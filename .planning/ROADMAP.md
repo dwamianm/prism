@@ -14,6 +14,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Storage Foundation** - All four storage backends with typed data model, temporal validity, lifecycle states, and user/session scoping (completed 2026-02-19)
 - [ ] **Phase 2: Ingestion Pipeline** - Conversations enter the system and produce structured memory across all storage backends
+- [ ] **Phase 2.1: Scope Isolation Fix** - INSERTED — Close audit gaps: persist Event.scope to DuckDB, thread scope through IngestionPipeline
+- [ ] **Phase 2.2: WriteQueue Contract & Async Safety** - INSERTED — Close audit gaps: route EntityMerger/SupersedenceDetector through WriteQueue, fix embedding async safety
+- [ ] **Phase 2.3: Revised RFC Reconciliation** - INSERTED — Reconcile REQUIREMENTS.md against Revised RFC suite, identify delta in built code
 - [ ] **Phase 3: Retrieval Pipeline** - Queries return ranked, explainable, context-packed memory from all backends
 - [ ] **Phase 4: HTTP API and Python SDK** - External consumers access memory through HTTP endpoints and a Python library
 - [ ] **Phase 5: Self-Organization** - Background scheduler maintains memory quality through salience, promotion, summarization, dedup, and archival
@@ -56,6 +59,49 @@ Plans:
 - [ ] 02-02-PLAN.md -- Extraction schema, ExtractionProvider Protocol, instructor implementations, grounding validation
 - [ ] 02-03-PLAN.md -- Entity merge and supersedence detection modules
 - [ ] 02-04-PLAN.md -- IngestionPipeline orchestrator, MemoryEngine integration, temporal resolution
+
+### Phase 2.1: Scope Isolation Fix
+**Goal**: Event.scope is persisted to DuckDB and the ingestion pipeline accepts a scope parameter, so all memory operations can be scoped beyond just user_id
+**Depends on**: Phase 2
+**Requirements**: STOR-06
+**Gap Closure:** Closes audit gaps — STOR-06 partial (scope not persisted/threadable), integration issues #2 and #3
+**Success Criteria** (what must be TRUE):
+  1. An event stored in DuckDB includes its scope value, and events can be queried by scope
+  2. IngestionPipeline.ingest() accepts a scope parameter that flows through to all created MemoryNodes
+  3. Existing tests continue to pass with PERSONAL as the default scope
+**Plans**: TBD
+
+Plans:
+- [ ] 02.1-01: TBD
+
+### Phase 2.2: WriteQueue Contract & Async Safety
+**Goal**: All graph writes during ingestion are serialized through WriteQueue and the embedding provider works safely in async contexts
+**Depends on**: Phase 2.1
+**Requirements**: INGE-05
+**Gap Closure:** Closes audit gaps — INGE-05 partial (WriteQueue bypass), integration issues #1 and #4
+**Success Criteria** (what must be TRUE):
+  1. EntityMerger.find_or_create_entity() routes all graph writes through WriteQueue, not directly through GraphStore
+  2. SupersedenceDetector.detect_and_supersede() routes all graph writes through WriteQueue
+  3. OpenAIEmbeddingProvider.embed() works correctly when called from both async context and thread pool context
+  4. Concurrent ingestion requests do not produce transaction conflicts or data loss
+**Plans**: TBD
+
+Plans:
+- [ ] 02.2-01: TBD
+
+### Phase 2.3: Revised RFC Reconciliation
+**Goal**: REQUIREMENTS.md is reconciled against the Revised RFC suite (RFC-0000 through RFC-0014) and any delta between built code and revised specs is identified
+**Depends on**: Phase 2.2
+**Requirements**: (cross-cutting — updates existing requirements and may add new ones)
+**Gap Closure:** Closes audit gap — Revised RFC suite not reflected in REQUIREMENTS.md
+**Success Criteria** (what must be TRUE):
+  1. Each Revised RFC relevant to completed phases (RFC-0001 through RFC-0004 at minimum) has been reviewed against REQUIREMENTS.md
+  2. New or changed requirements from the Revised RFCs are added to REQUIREMENTS.md with traceability
+  3. Any delta between built code and revised specs is documented with recommended action (fix now vs defer)
+**Plans**: TBD
+
+Plans:
+- [ ] 02.3-01: TBD
 
 ### Phase 3: Retrieval Pipeline
 **Goal**: A developer can query memory and receive ranked results that combine graph, vector, and lexical signals with explainable scores and token-budgeted context packing
@@ -135,12 +181,15 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Storage Foundation | 0/4 | Complete    | 2026-02-19 |
-| 2. Ingestion Pipeline | 0/4 | Not started | - |
+| 2. Ingestion Pipeline | 0/4 | Complete    | 2026-02-19 |
+| 2.1 Scope Isolation Fix | 0/1 | Not started | - |
+| 2.2 WriteQueue Contract & Async Safety | 0/1 | Not started | - |
+| 2.3 Revised RFC Reconciliation | 0/1 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |

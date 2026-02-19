@@ -9,21 +9,21 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Storage & Data Model
 
-- [ ] **STOR-01**: System stores all conversational inputs as immutable events in an append-only DuckDB event log
-- [ ] **STOR-02**: System represents entities as typed graph nodes (Entity, Event, Fact, Decision, Preference, Task, Summary) in Kuzu behind an abstract GraphStore interface
-- [ ] **STOR-03**: System represents relationships as typed edges with valid_from, valid_to, confidence, and provenance reference
-- [ ] **STOR-04**: System indexes event content and facts in an HNSW vector index with versioned embedding metadata
-- [ ] **STOR-05**: System indexes event content and facts in a full-text lexical index (Tantivy)
+- [x] **STOR-01**: System stores all conversational inputs as immutable events in an append-only DuckDB event log
+- [x] **STOR-02**: System represents entities as typed graph nodes (Entity, Event, Fact, Decision, Preference, Task, Summary) in Kuzu behind an abstract GraphStore interface
+- [x] **STOR-03**: System represents relationships as typed edges with valid_from, valid_to, confidence, and provenance reference
+- [x] **STOR-04**: System indexes event content and facts in an HNSW vector index with versioned embedding metadata
+- [x] **STOR-05**: System indexes event content and facts in a full-text lexical index (Tantivy)
 - [ ] **STOR-06**: System scopes all memory operations by user_id and session_id
-- [ ] **STOR-07**: System tracks memory object lifecycle states (Tentative → Stable → Superseded → Archived)
-- [ ] **STOR-08**: System maintains supersedence chains with provenance — superseded facts link to their replacement and the evidence that triggered the change
+- [x] **STOR-07**: System tracks memory object lifecycle states (Tentative → Stable → Superseded → Archived)
+- [x] **STOR-08**: System maintains supersedence chains with provenance — superseded facts link to their replacement and the evidence that triggered the change
 
 ### Ingestion & Extraction
 
-- [ ] **INGE-01**: System extracts entities, facts, and relationships from conversation events using pluggable LLM providers
-- [ ] **INGE-02**: System supports at least OpenAI and one local option for LLM-powered extraction
-- [ ] **INGE-03**: System supports pluggable embedding providers (API-based and local model)
-- [ ] **INGE-04**: System persists full conversation history as searchable events
+- [x] **INGE-01**: System extracts entities, facts, and relationships from conversation events using pluggable LLM providers
+- [x] **INGE-02**: System supports at least OpenAI and one local option for LLM-powered extraction
+- [x] **INGE-03**: System supports pluggable embedding providers (API-based and local model)
+- [x] **INGE-04**: System persists full conversation history as searchable events
 - [ ] **INGE-05**: System uses a write queue pattern to handle DuckDB single-writer concurrency under HTTP API load
 
 ### Retrieval
@@ -105,19 +105,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STOR-01 | Phase 1 | Pending |
-| STOR-02 | Phase 1 | Pending |
-| STOR-03 | Phase 1 | Pending |
-| STOR-04 | Phase 1 | Pending |
-| STOR-05 | Phase 1 | Pending |
-| STOR-06 | Phase 1 | Pending |
-| STOR-07 | Phase 1 | Pending |
-| STOR-08 | Phase 1 | Pending |
-| INGE-01 | Phase 2 | Pending |
-| INGE-02 | Phase 2 | Pending |
-| INGE-03 | Phase 2 | Pending |
-| INGE-04 | Phase 2 | Pending |
-| INGE-05 | Phase 2 | Pending |
+| STOR-01 | Phase 1 | Satisfied |
+| STOR-02 | Phase 1 | Satisfied |
+| STOR-03 | Phase 1 | Satisfied |
+| STOR-04 | Phase 1 | Satisfied |
+| STOR-05 | Phase 1 | Satisfied |
+| STOR-06 | Phase 1, Phase 2.1 | Pending |
+| STOR-07 | Phase 1 | Satisfied |
+| STOR-08 | Phase 1 | Satisfied |
+| INGE-01 | Phase 2 | Satisfied |
+| INGE-02 | Phase 2 | Satisfied |
+| INGE-03 | Phase 2 | Satisfied |
+| INGE-04 | Phase 2 | Satisfied |
+| INGE-05 | Phase 2, Phase 2.2 | Pending |
 | RETR-01 | Phase 3 | Pending |
 | RETR-02 | Phase 3 | Pending |
 | RETR-03 | Phase 3 | Pending |
@@ -144,7 +144,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1 requirements: 34 total
 - Mapped to phases: 34
 - Unmapped: 0
+- Satisfied (Phases 1-2): 11/13
+- Pending gap closure (Phases 2.1-2.2): 2 (STOR-06, INGE-05)
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after roadmap creation*
+*Last updated: 2026-02-19 after gap closure phase creation*
