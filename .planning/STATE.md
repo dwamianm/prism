@@ -5,36 +5,38 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 1: Storage Foundation
+**Current focus:** Phase 2: Ingestion Pipeline
 
 ## Current Position
 
-**Phase:** 1 of 7 (Storage Foundation)
-**Current Plan:** Not started
+**Phase:** 2 of 7 (Ingestion Pipeline)
+**Current Plan:** 2 of 4
 **Total Plans in Phase:** 4
-**Status:** Milestone complete
+**Status:** In progress
 **Last Activity:** 2026-02-19
 
-Progress: [████░░░░░░] 14%
+Progress: [█████░░░░░] 18%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 4.8min
-- Total execution time: 0.32 hours
+- Total plans completed: 5
+- Average duration: 4.4min
+- Total execution time: 0.37 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-storage-foundation | 4 | 19min | 4.8min |
+| 02-ingestion-pipeline | 1 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 6min, 4min, 6min
+- Last 5 plans: 3min, 6min, 4min, 6min, 3min
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 02 P01 | 3min | 2 tasks | 5 files |
 | Phase 01 P03 | 4min | 2 tasks | 3 files |
 | Phase 01 P02 | 6min | 2 tasks | 6 files |
 | Phase 01 P04 | 6min | 2 tasks | 5 files |
@@ -59,6 +61,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Removed FK constraints from edges table -- DuckDB treats UPDATE as DELETE+INSERT causing FK violations on referenced nodes
 - [Phase 01]: All graph traversal uses recursive CTEs as primary path (neighborhood, shortest path, supersedence chains)
 - [Phase 01]: MemoryEngine auto-propagation: store() writes to all four backends with graceful degradation on derived index failures
+- [Phase 02]: WriteQueue uses asyncio.Queue with None sentinel for clean shutdown (research Pattern 3)
+- [Phase 02]: OpenAIEmbeddingProvider.embed() uses asyncio.run() for sync wrapper (runs from asyncio.to_thread in VectorIndex)
+- [Phase 02]: create_embedding_provider factory uses simple if/elif dispatch (2 providers, no registry needed)
 
 ### Pending Todos
 
@@ -67,11 +72,9 @@ None yet.
 ### Blockers/Concerns
 
 - [Phase 1]: Kuzu pinned at 0.11.3 (archived repo) -- GraphStore abstraction must be built before any graph code. Monitor RyuGraph fork and DuckPGQ as migration paths.
-- [Phase 2]: Extraction pipeline design needs deeper research -- rule-based NER vs LLM tradeoffs, derived event schema, confidence scoring. High stakes: errors compound into corrupted graph.
-- [Phase 2]: DuckDB write queue pattern under FastAPI needs targeted spike before implementation.
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 01-04-PLAN.md (Phase 1 complete: MemoryEngine + GraphStore lifecycle/traversal)
-Resume file: Phase 2 planning needed
+Stopped at: Completed 02-01-PLAN.md (Phase 2 foundations: deps, config, WriteQueue, OpenAI embedding)
+Resume file: .planning/phases/02-ingestion-pipeline/02-02-PLAN.md
