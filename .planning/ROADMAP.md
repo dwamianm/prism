@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Storage Foundation | 0/4 | Complete    | 2026-02-19 |
 | 2. Ingestion Pipeline | 0/4 | Complete    | 2026-02-19 |
-| 2.1 Scope Isolation Fix | 0/2 | Not started | - |
+| 2.1 Scope Isolation Fix | 1/2 | In progress | - |
 | 2.2 WriteQueue Contract & Async Safety | 0/1 | Not started | - |
 | 2.3 Revised RFC Reconciliation | 0/1 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
