@@ -12,31 +12,32 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 1 of 7 (Storage Foundation)
 **Current Plan:** 4
 **Total Plans in Phase:** 4
-**Status:** Phase complete — ready for verification
+**Status:** Phase 1 COMPLETE -- all 4 plans executed
 **Last Activity:** 2026-02-19
 
-Progress: [████░░░░░░] 11%
+Progress: [████░░░░░░] 14%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 4.3min
-- Total execution time: 0.22 hours
+- Total plans completed: 4
+- Average duration: 4.8min
+- Total execution time: 0.32 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-storage-foundation | 3 | 13min | 4.3min |
+| 01-storage-foundation | 4 | 19min | 4.8min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 6min, 4min
+- Last 5 plans: 3min, 6min, 4min, 6min
 - Trend: Stable
 
 *Updated after each plan completion*
 | Phase 01 P03 | 4min | 2 tasks | 3 files |
 | Phase 01 P02 | 6min | 2 tasks | 6 files |
+| Phase 01 P04 | 6min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -55,6 +56,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Lazy FastEmbed model initialization to avoid blocking constructor with model downloads
 - [Phase 01]: DuckPGQ unavailable for DuckDB 1.4.4 -- implemented graceful fallback with SQL-only mode for all graph CRUD
 - [Phase 01]: Added pytz dependency required by DuckDB for TIMESTAMPTZ Python bridging
+- [Phase 01]: Removed FK constraints from edges table -- DuckDB treats UPDATE as DELETE+INSERT causing FK violations on referenced nodes
+- [Phase 01]: All graph traversal uses recursive CTEs as primary path (neighborhood, shortest path, supersedence chains)
+- [Phase 01]: MemoryEngine auto-propagation: store() writes to all four backends with graceful degradation on derived index failures
 
 ### Pending Todos
 
@@ -69,5 +73,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 01-03-PLAN.md (vector index and lexical index)
-Resume file: .planning/phases/01-storage-foundation/01-04-PLAN.md
+Stopped at: Completed 01-04-PLAN.md (Phase 1 complete: MemoryEngine + GraphStore lifecycle/traversal)
+Resume file: Phase 2 planning needed
