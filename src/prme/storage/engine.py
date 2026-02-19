@@ -5,24 +5,36 @@ A single store() call auto-propagates to: EventStore (source of truth),
 GraphStore (relational model), VectorIndex (semantic search), and
 LexicalIndex (full-text search).
 
+The ingest() method provides full two-phase ingestion: immediate event
+persistence followed by LLM extraction and materialization of entities,
+facts, relationships, and supersedence chains. All writes are serialized
+through a WriteQueue for DuckDB single-writer safety.
+
 Developers interact with this class exclusively. Backend coordination,
 error handling, and lifecycle transitions are managed here.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 import duckdb
 
 from prme.config import PRMEConfig
 from prme.models import Event, MemoryNode
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
-from prme.storage.embedding import FastEmbedProvider
+from prme.storage.embedding import create_embedding_provider
 from prme.storage.event_store import EventStore
 from prme.storage.lexical_index import LexicalIndex
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
+from prme.storage.write_queue import WriteQueue
 from prme.types import LifecycleState, NodeType, Scope
+
+if TYPE_CHECKING:
+    from prme.ingestion.pipeline import IngestionPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +43,13 @@ class MemoryEngine:
     """Unified memory interface. Single entry point for all storage operations.
 
     Coordinates writes across EventStore, GraphStore, VectorIndex, and
-    LexicalIndex. A single store() call propagates content to all four
-    backends. Lifecycle transitions (promote, supersede, archive) are
-    passed through to the GraphStore.
+    LexicalIndex. All writes are serialized through a WriteQueue for
+    DuckDB single-writer safety. The ingest() method provides full
+    two-phase ingestion with LLM extraction via IngestionPipeline.
+
+    A single store() call propagates content to all four backends.
+    Lifecycle transitions (promote, supersede, archive) are passed
+    through to the GraphStore.
 
     Use the async create() factory method to initialize.
     """
@@ -45,20 +61,27 @@ class MemoryEngine:
         graph_store: DuckPGQGraphStore,
         vector_index: VectorIndex,
         lexical_index: LexicalIndex,
+        write_queue: WriteQueue,
+        pipeline: IngestionPipeline | None = None,
     ) -> None:
         self._conn = conn
         self._event_store = event_store
         self._graph_store = graph_store
         self._vector_index = vector_index
         self._lexical_index = lexical_index
+        self._write_queue = write_queue
+        self._pipeline = pipeline
 
     @classmethod
     async def create(cls, config: PRMEConfig | None = None) -> "MemoryEngine":
         """Create and initialize a MemoryEngine with all backends.
 
-        Opens a DuckDB connection, initializes the schema, and creates
-        all four backend stores. If config is None, uses PRMEConfig()
-        which loads from environment variables and defaults.
+        Opens a DuckDB connection, initializes the schema, creates all
+        four backend stores, starts the write queue, and sets up the
+        ingestion pipeline with an extraction provider.
+
+        If config is None, uses PRMEConfig() which loads from environment
+        variables and defaults.
 
         Args:
             config: Optional configuration. Defaults to PRMEConfig().
@@ -79,11 +102,8 @@ class MemoryEngine:
         event_store = EventStore(conn)
         graph_store = DuckPGQGraphStore(conn)
 
-        # Create embedding provider
-        embedding_provider = FastEmbedProvider(
-            model_name=config.embedding.model_name,
-            dimension=config.embedding.dimension,
-        )
+        # Create embedding provider via factory
+        embedding_provider = create_embedding_provider(config.embedding)
 
         # Create vector index
         vector_index = VectorIndex(conn, config.vector_path, embedding_provider)
@@ -91,12 +111,33 @@ class MemoryEngine:
         # Create lexical index
         lexical_index = LexicalIndex(config.lexical_path)
 
+        # Create and start write queue
+        write_queue = WriteQueue(maxsize=config.write_queue_size)
+        await write_queue.start()
+
+        # Lazy import to avoid circular import (engine -> pipeline -> entity_merge -> graph_store -> engine)
+        from prme.ingestion.extraction import create_extraction_provider
+        from prme.ingestion.pipeline import IngestionPipeline
+
+        # Create extraction provider and ingestion pipeline
+        extraction_provider = create_extraction_provider(config.extraction)
+        pipeline = IngestionPipeline(
+            event_store=event_store,
+            graph_store=graph_store,
+            vector_index=vector_index,
+            lexical_index=lexical_index,
+            extraction_provider=extraction_provider,
+            write_queue=write_queue,
+        )
+
         return cls(
             conn=conn,
             event_store=event_store,
             graph_store=graph_store,
             vector_index=vector_index,
             lexical_index=lexical_index,
+            write_queue=write_queue,
+            pipeline=pipeline,
         )
 
     # --- Core Operations ---
@@ -116,9 +157,10 @@ class MemoryEngine:
         """Store content across all four backends in one call.
 
         Auto-propagation pipeline:
-        1. Create Event, append to EventStore (source of truth, MUST succeed).
-        2. Create MemoryNode with evidence_refs=[event.id], store in GraphStore.
-        3. Index into VectorIndex and LexicalIndex in parallel.
+        1. Create Event, append to EventStore via write queue (MUST succeed).
+        2. Create MemoryNode with evidence_refs=[event.id], store in GraphStore
+           via write queue.
+        3. Index into VectorIndex and LexicalIndex via write queue.
 
         If vector/lexical indexing fails, the error is logged but the
         store() call does not fail -- the event is already persisted and
@@ -137,7 +179,7 @@ class MemoryEngine:
         Returns:
             String UUID of the created event (source of truth ID).
         """
-        # Step 1: Create and persist event (source of truth)
+        # Step 1: Create and persist event (source of truth) via write queue
         event = Event(
             content=content,
             user_id=user_id,
@@ -145,9 +187,12 @@ class MemoryEngine:
             role=role,
             metadata=metadata,
         )
-        event_id = await self._event_store.append(event)
+        event_id = await self._write_queue.submit(
+            lambda ev=event: self._event_store.append(ev),
+            label=f"store.event:{event.id}",
+        )
 
-        # Step 2: Create graph node
+        # Step 2: Create graph node via write queue
         node = MemoryNode(
             user_id=user_id,
             session_id=session_id,
@@ -158,15 +203,24 @@ class MemoryEngine:
             confidence=confidence,
             evidence_refs=[event.id],
         )
-        node_id = await self._graph_store.create_node(node)
+        node_id = await self._write_queue.submit(
+            lambda n=node: self._graph_store.create_node(n),
+            label=f"store.node:{node.id}",
+        )
 
-        # Step 3: Index into vector and lexical in parallel
+        # Step 3: Index into vector and lexical via write queue
         try:
-            await asyncio.gather(
-                self._vector_index.index(node_id, content, user_id),
-                self._lexical_index.index(
-                    node_id, content, user_id, node_type.value
+            await self._write_queue.submit(
+                lambda nid=node_id, c=content, uid=user_id: (
+                    self._vector_index.index(nid, c, uid)
                 ),
+                label=f"store.vector:{node_id}",
+            )
+            await self._write_queue.submit(
+                lambda nid=node_id, c=content, uid=user_id, nt=node_type.value: (
+                    self._lexical_index.index(nid, c, uid, nt)
+                ),
+                label=f"store.lexical:{node_id}",
             )
         except Exception:
             logger.warning(
@@ -177,6 +231,100 @@ class MemoryEngine:
             )
 
         return event_id
+
+    # --- Ingestion Operations ---
+
+    async def ingest(
+        self,
+        content: str,
+        *,
+        user_id: str,
+        role: str = "user",
+        session_id: str | None = None,
+        metadata: dict | None = None,
+        wait_for_extraction: bool = False,
+    ) -> str:
+        """Ingest a message with LLM-powered extraction and materialization.
+
+        Delegates to the IngestionPipeline for two-phase ingestion:
+        Phase 1 persists the event immediately, Phase 2 runs extraction
+        and materialization (background by default, or synchronously if
+        wait_for_extraction=True).
+
+        If no pipeline is configured, falls back to store() behavior.
+
+        Args:
+            content: The message text to ingest.
+            user_id: Owner user ID.
+            role: Message role ('user', 'assistant', or 'system').
+            session_id: Optional session identifier.
+            metadata: Optional structured metadata.
+            wait_for_extraction: If True, block until extraction completes.
+
+        Returns:
+            String UUID of the persisted event.
+        """
+        if self._pipeline is None:
+            return await self.store(
+                content,
+                user_id=user_id,
+                session_id=session_id,
+                role=role,
+                metadata=metadata,
+            )
+        return await self._pipeline.ingest(
+            content,
+            user_id=user_id,
+            role=role,
+            session_id=session_id,
+            metadata=metadata,
+            wait_for_extraction=wait_for_extraction,
+        )
+
+    async def ingest_batch(
+        self,
+        messages: list[dict],
+        *,
+        user_id: str,
+        session_id: str | None = None,
+        wait_for_extraction: bool = False,
+    ) -> list[str]:
+        """Ingest a batch of messages with LLM extraction.
+
+        Delegates to the IngestionPipeline for sequential batch
+        processing. Each message dict must have 'content' and 'role'
+        keys, with optional 'metadata'.
+
+        If no pipeline is configured, falls back to sequential store().
+
+        Args:
+            messages: List of message dicts with 'content' and 'role'.
+            user_id: Owner user ID for all messages.
+            session_id: Optional session identifier for all messages.
+            wait_for_extraction: If True, block until all extractions
+                complete.
+
+        Returns:
+            List of event ID strings, one per message.
+        """
+        if self._pipeline is None:
+            event_ids: list[str] = []
+            for msg in messages:
+                eid = await self.store(
+                    msg["content"],
+                    user_id=user_id,
+                    session_id=session_id,
+                    role=msg["role"],
+                    metadata=msg.get("metadata"),
+                )
+                event_ids.append(eid)
+            return event_ids
+        return await self._pipeline.ingest_batch(
+            messages,
+            user_id=user_id,
+            session_id=session_id,
+            wait_for_extraction=wait_for_extraction,
+        )
 
     async def search(
         self,
@@ -316,9 +464,23 @@ class MemoryEngine:
     async def close(self) -> None:
         """Close and save all backends.
 
-        Saves the VectorIndex to disk, closes the LexicalIndex,
-        and closes the DuckDB connection.
+        Shuts down the ingestion pipeline (cancels background tasks),
+        stops the write queue, saves the VectorIndex to disk, closes
+        the LexicalIndex, and closes the DuckDB connection.
         """
+        # Shutdown pipeline first (cancel background extraction tasks)
+        if self._pipeline is not None:
+            try:
+                await self._pipeline.shutdown()
+            except Exception:
+                logger.warning("Error shutting down pipeline", exc_info=True)
+
+        # Stop write queue (drain pending jobs)
+        try:
+            await self._write_queue.stop()
+        except Exception:
+            logger.warning("Error stopping write queue", exc_info=True)
+
         try:
             await self._vector_index.close()
         except Exception:
