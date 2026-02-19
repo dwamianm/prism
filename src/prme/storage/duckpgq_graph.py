@@ -1,17 +1,18 @@
-"""DuckPGQ-backed GraphStore implementation with node/edge CRUD.
+"""DuckPGQ-backed GraphStore implementation with full graph operations.
 
 Implements the GraphStore Protocol using DuckDB tables as the underlying
-storage. When DuckPGQ is available, advanced traversal operations use
-SQL/PGQ syntax. When unavailable, all operations use standard SQL
-(JOINs, recursive CTEs).
+storage. All traversal operations use recursive CTEs on the edges table
+as the primary implementation path. DuckPGQ SQL/PGQ is not available for
+DuckDB 1.4.4 on osx_arm64, so recursive CTEs are the only code path.
 
-This plan covers node/edge CRUD and query_nodes/get_edges.
-Advanced traversal (neighborhood, paths, supersedence, lifecycle)
-is deferred to Plan 04.
+Covers: node/edge CRUD, query_nodes/get_edges, lifecycle transitions
+(promote, supersede, archive), graph traversal (neighborhood, shortest
+path), and supersedence chain traversal.
 """
 
 import asyncio
 import json
+import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -19,7 +20,16 @@ import duckdb
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
-from prme.types import EdgeType, LifecycleState, NodeType, Scope
+from prme.types import (
+    ALLOWED_TRANSITIONS,
+    EdgeType,
+    LifecycleState,
+    NodeType,
+    Scope,
+    validate_transition,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class DuckPGQGraphStore:
@@ -152,7 +162,64 @@ class DuckPGQGraphStore:
             min_confidence,
         )
 
-    # --- Stubbed methods (implemented in Plan 04) ---
+    # --- Lifecycle Transitions ---
+
+    async def promote(self, node_id: str) -> None:
+        """Promote a tentative node to stable.
+
+        Args:
+            node_id: String UUID of the node to promote.
+
+        Raises:
+            ValueError: If the node doesn't exist or the transition is invalid.
+        """
+        async with self._write_lock:
+            await asyncio.to_thread(self._promote_sync, node_id)
+
+    async def supersede(
+        self,
+        old_node_id: str,
+        new_node_id: str,
+        *,
+        evidence_id: str | None = None,
+    ) -> None:
+        """Mark a node as superseded by another.
+
+        Creates a SUPERSEDES edge from new_node to old_node with optional
+        evidence_id for provenance tracking. Updates the old node's
+        lifecycle_state to 'superseded' and sets superseded_by pointer.
+
+        Args:
+            old_node_id: Node being replaced.
+            new_node_id: Replacement node.
+            evidence_id: Optional event ID providing evidence for the
+                supersedence.
+
+        Raises:
+            ValueError: If either node doesn't exist or the transition
+                is invalid.
+        """
+        async with self._write_lock:
+            await asyncio.to_thread(
+                self._supersede_sync, old_node_id, new_node_id, evidence_id
+            )
+
+    async def archive(self, node_id: str) -> None:
+        """Archive a node (terminal state).
+
+        Any non-archived node can be archived. Archived is terminal --
+        no further transitions are allowed.
+
+        Args:
+            node_id: String UUID of the node to archive.
+
+        Raises:
+            ValueError: If the node doesn't exist or is already archived.
+        """
+        async with self._write_lock:
+            await asyncio.to_thread(self._archive_sync, node_id)
+
+    # --- Graph Traversal ---
 
     async def get_neighborhood(
         self,
@@ -164,8 +231,32 @@ class DuckPGQGraphStore:
         min_confidence: float | None = None,
         include_superseded: bool = False,
     ) -> list[MemoryNode]:
-        """Get nodes within N hops of a starting node."""
-        raise NotImplementedError("Implemented in Plan 04")
+        """Get nodes within N hops of a starting node.
+
+        Uses a recursive CTE on the edges table to find all reachable
+        nodes within max_hops. Traverses edges in both directions
+        (source->target and target->source) to find the full neighborhood.
+
+        Args:
+            node_id: Starting node ID.
+            max_hops: Maximum number of hops (default 2).
+            edge_types: Only traverse edges of these types.
+            valid_at: Temporal filter for nodes.
+            min_confidence: Minimum node confidence.
+            include_superseded: Include superseded/archived nodes.
+
+        Returns:
+            List of reachable MemoryNodes (excluding the starting node).
+        """
+        return await asyncio.to_thread(
+            self._get_neighborhood_sync,
+            node_id,
+            max_hops,
+            edge_types,
+            valid_at,
+            min_confidence,
+            include_superseded,
+        )
 
     async def find_shortest_path(
         self,
@@ -174,8 +265,23 @@ class DuckPGQGraphStore:
         *,
         edge_types: list[EdgeType] | None = None,
     ) -> list[str] | None:
-        """Find the shortest path between two nodes."""
-        raise NotImplementedError("Implemented in Plan 04")
+        """Find the shortest path between two nodes via BFS.
+
+        Uses a recursive CTE to perform breadth-first search from
+        source to target, tracking the path at each step.
+
+        Args:
+            source_id: Starting node ID.
+            target_id: Target node ID.
+            edge_types: Only traverse edges of these types.
+
+        Returns:
+            List of node IDs forming the shortest path (including
+            source and target), or None if no path exists.
+        """
+        return await asyncio.to_thread(
+            self._find_shortest_path_sync, source_id, target_id, edge_types
+        )
 
     async def get_supersedence_chain(
         self,
@@ -183,26 +289,24 @@ class DuckPGQGraphStore:
         *,
         direction: str = "forward",
     ) -> list[MemoryNode]:
-        """Traverse the supersedence chain from a node."""
-        raise NotImplementedError("Implemented in Plan 04")
+        """Traverse the supersedence chain from a node.
 
-    async def promote(self, node_id: str) -> None:
-        """Promote a tentative node to stable."""
-        raise NotImplementedError("Implemented in Plan 04")
+        SUPERSEDES edge direction: new_node -> old_node.
+        - "forward" = what replaced this node (follow edges where this
+          node is the TARGET of SUPERSEDES).
+        - "backward" = what this node replaced (follow edges where this
+          node is the SOURCE of SUPERSEDES).
 
-    async def supersede(
-        self,
-        old_node_id: str,
-        new_node_id: str,
-        *,
-        evidence_id: str | None = None,
-    ) -> None:
-        """Mark a node as superseded by another."""
-        raise NotImplementedError("Implemented in Plan 04")
+        Args:
+            node_id: Starting node ID.
+            direction: "forward" or "backward".
 
-    async def archive(self, node_id: str) -> None:
-        """Archive a node (terminal state)."""
-        raise NotImplementedError("Implemented in Plan 04")
+        Returns:
+            Ordered list of MemoryNodes in the chain.
+        """
+        return await asyncio.to_thread(
+            self._get_supersedence_chain_sync, node_id, direction
+        )
 
     # --- Internal sync methods ---
 
@@ -404,6 +508,389 @@ class DuckPGQGraphStore:
 
         rows = self._conn.execute(query, params).fetchall()
         return [self._row_to_edge(row) for row in rows]
+
+    # --- Lifecycle sync methods ---
+
+    def _promote_sync(self, node_id: str) -> None:
+        """Promote a tentative node to stable (sync)."""
+        row = self._conn.execute(
+            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Node {node_id} not found")
+
+        current_state = LifecycleState(row[0])
+        target_state = LifecycleState.STABLE
+
+        if not validate_transition(current_state, target_state):
+            raise ValueError(
+                f"Cannot promote: node is {current_state.value}, "
+                f"only Tentative nodes can be promoted"
+            )
+
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [target_state.value, node_id],
+        )
+
+    def _supersede_sync(
+        self,
+        old_node_id: str,
+        new_node_id: str,
+        evidence_id: str | None,
+    ) -> None:
+        """Mark a node as superseded by another (sync)."""
+        # Validate both nodes exist
+        old_row = self._conn.execute(
+            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            [old_node_id],
+        ).fetchone()
+        if old_row is None:
+            raise ValueError(f"Old node {old_node_id} not found")
+
+        new_row = self._conn.execute(
+            "SELECT id, user_id FROM nodes WHERE id = ?", [new_node_id]
+        ).fetchone()
+        if new_row is None:
+            raise ValueError(f"New node {new_node_id} not found")
+
+        # Validate transition
+        current_state = LifecycleState(old_row[0])
+        target_state = LifecycleState.SUPERSEDED
+
+        if not validate_transition(current_state, target_state):
+            raise ValueError(
+                f"Cannot supersede: node is {current_state.value}, "
+                f"only Tentative or Stable nodes can be superseded"
+            )
+
+        # Update old node
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?,
+                superseded_by = ?,
+                updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [target_state.value, new_node_id, old_node_id],
+        )
+
+        # Create SUPERSEDES edge: new_node -> old_node
+        # Parse evidence_id as UUID if valid, otherwise store None
+        provenance_uuid = None
+        if evidence_id is not None:
+            try:
+                provenance_uuid = UUID(evidence_id)
+            except ValueError:
+                logger.warning(
+                    "evidence_id %r is not a valid UUID, storing edge "
+                    "without provenance reference",
+                    evidence_id,
+                )
+
+        edge = MemoryEdge(
+            source_id=UUID(new_node_id),
+            target_id=UUID(old_node_id),
+            edge_type=EdgeType.SUPERSEDES,
+            user_id=old_row[1],  # Use the old node's user_id
+            confidence=1.0,
+            provenance_event_id=provenance_uuid,
+        )
+        self._create_edge_sync(edge)
+
+    def _archive_sync(self, node_id: str) -> None:
+        """Archive a node (sync)."""
+        row = self._conn.execute(
+            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Node {node_id} not found")
+
+        current_state = LifecycleState(row[0])
+        target_state = LifecycleState.ARCHIVED
+
+        if not validate_transition(current_state, target_state):
+            raise ValueError(
+                f"Cannot archive: node is {current_state.value}, "
+                f"Archived nodes cannot be transitioned"
+            )
+
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [target_state.value, node_id],
+        )
+
+    # --- Traversal sync methods ---
+
+    def _get_neighborhood_sync(
+        self,
+        node_id: str,
+        max_hops: int,
+        edge_types: list[EdgeType] | None,
+        valid_at: datetime | None,
+        min_confidence: float | None,
+        include_superseded: bool,
+    ) -> list[MemoryNode]:
+        """Get neighborhood via recursive CTE (sync).
+
+        Traverses edges in both directions to find the full neighborhood.
+        Uses a single UNION ALL recursive CTE with bidirectional traversal
+        in both the base and recursive cases.
+        """
+        logger.debug(
+            "get_neighborhood using recursive CTE (SQL fallback)",
+            extra={"node_id": node_id, "max_hops": max_hops},
+        )
+
+        # Build edge filter clause
+        edge_conditions = []
+        edge_params: list = []
+        if edge_types is not None:
+            placeholders = ", ".join(["?" for _ in edge_types])
+            edge_conditions.append(f"e.edge_type IN ({placeholders})")
+            edge_params.extend([et.value for et in edge_types])
+
+        edge_where = (
+            "AND " + " AND ".join(edge_conditions) if edge_conditions else ""
+        )
+
+        # Build node filter clause
+        node_conditions = []
+        node_params: list = []
+
+        if not include_superseded:
+            node_conditions.append(
+                "n.lifecycle_state IN ('tentative', 'stable')"
+            )
+
+        if valid_at is not None:
+            node_conditions.append(
+                "n.valid_from <= ? AND (n.valid_to IS NULL OR n.valid_to > ?)"
+            )
+            node_params.extend([valid_at, valid_at])
+
+        if min_confidence is not None:
+            node_conditions.append("n.confidence >= ?")
+            node_params.append(min_confidence)
+
+        node_where = (
+            "AND " + " AND ".join(node_conditions) if node_conditions else ""
+        )
+
+        # Recursive CTE: base case finds direct neighbors (both directions),
+        # recursive case expands from there. Uses CASE to handle bidirectional
+        # traversal in a single UNION ALL.
+        query = f"""
+            WITH RECURSIVE neighborhood AS (
+                -- Base case: direct neighbors in both directions
+                SELECT
+                    CASE WHEN e.source_id = CAST(? AS UUID)
+                         THEN e.target_id
+                         ELSE e.source_id
+                    END AS id,
+                    1 AS depth
+                FROM edges e
+                WHERE (e.source_id = CAST(? AS UUID) OR e.target_id = CAST(? AS UUID))
+                    {edge_where}
+
+                UNION ALL
+
+                -- Recursive case: expand from discovered neighbors
+                SELECT
+                    CASE WHEN e.source_id = nb.id
+                         THEN e.target_id
+                         ELSE e.source_id
+                    END AS id,
+                    nb.depth + 1 AS depth
+                FROM neighborhood nb
+                JOIN edges e ON (e.source_id = nb.id OR e.target_id = nb.id)
+                    {edge_where}
+                WHERE nb.depth < ?
+            )
+            SELECT DISTINCT n.*
+            FROM neighborhood nb
+            JOIN nodes n ON nb.id = n.id
+            WHERE n.id != CAST(? AS UUID) {node_where}
+        """
+
+        params: list = []
+        # Base case: 3 refs to node_id + edge_params
+        params.append(node_id)
+        params.append(node_id)
+        params.append(node_id)
+        params.extend(edge_params)
+        # Recursive case: edge_params + max_hops
+        params.extend(edge_params)
+        params.append(max_hops)
+        # Final WHERE: node_id + node_params
+        params.append(node_id)
+        params.extend(node_params)
+
+        rows = self._conn.execute(query, params).fetchall()
+        return [self._row_to_node(row) for row in rows]
+
+    def _find_shortest_path_sync(
+        self,
+        source_id: str,
+        target_id: str,
+        edge_types: list[EdgeType] | None,
+    ) -> list[str] | None:
+        """BFS shortest path via iterative query (sync).
+
+        Uses Python-side BFS with SQL queries per level to avoid
+        DuckDB recursive CTE limitations with complex path tracking.
+        """
+        logger.debug(
+            "find_shortest_path using iterative BFS",
+            extra={"source_id": source_id, "target_id": target_id},
+        )
+
+        if source_id == target_id:
+            return [source_id]
+
+        # Build edge filter clause
+        edge_conditions = []
+        edge_params: list = []
+        if edge_types is not None:
+            placeholders = ", ".join(["?" for _ in edge_types])
+            edge_conditions.append(f"edge_type IN ({placeholders})")
+            edge_params.extend([et.value for et in edge_types])
+
+        edge_where = (
+            "AND " + " AND ".join(edge_conditions) if edge_conditions else ""
+        )
+
+        # BFS: track visited nodes and parent pointers
+        visited: set[str] = {source_id}
+        parent: dict[str, str] = {}
+        frontier = [source_id]
+        max_depth = 10
+
+        for _ in range(max_depth):
+            if not frontier:
+                return None
+
+            # Find all neighbors of frontier nodes
+            next_frontier: list[str] = []
+            for current_id in frontier:
+                # Get neighbors in both directions
+                query = f"""
+                    SELECT
+                        CASE WHEN source_id = CAST(? AS UUID)
+                             THEN CAST(target_id AS VARCHAR)
+                             ELSE CAST(source_id AS VARCHAR)
+                        END AS neighbor_id
+                    FROM edges
+                    WHERE (source_id = CAST(? AS UUID) OR target_id = CAST(? AS UUID))
+                        {edge_where}
+                """
+                params = [current_id, current_id, current_id]
+                params.extend(edge_params)
+
+                rows = self._conn.execute(query, params).fetchall()
+                for row in rows:
+                    neighbor_id = str(row[0])
+                    if neighbor_id not in visited:
+                        visited.add(neighbor_id)
+                        parent[neighbor_id] = current_id
+                        next_frontier.append(neighbor_id)
+
+                        if neighbor_id == target_id:
+                            # Reconstruct path
+                            path = [target_id]
+                            node = target_id
+                            while node != source_id:
+                                node = parent[node]
+                                path.append(node)
+                            path.reverse()
+                            return path
+
+            frontier = next_frontier
+
+        return None
+
+    def _get_supersedence_chain_sync(
+        self, node_id: str, direction: str
+    ) -> list[MemoryNode]:
+        """Traverse supersedence chain via iterative queries (sync).
+
+        SUPERSEDES edge direction: new_node (source) -> old_node (target).
+        - "forward" = what replaced this node. This node is the TARGET
+          of a SUPERSEDES edge; follow source_id to find the replacer,
+          then continue from there.
+        - "backward" = what this node replaced. This node is the SOURCE
+          of a SUPERSEDES edge; follow target_id to find the replaced,
+          then continue from there.
+        """
+        logger.debug(
+            "get_supersedence_chain using iterative SQL",
+            extra={"node_id": node_id, "direction": direction},
+        )
+
+        chain: list[MemoryNode] = []
+        visited: set[str] = {node_id}
+        current_id = node_id
+
+        # Max chain length to prevent infinite loops
+        max_depth = 100
+
+        for _ in range(max_depth):
+            if direction == "forward":
+                # What replaced this node?
+                # Find SUPERSEDES edge where current is TARGET (old node)
+                row = self._conn.execute(
+                    """
+                    SELECT source_id FROM edges
+                    WHERE target_id = ? AND edge_type = 'supersedes'
+                    LIMIT 1
+                    """,
+                    [current_id],
+                ).fetchone()
+            elif direction == "backward":
+                # What did this node replace?
+                # Find SUPERSEDES edge where current is SOURCE (new node)
+                row = self._conn.execute(
+                    """
+                    SELECT target_id FROM edges
+                    WHERE source_id = ? AND edge_type = 'supersedes'
+                    LIMIT 1
+                    """,
+                    [current_id],
+                ).fetchone()
+            else:
+                raise ValueError(
+                    f"Invalid direction: {direction}. Use 'forward' or 'backward'."
+                )
+
+            if row is None:
+                break
+
+            next_id = str(row[0])
+            if next_id in visited:
+                break  # Cycle detection
+
+            visited.add(next_id)
+
+            # Fetch the node (include all states since chain may have archived nodes)
+            node_row = self._conn.execute(
+                "SELECT * FROM nodes WHERE id = ?", [next_id]
+            ).fetchone()
+            if node_row is None:
+                break
+
+            chain.append(self._row_to_node(node_row))
+            current_id = next_id
+
+        return chain
 
     # --- Row conversion helpers ---
 
