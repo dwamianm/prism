@@ -38,6 +38,7 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             content_hash VARCHAR NOT NULL,
             user_id VARCHAR NOT NULL,
             session_id VARCHAR,
+            scope VARCHAR NOT NULL DEFAULT 'personal',
             metadata JSON,
             created_at TIMESTAMPTZ DEFAULT current_timestamp
         )
@@ -54,6 +55,9 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_events_hash ON events (content_hash)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_events_scope ON events (scope)"
     )
 
     # --- Nodes table ---
@@ -124,6 +128,76 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_edges_user ON edges (user_id)"
     )
+
+
+def _migrate_events_scope(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add scope column to events table if missing (auto-migration).
+
+    For existing databases created before scope was added to the events
+    table, this function detects the missing column and adds it with
+    a NOT NULL DEFAULT 'personal' constraint. DuckDB backfills all
+    existing rows atomically.
+
+    Safe to call on databases that already have the scope column (no-op).
+
+    Args:
+        conn: Active DuckDB connection.
+    """
+    result = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'events' AND column_name = 'scope'
+    """).fetchone()
+    if result is None:
+        # DuckDB 1.4.x does not support ADD COLUMN with NOT NULL
+        # constraint, so we add with DEFAULT only. The DEFAULT
+        # backfills existing rows as 'personal'. New databases use
+        # CREATE TABLE with NOT NULL DEFAULT for full enforcement.
+        conn.execute("""
+            ALTER TABLE events
+            ADD COLUMN scope VARCHAR DEFAULT 'personal'
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_events_scope ON events (scope)"
+        )
+        logger.info(
+            "Migrated events table: added scope column "
+            "(backfilled as 'personal')"
+        )
+
+
+def _verify_nodes_scope(conn: duckdb.DuckDBPyConnection) -> None:
+    """Verify existing graph nodes have consistent scope values.
+
+    The nodes table already has a NOT NULL DEFAULT 'personal' constraint
+    on the scope column, so this should always be a no-op. This function
+    serves as a safety check per user decision to verify existing graph
+    nodes at startup.
+
+    Args:
+        conn: Active DuckDB connection.
+    """
+    # Check if the nodes table exists first (may not exist on first run
+    # before create_schema completes)
+    table_exists = conn.execute("""
+        SELECT table_name FROM information_schema.tables
+        WHERE table_name = 'nodes'
+    """).fetchone()
+    if table_exists is None:
+        return
+
+    null_count = conn.execute(
+        "SELECT COUNT(*) FROM nodes WHERE scope IS NULL"
+    ).fetchone()[0]
+    if null_count > 0:
+        conn.execute(
+            "UPDATE nodes SET scope = 'personal' WHERE scope IS NULL"
+        )
+        logger.info(
+            "Fixed %d graph nodes with NULL scope (set to 'personal')",
+            null_count,
+        )
+    else:
+        logger.debug("Nodes scope verification passed: no NULL scope values")
 
 
 def install_duckpgq(conn: duckdb.DuckDBPyConnection) -> bool:
@@ -222,5 +296,7 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     """
     pgq_available = install_duckpgq(conn)
     create_schema(conn)
+    _migrate_events_scope(conn)
+    _verify_nodes_scope(conn)
     pgq_graph = create_property_graph(conn)
     return pgq_available and pgq_graph
