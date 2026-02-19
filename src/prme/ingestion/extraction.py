@@ -52,6 +52,12 @@ Use relationship types: relates_to, part_of, caused_by, supports, mentions.
 "yesterday", "last week", "in March 2024", "3 days ago"), include the raw \
 temporal text in the temporal_ref field.
 
+6. **Scope Classification**: For each entity and fact, classify the scope:
+   - "personal" — about a specific individual's preferences, habits, or personal context
+   - "project" — about a specific project, its decisions, tools, or deliverables
+   - "org" — about organization-wide policies, structures, or shared context
+   If the scope is unclear, leave it as null (the system will use a safe default).
+
 IMPORTANT RULES:
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.
