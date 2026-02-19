@@ -42,24 +42,28 @@ An LLM-powered agent can reliably recall long-term context — preferences, deci
 - Target consumers: the developer's own chatbot/agent first, then other developers embedding PRME in their LLM systems
 - Entity extraction and intent classification should use whichever method minimizes errors — likely LLM-powered extraction with rule-based fallbacks, determined during research
 - "It works" means: a developer can hit API endpoints, store conversations, and get accurate contextual recall back
-- Two spec documents exist in `docs/` defining the architecture and RFC-level requirements in detail
+- **Authoritative specification**: The Revised RFC suite in `docs/*` (RFC-0000 through RFC-0014) is the canonical spec. See `docs/INDEX.md` for the full listing and dependency graph. These RFCs supersede all prior spec documents in `docs/`
+- The RFC suite is organized into conformance tiers: Tier 0 (data model), Tier 1 (storage/integrity), Tier 2 (retrieval), Tier 3 (lifecycle), Tier 4 (advanced capabilities). An implementation claiming conformance at a given tier must satisfy all tiers below it
+- Key design principles from the Revised RFCs: determinism is scoped (strict at storage/derivation, best-effort at extraction); unvalidated parameters are marked `[HYPOTHESIS]` and require benchmarks before promotion; merge conflict resolution is fully specified; agent trust is domain-scoped not scalar
+- RFC-0013 (Intent and Goal Memory) replaces the original emotional/behavioral signal tracking. RFC-0014 (Portability, Sync, and Federation) replaces the original git sync profile with full merge conflict semantics
 - The spec's 3-phase roadmap (store+retrieve → organizer → encryption+CLI+eval) is the intended build order
 
 ## Constraints
 
 - **Language**: Python — DuckDB, Kuzu, and HNSW libraries have mature Python bindings
 - **Local-first**: All data stays local, no cloud dependencies for core functionality
-- **Determinism**: Identical event logs + config must produce identical retrieval results
+- **Determinism (scoped)**: Strict determinism at storage and derivation layers (identical event logs + config → identical retrieval results). Best-effort reproducibility at extraction layer (LLM-based extraction is inherently non-deterministic)
 - **Append-only**: Events are never mutated or deleted except by policy-based archival
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Python as implementation language | Mature bindings for DuckDB, Kuzu, HNSW; target audience familiarity | — Pending |
-| HTTP API first, library second | Cross-language compatibility; consistent interface for any LLM framework | — Pending |
-| Pluggable embedding providers | Avoid lock-in; support both API-based (OpenAI/Voyage) and local (sentence-transformers) | — Pending |
-| Full spec as v1 (all 3 phases) | Developer wants complete system including encryption, CLI, and eval harness | — Pending |
+| Decision                          | Rationale                                                                               | Outcome   |
+| --------------------------------- | --------------------------------------------------------------------------------------- | --------- |
+| Python as implementation language | Mature bindings for DuckDB, Kuzu, HNSW; target audience familiarity                     | — Pending |
+| HTTP API first, library second    | Cross-language compatibility; consistent interface for any LLM framework                | — Pending |
+| Pluggable embedding providers     | Avoid lock-in; support both API-based (OpenAI/Voyage) and local (sentence-transformers) | — Pending |
+| Full spec as v1 (all 3 phases)    | Developer wants complete system including encryption, CLI, and eval harness             | — Pending |
 
 ---
-*Last updated: 2026-02-19 after initialization*
+
+_Last updated: 2026-02-19 — updated to reference Revised RFC suite as authoritative spec_
