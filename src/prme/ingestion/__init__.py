@@ -11,6 +11,7 @@ from prme.ingestion.extraction import (
     InstructorExtractionProvider,
     create_extraction_provider,
 )
+from prme.ingestion.grounding import validate_grounding
 from prme.ingestion.schema import (
     ExtractedEntity,
     ExtractedFact,
@@ -29,4 +30,5 @@ __all__ = [
     "InstructorExtractionProvider",
     "SupersedenceDetector",
     "create_extraction_provider",
+    "validate_grounding",
 ]
