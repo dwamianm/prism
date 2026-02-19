@@ -1,0 +1,30 @@
+[project]
+name = "prme"
+version = "0.1.0"
+description = "Portable Relational Memory Engine - local-first memory substrate for LLM-powered systems"
+readme = "README.md"
+authors = [
+    { name = "dwamianm", email = "mcleish@cornersix.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "duckdb>=1.2.0",
+    "usearch>=2.16.0",
+    "tantivy>=0.22.0",
+    "pydantic>=2.12",
+    "pydantic-settings>=2.9",
+    "fastembed>=0.7.4",
+    "structlog",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "mypy",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.17,<0.10.0"]
+build-backend = "uv_build"
