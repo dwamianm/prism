@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 **Phase:** 2 of 7 (Ingestion Pipeline)
-**Current Plan:** 3
+**Current Plan:** 4
 **Total Plans in Phase:** 4
-**Status:** In progress
+**Status:** Ready to execute
 **Last Activity:** 2026-02-19
 
 Progress: [██████░░░░] 21%
@@ -41,6 +41,7 @@ Progress: [██████░░░░] 21%
 | Phase 01 P02 | 6min | 2 tasks | 6 files |
 | Phase 01 P04 | 6min | 2 tasks | 5 files |
 | Phase 02 P03 | 3min | 2 tasks | 4 files |
+| Phase 02 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Conservative entity merge: match on both name AND entity_type (case-insensitive) to prevent cross-type merging
 - [Phase 02]: Added HAS_FACT EdgeType for entity-to-fact graph relationships
 - [Phase 02]: Predicate equivalence classes kept small (3 groups) -- start exact, expand if hit rate too low
+- [Phase 02]: Single ExtractionResult schema with fact_type field for facts/decisions/preferences rather than separate models per type
+- [Phase 02]: InstructorExtractionProvider fails open (returns empty ExtractionResult) on extraction errors -- pipeline handles retry
+- [Phase 02]: Grounding validation uses conservative substring matching; facts filtered by subject only (object may be paraphrased)
 
 ### Pending Todos
 
@@ -80,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 02-03-PLAN.md (Entity merge + supersedence detection)
+Stopped at: Completed 02-02-PLAN.md (Extraction schema, provider protocol, grounding validation)
 Resume file: .planning/phases/02-ingestion-pipeline/02-04-PLAN.md
