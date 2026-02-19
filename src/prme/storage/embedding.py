@@ -1,13 +1,18 @@
 """Embedding provider abstraction and implementations.
 
 Defines the EmbeddingProvider Protocol for swappable embedding backends
-and provides a FastEmbed implementation using ONNX-based local models.
+and provides FastEmbed (local ONNX) and OpenAI (API-based) implementations,
+plus a factory function for config-driven provider selection.
 """
 
 from __future__ import annotations
 
+import asyncio
 import importlib.metadata
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from prme.config import EmbeddingConfig
 
 
 @runtime_checkable
@@ -121,3 +126,128 @@ class FastEmbedProvider:
         assert self._model is not None
         # TextEmbedding.embed() returns a generator of numpy arrays
         return [embedding.tolist() for embedding in self._model.embed(texts)]
+
+
+class OpenAIEmbeddingProvider:
+    """EmbeddingProvider using OpenAI's embedding API.
+
+    Lazily initializes the AsyncOpenAI client on first embed() call
+    to avoid requiring API keys at construction time.
+
+    The embed() method is synchronous (required by the EmbeddingProvider
+    Protocol) and internally runs the async OpenAI call via asyncio.run()
+    in a new event loop, since VectorIndex calls embed() from
+    asyncio.to_thread().
+
+    Args:
+        model_name: OpenAI embedding model identifier.
+            Defaults to 'text-embedding-3-small'.
+        api_key: Optional OpenAI API key. If None, the client will
+            use the OPENAI_API_KEY environment variable.
+        dimension: Output vector dimension. Defaults to the model's
+            known dimension (1536 for text-embedding-3-small).
+    """
+
+    _KNOWN_DIMENSIONS: dict[str, int] = {
+        "text-embedding-3-small": 1536,
+        "text-embedding-3-large": 3072,
+    }
+
+    def __init__(
+        self,
+        model_name: str = "text-embedding-3-small",
+        *,
+        api_key: str | None = None,
+        dimension: int | None = None,
+    ) -> None:
+        self._model_name = model_name
+        self._api_key = api_key
+        self._dimension = dimension or self._KNOWN_DIMENSIONS.get(model_name, 1536)
+        self._client = None  # Lazy-initialized AsyncOpenAI
+
+    @property
+    def model_name(self) -> str:
+        """Return the configured OpenAI embedding model identifier."""
+        return self._model_name
+
+    @property
+    def model_version(self) -> str:
+        """Return a version string combining provider and model name."""
+        return f"openai-{self._model_name}"
+
+    @property
+    def dimension(self) -> int:
+        """Return the embedding vector dimension."""
+        return self._dimension
+
+    def _ensure_client(self):
+        """Lazily initialize the AsyncOpenAI client on first use."""
+        if self._client is None:
+            from openai import AsyncOpenAI
+
+            kwargs: dict = {}
+            if self._api_key is not None:
+                kwargs["api_key"] = self._api_key
+            self._client = AsyncOpenAI(**kwargs)
+        return self._client
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed texts using the OpenAI embedding API.
+
+        Synchronous wrapper required by the EmbeddingProvider Protocol.
+        Internally runs the async API call via asyncio.run().
+
+        Args:
+            texts: List of strings to embed.
+
+        Returns:
+            List of float vectors with the configured dimension.
+        """
+        return asyncio.run(self._embed_async(texts))
+
+    async def _embed_async(self, texts: list[str]) -> list[list[float]]:
+        """Async implementation of embedding via OpenAI API.
+
+        Args:
+            texts: List of strings to embed.
+
+        Returns:
+            List of float vectors from the API response.
+        """
+        client = self._ensure_client()
+        response = await client.embeddings.create(
+            model=self._model_name,
+            input=texts,
+            dimensions=self._dimension,
+        )
+        return [item.embedding for item in response.data]
+
+
+def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
+    """Factory function to create the appropriate embedding provider.
+
+    Dispatches based on config.provider to return a FastEmbedProvider
+    or OpenAIEmbeddingProvider instance configured from the given config.
+
+    Args:
+        config: Embedding configuration specifying provider and model settings.
+
+    Returns:
+        An EmbeddingProvider instance matching the configured provider.
+
+    Raises:
+        ValueError: If the configured provider is not recognized.
+    """
+    if config.provider == "fastembed":
+        return FastEmbedProvider(
+            model_name=config.model_name,
+            dimension=config.dimension,
+        )
+    elif config.provider == "openai":
+        return OpenAIEmbeddingProvider(
+            model_name=config.model_name,
+            api_key=config.api_key,
+            dimension=config.dimension,
+        )
+    else:
+        raise ValueError(f"Unknown embedding provider: {config.provider}")
