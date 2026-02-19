@@ -12,7 +12,7 @@ PRME is built bottom-up from its event-sourced storage foundation through progre
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Storage Foundation** - All four storage backends with typed data model, temporal validity, lifecycle states, and user/session scoping
+- [x] **Phase 1: Storage Foundation** - All four storage backends with typed data model, temporal validity, lifecycle states, and user/session scoping (completed 2026-02-19)
 - [ ] **Phase 2: Ingestion Pipeline** - Conversations enter the system and produce structured memory across all storage backends
 - [ ] **Phase 3: Retrieval Pipeline** - Queries return ranked, explainable, context-packed memory from all backends
 - [ ] **Phase 4: HTTP API and Python SDK** - External consumers access memory through HTTP endpoints and a Python library
@@ -137,7 +137,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Storage Foundation | 0/4 | Planned | - |
+| 1. Storage Foundation | 0/4 | Complete    | 2026-02-19 |
 | 2. Ingestion Pipeline | 0/2 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
