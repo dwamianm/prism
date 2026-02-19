@@ -34,6 +34,7 @@ class EdgeType(str, Enum):
     CAUSED_BY = "caused_by"
     SUPPORTS = "supports"
     CONTRADICTS = "contradicts"
+    HAS_FACT = "has_fact"
 
 
 class Scope(str, Enum):
