@@ -49,11 +49,13 @@ Plans:
   2. Extraction works with at least two LLM providers (OpenAI API and one local option) selectable by configuration
   3. Embedding works with at least two providers (API-based and local/FastEmbed) selectable by configuration, and vectors carry model metadata
   4. Concurrent write requests are serialized through the async write queue without transaction conflicts or data loss
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md -- Dependencies, config extensions, WriteQueue, OpenAI embedding provider
+- [ ] 02-02-PLAN.md -- Extraction schema, ExtractionProvider Protocol, instructor implementations, grounding validation
+- [ ] 02-03-PLAN.md -- Entity merge and supersedence detection modules
+- [ ] 02-04-PLAN.md -- IngestionPipeline orchestrator, MemoryEngine integration, temporal resolution
 
 ### Phase 3: Retrieval Pipeline
 **Goal**: A developer can query memory and receive ranked results that combine graph, vector, and lexical signals with explainable scores and token-budgeted context packing
@@ -138,7 +140,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Storage Foundation | 0/4 | Complete    | 2026-02-19 |
-| 2. Ingestion Pipeline | 0/2 | Not started | - |
+| 2. Ingestion Pipeline | 0/4 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |
