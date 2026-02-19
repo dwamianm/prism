@@ -243,6 +243,7 @@ class MemoryEngine:
         session_id: str | None = None,
         metadata: dict | None = None,
         wait_for_extraction: bool = False,
+        scope: Scope = Scope.PERSONAL,
     ) -> str:
         """Ingest a message with LLM-powered extraction and materialization.
 
@@ -270,6 +271,7 @@ class MemoryEngine:
                 user_id=user_id,
                 session_id=session_id,
                 role=role,
+                scope=scope,
                 metadata=metadata,
             )
         return await self._pipeline.ingest(
@@ -279,6 +281,7 @@ class MemoryEngine:
             session_id=session_id,
             metadata=metadata,
             wait_for_extraction=wait_for_extraction,
+            scope=scope,
         )
 
     async def ingest_batch(
@@ -288,6 +291,7 @@ class MemoryEngine:
         user_id: str,
         session_id: str | None = None,
         wait_for_extraction: bool = False,
+        scope: Scope = Scope.PERSONAL,
     ) -> list[str]:
         """Ingest a batch of messages with LLM extraction.
 
@@ -315,6 +319,7 @@ class MemoryEngine:
                     user_id=user_id,
                     session_id=session_id,
                     role=msg["role"],
+                    scope=scope,
                     metadata=msg.get("metadata"),
                 )
                 event_ids.append(eid)
@@ -324,6 +329,7 @@ class MemoryEngine:
             user_id=user_id,
             session_id=session_id,
             wait_for_extraction=wait_for_extraction,
+            scope=scope,
         )
 
     async def search(
