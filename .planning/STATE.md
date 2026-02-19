@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 2 of 7 (Ingestion Pipeline)
 **Current Plan:** 4
 **Total Plans in Phase:** 4
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-02-19
 
 Progress: [██████░░░░] 21%
@@ -20,19 +20,19 @@ Progress: [██████░░░░] 21%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 4.2min
-- Total execution time: 0.42 hours
+- Total plans completed: 7
+- Average duration: 4.3min
+- Total execution time: 0.50 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-storage-foundation | 4 | 19min | 4.8min |
-| 02-ingestion-pipeline | 2 | 6min | 3min |
+| 02-ingestion-pipeline | 4 | 15min | 3.8min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 3min, 6min, 4min, 6min
+- Last 5 plans: 3min, 6min, 4min, 6min, 5min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -42,6 +42,7 @@ Progress: [██████░░░░] 21%
 | Phase 01 P04 | 6min | 2 tasks | 5 files |
 | Phase 02 P03 | 3min | 2 tasks | 4 files |
 | Phase 02 P02 | 4min | 2 tasks | 4 files |
+| Phase 02 P04 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Single ExtractionResult schema with fact_type field for facts/decisions/preferences rather than separate models per type
 - [Phase 02]: InstructorExtractionProvider fails open (returns empty ExtractionResult) on extraction errors -- pipeline handles retry
 - [Phase 02]: Grounding validation uses conservative substring matching; facts filtered by subject only (object may be paraphrased)
+- [Phase 02]: Lazy imports in engine.py and prme/__init__.py to break circular import chain (engine -> pipeline -> entity_merge -> graph_store -> engine)
+- [Phase 02]: All MemoryEngine writes serialized through WriteQueue -- store() and ingest() both route through write_queue.submit()
 
 ### Pending Todos
 
@@ -84,5 +87,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 02-02-PLAN.md (Extraction schema, provider protocol, grounding validation)
-Resume file: .planning/phases/02-ingestion-pipeline/02-04-PLAN.md
+Stopped at: Completed 02-04-PLAN.md (IngestionPipeline orchestrator + MemoryEngine integration). Phase 2 complete.
+Resume file: Next phase (03-retrieval-pipeline)
