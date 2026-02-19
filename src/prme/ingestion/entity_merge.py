@@ -42,6 +42,7 @@ class EntityMerger:
         description: str | None = None,
         session_id: str | None = None,
         evidence_event_id: str | None = None,
+        scope: Scope = Scope.PERSONAL,
     ) -> tuple[str, bool]:
         """Find an existing entity or create a new one.
 
@@ -96,7 +97,7 @@ class EntityMerger:
             content=name,
             user_id=user_id,
             session_id=session_id,
-            scope=Scope.PERSONAL,
+            scope=scope,
             lifecycle_state=LifecycleState.TENTATIVE,
             confidence=0.5,
             metadata=metadata,

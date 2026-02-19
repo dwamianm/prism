@@ -97,6 +97,7 @@ class IngestionPipeline:
         session_id: str | None = None,
         metadata: dict | None = None,
         wait_for_extraction: bool = False,
+        scope: Scope = Scope.PERSONAL,
     ) -> str:
         """Ingest a message through the two-phase pipeline.
 
@@ -126,6 +127,7 @@ class IngestionPipeline:
             session_id=session_id,
             role=role,
             metadata=metadata,
+            scope=scope,
         )
         event_id = await self._write_queue.submit(
             lambda ev=event: self._event_store.append(ev),
@@ -150,7 +152,7 @@ class IngestionPipeline:
 
         # --- Phase 2: Extract and materialize ---
         task = asyncio.create_task(
-            self._extract_and_materialize(event, event_id)
+            self._extract_and_materialize(event, event_id, scope)
         )
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
@@ -167,6 +169,7 @@ class IngestionPipeline:
         user_id: str,
         session_id: str | None = None,
         wait_for_extraction: bool = False,
+        scope: Scope = Scope.PERSONAL,
     ) -> list[str]:
         """Ingest a batch of messages sequentially.
 
@@ -193,12 +196,13 @@ class IngestionPipeline:
                 session_id=session_id,
                 metadata=msg.get("metadata"),
                 wait_for_extraction=wait_for_extraction,
+                scope=scope,
             )
             event_ids.append(event_id)
         return event_ids
 
     async def _extract_and_materialize(
-        self, event: Event, event_id: str
+        self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL
     ) -> None:
         """Run LLM extraction, validate grounding, and materialize results.
 
@@ -208,13 +212,14 @@ class IngestionPipeline:
         Args:
             event: The persisted Event model.
             event_id: String UUID of the event.
+            scope: Ingestion-level scope for fallback when LLM does not classify.
         """
         try:
             result = await self._extraction_provider.extract(
                 event.content, role=event.role
             )
             result = validate_grounding(result, event.content)
-            await self._materialize(result, event, event_id)
+            await self._materialize(result, event, event_id, scope)
             logger.info(
                 "ingestion.phase2_complete",
                 event_id=event_id,
@@ -228,26 +233,38 @@ class IngestionPipeline:
                 event_id=event_id,
                 exc_info=True,
             )
-            self._schedule_retry(event, event_id)
+            self._schedule_retry(event, event_id, scope=scope)
 
     async def _materialize(
-        self, result: ExtractionResult, event: Event, event_id: str
+        self,
+        result: ExtractionResult,
+        event: Event,
+        event_id: str,
+        scope: Scope = Scope.PERSONAL,
     ) -> None:
         """Materialize extraction results into graph, vector, and lexical stores.
 
         Creates entity nodes (via merge), fact/decision/preference nodes,
         relationship edges, and indexes everything for search.
 
+        Per-object scope from LLM extraction overrides the ingestion-level
+        scope. If the LLM did not classify scope (None), the ingestion-level
+        scope is used as fallback.
+
         Args:
             result: Grounding-validated extraction result.
             event: The source event.
             event_id: String UUID of the event.
+            scope: Ingestion-level scope for fallback when LLM does not classify.
         """
         # Map entity name -> entity_id for relationship wiring
         entity_id_map: dict[str, str] = {}
 
         # --- Entities ---
         for entity in result.entities:
+            # Resolve scope: LLM-extracted scope overrides ingestion-level default
+            entity_scope = Scope(entity.scope) if entity.scope else scope
+
             entity_id, _is_new = await self._entity_merger.find_or_create_entity(
                 name=entity.name,
                 entity_type=entity.entity_type,
@@ -255,6 +272,7 @@ class IngestionPipeline:
                 description=entity.description,
                 session_id=event.session_id,
                 evidence_event_id=event_id,
+                scope=entity_scope,
             )
             entity_id_map[entity.name.strip().lower()] = entity_id
 
@@ -271,6 +289,9 @@ class IngestionPipeline:
 
         # --- Facts ---
         for fact in result.facts:
+            # Resolve scope: LLM-extracted scope overrides ingestion-level default
+            fact_scope = Scope(fact.scope) if fact.scope else scope
+
             # Resolve temporal reference
             resolved_date = self._resolve_temporal(fact.temporal_ref)
 
@@ -299,7 +320,7 @@ class IngestionPipeline:
                 content=fact_content,
                 user_id=event.user_id,
                 session_id=event.session_id,
-                scope=Scope.PERSONAL,
+                scope=fact_scope,
                 lifecycle_state=LifecycleState.TENTATIVE,
                 confidence=fact.confidence,
                 metadata=fact_metadata,
@@ -426,7 +447,12 @@ class IngestionPipeline:
         return None
 
     def _schedule_retry(
-        self, event: Event, event_id: str, attempt: int = 1
+        self,
+        event: Event,
+        event_id: str,
+        attempt: int = 1,
+        *,
+        scope: Scope = Scope.PERSONAL,
     ) -> None:
         """Schedule a retry of extraction with exponential backoff.
 
@@ -437,6 +463,7 @@ class IngestionPipeline:
             event: The event to re-extract.
             event_id: String UUID of the event.
             attempt: Current attempt number (1-based).
+            scope: Ingestion-level scope to forward on retry.
         """
         if attempt > 3:
             logger.error(
@@ -457,7 +484,7 @@ class IngestionPipeline:
         async def _retry() -> None:
             await asyncio.sleep(delay)
             try:
-                await self._extract_and_materialize(event, event_id)
+                await self._extract_and_materialize(event, event_id, scope)
             except Exception:
                 logger.error(
                     "ingestion.retry_failed",
@@ -465,7 +492,7 @@ class IngestionPipeline:
                     attempt=attempt,
                     exc_info=True,
                 )
-                self._schedule_retry(event, event_id, attempt + 1)
+                self._schedule_retry(event, event_id, attempt + 1, scope=scope)
 
         task = asyncio.create_task(_retry())
         self._retry_tasks[event_id] = task
