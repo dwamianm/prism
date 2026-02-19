@@ -22,6 +22,14 @@ class ExtractedEntity(BaseModel):
         default=None,
         description="Brief contextual description from the text",
     )
+    scope: str | None = Field(
+        default=None,
+        description=(
+            "Scope classification: 'personal' for individual context, "
+            "'project' for project-specific context, 'org' for "
+            "organization-wide context. Null if unclear."
+        ),
+    )
 
 
 class ExtractedFact(BaseModel):
@@ -50,6 +58,13 @@ class ExtractedFact(BaseModel):
     fact_type: str = Field(
         default="fact",
         description="One of: fact, decision, preference",
+    )
+    scope: str | None = Field(
+        default=None,
+        description=(
+            "Scope classification: 'personal', 'project', or 'org'. "
+            "Null if unclear."
+        ),
     )
 
 
