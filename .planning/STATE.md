@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 2: Ingestion Pipeline
+**Current focus:** Phase 2.1: Scope Isolation Fix
 
 ## Current Position
 
-**Phase:** 2 of 7 (Ingestion Pipeline)
-**Current Plan:** Not started
-**Total Plans in Phase:** 4
-**Status:** Milestone complete
+**Phase:** 2.1 of 7 (Scope Isolation Fix)
+**Current Plan:** 2 of 2
+**Total Plans in Phase:** 2
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-02-19
 
-Progress: [██████░░░░] 21%
+Progress: [██████░░░░] 24%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 4.3min
-- Total execution time: 0.50 hours
+- Total plans completed: 8
+- Average duration: 4.1min
+- Total execution time: 0.55 hours
 
 **By Phase:**
 
@@ -30,12 +30,14 @@ Progress: [██████░░░░] 21%
 |-------|-------|-------|----------|
 | 01-storage-foundation | 4 | 19min | 4.8min |
 | 02-ingestion-pipeline | 4 | 15min | 3.8min |
+| 02.1-scope-isolation-fix | 1 | 3min | 3.0min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 6min, 4min, 6min, 5min
+- Last 5 plans: 6min, 4min, 6min, 5min, 3min
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 02.1 P01 | 3min | 2 tasks | 2 files |
 | Phase 02 P01 | 3min | 2 tasks | 5 files |
 | Phase 01 P03 | 4min | 2 tasks | 3 files |
 | Phase 01 P02 | 6min | 2 tasks | 6 files |
@@ -43,6 +45,7 @@ Progress: [██████░░░░] 21%
 | Phase 02 P03 | 3min | 2 tasks | 4 files |
 | Phase 02 P02 | 4min | 2 tasks | 4 files |
 | Phase 02 P04 | 5min | 2 tasks | 5 files |
+| Phase 02.1 P02 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -75,6 +78,11 @@ Recent decisions affecting current work:
 - [Phase 02]: Grounding validation uses conservative substring matching; facts filtered by subject only (object may be paraphrased)
 - [Phase 02]: Lazy imports in engine.py and prme/__init__.py to break circular import chain (engine -> pipeline -> entity_merge -> graph_store -> engine)
 - [Phase 02]: All MemoryEngine writes serialized through WriteQueue -- store() and ingest() both route through write_queue.submit()
+- [Phase 02.1]: DuckDB 1.4.x ALTER TABLE ADD COLUMN does not support NOT NULL constraint -- migration uses DEFAULT only; CREATE TABLE has full NOT NULL DEFAULT
+- [Phase 02.1]: Explicit column SELECT list (_EVENT_COLUMNS) replaces SELECT * in EventStore to avoid positional dependency on schema evolution
+- [Phase 02.1]: LLM-extracted scope (per entity/fact) overrides ingestion-level scope when present; null falls back to ingestion-level default
+- [Phase 02.1]: Entity merge lookup does not filter by scope (conservative merge: same entity in different scopes still merges within same user_id)
+- [Phase 02.1]: Scope param defaults to Scope.PERSONAL at all entry points for backward compatibility
 
 ### Pending Todos
 
@@ -87,5 +95,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 02-04-PLAN.md (IngestionPipeline orchestrator + MemoryEngine integration). Phase 2 complete.
-Resume file: Next phase (03-retrieval-pipeline)
+Stopped at: Completed 02.1-01-PLAN.md (EventStore scope persistence + auto-migration).
+Resume file: 02.1-02-PLAN.md (ingestion pipeline scope threading)

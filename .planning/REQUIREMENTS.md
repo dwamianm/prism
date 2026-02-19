@@ -14,7 +14,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **STOR-03**: System represents relationships as typed edges with valid_from, valid_to, confidence, and provenance reference
 - [x] **STOR-04**: System indexes event content and facts in an HNSW vector index with versioned embedding metadata
 - [x] **STOR-05**: System indexes event content and facts in a full-text lexical index (Tantivy)
-- [ ] **STOR-06**: System scopes all memory operations by user_id and session_id
+- [x] **STOR-06**: System scopes all memory operations by user_id and session_id
 - [x] **STOR-07**: System tracks memory object lifecycle states (Tentative → Stable → Superseded → Archived)
 - [x] **STOR-08**: System maintains supersedence chains with provenance — superseded facts link to their replacement and the evidence that triggered the change
 
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-03 | Phase 1 | Satisfied |
 | STOR-04 | Phase 1 | Satisfied |
 | STOR-05 | Phase 1 | Satisfied |
-| STOR-06 | Phase 1, Phase 2.1 | Pending |
+| STOR-06 | Phase 1, Phase 2.1 | Complete |
 | STOR-07 | Phase 1 | Satisfied |
 | STOR-08 | Phase 1 | Satisfied |
 | INGE-01 | Phase 2 | Satisfied |
