@@ -13,6 +13,15 @@ from uuid import UUID
 import duckdb
 
 from prme.models import Event
+from prme.types import Scope
+
+# Explicit column list used in all SELECT queries to avoid positional
+# dependency issues when the schema evolves (e.g., ALTER TABLE adds
+# columns at the end rather than at the CREATE TABLE position).
+_EVENT_COLUMNS = (
+    "id, timestamp, role, content, content_hash, "
+    "user_id, session_id, scope, metadata, created_at"
+)
 
 
 class EventStore:
@@ -58,14 +67,17 @@ class EventStore:
         user_id: str,
         *,
         session_id: str | None = None,
+        scopes: list[Scope] | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Event]:
-        """Retrieve events for a user, optionally filtered by session.
+        """Retrieve events for a user, optionally filtered by session and scope.
 
         Args:
             user_id: The user to query events for.
             session_id: Optional session filter.
+            scopes: Optional list of scopes to filter by. When None,
+                returns events from all scopes (backward compatible).
             limit: Maximum number of events to return.
             offset: Number of events to skip.
 
@@ -73,23 +85,29 @@ class EventStore:
             List of Events ordered by timestamp descending.
         """
         return await asyncio.to_thread(
-            self._get_by_user_sync, user_id, session_id, limit, offset
+            self._get_by_user_sync, user_id, session_id, scopes, limit, offset
         )
 
     async def get_by_hash(
-        self, content_hash: str, user_id: str
+        self,
+        content_hash: str,
+        user_id: str,
+        *,
+        scopes: list[Scope] | None = None,
     ) -> list[Event]:
         """Find events with the same content hash for dedup detection.
 
         Args:
             content_hash: SHA-256 hash of the content to find.
             user_id: User scope for the query.
+            scopes: Optional list of scopes to filter by. When None,
+                returns events from all scopes (backward compatible).
 
         Returns:
             List of Events matching the content hash.
         """
         return await asyncio.to_thread(
-            self._get_by_hash_sync, content_hash, user_id
+            self._get_by_hash_sync, content_hash, user_id, scopes
         )
 
     # --- Internal sync methods ---
@@ -103,8 +121,8 @@ class EventStore:
             """
             INSERT INTO events (
                 id, timestamp, role, content, content_hash,
-                user_id, session_id, metadata, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                user_id, session_id, scope, metadata, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 str(event.id),
@@ -114,6 +132,7 @@ class EventStore:
                 event.content_hash,
                 event.user_id,
                 event.session_id,
+                event.scope.value,
                 metadata_json,
                 event.created_at,
             ],
@@ -122,7 +141,8 @@ class EventStore:
     def _get_sync(self, event_id: str) -> Event | None:
         """Retrieve a single event by ID (sync)."""
         result = self._conn.execute(
-            "SELECT * FROM events WHERE id = ?", [event_id]
+            f"SELECT {_EVENT_COLUMNS} FROM events WHERE id = ?",
+            [event_id],
         ).fetchone()
         if result is None:
             return None
@@ -132,52 +152,69 @@ class EventStore:
         self,
         user_id: str,
         session_id: str | None,
+        scopes: list[Scope] | None,
         limit: int,
         offset: int,
     ) -> list[Event]:
-        """Retrieve events for a user (sync)."""
+        """Retrieve events for a user (sync).
+
+        Builds a dynamic WHERE clause from the provided filters.
+        """
+        conditions: list[str] = ["user_id = ?"]
+        params: list = [user_id]
+
         if session_id is not None:
-            result = self._conn.execute(
-                """
-                SELECT * FROM events
-                WHERE user_id = ? AND session_id = ?
-                ORDER BY timestamp DESC
-                LIMIT ? OFFSET ?
-                """,
-                [user_id, session_id, limit, offset],
-            ).fetchall()
-        else:
-            result = self._conn.execute(
-                """
-                SELECT * FROM events
-                WHERE user_id = ?
-                ORDER BY timestamp DESC
-                LIMIT ? OFFSET ?
-                """,
-                [user_id, limit, offset],
-            ).fetchall()
+            conditions.append("session_id = ?")
+            params.append(session_id)
+
+        if scopes is not None:
+            placeholders = ", ".join(["?" for _ in scopes])
+            conditions.append(f"scope IN ({placeholders})")
+            params.extend([s.value for s in scopes])
+
+        where_clause = " AND ".join(conditions)
+        query = (
+            f"SELECT {_EVENT_COLUMNS} FROM events "
+            f"WHERE {where_clause} "
+            f"ORDER BY timestamp DESC "
+            f"LIMIT ? OFFSET ?"
+        )
+        params.extend([limit, offset])
+
+        result = self._conn.execute(query, params).fetchall()
         return [self._row_to_event(row) for row in result]
 
     def _get_by_hash_sync(
-        self, content_hash: str, user_id: str
+        self,
+        content_hash: str,
+        user_id: str,
+        scopes: list[Scope] | None,
     ) -> list[Event]:
         """Find events by content hash (sync)."""
-        result = self._conn.execute(
-            """
-            SELECT * FROM events
-            WHERE content_hash = ? AND user_id = ?
-            ORDER BY timestamp DESC
-            """,
-            [content_hash, user_id],
-        ).fetchall()
+        conditions: list[str] = ["content_hash = ?", "user_id = ?"]
+        params: list = [content_hash, user_id]
+
+        if scopes is not None:
+            placeholders = ", ".join(["?" for _ in scopes])
+            conditions.append(f"scope IN ({placeholders})")
+            params.extend([s.value for s in scopes])
+
+        where_clause = " AND ".join(conditions)
+        query = (
+            f"SELECT {_EVENT_COLUMNS} FROM events "
+            f"WHERE {where_clause} "
+            f"ORDER BY timestamp DESC"
+        )
+
+        result = self._conn.execute(query, params).fetchall()
         return [self._row_to_event(row) for row in result]
 
     def _row_to_event(self, row: tuple) -> Event:
         """Convert a DuckDB row tuple to an Event model instance.
 
-        Column order matches the CREATE TABLE definition:
-        id, timestamp, role, content, content_hash,
-        user_id, session_id, metadata, created_at
+        Column order matches the explicit SELECT column list:
+        id(0), timestamp(1), role(2), content(3), content_hash(4),
+        user_id(5), session_id(6), scope(7), metadata(8), created_at(9)
         """
         raw_id = row[0]
         event_id = raw_id if isinstance(raw_id, UUID) else UUID(str(raw_id))
@@ -192,7 +229,7 @@ class EventStore:
         else:
             ts = raw_ts
 
-        raw_created = row[8]
+        raw_created = row[9]
         if isinstance(raw_created, datetime):
             created_at = (
                 raw_created.replace(tzinfo=timezone.utc)
@@ -202,11 +239,16 @@ class EventStore:
         else:
             created_at = raw_created
 
-        raw_metadata = row[7]
+        raw_metadata = row[8]
         if isinstance(raw_metadata, str):
             metadata = json.loads(raw_metadata)
         else:
             metadata = raw_metadata
+
+        # Map scope VARCHAR back to Scope enum. Works because Scope
+        # uses the (str, Enum) pattern for DuckDB VARCHAR compatibility.
+        scope_value = row[7]
+        scope = Scope(scope_value) if scope_value is not None else Scope.PERSONAL
 
         return Event.model_validate(
             {
@@ -217,6 +259,7 @@ class EventStore:
                 "content_hash": row[4],
                 "user_id": row[5],
                 "session_id": row[6],
+                "scope": scope,
                 "metadata": metadata,
                 "created_at": created_at,
             }
