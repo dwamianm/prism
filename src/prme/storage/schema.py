@@ -92,11 +92,16 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     )
 
     # --- Edges table ---
+    # Note: source_id and target_id intentionally do NOT use REFERENCES
+    # (foreign key constraints). DuckDB treats UPDATE as DELETE+INSERT
+    # internally, which causes FK violations when updating a node that
+    # is referenced by edges -- even when the primary key is unchanged.
+    # Referential integrity is enforced at the application level.
     conn.execute("""
         CREATE TABLE IF NOT EXISTS edges (
             id UUID PRIMARY KEY,
-            source_id UUID NOT NULL REFERENCES nodes(id),
-            target_id UUID NOT NULL REFERENCES nodes(id),
+            source_id UUID NOT NULL,
+            target_id UUID NOT NULL,
             edge_type VARCHAR NOT NULL,
             user_id VARCHAR NOT NULL,
             confidence FLOAT DEFAULT 0.5,
