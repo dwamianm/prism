@@ -32,12 +32,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A typed edge created between graph nodes carries valid_from, valid_to, confidence, and provenance reference, and supersedence chains link replaced facts to their successors with evidence
   4. Content embedded into the HNSW vector index returns approximate nearest neighbors, and each vector record includes embedding model name, version, and dimension metadata
   5. Content indexed in Tantivy returns BM25-ranked full-text search results
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Project scaffolding, domain models, type enums, lifecycle state machine, configuration
+- [ ] 01-02-PLAN.md — DuckDB schema, EventStore, GraphStore Protocol, DuckPGQ node/edge CRUD
+- [ ] 01-03-PLAN.md — VectorIndex (USearch + FastEmbed) and LexicalIndex (tantivy-py BM25)
+- [ ] 01-04-PLAN.md — GraphStore advanced ops (traversal, lifecycle, supersedence) and MemoryEngine integration
 
 ### Phase 2: Ingestion Pipeline
 **Goal**: A developer can submit conversation events and the system automatically extracts entities, facts, and relationships into structured memory across all storage backends
@@ -136,7 +137,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Storage Foundation | 0/3 | Not started | - |
+| 1. Storage Foundation | 0/4 | Planned | - |
 | 2. Ingestion Pipeline | 0/2 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
