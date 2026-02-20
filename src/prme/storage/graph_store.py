@@ -235,3 +235,29 @@ class GraphStore(Protocol):
             ValueError: If the transition is invalid.
         """
         ...
+
+    # --- Cleanup / Rollback ---
+
+    async def delete_node(self, node_id: str) -> None:
+        """Delete a node by ID.
+
+        Used for rollback cleanup when event materialization fails.
+        Also needed for Phase 5 archival. No-op if the node does
+        not exist.
+
+        Args:
+            node_id: String UUID of the node to delete.
+        """
+        ...
+
+    async def delete_edge(self, edge_id: str) -> None:
+        """Delete an edge by ID.
+
+        Used for rollback cleanup when event materialization fails.
+        Also needed for Phase 5 archival. No-op if the edge does
+        not exist.
+
+        Args:
+            edge_id: String UUID of the edge to delete.
+        """
+        ...

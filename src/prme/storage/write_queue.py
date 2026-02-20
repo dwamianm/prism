@@ -4,6 +4,9 @@ Serializes all storage backend write operations through a single
 asyncio consumer, ensuring DuckDB single-writer safety under
 concurrent HTTP load. Producers submit coroutine factories and
 await Future-based responses.
+
+Also provides WriteTracker for recording graph write operations
+during event materialization and rolling them back on failure.
 """
 
 from __future__ import annotations
@@ -130,3 +133,86 @@ class WriteQueue:
     def pending(self) -> int:
         """Number of pending jobs in the queue."""
         return self._queue.qsize()
+
+
+class WriteTracker:
+    """Tracks graph write operations for rollback on failure.
+
+    Records node and edge IDs created during event materialization.
+    On failure, rollback() deletes all tracked artifacts in reverse
+    order (edges first for referential integrity, then nodes) via
+    the WriteQueue to maintain serialization.
+
+    Note: Graph rollback only. Vector and lexical index entries for
+    rolled-back nodes will be orphaned -- these stores currently lack
+    delete methods. Orphaned entries are harmless (search returns an
+    ID, get_node returns None, caller handles gracefully). Vector and
+    lexical cleanup will be added when those delete methods are
+    implemented.
+    """
+
+    def __init__(self) -> None:
+        self._created_node_ids: list[str] = []
+        self._created_edge_ids: list[str] = []
+
+    def record_node(self, node_id: str) -> None:
+        """Record a created node ID for potential rollback."""
+        self._created_node_ids.append(node_id)
+
+    def record_edge(self, edge_id: str) -> None:
+        """Record a created edge ID for potential rollback."""
+        self._created_edge_ids.append(edge_id)
+
+    @property
+    def node_ids(self) -> list[str]:
+        """Return a copy of recorded node IDs."""
+        return list(self._created_node_ids)
+
+    @property
+    def edge_ids(self) -> list[str]:
+        """Return a copy of recorded edge IDs."""
+        return list(self._created_edge_ids)
+
+    async def rollback(self, graph_store: object, write_queue: WriteQueue) -> None:
+        """Delete all tracked writes in reverse order via WriteQueue.
+
+        Edges first (referential integrity), then nodes. Best-effort:
+        logs warnings on individual delete failures but continues with
+        remaining items.
+
+        Args:
+            graph_store: GraphStore instance with delete_node/delete_edge
+                methods. Typed as object to avoid circular import with
+                the GraphStore Protocol.
+            write_queue: WriteQueue for serialized delete execution.
+        """
+        for edge_id in reversed(self._created_edge_ids):
+            try:
+                await write_queue.submit(
+                    lambda eid=edge_id: graph_store.delete_edge(eid),  # type: ignore[attr-defined]
+                    label=f"rollback.edge:{edge_id}",
+                )
+            except Exception:
+                logger.warning(
+                    "rollback.edge_failed", edge_id=edge_id, exc_info=True
+                )
+
+        for node_id in reversed(self._created_node_ids):
+            try:
+                await write_queue.submit(
+                    lambda nid=node_id: graph_store.delete_node(nid),  # type: ignore[attr-defined]
+                    label=f"rollback.node:{node_id}",
+                )
+            except Exception:
+                logger.warning(
+                    "rollback.node_failed", node_id=node_id, exc_info=True
+                )
+
+        if self._created_node_ids or self._created_edge_ids:
+            logger.warning(
+                "rollback.orphaned_indexes",
+                node_count=len(self._created_node_ids),
+                edge_count=len(self._created_edge_ids),
+                detail="Vector and lexical index entries for rolled-back "
+                "nodes may be orphaned (cleanup deferred to future phase)",
+            )

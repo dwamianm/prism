@@ -308,7 +308,45 @@ class DuckPGQGraphStore:
             self._get_supersedence_chain_sync, node_id, direction
         )
 
+    # --- Cleanup / Rollback ---
+
+    async def delete_node(self, node_id: str) -> None:
+        """Delete a node by ID for rollback cleanup.
+
+        No-op if the node does not exist. Logs the deletion at debug
+        level for traceability.
+
+        Args:
+            node_id: String UUID of the node to delete.
+        """
+        # Defense-in-depth: primary write serialization is via WriteQueue
+        async with self._write_lock:
+            await asyncio.to_thread(self._delete_node_sync, node_id)
+
+    async def delete_edge(self, edge_id: str) -> None:
+        """Delete an edge by ID for rollback cleanup.
+
+        No-op if the edge does not exist. Logs the deletion at debug
+        level for traceability.
+
+        Args:
+            edge_id: String UUID of the edge to delete.
+        """
+        # Defense-in-depth: primary write serialization is via WriteQueue
+        async with self._write_lock:
+            await asyncio.to_thread(self._delete_edge_sync, edge_id)
+
     # --- Internal sync methods ---
+
+    def _delete_node_sync(self, node_id: str) -> None:
+        """Delete a node by ID (sync). No-op if not found."""
+        self._conn.execute("DELETE FROM nodes WHERE id = ?", [node_id])
+        logger.debug("graph.delete_node", extra={"node_id": node_id})
+
+    def _delete_edge_sync(self, edge_id: str) -> None:
+        """Delete an edge by ID (sync). No-op if not found."""
+        self._conn.execute("DELETE FROM edges WHERE id = ?", [edge_id])
+        logger.debug("graph.delete_edge", extra={"edge_id": edge_id})
 
     def _create_node_sync(self, node: MemoryNode) -> None:
         """Insert a node into the nodes table (sync)."""
