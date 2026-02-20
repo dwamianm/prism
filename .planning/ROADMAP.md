@@ -69,11 +69,12 @@ Plans:
   1. An event stored in DuckDB includes its scope value, and events can be queried by scope
   2. IngestionPipeline.ingest() accepts a scope parameter that flows through to all created MemoryNodes
   3. Existing tests continue to pass with PERSONAL as the default scope
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 - [ ] 02.1-01-PLAN.md — EventStore scope persistence: DuckDB schema migration, scope in INSERT/SELECT, multi-scope query filtering
 - [ ] 02.1-02-PLAN.md — Ingestion pipeline scope threading: extraction schema, LLM prompt, entity merge, pipeline, engine entry points
+- [ ] 02.1-03-PLAN.md — Gap closure: add scope=scope to Event() constructor in MemoryEngine.store()
 
 ### Phase 2.2: WriteQueue Contract & Async Safety
 **Goal**: All graph writes during ingestion are serialized through WriteQueue and the embedding provider works safely in async contexts
@@ -188,7 +189,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Storage Foundation | 0/4 | Complete    | 2026-02-19 |
 | 2. Ingestion Pipeline | 0/4 | Complete    | 2026-02-19 |
-| 2.1 Scope Isolation Fix | 1/2 | In progress | - |
+| 2.1 Scope Isolation Fix | 2/3 | In progress | - |
 | 2.2 WriteQueue Contract & Async Safety | 0/1 | Not started | - |
 | 2.3 Revised RFC Reconciliation | 0/1 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
