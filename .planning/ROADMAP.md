@@ -86,10 +86,12 @@ Plans:
   2. SupersedenceDetector.detect_and_supersede() routes all graph writes through WriteQueue
   3. OpenAIEmbeddingProvider.embed() works correctly when called from both async context and thread pool context
   4. Concurrent ingestion requests do not produce transaction conflicts or data loss
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02.2-01: TBD
+- [ ] 02.2-01-PLAN.md -- GraphWriter Protocol, WriteQueueGraphWriter, WriteTracker rollback, custom exception hierarchy
+- [ ] 02.2-02-PLAN.md -- Async EmbeddingProvider Protocol, LRU cache, VectorIndex async update
+- [ ] 02.2-03-PLAN.md -- Pipeline/Engine wiring with GraphWriter, rollback-on-failure, concurrency tests
 
 ### Phase 2.3: Revised RFC Reconciliation
 **Goal**: REQUIREMENTS.md is reconciled against the Revised RFC suite (RFC-0000 through RFC-0014) and any delta between built code and revised specs is identified
@@ -190,7 +192,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6
 | 1. Storage Foundation | 0/4 | Complete    | 2026-02-19 |
 | 2. Ingestion Pipeline | 0/4 | Complete    | 2026-02-19 |
 | 2.1 Scope Isolation Fix | 2/3 | In progress | - |
-| 2.2 WriteQueue Contract & Async Safety | 0/1 | Not started | - |
+| 2.2 WriteQueue Contract & Async Safety | 0/3 | Not started | - |
 | 2.3 Revised RFC Reconciliation | 0/1 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
