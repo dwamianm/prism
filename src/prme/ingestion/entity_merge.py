@@ -15,6 +15,7 @@ from uuid import UUID
 
 import structlog
 
+from prme.ingestion.graph_writer import GraphWriter
 from prme.models.nodes import MemoryNode
 from prme.storage.graph_store import GraphStore
 from prme.types import LifecycleState, NodeType, Scope
@@ -30,8 +31,9 @@ class EntityMerger:
     a new node otherwise.
     """
 
-    def __init__(self, graph_store: GraphStore) -> None:
+    def __init__(self, graph_store: GraphStore, graph_writer: GraphWriter) -> None:
         self._graph_store = graph_store
+        self._graph_writer = graph_writer
 
     async def find_or_create_entity(
         self,
@@ -104,7 +106,7 @@ class EntityMerger:
             evidence_refs=evidence_refs,
         )
 
-        node_id = await self._graph_store.create_node(node)
+        node_id = await self._graph_writer.create_node(node)
 
         logger.info(
             "Created new entity",

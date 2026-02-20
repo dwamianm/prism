@@ -23,12 +23,15 @@ import dateparser
 import structlog
 
 from prme.ingestion.entity_merge import EntityMerger
+from prme.ingestion.errors import MaterializationError
+from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import validate_grounding
 from prme.ingestion.schema import ExtractionResult
 from prme.ingestion.supersedence import SupersedenceDetector
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
 from prme.models.nodes import MemoryNode
+from prme.storage.write_queue import WriteTracker
 from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 if TYPE_CHECKING:
@@ -76,6 +79,7 @@ class IngestionPipeline:
         lexical_index: LexicalIndex,
         extraction_provider: ExtractionProvider,
         write_queue: WriteQueue,
+        graph_writer: GraphWriter | None = None,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -83,8 +87,9 @@ class IngestionPipeline:
         self._lexical_index = lexical_index
         self._extraction_provider = extraction_provider
         self._write_queue = write_queue
-        self._entity_merger = EntityMerger(graph_store)
-        self._supersedence_detector = SupersedenceDetector(graph_store)
+        self._graph_writer = graph_writer
+        self._entity_merger = EntityMerger(graph_store, graph_writer) if graph_writer else EntityMerger(graph_store, WriteQueueGraphWriter(graph_store, write_queue))
+        self._supersedence_detector = SupersedenceDetector(graph_store, graph_writer) if graph_writer else SupersedenceDetector(graph_store, WriteQueueGraphWriter(graph_store, write_queue))
         self._retry_tasks: dict[str, asyncio.Task] = {}
         self._background_tasks: set[asyncio.Task] = set()
 
@@ -244,8 +249,10 @@ class IngestionPipeline:
     ) -> None:
         """Materialize extraction results into graph, vector, and lexical stores.
 
-        Creates entity nodes (via merge), fact/decision/preference nodes,
-        relationship edges, and indexes everything for search.
+        Creates a per-event WriteTracker to record all graph artifacts. On
+        failure, rolls back all tracked graph nodes and edges. Vector and
+        lexical index writes are NOT rolled back (orphaned entries are
+        harmless and logged as a warning by WriteTracker).
 
         Per-object scope from LLM extraction overrides the ingestion-level
         scope. If the LLM did not classify scope (None), the ingestion-level
@@ -257,168 +264,185 @@ class IngestionPipeline:
             event_id: String UUID of the event.
             scope: Ingestion-level scope for fallback when LLM does not classify.
         """
-        # Map entity name -> entity_id for relationship wiring
-        entity_id_map: dict[str, str] = {}
+        tracker = WriteTracker()
+        tracked_writer = WriteQueueGraphWriter(
+            self._graph_store, self._write_queue, tracker=tracker
+        )
+        entity_merger = EntityMerger(self._graph_store, tracked_writer)
+        supersedence_detector = SupersedenceDetector(self._graph_store, tracked_writer)
 
-        # --- Entities ---
-        for entity in result.entities:
-            # Resolve scope: LLM-extracted scope overrides ingestion-level default
-            entity_scope = Scope(entity.scope) if entity.scope else scope
+        try:
+            # Map entity name -> entity_id for relationship wiring
+            entity_id_map: dict[str, str] = {}
 
-            entity_id, _is_new = await self._entity_merger.find_or_create_entity(
-                name=entity.name,
-                entity_type=entity.entity_type,
-                user_id=event.user_id,
-                description=entity.description,
-                session_id=event.session_id,
-                evidence_event_id=event_id,
-                scope=entity_scope,
-            )
-            entity_id_map[entity.name.strip().lower()] = entity_id
+            # --- Entities ---
+            for entity in result.entities:
+                # Resolve scope: LLM-extracted scope overrides ingestion-level default
+                entity_scope = Scope(entity.scope) if entity.scope else scope
 
-            # Index entity in vector store
-            entity_text = entity.name
-            if entity.description:
-                entity_text = f"{entity.name}: {entity.description}"
-            await self._write_queue.submit(
-                lambda eid=entity_id, txt=entity_text, uid=event.user_id: (
-                    self._vector_index.index(eid, txt, uid)
-                ),
-                label=f"vector.entity:{entity_id}",
-            )
-
-        # --- Facts ---
-        for fact in result.facts:
-            # Resolve scope: LLM-extracted scope overrides ingestion-level default
-            fact_scope = Scope(fact.scope) if fact.scope else scope
-
-            # Resolve temporal reference
-            resolved_date = self._resolve_temporal(fact.temporal_ref)
-
-            # Determine node type from fact_type
-            node_type = _FACT_TYPE_TO_NODE_TYPE.get(
-                fact.fact_type, NodeType.FACT
-            )
-
-            # Build fact content
-            fact_content = f"{fact.subject} {fact.predicate} {fact.object}"
-
-            # Build metadata
-            fact_metadata: dict = {
-                "subject": fact.subject,
-                "predicate": fact.predicate,
-                "object": fact.object,
-            }
-            if fact.temporal_ref:
-                fact_metadata["temporal_ref"] = fact.temporal_ref
-            if resolved_date:
-                fact_metadata["resolved_date"] = resolved_date
-
-            # Create fact node
-            fact_node = MemoryNode(
-                node_type=node_type,
-                content=fact_content,
-                user_id=event.user_id,
-                session_id=event.session_id,
-                scope=fact_scope,
-                lifecycle_state=LifecycleState.TENTATIVE,
-                confidence=fact.confidence,
-                metadata=fact_metadata,
-                evidence_refs=[event.id],
-            )
-            fact_node_id = await self._write_queue.submit(
-                lambda fn=fact_node: self._graph_store.create_node(fn),
-                label=f"graph.fact:{fact_node.id}",
-            )
-
-            # Create HAS_FACT edge from subject entity to fact node
-            subject_key = fact.subject.strip().lower()
-            subject_entity_id = entity_id_map.get(subject_key)
-            if subject_entity_id:
-                has_fact_edge = MemoryEdge(
-                    source_id=UUID(subject_entity_id),
-                    target_id=fact_node.id,
-                    edge_type=EdgeType.HAS_FACT,
+                entity_id, _is_new = await entity_merger.find_or_create_entity(
+                    name=entity.name,
+                    entity_type=entity.entity_type,
                     user_id=event.user_id,
-                    provenance_event_id=event.id,
-                )
-                await self._write_queue.submit(
-                    lambda e=has_fact_edge: self._graph_store.create_edge(e),
-                    label=f"graph.edge.has_fact:{fact_node_id}",
-                )
-
-                # Detect supersedence for the new fact
-                await self._supersedence_detector.detect_and_supersede(
-                    new_fact_node_id=fact_node_id,
-                    subject_entity_id=subject_entity_id,
-                    predicate=fact.predicate,
-                    object_value=fact.object,
-                    user_id=event.user_id,
+                    description=entity.description,
+                    session_id=event.session_id,
                     evidence_event_id=event_id,
+                    scope=entity_scope,
+                )
+                entity_id_map[entity.name.strip().lower()] = entity_id
+
+                # Index entity in vector store (not tracked for rollback)
+                entity_text = entity.name
+                if entity.description:
+                    entity_text = f"{entity.name}: {entity.description}"
+                await self._write_queue.submit(
+                    lambda eid=entity_id, txt=entity_text, uid=event.user_id: (
+                        self._vector_index.index(eid, txt, uid)
+                    ),
+                    label=f"vector.entity:{entity_id}",
                 )
 
-            # Index fact in vector and lexical stores
-            await self._write_queue.submit(
-                lambda fid=fact_node_id, fc=fact_content, uid=event.user_id: (
-                    self._vector_index.index(fid, fc, uid)
-                ),
-                label=f"vector.fact:{fact_node_id}",
-            )
-            await self._write_queue.submit(
-                lambda fid=fact_node_id, fc=fact_content, uid=event.user_id, nt=node_type.value: (
-                    self._lexical_index.index(fid, fc, uid, nt)
-                ),
-                label=f"lexical.fact:{fact_node_id}",
-            )
+            # --- Facts ---
+            for fact in result.facts:
+                # Resolve scope: LLM-extracted scope overrides ingestion-level default
+                fact_scope = Scope(fact.scope) if fact.scope else scope
 
-        # --- Relationships ---
-        for rel in result.relationships:
-            source_key = rel.source_entity.strip().lower()
-            target_key = rel.target_entity.strip().lower()
-            source_entity_id = entity_id_map.get(source_key)
-            target_entity_id = entity_id_map.get(target_key)
+                # Resolve temporal reference
+                resolved_date = self._resolve_temporal(fact.temporal_ref)
 
-            if source_entity_id and target_entity_id:
-                # Map relationship_type to EdgeType
-                edge_type = _relationship_type_to_edge_type(
-                    rel.relationship_type
+                # Determine node type from fact_type
+                node_type = _FACT_TYPE_TO_NODE_TYPE.get(
+                    fact.fact_type, NodeType.FACT
                 )
-                rel_edge = MemoryEdge(
-                    source_id=UUID(source_entity_id),
-                    target_id=UUID(target_entity_id),
-                    edge_type=edge_type,
+
+                # Build fact content
+                fact_content = f"{fact.subject} {fact.predicate} {fact.object}"
+
+                # Build metadata
+                fact_metadata: dict = {
+                    "subject": fact.subject,
+                    "predicate": fact.predicate,
+                    "object": fact.object,
+                }
+                if fact.temporal_ref:
+                    fact_metadata["temporal_ref"] = fact.temporal_ref
+                if resolved_date:
+                    fact_metadata["resolved_date"] = resolved_date
+
+                # Create fact node via tracked writer
+                fact_node = MemoryNode(
+                    node_type=node_type,
+                    content=fact_content,
                     user_id=event.user_id,
-                    confidence=rel.confidence,
-                    provenance_event_id=event.id,
+                    session_id=event.session_id,
+                    scope=fact_scope,
+                    lifecycle_state=LifecycleState.TENTATIVE,
+                    confidence=fact.confidence,
+                    metadata=fact_metadata,
+                    evidence_refs=[event.id],
+                )
+                fact_node_id = await tracked_writer.create_node(fact_node)
+
+                # Create HAS_FACT edge from subject entity to fact node
+                subject_key = fact.subject.strip().lower()
+                subject_entity_id = entity_id_map.get(subject_key)
+                if subject_entity_id:
+                    has_fact_edge = MemoryEdge(
+                        source_id=UUID(subject_entity_id),
+                        target_id=fact_node.id,
+                        edge_type=EdgeType.HAS_FACT,
+                        user_id=event.user_id,
+                        provenance_event_id=event.id,
+                    )
+                    await tracked_writer.create_edge(has_fact_edge)
+
+                    # Detect supersedence for the new fact
+                    await supersedence_detector.detect_and_supersede(
+                        new_fact_node_id=fact_node_id,
+                        subject_entity_id=subject_entity_id,
+                        predicate=fact.predicate,
+                        object_value=fact.object,
+                        user_id=event.user_id,
+                        evidence_event_id=event_id,
+                    )
+
+                # Index fact in vector and lexical stores (not tracked for rollback)
+                await self._write_queue.submit(
+                    lambda fid=fact_node_id, fc=fact_content, uid=event.user_id: (
+                        self._vector_index.index(fid, fc, uid)
+                    ),
+                    label=f"vector.fact:{fact_node_id}",
                 )
                 await self._write_queue.submit(
-                    lambda e=rel_edge: self._graph_store.create_edge(e),
-                    label=f"graph.edge.rel:{rel_edge.id}",
-                )
-            else:
-                logger.warning(
-                    "ingestion.relationship_skipped",
-                    source_entity=rel.source_entity,
-                    target_entity=rel.target_entity,
-                    reason="One or both entities not found in extraction",
-                    source_found=source_entity_id is not None,
-                    target_found=target_entity_id is not None,
+                    lambda fid=fact_node_id, fc=fact_content, uid=event.user_id, nt=node_type.value: (
+                        self._lexical_index.index(fid, fc, uid, nt)
+                    ),
+                    label=f"lexical.fact:{fact_node_id}",
                 )
 
-        # --- Summary ---
-        if result.summary:
-            await self._write_queue.submit(
-                lambda eid=event_id, s=result.summary, uid=event.user_id: (
-                    self._vector_index.index(eid, s, uid)
-                ),
-                label=f"vector.summary:{event_id}",
+            # --- Relationships ---
+            for rel in result.relationships:
+                source_key = rel.source_entity.strip().lower()
+                target_key = rel.target_entity.strip().lower()
+                source_entity_id = entity_id_map.get(source_key)
+                target_entity_id = entity_id_map.get(target_key)
+
+                if source_entity_id and target_entity_id:
+                    # Map relationship_type to EdgeType
+                    edge_type = _relationship_type_to_edge_type(
+                        rel.relationship_type
+                    )
+                    rel_edge = MemoryEdge(
+                        source_id=UUID(source_entity_id),
+                        target_id=UUID(target_entity_id),
+                        edge_type=edge_type,
+                        user_id=event.user_id,
+                        confidence=rel.confidence,
+                        provenance_event_id=event.id,
+                    )
+                    await tracked_writer.create_edge(rel_edge)
+                else:
+                    logger.warning(
+                        "ingestion.relationship_skipped",
+                        source_entity=rel.source_entity,
+                        target_entity=rel.target_entity,
+                        reason="One or both entities not found in extraction",
+                        source_found=source_entity_id is not None,
+                        target_found=target_entity_id is not None,
+                    )
+
+            # --- Summary (not tracked for rollback) ---
+            if result.summary:
+                await self._write_queue.submit(
+                    lambda eid=event_id, s=result.summary, uid=event.user_id: (
+                        self._vector_index.index(eid, s, uid)
+                    ),
+                    label=f"vector.summary:{event_id}",
+                )
+                await self._write_queue.submit(
+                    lambda eid=event_id, s=result.summary, uid=event.user_id: (
+                        self._lexical_index.index(eid, s, uid, "summary")
+                    ),
+                    label=f"lexical.summary:{event_id}",
+                )
+        except Exception as exc:
+            logger.error(
+                "ingestion.materialization_failed",
+                event_id=event_id,
+                exc_info=True,
             )
-            await self._write_queue.submit(
-                lambda eid=event_id, s=result.summary, uid=event.user_id: (
-                    self._lexical_index.index(eid, s, uid, "summary")
-                ),
-                label=f"lexical.summary:{event_id}",
+            # Rollback all graph artifacts from this event
+            await tracker.rollback(self._graph_store, self._write_queue)
+            logger.info(
+                "ingestion.rollback_complete",
+                event_id=event_id,
+                rolled_back_nodes=len(tracker.node_ids),
+                rolled_back_edges=len(tracker.edge_ids),
             )
+            raise MaterializationError(
+                f"Materialization failed for event {event_id}",
+                event_id=event_id,
+            ) from exc
 
     @staticmethod
     def _resolve_temporal(temporal_ref: str | None) -> str | None:

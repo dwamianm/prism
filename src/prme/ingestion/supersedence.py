@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import structlog
 
+from prme.ingestion.graph_writer import GraphWriter
 from prme.models.nodes import MemoryNode
 from prme.storage.graph_store import GraphStore
 from prme.types import LifecycleState, NodeType
@@ -76,8 +77,9 @@ class SupersedenceDetector:
     is found, creates a supersedence chain via GraphStore.supersede().
     """
 
-    def __init__(self, graph_store: GraphStore) -> None:
+    def __init__(self, graph_store: GraphStore, graph_writer: GraphWriter) -> None:
         self._graph_store = graph_store
+        self._graph_writer = graph_writer
 
     async def detect_and_supersede(
         self,
@@ -160,8 +162,8 @@ class SupersedenceDetector:
                         subject_entity_id=subject_entity_id,
                     )
 
-                    # Create supersedence chain
-                    await self._graph_store.supersede(
+                    # Create supersedence chain via GraphWriter
+                    await self._graph_writer.supersede(
                         old_node_id=target_id,
                         new_node_id=new_fact_node_id,
                         evidence_id=evidence_event_id,
