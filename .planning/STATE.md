@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 2.1: Scope Isolation Fix
+**Current focus:** Phase 2.2: WriteQueue Contract & Async Safety
 
 ## Current Position
 
-**Phase:** 2.1 of 7 (Scope Isolation Fix)
-**Current Plan:** Not started
+**Phase:** 2.2 of 7 (WriteQueue Contract & Async Safety)
+**Current Plan:** 3
 **Total Plans in Phase:** 3
-**Status:** Ready to plan
+**Status:** Ready to execute
 **Last Activity:** 2026-02-20
 
-Progress: [██████░░░░] 24%
+Progress: [███████░░░] 28%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 3.8min
-- Total execution time: 0.57 hours
+- Total plans completed: 10
+- Average duration: 3.6min
+- Total execution time: 0.60 hours
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [██████░░░░] 24%
 | 01-storage-foundation | 4 | 19min | 4.8min |
 | 02-ingestion-pipeline | 4 | 15min | 3.8min |
 | 02.1-scope-isolation-fix | 3 | 7min | 2.3min |
+| 02.2-writequeue-contract-async-safety | 2 | 5min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 6min, 5min, 3min, 1min
+- Last 5 plans: 6min, 5min, 3min, 1min, 2min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -47,6 +48,8 @@ Progress: [██████░░░░] 24%
 | Phase 02 P04 | 5min | 2 tasks | 5 files |
 | Phase 02.1 P03 | 1min | 1 tasks | 1 files |
 | Phase 02.1 P02 | 3min | 2 tasks | 5 files |
+| Phase 02.2 P01 | 3min | 2 tasks | 5 files |
+| Phase 02.2 P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +87,12 @@ Recent decisions affecting current work:
 - [Phase 02.1]: LLM-extracted scope (per entity/fact) overrides ingestion-level scope when present; null falls back to ingestion-level default
 - [Phase 02.1]: Entity merge lookup does not filter by scope (conservative merge: same entity in different scopes still merges within same user_id)
 - [Phase 02.1]: Scope param defaults to Scope.PERSONAL at all entry points for backward compatibility
+- [Phase 02.2]: Async threading pushed into provider (FastEmbed uses to_thread internally) rather than caller (VectorIndex)
+- [Phase 02.2]: CachedEmbeddingProvider uses SHA-256 text hash for cache keys -- deduplicates identical content across calls
+- [Phase 02.2]: LRU eviction via OrderedDict.popitem(last=False) -- simple, no external deps
+- [Phase 02.2]: GraphWriter Protocol uses runtime_checkable for structural typing enforcement of write-only graph interface
+- [Phase 02.2]: DuckPGQGraphStore._write_lock retained on delete methods as defense-in-depth (primary serialization via WriteQueue)
+- [Phase 02.2]: WriteTracker.rollback() graph-only; orphaned vector/lexical entries logged as warning (cleanup deferred)
 
 ### Pending Todos
 
@@ -96,5 +105,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 02.1-03-PLAN.md (MemoryEngine.store() scope fix -- Phase 2.1 fully complete).
-Resume file: Next phase (03-retrieval-api)
+Stopped at: Completed 02.2-01-PLAN.md (GraphWriter Protocol, WriteTracker rollback, ingestion exception hierarchy).
+Resume file: .planning/phases/02.2-writequeue-contract-async-safety/02.2-03-PLAN.md
