@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 2.2 of 7 (WriteQueue Contract & Async Safety)
 **Current Plan:** 3
 **Total Plans in Phase:** 3
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-02-20
 
 Progress: [███████░░░] 28%
@@ -50,6 +50,7 @@ Progress: [███████░░░] 28%
 | Phase 02.1 P02 | 3min | 2 tasks | 5 files |
 | Phase 02.2 P01 | 3min | 2 tasks | 5 files |
 | Phase 02.2 P02 | 2min | 2 tasks | 2 files |
+| Phase 02.2 P03 | 5min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 02.2]: GraphWriter Protocol uses runtime_checkable for structural typing enforcement of write-only graph interface
 - [Phase 02.2]: DuckPGQGraphStore._write_lock retained on delete methods as defense-in-depth (primary serialization via WriteQueue)
 - [Phase 02.2]: WriteTracker.rollback() graph-only; orphaned vector/lexical entries logged as warning (cleanup deferred)
+- [Phase 02.2]: Per-event WriteTracker in _materialize() isolates rollback scope per event rather than using shared tracker
+- [Phase 02.2]: Dual-interface injection: EntityMerger/SupersedenceDetector take GraphStore (reads) + GraphWriter (writes) for structural write prevention
+- [Phase 02.2]: Concurrency tests use MockEmbeddingProvider/MockExtractionProvider for CI speed (no LLM or model download needed)
 
 ### Pending Todos
 
