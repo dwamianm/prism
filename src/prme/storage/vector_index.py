@@ -101,10 +101,8 @@ class VectorIndex:
         Returns:
             The integer key assigned to the vector in USearch.
         """
-        # Generate embedding (blocking, run in thread)
-        embedding = await asyncio.to_thread(
-            self._provider.embed, [content]
-        )
+        # Generate embedding (provider handles async internally)
+        embedding = await self._provider.embed([content])
         vector = np.array(embedding[0], dtype=np.float32)
 
         async with self._write_lock:
@@ -162,10 +160,8 @@ class VectorIndex:
             Score is 1 - distance (cosine similarity). Results are
             ordered by descending score (most similar first).
         """
-        # Generate query embedding
-        embedding = await asyncio.to_thread(
-            self._provider.embed, [query]
-        )
+        # Generate query embedding (provider handles async internally)
+        embedding = await self._provider.embed([query])
         vector = np.array(embedding[0], dtype=np.float32)
 
         return await self.search_by_vector(vector.tolist(), user_id, k=k)
