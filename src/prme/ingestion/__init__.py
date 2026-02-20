@@ -13,6 +13,7 @@ from prme.ingestion.extraction import (
     InstructorExtractionProvider,
     create_extraction_provider,
 )
+from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import validate_grounding
 from prme.ingestion.pipeline import IngestionPipeline
 from prme.ingestion.schema import (
@@ -30,9 +31,11 @@ __all__ = [
     "ExtractedRelationship",
     "ExtractionProvider",
     "ExtractionResult",
+    "GraphWriter",
     "IngestionPipeline",
     "InstructorExtractionProvider",
     "SupersedenceDetector",
+    "WriteQueueGraphWriter",
     "create_extraction_provider",
     "validate_grounding",
 ]
