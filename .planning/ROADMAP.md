@@ -194,7 +194,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6
 | 2. Ingestion Pipeline | 0/4 | Complete    | 2026-02-19 |
 | 2.1 Scope Isolation Fix | 2/3 | In progress | - |
 | 2.2 WriteQueue Contract & Async Safety | 0/3 | Not started | - |
-| 2.3 Revised RFC Reconciliation | 0/1 | Not started | - |
+| 2.3 Revised RFC Reconciliation | 0/2 | Not started | - |
 | 3. Retrieval Pipeline | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |
