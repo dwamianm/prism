@@ -185,6 +185,7 @@ class MemoryEngine:
             user_id=user_id,
             session_id=session_id,
             role=role,
+            scope=scope,
             metadata=metadata,
         )
         event_id = await self._write_queue.submit(
