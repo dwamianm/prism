@@ -102,10 +102,11 @@ Plans:
   1. Each Revised RFC relevant to completed phases (RFC-0001 through RFC-0004 at minimum) has been reviewed against REQUIREMENTS.md
   2. New or changed requirements from the Revised RFCs are added to REQUIREMENTS.md with traceability
   3. Any delta between built code and revised specs is documented with recommended action (fix now vs defer)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02.3-01: TBD
+- [ ] 02.3-01-PLAN.md — Reconcile REQUIREMENTS.md against all 17 RFCs (update existing, add new requirement domains)
+- [ ] 02.3-02-PLAN.md — Build delta report (code-vs-spec gap analysis with P0/P1/P2 triage)
 
 ### Phase 3: Retrieval Pipeline
 **Goal**: A developer can query memory and receive ranked results that combine graph, vector, and lexical signals with explainable scores and token-budgeted context packing
