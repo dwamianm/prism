@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **INGE-02**: System supports at least OpenAI and one local option for LLM-powered extraction
 - [x] **INGE-03**: System supports pluggable embedding providers (API-based and local model)
 - [x] **INGE-04**: System persists full conversation history as searchable events
-- [ ] **INGE-05**: System uses a write queue pattern to handle DuckDB single-writer concurrency under HTTP API load
+- [x] **INGE-05**: System uses a write queue pattern to handle DuckDB single-writer concurrency under HTTP API load
 
 ### Retrieval
 
@@ -117,7 +117,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INGE-02 | Phase 2 | Satisfied |
 | INGE-03 | Phase 2 | Satisfied |
 | INGE-04 | Phase 2 | Satisfied |
-| INGE-05 | Phase 2, Phase 2.2 | Pending |
+| INGE-05 | Phase 2, Phase 2.2 | Complete |
 | RETR-01 | Phase 3 | Pending |
 | RETR-02 | Phase 3 | Pending |
 | RETR-03 | Phase 3 | Pending |

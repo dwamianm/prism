@@ -20,9 +20,9 @@ Progress: [███████░░░] 28%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 3.6min
-- Total execution time: 0.60 hours
+- Total plans completed: 11
+- Average duration: 3.5min
+- Total execution time: 0.63 hours
 
 **By Phase:**
 
@@ -105,5 +105,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 02.2-01-PLAN.md (GraphWriter Protocol, WriteTracker rollback, ingestion exception hierarchy).
+Stopped at: Completed 02.2-02-PLAN.md (Async EmbeddingProvider with LRU cache and VectorIndex direct await).
 Resume file: .planning/phases/02.2-writequeue-contract-async-safety/02.2-03-PLAN.md
