@@ -117,10 +117,14 @@ class MemoryEngine:
 
         # Lazy import to avoid circular import (engine -> pipeline -> entity_merge -> graph_store -> engine)
         from prme.ingestion.extraction import create_extraction_provider
+        from prme.ingestion.graph_writer import WriteQueueGraphWriter
         from prme.ingestion.pipeline import IngestionPipeline
 
-        # Create extraction provider and ingestion pipeline
+        # Create extraction provider and graph writer
         extraction_provider = create_extraction_provider(config.extraction)
+        graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
+
+        # Create ingestion pipeline with GraphWriter injection
         pipeline = IngestionPipeline(
             event_store=event_store,
             graph_store=graph_store,
@@ -128,6 +132,7 @@ class MemoryEngine:
             lexical_index=lexical_index,
             extraction_provider=extraction_provider,
             write_queue=write_queue,
+            graph_writer=graph_writer,
         )
 
         return cls(
