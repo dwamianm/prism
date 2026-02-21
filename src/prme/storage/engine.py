@@ -407,12 +407,13 @@ class MemoryEngine:
         query: str,
         *,
         user_id: str,
-        scope: Scope | None = None,
+        scope: Scope | list[Scope] | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
         token_budget: int | None = None,
         weights: ScoringWeights | None = None,
         min_fidelity: RepresentationLevel | None = None,
+        include_cross_scope: bool = True,
     ) -> RetrievalResponse:
         """Retrieve memories via the hybrid retrieval pipeline.
 
@@ -424,17 +425,20 @@ class MemoryEngine:
         Args:
             query: Natural language query text.
             user_id: User ID for scoping all backend queries.
-            scope: Optional scope filter (personal, project, org).
+            scope: Optional scope filter. Accepts a single Scope, a list of
+                Scopes, or None (no filter -- returns results from all scopes).
             time_from: Explicit start of temporal window.
             time_to: Explicit end of temporal window.
             token_budget: Override default token budget for this request.
             weights: Override default scoring weights.
             min_fidelity: Override minimum representation level.
+            include_cross_scope: Whether to include cross-scope hints.
+                Defaults to True. Set to False to disable.
 
         Returns:
             RetrievalResponse with packed MemoryBundle, scored results,
-            metadata (request_id, timing, candidate counts), and
-            always-on score traces.
+            metadata (request_id, timing, candidate counts), filter metadata,
+            and always-on score traces.
 
         Raises:
             NotImplementedError: If no retrieval pipeline is configured.
@@ -455,6 +459,7 @@ class MemoryEngine:
             token_budget=token_budget,
             weights=weights,
             min_fidelity=min_fidelity,
+            include_cross_scope=include_cross_scope,
         )
 
     async def search(

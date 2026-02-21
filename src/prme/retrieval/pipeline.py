@@ -32,6 +32,7 @@ from prme.retrieval.config import (
 )
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
+    FilterMetadata,
     RetrievalMetadata,
     RetrievalResponse,
 )
@@ -79,13 +80,14 @@ class RetrievalPipeline:
         query: str,
         *,
         user_id: str,
-        scope: Scope | None = None,
+        scope: Scope | list[Scope] | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
         token_budget: int | None = None,
         weights: ScoringWeights | None = None,
         min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
+        include_cross_scope: bool = True,
     ) -> RetrievalResponse:
         """Execute the full 6-stage retrieval pipeline.
 
@@ -96,18 +98,32 @@ class RetrievalPipeline:
         Args:
             query: Raw query text from the user.
             user_id: User ID for scoping all backend queries.
-            scope: Optional scope filter.
-            time_from: Explicit start of temporal window.
-            time_to: Explicit end of temporal window.
+            scope: Optional scope filter. Accepts a single Scope, a list of
+                Scopes, or None (no filter). Single Scope is normalized to
+                a list for backward compatibility.
+            time_from: Explicit start of temporal window. If provided,
+                overrides any temporal signal from query analysis.
+            time_to: Explicit end of temporal window. If provided,
+                overrides any temporal signal from query analysis.
             token_budget: Override default token budget for this request.
             weights: Override default scoring weights for this request.
             min_fidelity: Override minimum representation level.
             retrieval_mode: Retrieval mode controlling epistemic filtering.
+            include_cross_scope: Whether to include cross-scope hints in the
+                response. Plumbing for Plan 02 (actual logic TBD).
 
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
         start_time = time.monotonic()
+
+        # Normalize scope: single Scope -> list, list -> as-is, None -> None.
+        normalized_scope: list[Scope] | None = None
+        if isinstance(scope, Scope):
+            normalized_scope = [scope]
+        elif isinstance(scope, list):
+            normalized_scope = scope
+        # else: None means "all scopes, no filter"
 
         # Resolve effective configuration.
         effective_weights = weights if weights is not None else self._scoring_weights
@@ -132,6 +148,11 @@ class RetrievalPipeline:
             retrieval_mode=retrieval_mode,
         )
 
+        # Determine effective temporal window: explicit params take priority
+        # over analysis-derived values from query text.
+        effective_time_from = time_from if time_from is not None else analysis.time_from
+        effective_time_to = time_to if time_to is not None else analysis.time_to
+
         # --- Stages 2-3: Candidate Generation + Merging ---
         candidates, candidate_counts = await generate_candidates(
             analysis,
@@ -139,7 +160,9 @@ class RetrievalPipeline:
             vector_index=self._vector_index,
             lexical_index=self._lexical_index,
             user_id=user_id,
-            scope=scope,
+            scope=normalized_scope,
+            time_from=effective_time_from,
+            time_to=effective_time_to,
             config=effective_packing_config,
         )
 
@@ -199,9 +222,18 @@ class RetrievalPipeline:
             embedding_mismatch=embedding_mismatch,
         )
 
+        # Build filter metadata for debugging/explainability.
+        filter_meta = FilterMetadata(
+            scope_filter=[s.value for s in normalized_scope] if normalized_scope else None,
+            time_from=effective_time_from,
+            time_to=effective_time_to,
+            cross_scope_enabled=include_cross_scope and normalized_scope is not None,
+        )
+
         return RetrievalResponse(
             bundle=bundle,
             results=scored,
             metadata=metadata,
             score_traces=traces,
+            filter_metadata=filter_meta,
         )
