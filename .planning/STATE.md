@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 03: Retrieval Pipeline
+**Current focus:** Phase 03.1: Epistemic Type & Confidence Matrix
 
 ## Current Position
 
-**Phase:** 03 (Retrieval Pipeline)
-**Current Plan:** Not started
-**Total Plans in Phase:** 4
-**Status:** Milestone complete
+**Phase:** 03.1 (Epistemic Type & Confidence Matrix)
+**Current Plan:** 2 of 2
+**Total Plans in Phase:** 2
+**Status:** In progress
 **Last Activity:** 2026-02-21
 
-Progress: [████████░░] 32%
+Progress: [████████░░] 35%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 3.7min
-- Total execution time: 0.97 hours
+- Total plans completed: 17
+- Average duration: 3.6min
+- Total execution time: 1.02 hours
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: [████████░░] 32%
 | 02.2-writequeue-contract-async-safety | 2 | 5min | 2.5min |
 | 02.3-revised-rfc-reconciliation | 2 | 11min | 5.5min |
 | 03-retrieval-pipeline | 1 | 3min | 3.0min |
+| 03.1-epistemic-type-confidence-matrix | 1 | 3min | 3.0min |
 
 **Recent Trend:**
-- Last 5 plans: 2min, 7min, 5min, 4min, 3min
-- Trend: Stable (returning to code execution after doc-heavy Phase 2.3)
+- Last 5 plans: 7min, 5min, 4min, 3min, 3min
+- Trend: Stable
 
 *Updated after each plan completion*
 | Phase 02.1 P01 | 3min | 2 tasks | 2 files |
@@ -59,6 +60,7 @@ Progress: [████████░░] 32%
 | Phase 03 P03 | 3min | 3 tasks | 4 files |
 | Phase 03 P02 | 4min | 2 tasks | 2 files |
 | Phase 03 P04 | 3min | 2 tasks | 5 files |
+| Phase 03.1 P01 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -118,6 +120,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Token estimation uses character-based method (len/4.2) as MVP; tiktoken deferred
 - [Phase 03]: Embedding mismatch inferred from zero VECTOR count rather than explicit flag threading
 - [Phase 03]: search() preserved with DeprecationWarning for backward compat; retrieve() is the new unified entry point
+- [Phase 03.1]: SourceType is a fixed 5-member (str, Enum) for DuckDB VARCHAR compatibility, matching Phase 01 enum pattern
+- [Phase 03.1]: Defaults ASSERTED/USER_STATED for backward compatibility with existing node creation code
+- [Phase 03.1]: Graceful _row_to_node fallback via len(row) check handles pre-migration SELECT * results
 
 ### Pending Todos
 
@@ -130,5 +135,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 03-01-PLAN.md (retrieval data models, enums, scoring config, operations table)
-Resume file: .planning/phases/03-retrieval-pipeline/03-02-PLAN.md
+Stopped at: Completed 03.1-01-PLAN.md (epistemic_type and source_type fields on MemoryNode with DuckDB persistence)
+Resume file: .planning/phases/03.1-epistemic-type-confidence-matrix/03.1-02-PLAN.md
