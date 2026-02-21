@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 03 (Retrieval Pipeline)
 **Current Plan:** 4
 **Total Plans in Phase:** 4
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-02-21
 
 Progress: [████████░░] 32%
@@ -58,6 +58,7 @@ Progress: [████████░░] 32%
 | Phase 03 P01 | 3min | 2 tasks | 5 files |
 | Phase 03 P03 | 3min | 3 tasks | 4 files |
 | Phase 03 P02 | 4min | 2 tasks | 2 files |
+| Phase 03 P04 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Adjusted w_confidence default from 0.10 to 0.15 so additive scoring weights sum to 1.0 (plan defaults summed to 0.95)
 - [Phase 03]: dateparser false positive filtering: single-word matches only trusted if they are known temporal words or contain digits
 - [Phase 03]: Graph proximity via incremental hop queries: get_neighborhood at 1/2/3 hops with subtraction to approximate per-node hop distance
+- [Phase 03]: Token estimation uses character-based method (len/4.2) as MVP; tiktoken deferred
+- [Phase 03]: Embedding mismatch inferred from zero VECTOR count rather than explicit flag threading
+- [Phase 03]: search() preserved with DeprecationWarning for backward compat; retrieve() is the new unified entry point
 
 ### Pending Todos
 
