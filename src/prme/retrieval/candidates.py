@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
@@ -59,6 +60,10 @@ async def _generate_graph_candidates(
     graph_store: GraphStore,
     user_id: str,
     config: PackingConfig,
+    *,
+    scope: list[Scope] | None = None,
+    time_from: datetime | None = None,
+    time_to: datetime | None = None,
 ) -> list[dict]:
     """Generate candidates from graph neighborhood traversal.
 
@@ -66,16 +71,35 @@ async def _generate_graph_candidates(
     runs get_neighborhood at 1-hop, 2-hop, and 3-hop to determine per-node
     hop distances for graph_proximity scoring.
 
+    Scope and temporal filters are forwarded to query_nodes() for seed
+    discovery and used for post-filter on neighborhood results.
+
     Returns list of dicts: {node: MemoryNode, graph_proximity: float}.
     """
     if not analysis.entities:
         return []
 
     # Find seed nodes matching extracted entity names.
-    all_entity_nodes = await graph_store.query_nodes(
-        user_id=user_id,
-        node_type=NodeType.ENTITY,
-    )
+    # For multi-scope, iterate and union (query_nodes takes single Scope).
+    if scope is not None and scope:
+        all_entity_nodes = []
+        seen_entity_ids: set[str] = set()
+        for s in scope:
+            nodes = await graph_store.query_nodes(
+                user_id=user_id,
+                node_type=NodeType.ENTITY,
+                scope=s,
+            )
+            for n in nodes:
+                nid = str(n.id)
+                if nid not in seen_entity_ids:
+                    seen_entity_ids.add(nid)
+                    all_entity_nodes.append(n)
+    else:
+        all_entity_nodes = await graph_store.query_nodes(
+            user_id=user_id,
+            node_type=NodeType.ENTITY,
+        )
 
     seed_ids: list[str] = []
     for node in all_entity_nodes:
@@ -87,10 +111,16 @@ async def _generate_graph_candidates(
     if not seed_ids:
         return []
 
+    # Determine valid_at for neighborhood queries if temporal filter is set.
+    valid_at = time_from if time_from is not None else time_to
+
     # For each seed, determine hop distances via incremental neighborhood
     # queries: 1-hop, 2-hop (minus 1-hop), 3-hop (minus 1&2-hop).
     node_proximity: dict[str, float] = {}  # node_id -> best proximity
     node_map: dict[str, MemoryNode] = {}  # node_id -> MemoryNode
+
+    # Node types exempt from temporal filtering (persistent knowledge).
+    _TEMPORAL_EXEMPT_TYPES = {NodeType.ENTITY, NodeType.PREFERENCE}
 
     max_hops = min(config.graph_max_hops, 3)
 
@@ -101,12 +131,27 @@ async def _generate_graph_candidates(
             proximity = {1: 1.0, 2: 0.7, 3: 0.4}.get(hop, 0.4)
 
             neighbors = await graph_store.get_neighborhood(
-                seed_id, max_hops=hop
+                seed_id, max_hops=hop, valid_at=valid_at,
             )
 
             for neighbor in neighbors:
                 nid = str(neighbor.id)
                 if nid not in seen_at_previous_hops:
+                    # Scope filter: skip neighbors outside requested scopes.
+                    if scope is not None and scope:
+                        if neighbor.scope not in scope:
+                            continue
+
+                    # Temporal filter: skip nodes outside temporal window,
+                    # but exempt ENTITY and PREFERENCE types.
+                    if neighbor.node_type not in _TEMPORAL_EXEMPT_TYPES:
+                        if time_from is not None and neighbor.valid_to is not None:
+                            if neighbor.valid_to <= time_from:
+                                continue
+                        if time_to is not None and neighbor.valid_from is not None:
+                            if neighbor.valid_from > time_to:
+                                continue
+
                     # First time seeing this node -- it's at this hop distance.
                     if nid not in node_proximity or proximity > node_proximity[nid]:
                         node_proximity[nid] = proximity
@@ -132,17 +177,29 @@ async def _generate_vector_candidates(
     vector_index: VectorIndex,
     user_id: str,
     config: PackingConfig,
+    *,
+    scope: list[Scope] | None = None,
+    time_from: datetime | None = None,
+    time_to: datetime | None = None,
 ) -> tuple[list[dict], bool]:
     """Generate candidates from vector similarity search.
 
     Returns (candidates, embedding_mismatch_flag). On embedding version
     mismatch or other error, returns empty candidates with mismatch=True.
 
+    Scope and temporal filters are forwarded to vector_index.search() which
+    enforces them via DuckDB JOIN with the nodes table.
+
     Each candidate dict has: node_id, score (cosine similarity).
     """
+    # Convert Scope enums to string values for the vector index.
+    scope_values = [s.value for s in scope] if scope else None
     try:
         results = await vector_index.search(
-            analysis.query, user_id, k=config.vector_k
+            analysis.query, user_id, k=config.vector_k,
+            scope=scope_values,
+            time_from=time_from,
+            time_to=time_to,
         )
         return results, False
     except Exception:
@@ -159,14 +216,22 @@ async def _generate_lexical_candidates(
     lexical_index: LexicalIndex,
     user_id: str,
     config: PackingConfig,
+    *,
+    scope: list[Scope] | None = None,
 ) -> list[dict]:
     """Generate candidates from lexical (BM25) search.
+
+    Scope filter is forwarded to lexical_index.search() which enforces
+    it via tantivy query AND clause.
 
     Returns list of dicts with normalized_score added via min-max
     normalization.
     """
+    # Convert Scope enums to string values for the lexical index.
+    scope_values = [s.value for s in scope] if scope else None
     results = await lexical_index.search(
-        analysis.query, user_id, limit=config.lexical_k
+        analysis.query, user_id, limit=config.lexical_k,
+        scope=scope_values,
     )
     return normalize_bm25_scores(results)
 
@@ -174,19 +239,39 @@ async def _generate_lexical_candidates(
 async def _generate_pinned_candidates(
     graph_store: GraphStore,
     user_id: str,
+    *,
+    scope: list[Scope] | None = None,
 ) -> list[MemoryNode]:
     """Generate always-include candidates: pinned nodes and active tasks.
 
     Pinned = salience == 1.0. Active tasks = TASK type with lifecycle
-    in (TENTATIVE, STABLE).
+    in (TENTATIVE, STABLE). Scope filter limits to requested scopes.
     """
-    # Get all active nodes for this user (no min_confidence filter).
-    all_nodes = await graph_store.query_nodes(
-        user_id=user_id,
-        min_confidence=None,
-        lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
-        limit=500,
-    )
+    # For multi-scope, iterate and union (query_nodes takes single Scope).
+    if scope is not None and scope:
+        all_nodes = []
+        seen_ids: set[str] = set()
+        for s in scope:
+            nodes = await graph_store.query_nodes(
+                user_id=user_id,
+                scope=s,
+                min_confidence=None,
+                lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+                limit=500,
+            )
+            for n in nodes:
+                nid = str(n.id)
+                if nid not in seen_ids:
+                    seen_ids.add(nid)
+                    all_nodes.append(n)
+    else:
+        # No scope filter -- get all active nodes.
+        all_nodes = await graph_store.query_nodes(
+            user_id=user_id,
+            min_confidence=None,
+            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+            limit=500,
+        )
 
     pinned: list[MemoryNode] = []
     for node in all_nodes:
@@ -314,7 +399,9 @@ async def generate_candidates(
     vector_index: VectorIndex,
     lexical_index: LexicalIndex,
     user_id: str,
-    scope: Scope | None = None,
+    scope: list[Scope] | None = None,
+    time_from: datetime | None = None,
+    time_to: datetime | None = None,
     config: PackingConfig = DEFAULT_PACKING_CONFIG,
 ) -> tuple[list[RetrievalCandidate], dict[str, int]]:
     """Generate and merge candidates from all four backends in parallel.
@@ -329,19 +416,33 @@ async def generate_candidates(
         vector_index: VectorIndex for semantic similarity search.
         lexical_index: LexicalIndex for BM25 search.
         user_id: User ID for scoping all queries.
-        scope: Optional scope filter (not yet enforced on all backends).
+        scope: Optional list of Scope filters. When provided, candidates from
+            other scopes are excluded before merging. None means no filter.
+        time_from: Optional temporal window start. Forwarded to graph and
+            vector backends. ENTITY and PREFERENCE types are exempt.
+        time_to: Optional temporal window end. Forwarded to graph and
+            vector backends. ENTITY and PREFERENCE types are exempt.
         config: PackingConfig controlling candidate limits.
 
     Returns:
         Tuple of (merged_candidates, candidate_counts_per_backend).
         candidate_counts_per_backend maps backend name to pre-merge count.
     """
-    # Run all four backends in parallel.
+    # Run all four backends in parallel, forwarding scope and temporal filters.
     results = await asyncio.gather(
-        _generate_graph_candidates(analysis, graph_store, user_id, config),
-        _generate_vector_candidates(analysis, vector_index, user_id, config),
-        _generate_lexical_candidates(analysis, lexical_index, user_id, config),
-        _generate_pinned_candidates(graph_store, user_id),
+        _generate_graph_candidates(
+            analysis, graph_store, user_id, config,
+            scope=scope, time_from=time_from, time_to=time_to,
+        ),
+        _generate_vector_candidates(
+            analysis, vector_index, user_id, config,
+            scope=scope, time_from=time_from, time_to=time_to,
+        ),
+        _generate_lexical_candidates(
+            analysis, lexical_index, user_id, config,
+            scope=scope,
+        ),
+        _generate_pinned_candidates(graph_store, user_id, scope=scope),
         return_exceptions=True,
     )
 
