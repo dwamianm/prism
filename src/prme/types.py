@@ -79,6 +79,20 @@ ALLOWED_TRANSITIONS: dict[LifecycleState, set[LifecycleState]] = {
 }
 
 
+class SourceType(str, Enum):
+    """Source provenance type for confidence matrix lookup (RFC-0003 S4).
+
+    Tracks how a memory object was originally produced. Persisted on
+    MemoryNode for downstream provenance auditing and confidence scoring.
+    """
+
+    USER_STATED = "user_stated"
+    USER_DEMONSTRATED = "user_demonstrated"
+    SYSTEM_INFERRED = "system_inferred"
+    EXTERNAL_DOCUMENT = "external_document"
+    TOOL_OUTPUT = "tool_output"
+
+
 class EpistemicType(str, Enum):
     """Epistemic status of memory assertions (RFC-0003 S3).
 
@@ -130,6 +144,18 @@ class RepresentationLevel(str, Enum):
     PROSE = "prose"
     FULL = "full"
 
+
+# Epistemic types valid at creation time. DEPRECATED is excluded --
+# it is a lifecycle transition only, not assignable at creation
+# (per CONTEXT.md locked decision).
+CREATION_EPISTEMIC_TYPES: frozenset[EpistemicType] = frozenset({
+    EpistemicType.OBSERVED,
+    EpistemicType.ASSERTED,
+    EpistemicType.INFERRED,
+    EpistemicType.HYPOTHETICAL,
+    EpistemicType.CONDITIONAL,
+    EpistemicType.UNVERIFIED,
+})
 
 # [HYPOTHESIS] -- tunable per deployment
 # Epistemic multiplier values for composite score formula (RFC-0005 S7).

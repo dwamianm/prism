@@ -10,7 +10,7 @@ from uuid import UUID
 from pydantic import Field
 
 from prme.models.base import MemoryObject
-from prme.types import LifecycleState, NodeType
+from prme.types import EpistemicType, LifecycleState, NodeType, SourceType
 
 
 class MemoryNode(MemoryObject):
@@ -36,6 +36,14 @@ class MemoryNode(MemoryObject):
         ge=0.0,
         le=1.0,
         description="Salience score (0.0 to 1.0)",
+    )
+    epistemic_type: EpistemicType = Field(
+        default=EpistemicType.ASSERTED,
+        description="Epistemic classification of this memory object (RFC-0003 S3)",
+    )
+    source_type: SourceType = Field(
+        default=SourceType.USER_STATED,
+        description="Source provenance type for confidence matrix lookup (RFC-0003 S4)",
     )
     lifecycle_state: LifecycleState = Field(
         default=LifecycleState.TENTATIVE,
