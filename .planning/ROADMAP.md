@@ -155,11 +155,11 @@ Plans:
   1. generate_candidates() forwards scope parameter to vector, lexical, and graph backends — candidates from other scopes are excluded
   2. Temporal filter from QueryAnalysis is forwarded to backends — expired nodes excluded from candidates
   3. E2E Flow: retrieve(scope=PROJECT) returns only PROJECT-scoped candidates, not PERSONAL
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03.2-01: TBD
-- [ ] 03.2-02: TBD
+- [ ] 03.2-01-PLAN.md — Scope + temporal filter forwarding to all backend generators, multi-scope entry points
+- [ ] 03.2-02-PLAN.md — Cross-scope hint generation, filter metadata on response, integration tests
 
 ### Phase 3.3: Contradiction Modeling
 **Goal**: When conflicting assertions are detected, the system preserves both objects, creates a CONTRADICTS edge, and logs a CONTRADICTION_NOTED operation
