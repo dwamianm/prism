@@ -75,7 +75,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **NSPC-02**: System models namespaces as first-class entities with id, name, type, parent_id, access_policy, retention_policy, decay_policy_ref, and tree-structured hierarchy (RFC-0004 §2, §4)
 - [ ] **NSPC-03**: System enforces granular access permissions (READ, WRITE, ASSERT, DEPRECATE, ADMIN) per actor per namespace, with permissions checked independently (RFC-0004 §5)
 - [ ] **NSPC-04**: System supports per-namespace retention policies with TTL, max event count, min retention window, and expiry actions (ARCHIVE/TOMBSTONE/HARD_DELETE with HARD_DELETE restricted to SANDBOX) (RFC-0004 §7)
-- [ ] **NSPC-05**: System applies namespace filters before returning vector search candidates — post-hoc filtering is insufficient for namespace isolation (RFC-0004 §6)
+- [x] **NSPC-05**: System applies namespace filters before returning vector search candidates — post-hoc filtering is insufficient for namespace isolation (RFC-0004 §6)
 - [ ] **NSPC-06**: System logs cross-namespace reference operations and preserves referenced object's namespace ID in the reference (RFC-0004 §8)
 
 ### Context Packing
@@ -236,7 +236,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NSPC-02 | Phase 5 | Pending |
 | NSPC-03 | Phase 4 | Pending |
 | NSPC-04 | Phase 5 | Pending |
-| NSPC-05 | Phase 3.2 | Pending |
+| NSPC-05 | Phase 3.2 | Complete |
 | NSPC-06 | Phase 5 | Pending |
 | CTXP-01 | Phase 3 | Satisfied |
 | CTXP-02 | Phase 3 | Satisfied |
