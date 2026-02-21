@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 03.1 (Epistemic Type & Confidence Matrix)
 **Current Plan:** 2 of 2
 **Total Plans in Phase:** 2
-**Status:** In progress
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-02-21
 
 Progress: [████████░░] 35%
@@ -34,10 +34,10 @@ Progress: [████████░░] 35%
 | 02.2-writequeue-contract-async-safety | 2 | 5min | 2.5min |
 | 02.3-revised-rfc-reconciliation | 2 | 11min | 5.5min |
 | 03-retrieval-pipeline | 1 | 3min | 3.0min |
-| 03.1-epistemic-type-confidence-matrix | 1 | 3min | 3.0min |
+| 03.1-epistemic-type-confidence-matrix | 2 | 8min | 4.0min |
 
 **Recent Trend:**
-- Last 5 plans: 7min, 5min, 4min, 3min, 3min
+- Last 5 plans: 5min, 4min, 3min, 3min, 5min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -61,6 +61,7 @@ Progress: [████████░░] 35%
 | Phase 03 P02 | 4min | 2 tasks | 2 files |
 | Phase 03 P04 | 3min | 2 tasks | 5 files |
 | Phase 03.1 P01 | 3min | 2 tasks | 4 files |
+| Phase 03.1 P02 | 5min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,11 @@ Recent decisions affecting current work:
 - [Phase 03.1]: SourceType is a fixed 5-member (str, Enum) for DuckDB VARCHAR compatibility, matching Phase 01 enum pattern
 - [Phase 03.1]: Defaults ASSERTED/USER_STATED for backward compatibility with existing node creation code
 - [Phase 03.1]: Graceful _row_to_node fallback via len(row) check handles pre-migration SELECT * results
+- [Phase 03.1]: OBSERVED/USER_STATED = 0.90 confidence in matrix per user decision; all other values [HYPOTHESIS]-marked
+- [Phase 03.1]: Strict Pydantic field_validator on ExtractedFact epistemic_type rejects DEPRECATED at creation; works with instructor retry mechanism
+- [Phase 03.1]: UNVERIFIED confidence threshold 0.30 in DEFAULT retrieval mode per RFC-0003 S8
+- [Phase 03.1]: store() confidence param changed to None default -- derives from (epistemic_type, source_type) matrix when not specified
+- [Phase 03.1]: Backfill preserves existing confidence (user decision); marks nodes with _epistemic_backfill metadata for idempotency
 
 ### Pending Todos
 
@@ -135,5 +141,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 03.1-01-PLAN.md (epistemic_type and source_type fields on MemoryNode with DuckDB persistence)
-Resume file: .planning/phases/03.1-epistemic-type-confidence-matrix/03.1-02-PLAN.md
+Stopped at: Completed 03.1-02-PLAN.md (confidence matrix, epistemic wiring, retrieval cleanup, backfill migration)
+Resume file: Phase 03.1 complete. Next phase TBD.
