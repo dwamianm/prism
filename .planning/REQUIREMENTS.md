@@ -226,21 +226,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ORGN-03 | Phase 5 | Pending |
 | ORGN-04 | Phase 5 | Pending |
 | ORGN-05 | Phase 5 | Pending |
-| EPIS-01 | Phase 3 (pre-req) | Pending |
-| EPIS-02 | Phase 3 (pre-req) | Pending |
+| EPIS-01 | Phase 3.1 | Pending |
+| EPIS-02 | Phase 3.1 | Pending |
 | EPIS-03 | Phase 5 | Pending |
-| EPIS-04 | Phase 3 | Pending |
-| EPIS-05 | Phase 3 | Pending |
+| EPIS-04 | Phase 3.3 | Pending |
+| EPIS-05 | Phase 3.1 | Pending |
 | EPIS-06 | Phase 5 | Pending |
-| NSPC-01 | Phase 3 (pre-req) | Pending |
+| NSPC-01 | Phase 3.4 | Pending |
 | NSPC-02 | Phase 5 | Pending |
 | NSPC-03 | Phase 4 | Pending |
 | NSPC-04 | Phase 5 | Pending |
-| NSPC-05 | Phase 3 | Pending |
+| NSPC-05 | Phase 3.2 | Pending |
 | NSPC-06 | Phase 5 | Pending |
-| CTXP-01 | Phase 3 | Pending |
-| CTXP-02 | Phase 3 | Pending |
-| CTXP-03 | Phase 3 | Pending |
+| CTXP-01 | Phase 3 | Satisfied |
+| CTXP-02 | Phase 3 | Satisfied |
+| CTXP-03 | Phase 3 | Satisfied |
 | DECY-01 | Phase 5 | Pending |
 | DECY-02 | Phase 5 | Pending |
 | DECY-03 | Phase 5 | Pending |
@@ -266,7 +266,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRST-04 | Phase 6 | Pending |
 | TRST-05 | Phase 7 | Pending |
 | TRST-06 | Phase 5 | Pending |
-| TRST-07 | Phase 3 (pre-req) | Pending |
+| TRST-07 | Phase 3.4 | Pending |
 | TRST-08 | Phase 5 | Pending |
 | SYNC-01 | v2 | Deferred |
 | SYNC-02 | v2 | Deferred |
@@ -297,8 +297,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Grand total: 87 requirements
 - Mapped to phases: 87
 - Unmapped: 0
-- Satisfied (Phases 1-2): 13/13
-- v1 pending: 52
+- Satisfied (Phases 1-3): 22/22 (core) + 3 CTXP = 25
+- v1 pending: 40 (includes 7 gap closure in Phases 3.1-3.4)
 - v2 deferred: 22
 - RFCs covered: All 15 Revised (RFC-0000 through RFC-0014) + 2 original (RFC_0001, RFC_0002)
 

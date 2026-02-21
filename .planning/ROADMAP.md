@@ -18,6 +18,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2.2: WriteQueue Contract & Async Safety** - INSERTED — Close audit gaps: route EntityMerger/SupersedenceDetector through WriteQueue, fix embedding async safety
 - [x] **Phase 2.3: Revised RFC Reconciliation** - INSERTED — Reconcile REQUIREMENTS.md against Revised RFC suite, identify delta in built code (completed 2026-02-20)
 - [x] **Phase 3: Retrieval Pipeline** - Queries return ranked, explainable, context-packed memory from all backends (completed 2026-02-21)
+- [ ] **Phase 3.1: Epistemic Type & Confidence Matrix** - INSERTED — Close audit gaps: add epistemic_type to MemoryNode/DuckDB, assign at ingestion, apply confidence matrix
+- [ ] **Phase 3.2: Retrieval Filter Forwarding** - INSERTED — Close audit gaps: forward scope and temporal filters to all retrieval backends
+- [ ] **Phase 3.3: Contradiction Modeling** - INSERTED — Close audit gaps: create CONTRADICTS edges, log CONTRADICTION_NOTED operations
+- [ ] **Phase 3.4: Namespace & Config Expansion** - INSERTED — Close audit gaps: expand namespace types to 6, expose all [HYPOTHESIS] params as config
 - [ ] **Phase 4: HTTP API and Python SDK** - External consumers access memory through HTTP endpoints and a Python library
 - [ ] **Phase 5: Self-Organization** - Background scheduler maintains memory quality through salience, promotion, summarization, dedup, and archival
 - [ ] **Phase 6: Portability and CLI** - Memory is exportable as a portable artifact, rebuildable from event log, and inspectable via CLI
@@ -126,6 +130,66 @@ Plans:
 - [ ] 03-03-PLAN.md — Epistemic filtering and composite scoring with deterministic ranking (TDD)
 - [ ] 03-04-PLAN.md — Context packing, RetrievalPipeline orchestrator, MemoryEngine.retrieve() integration
 
+### Phase 3.1: Epistemic Type & Confidence Matrix
+**Goal**: Every memory object carries its epistemic type at creation, default confidence is assigned from a (type, source) matrix, and epistemic filtering uses real field values instead of getattr fallback
+**Depends on**: Phase 3
+**Requirements**: EPIS-01, EPIS-02, EPIS-05
+**Gap Closure:** Closes audit gaps — EPIS-01 unsatisfied (no epistemic_type field), EPIS-02 unsatisfied (no confidence matrix), EPIS-05 partial (filtering depends on missing field), integration issue #4 (epistemic_type absent)
+**Success Criteria** (what must be TRUE):
+  1. MemoryNode has an epistemic_type field populated at creation with a valid EpistemicType value
+  2. DuckDB schema includes epistemic_type column, persisted and queryable
+  3. Default confidence is assigned from the (epistemic_type, source_type) matrix during ingestion
+  4. Epistemic filtering (DEFAULT/EXPLICIT modes) uses real epistemic_type values, not getattr fallback
+**Plans**: TBD
+
+Plans:
+- [ ] 03.1-01: TBD
+- [ ] 03.1-02: TBD
+
+### Phase 3.2: Retrieval Filter Forwarding
+**Goal**: Retrieval candidate generation respects scope and temporal filters by forwarding them to all backends before candidate merging
+**Depends on**: Phase 3.1
+**Requirements**: NSPC-05
+**Gap Closure:** Closes audit gaps — NSPC-05 unsatisfied (scope not forwarded), RETR-03 temporal partial (temporal filter not forwarded), E2E Flow 3 (Scope Isolation broken at retrieval)
+**Success Criteria** (what must be TRUE):
+  1. generate_candidates() forwards scope parameter to vector, lexical, and graph backends — candidates from other scopes are excluded
+  2. Temporal filter from QueryAnalysis is forwarded to backends — expired nodes excluded from candidates
+  3. E2E Flow: retrieve(scope=PROJECT) returns only PROJECT-scoped candidates, not PERSONAL
+**Plans**: TBD
+
+Plans:
+- [ ] 03.2-01: TBD
+- [ ] 03.2-02: TBD
+
+### Phase 3.3: Contradiction Modeling
+**Goal**: When conflicting assertions are detected, the system preserves both objects, creates a CONTRADICTS edge, and logs a CONTRADICTION_NOTED operation
+**Depends on**: Phase 3.1
+**Requirements**: EPIS-04
+**Gap Closure:** Closes audit gaps — EPIS-04 unsatisfied (CONTRADICTS edge never created), integration issue #3
+**Success Criteria** (what must be TRUE):
+  1. SupersedenceDetector creates CONTRADICTS edges (in addition to SUPERSEDES) when conflicting assertions are detected
+  2. Both original and conflicting objects are preserved with CONTRADICTS edge linking them
+  3. CONTRADICTION_NOTED operation is logged to the operations table with structured payload
+**Plans**: TBD
+
+Plans:
+- [ ] 03.3-01: TBD
+
+### Phase 3.4: Namespace & Config Expansion
+**Goal**: Namespace types match the full RFC-0004 specification and all [HYPOTHESIS] parameters are exposed as configurable values
+**Depends on**: Phase 3
+**Requirements**: NSPC-01, TRST-07
+**Gap Closure:** Closes audit gaps — NSPC-01 partial (3/6 namespace types), TRST-07 partial (no systematic config mechanism)
+**Success Criteria** (what must be TRUE):
+  1. Scope/Namespace enum includes all 6 types: PERSONAL, PROJECT, ORGANISATION, AGENT, SYSTEM, SANDBOX
+  2. PRMEConfig exposes ScoringWeights and PackingConfig as configurable fields
+  3. All [HYPOTHESIS]-marked parameters are accessible through PRMEConfig without code changes
+**Plans**: TBD
+
+Plans:
+- [ ] 03.4-01: TBD
+- [ ] 03.4-02: TBD
+
 ### Phase 4: HTTP API and Python SDK
 **Goal**: An external developer can store events, search memory, and retrieve entity snapshots through HTTP endpoints and a Python library, with full async support
 **Depends on**: Phase 3
@@ -188,7 +252,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 3.1 -> 3.2 -> 3.3 -> 3.4 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -198,6 +262,10 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6
 | 2.2 WriteQueue Contract & Async Safety | 0/3 | Not started | - |
 | 2.3 Revised RFC Reconciliation | 2/2 | Complete    | 2026-02-20 |
 | 3. Retrieval Pipeline | 0/4 | Complete    | 2026-02-21 |
+| 3.1 Epistemic Type & Confidence Matrix | 0/2 | Not started | - |
+| 3.2 Retrieval Filter Forwarding | 0/2 | Not started | - |
+| 3.3 Contradiction Modeling | 0/1 | Not started | - |
+| 3.4 Namespace & Config Expansion | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |
 | 6. Portability and CLI | 0/2 | Not started | - |
