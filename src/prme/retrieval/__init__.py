@@ -1,7 +1,7 @@
 """PRME hybrid retrieval pipeline.
 
 Public API exports for the retrieval module. All data models, scoring
-configuration, and packing configuration are importable from this package.
+configuration, filtering, and scoring are importable from this package.
 """
 
 from prme.retrieval.config import (
@@ -10,6 +10,7 @@ from prme.retrieval.config import (
     PackingConfig,
     ScoringWeights,
 )
+from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     ExcludedCandidate,
     MemoryBundle,
@@ -19,6 +20,7 @@ from prme.retrieval.models import (
     RetrievalResponse,
     ScoreTrace,
 )
+from prme.retrieval.scoring import compute_composite_score, score_and_rank
 
 __all__ = [
     "DEFAULT_PACKING_CONFIG",
@@ -32,4 +34,7 @@ __all__ = [
     "RetrievalResponse",
     "ScoreTrace",
     "ScoringWeights",
+    "compute_composite_score",
+    "filter_epistemic",
+    "score_and_rank",
 ]
