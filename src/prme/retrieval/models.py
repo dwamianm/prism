@@ -207,6 +207,23 @@ class RetrievalMetadata(BaseModel):
     )
 
 
+class FilterMetadata(BaseModel):
+    """Metadata about active filters for debugging and explainability."""
+
+    scope_filter: list[str] | None = Field(
+        default=None, description="Active scope filter values"
+    )
+    time_from: datetime | None = Field(
+        default=None, description="Active temporal window start"
+    )
+    time_to: datetime | None = Field(
+        default=None, description="Active temporal window end"
+    )
+    cross_scope_enabled: bool = Field(
+        default=False, description="Whether cross-scope hints were requested"
+    )
+
+
 class RetrievalResponse(BaseModel):
     """Top-level response for a retrieval request.
 
@@ -225,6 +242,14 @@ class RetrievalResponse(BaseModel):
     score_traces: list[ScoreTrace] = Field(
         default_factory=list,
         description="Always-on score traces (one per result)",
+    )
+    filter_metadata: FilterMetadata | None = Field(
+        default=None,
+        description="Metadata about active filters (scope, temporal, cross-scope)",
+    )
+    cross_scope_hints: list[RetrievalCandidate] = Field(
+        default_factory=list,
+        description="Highly relevant results from outside the requested scope",
     )
 
 
