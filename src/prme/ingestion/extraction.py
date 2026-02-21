@@ -58,6 +58,14 @@ temporal text in the temporal_ref field.
    - "org" — about organization-wide policies, structures, or shared context
    If the scope is unclear, leave it as null (the system will use a safe default).
 
+7. **Epistemic Type**: For each fact, classify its epistemic_type:
+   - "observed" — directly stated or witnessed ("I work at Google")
+   - "asserted" — claimed as fact without direct evidence
+   - "inferred" — derived from context ("Based on their questions, they know Python")
+   - "hypothetical" — speculative or conditional
+   - "unverified" — from untrusted or unverified source
+   Default to "asserted" if unclear.
+
 IMPORTANT RULES:
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.
