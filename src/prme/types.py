@@ -79,6 +79,77 @@ ALLOWED_TRANSITIONS: dict[LifecycleState, set[LifecycleState]] = {
 }
 
 
+class EpistemicType(str, Enum):
+    """Epistemic status of memory assertions (RFC-0003 S3).
+
+    Used for epistemic filtering (retrieval Stage 4) and epistemic
+    weight lookup (scoring Stage 5).
+    """
+
+    OBSERVED = "observed"
+    ASSERTED = "asserted"
+    INFERRED = "inferred"
+    HYPOTHETICAL = "hypothetical"
+    CONDITIONAL = "conditional"
+    DEPRECATED = "deprecated"
+    UNVERIFIED = "unverified"
+
+
+class QueryIntent(str, Enum):
+    """Classification of retrieval query intent.
+
+    Used by query analysis to classify intent and select retrieval backends.
+    """
+
+    SEMANTIC = "semantic"
+    FACTUAL = "factual"
+    ENTITY_LOOKUP = "entity_lookup"
+    TEMPORAL = "temporal"
+    RELATIONAL = "relational"
+
+
+class RetrievalMode(str, Enum):
+    """Retrieval mode controlling epistemic filtering (RFC-0003 S8).
+
+    DEFAULT excludes HYPOTHETICAL and DEPRECATED; EXPLICIT includes everything.
+    """
+
+    DEFAULT = "default"
+    EXPLICIT = "explicit"
+
+
+class RepresentationLevel(str, Enum):
+    """Context representation fidelity levels (RFC-0006 S4).
+
+    Ordered by token cost, lowest to highest.
+    """
+
+    REFERENCE = "reference"
+    KEY_VALUE = "key_value"
+    STRUCTURED = "structured"
+    PROSE = "prose"
+    FULL = "full"
+
+
+# [HYPOTHESIS] -- tunable per deployment
+# Epistemic multiplier values for composite score formula (RFC-0005 S7).
+EPISTEMIC_WEIGHTS: dict[EpistemicType, float] = {
+    EpistemicType.OBSERVED: 1.0,
+    EpistemicType.ASSERTED: 0.9,
+    EpistemicType.INFERRED: 0.7,
+    EpistemicType.HYPOTHETICAL: 0.3,
+    EpistemicType.CONDITIONAL: 0.5,
+    EpistemicType.DEPRECATED: 0.1,
+    EpistemicType.UNVERIFIED: 0.5,
+}
+
+# Epistemic types excluded by DEFAULT retrieval mode.
+DEFAULT_EXCLUDED_EPISTEMIC: set[EpistemicType] = {
+    EpistemicType.HYPOTHETICAL,
+    EpistemicType.DEPRECATED,
+}
+
+
 def validate_transition(current: LifecycleState, target: LifecycleState) -> bool:
     """Check whether a lifecycle state transition is valid.
 
