@@ -118,11 +118,13 @@ Plans:
   3. A hybrid retrieval query combines candidates from graph neighborhood, vector similarity, lexical match, and recency/salience signals into a single merged result set with deterministic re-ranking using configurable, versioned scoring weights
   4. Each result in a retrieval response includes an explainable score trace showing the individual components (graph, vector, lexical, recency, salience) that contributed to its rank
   5. Retrieval output is packed into a structured memory bundle (entity snapshots, stable facts, recent decisions, active tasks) that respects a configurable token budget
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Retrieval data models, versioned scoring config, domain enums, operations table
+- [ ] 03-02-PLAN.md — Query analysis (intent/entity/temporal extraction) and parallel candidate generation with merging
+- [ ] 03-03-PLAN.md — Epistemic filtering and composite scoring with deterministic ranking (TDD)
+- [ ] 03-04-PLAN.md — Context packing, RetrievalPipeline orchestrator, MemoryEngine.retrieve() integration
 
 ### Phase 4: HTTP API and Python SDK
 **Goal**: An external developer can store events, search memory, and retrieve entity snapshots through HTTP endpoints and a Python library, with full async support
@@ -195,7 +197,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6
 | 2.1 Scope Isolation Fix | 2/3 | In progress | - |
 | 2.2 WriteQueue Contract & Async Safety | 0/3 | Not started | - |
 | 2.3 Revised RFC Reconciliation | 2/2 | Complete    | 2026-02-20 |
-| 3. Retrieval Pipeline | 0/2 | Not started | - |
+| 3. Retrieval Pipeline | 0/4 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |
 | 6. Portability and CLI | 0/2 | Not started | - |
