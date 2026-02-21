@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2.2: WriteQueue Contract & Async Safety** - INSERTED — Close audit gaps: route EntityMerger/SupersedenceDetector through WriteQueue, fix embedding async safety
 - [x] **Phase 2.3: Revised RFC Reconciliation** - INSERTED — Reconcile REQUIREMENTS.md against Revised RFC suite, identify delta in built code (completed 2026-02-20)
 - [x] **Phase 3: Retrieval Pipeline** - Queries return ranked, explainable, context-packed memory from all backends (completed 2026-02-21)
-- [ ] **Phase 3.1: Epistemic Type & Confidence Matrix** - INSERTED — Close audit gaps: add epistemic_type to MemoryNode/DuckDB, assign at ingestion, apply confidence matrix
+- [x] **Phase 3.1: Epistemic Type & Confidence Matrix** - INSERTED — Close audit gaps: add epistemic_type to MemoryNode/DuckDB, assign at ingestion, apply confidence matrix (completed 2026-02-21)
 - [ ] **Phase 3.2: Retrieval Filter Forwarding** - INSERTED — Close audit gaps: forward scope and temporal filters to all retrieval backends
 - [ ] **Phase 3.3: Contradiction Modeling** - INSERTED — Close audit gaps: create CONTRADICTS edges, log CONTRADICTION_NOTED operations
 - [ ] **Phase 3.4: Namespace & Config Expansion** - INSERTED — Close audit gaps: expand namespace types to 6, expose all [HYPOTHESIS] params as config
@@ -262,7 +262,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 3.1 -> 3.2 
 | 2.2 WriteQueue Contract & Async Safety | 0/3 | Not started | - |
 | 2.3 Revised RFC Reconciliation | 2/2 | Complete    | 2026-02-20 |
 | 3. Retrieval Pipeline | 0/4 | Complete    | 2026-02-21 |
-| 3.1 Epistemic Type & Confidence Matrix | 0/2 | Not started | - |
+| 3.1 Epistemic Type & Confidence Matrix | 0/2 | Complete    | 2026-02-21 |
 | 3.2 Retrieval Filter Forwarding | 0/2 | Not started | - |
 | 3.3 Contradiction Modeling | 0/1 | Not started | - |
 | 3.4 Namespace & Config Expansion | 0/2 | Not started | - |
