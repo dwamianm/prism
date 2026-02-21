@@ -45,22 +45,20 @@ def _make_node(
 ) -> MemoryNode:
     """Create a MemoryNode stub for testing.
 
-    If epistemic_type is provided, it is set as an attribute on the
-    returned node (MemoryNode does not yet have this field natively).
+    epistemic_type is set directly via native MemoryNode field.
     """
-    node = MemoryNode(
-        id=node_id or uuid4(),
-        user_id=user_id,
-        node_type=NodeType.FACT,
-        content="test content",
-        confidence=confidence,
-        salience=salience,
-        updated_at=updated_at or datetime.now(timezone.utc),
-    )
+    kwargs: dict = {
+        "id": node_id or uuid4(),
+        "user_id": user_id,
+        "node_type": NodeType.FACT,
+        "content": "test content",
+        "confidence": confidence,
+        "salience": salience,
+        "updated_at": updated_at or datetime.now(timezone.utc),
+    }
     if epistemic_type is not None:
-        # Forward-compatible: set epistemic_type as extra attribute
-        object.__setattr__(node, "epistemic_type", epistemic_type)
-    return node
+        kwargs["epistemic_type"] = epistemic_type
+    return MemoryNode(**kwargs)
 
 
 def _make_candidate(
@@ -124,18 +122,19 @@ class TestEpistemicFiltering:
         assert len(kept) == 3
         assert len(excluded) == 0
 
-    def test_filter_handles_missing_epistemic_type(self):
-        """Candidates without epistemic_type are treated as ASSERTED (kept)."""
-        # Node without epistemic_type attribute
-        node_no_epistemic = MemoryNode(
+    def test_filter_handles_default_epistemic_type(self):
+        """Candidates with default epistemic_type (ASSERTED) are kept."""
+        # Node with default epistemic_type (ASSERTED)
+        node_default = MemoryNode(
             id=uuid4(),
             user_id="user-1",
             node_type=NodeType.FACT,
             content="test",
         )
+        assert node_default.epistemic_type == EpistemicType.ASSERTED
         candidates = [
             RetrievalCandidate(
-                node=node_no_epistemic,
+                node=node_default,
                 paths=["VECTOR"],
                 path_count=1,
             ),

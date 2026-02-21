@@ -6,7 +6,7 @@ and an optional summary. All models include LLM-friendly Field descriptions
 to guide structured extraction via instructor.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ExtractedEntity(BaseModel):
@@ -66,6 +66,37 @@ class ExtractedFact(BaseModel):
             "Null if unclear."
         ),
     )
+    epistemic_type: str = Field(
+        default="asserted",
+        description=(
+            "Epistemic classification of this fact. Must be one of: "
+            "observed (directly stated/witnessed), asserted (claimed as fact), "
+            "inferred (derived from context), hypothetical (speculative), "
+            "conditional (depends on conditions), unverified (from untrusted source). "
+            "DEPRECATED is not allowed at creation time."
+        ),
+    )
+
+    @field_validator("epistemic_type")
+    @classmethod
+    def validate_epistemic_type(cls, v: str) -> str:
+        """Strictly validate epistemic_type against creation-time types.
+
+        Rejects invalid types -- instructor will re-prompt the LLM when
+        Pydantic validation fails (already configured with max_retries).
+        DEPRECATED is not assignable at creation per CONTEXT.md decision.
+        """
+        allowed = {
+            "observed", "asserted", "inferred",
+            "hypothetical", "conditional", "unverified",
+        }
+        if v.lower() not in allowed:
+            raise ValueError(
+                f"Invalid epistemic_type '{v}'. Must be one of: "
+                f"{', '.join(sorted(allowed))}. "
+                "DEPRECATED is not assignable at creation."
+            )
+        return v.lower()
 
 
 class ExtractedRelationship(BaseModel):

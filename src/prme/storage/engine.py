@@ -37,7 +37,14 @@ from prme.storage.lexical_index import LexicalIndex
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import WriteQueue
-from prme.types import LifecycleState, NodeType, RepresentationLevel, Scope
+from prme.types import (
+    EpistemicType,
+    LifecycleState,
+    NodeType,
+    RepresentationLevel,
+    Scope,
+    SourceType,
+)
 
 if TYPE_CHECKING:
     from prme.ingestion.pipeline import IngestionPipeline
@@ -156,6 +163,16 @@ class MemoryEngine:
             conn=conn,
         )
 
+        # Run epistemic backfill migration for existing nodes
+        from prme.epistemic.migration import backfill_epistemic_types
+
+        backfill_count = await backfill_epistemic_types(graph_store)
+        if backfill_count > 0:
+            logger.info(
+                "Backfilled epistemic types for %d existing nodes",
+                backfill_count,
+            )
+
         return cls(
             conn=conn,
             event_store=event_store,
@@ -179,7 +196,9 @@ class MemoryEngine:
         node_type: NodeType = NodeType.NOTE,
         scope: Scope = Scope.PERSONAL,
         metadata: dict | None = None,
-        confidence: float = 0.5,
+        confidence: float | None = None,
+        epistemic_type: EpistemicType | None = None,
+        source_type: SourceType | None = None,
     ) -> str:
         """Store content across all four backends in one call.
 
@@ -201,11 +220,30 @@ class MemoryEngine:
             node_type: Type of memory node to create.
             scope: Memory scope (personal, project, org).
             metadata: Optional structured metadata.
-            confidence: Initial confidence score (0.0 to 1.0).
+            confidence: Initial confidence score. If None, derived from
+                the (epistemic_type, source_type) confidence matrix.
+            epistemic_type: Epistemic classification. If None, inferred
+                from node_type via heuristic.
+            source_type: Source provenance type. If None, inferred from
+                node_type and role via heuristic.
 
         Returns:
             String UUID of the created event (source of truth ID).
         """
+        # Infer epistemic_type and source_type if not provided
+        # Lazy imports to avoid circular dependencies
+        from prme.epistemic.inference import infer_epistemic_type, infer_source_type
+        from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
+
+        if epistemic_type is None:
+            epistemic_type = infer_epistemic_type(node_type)
+        if source_type is None:
+            source_type = infer_source_type(node_type, role=role)
+        if confidence is None:
+            confidence = DEFAULT_CONFIDENCE_MATRIX.lookup_with_fallback(
+                epistemic_type, source_type
+            )
+
         # Step 1: Create and persist event (source of truth) via write queue
         event = Event(
             content=content,
@@ -229,6 +267,8 @@ class MemoryEngine:
             content=content,
             metadata=metadata,
             confidence=confidence,
+            epistemic_type=epistemic_type,
+            source_type=source_type,
             evidence_refs=[event.id],
         )
         node_id = await self._write_queue.submit(

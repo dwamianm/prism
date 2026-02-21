@@ -45,9 +45,8 @@ def compute_composite_score(
     days_since_update = (now - reference_time).total_seconds() / 86400.0
     recency = math.exp(-weights.recency_lambda * days_since_update)
 
-    # Epistemic weight: lookup by epistemic_type (forward-compatible fallback).
-    epistemic_type = getattr(node, "epistemic_type", EpistemicType.ASSERTED)
-    epistemic_weight = EPISTEMIC_WEIGHTS.get(epistemic_type, 0.7)
+    # Epistemic weight: direct field access on MemoryNode.
+    epistemic_weight = EPISTEMIC_WEIGHTS.get(node.epistemic_type, 0.7)
 
     # Path score: multi-path corroboration (tiebreaker only).
     path_score = min(candidate.path_count / 3.0, 1.0)

@@ -32,7 +32,7 @@ from prme.models.edges import MemoryEdge
 from prme.models.events import Event
 from prme.models.nodes import MemoryNode
 from prme.storage.write_queue import WriteTracker
-from prme.types import EdgeType, LifecycleState, NodeType, Scope
+from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
 
 if TYPE_CHECKING:
     from prme.ingestion.extraction import ExtractionProvider
@@ -329,6 +329,28 @@ class IngestionPipeline:
                 if resolved_date:
                     fact_metadata["resolved_date"] = resolved_date
 
+                # Determine epistemic type from LLM extraction
+                try:
+                    fact_epistemic_type = EpistemicType(fact.epistemic_type)
+                except ValueError:
+                    fact_epistemic_type = EpistemicType.ASSERTED
+
+                # Determine source type from conversation role
+                if event.role and event.role.lower() in ("user", "human"):
+                    fact_source_type = SourceType.USER_STATED
+                elif event.role and event.role.lower() in ("assistant", "system"):
+                    fact_source_type = SourceType.SYSTEM_INFERRED
+                else:
+                    fact_source_type = SourceType.USER_STATED
+
+                # Look up default confidence from the matrix
+                # Lazy import to avoid circular imports
+                from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
+
+                matrix_confidence = DEFAULT_CONFIDENCE_MATRIX.lookup_with_fallback(
+                    fact_epistemic_type, fact_source_type
+                )
+
                 # Create fact node via tracked writer
                 fact_node = MemoryNode(
                     node_type=node_type,
@@ -337,11 +359,24 @@ class IngestionPipeline:
                     session_id=event.session_id,
                     scope=fact_scope,
                     lifecycle_state=LifecycleState.TENTATIVE,
-                    confidence=fact.confidence,
+                    confidence=matrix_confidence,
+                    epistemic_type=fact_epistemic_type,
+                    source_type=fact_source_type,
                     metadata=fact_metadata,
                     evidence_refs=[event.id],
                 )
                 fact_node_id = await tracked_writer.create_node(fact_node)
+
+                # Log EPISTEMIC_TYPE_ASSIGNED operation
+                logger.info(
+                    "epistemic_type_assigned",
+                    op_type="EPISTEMIC_TYPE_ASSIGNED",
+                    target_id=fact_node_id,
+                    epistemic_type=fact_epistemic_type.value,
+                    source_type=fact_source_type.value,
+                    confidence_from_matrix=matrix_confidence,
+                    assignment_method="creation",
+                )
 
                 # Create HAS_FACT edge from subject entity to fact node
                 subject_key = fact.subject.strip().lower()
