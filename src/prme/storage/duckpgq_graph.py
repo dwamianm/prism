@@ -23,9 +23,11 @@ from prme.models.nodes import MemoryNode
 from prme.types import (
     ALLOWED_TRANSITIONS,
     EdgeType,
+    EpistemicType,
     LifecycleState,
     NodeType,
     Scope,
+    SourceType,
     validate_transition,
 )
 
@@ -365,8 +367,8 @@ class DuckPGQGraphStore:
                 id, node_type, user_id, session_id, scope, content,
                 metadata, confidence, salience, lifecycle_state,
                 valid_from, valid_to, superseded_by, evidence_refs,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                created_at, updated_at, epistemic_type, source_type
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 str(node.id),
@@ -385,6 +387,8 @@ class DuckPGQGraphStore:
                 evidence_json,
                 node.created_at,
                 node.updated_at,
+                node.epistemic_type.value,
+                node.source_type.value,
             ],
         )
 
@@ -978,6 +982,10 @@ class DuckPGQGraphStore:
                 return dt.replace(tzinfo=timezone.utc)
             return dt
 
+        # Graceful fallback for pre-migration rows (columns may not exist)
+        raw_epistemic = row[16] if len(row) > 16 else "asserted"
+        raw_source = row[17] if len(row) > 17 else "user_stated"
+
         return MemoryNode(
             id=node_id,
             node_type=NodeType(row[1]),
@@ -995,6 +1003,8 @@ class DuckPGQGraphStore:
             evidence_refs=evidence_refs,
             created_at=ensure_tz(row[14]),
             updated_at=ensure_tz(row[15]),
+            epistemic_type=raw_epistemic,
+            source_type=raw_source,
         )
 
     def _row_to_edge(self, row: tuple) -> MemoryEdge:

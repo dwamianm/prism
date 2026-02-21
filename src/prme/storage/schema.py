@@ -78,7 +78,9 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             superseded_by UUID,
             evidence_refs JSON,
             created_at TIMESTAMPTZ DEFAULT current_timestamp,
-            updated_at TIMESTAMPTZ DEFAULT current_timestamp
+            updated_at TIMESTAMPTZ DEFAULT current_timestamp,
+            epistemic_type VARCHAR NOT NULL DEFAULT 'asserted',
+            source_type VARCHAR NOT NULL DEFAULT 'user_stated'
         )
     """)
     conn.execute(
@@ -224,6 +226,38 @@ def _verify_nodes_scope(conn: duckdb.DuckDBPyConnection) -> None:
         logger.debug("Nodes scope verification passed: no NULL scope values")
 
 
+def _migrate_nodes_epistemic_type(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add epistemic_type and source_type columns to nodes table if missing.
+
+    For existing databases created before these columns were added, this
+    function detects the missing columns and adds them with sensible defaults.
+    DuckDB 1.4.x ALTER TABLE ADD COLUMN does not support NOT NULL, so we
+    use DEFAULT only. New databases use CREATE TABLE with NOT NULL DEFAULT.
+
+    Safe to call on databases that already have the columns (no-op).
+
+    Args:
+        conn: Active DuckDB connection.
+    """
+    result = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'nodes' AND column_name = 'epistemic_type'
+    """).fetchone()
+    if result is None:
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN epistemic_type VARCHAR DEFAULT 'asserted'
+        """)
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN source_type VARCHAR DEFAULT 'user_stated'
+        """)
+        logger.info(
+            "Migrated nodes table: added epistemic_type and source_type "
+            "columns (backfilled as 'asserted'/'user_stated')"
+        )
+
+
 def install_duckpgq(conn: duckdb.DuckDBPyConnection) -> bool:
     """Attempt to install and load the DuckPGQ community extension.
 
@@ -322,5 +356,6 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     create_schema(conn)
     _migrate_events_scope(conn)
     _verify_nodes_scope(conn)
+    _migrate_nodes_epistemic_type(conn)
     pgq_graph = create_property_graph(conn)
     return pgq_available and pgq_graph
