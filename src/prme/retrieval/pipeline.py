@@ -33,6 +33,7 @@ from prme.retrieval.config import (
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     FilterMetadata,
+    RetrievalCandidate,
     RetrievalMetadata,
     RetrievalResponse,
 )
@@ -109,8 +110,12 @@ class RetrievalPipeline:
             weights: Override default scoring weights for this request.
             min_fidelity: Override minimum representation level.
             retrieval_mode: Retrieval mode controlling epistemic filtering.
-            include_cross_scope: Whether to include cross-scope hints in the
-                response. Plumbing for Plan 02 (actual logic TBD).
+            include_cross_scope: Whether to include cross-scope hints when
+                scope is active. When True and a scope filter is set, a
+                secondary vector+lexical pass runs without scope restriction
+                to surface highly relevant results from other scopes.
+                Results appear as separate cross_scope_hints list, never
+                merged into primary results. Defaults to True.
 
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
@@ -177,6 +182,52 @@ class RetrievalPipeline:
         # --- Stage 5: Scoring + Ranking ---
         scored, traces = score_and_rank(filtered, effective_weights)
 
+        # --- Cross-Scope Hint Generation ---
+        # When scope is active and include_cross_scope=True, run a secondary
+        # vector+lexical pass without scope filter (cheapest backends only,
+        # per research Pattern 3) to surface highly relevant results from
+        # other scopes. Hints are separate from primary results.
+        cross_scope_hints: list[RetrievalCandidate] = []
+        if normalized_scope is not None and include_cross_scope and candidates:
+            try:
+                # Build hint config with reduced k for performance.
+                hint_config = effective_packing_config.model_copy(
+                    update={
+                        "vector_k": effective_packing_config.cross_scope_top_n * 2,
+                        "lexical_k": effective_packing_config.cross_scope_top_n * 2,
+                    }
+                )
+                # Secondary generation: no scope filter, WITH temporal filter.
+                hint_candidates, _ = await generate_candidates(
+                    analysis,
+                    graph_store=self._graph_store,
+                    vector_index=self._vector_index,
+                    lexical_index=self._lexical_index,
+                    user_id=user_id,
+                    scope=None,  # No scope filter for hints
+                    time_from=effective_time_from,
+                    time_to=effective_time_to,
+                    config=hint_config,
+                )
+                # Filter to only results NOT in primary scopes.
+                primary_scope_values = {s.value for s in normalized_scope}
+                hint_candidates = [
+                    c for c in hint_candidates
+                    if c.node.scope.value not in primary_scope_values
+                ]
+                # Score the hints using the same weights.
+                if hint_candidates:
+                    scored_hints, _ = score_and_rank(hint_candidates, effective_weights)
+                    # Only include top-N as cross-scope hints.
+                    cross_scope_hints = scored_hints[
+                        : effective_packing_config.cross_scope_top_n
+                    ]
+            except Exception:
+                logger.warning(
+                    "Cross-scope hint generation failed; continuing without hints",
+                    exc_info=True,
+                )
+
         # --- Stage 6: Context Packing ---
         bundle = pack_context(scored, config=effective_packing_config)
 
@@ -197,6 +248,10 @@ class RetrievalPipeline:
                 "scoring_config_version": effective_weights.version_id,
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
+                "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
+                "time_from": effective_time_from.isoformat() if effective_time_from else None,
+                "time_to": effective_time_to.isoformat() if effective_time_to else None,
+                "cross_scope_hint_count": len(cross_scope_hints),
             })
             self._conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
@@ -236,4 +291,5 @@ class RetrievalPipeline:
             metadata=metadata,
             score_traces=traces,
             filter_metadata=filter_meta,
+            cross_scope_hints=cross_scope_hints,
         )
