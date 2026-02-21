@@ -1,9 +1,13 @@
 """Unified MemoryEngine coordinating all four storage backends.
 
-The MemoryEngine is the single entry point for all storage operations.
-A single store() call auto-propagates to: EventStore (source of truth),
-GraphStore (relational model), VectorIndex (semantic search), and
-LexicalIndex (full-text search).
+The MemoryEngine is the single entry point for all storage and retrieval
+operations. A single store() call auto-propagates to: EventStore (source
+of truth), GraphStore (relational model), VectorIndex (semantic search),
+and LexicalIndex (full-text search).
+
+The retrieve() method provides hybrid retrieval through the 6-stage
+RetrievalPipeline: query analysis, candidate generation, epistemic
+filtering, scoring, context packing, and operation logging.
 
 The ingest() method provides full two-phase ingestion: immediate event
 persistence followed by LLM extraction and materialization of entities,
@@ -18,6 +22,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import warnings
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import duckdb
@@ -31,10 +37,13 @@ from prme.storage.lexical_index import LexicalIndex
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import WriteQueue
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import LifecycleState, NodeType, RepresentationLevel, Scope
 
 if TYPE_CHECKING:
     from prme.ingestion.pipeline import IngestionPipeline
+    from prme.retrieval.config import ScoringWeights
+    from prme.retrieval.models import RetrievalResponse
+    from prme.retrieval.pipeline import RetrievalPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +72,7 @@ class MemoryEngine:
         lexical_index: LexicalIndex,
         write_queue: WriteQueue,
         pipeline: IngestionPipeline | None = None,
+        retrieval_pipeline: RetrievalPipeline | None = None,
     ) -> None:
         self._conn = conn
         self._event_store = event_store
@@ -71,6 +81,7 @@ class MemoryEngine:
         self._lexical_index = lexical_index
         self._write_queue = write_queue
         self._pipeline = pipeline
+        self._retrieval_pipeline = retrieval_pipeline
 
     @classmethod
     async def create(cls, config: PRMEConfig | None = None) -> "MemoryEngine":
@@ -135,6 +146,16 @@ class MemoryEngine:
             graph_writer=graph_writer,
         )
 
+        # Create retrieval pipeline (lazy import to avoid circular imports)
+        from prme.retrieval.pipeline import RetrievalPipeline
+
+        retrieval_pipeline = RetrievalPipeline(
+            graph_store=graph_store,
+            vector_index=vector_index,
+            lexical_index=lexical_index,
+            conn=conn,
+        )
+
         return cls(
             conn=conn,
             event_store=event_store,
@@ -143,6 +164,7 @@ class MemoryEngine:
             lexical_index=lexical_index,
             write_queue=write_queue,
             pipeline=pipeline,
+            retrieval_pipeline=retrieval_pipeline,
         )
 
     # --- Core Operations ---
@@ -338,6 +360,63 @@ class MemoryEngine:
             scope=scope,
         )
 
+    # --- Retrieval Operations ---
+
+    async def retrieve(
+        self,
+        query: str,
+        *,
+        user_id: str,
+        scope: Scope | None = None,
+        time_from: datetime | None = None,
+        time_to: datetime | None = None,
+        token_budget: int | None = None,
+        weights: ScoringWeights | None = None,
+        min_fidelity: RepresentationLevel | None = None,
+    ) -> RetrievalResponse:
+        """Retrieve memories via the hybrid retrieval pipeline.
+
+        This is the unified entry point for memory retrieval. Delegates
+        to the 6-stage RetrievalPipeline which handles query analysis,
+        candidate generation, epistemic filtering, scoring, context
+        packing, and operation logging.
+
+        Args:
+            query: Natural language query text.
+            user_id: User ID for scoping all backend queries.
+            scope: Optional scope filter (personal, project, org).
+            time_from: Explicit start of temporal window.
+            time_to: Explicit end of temporal window.
+            token_budget: Override default token budget for this request.
+            weights: Override default scoring weights.
+            min_fidelity: Override minimum representation level.
+
+        Returns:
+            RetrievalResponse with packed MemoryBundle, scored results,
+            metadata (request_id, timing, candidate counts), and
+            always-on score traces.
+
+        Raises:
+            NotImplementedError: If no retrieval pipeline is configured.
+        """
+        if self._retrieval_pipeline is None:
+            raise NotImplementedError(
+                "RetrievalPipeline not configured. Use MemoryEngine.create() "
+                "to initialize with all backends, or pass a retrieval_pipeline "
+                "to the constructor."
+            )
+
+        return await self._retrieval_pipeline.retrieve(
+            query,
+            user_id=user_id,
+            scope=scope,
+            time_from=time_from,
+            time_to=time_to,
+            token_budget=token_budget,
+            weights=weights,
+            min_fidelity=min_fidelity,
+        )
+
     async def search(
         self,
         query: str,
@@ -347,8 +426,10 @@ class MemoryEngine:
     ) -> dict:
         """Search across vector and lexical backends in parallel.
 
-        Returns raw results from both backends. Phase 3 builds the
-        hybrid re-ranker that merges and scores these results.
+        .. deprecated::
+            Use ``retrieve()`` instead. This method returns raw backend
+            results without scoring, filtering, or context packing.
+            It is retained for backward compatibility only.
 
         Args:
             query: Search query text.
@@ -358,6 +439,12 @@ class MemoryEngine:
         Returns:
             Dict with 'vector_results' and 'lexical_results' keys.
         """
+        warnings.warn(
+            "MemoryEngine.search() is deprecated. Use retrieve() for "
+            "hybrid retrieval with scoring, filtering, and context packing.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         vector_results, lexical_results = await asyncio.gather(
             self._vector_index.search(query, user_id, k=k),
             self._lexical_index.search(query, user_id, limit=k),
