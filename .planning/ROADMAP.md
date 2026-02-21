@@ -140,11 +140,11 @@ Plans:
   2. DuckDB schema includes epistemic_type column, persisted and queryable
   3. Default confidence is assigned from the (epistemic_type, source_type) matrix during ingestion
   4. Epistemic filtering (DEFAULT/EXPLICIT modes) uses real epistemic_type values, not getattr fallback
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03.1-01: TBD
-- [ ] 03.1-02: TBD
+- [ ] 03.1-01-PLAN.md — SourceType enum, epistemic_type/source_type fields on MemoryNode, DuckDB schema migration, graph store column mapping
+- [ ] 03.1-02-PLAN.md — ConfidenceMatrix, epistemic inference, LLM extraction classification, ingestion/store() wiring, retrieval getattr cleanup, startup backfill
 
 ### Phase 3.2: Retrieval Filter Forwarding
 **Goal**: Retrieval candidate generation respects scope and temporal filters by forwarding them to all backends before candidate merging
