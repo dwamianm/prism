@@ -45,9 +45,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Retrieval
 
-- [ ] **RETR-01**: User can search memory by semantic similarity via vector search
-- [ ] **RETR-02**: User can search memory by exact terms via lexical full-text search
-- [ ] **RETR-03**: System performs hybrid retrieval combining graph neighborhood, vector similarity, lexical match, and recency/salience signals. (Updated per RFC-0005 §2-5: RFC specifies 4 parallel candidate generation paths — graph traversal (1-3 hops), vector similarity (HNSW), lexical search (BM25/FTS), and pinned/active object direct lookup. Candidates are merged with `path_count` multi-path membership signal used in scoring. RFC defines 8-input composite scoring formula.)
+- [x] **RETR-01**: User can search memory by semantic similarity via vector search
+- [x] **RETR-02**: User can search memory by exact terms via lexical full-text search
+- [x] **RETR-03**: System performs hybrid retrieval combining graph neighborhood, vector similarity, lexical match, and recency/salience signals. (Updated per RFC-0005 §2-5: RFC specifies 4 parallel candidate generation paths — graph traversal (1-3 hops), vector similarity (HNSW), lexical search (BM25/FTS), and pinned/active object direct lookup. Candidates are merged with `path_count` multi-path membership signal used in scoring. RFC defines 8-input composite scoring formula.)
 - [x] **RETR-04**: System applies deterministic re-ranking with configurable, versioned scoring weights. (Updated per RFC-0005 §7: RFC specifies 8-input composite score formula with specific default weights [HYPOTHESIS]: w_semantic=0.30, w_lexical=0.15, w_graph=0.20, w_recency=0.10, w_salience=0.10, w_confidence=0.10, w_epistemic=0.05 (multiplicative), w_paths=0.00 (tiebreaker). Weights must sum to 1.0 excluding epistemic multiplier and path tiebreaker. RFC requires embedding version mismatch detection — reject or fall back to lexical-only.)
 - [x] **RETR-05**: System returns explainable retrieval traces showing score components per result. (Updated per RFC-0005 §9: RFC requires every retrieval request to generate a RETRIEVAL_REQUEST operation log entry recording request_id, namespace_scope, candidates generated/filtered/included, tokens used, scores, exclusion reasons, and embedding model version.)
 - [ ] **RETR-06**: System constructs context-packed memory bundles (entity snapshots, stable facts, recent decisions, active tasks) within a configurable token budget. (Updated per RFC-0006 §2-5: RFC defines STR (Signal-to-Token Ratio) metric as composite_score/token_cost. RFC specifies 5 representation levels — REFERENCE, KEY_VALUE, STRUCTURED, PROSE, FULL — with representation selection policy based on remaining budget. RFC defines 3-priority greedy bin-packing: (1) pinned + active tasks, (2) multi-path objects by STR, (3) remaining by composite score. Context budget MUST NEVER be exceeded.)
@@ -215,9 +215,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INGE-03 | Phase 2 | Satisfied |
 | INGE-04 | Phase 2 | Satisfied |
 | INGE-05 | Phase 2, Phase 2.2 | Complete |
-| RETR-01 | Phase 3 | Pending |
-| RETR-02 | Phase 3 | Pending |
-| RETR-03 | Phase 3 | Pending |
+| RETR-01 | Phase 3 | Complete |
+| RETR-02 | Phase 3 | Complete |
+| RETR-03 | Phase 3 | Complete |
 | RETR-04 | Phase 3 | Complete |
 | RETR-05 | Phase 3 | Complete |
 | RETR-06 | Phase 3 | Pending |

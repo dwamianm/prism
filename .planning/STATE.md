@@ -10,7 +10,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 **Phase:** 03 (Retrieval Pipeline)
-**Current Plan:** 3
+**Current Plan:** 4
 **Total Plans in Phase:** 4
 **Status:** Ready to execute
 **Last Activity:** 2026-02-21
@@ -57,6 +57,7 @@ Progress: [████████░░] 32%
 | Phase 02.3 P02 | 4min | 2 tasks | 2 files |
 | Phase 03 P01 | 3min | 2 tasks | 5 files |
 | Phase 03 P03 | 3min | 3 tasks | 4 files |
+| Phase 03 P02 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Recent decisions affecting current work:
 - [Phase 02.3]: 14 P1 items identified for gap-closure: Event/MemoryObject field additions, missing enums (ActorType, SourceType), edge model gaps, namespace type expansion
 - [Phase 02.3]: Lifecycle state naming and pre-filter vs post-filter decisions flagged for manual review -- 3 options presented for each
 - [Phase 03]: Adjusted w_confidence default from 0.10 to 0.15 so additive scoring weights sum to 1.0 (plan defaults summed to 0.95)
+- [Phase 03]: dateparser false positive filtering: single-word matches only trusted if they are known temporal words or contain digits
+- [Phase 03]: Graph proximity via incremental hop queries: get_neighborhood at 1/2/3 hops with subtraction to approximate per-node hop distance
 
 ### Pending Todos
 
