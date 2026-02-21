@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 03.2 (Retrieval Filter Forwarding)
 **Current Plan:** 2 of 2
 **Total Plans in Phase:** 2
-**Status:** In progress
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-02-21
 
 Progress: [████████░░] 38%
@@ -64,6 +64,7 @@ Progress: [████████░░] 38%
 | Phase 03.1 P01 | 3min | 2 tasks | 4 files |
 | Phase 03.1 P02 | 5min | 2 tasks | 11 files |
 | Phase 03.2 P01 | 5min | 2 tasks | 7 files |
+| Phase 03.2 P02 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,8 @@ Recent decisions affecting current work:
 - [Phase 03.2]: ENTITY and PREFERENCE types exempt from temporal filtering (persistent knowledge anchors)
 - [Phase 03.2]: Multi-scope via iterate-and-union on query_nodes (avoids extending GraphStore Protocol)
 - [Phase 03.2]: Explicit temporal params from caller override analysis-derived values in pipeline
+- [Phase 03.2]: Cross-scope hints run vector+lexical only (cheapest backends) with reduced k per research Pattern 3
+- [Phase 03.2]: Integration tests verify filtering at vector backend level (DuckDB JOIN-based, most reliable path)
 
 ### Pending Todos
 
