@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 2.3: Revised RFC Reconciliation
+**Current focus:** Phase 03: Retrieval Pipeline
 
 ## Current Position
 
-**Phase:** 2.3 (Revised RFC Reconciliation)
-**Current Plan:** Not started
-**Total Plans in Phase:** 2
-**Status:** Milestone complete
-**Last Activity:** 2026-02-20
+**Phase:** 03 (Retrieval Pipeline)
+**Current Plan:** 2 of 4
+**Total Plans in Phase:** 4
+**Status:** In progress
+**Last Activity:** 2026-02-21
 
-Progress: [███████░░░] 28%
+Progress: [████████░░] 32%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: 3.7min
-- Total execution time: 0.92 hours
+- Total execution time: 0.97 hours
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [███████░░░] 28%
 | 02.1-scope-isolation-fix | 3 | 7min | 2.3min |
 | 02.2-writequeue-contract-async-safety | 2 | 5min | 2.5min |
 | 02.3-revised-rfc-reconciliation | 2 | 11min | 5.5min |
+| 03-retrieval-pipeline | 1 | 3min | 3.0min |
 
 **Recent Trend:**
-- Last 5 plans: 1min, 2min, 7min, 5min, 4min
-- Trend: Stable (documentation plans averaging 5.5min due to RFC review scope)
+- Last 5 plans: 2min, 7min, 5min, 4min, 3min
+- Trend: Stable (returning to code execution after doc-heavy Phase 2.3)
 
 *Updated after each plan completion*
 | Phase 02.1 P01 | 3min | 2 tasks | 2 files |
@@ -54,6 +55,7 @@ Progress: [███████░░░] 28%
 | Phase 02.2 P03 | 5min | 2 tasks | 7 files |
 | Phase 02.3 P01 | 7min | 2 tasks | 1 files |
 | Phase 02.3 P02 | 4min | 2 tasks | 2 files |
+| Phase 03 P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -107,6 +109,7 @@ Recent decisions affecting current work:
 - [Phase 02.3]: No P0 items: all built-code gaps are additive (missing fields/types) not MUST violations -- triage conservative per RESEARCH.md Pitfall 2
 - [Phase 02.3]: 14 P1 items identified for gap-closure: Event/MemoryObject field additions, missing enums (ActorType, SourceType), edge model gaps, namespace type expansion
 - [Phase 02.3]: Lifecycle state naming and pre-filter vs post-filter decisions flagged for manual review -- 3 options presented for each
+- [Phase 03]: Adjusted w_confidence default from 0.10 to 0.15 so additive scoring weights sum to 1.0 (plan defaults summed to 0.95)
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: Completed 02.3-02-PLAN.md (delta report: 32 items triaged, 14 P1 gap-closure items identified, Phase 2.3 reconciliation complete).
-Resume file: Next phase TBD (Phase 2.3 complete)
+Last session: 2026-02-21
+Stopped at: Completed 03-01-PLAN.md (retrieval data models, enums, scoring config, operations table)
+Resume file: .planning/phases/03-retrieval-pipeline/03-02-PLAN.md
