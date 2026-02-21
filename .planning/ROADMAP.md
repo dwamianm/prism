@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2.1: Scope Isolation Fix** - INSERTED — Close audit gaps: persist Event.scope to DuckDB, thread scope through IngestionPipeline
 - [ ] **Phase 2.2: WriteQueue Contract & Async Safety** - INSERTED — Close audit gaps: route EntityMerger/SupersedenceDetector through WriteQueue, fix embedding async safety
 - [x] **Phase 2.3: Revised RFC Reconciliation** - INSERTED — Reconcile REQUIREMENTS.md against Revised RFC suite, identify delta in built code (completed 2026-02-20)
-- [ ] **Phase 3: Retrieval Pipeline** - Queries return ranked, explainable, context-packed memory from all backends
+- [x] **Phase 3: Retrieval Pipeline** - Queries return ranked, explainable, context-packed memory from all backends (completed 2026-02-21)
 - [ ] **Phase 4: HTTP API and Python SDK** - External consumers access memory through HTTP endpoints and a Python library
 - [ ] **Phase 5: Self-Organization** - Background scheduler maintains memory quality through salience, promotion, summarization, dedup, and archival
 - [ ] **Phase 6: Portability and CLI** - Memory is exportable as a portable artifact, rebuildable from event log, and inspectable via CLI
@@ -197,7 +197,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 4 -> 5 -> 6
 | 2.1 Scope Isolation Fix | 2/3 | In progress | - |
 | 2.2 WriteQueue Contract & Async Safety | 0/3 | Not started | - |
 | 2.3 Revised RFC Reconciliation | 2/2 | Complete    | 2026-02-20 |
-| 3. Retrieval Pipeline | 0/4 | Not started | - |
+| 3. Retrieval Pipeline | 0/4 | Complete    | 2026-02-21 |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |
 | 6. Portability and CLI | 0/2 | Not started | - |
