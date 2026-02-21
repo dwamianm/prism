@@ -13,11 +13,19 @@ from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 
 def __getattr__(name: str):
-    """Lazy import for IngestionPipeline to avoid circular import."""
+    """Lazy imports for heavy modules to avoid circular import chains."""
     if name == "IngestionPipeline":
         from prme.ingestion.pipeline import IngestionPipeline
 
         return IngestionPipeline
+    if name == "RetrievalResponse":
+        from prme.retrieval.models import RetrievalResponse
+
+        return RetrievalResponse
+    if name == "RetrievalPipeline":
+        from prme.retrieval.pipeline import RetrievalPipeline
+
+        return RetrievalPipeline
     raise AttributeError(f"module 'prme' has no attribute {name!r}")
 
 
@@ -28,5 +36,7 @@ __all__ = [
     "MemoryEngine",
     "NodeType",
     "PRMEConfig",
+    "RetrievalPipeline",
+    "RetrievalResponse",
     "Scope",
 ]
