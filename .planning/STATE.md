@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 03.1: Epistemic Type & Confidence Matrix
+**Current focus:** Phase 03.2: Retrieval Filter Forwarding
 
 ## Current Position
 
-**Phase:** 03.1 (Epistemic Type & Confidence Matrix)
-**Current Plan:** Not started
+**Phase:** 03.2 (Retrieval Filter Forwarding)
+**Current Plan:** 2 of 2
 **Total Plans in Phase:** 2
-**Status:** Ready to plan
+**Status:** In progress
 **Last Activity:** 2026-02-21
 
-Progress: [████████░░] 35%
+Progress: [████████░░] 38%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: 3.6min
-- Total execution time: 1.02 hours
+- Total execution time: 1.10 hours
 
 **By Phase:**
 
@@ -35,9 +35,10 @@ Progress: [████████░░] 35%
 | 02.3-revised-rfc-reconciliation | 2 | 11min | 5.5min |
 | 03-retrieval-pipeline | 1 | 3min | 3.0min |
 | 03.1-epistemic-type-confidence-matrix | 2 | 8min | 4.0min |
+| 03.2-retrieval-filter-forwarding | 1 | 5min | 5.0min |
 
 **Recent Trend:**
-- Last 5 plans: 5min, 4min, 3min, 3min, 5min
+- Last 5 plans: 4min, 3min, 3min, 5min, 5min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -62,6 +63,7 @@ Progress: [████████░░] 35%
 | Phase 03 P04 | 3min | 2 tasks | 5 files |
 | Phase 03.1 P01 | 3min | 2 tasks | 4 files |
 | Phase 03.1 P02 | 5min | 2 tasks | 11 files |
+| Phase 03.2 P01 | 5min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -129,6 +131,11 @@ Recent decisions affecting current work:
 - [Phase 03.1]: UNVERIFIED confidence threshold 0.30 in DEFAULT retrieval mode per RFC-0003 S8
 - [Phase 03.1]: store() confidence param changed to None default -- derives from (epistemic_type, source_type) matrix when not specified
 - [Phase 03.1]: Backfill preserves existing confidence (user decision); marks nodes with _epistemic_backfill metadata for idempotency
+- [Phase 03.2]: DuckDB JOIN approach for vector scope filtering (no vector_metadata migration needed)
+- [Phase 03.2]: Tantivy scope field added to schema; pre-migration documents safely excluded from scope-filtered queries (P8)
+- [Phase 03.2]: ENTITY and PREFERENCE types exempt from temporal filtering (persistent knowledge anchors)
+- [Phase 03.2]: Multi-scope via iterate-and-union on query_nodes (avoids extending GraphStore Protocol)
+- [Phase 03.2]: Explicit temporal params from caller override analysis-derived values in pipeline
 
 ### Pending Todos
 
@@ -141,5 +148,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 03.1-02-PLAN.md (confidence matrix, epistemic wiring, retrieval cleanup, backfill migration)
-Resume file: Phase 03.1 complete. Next phase TBD.
+Stopped at: Completed 03.2-01-PLAN.md (scope + temporal filter forwarding to all backends)
+Resume file: .planning/phases/03.2-retrieval-filter-forwarding/03.2-02-PLAN.md
