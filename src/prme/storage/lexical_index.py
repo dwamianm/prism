@@ -43,6 +43,9 @@ class LexicalIndex:
         schema_builder.add_text_field(
             "node_type", stored=True, tokenizer_name="raw"
         )
+        schema_builder.add_text_field(
+            "scope", stored=True, tokenizer_name="raw"
+        )
         self._schema = schema_builder.build()
 
         # Create or open persistent index
@@ -54,17 +57,19 @@ class LexicalIndex:
         content: str,
         user_id: str,
         node_type: str,
+        scope: str | None,
     ) -> None:
         """Synchronous indexing operation (runs in thread pool)."""
         writer = self._index.writer(heap_size=50_000_000)
-        writer.add_document(
-            tantivy.Document(
-                node_id=[node_id],
-                content=[content],
-                user_id=[user_id],
-                node_type=[node_type],
-            )
-        )
+        doc_fields: dict = {
+            "node_id": [node_id],
+            "content": [content],
+            "user_id": [user_id],
+            "node_type": [node_type],
+        }
+        if scope is not None:
+            doc_fields["scope"] = [scope]
+        writer.add_document(tantivy.Document(**doc_fields))
         writer.commit()
         self._index.reload()
 
@@ -74,6 +79,7 @@ class LexicalIndex:
         content: str,
         user_id: str,
         node_type: str = "note",
+        scope: str | None = None,
     ) -> None:
         """Index a document for full-text search.
 
@@ -85,10 +91,12 @@ class LexicalIndex:
             content: Text content to index with English stemming.
             user_id: Owner user ID for access scoping.
             node_type: Type classification (e.g., 'fact', 'note', 'event').
+            scope: Optional scope value (e.g., 'PERSONAL', 'PROJECT').
+                When provided, enables scope-filtered search queries.
         """
         async with self._write_lock:
             await asyncio.to_thread(
-                self._do_index, node_id, content, user_id, node_type
+                self._do_index, node_id, content, user_id, node_type, scope
             )
 
     def _do_search(
@@ -97,6 +105,7 @@ class LexicalIndex:
         user_id: str,
         node_type: str | None,
         limit: int,
+        scope: list[str] | None,
     ) -> list[dict]:
         """Synchronous search operation (runs in thread pool)."""
         self._index.reload()
@@ -106,7 +115,15 @@ class LexicalIndex:
         # tantivy query syntax: content terms AND user_id:exact_match
         query_str = f"{query_text} AND user_id:{user_id}"
         if node_type is not None:
-            query_str = f"{query_text} AND user_id:{user_id} AND node_type:{node_type}"
+            query_str += f" AND node_type:{node_type}"
+
+        # Scope filtering via tantivy AND clause with OR for multi-scope
+        if scope is not None and scope:
+            if len(scope) == 1:
+                query_str += f" AND scope:{scope[0]}"
+            else:
+                scope_clause = " OR ".join(f"scope:{s}" for s in scope)
+                query_str += f" AND ({scope_clause})"
 
         query = self._index.parse_query(query_str, ["content"])
         search_result = searcher.search(query, limit)
@@ -130,6 +147,7 @@ class LexicalIndex:
         *,
         node_type: str | None = None,
         limit: int = 10,
+        scope: list[str] | None = None,
     ) -> list[dict]:
         """Search for documents by text query, scoped to user_id.
 
@@ -142,13 +160,17 @@ class LexicalIndex:
             user_id: Only return results belonging to this user.
             node_type: Optional filter by node type.
             limit: Maximum number of results to return.
+            scope: Optional list of scope values to filter by (e.g. ['PERSONAL']).
+                When provided, only documents indexed with a matching scope
+                are returned. Documents without a scope field will not match
+                (safe degradation for pre-migration data).
 
         Returns:
             List of dicts with keys: node_id, content, score, node_type.
             Results are ordered by descending BM25 score.
         """
         return await asyncio.to_thread(
-            self._do_search, query_text, user_id, node_type, limit
+            self._do_search, query_text, user_id, node_type, limit, scope
         )
 
     async def delete_by_node_id(self, node_id: str) -> None:

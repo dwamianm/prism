@@ -131,6 +131,14 @@ class PackingConfig(BaseModel):
     graph_max_hops: int = Field(
         default=3, description="Max hops for graph neighborhood (1-3 per RFC)"
     )
+    cross_scope_top_n: int = Field(
+        default=5,
+        description="Top-N threshold for cross-scope hints [HYPOTHESIS]",
+    )
+    cross_scope_token_budget: int = Field(
+        default=512,
+        description="Separate token budget for cross-scope hints [HYPOTHESIS]",
+    )
 
 
 # Module-level default instances.

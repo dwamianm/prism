@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from datetime import datetime
 
 import duckdb
 import numpy as np
@@ -143,6 +144,9 @@ class VectorIndex:
         user_id: str,
         *,
         k: int = 10,
+        scope: list[str] | None = None,
+        time_from: datetime | None = None,
+        time_to: datetime | None = None,
     ) -> list[dict]:
         """Search for nearest neighbors by text query, scoped to user_id.
 
@@ -154,6 +158,12 @@ class VectorIndex:
             query: Text to search for.
             user_id: Only return results belonging to this user.
             k: Maximum number of results to return.
+            scope: Optional list of scope values to filter by (e.g. ['PERSONAL', 'PROJECT']).
+                When provided, only vectors for nodes matching these scopes are returned.
+            time_from: Optional temporal window start. Excludes nodes with
+                valid_to <= time_from (except ENTITY and PREFERENCE types).
+            time_to: Optional temporal window end. Excludes nodes with
+                valid_from > time_to (except ENTITY and PREFERENCE types).
 
         Returns:
             List of dicts with keys: node_id, score, distance.
@@ -164,7 +174,10 @@ class VectorIndex:
         embedding = await self._provider.embed([query])
         vector = np.array(embedding[0], dtype=np.float32)
 
-        return await self.search_by_vector(vector.tolist(), user_id, k=k)
+        return await self.search_by_vector(
+            vector.tolist(), user_id, k=k,
+            scope=scope, time_from=time_from, time_to=time_to,
+        )
 
     async def search_by_vector(
         self,
@@ -172,6 +185,9 @@ class VectorIndex:
         user_id: str,
         *,
         k: int = 10,
+        scope: list[str] | None = None,
+        time_from: datetime | None = None,
+        time_to: datetime | None = None,
     ) -> list[dict]:
         """Search for nearest neighbors by pre-computed vector.
 
@@ -179,6 +195,12 @@ class VectorIndex:
             vector: Pre-computed embedding vector.
             user_id: Only return results belonging to this user.
             k: Maximum number of results to return.
+            scope: Optional list of scope values to filter by via JOIN
+                with nodes table.
+            time_from: Optional temporal window start. Excludes nodes with
+                valid_to <= time_from (except ENTITY and PREFERENCE types).
+            time_to: Optional temporal window end. Excludes nodes with
+                valid_from > time_to (except ENTITY and PREFERENCE types).
 
         Returns:
             List of dicts with keys: node_id, score, distance.
@@ -193,12 +215,49 @@ class VectorIndex:
         # Search USearch
         matches = self._index.search(query_vector, fetch_k)
 
-        # Build set of keys belonging to this user for fast filtering
-        user_keys_rows = self._conn.execute(
-            "SELECT vector_key FROM vector_metadata WHERE user_id = ?",
-            [user_id],
-        ).fetchall()
-        user_keys = {row[0] for row in user_keys_rows}
+        # Build set of allowed keys via DuckDB query with scope/temporal filtering.
+        # When scope or temporal filters are active, JOIN with nodes table.
+        if scope is not None or time_from is not None or time_to is not None:
+            # JOIN vector_metadata with nodes for scope/temporal filtering
+            sql = (
+                "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
+                "JOIN nodes n ON vm.node_id = n.id "
+                "WHERE vm.user_id = ?"
+            )
+            params: list = [user_id]
+
+            if scope is not None and scope:
+                placeholders = ", ".join("?" for _ in scope)
+                sql += f" AND n.scope IN ({placeholders})"
+                params.extend(scope)
+
+            if time_from is not None:
+                # Exclude nodes whose validity ended before time_from,
+                # but exempt ENTITY and PREFERENCE types (persistent knowledge).
+                sql += (
+                    " AND (n.valid_to IS NULL OR n.valid_to > ? "
+                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
+                )
+                params.append(time_from)
+
+            if time_to is not None:
+                # Exclude nodes created after time_to,
+                # but exempt ENTITY and PREFERENCE types.
+                sql += (
+                    " AND (n.valid_from <= ? "
+                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
+                )
+                params.append(time_to)
+
+            rows = self._conn.execute(sql, params).fetchall()
+            allowed_keys = {row[0]: row[1] for row in rows}  # key -> node_id
+        else:
+            # No scope/temporal filter -- just filter by user_id (original path)
+            user_keys_rows = self._conn.execute(
+                "SELECT vector_key, node_id FROM vector_metadata WHERE user_id = ?",
+                [user_id],
+            ).fetchall()
+            allowed_keys = {row[0]: row[1] for row in user_keys_rows}
 
         # Filter and map results
         results = []
@@ -206,21 +265,14 @@ class VectorIndex:
             key = int(matches.keys[i])
             distance = float(matches.distances[i])
 
-            if key not in user_keys:
+            if key not in allowed_keys:
                 continue
 
-            # Look up node_id
-            row = self._conn.execute(
-                "SELECT node_id FROM vector_metadata WHERE vector_key = ?",
-                [key],
-            ).fetchone()
-
-            if row is not None:
-                results.append({
-                    "node_id": row[0],
-                    "score": 1.0 - distance,  # cosine similarity
-                    "distance": distance,
-                })
+            results.append({
+                "node_id": allowed_keys[key],
+                "score": 1.0 - distance,  # cosine similarity
+                "distance": distance,
+            })
 
             if len(results) >= k:
                 break
