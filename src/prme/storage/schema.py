@@ -129,6 +129,30 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_edges_user ON edges (user_id)"
     )
 
+    # --- Operations table ---
+    # Stores RETRIEVAL_REQUEST records per RFC-0005 S9 and forward-compatible
+    # with Phase 5 TRST-08. Separate from event log per research recommendation
+    # (operational metadata, not conversation content).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS operations (
+            id VARCHAR PRIMARY KEY,
+            op_type VARCHAR NOT NULL,
+            target_id VARCHAR,
+            payload JSON,
+            actor_id VARCHAR,
+            namespace_id VARCHAR,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_operations_op_type "
+        "ON operations(op_type)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_operations_created_at "
+        "ON operations(created_at)"
+    )
+
 
 def _migrate_events_scope(conn: duckdb.DuckDBPyConnection) -> None:
     """Add scope column to events table if missing (auto-migration).
