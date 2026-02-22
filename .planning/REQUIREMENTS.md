@@ -65,7 +65,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **EPIS-01**: System assigns an epistemic type (OBSERVED, ASSERTED, INFERRED, HYPOTHETICAL, CONDITIONAL, DEPRECATED, UNVERIFIED) to every memory object at creation (RFC-0003 §3)
 - [x] **EPIS-02**: System applies default confidence values from the (epistemic_type, source_type) matrix, with values tunable per deployment [HYPOTHESIS] (RFC-0003 §4)
 - [ ] **EPIS-03**: System enforces permitted epistemic transitions and blocks forbidden ones — deprecation is irreversible, transitions must not skip intermediate states (RFC-0003 §6)
-- [ ] **EPIS-04**: System models contradictions by preserving both objects, creating CONTRADICTS edge, logging CONTRADICTION_NOTED operation, and surfacing conflicts explicitly at retrieval time (RFC-0003 §7)
+- [x] **EPIS-04**: System models contradictions by preserving both objects, creating CONTRADICTS edge, logging CONTRADICTION_NOTED operation, and surfacing conflicts explicitly at retrieval time (RFC-0003 §7)
 - [x] **EPIS-05**: System supports DEFAULT and EXPLICIT retrieval modes with per-epistemic-type inclusion rules — HYPOTHETICAL and DEPRECATED excluded from DEFAULT mode (RFC-0003 §8)
 - [ ] **EPIS-06**: System supports CONDITIONAL claims with condition_state tracking (UNKNOWN/TRUE/FALSE/EXPIRED) and retrieval behavior varying by condition state (RFC-0003 §5)
 
@@ -229,7 +229,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EPIS-01 | Phase 3.1 | Complete |
 | EPIS-02 | Phase 3.1 | Complete |
 | EPIS-03 | Phase 5 | Pending |
-| EPIS-04 | Phase 3.3 | Pending |
+| EPIS-04 | Phase 3.3 | Complete |
 | EPIS-05 | Phase 3.1 | Complete |
 | EPIS-06 | Phase 5 | Pending |
 | NSPC-01 | Phase 3.4 | Pending |
