@@ -52,12 +52,16 @@ class LifecycleState(str, Enum):
     """Memory object lifecycle states.
 
     Objects progress: Tentative -> Stable -> Superseded -> Archived.
-    Forward-only transitions; Archived is terminal.
+    Objects may also transition to Contested (unresolved contradiction)
+    and Deprecated (confirmed incorrect). Forward-only transitions;
+    Archived is terminal.
     """
 
     TENTATIVE = "tentative"
     STABLE = "stable"
+    CONTESTED = "contested"
     SUPERSEDED = "superseded"
+    DEPRECATED = "deprecated"
     ARCHIVED = "archived"
 
 
@@ -66,13 +70,23 @@ ALLOWED_TRANSITIONS: dict[LifecycleState, set[LifecycleState]] = {
     LifecycleState.TENTATIVE: {
         LifecycleState.STABLE,
         LifecycleState.SUPERSEDED,
+        LifecycleState.CONTESTED,
         LifecycleState.ARCHIVED,
     },
     LifecycleState.STABLE: {
         LifecycleState.SUPERSEDED,
+        LifecycleState.CONTESTED,
+        LifecycleState.ARCHIVED,
+    },
+    LifecycleState.CONTESTED: {
+        LifecycleState.STABLE,
+        LifecycleState.DEPRECATED,
         LifecycleState.ARCHIVED,
     },
     LifecycleState.SUPERSEDED: {
+        LifecycleState.ARCHIVED,
+    },
+    LifecycleState.DEPRECATED: {
         LifecycleState.ARCHIVED,
     },
     LifecycleState.ARCHIVED: set(),  # terminal state
