@@ -66,6 +66,13 @@ temporal text in the temporal_ref field.
    - "unverified" — from untrusted or unverified source
    Default to "asserted" if unclear.
 
+8. **Temporal Intent**: For each fact, classify its temporal_intent:
+   - "update" — this fact replaces a prior state (signals: "now", "changed to", \
+"moved to", "switched to", "no longer", "left", "started", "recently")
+   - "assertion" — this is a standalone claim with no indication it replaces \
+prior knowledge
+   If unclear, leave temporal_intent as null (the system will use a safe default).
+
 IMPORTANT RULES:
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.

@@ -76,6 +76,15 @@ class ExtractedFact(BaseModel):
             "DEPRECATED is not allowed at creation time."
         ),
     )
+    temporal_intent: str | None = Field(
+        default=None,
+        description=(
+            "Temporal intent classification for conflict detection. "
+            "'update' if this fact replaces prior state (e.g., 'now works at', "
+            "'moved to', 'changed to'). 'assertion' if this is a standalone "
+            "claim with no temporal replacement signal. Null if unclear."
+        ),
+    )
 
     @field_validator("epistemic_type")
     @classmethod
