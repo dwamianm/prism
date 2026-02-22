@@ -67,6 +67,22 @@ class GraphWriter(Protocol):
         """
         ...
 
+    async def contradict(
+        self,
+        node_a_id: str,
+        node_b_id: str,
+        *,
+        evidence_id: str | None = None,
+    ) -> None:
+        """Mark two nodes as contradicting each other.
+
+        Args:
+            node_a_id: First conflicting node (typically the existing/older node).
+            node_b_id: Second conflicting node (typically the new/incoming node).
+            evidence_id: Optional event ID providing evidence.
+        """
+        ...
+
 
 class WriteQueueGraphWriter:
     """GraphWriter that routes all writes through WriteQueue.
@@ -154,4 +170,28 @@ class WriteQueueGraphWriter:
                 old_node_id, new_node_id, evidence_id=evidence_id
             ),
             label=f"graph.supersede:{old_node_id}->{new_node_id}",
+        )
+
+    async def contradict(
+        self,
+        node_a_id: str,
+        node_b_id: str,
+        *,
+        evidence_id: str | None = None,
+    ) -> None:
+        """Mark two nodes as contradicting via WriteQueue.
+
+        No tracker recording needed -- contradict transitions state on
+        existing nodes rather than creating new artifacts.
+
+        Args:
+            node_a_id: First conflicting node (typically the existing/older node).
+            node_b_id: Second conflicting node (typically the new/incoming node).
+            evidence_id: Optional event ID providing evidence.
+        """
+        await self._write_queue.submit(
+            lambda: self._graph_store.contradict(
+                node_a_id, node_b_id, evidence_id=evidence_id
+            ),
+            label=f"graph.contradict:{node_a_id}<->{node_b_id}",
         )
