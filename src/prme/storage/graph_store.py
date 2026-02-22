@@ -225,6 +225,57 @@ class GraphStore(Protocol):
         """
         ...
 
+    async def contradict(
+        self,
+        node_a_id: str,
+        node_b_id: str,
+        *,
+        evidence_id: str | None = None,
+    ) -> None:
+        """Mark two nodes as contradicting each other.
+
+        Creates a CONTRADICTS edge (from node_b to node_a), transitions both
+        nodes to CONTESTED lifecycle state, and logs a CONTRADICTION_NOTED
+        operation to the operations table.
+
+        Both nodes must be in an active state (TENTATIVE or STABLE).
+
+        Args:
+            node_a_id: First conflicting node (typically the existing/older node).
+            node_b_id: Second conflicting node (typically the new/incoming node).
+            evidence_id: Optional event ID providing evidence.
+
+        Raises:
+            ValueError: If either node is not found or not in an active state.
+        """
+        ...
+
+    async def resolve_contradiction(
+        self,
+        winner_id: str,
+        loser_id: str,
+        *,
+        resolver_actor_id: str = "system",
+        evidence_id: str | None = None,
+    ) -> None:
+        """Resolve a contradiction by declaring a winner and loser.
+
+        Validates both nodes are CONTESTED and a CONTRADICTS edge exists
+        between them. Transitions winner to STABLE and loser to DEPRECATED.
+        Logs EPISTEMIC_TRANSITION operations for both and a
+        CONTRADICTION_RESOLVED operation.
+
+        Args:
+            winner_id: Node determined to be correct (-> STABLE).
+            loser_id: Node determined to be incorrect (-> DEPRECATED).
+            resolver_actor_id: ID of the resolving actor.
+            evidence_id: Optional supporting evidence event ID.
+
+        Raises:
+            ValueError: If nodes are not CONTESTED or no CONTRADICTS edge exists.
+        """
+        ...
+
     async def archive(self, node_id: str) -> None:
         """Archive a node (terminal state).
 

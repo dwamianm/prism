@@ -206,6 +206,65 @@ class DuckPGQGraphStore:
                 self._supersede_sync, old_node_id, new_node_id, evidence_id
             )
 
+    async def contradict(
+        self,
+        node_a_id: str,
+        node_b_id: str,
+        *,
+        evidence_id: str | None = None,
+    ) -> None:
+        """Mark two nodes as contradicting each other.
+
+        Creates a CONTRADICTS edge (from node_b to node_a), transitions both
+        nodes to CONTESTED lifecycle state, and logs a CONTRADICTION_NOTED
+        operation to the operations table.
+
+        Args:
+            node_a_id: First conflicting node (typically the existing/older node).
+            node_b_id: Second conflicting node (typically the new/incoming node).
+            evidence_id: Optional event ID providing evidence.
+
+        Raises:
+            ValueError: If either node is not found or not in an active state.
+        """
+        async with self._write_lock:
+            await asyncio.to_thread(
+                self._contradict_sync, node_a_id, node_b_id, evidence_id
+            )
+
+    async def resolve_contradiction(
+        self,
+        winner_id: str,
+        loser_id: str,
+        *,
+        resolver_actor_id: str = "system",
+        evidence_id: str | None = None,
+    ) -> None:
+        """Resolve a contradiction by declaring a winner and loser.
+
+        Validates both nodes are CONTESTED and a CONTRADICTS edge exists
+        between them. Transitions winner to STABLE and loser to DEPRECATED.
+        Logs EPISTEMIC_TRANSITION operations for both and a
+        CONTRADICTION_RESOLVED operation.
+
+        Args:
+            winner_id: Node determined to be correct (-> STABLE).
+            loser_id: Node determined to be incorrect (-> DEPRECATED).
+            resolver_actor_id: ID of the resolving actor.
+            evidence_id: Optional supporting evidence event ID.
+
+        Raises:
+            ValueError: If nodes are not CONTESTED or no CONTRADICTS edge exists.
+        """
+        async with self._write_lock:
+            await asyncio.to_thread(
+                self._resolve_contradiction_sync,
+                winner_id,
+                loser_id,
+                resolver_actor_id,
+                evidence_id,
+            )
+
     async def archive(self, node_id: str) -> None:
         """Archive a node (terminal state).
 
@@ -428,11 +487,14 @@ class DuckPGQGraphStore:
         conditions: list[str] = []
         params: list = []
 
-        # Default lifecycle filter: active states only
+        # Default lifecycle filter: active states only (includes CONTESTED
+        # per Research Pitfall 3 -- contested nodes are active with unresolved
+        # conflicts but still valid candidates for retrieval).
         if lifecycle_states is None:
             lifecycle_states = [
                 LifecycleState.TENTATIVE,
                 LifecycleState.STABLE,
+                LifecycleState.CONTESTED,
             ]
 
         # Build lifecycle IN clause
@@ -669,6 +731,244 @@ class DuckPGQGraphStore:
             WHERE id = ?
             """,
             [target_state.value, node_id],
+        )
+
+    def _contradict_sync(
+        self,
+        node_a_id: str,
+        node_b_id: str,
+        evidence_id: str | None,
+    ) -> None:
+        """Mark two nodes as contradicting each other (sync).
+
+        Creates CONTRADICTS edge from node_b (newer) to node_a (older),
+        transitions both nodes to CONTESTED, and logs CONTRADICTION_NOTED
+        operation.
+        """
+        import uuid as _uuid
+
+        # Validate both nodes exist and are in active state
+        row_a = self._conn.execute(
+            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            [node_a_id],
+        ).fetchone()
+        if row_a is None:
+            raise ValueError(f"Node {node_a_id} not found")
+
+        row_b = self._conn.execute(
+            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            [node_b_id],
+        ).fetchone()
+        if row_b is None:
+            raise ValueError(f"Node {node_b_id} not found")
+
+        state_a = LifecycleState(row_a[0])
+        state_b = LifecycleState(row_b[0])
+
+        if not validate_transition(state_a, LifecycleState.CONTESTED):
+            raise ValueError(
+                f"Cannot contest node {node_a_id}: current state "
+                f"'{state_a.value}' does not allow transition to CONTESTED"
+            )
+        if not validate_transition(state_b, LifecycleState.CONTESTED):
+            raise ValueError(
+                f"Cannot contest node {node_b_id}: current state "
+                f"'{state_b.value}' does not allow transition to CONTESTED"
+            )
+
+        # Transition both nodes to CONTESTED
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [LifecycleState.CONTESTED.value, node_a_id],
+        )
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [LifecycleState.CONTESTED.value, node_b_id],
+        )
+
+        # Create CONTRADICTS edge: node_b (newer) -> node_a (older)
+        provenance_uuid = None
+        if evidence_id is not None:
+            try:
+                provenance_uuid = UUID(evidence_id)
+            except ValueError:
+                logger.warning(
+                    "evidence_id %r is not a valid UUID, storing edge "
+                    "without provenance reference",
+                    evidence_id,
+                )
+
+        edge = MemoryEdge(
+            source_id=UUID(node_b_id),
+            target_id=UUID(node_a_id),
+            edge_type=EdgeType.CONTRADICTS,
+            user_id=row_a[1],  # Use the older node's user_id
+            confidence=1.0,
+            provenance_event_id=provenance_uuid,
+        )
+        self._create_edge_sync(edge)
+
+        # Log CONTRADICTION_NOTED operation
+        op_id = str(_uuid.uuid4())
+        payload = json.dumps({
+            "node_a_id": node_a_id,
+            "node_b_id": node_b_id,
+            "evidence_event_id": evidence_id,
+        })
+        self._conn.execute(
+            """
+            INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at)
+            VALUES (?, 'CONTRADICTION_NOTED', ?, ?, 'system', now())
+            """,
+            [op_id, node_a_id, payload],
+        )
+
+    def _resolve_contradiction_sync(
+        self,
+        winner_id: str,
+        loser_id: str,
+        resolver_actor_id: str,
+        evidence_id: str | None,
+    ) -> None:
+        """Resolve a contradiction by declaring a winner and loser (sync).
+
+        Validates both nodes are CONTESTED and a CONTRADICTS edge exists
+        between them. Transitions winner to STABLE and loser to DEPRECATED.
+        Logs EPISTEMIC_TRANSITION operations for both and a
+        CONTRADICTION_RESOLVED operation.
+        """
+        import uuid as _uuid
+
+        # Validate both nodes exist and are CONTESTED
+        winner_row = self._conn.execute(
+            "SELECT lifecycle_state FROM nodes WHERE id = ?",
+            [winner_id],
+        ).fetchone()
+        if winner_row is None:
+            raise ValueError(f"Winner node {winner_id} not found")
+
+        loser_row = self._conn.execute(
+            "SELECT lifecycle_state FROM nodes WHERE id = ?",
+            [loser_id],
+        ).fetchone()
+        if loser_row is None:
+            raise ValueError(f"Loser node {loser_id} not found")
+
+        winner_state = LifecycleState(winner_row[0])
+        loser_state = LifecycleState(loser_row[0])
+
+        if winner_state != LifecycleState.CONTESTED:
+            raise ValueError(
+                f"Winner node {winner_id} is not CONTESTED "
+                f"(current: {winner_state.value})"
+            )
+        if loser_state != LifecycleState.CONTESTED:
+            raise ValueError(
+                f"Loser node {loser_id} is not CONTESTED "
+                f"(current: {loser_state.value})"
+            )
+
+        # Validate a CONTRADICTS edge exists between them (either direction)
+        edge_row = self._conn.execute(
+            """
+            SELECT id FROM edges
+            WHERE edge_type = 'contradicts'
+            AND (
+                (source_id = CAST(? AS UUID) AND target_id = CAST(? AS UUID))
+                OR
+                (source_id = CAST(? AS UUID) AND target_id = CAST(? AS UUID))
+            )
+            LIMIT 1
+            """,
+            [winner_id, loser_id, loser_id, winner_id],
+        ).fetchone()
+        if edge_row is None:
+            raise ValueError(
+                f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
+            )
+
+        # Transition winner to STABLE
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [LifecycleState.STABLE.value, winner_id],
+        )
+
+        # Transition loser to DEPRECATED
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [LifecycleState.DEPRECATED.value, loser_id],
+        )
+
+        # Log EPISTEMIC_TRANSITION for winner (CONTESTED -> STABLE)
+        self._conn.execute(
+            """
+            INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at)
+            VALUES (?, 'EPISTEMIC_TRANSITION', ?, ?, ?, now())
+            """,
+            [
+                str(_uuid.uuid4()),
+                winner_id,
+                json.dumps({
+                    "from_state": LifecycleState.CONTESTED.value,
+                    "to_state": LifecycleState.STABLE.value,
+                    "reason": "contradiction_resolved_winner",
+                    "evidence_event_id": evidence_id,
+                }),
+                resolver_actor_id,
+            ],
+        )
+
+        # Log EPISTEMIC_TRANSITION for loser (CONTESTED -> DEPRECATED)
+        self._conn.execute(
+            """
+            INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at)
+            VALUES (?, 'EPISTEMIC_TRANSITION', ?, ?, ?, now())
+            """,
+            [
+                str(_uuid.uuid4()),
+                loser_id,
+                json.dumps({
+                    "from_state": LifecycleState.CONTESTED.value,
+                    "to_state": LifecycleState.DEPRECATED.value,
+                    "reason": "contradiction_resolved_loser",
+                    "evidence_event_id": evidence_id,
+                }),
+                resolver_actor_id,
+            ],
+        )
+
+        # Log CONTRADICTION_RESOLVED operation
+        self._conn.execute(
+            """
+            INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at)
+            VALUES (?, 'CONTRADICTION_RESOLVED', ?, ?, ?, now())
+            """,
+            [
+                str(_uuid.uuid4()),
+                winner_id,
+                json.dumps({
+                    "winner_id": winner_id,
+                    "loser_id": loser_id,
+                    "evidence_event_id": evidence_id,
+                }),
+                resolver_actor_id,
+            ],
         )
 
     # --- Traversal sync methods ---
