@@ -157,12 +157,20 @@ def select_representation(
 def classify_into_sections(candidate: RetrievalCandidate) -> str:
     """Map a candidate's node_type to a MemoryBundle section name.
 
+    CONTESTED nodes are classified into ``contested_claims`` regardless of
+    node type, ensuring they never appear in ``stable_facts`` or
+    ``recent_decisions``.
+
     Args:
         candidate: The retrieval candidate.
 
     Returns:
         Section name string for the MemoryBundle.
     """
+    # CONTESTED nodes go to their own section, not stable_facts
+    if candidate.node.lifecycle_state == LifecycleState.CONTESTED:
+        return "contested_claims"
+
     node_type = candidate.node.node_type
 
     if node_type == NodeType.ENTITY:

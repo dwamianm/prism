@@ -40,7 +40,7 @@ from prme.retrieval.models import (
 from prme.retrieval.packing import pack_context
 from prme.retrieval.query_analysis import analyze_query
 from prme.retrieval.scoring import score_and_rank
-from prme.types import RepresentationLevel, RetrievalMode, Scope
+from prme.types import EdgeType, LifecycleState, RepresentationLevel, RetrievalMode, Scope
 
 if TYPE_CHECKING:
     from prme.storage.graph_store import GraphStore
@@ -181,6 +181,38 @@ class RetrievalPipeline:
 
         # --- Stage 5: Scoring + Ranking ---
         scored, traces = score_and_rank(filtered, effective_weights)
+
+        # --- Stage 5.5: Conflict Metadata Annotation ---
+        # Batch-annotate CONTESTED candidates with conflict_flag and
+        # contradicts_id so consuming LLMs can surface conflicts.
+        # Per locked decision: counterparts are NOT auto-injected into
+        # results -- only included if independently relevant to the query.
+        contested_ids = [
+            str(c.node.id) for c in scored
+            if c.node.lifecycle_state == LifecycleState.CONTESTED
+        ]
+        if contested_ids:
+            for cid in contested_ids:
+                # Look up CONTRADICTS edges in both directions
+                edges_out = await self._graph_store.get_edges(
+                    source_id=cid, edge_type=EdgeType.CONTRADICTS
+                )
+                edges_in = await self._graph_store.get_edges(
+                    target_id=cid, edge_type=EdgeType.CONTRADICTS
+                )
+                all_edges = edges_out + edges_in
+                if all_edges:
+                    # Find the counterpart node ID
+                    edge = all_edges[0]
+                    counterpart_id = (
+                        str(edge.target_id) if str(edge.source_id) == cid
+                        else str(edge.source_id)
+                    )
+                    # Annotate the candidate
+                    for c in scored:
+                        if str(c.node.id) == cid:
+                            c.conflict_flag = True
+                            c.contradicts_id = uuid.UUID(counterpart_id)
 
         # --- Cross-Scope Hint Generation ---
         # When scope is active and include_cross_scope=True, run a secondary

@@ -1,14 +1,17 @@
-"""Supersedence detection at ingestion time.
+"""Supersedence and contradiction detection at ingestion time.
 
-Detects contradicting facts by matching subject + predicate and finding
-differing objects. Creates SUPERSEDES edges and transitions old nodes to
-Superseded lifecycle state immediately on detection.
+Detects contradicting assertions by matching subject + predicate and finding
+differing objects. Branches on temporal_intent:
+- "update" or None (default): creates SUPERSEDES edges (original behavior)
+- "assertion": creates CONTRADICTS edges (true contradiction, both preserved)
 
 Per user decision: "Detect supersedence at ingestion: when new facts
 contradict existing ones, create supersedence chains immediately."
 
 Example: "Sarah left Google" should immediately flag existing
-"Sarah works_at Google" facts and supersede them.
+"Sarah works_at Google" facts and supersede them (temporal_intent="update").
+But "Sarah works at Google" vs "Sarah works at Meta" with temporal_intent=
+"assertion" creates a CONTRADICTS edge preserving both claims.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ import structlog
 from prme.ingestion.graph_writer import GraphWriter
 from prme.models.nodes import MemoryNode
 from prme.storage.graph_store import GraphStore
-from prme.types import LifecycleState, NodeType
+from prme.types import LifecycleState
 
 logger = structlog.get_logger(__name__)
 
@@ -70,11 +73,19 @@ def _predicates_match(pred_a: str, pred_b: str) -> bool:
 
 
 class SupersedenceDetector:
-    """Contradiction detection and supersedence chain creation.
+    """Contradiction and supersedence detection at ingestion time.
 
-    Identifies contradicting facts by matching subject entity +
-    predicate and finding differing object values. When a contradiction
-    is found, creates a supersedence chain via GraphStore.supersede().
+    Identifies contradicting assertions by matching subject entity +
+    predicate and finding differing object values. Branches on
+    temporal_intent:
+
+    - ``"update"`` or ``None`` (default): existing supersedence behavior.
+      Old node is SUPERSEDED by the new one via GraphWriter.supersede().
+    - ``"assertion"``: true contradiction. Both nodes are transitioned to
+      CONTESTED via GraphWriter.contradict(), preserving both claims.
+
+    Applies to all node types with predicate metadata (FACT, DECISION,
+    PREFERENCE), not just FACT nodes.
     """
 
     def __init__(self, graph_store: GraphStore, graph_writer: GraphWriter) -> None:
@@ -90,12 +101,20 @@ class SupersedenceDetector:
         user_id: str,
         *,
         evidence_event_id: str | None = None,
+        temporal_intent: str | None = None,
     ) -> list[str]:
-        """Detect contradictions and create supersedence chains.
+        """Detect contradictions and create supersedence or contradiction chains.
 
-        Examines all active FACT nodes connected to the subject entity.
-        If a fact has a matching predicate but a different object value,
-        it is considered a contradiction and is superseded by the new fact.
+        Examines all active nodes connected to the subject entity that have
+        predicate metadata. If a node has a matching predicate but a different
+        object value, it is a contradiction. The resolution depends on
+        temporal_intent:
+
+        - ``"update"`` or ``None`` (default): supersedence. The old node is
+          transitioned to SUPERSEDED. This preserves backward compatibility
+          for extraction results that lack temporal_intent.
+        - ``"assertion"``: true contradiction. Both nodes are transitioned to
+          CONTESTED via a CONTRADICTS edge. Neither is removed.
 
         Args:
             new_fact_node_id: ID of the new fact node.
@@ -104,9 +123,12 @@ class SupersedenceDetector:
             object_value: The object value of the new fact (e.g., "Meta").
             user_id: Owner user ID for scoping.
             evidence_event_id: Optional event ID providing evidence.
+            temporal_intent: Intent classification from extraction.
+                "update" or None -> supersedence (default).
+                "assertion" -> contradiction (preserve both).
 
         Returns:
-            List of superseded node IDs.
+            List of superseded or contradicted node IDs.
         """
         superseded: list[str] = []
 
@@ -125,16 +147,17 @@ class SupersedenceDetector:
             if target_node is None:
                 continue
 
-            # Only check FACT nodes that are active (tentative or stable)
-            if target_node.node_type != NodeType.FACT:
-                continue
+            # Only check nodes that are active (tentative or stable)
             if target_node.lifecycle_state not in (
                 LifecycleState.TENTATIVE,
                 LifecycleState.STABLE,
             ):
                 continue
 
-            # Extract predicate from existing fact's metadata
+            # Skip nodes without predicate metadata (non-fact-like nodes).
+            # This naturally handles all node types -- only those with
+            # predicate metadata are checked (FACT, DECISION, PREFERENCE
+            # all use the subject-predicate-object triple structure).
             existing_metadata = target_node.metadata or {}
             existing_predicate = existing_metadata.get("predicate")
             existing_object = existing_metadata.get("object")
@@ -152,22 +175,39 @@ class SupersedenceDetector:
             # Check for contradiction: predicate matches but object differs
             if _predicates_match(predicate, existing_predicate):
                 if existing_object != object_value:
-                    logger.info(
-                        "Supersedence detected: contradicting facts",
-                        old_fact_id=target_id,
-                        new_fact_id=new_fact_node_id,
-                        predicate=predicate,
-                        old_object=existing_object,
-                        new_object=object_value,
-                        subject_entity_id=subject_entity_id,
-                    )
-
-                    # Create supersedence chain via GraphWriter
-                    await self._graph_writer.supersede(
-                        old_node_id=target_id,
-                        new_node_id=new_fact_node_id,
-                        evidence_id=evidence_event_id,
-                    )
-                    superseded.append(target_id)
+                    if temporal_intent == "assertion":
+                        # True contradiction: preserve both objects
+                        logger.info(
+                            "Contradiction detected: conflicting assertions",
+                            old_fact_id=target_id,
+                            new_fact_id=new_fact_node_id,
+                            predicate=predicate,
+                            old_object=existing_object,
+                            new_object=object_value,
+                            temporal_intent=temporal_intent,
+                        )
+                        await self._graph_writer.contradict(
+                            node_a_id=target_id,
+                            node_b_id=new_fact_node_id,
+                            evidence_id=evidence_event_id,
+                        )
+                        superseded.append(target_id)
+                    else:
+                        # Default: supersedence (temporal_intent="update" or None)
+                        logger.info(
+                            "Supersedence detected: contradicting facts",
+                            old_fact_id=target_id,
+                            new_fact_id=new_fact_node_id,
+                            predicate=predicate,
+                            old_object=existing_object,
+                            new_object=object_value,
+                            subject_entity_id=subject_entity_id,
+                        )
+                        await self._graph_writer.supersede(
+                            old_node_id=target_id,
+                            new_node_id=new_fact_node_id,
+                            evidence_id=evidence_event_id,
+                        )
+                        superseded.append(target_id)
 
         return superseded

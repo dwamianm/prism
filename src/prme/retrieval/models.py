@@ -28,6 +28,7 @@ BundleSection = Literal[
     "recent_decisions",
     "active_tasks",
     "provenance_refs",
+    "contested_claims",
 ]
 
 
@@ -139,6 +140,14 @@ class RetrievalCandidate(BaseModel):
     )
     token_cost: int = Field(
         default=0, description="Estimated token cost (set in packing stage)"
+    )
+    conflict_flag: bool = Field(
+        default=False,
+        description="Whether this node has an unresolved contradiction (CONTESTED state)",
+    )
+    contradicts_id: UUID | None = Field(
+        default=None,
+        description="ID of the contradicting node, if this node is CONTESTED",
     )
 
 
