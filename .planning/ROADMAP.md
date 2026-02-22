@@ -170,10 +170,11 @@ Plans:
   1. SupersedenceDetector creates CONTRADICTS edges (in addition to SUPERSEDES) when conflicting assertions are detected
   2. Both original and conflicting objects are preserved with CONTRADICTS edge linking them
   3. CONTRADICTION_NOTED operation is logged to the operations table with structured payload
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03.3-01: TBD
+- [ ] 03.3-01-PLAN.md — CONTESTED/DEPRECATED lifecycle states, temporal_intent extraction, contradict()/resolve_contradiction() graph operations
+- [ ] 03.3-02-PLAN.md — SupersedenceDetector temporal_intent branching, retrieval conflict metadata, CONTESTED packing exclusion, integration tests
 
 ### Phase 3.4: Namespace & Config Expansion
 **Goal**: Namespace types match the full RFC-0004 specification and all [HYPOTHESIS] parameters are exposed as configurable values
@@ -264,7 +265,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 3.1 -> 3.2 
 | 3. Retrieval Pipeline | 0/4 | Complete    | 2026-02-21 |
 | 3.1 Epistemic Type & Confidence Matrix | 0/2 | Complete    | 2026-02-21 |
 | 3.2 Retrieval Filter Forwarding | 0/2 | Not started | - |
-| 3.3 Contradiction Modeling | 0/1 | Not started | - |
+| 3.3 Contradiction Modeling | 0/2 | Not started | - |
 | 3.4 Namespace & Config Expansion | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |
