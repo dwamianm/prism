@@ -2,7 +2,7 @@
 phase: 03-retrieval-pipeline
 verified: 2026-02-21T03:05:34Z
 status: passed
-score: 16/16 must-haves verified
+score: 16/16 must-haves verified + 3 CTXP traceability entries
 re_verification: false
 ---
 
@@ -96,8 +96,11 @@ All 15/15 key links WIRED.
 | RETR-04 | 03-01, 03-03 | Deterministic re-ranking with configurable versioned scoring weights | SATISFIED | ScoringWeights.version_id (SHA-256 hash); weight-sum validator; composite rounded to 10 decimal places; sort by (-score, -path, str(id)); 100-iteration determinism test passes |
 | RETR-05 | 03-01, 03-03, 03-04 | Explainable retrieval traces with score components per result | SATISFIED | ScoreTrace with 8 components (frozen Pydantic); always-on in RetrievalResponse.score_traces; RETRIEVAL_REQUEST logged to operations table with scoring_config_version; RetrievalMetadata captures candidates_generated, filtered, included, timing, backends_used, embedding_mismatch |
 | RETR-06 | 03-01, 03-04 | Context-packed memory bundles within configurable token budget | SATISFIED | pack_context() implements 3-priority greedy bin-packing; compute_str() for STR ranking; 5 representation levels; 4 bundle sections (entity_snapshots, stable_facts, recent_decisions, active_tasks); budget never exceeded per CRITICAL comment and _try_include() guard |
+| CTXP-01 | 03-04 | STR computation (composite_score / token_cost) as tiebreaker within priority tiers | SATISFIED | compute_str() in packing.py; STR used in priority tier 2 sorting; verified in pack_context() test coverage |
+| CTXP-02 | 03-04 | 5 representation levels (REFERENCE, KEY_VALUE, STRUCTURED, PROSE, FULL) for memory objects | SATISFIED | select_representation() in packing.py with budget-aware level selection; RepresentationLevel enum in types.py with 5 members |
+| CTXP-03 | 03-04 | 3-priority greedy bin-packing within token budget | SATISFIED | pack_context() in packing.py implements: (1) pinned + active tasks, (2) multi-path by STR, (3) remaining by composite score; _try_include() enforces budget never exceeded |
 
-All 6 requirements SATISFIED. No orphaned requirements detected.
+All 6 RETR requirements + 3 CTXP requirements SATISFIED. No orphaned requirements detected.
 
 ---
 
