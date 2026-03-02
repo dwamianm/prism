@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_plan: 2 of 2
-status: completed
-last_updated: "2026-03-02T02:04:35Z"
+status: verifying
+last_updated: "2026-03-02T02:07:44.795Z"
 last_activity: 2026-03-02
 progress:
   total_phases: 11
   completed_phases: 11
   total_plans: 30
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 03.5 (Cross-Phase Wiring Fixes)
 **Current Plan:** 2 of 2
 **Total Plans in Phase:** 2
-**Status:** Plan 02 complete
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-03-02
 
 Progress: [████████░░] 47%
@@ -87,6 +87,7 @@ Progress: [████████░░] 47%
 | Phase 03.4 P01 | 2min | 2 tasks | 5 files |
 | Phase 03.4 P02 | 6min | 2 tasks | 7 files |
 | Phase 03.5 P02 | 2min | 2 tasks | 3 files |
+| Phase 03.5 P01 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,7 @@ Recent decisions affecting current work:
 - [Phase 03.4]: Direct import of ScoringWeights/PackingConfig in config.py (no circular dep) enables pydantic-settings env var nested delimiter parsing
 - [Phase 03.4]: Optional parameter threading: scoring/filtering functions accept None-defaulted config params, fall back to module constants for backward compat
 - [Phase 03.5]: Documentation-only fix: CTXP-01/02/03 were already implemented in packing.py; this plan only closes the traceability gap in VERIFICATION.md and REQUIREMENTS.md
+- [Phase 03.5]: E2E wiring tests exercise boundary forwarding points (filter_epistemic, score_and_rank, SupersedenceDetector, LexicalIndex) rather than full pipeline.retrieve() to isolate each gap fix
 
 ### Pending Todos
 
