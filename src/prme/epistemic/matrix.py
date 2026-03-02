@@ -103,6 +103,26 @@ class ConfidenceMatrix(BaseModel):
             return fallback
         return value
 
+    def with_overrides(self, overrides: dict[str, float]) -> "ConfidenceMatrix":
+        """Return a new ConfidenceMatrix with specified cells overridden.
+
+        Overrides merge into the existing matrix. New keys (not in the
+        default matrix) are accepted for forward-compatibility.
+
+        Args:
+            overrides: Dict of "epistemic_type:source_type" -> confidence.
+
+        Returns:
+            New ConfidenceMatrix instance with overrides applied.
+        """
+        if not overrides:
+            return self
+        merged = dict(self.matrix)
+        for key, value in overrides.items():
+            epistemic, source = key.split(":")
+            merged[(epistemic, source)] = value
+        return ConfidenceMatrix(matrix=merged)
+
 
 # Module-level singleton -- the default confidence matrix with all
 # [HYPOTHESIS]-marked values from RESEARCH.md.
