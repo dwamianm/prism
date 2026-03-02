@@ -123,7 +123,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TRST-04**: System provides CLI tooling for memory inspection, querying, export, and rebuild
 - [ ] **TRST-05**: System includes an evaluation harness measuring recall accuracy, supersedence correctness, context compaction, and deterministic rebuild
 - [ ] **TRST-06**: System records policy_version on every operation resulting from a policy decision, enabling exact replay under original policy for auditing (RFC-0002 §4, RFC-0007, RFC-0008)
-- [ ] **TRST-07**: All [HYPOTHESIS]-marked parameters are exposed as configurable values with documented defaults, enabling empirical calibration without code changes (RFC-0000 §8)
+- [x] **TRST-07**: All [HYPOTHESIS]-marked parameters are exposed as configurable values with documented defaults, enabling empirical calibration without code changes (RFC-0000 §8)
 - [ ] **TRST-08**: System supports an operation log recording all state changes (ASSERT, DEPRECATE, SUPERSEDE, ARCHIVE, TOMBSTONE, EPISTEMIC_TRANSITION, DECAY_APPLIED, REINFORCE, RELATE, ENTITY_CREATE, ENTITY_MERGE, and organiser operations) with structured payloads (RFC-0002 §4, §6)
 
 ## v2 Requirements
@@ -266,7 +266,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRST-04 | Phase 6 | Pending |
 | TRST-05 | Phase 7 | Pending |
 | TRST-06 | Phase 5 | Pending |
-| TRST-07 | Phase 3.4 | Pending |
+| TRST-07 | Phase 3.4 | Complete |
 | TRST-08 | Phase 5 | Pending |
 | SYNC-01 | v2 | Deferred |
 | SYNC-02 | v2 | Deferred |
