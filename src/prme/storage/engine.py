@@ -80,6 +80,9 @@ class MemoryEngine:
         write_queue: WriteQueue,
         pipeline: IngestionPipeline | None = None,
         retrieval_pipeline: RetrievalPipeline | None = None,
+        confidence_matrix: object | None = None,
+        epistemic_weights: dict[str, float] | None = None,
+        unverified_confidence_threshold: float | None = None,
     ) -> None:
         self._conn = conn
         self._event_store = event_store
@@ -89,6 +92,20 @@ class MemoryEngine:
         self._write_queue = write_queue
         self._pipeline = pipeline
         self._retrieval_pipeline = retrieval_pipeline
+
+        # Config-driven overrides with module-level defaults as fallback
+        from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
+
+        self._confidence_matrix = (
+            confidence_matrix if confidence_matrix is not None
+            else DEFAULT_CONFIDENCE_MATRIX
+        )
+        self._epistemic_weights = epistemic_weights
+        self._unverified_confidence_threshold = (
+            unverified_confidence_threshold
+            if unverified_confidence_threshold is not None
+            else 0.30
+        )
 
     @classmethod
     async def create(cls, config: PRMEConfig | None = None) -> "MemoryEngine":
@@ -142,6 +159,13 @@ class MemoryEngine:
         extraction_provider = create_extraction_provider(config.extraction)
         graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
 
+        # Build overridden confidence matrix from config (used by both ingestion and engine)
+        from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX as _default_matrix
+
+        _active_confidence_matrix = _default_matrix.with_overrides(
+            config.confidence_overrides
+        )
+
         # Create ingestion pipeline with GraphWriter injection
         pipeline = IngestionPipeline(
             event_store=event_store,
@@ -151,6 +175,7 @@ class MemoryEngine:
             extraction_provider=extraction_provider,
             write_queue=write_queue,
             graph_writer=graph_writer,
+            confidence_matrix=_active_confidence_matrix,
         )
 
         # Create retrieval pipeline (lazy import to avoid circular imports)
@@ -161,6 +186,8 @@ class MemoryEngine:
             vector_index=vector_index,
             lexical_index=lexical_index,
             conn=conn,
+            scoring_weights=config.scoring,
+            packing_config=config.packing,
         )
 
         # Run epistemic backfill migration for existing nodes
@@ -173,6 +200,13 @@ class MemoryEngine:
                 backfill_count,
             )
 
+        logger.debug(
+            "PRMEConfig: scoring=%s, packing_budget=%d, confidence_overrides=%d",
+            config.scoring.version_id,
+            config.packing.token_budget,
+            len(config.confidence_overrides),
+        )
+
         return cls(
             conn=conn,
             event_store=event_store,
@@ -182,6 +216,9 @@ class MemoryEngine:
             write_queue=write_queue,
             pipeline=pipeline,
             retrieval_pipeline=retrieval_pipeline,
+            confidence_matrix=_active_confidence_matrix,
+            epistemic_weights=config.epistemic_weights,
+            unverified_confidence_threshold=config.unverified_confidence_threshold,
         )
 
     # --- Core Operations ---
@@ -233,14 +270,13 @@ class MemoryEngine:
         # Infer epistemic_type and source_type if not provided
         # Lazy imports to avoid circular dependencies
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
-        from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
 
         if epistemic_type is None:
             epistemic_type = infer_epistemic_type(node_type)
         if source_type is None:
             source_type = infer_source_type(node_type, role=role)
         if confidence is None:
-            confidence = DEFAULT_CONFIDENCE_MATRIX.lookup_with_fallback(
+            confidence = self._confidence_matrix.lookup_with_fallback(
                 epistemic_type, source_type
             )
 

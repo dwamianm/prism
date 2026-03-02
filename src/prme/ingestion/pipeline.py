@@ -80,6 +80,7 @@ class IngestionPipeline:
         extraction_provider: ExtractionProvider,
         write_queue: WriteQueue,
         graph_writer: GraphWriter | None = None,
+        confidence_matrix: object | None = None,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -88,6 +89,13 @@ class IngestionPipeline:
         self._extraction_provider = extraction_provider
         self._write_queue = write_queue
         self._graph_writer = graph_writer
+
+        # Config-driven confidence matrix with module-level default fallback
+        if confidence_matrix is not None:
+            self._confidence_matrix = confidence_matrix
+        else:
+            from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
+            self._confidence_matrix = DEFAULT_CONFIDENCE_MATRIX
         self._entity_merger = EntityMerger(graph_store, graph_writer) if graph_writer else EntityMerger(graph_store, WriteQueueGraphWriter(graph_store, write_queue))
         self._supersedence_detector = SupersedenceDetector(graph_store, graph_writer) if graph_writer else SupersedenceDetector(graph_store, WriteQueueGraphWriter(graph_store, write_queue))
         self._retry_tasks: dict[str, asyncio.Task] = {}
@@ -344,10 +352,7 @@ class IngestionPipeline:
                     fact_source_type = SourceType.USER_STATED
 
                 # Look up default confidence from the matrix
-                # Lazy import to avoid circular imports
-                from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
-
-                matrix_confidence = DEFAULT_CONFIDENCE_MATRIX.lookup_with_fallback(
+                matrix_confidence = self._confidence_matrix.lookup_with_fallback(
                     fact_epistemic_type, fact_source_type
                 )
 

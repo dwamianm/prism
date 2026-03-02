@@ -17,6 +17,7 @@ from prme.types import EPISTEMIC_WEIGHTS, EpistemicType
 def compute_composite_score(
     candidate: RetrievalCandidate,
     weights: ScoringWeights,
+    epistemic_weights: dict[str, float] | None = None,
 ) -> ScoreTrace:
     """Compute the 8-input composite score for a single candidate.
 
@@ -27,11 +28,13 @@ def compute_composite_score(
       path_score = min(path_count / 3.0, 1.0)   (tiebreaker only)
 
     Recency: exp(-lambda * days_since_update)
-    Epistemic weight: lookup from EPISTEMIC_WEIGHTS table.
+    Epistemic weight: lookup from EPISTEMIC_WEIGHTS table or config override.
 
     Args:
         candidate: The retrieval candidate to score.
         weights: Scoring weight configuration.
+        epistemic_weights: Optional dict of epistemic type string values to
+            float multipliers. If None, uses module-level EPISTEMIC_WEIGHTS.
 
     Returns:
         ScoreTrace with all 8 component values and the composite score.
@@ -45,8 +48,11 @@ def compute_composite_score(
     days_since_update = (now - reference_time).total_seconds() / 86400.0
     recency = math.exp(-weights.recency_lambda * days_since_update)
 
-    # Epistemic weight: direct field access on MemoryNode.
-    epistemic_weight = EPISTEMIC_WEIGHTS.get(node.epistemic_type, 0.7)
+    # Epistemic weight: config override dict (str keys) or module-level default (Enum keys).
+    if epistemic_weights is not None:
+        epistemic_weight = epistemic_weights.get(node.epistemic_type.value, 0.7)
+    else:
+        epistemic_weight = EPISTEMIC_WEIGHTS.get(node.epistemic_type, 0.7)
 
     # Path score: multi-path corroboration (tiebreaker only).
     path_score = min(candidate.path_count / 3.0, 1.0)
@@ -80,6 +86,7 @@ def compute_composite_score(
 def score_and_rank(
     candidates: list[RetrievalCandidate],
     weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
+    epistemic_weights: dict[str, float] | None = None,
 ) -> tuple[list[RetrievalCandidate], list[ScoreTrace]]:
     """Score all candidates and return them in deterministic ranked order.
 
@@ -90,6 +97,8 @@ def score_and_rank(
     Args:
         candidates: Candidates to score.
         weights: Scoring weight configuration (default: DEFAULT_SCORING_WEIGHTS).
+        epistemic_weights: Optional dict of epistemic type string values to
+            float multipliers. Passed through to compute_composite_score.
 
     Returns:
         Tuple of (sorted candidates, corresponding score traces).
@@ -97,7 +106,7 @@ def score_and_rank(
     traces: list[ScoreTrace] = []
 
     for candidate in candidates:
-        trace = compute_composite_score(candidate, weights)
+        trace = compute_composite_score(candidate, weights, epistemic_weights)
         candidate.composite_score = trace.composite_score
         candidate.score_trace = trace
         traces.append(trace)
