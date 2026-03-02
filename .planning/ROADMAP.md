@@ -191,6 +191,22 @@ Plans:
 - [ ] 03.4-01-PLAN.md — Scope enum expansion (ORG -> ORGANISATION + 3 new scopes), LLM prompt updates, all file references
 - [ ] 03.4-02-PLAN.md — PRMEConfig nesting (ScoringWeights, PackingConfig, epistemic_weights, confidence_overrides), ConfidenceMatrix.with_overrides(), MemoryEngine wiring
 
+### Phase 3.5: Cross-Phase Wiring Fixes
+**Goal**: Close all remaining v1.0 audit gaps by forwarding config, temporal_intent, and scope to their consumers, and resolving traceability orphans
+**Depends on**: Phase 3.4
+**Requirements**: TRST-07, EPIS-05, EPIS-04, NSPC-05, CTXP-01, CTXP-02, CTXP-03
+**Gap Closure:** Closes audit gaps — GAP-01 (config not forwarded to retrieval), GAP-02 (temporal_intent not forwarded to supersedence), GAP-03 (scope not written to lexical index), CTXP orphans (traceability)
+**Success Criteria** (what must be TRUE):
+  1. PRMEConfig.epistemic_weights and unverified_confidence_threshold reach filter_epistemic() and score_and_rank() at retrieval time — env var overrides have runtime effect
+  2. temporal_intent from LLM extraction is forwarded to detect_and_supersede() — "assertion" intent triggers contradict() through the automated ingestion path
+  3. scope is passed to lexical_index.index() at all write call sites — scope-filtered lexical queries return matching documents
+  4. CTXP-01/02/03 are explicitly listed in Phase 3 VERIFICATION.md and checked off in REQUIREMENTS.md
+**Plans**: TBD
+
+Plans:
+- [ ] 03.5-01-PLAN.md — Config wiring (GAP-01), temporal_intent forwarding (GAP-02), lexical scope write (GAP-03), integration tests
+- [ ] 03.5-02-PLAN.md — CTXP traceability fix (update VERIFICATION.md, REQUIREMENTS.md checkboxes)
+
 ### Phase 4: HTTP API and Python SDK
 **Goal**: An external developer can store events, search memory, and retrieve entity snapshots through HTTP endpoints and a Python library, with full async support
 **Depends on**: Phase 3
@@ -253,7 +269,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 3.1 -> 3.2 -> 3.3 -> 3.4 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 3.1 -> 3.2 -> 3.3 -> 3.4 -> 3.5 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -267,6 +283,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 2.3 -> 3 -> 3.1 -> 3.2 
 | 3.2 Retrieval Filter Forwarding | 0/2 | Not started | - |
 | 3.3 Contradiction Modeling | 0/2 | Complete    | 2026-02-22 |
 | 3.4 Namespace & Config Expansion | 0/2 | Not started | - |
+| 3.5 Cross-Phase Wiring Fixes | 0/2 | Not started | - |
 | 4. HTTP API and Python SDK | 0/2 | Not started | - |
 | 5. Self-Organization | 0/2 | Not started | - |
 | 6. Portability and CLI | 0/2 | Not started | - |
