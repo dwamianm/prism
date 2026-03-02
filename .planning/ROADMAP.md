@@ -201,11 +201,11 @@ Plans:
   2. temporal_intent from LLM extraction is forwarded to detect_and_supersede() — "assertion" intent triggers contradict() through the automated ingestion path
   3. scope is passed to lexical_index.index() at all write call sites — scope-filtered lexical queries return matching documents
   4. CTXP-01/02/03 are explicitly listed in Phase 3 VERIFICATION.md and checked off in REQUIREMENTS.md
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03.5-01-PLAN.md — Config wiring (GAP-01), temporal_intent forwarding (GAP-02), lexical scope write (GAP-03), integration tests
-- [ ] 03.5-02-PLAN.md — CTXP traceability fix (update VERIFICATION.md, REQUIREMENTS.md checkboxes)
+- [ ] 03.5-01-PLAN.md — Config wiring (GAP-01), temporal_intent forwarding (GAP-02), lexical scope write (GAP-03), E2E integration tests
+- [ ] 03.5-02-PLAN.md — CTXP traceability fix (update VERIFICATION.md, REQUIREMENTS.md checkboxes), milestone gate test
 
 ### Phase 4: HTTP API and Python SDK
 **Goal**: An external developer can store events, search memory, and retrieve entity snapshots through HTTP endpoints and a Python library, with full async support
