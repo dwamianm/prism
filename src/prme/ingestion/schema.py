@@ -26,8 +26,10 @@ class ExtractedEntity(BaseModel):
         default=None,
         description=(
             "Scope classification: 'personal' for individual context, "
-            "'project' for project-specific context, 'org' for "
-            "organization-wide context. Null if unclear."
+            "'project' for project-specific context, 'organisation' for "
+            "organization-wide context, 'agent' for agent working memory, "
+            "'system' for system-generated content, 'sandbox' for "
+            "temporary/testing context. Null if unclear."
         ),
     )
 
@@ -62,8 +64,8 @@ class ExtractedFact(BaseModel):
     scope: str | None = Field(
         default=None,
         description=(
-            "Scope classification: 'personal', 'project', or 'org'. "
-            "Null if unclear."
+            "Scope classification: 'personal', 'project', 'organisation', "
+            "'agent', 'system', or 'sandbox'. Null if unclear."
         ),
     )
     epistemic_type: str = Field(
