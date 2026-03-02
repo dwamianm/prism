@@ -4,7 +4,11 @@ Type-safe configuration using pydantic-settings with support for
 environment variables (PRME_ prefix), .env files, and direct arguments.
 """
 
-from pydantic import Field
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -88,6 +92,79 @@ class PRMEConfig(BaseSettings):
         default=1000,
         description="Max pending write queue items",
     )
+
+    # Retrieval scoring and packing config (RFC-0005, RFC-0006)
+    scoring: Any = Field(
+        default=None,
+        description="Scoring weights for composite retrieval formula (RFC-0005 S7)",
+    )
+    packing: Any = Field(
+        default=None,
+        description="Context packing configuration (RFC-0006)",
+    )
+
+    # [HYPOTHESIS] parameter overrides
+    epistemic_weights: dict[str, float] = Field(
+        default={
+            "observed": 1.0,
+            "asserted": 0.9,
+            "inferred": 0.7,
+            "hypothetical": 0.3,
+            "conditional": 0.5,
+            "deprecated": 0.1,
+            "unverified": 0.5,
+        },
+        description=(
+            "Epistemic multiplier values for composite score formula "
+            "(RFC-0005 S7) [HYPOTHESIS]. Keys are EpistemicType values."
+        ),
+    )
+    unverified_confidence_threshold: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Confidence threshold for UNVERIFIED nodes in DEFAULT retrieval "
+            "mode (RFC-0003 S8) [HYPOTHESIS]"
+        ),
+    )
+    confidence_overrides: dict[str, float] = Field(
+        default_factory=dict,
+        description=(
+            "Override specific confidence matrix cells. "
+            "Keys: 'epistemic_type:source_type' (e.g., 'observed:user_stated'). "
+            "Values: float 0.0-1.0. Merges into default matrix at startup."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _populate_defaults_and_validate(self) -> PRMEConfig:
+        """Populate lazy defaults for scoring/packing and validate overrides."""
+        # Lazy import to avoid circular import at module level
+        from prme.retrieval.config import PackingConfig, ScoringWeights
+
+        if self.scoring is None:
+            object.__setattr__(self, "scoring", ScoringWeights())
+        elif isinstance(self.scoring, dict):
+            object.__setattr__(self, "scoring", ScoringWeights(**self.scoring))
+
+        if self.packing is None:
+            object.__setattr__(self, "packing", PackingConfig())
+        elif isinstance(self.packing, dict):
+            object.__setattr__(self, "packing", PackingConfig(**self.packing))
+
+        for key, value in self.confidence_overrides.items():
+            if not (0.0 <= value <= 1.0):
+                raise ValueError(
+                    f"confidence_overrides['{key}'] = {value} not in [0.0, 1.0]"
+                )
+            parts = key.split(":")
+            if len(parts) != 2:
+                raise ValueError(
+                    f"confidence_overrides key '{key}' must be "
+                    f"'epistemic_type:source_type' format"
+                )
+        return self
 
     model_config = {
         "env_prefix": "PRME_",
