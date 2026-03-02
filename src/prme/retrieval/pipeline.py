@@ -68,6 +68,8 @@ class RetrievalPipeline:
         conn: duckdb.DuckDBPyConnection,
         scoring_weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
         packing_config: PackingConfig = DEFAULT_PACKING_CONFIG,
+        epistemic_weights: dict[str, float] | None = None,
+        unverified_confidence_threshold: float | None = None,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -75,6 +77,8 @@ class RetrievalPipeline:
         self._conn = conn
         self._scoring_weights = scoring_weights
         self._packing_config = packing_config
+        self._epistemic_weights = epistemic_weights
+        self._unverified_confidence_threshold = unverified_confidence_threshold
 
     async def retrieve(
         self,
@@ -177,10 +181,16 @@ class RetrievalPipeline:
         embedding_mismatch = candidate_counts.get("VECTOR", 0) == 0
 
         # --- Stage 4: Epistemic Filtering ---
-        filtered, excluded = filter_epistemic(candidates, analysis.retrieval_mode)
+        filtered, excluded = filter_epistemic(
+            candidates, analysis.retrieval_mode,
+            unverified_threshold=self._unverified_confidence_threshold,
+        )
 
         # --- Stage 5: Scoring + Ranking ---
-        scored, traces = score_and_rank(filtered, effective_weights)
+        scored, traces = score_and_rank(
+            filtered, effective_weights,
+            epistemic_weights=self._epistemic_weights,
+        )
 
         # --- Stage 5.5: Conflict Metadata Annotation ---
         # Batch-annotate CONTESTED candidates with conflict_flag and

@@ -188,6 +188,8 @@ class MemoryEngine:
             conn=conn,
             scoring_weights=config.scoring,
             packing_config=config.packing,
+            epistemic_weights=config.epistemic_weights,
+            unverified_confidence_threshold=config.unverified_confidence_threshold,
         )
 
         # Run epistemic backfill migration for existing nodes
@@ -321,8 +323,8 @@ class MemoryEngine:
                 label=f"store.vector:{node_id}",
             )
             await self._write_queue.submit(
-                lambda nid=node_id, c=content, uid=user_id, nt=node_type.value: (
-                    self._lexical_index.index(nid, c, uid, nt)
+                lambda nid=node_id, c=content, uid=user_id, nt=node_type.value, sc=scope.value: (
+                    self._lexical_index.index(nid, c, uid, nt, sc)
                 ),
                 label=f"store.lexical:{node_id}",
             )
