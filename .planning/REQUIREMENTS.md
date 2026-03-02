@@ -71,7 +71,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Namespace and Scope Isolation
 
-- [ ] **NSPC-01**: System supports 6 namespace types: PERSONAL, PROJECT, ORGANISATION, AGENT, SYSTEM, SANDBOX (RFC-0004 §3)
+- [x] **NSPC-01**: System supports 6 namespace types: PERSONAL, PROJECT, ORGANISATION, AGENT, SYSTEM, SANDBOX (RFC-0004 §3)
 - [ ] **NSPC-02**: System models namespaces as first-class entities with id, name, type, parent_id, access_policy, retention_policy, decay_policy_ref, and tree-structured hierarchy (RFC-0004 §2, §4)
 - [ ] **NSPC-03**: System enforces granular access permissions (READ, WRITE, ASSERT, DEPRECATE, ADMIN) per actor per namespace, with permissions checked independently (RFC-0004 §5)
 - [ ] **NSPC-04**: System supports per-namespace retention policies with TTL, max event count, min retention window, and expiry actions (ARCHIVE/TOMBSTONE/HARD_DELETE with HARD_DELETE restricted to SANDBOX) (RFC-0004 §7)
@@ -232,7 +232,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EPIS-04 | Phase 3.3 | Complete |
 | EPIS-05 | Phase 3.1 | Complete |
 | EPIS-06 | Phase 5 | Pending |
-| NSPC-01 | Phase 3.4 | Pending |
+| NSPC-01 | Phase 3.4 | Complete |
 | NSPC-02 | Phase 5 | Pending |
 | NSPC-03 | Phase 4 | Pending |
 | NSPC-04 | Phase 5 | Pending |
