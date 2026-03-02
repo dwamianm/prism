@@ -19,6 +19,7 @@ UNVERIFIED_CONFIDENCE_THRESHOLD: float = 0.30
 def filter_epistemic(
     candidates: list[RetrievalCandidate],
     mode: RetrievalMode = RetrievalMode.DEFAULT,
+    unverified_threshold: float | None = None,
 ) -> tuple[list[RetrievalCandidate], list[ExcludedCandidate]]:
     """Filter candidates by epistemic type based on retrieval mode.
 
@@ -34,12 +35,20 @@ def filter_epistemic(
         candidates: Candidates to filter.
         mode: Retrieval mode. DEFAULT excludes HYPOTHETICAL/DEPRECATED
               and low-confidence UNVERIFIED; EXPLICIT keeps all.
+        unverified_threshold: Optional override for the UNVERIFIED confidence
+            threshold. If None, uses module-level UNVERIFIED_CONFIDENCE_THRESHOLD.
 
     Returns:
         Tuple of (kept candidates, excluded candidate records).
     """
     if mode == RetrievalMode.EXPLICIT:
         return candidates, []
+
+    threshold = (
+        unverified_threshold
+        if unverified_threshold is not None
+        else UNVERIFIED_CONFIDENCE_THRESHOLD
+    )
 
     kept: list[RetrievalCandidate] = []
     excluded: list[ExcludedCandidate] = []
@@ -57,7 +66,7 @@ def filter_epistemic(
             )
         elif (
             epistemic_type == EpistemicType.UNVERIFIED
-            and candidate.node.confidence <= UNVERIFIED_CONFIDENCE_THRESHOLD
+            and candidate.node.confidence <= threshold
         ):
             excluded.append(
                 ExcludedCandidate(
@@ -65,7 +74,7 @@ def filter_epistemic(
                     reason=(
                         f"unverified_below_threshold:"
                         f"{candidate.node.confidence:.2f}<="
-                        f"{UNVERIFIED_CONFIDENCE_THRESHOLD:.2f}"
+                        f"{threshold:.2f}"
                     ),
                 )
             )

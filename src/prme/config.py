@@ -6,10 +6,10 @@ environment variables (PRME_ prefix), .env files, and direct arguments.
 
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
+
+from prme.retrieval.config import PackingConfig, ScoringWeights
 
 
 class ExtractionConfig(BaseSettings):
@@ -94,12 +94,12 @@ class PRMEConfig(BaseSettings):
     )
 
     # Retrieval scoring and packing config (RFC-0005, RFC-0006)
-    scoring: Any = Field(
-        default=None,
+    scoring: ScoringWeights = Field(
+        default_factory=ScoringWeights,
         description="Scoring weights for composite retrieval formula (RFC-0005 S7)",
     )
-    packing: Any = Field(
-        default=None,
+    packing: PackingConfig = Field(
+        default_factory=PackingConfig,
         description="Context packing configuration (RFC-0006)",
     )
 
@@ -138,21 +138,8 @@ class PRMEConfig(BaseSettings):
     )
 
     @model_validator(mode="after")
-    def _populate_defaults_and_validate(self) -> PRMEConfig:
-        """Populate lazy defaults for scoring/packing and validate overrides."""
-        # Lazy import to avoid circular import at module level
-        from prme.retrieval.config import PackingConfig, ScoringWeights
-
-        if self.scoring is None:
-            object.__setattr__(self, "scoring", ScoringWeights())
-        elif isinstance(self.scoring, dict):
-            object.__setattr__(self, "scoring", ScoringWeights(**self.scoring))
-
-        if self.packing is None:
-            object.__setattr__(self, "packing", PackingConfig())
-        elif isinstance(self.packing, dict):
-            object.__setattr__(self, "packing", PackingConfig(**self.packing))
-
+    def _validate_confidence_overrides(self) -> PRMEConfig:
+        """Validate confidence_overrides key format and value range."""
         for key, value in self.confidence_overrides.items():
             if not (0.0 <= value <= 1.0):
                 raise ValueError(
