@@ -1,3 +1,18 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+current_plan: 2 of 2
+status: verifying
+last_updated: "2026-03-02T00:41:05.705Z"
+last_activity: 2026-03-02
+progress:
+  total_phases: 10
+  completed_phases: 10
+  total_plans: 28
+  completed_plans: 28
+---
+
 # Project State
 
 ## Project Reference
@@ -12,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 **Phase:** 03.4 (Namespace & Config Expansion)
 **Current Plan:** 2 of 2
 **Total Plans in Phase:** 2
-**Status:** In progress
+**Status:** Phase complete — ready for verification
 **Last Activity:** 2026-03-02
 
 Progress: [████████░░] 45%
@@ -20,9 +35,9 @@ Progress: [████████░░] 45%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: 3.5min
-- Total execution time: 1.18 hours
+- Total execution time: 1.28 hours
 
 **By Phase:**
 
@@ -70,6 +85,7 @@ Progress: [████████░░] 45%
 | Phase 03.3 P01 | 3min | 2 tasks | 6 files |
 | Phase 03.3 P02 | 4min | 2 tasks | 5 files |
 | Phase 03.4 P01 | 2min | 2 tasks | 5 files |
+| Phase 03.4 P02 | 6min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -153,6 +169,8 @@ Recent decisions affecting current work:
 - [Phase 03.3]: No scoring penalty for CONTESTED nodes -- conflict_flag is purely informational metadata
 - [Phase 03.4]: Clean break rename ORG to ORGANISATION with no backward-compat aliases (pre-release, no production data)
 - [Phase 03.4]: SANDBOX docstring documents HARD_DELETE expiry action support (RFC-0004 S7); enforcement constant deferred to Phase 5
+- [Phase 03.4]: Direct import of ScoringWeights/PackingConfig in config.py (no circular dep) enables pydantic-settings env var nested delimiter parsing
+- [Phase 03.4]: Optional parameter threading: scoring/filtering functions accept None-defaulted config params, fall back to module constants for backward compat
 
 ### Pending Todos
 
@@ -165,5 +183,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 03.4-01-PLAN.md (Scope enum expansion to 6 members per RFC-0004 S3)
-Resume file: .planning/phases/03.4-namespace-config-expansion/03.4-02-PLAN.md
+Stopped at: Completed 03.4-02-PLAN.md (PRMEConfig expansion with scoring/packing/epistemic config wiring)
+Resume file: Next phase planning needed
