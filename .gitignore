@@ -1,0 +1,6 @@
+.env
+
+my_memories/
+examples/logs/
+__pycache__/
+*.pyc
