@@ -80,9 +80,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Context Packing
 
-- [ ] **CTXP-01**: System computes Signal-to-Token Ratio (STR = composite_score / token_cost) for every retrieval candidate and uses STR as a tiebreaker within priority tiers (RFC-0006 §2)
-- [ ] **CTXP-02**: System supports 5 representation levels (REFERENCE, KEY_VALUE, STRUCTURED, PROSE, FULL) for memory objects in bundles, with representation selection based on remaining token budget (RFC-0006 §4)
-- [ ] **CTXP-03**: System uses 3-priority greedy bin-packing for context assembly within token budget: (1) pinned + active tasks, (2) multi-path objects by STR, (3) remaining by composite score. Budget MUST NEVER be exceeded. (RFC-0006 §5)
+- [x] **CTXP-01**: System computes Signal-to-Token Ratio (STR = composite_score / token_cost) for every retrieval candidate and uses STR as a tiebreaker within priority tiers (RFC-0006 §2)
+- [x] **CTXP-02**: System supports 5 representation levels (REFERENCE, KEY_VALUE, STRUCTURED, PROSE, FULL) for memory objects in bundles, with representation selection based on remaining token budget (RFC-0006 §4)
+- [x] **CTXP-03**: System uses 3-priority greedy bin-packing for context assembly within token budget: (1) pinned + active tasks, (2) multi-path objects by STR, (3) remaining by composite score. Budget MUST NEVER be exceeded. (RFC-0006 §5)
 
 ### Decay and Forgetting
 
@@ -238,9 +238,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NSPC-04 | Phase 5 | Pending |
 | NSPC-05 | Phase 3.2 | Complete |
 | NSPC-06 | Phase 5 | Pending |
-| CTXP-01 | Phase 3, Phase 3.5 | Pending |
-| CTXP-02 | Phase 3, Phase 3.5 | Pending |
-| CTXP-03 | Phase 3, Phase 3.5 | Pending |
+| CTXP-01 | Phase 3, Phase 3.5 | Complete |
+| CTXP-02 | Phase 3, Phase 3.5 | Complete |
+| CTXP-03 | Phase 3, Phase 3.5 | Complete |
 | DECY-01 | Phase 5 | Pending |
 | DECY-02 | Phase 5 | Pending |
 | DECY-03 | Phase 5 | Pending |
