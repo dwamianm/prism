@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: Not started
+current_plan: 2 of 2
 status: completed
-last_updated: "2026-03-02T00:45:07.765Z"
+last_updated: "2026-03-02T02:04:35Z"
 last_activity: 2026-03-02
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 28
-  completed_plans: 28
+  total_phases: 11
+  completed_phases: 11
+  total_plans: 30
+  completed_plans: 29
 ---
 
 # Project State
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 03.4: Namespace & Config Expansion
+**Current focus:** Phase 03.5: Cross-Phase Wiring Fixes
 
 ## Current Position
 
-**Phase:** 03.4 (Namespace & Config Expansion)
-**Current Plan:** Not started
+**Phase:** 03.5 (Cross-Phase Wiring Fixes)
+**Current Plan:** 2 of 2
 **Total Plans in Phase:** 2
-**Status:** Milestone complete
+**Status:** Plan 02 complete
 **Last Activity:** 2026-03-02
 
-Progress: [████████░░] 45%
+Progress: [████████░░] 47%
 
 ## Performance Metrics
 
@@ -86,6 +86,7 @@ Progress: [████████░░] 45%
 | Phase 03.3 P02 | 4min | 2 tasks | 5 files |
 | Phase 03.4 P01 | 2min | 2 tasks | 5 files |
 | Phase 03.4 P02 | 6min | 2 tasks | 7 files |
+| Phase 03.5 P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,7 @@ Recent decisions affecting current work:
 - [Phase 03.4]: SANDBOX docstring documents HARD_DELETE expiry action support (RFC-0004 S7); enforcement constant deferred to Phase 5
 - [Phase 03.4]: Direct import of ScoringWeights/PackingConfig in config.py (no circular dep) enables pydantic-settings env var nested delimiter parsing
 - [Phase 03.4]: Optional parameter threading: scoring/filtering functions accept None-defaulted config params, fall back to module constants for backward compat
+- [Phase 03.5]: Documentation-only fix: CTXP-01/02/03 were already implemented in packing.py; this plan only closes the traceability gap in VERIFICATION.md and REQUIREMENTS.md
 
 ### Pending Todos
 
@@ -183,5 +185,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 03.4-02-PLAN.md (PRMEConfig expansion with scoring/packing/epistemic config wiring)
-Resume file: Next phase planning needed
+Stopped at: Completed 03.5-02-PLAN.md (CTXP traceability fix and milestone gate test)
+Resume file: .planning/phases/03.5-cross-phase-wiring-fixes/03.5-02-SUMMARY.md
