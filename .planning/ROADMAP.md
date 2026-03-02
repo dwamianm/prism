@@ -185,11 +185,11 @@ Plans:
   1. Scope/Namespace enum includes all 6 types: PERSONAL, PROJECT, ORGANISATION, AGENT, SYSTEM, SANDBOX
   2. PRMEConfig exposes ScoringWeights and PackingConfig as configurable fields
   3. All [HYPOTHESIS]-marked parameters are accessible through PRMEConfig without code changes
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03.4-01: TBD
-- [ ] 03.4-02: TBD
+- [ ] 03.4-01-PLAN.md — Scope enum expansion (ORG -> ORGANISATION + 3 new scopes), LLM prompt updates, all file references
+- [ ] 03.4-02-PLAN.md — PRMEConfig nesting (ScoringWeights, PackingConfig, epistemic_weights, confidence_overrides), ConfidenceMatrix.with_overrides(), MemoryEngine wiring
 
 ### Phase 4: HTTP API and Python SDK
 **Goal**: An external developer can store events, search memory, and retrieve entity snapshots through HTTP endpoints and a Python library, with full async support
