@@ -149,8 +149,8 @@ class IngestionPipeline:
 
         # Index raw content in lexical store for instant searchability
         await self._write_queue.submit(
-            lambda eid=str(event.id), c=content, uid=user_id: (
-                self._lexical_index.index(eid, c, uid, "event")
+            lambda eid=str(event.id), c=content, uid=user_id, sc=scope.value: (
+                self._lexical_index.index(eid, c, uid, "event", sc)
             ),
             label=f"lexical.index:{event.id}",
         )
@@ -404,6 +404,7 @@ class IngestionPipeline:
                         object_value=fact.object,
                         user_id=event.user_id,
                         evidence_event_id=event_id,
+                        temporal_intent=fact.temporal_intent,
                     )
 
                 # Index fact in vector and lexical stores (not tracked for rollback)
@@ -414,8 +415,8 @@ class IngestionPipeline:
                     label=f"vector.fact:{fact_node_id}",
                 )
                 await self._write_queue.submit(
-                    lambda fid=fact_node_id, fc=fact_content, uid=event.user_id, nt=node_type.value: (
-                        self._lexical_index.index(fid, fc, uid, nt)
+                    lambda fid=fact_node_id, fc=fact_content, uid=event.user_id, nt=node_type.value, sc=fact_scope.value: (
+                        self._lexical_index.index(fid, fc, uid, nt, sc)
                     ),
                     label=f"lexical.fact:{fact_node_id}",
                 )
@@ -460,8 +461,8 @@ class IngestionPipeline:
                     label=f"vector.summary:{event_id}",
                 )
                 await self._write_queue.submit(
-                    lambda eid=event_id, s=result.summary, uid=event.user_id: (
-                        self._lexical_index.index(eid, s, uid, "summary")
+                    lambda eid=event_id, s=result.summary, uid=event.user_id, sc=scope.value: (
+                        self._lexical_index.index(eid, s, uid, "summary", sc)
                     ),
                     label=f"lexical.summary:{event_id}",
                 )
