@@ -38,14 +38,24 @@ class EdgeType(str, Enum):
 
 
 class Scope(str, Enum):
-    """Memory scoping levels.
+    """Memory scoping levels (RFC-0004 S3).
 
-    All three supported from day one per user decision.
+    Six namespace types covering all isolation patterns:
+    - PERSONAL: Single human user. Highest trust.
+    - PROJECT: Shared across actors working on a common goal.
+    - ORGANISATION: Shared across an organisation. Cross-project facts.
+    - AGENT: Private to a specific AI agent's working memory.
+    - SYSTEM: Reserved for system-generated content (summaries, organizer output).
+    - SANDBOX: Temporary isolated scope for testing/simulation.
+      Supports HARD_DELETE expiry action (RFC-0004 S7).
     """
 
     PERSONAL = "personal"
     PROJECT = "project"
-    ORG = "org"
+    ORGANISATION = "organisation"
+    AGENT = "agent"
+    SYSTEM = "system"
+    SANDBOX = "sandbox"
 
 
 class LifecycleState(str, Enum):

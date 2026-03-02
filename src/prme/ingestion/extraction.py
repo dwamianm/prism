@@ -55,7 +55,10 @@ temporal text in the temporal_ref field.
 6. **Scope Classification**: For each entity and fact, classify the scope:
    - "personal" — about a specific individual's preferences, habits, or personal context
    - "project" — about a specific project, its decisions, tools, or deliverables
-   - "org" — about organization-wide policies, structures, or shared context
+   - "organisation" — about organization-wide policies, structures, or shared context
+   - "agent" — about a specific AI agent's working memory or internal reasoning
+   - "system" — system-generated content such as summaries or organizer output
+   - "sandbox" — temporary or experimental context intended for isolated testing
    If the scope is unclear, leave it as null (the system will use a safe default).
 
 7. **Epistemic Type**: For each fact, classify its epistemic_type:
