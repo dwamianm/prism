@@ -238,9 +238,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NSPC-04 | Phase 5 | Pending |
 | NSPC-05 | Phase 3.2 | Complete |
 | NSPC-06 | Phase 5 | Pending |
-| CTXP-01 | Phase 3 | Satisfied |
-| CTXP-02 | Phase 3 | Satisfied |
-| CTXP-03 | Phase 3 | Satisfied |
+| CTXP-01 | Phase 3, Phase 3.5 | Pending |
+| CTXP-02 | Phase 3, Phase 3.5 | Pending |
+| CTXP-03 | Phase 3, Phase 3.5 | Pending |
 | DECY-01 | Phase 5 | Pending |
 | DECY-02 | Phase 5 | Pending |
 | DECY-03 | Phase 5 | Pending |
