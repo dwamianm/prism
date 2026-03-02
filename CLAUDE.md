@@ -33,6 +33,19 @@ Objects progress through: Tentative → Stable → Superseded → Archived. Each
 
 Periodic jobs handle: salience recalculation, promotion/demotion of assertions, summarization (daily → weekly → monthly), deduplication/entity alias resolution, and policy-based archival with TTL enforcement.
 
+## RFCs
+
+Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0014). See `docs/INDEX.md` for the full listing. Key RFCs include:
+
+- **RFC-0000** — Suite overview
+- **RFC-0001** — Core data model
+- **RFC-0002** — Event store
+- **RFC-0003** — Epistemic state model
+- **RFC-0005** — Hybrid retrieval pipeline
+- **RFC-0014** — Portability, sync, and federation
+
+Always consult the relevant RFC before implementing or modifying a subsystem.
+
 ## MVP Phases
 
 1. Event store, basic graph schema, vector search, hybrid retrieval
