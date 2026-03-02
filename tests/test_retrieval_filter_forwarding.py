@@ -276,7 +276,7 @@ async def test_multi_scope_filter(backends):
     """Vector backend scope filtering includes requested scopes and excludes others.
 
     Verifies that multi-scope vector filtering (DuckDB JOIN with IN clause)
-    returns nodes from both requested scopes while excluding ORG.
+    returns nodes from both requested scopes while excluding ORGANISATION.
     """
     conn, graph_store, vector_index, lexical_index = backends
 
@@ -289,7 +289,7 @@ async def test_multi_scope_filter(backends):
         content="Project deployment checklist",
     )
     org_node = _make_node(
-        scope=Scope.ORG,
+        scope=Scope.ORGANISATION,
         content="Organization quarterly budget report",
     )
 
@@ -305,7 +305,7 @@ async def test_multi_scope_filter(backends):
 
     vector_node_ids = {r["node_id"] for r in vector_results}
     assert str(org_node.id) not in vector_node_ids, (
-        "ORG node leaked into PERSONAL+PROJECT vector results"
+        "ORGANISATION node leaked into PERSONAL+PROJECT vector results"
     )
 
 
