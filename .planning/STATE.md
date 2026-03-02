@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** An LLM-powered agent can reliably recall long-term context -- preferences, decisions, relationships -- without resurfacing superseded information or wasting context window tokens.
-**Current focus:** Phase 03.3: Contradiction Modeling
+**Current focus:** Phase 03.4: Namespace & Config Expansion
 
 ## Current Position
 
-**Phase:** 03.3 (Contradiction Modeling)
-**Current Plan:** Not started
+**Phase:** 03.4 (Namespace & Config Expansion)
+**Current Plan:** 2 of 2
 **Total Plans in Phase:** 2
-**Status:** Ready to plan
-**Last Activity:** 2026-02-22
+**Status:** In progress
+**Last Activity:** 2026-03-02
 
-Progress: [████████░░] 42%
+Progress: [████████░░] 45%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: 3.6min
-- Total execution time: 1.15 hours
+- Total plans completed: 20
+- Average duration: 3.5min
+- Total execution time: 1.18 hours
 
 **By Phase:**
 
@@ -37,9 +37,10 @@ Progress: [████████░░] 42%
 | 03.1-epistemic-type-confidence-matrix | 2 | 8min | 4.0min |
 | 03.2-retrieval-filter-forwarding | 1 | 5min | 5.0min |
 | 03.3-contradiction-modeling | 1 | 3min | 3.0min |
+| 03.4-namespace-config-expansion | 1 | 2min | 2.0min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 3min, 5min, 5min, 3min
+- Last 5 plans: 3min, 5min, 5min, 3min, 2min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -68,6 +69,7 @@ Progress: [████████░░] 42%
 | Phase 03.2 P02 | 8min | 2 tasks | 2 files |
 | Phase 03.3 P01 | 3min | 2 tasks | 6 files |
 | Phase 03.3 P02 | 4min | 2 tasks | 5 files |
+| Phase 03.4 P01 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -149,6 +151,8 @@ Recent decisions affecting current work:
 - [Phase 03.3]: CONTESTED lifecycle check precedes node_type classification in packing to override stable_facts
 - [Phase 03.3]: Counterparts NOT auto-injected into retrieval results -- only included if independently query-relevant
 - [Phase 03.3]: No scoring penalty for CONTESTED nodes -- conflict_flag is purely informational metadata
+- [Phase 03.4]: Clean break rename ORG to ORGANISATION with no backward-compat aliases (pre-release, no production data)
+- [Phase 03.4]: SANDBOX docstring documents HARD_DELETE expiry action support (RFC-0004 S7); enforcement constant deferred to Phase 5
 
 ### Pending Todos
 
@@ -160,6 +164,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Completed 03.3-02-PLAN.md (contradiction detection/retrieval wiring, 9 integration tests, Phase 03.3 complete)
-Resume file: Next phase planning needed
+Last session: 2026-03-02
+Stopped at: Completed 03.4-01-PLAN.md (Scope enum expansion to 6 members per RFC-0004 S3)
+Resume file: .planning/phases/03.4-namespace-config-expansion/03.4-02-PLAN.md
