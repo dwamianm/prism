@@ -97,13 +97,17 @@ class VectorIndex:
         time_to: datetime | None,
     ) -> dict[int, str]:
         """Fetch allowed vector keys from DuckDB (sync, runs in thread pool)."""
+        # Lifecycle states eligible for retrieval (exclude superseded/archived)
+        _ACTIVE_STATES = ("tentative", "stable", "contested")
+
         if scope is not None or time_from is not None or time_to is not None:
             sql = (
                 "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
                 "JOIN nodes n ON vm.node_id = n.id "
                 "WHERE vm.user_id = ?"
+                " AND COALESCE(n.lifecycle_state, 'tentative') IN (?, ?, ?)"
             )
-            params: list = [user_id]
+            params: list = [user_id, *_ACTIVE_STATES]
 
             if scope is not None and scope:
                 placeholders = ", ".join("?" for _ in scope)
@@ -128,8 +132,11 @@ class VectorIndex:
             return {row[0]: row[1] for row in rows}
         else:
             rows = self._conn.execute(
-                "SELECT vector_key, node_id FROM vector_metadata WHERE user_id = ?",
-                [user_id],
+                "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
+                "JOIN nodes n ON vm.node_id = n.id "
+                "WHERE vm.user_id = ?"
+                " AND COALESCE(n.lifecycle_state, 'tentative') IN (?, ?, ?)",
+                [user_id, *_ACTIVE_STATES],
             ).fetchall()
             return {row[0]: row[1] for row in rows}
 

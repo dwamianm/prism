@@ -562,28 +562,40 @@ class IngestionPipeline:
         task = asyncio.create_task(_retry())
         self._retry_tasks[event_id] = task
 
-    async def shutdown(self) -> None:
-        """Cancel all background and retry tasks and wait for completion.
+    async def shutdown(self, drain_timeout: float = 10.0) -> None:
+        """Drain pending background tasks then shut down.
 
-        Should be called during engine shutdown to ensure clean teardown.
+        Waits up to *drain_timeout* seconds for in-progress extraction
+        tasks to finish so that supersedence detection completes before
+        the engine closes.  Any tasks still running after the timeout
+        are cancelled.  Retry tasks are cancelled immediately since
+        their long sleep delays make draining impractical.
+
+        Args:
+            drain_timeout: Maximum seconds to wait for background tasks.
         """
-        # Cancel background extraction tasks
-        for task in self._background_tasks:
-            task.cancel()
-
-        # Cancel retry tasks
+        # Cancel retry tasks immediately (long sleeps, not worth draining)
         for task in self._retry_tasks.values():
             task.cancel()
+        if self._retry_tasks:
+            await asyncio.gather(
+                *self._retry_tasks.values(), return_exceptions=True
+            )
+        self._retry_tasks.clear()
 
-        # Gather all tasks, suppressing CancelledError
-        all_tasks = list(self._background_tasks) + list(
-            self._retry_tasks.values()
-        )
-        if all_tasks:
-            await asyncio.gather(*all_tasks, return_exceptions=True)
+        # Drain background extraction tasks with a timeout
+        bg_tasks = list(self._background_tasks)
+        if bg_tasks:
+            _done, pending = await asyncio.wait(
+                bg_tasks, timeout=drain_timeout
+            )
+            # Cancel any that didn't finish in time
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
 
         self._background_tasks.clear()
-        self._retry_tasks.clear()
         logger.info("ingestion.pipeline_shutdown")
 
 
