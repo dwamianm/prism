@@ -24,7 +24,7 @@ import asyncio
 import logging
 import warnings
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 
@@ -36,7 +36,7 @@ from prme.storage.event_store import EventStore
 from prme.storage.lexical_index import LexicalIndex
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
-from prme.storage.write_queue import WriteQueue
+from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
 from prme.types import (
     EpistemicType,
     LifecycleState,
@@ -47,6 +47,8 @@ from prme.types import (
 )
 
 if TYPE_CHECKING:
+    import asyncpg
+
     from prme.ingestion.pipeline import IngestionPipeline
     from prme.retrieval.config import ScoringWeights
     from prme.retrieval.models import RetrievalResponse
@@ -72,19 +74,21 @@ class MemoryEngine:
 
     def __init__(
         self,
-        conn: duckdb.DuckDBPyConnection,
-        event_store: EventStore,
-        graph_store: DuckPGQGraphStore,
-        vector_index: VectorIndex,
-        lexical_index: LexicalIndex,
-        write_queue: WriteQueue,
+        conn: duckdb.DuckDBPyConnection | None,
+        event_store: Any,
+        graph_store: Any,
+        vector_index: Any,
+        lexical_index: Any,
+        write_queue: WriteQueue | NoOpWriteQueue,
         pipeline: IngestionPipeline | None = None,
         retrieval_pipeline: RetrievalPipeline | None = None,
         confidence_matrix: object | None = None,
         epistemic_weights: dict[str, float] | None = None,
         unverified_confidence_threshold: float | None = None,
+        pool: asyncpg.Pool | None = None,
     ) -> None:
         self._conn = conn
+        self._pool = pool
         self._event_store = event_store
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -111,12 +115,9 @@ class MemoryEngine:
     async def create(cls, config: PRMEConfig | None = None) -> "MemoryEngine":
         """Create and initialize a MemoryEngine with all backends.
 
-        Opens a DuckDB connection, initializes the schema, creates all
-        four backend stores, starts the write queue, and sets up the
-        ingestion pipeline with an extraction provider.
-
-        If config is None, uses PRMEConfig() which loads from environment
-        variables and defaults.
+        Dispatches to ``_create_duckdb()`` or ``_create_postgres()``
+        based on ``config.backend``. When ``database_url`` is set,
+        all storage uses PostgreSQL; otherwise, file-based DuckDB.
 
         Args:
             config: Optional configuration. Defaults to PRMEConfig().
@@ -127,21 +128,31 @@ class MemoryEngine:
         if config is None:
             config = PRMEConfig()
 
+        if config.backend == "postgres":
+            return await cls._create_postgres(config)
+        return await cls._create_duckdb(config)
+
+    @classmethod
+    async def _create_duckdb(cls, config: PRMEConfig) -> "MemoryEngine":
+        """Create a MemoryEngine backed by DuckDB (file-based)."""
         # Open DuckDB connection
         conn = duckdb.connect(config.db_path)
 
         # Initialize schema (tables, indexes, DuckPGQ attempt)
         initialize_database(conn)
 
+        # Create shared connection lock for DuckDB thread-safety.
+        conn_lock = asyncio.Lock()
+
         # Create backend stores
-        event_store = EventStore(conn)
-        graph_store = DuckPGQGraphStore(conn)
+        event_store = EventStore(conn, conn_lock)
+        graph_store = DuckPGQGraphStore(conn, conn_lock)
 
         # Create embedding provider via factory
         embedding_provider = create_embedding_provider(config.embedding)
 
         # Create vector index
-        vector_index = VectorIndex(conn, config.vector_path, embedding_provider)
+        vector_index = VectorIndex(conn, config.vector_path, embedding_provider, conn_lock)
 
         # Create lexical index
         lexical_index = LexicalIndex(config.lexical_path)
@@ -150,23 +161,20 @@ class MemoryEngine:
         write_queue = WriteQueue(maxsize=config.write_queue_size)
         await write_queue.start()
 
-        # Lazy import to avoid circular import (engine -> pipeline -> entity_merge -> graph_store -> engine)
+        # Lazy import to avoid circular import
         from prme.ingestion.extraction import create_extraction_provider
         from prme.ingestion.graph_writer import WriteQueueGraphWriter
         from prme.ingestion.pipeline import IngestionPipeline
 
-        # Create extraction provider and graph writer
         extraction_provider = create_extraction_provider(config.extraction)
         graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
 
-        # Build overridden confidence matrix from config (used by both ingestion and engine)
         from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX as _default_matrix
 
         _active_confidence_matrix = _default_matrix.with_overrides(
             config.confidence_overrides
         )
 
-        # Create ingestion pipeline with GraphWriter injection
         pipeline = IngestionPipeline(
             event_store=event_store,
             graph_store=graph_store,
@@ -178,7 +186,6 @@ class MemoryEngine:
             confidence_matrix=_active_confidence_matrix,
         )
 
-        # Create retrieval pipeline (lazy import to avoid circular imports)
         from prme.retrieval.pipeline import RetrievalPipeline
 
         retrieval_pipeline = RetrievalPipeline(
@@ -186,6 +193,7 @@ class MemoryEngine:
             vector_index=vector_index,
             lexical_index=lexical_index,
             conn=conn,
+            conn_lock=conn_lock,
             scoring_weights=config.scoring,
             packing_config=config.packing,
             epistemic_weights=config.epistemic_weights,
@@ -211,6 +219,106 @@ class MemoryEngine:
 
         return cls(
             conn=conn,
+            event_store=event_store,
+            graph_store=graph_store,
+            vector_index=vector_index,
+            lexical_index=lexical_index,
+            write_queue=write_queue,
+            pipeline=pipeline,
+            retrieval_pipeline=retrieval_pipeline,
+            confidence_matrix=_active_confidence_matrix,
+            epistemic_weights=config.epistemic_weights,
+            unverified_confidence_threshold=config.unverified_confidence_threshold,
+        )
+
+    @classmethod
+    async def _create_postgres(cls, config: PRMEConfig) -> "MemoryEngine":
+        """Create a MemoryEngine backed by PostgreSQL."""
+        from prme.storage.pg import (
+            PgEventStore,
+            PgGraphStore,
+            PgLexicalIndex,
+            PgVectorIndex,
+            create_pool,
+            initialize_pg_database,
+        )
+
+        assert config.database_url is not None
+
+        # Create asyncpg pool and initialize schema
+        pool = await create_pool(config.database_url)
+        await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
+
+        # Create Pg backends
+        event_store = PgEventStore(pool)
+        graph_store = PgGraphStore(pool)
+        embedding_provider = create_embedding_provider(config.embedding)
+        vector_index = PgVectorIndex(pool, embedding_provider)
+        lexical_index = PgLexicalIndex(pool)
+
+        # NoOpWriteQueue — PostgreSQL handles multi-writer natively
+        write_queue = NoOpWriteQueue()
+        await write_queue.start()
+
+        # Lazy imports for ingestion pipeline
+        from prme.ingestion.extraction import create_extraction_provider
+        from prme.ingestion.graph_writer import WriteQueueGraphWriter
+        from prme.ingestion.pipeline import IngestionPipeline
+
+        extraction_provider = create_extraction_provider(config.extraction)
+        graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
+
+        from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX as _default_matrix
+
+        _active_confidence_matrix = _default_matrix.with_overrides(
+            config.confidence_overrides
+        )
+
+        pipeline = IngestionPipeline(
+            event_store=event_store,
+            graph_store=graph_store,
+            vector_index=vector_index,
+            lexical_index=lexical_index,
+            extraction_provider=extraction_provider,
+            write_queue=write_queue,
+            graph_writer=graph_writer,
+            confidence_matrix=_active_confidence_matrix,
+        )
+
+        from prme.retrieval.pipeline import RetrievalPipeline
+
+        retrieval_pipeline = RetrievalPipeline(
+            graph_store=graph_store,
+            vector_index=vector_index,
+            lexical_index=lexical_index,
+            conn=None,
+            conn_lock=None,
+            pool=pool,
+            scoring_weights=config.scoring,
+            packing_config=config.packing,
+            epistemic_weights=config.epistemic_weights,
+            unverified_confidence_threshold=config.unverified_confidence_threshold,
+        )
+
+        # Run epistemic backfill migration
+        from prme.epistemic.migration import backfill_epistemic_types
+
+        backfill_count = await backfill_epistemic_types(graph_store)
+        if backfill_count > 0:
+            logger.info(
+                "Backfilled epistemic types for %d existing nodes",
+                backfill_count,
+            )
+
+        logger.debug(
+            "PRMEConfig[postgres]: scoring=%s, packing_budget=%d",
+            config.scoring.version_id,
+            config.packing.token_budget,
+        )
+
+        return cls(
+            conn=None,
+            pool=pool,
             event_store=event_store,
             graph_store=graph_store,
             vector_index=vector_index,
@@ -673,7 +781,14 @@ class MemoryEngine:
         except Exception:
             logger.warning("Error closing lexical index", exc_info=True)
 
-        try:
-            self._conn.close()
-        except Exception:
-            logger.warning("Error closing DuckDB connection", exc_info=True)
+        if self._conn is not None:
+            try:
+                self._conn.close()
+            except Exception:
+                logger.warning("Error closing DuckDB connection", exc_info=True)
+
+        if self._pool is not None:
+            try:
+                await self._pool.close()
+            except Exception:
+                logger.warning("Error closing PostgreSQL pool", exc_info=True)

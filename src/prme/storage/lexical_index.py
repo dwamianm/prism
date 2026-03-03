@@ -111,21 +111,38 @@ class LexicalIndex:
         self._index.reload()
         searcher = self._index.searcher()
 
-        # Build query combining content search with user_id filter
-        # tantivy query syntax: content terms AND user_id:exact_match
-        query_str = f"{query_text} AND user_id:{user_id}"
-        if node_type is not None:
-            query_str += f" AND node_type:{node_type}"
+        # Parse content query leniently — tolerates apostrophes, parens,
+        # colons, and other special characters in user query text.
+        content_q, _unconsumed = self._index.parse_query_lenient(
+            query_text, ["content"]
+        )
 
-        # Scope filtering via tantivy AND clause with OR for multi-scope
+        # Build exact-match filters via term_query (no parser involved)
+        subqueries = [
+            (tantivy.Occur.Must, content_q),
+            (tantivy.Occur.Must, tantivy.Query.term_query(
+                self._schema, "user_id", user_id
+            )),
+        ]
+        if node_type is not None:
+            subqueries.append((tantivy.Occur.Must, tantivy.Query.term_query(
+                self._schema, "node_type", node_type
+            )))
         if scope is not None and scope:
             if len(scope) == 1:
-                query_str += f" AND scope:{scope[0]}"
+                subqueries.append((tantivy.Occur.Must, tantivy.Query.term_query(
+                    self._schema, "scope", scope[0]
+                )))
             else:
-                scope_clause = " OR ".join(f"scope:{s}" for s in scope)
-                query_str += f" AND ({scope_clause})"
+                scope_q = tantivy.Query.boolean_query([
+                    (tantivy.Occur.Should, tantivy.Query.term_query(
+                        self._schema, "scope", s
+                    ))
+                    for s in scope
+                ])
+                subqueries.append((tantivy.Occur.Must, scope_q))
 
-        query = self._index.parse_query(query_str, ["content"])
+        query = tantivy.Query.boolean_query(subqueries)
         search_result = searcher.search(query, limit)
 
         results = []

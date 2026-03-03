@@ -32,9 +32,13 @@ class EventStore:
     user_id scoping to prevent cross-user data leakage.
     """
 
-    def __init__(self, conn: duckdb.DuckDBPyConnection) -> None:
+    def __init__(
+        self,
+        conn: duckdb.DuckDBPyConnection,
+        conn_lock: asyncio.Lock | None = None,
+    ) -> None:
         self._conn = conn
-        self._write_lock = asyncio.Lock()
+        self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
     # --- Public async API ---
 
@@ -47,7 +51,7 @@ class EventStore:
         Returns:
             The string representation of the event's UUID.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(self._append_sync, event)
         return str(event.id)
 
@@ -60,7 +64,8 @@ class EventStore:
         Returns:
             The Event if found, None otherwise.
         """
-        return await asyncio.to_thread(self._get_sync, event_id)
+        async with self._conn_lock:
+            return await asyncio.to_thread(self._get_sync, event_id)
 
     async def get_by_user(
         self,
@@ -84,9 +89,10 @@ class EventStore:
         Returns:
             List of Events ordered by timestamp descending.
         """
-        return await asyncio.to_thread(
-            self._get_by_user_sync, user_id, session_id, scopes, limit, offset
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_by_user_sync, user_id, session_id, scopes, limit, offset
+            )
 
     async def get_by_hash(
         self,
@@ -106,9 +112,10 @@ class EventStore:
         Returns:
             List of Events matching the content hash.
         """
-        return await asyncio.to_thread(
-            self._get_by_hash_sync, content_hash, user_id, scopes
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_by_hash_sync, content_hash, user_id, scopes
+            )
 
     # --- Internal sync methods ---
 

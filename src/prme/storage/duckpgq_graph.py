@@ -42,9 +42,13 @@ class DuckPGQGraphStore:
     lifecycle states (tentative + stable).
     """
 
-    def __init__(self, conn: duckdb.DuckDBPyConnection) -> None:
+    def __init__(
+        self,
+        conn: duckdb.DuckDBPyConnection,
+        conn_lock: asyncio.Lock | None = None,
+    ) -> None:
         self._conn = conn
-        self._write_lock = asyncio.Lock()
+        self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
     # --- Node Operations ---
 
@@ -57,7 +61,7 @@ class DuckPGQGraphStore:
         Returns:
             String UUID of the created node.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(self._create_node_sync, node)
         return str(node.id)
 
@@ -77,9 +81,10 @@ class DuckPGQGraphStore:
         Returns:
             The MemoryNode if found and visible, None otherwise.
         """
-        return await asyncio.to_thread(
-            self._get_node_sync, node_id, include_superseded
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_node_sync, node_id, include_superseded
+            )
 
     async def query_nodes(
         self,
@@ -108,16 +113,17 @@ class DuckPGQGraphStore:
         Returns:
             List of matching MemoryNodes.
         """
-        return await asyncio.to_thread(
-            self._query_nodes_sync,
-            node_type,
-            user_id,
-            scope,
-            lifecycle_states,
-            valid_at,
-            min_confidence,
-            limit,
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._query_nodes_sync,
+                node_type,
+                user_id,
+                scope,
+                lifecycle_states,
+                valid_at,
+                min_confidence,
+                limit,
+            )
 
     # --- Edge Operations ---
 
@@ -130,7 +136,7 @@ class DuckPGQGraphStore:
         Returns:
             String UUID of the created edge.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(self._create_edge_sync, edge)
         return str(edge.id)
 
@@ -155,14 +161,15 @@ class DuckPGQGraphStore:
         Returns:
             List of matching MemoryEdges.
         """
-        return await asyncio.to_thread(
-            self._get_edges_sync,
-            source_id,
-            target_id,
-            edge_type,
-            valid_at,
-            min_confidence,
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_edges_sync,
+                source_id,
+                target_id,
+                edge_type,
+                valid_at,
+                min_confidence,
+            )
 
     # --- Lifecycle Transitions ---
 
@@ -175,7 +182,7 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If the node doesn't exist or the transition is invalid.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(self._promote_sync, node_id)
 
     async def supersede(
@@ -201,7 +208,7 @@ class DuckPGQGraphStore:
             ValueError: If either node doesn't exist or the transition
                 is invalid.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(
                 self._supersede_sync, old_node_id, new_node_id, evidence_id
             )
@@ -227,7 +234,7 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If either node is not found or not in an active state.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(
                 self._contradict_sync, node_a_id, node_b_id, evidence_id
             )
@@ -256,7 +263,7 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If nodes are not CONTESTED or no CONTRADICTS edge exists.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(
                 self._resolve_contradiction_sync,
                 winner_id,
@@ -277,7 +284,7 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If the node doesn't exist or is already archived.
         """
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(self._archive_sync, node_id)
 
     # --- Graph Traversal ---
@@ -309,15 +316,16 @@ class DuckPGQGraphStore:
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
         """
-        return await asyncio.to_thread(
-            self._get_neighborhood_sync,
-            node_id,
-            max_hops,
-            edge_types,
-            valid_at,
-            min_confidence,
-            include_superseded,
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_neighborhood_sync,
+                node_id,
+                max_hops,
+                edge_types,
+                valid_at,
+                min_confidence,
+                include_superseded,
+            )
 
     async def find_shortest_path(
         self,
@@ -340,9 +348,10 @@ class DuckPGQGraphStore:
             List of node IDs forming the shortest path (including
             source and target), or None if no path exists.
         """
-        return await asyncio.to_thread(
-            self._find_shortest_path_sync, source_id, target_id, edge_types
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._find_shortest_path_sync, source_id, target_id, edge_types
+            )
 
     async def get_supersedence_chain(
         self,
@@ -365,9 +374,10 @@ class DuckPGQGraphStore:
         Returns:
             Ordered list of MemoryNodes in the chain.
         """
-        return await asyncio.to_thread(
-            self._get_supersedence_chain_sync, node_id, direction
-        )
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_supersedence_chain_sync, node_id, direction
+            )
 
     # --- Cleanup / Rollback ---
 
@@ -381,7 +391,7 @@ class DuckPGQGraphStore:
             node_id: String UUID of the node to delete.
         """
         # Defense-in-depth: primary write serialization is via WriteQueue
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(self._delete_node_sync, node_id)
 
     async def delete_edge(self, edge_id: str) -> None:
@@ -394,7 +404,7 @@ class DuckPGQGraphStore:
             edge_id: String UUID of the edge to delete.
         """
         # Defense-in-depth: primary write serialization is via WriteQueue
-        async with self._write_lock:
+        async with self._conn_lock:
             await asyncio.to_thread(self._delete_edge_sync, edge_id)
 
     # --- Internal sync methods ---

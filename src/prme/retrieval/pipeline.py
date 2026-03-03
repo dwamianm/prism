@@ -14,6 +14,7 @@ request_id for replay capability and audit trail.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -65,7 +66,9 @@ class RetrievalPipeline:
         graph_store: GraphStore,
         vector_index: VectorIndex,
         lexical_index: LexicalIndex,
-        conn: duckdb.DuckDBPyConnection,
+        conn: duckdb.DuckDBPyConnection | None = None,
+        conn_lock: asyncio.Lock | None = None,
+        pool: object | None = None,
         scoring_weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
         packing_config: PackingConfig = DEFAULT_PACKING_CONFIG,
         epistemic_weights: dict[str, float] | None = None,
@@ -75,6 +78,8 @@ class RetrievalPipeline:
         self._vector_index = vector_index
         self._lexical_index = lexical_index
         self._conn = conn
+        self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
+        self._pool = pool  # asyncpg.Pool for PostgreSQL mode
         self._scoring_weights = scoring_weights
         self._packing_config = packing_config
         self._epistemic_weights = epistemic_weights
@@ -295,11 +300,22 @@ class RetrievalPipeline:
                 "time_to": effective_time_to.isoformat() if effective_time_to else None,
                 "cross_scope_hint_count": len(cross_scope_hints),
             })
-            self._conn.execute(
-                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
-                "VALUES (?, ?, ?, ?, ?, now())",
-                [op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id],
-            )
+            if self._pool is not None:
+                # PostgreSQL backend
+                async with self._pool.acquire() as pg_conn:
+                    await pg_conn.execute(
+                        "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
+                        "VALUES ($1, $2, $3, $4::jsonb, $5, now())",
+                        op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id,
+                    )
+            elif self._conn is not None:
+                async with self._conn_lock:
+                    await asyncio.to_thread(
+                        self._conn.execute,
+                        "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
+                        "VALUES (?, ?, ?, ?, ?, now())",
+                        [op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id],
+                    )
         except Exception:
             logger.warning(
                 "Failed to log RETRIEVAL_REQUEST operation for request %s",

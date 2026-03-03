@@ -23,6 +23,12 @@ dependencies = [
     "dateparser>=1.2",
 ]
 
+[project.optional-dependencies]
+postgres = [
+    "asyncpg>=0.29.0",
+    "pgvector>=0.3.0",
+]
+
 [dependency-groups]
 dev = [
     "pytest",

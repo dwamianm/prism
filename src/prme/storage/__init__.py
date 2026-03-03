@@ -11,7 +11,7 @@ from prme.storage.event_store import EventStore
 from prme.storage.graph_store import GraphStore
 from prme.storage.lexical_index import LexicalIndex
 from prme.storage.vector_index import VectorIndex
-from prme.storage.write_queue import WriteQueue
+from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
 
 __all__ = [
     "DuckPGQGraphStore",
@@ -19,6 +19,7 @@ __all__ = [
     "GraphStore",
     "LexicalIndex",
     "MemoryEngine",
+    "NoOpWriteQueue",
     "VectorIndex",
     "WriteQueue",
 ]

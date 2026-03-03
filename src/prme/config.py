@@ -71,6 +71,10 @@ class PRMEConfig(BaseSettings):
     double-underscore delimiter (e.g., PRME_EMBEDDING__DIMENSION=384).
     """
 
+    database_url: str | None = Field(
+        default=None,
+        description="PostgreSQL connection string. When set, all storage uses PostgreSQL.",
+    )
     db_path: str = Field(
         default="./memory.duckdb", description="Path to DuckDB database file"
     )
@@ -152,6 +156,11 @@ class PRMEConfig(BaseSettings):
                     f"'epistemic_type:source_type' format"
                 )
         return self
+
+    @property
+    def backend(self) -> str:
+        """Return 'postgres' when database_url is set, else 'duckdb'."""
+        return "postgres" if self.database_url else "duckdb"
 
     model_config = {
         "env_prefix": "PRME_",
