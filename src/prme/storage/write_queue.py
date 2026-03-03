@@ -135,6 +135,34 @@ class WriteQueue:
         return self._queue.qsize()
 
 
+class NoOpWriteQueue:
+    """Passthrough write queue for PostgreSQL multi-writer mode.
+
+    Satisfies the WriteQueue interface but executes coroutine factories
+    immediately without serialization. PostgreSQL handles concurrency
+    natively, so the single-writer queue is not needed.
+    """
+
+    async def start(self) -> None:
+        """No-op -- no consumer to start."""
+
+    async def stop(self) -> None:
+        """No-op -- no consumer to stop."""
+
+    async def submit(
+        self,
+        coro_factory: Callable[[], Coroutine[Any, Any, Any]],
+        label: str = "",
+    ) -> Any:
+        """Execute the coroutine factory immediately and return its result."""
+        return await coro_factory()
+
+    @property
+    def pending(self) -> int:
+        """Always zero -- no queue."""
+        return 0
+
+
 class WriteTracker:
     """Tracks graph write operations for rollback on failure.
 

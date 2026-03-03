@@ -43,11 +43,13 @@ class VectorIndex:
         conn: duckdb.DuckDBPyConnection,
         index_path: str,
         embedding_provider: EmbeddingProvider,
+        conn_lock: asyncio.Lock | None = None,
     ) -> None:
         self._conn = conn
         self._index_path = index_path
         self._provider = embedding_provider
         self._write_lock = asyncio.Lock()
+        self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
         # Create metadata table and sequence in DuckDB
         self._init_metadata_table()
@@ -86,6 +88,50 @@ class VectorIndex:
             CREATE INDEX IF NOT EXISTS idx_vector_user
             ON vector_metadata (user_id)
         """)
+
+    def _fetch_allowed_keys(
+        self,
+        user_id: str,
+        scope: list[str] | None,
+        time_from: datetime | None,
+        time_to: datetime | None,
+    ) -> dict[int, str]:
+        """Fetch allowed vector keys from DuckDB (sync, runs in thread pool)."""
+        if scope is not None or time_from is not None or time_to is not None:
+            sql = (
+                "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
+                "JOIN nodes n ON vm.node_id = n.id "
+                "WHERE vm.user_id = ?"
+            )
+            params: list = [user_id]
+
+            if scope is not None and scope:
+                placeholders = ", ".join("?" for _ in scope)
+                sql += f" AND n.scope IN ({placeholders})"
+                params.extend(scope)
+
+            if time_from is not None:
+                sql += (
+                    " AND (n.valid_to IS NULL OR n.valid_to > ? "
+                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
+                )
+                params.append(time_from)
+
+            if time_to is not None:
+                sql += (
+                    " AND (n.valid_from <= ? "
+                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
+                )
+                params.append(time_to)
+
+            rows = self._conn.execute(sql, params).fetchall()
+            return {row[0]: row[1] for row in rows}
+        else:
+            rows = self._conn.execute(
+                "SELECT vector_key, node_id FROM vector_metadata WHERE user_id = ?",
+                [user_id],
+            ).fetchall()
+            return {row[0]: row[1] for row in rows}
 
     async def index(self, node_id: str, content: str, user_id: str) -> int:
         """Embed content and add to the vector index.
@@ -217,47 +263,12 @@ class VectorIndex:
 
         # Build set of allowed keys via DuckDB query with scope/temporal filtering.
         # When scope or temporal filters are active, JOIN with nodes table.
-        if scope is not None or time_from is not None or time_to is not None:
-            # JOIN vector_metadata with nodes for scope/temporal filtering
-            sql = (
-                "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
-                "JOIN nodes n ON vm.node_id = n.id "
-                "WHERE vm.user_id = ?"
+        # All DuckDB access is serialized through conn_lock to prevent
+        # concurrent thread access during asyncio.gather parallelism.
+        async with self._conn_lock:
+            allowed_keys = await asyncio.to_thread(
+                self._fetch_allowed_keys, user_id, scope, time_from, time_to
             )
-            params: list = [user_id]
-
-            if scope is not None and scope:
-                placeholders = ", ".join("?" for _ in scope)
-                sql += f" AND n.scope IN ({placeholders})"
-                params.extend(scope)
-
-            if time_from is not None:
-                # Exclude nodes whose validity ended before time_from,
-                # but exempt ENTITY and PREFERENCE types (persistent knowledge).
-                sql += (
-                    " AND (n.valid_to IS NULL OR n.valid_to > ? "
-                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
-                )
-                params.append(time_from)
-
-            if time_to is not None:
-                # Exclude nodes created after time_to,
-                # but exempt ENTITY and PREFERENCE types.
-                sql += (
-                    " AND (n.valid_from <= ? "
-                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
-                )
-                params.append(time_to)
-
-            rows = self._conn.execute(sql, params).fetchall()
-            allowed_keys = {row[0]: row[1] for row in rows}  # key -> node_id
-        else:
-            # No scope/temporal filter -- just filter by user_id (original path)
-            user_keys_rows = self._conn.execute(
-                "SELECT vector_key, node_id FROM vector_metadata WHERE user_id = ?",
-                [user_id],
-            ).fetchall()
-            allowed_keys = {row[0]: row[1] for row in user_keys_rows}
 
         # Filter and map results
         results = []
