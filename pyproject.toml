@@ -4,9 +4,28 @@ version = "0.1.0"
 description = "Portable Relational Memory Engine - local-first memory substrate for LLM-powered systems"
 readme = "README.md"
 authors = [
-    { name = "dwamianm", email = "mcleish@cornersix.com" }
+    { name = "Dwamian McLeish", email = "dwamian@journey.ly" }
 ]
+license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
+keywords = ["memory", "llm", "ai", "knowledge-graph", "vector-search", "event-sourcing", "duckdb", "agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Database",
+]
+
+[project.urls]
+Homepage = "https://github.com/dwamianm/prism"
+Documentation = "https://github.com/dwamianm/prism/tree/main/docs"
+Repository = "https://github.com/dwamianm/prism"
+Issues = "https://github.com/dwamianm/prism/issues"
+Changelog = "https://github.com/dwamianm/prism/blob/main/CHANGELOG.md"
 dependencies = [
     "duckdb>=1.2.0",
     "usearch>=2.16.0",
