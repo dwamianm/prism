@@ -19,7 +19,7 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import duckdb
@@ -192,9 +192,13 @@ class RetrievalPipeline:
         )
 
         # --- Stage 5: Scoring + Ranking ---
+        # Capture a single timestamp so all candidates in this retrieval
+        # use the same reference point for deterministic decay computation.
+        scoring_now = datetime.now(timezone.utc)
         scored, traces = score_and_rank(
             filtered, effective_weights,
             epistemic_weights=self._epistemic_weights,
+            now=scoring_now,
         )
 
         # --- Stage 5.5: Conflict Metadata Annotation ---
@@ -262,9 +266,11 @@ class RetrievalPipeline:
                     c for c in hint_candidates
                     if c.node.scope.value not in primary_scope_values
                 ]
-                # Score the hints using the same weights.
+                # Score the hints using the same weights and timestamp.
                 if hint_candidates:
-                    scored_hints, _ = score_and_rank(hint_candidates, effective_weights)
+                    scored_hints, _ = score_and_rank(
+                        hint_candidates, effective_weights, now=scoring_now,
+                    )
                     # Only include top-N as cross-scope hints.
                     cross_scope_hints = scored_hints[
                         : effective_packing_config.cross_scope_top_n
