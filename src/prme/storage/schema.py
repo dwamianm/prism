@@ -80,7 +80,13 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             created_at TIMESTAMPTZ DEFAULT current_timestamp,
             updated_at TIMESTAMPTZ DEFAULT current_timestamp,
             epistemic_type VARCHAR NOT NULL DEFAULT 'asserted',
-            source_type VARCHAR NOT NULL DEFAULT 'user_stated'
+            source_type VARCHAR NOT NULL DEFAULT 'user_stated',
+            decay_profile VARCHAR DEFAULT 'medium',
+            last_reinforced_at TIMESTAMPTZ DEFAULT current_timestamp,
+            reinforcement_boost FLOAT DEFAULT 0.0,
+            salience_base FLOAT DEFAULT 0.5,
+            confidence_base FLOAT DEFAULT 0.5,
+            pinned BOOLEAN DEFAULT FALSE
         )
     """)
     conn.execute(
@@ -258,6 +264,55 @@ def _migrate_nodes_epistemic_type(conn: duckdb.DuckDBPyConnection) -> None:
         )
 
 
+def _migrate_nodes_decay_fields(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add decay/reinforcement columns to nodes table if missing (RFC-0015).
+
+    For existing databases created before self-organizing memory fields
+    were added, this function detects the missing columns and adds them
+    with sensible defaults. DuckDB 1.4.x ALTER TABLE ADD COLUMN does
+    not support NOT NULL, so we use DEFAULT only.
+
+    Safe to call on databases that already have the columns (no-op).
+
+    Args:
+        conn: Active DuckDB connection.
+    """
+    result = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'nodes' AND column_name = 'decay_profile'
+    """).fetchone()
+    if result is None:
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN decay_profile VARCHAR DEFAULT 'medium'
+        """)
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN last_reinforced_at TIMESTAMPTZ DEFAULT current_timestamp
+        """)
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN reinforcement_boost FLOAT DEFAULT 0.0
+        """)
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN salience_base FLOAT DEFAULT 0.5
+        """)
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN confidence_base FLOAT DEFAULT 0.5
+        """)
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN pinned BOOLEAN DEFAULT FALSE
+        """)
+        logger.info(
+            "Migrated nodes table: added decay_profile, last_reinforced_at, "
+            "reinforcement_boost, salience_base, confidence_base, pinned "
+            "columns (RFC-0015 self-organizing memory)"
+        )
+
+
 def install_duckpgq(conn: duckdb.DuckDBPyConnection) -> bool:
     """Attempt to install and load the DuckPGQ community extension.
 
@@ -357,5 +412,6 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     _migrate_events_scope(conn)
     _verify_nodes_scope(conn)
     _migrate_nodes_epistemic_type(conn)
+    _migrate_nodes_decay_fields(conn)
     pgq_graph = create_property_graph(conn)
     return pgq_available and pgq_graph

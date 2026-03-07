@@ -10,7 +10,7 @@ from uuid import UUID
 from pydantic import Field
 
 from prme.models.base import MemoryObject
-from prme.types import EpistemicType, LifecycleState, NodeType, SourceType
+from prme.types import DecayProfile, EpistemicType, LifecycleState, NodeType, SourceType
 
 
 class MemoryNode(MemoryObject):
@@ -64,4 +64,33 @@ class MemoryNode(MemoryObject):
     evidence_refs: list[UUID] = Field(
         default_factory=list,
         description="List of event IDs providing evidence for this node",
+    )
+    decay_profile: DecayProfile = Field(
+        default=DecayProfile.MEDIUM,
+        description="Decay rate profile for salience/confidence decay (RFC-0015)",
+    )
+    last_reinforced_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp of most recent reinforcement event (RFC-0015)",
+    )
+    reinforcement_boost: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Cumulative reinforcement boost, capped per RFC-0008 S6",
+    )
+    salience_base: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Baseline salience before virtual decay (RFC-0015)",
+    )
+    confidence_base: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Baseline confidence before virtual decay (RFC-0015)",
+    )
+    pinned: bool = Field(
+        default=False,
+        description="If True, exempt from all automated decay (RFC-0015)",
     )
