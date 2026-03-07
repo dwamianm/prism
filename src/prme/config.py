@@ -63,6 +63,63 @@ class EmbeddingConfig(BaseSettings):
     }
 
 
+class OrganizerConfig(BaseSettings):
+    """Configuration for self-organizing memory (RFC-0015)."""
+
+    opportunistic_enabled: bool = Field(
+        default=True,
+        description="Enable opportunistic maintenance during retrieve/ingest",
+    )
+    opportunistic_cooldown: int = Field(
+        default=3600,
+        description="Minimum seconds between opportunistic maintenance passes",
+    )
+    opportunistic_budget_ms: int = Field(
+        default=200,
+        description="Max milliseconds per opportunistic maintenance pass",
+    )
+    opportunistic_batch_size: int = Field(
+        default=50,
+        description="Max nodes processed per job per opportunistic pass",
+    )
+    default_organize_budget_ms: int = Field(
+        default=5000,
+        description="Default time budget for explicit organize() calls",
+    )
+    promotion_age_days: float = Field(
+        default=7.0,
+        description="Min age in days before auto-promotion [HYPOTHESIS]",
+    )
+    promotion_evidence_count: int = Field(
+        default=2,
+        description="Min evidence refs for auto-promotion [HYPOTHESIS]",
+    )
+    archive_salience_threshold: float = Field(
+        default=0.10,
+        ge=0.0, le=1.0,
+        description="Salience below this + low confidence triggers DEPRECATED (RFC-0007 S6)",
+    )
+    archive_confidence_threshold: float = Field(
+        default=0.40,
+        ge=0.0, le=1.0,
+        description="Confidence threshold paired with archive_salience_threshold",
+    )
+    force_archive_salience_threshold: float = Field(
+        default=0.05,
+        ge=0.0, le=1.0,
+        description="Salience below this triggers ARCHIVED regardless of confidence",
+    )
+    deprecate_confidence_threshold: float = Field(
+        default=0.15,
+        ge=0.0, le=1.0,
+        description="Confidence below this triggers DEPRECATED at any salience",
+    )
+
+    model_config = {
+        "env_prefix": "PRME_ORGANIZER_",
+    }
+
+
 class PRMEConfig(BaseSettings):
     """Root configuration for PRME.
 
@@ -105,6 +162,10 @@ class PRMEConfig(BaseSettings):
     packing: PackingConfig = Field(
         default_factory=PackingConfig,
         description="Context packing configuration (RFC-0006)",
+    )
+    organizer: OrganizerConfig = Field(
+        default_factory=OrganizerConfig,
+        description="Self-organizing memory configuration (RFC-0015)",
     )
 
     # [HYPOTHESIS] parameter overrides
