@@ -18,6 +18,7 @@ import asyncpg
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.types import (
+    DecayProfile,
     EdgeType,
     EpistemicType,
     LifecycleState,
@@ -34,7 +35,9 @@ _NODE_COLUMNS = (
     "id, node_type, user_id, session_id, scope, content, "
     "metadata, confidence, salience, lifecycle_state, "
     "valid_from, valid_to, superseded_by, evidence_refs, "
-    "created_at, updated_at, epistemic_type, source_type"
+    "created_at, updated_at, epistemic_type, source_type, "
+    "decay_profile, last_reinforced_at, reinforcement_boost, "
+    "salience_base, confidence_base, pinned"
 )
 
 _EDGE_COLUMNS = (
@@ -75,9 +78,12 @@ class PgGraphStore:
                     id, node_type, user_id, session_id, scope, content,
                     metadata, confidence, salience, lifecycle_state,
                     valid_from, valid_to, superseded_by, evidence_refs,
-                    created_at, updated_at, epistemic_type, source_type
+                    created_at, updated_at, epistemic_type, source_type,
+                    decay_profile, last_reinforced_at, reinforcement_boost,
+                    salience_base, confidence_base, pinned
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10,
-                          $11, $12, $13, $14::jsonb, $15, $16, $17, $18)
+                          $11, $12, $13, $14::jsonb, $15, $16, $17, $18,
+                          $19, $20, $21, $22, $23, $24)
                 """,
                 str(node.id),
                 node.node_type.value,
@@ -97,6 +103,12 @@ class PgGraphStore:
                 node.updated_at,
                 node.epistemic_type.value,
                 node.source_type.value,
+                node.decay_profile.value,
+                node.last_reinforced_at,
+                node.reinforcement_boost,
+                node.salience_base,
+                node.confidence_base,
+                node.pinned,
             )
         return str(node.id)
 
@@ -867,6 +879,14 @@ class PgGraphStore:
                 return dt.replace(tzinfo=timezone.utc)
             return dt
 
+        # Decay/reinforcement fields (RFC-0015) -- graceful fallback
+        raw_decay_profile = row.get("decay_profile", "medium") if hasattr(row, "get") else "medium"
+        raw_last_reinforced = row.get("last_reinforced_at") if hasattr(row, "get") else None
+        raw_reinforcement_boost = row.get("reinforcement_boost", 0.0) if hasattr(row, "get") else 0.0
+        raw_salience_base = row.get("salience_base", row["salience"]) if hasattr(row, "get") else row["salience"]
+        raw_confidence_base = row.get("confidence_base", row["confidence"]) if hasattr(row, "get") else row["confidence"]
+        raw_pinned = row.get("pinned", False) if hasattr(row, "get") else False
+
         return MemoryNode(
             id=node_id,
             node_type=NodeType(row["node_type"]),
@@ -886,6 +906,12 @@ class PgGraphStore:
             updated_at=ensure_tz(row["updated_at"]),
             epistemic_type=row["epistemic_type"],
             source_type=row["source_type"],
+            decay_profile=DecayProfile(raw_decay_profile) if raw_decay_profile else DecayProfile.MEDIUM,
+            last_reinforced_at=ensure_tz(raw_last_reinforced) or datetime.now(timezone.utc),
+            reinforcement_boost=raw_reinforcement_boost or 0.0,
+            salience_base=raw_salience_base if raw_salience_base is not None else 0.5,
+            confidence_base=raw_confidence_base if raw_confidence_base is not None else 0.5,
+            pinned=bool(raw_pinned),
         )
 
     @staticmethod
