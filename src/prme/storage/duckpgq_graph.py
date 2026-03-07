@@ -288,6 +288,23 @@ class DuckPGQGraphStore:
         async with self._conn_lock:
             await asyncio.to_thread(self._archive_sync, node_id)
 
+    async def deprecate(self, node_id: str) -> None:
+        """Deprecate a node (mark as confirmed incorrect).
+
+        Valid transitions to DEPRECATED: CONTESTED -> DEPRECATED.
+        Used by the organizer for threshold-based deprecation when
+        confidence drops below the deprecate threshold.
+
+        Args:
+            node_id: String UUID of the node to deprecate.
+
+        Raises:
+            ValueError: If the node doesn't exist or the transition
+                is invalid.
+        """
+        async with self._conn_lock:
+            await asyncio.to_thread(self._deprecate_sync, node_id)
+
     # --- Graph Traversal ---
 
     async def get_neighborhood(
@@ -742,6 +759,32 @@ class DuckPGQGraphStore:
             raise ValueError(
                 f"Cannot archive: node is {current_state.value}, "
                 f"Archived nodes cannot be transitioned"
+            )
+
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [target_state.value, node_id],
+        )
+
+    def _deprecate_sync(self, node_id: str) -> None:
+        """Deprecate a node (sync)."""
+        row = self._conn.execute(
+            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Node {node_id} not found")
+
+        current_state = LifecycleState(row[0])
+        target_state = LifecycleState.DEPRECATED
+
+        if not validate_transition(current_state, target_state):
+            raise ValueError(
+                f"Cannot deprecate: node is {current_state.value}, "
+                f"transition to DEPRECATED not allowed"
             )
 
         self._conn.execute(
