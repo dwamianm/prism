@@ -170,6 +170,15 @@ class PRMEConfig(BaseSettings):
         default_factory=OrganizerConfig,
         description="Self-organizing memory configuration (RFC-0015)",
     )
+    enable_store_supersedence: bool = Field(
+        default=False,
+        description=(
+            "When True, store() checks new content for contradiction signals "
+            "(migration/replacement language) and marks matching existing nodes "
+            "as superseded. Requires vector index to find similar nodes. "
+            "Default False for backward compatibility."
+        ),
+    )
 
     # [HYPOTHESIS] parameter overrides
     epistemic_weights: dict[str, float] = Field(
