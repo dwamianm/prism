@@ -33,6 +33,7 @@ ALL_JOBS: list[str] = [
     "feedback_apply",
     "centrality_boost",
     "tombstone_sweep",
+    "snapshot_generation",
 ]
 
 
@@ -66,6 +67,7 @@ async def run_job(
         "summarize": _job_stub,
         "centrality_boost": _job_stub,
         "tombstone_sweep": _job_stub,
+        "snapshot_generation": _job_snapshot_generation,
     }
 
     handler = dispatch.get(job_name)
@@ -443,6 +445,57 @@ async def _job_alias_resolve(
             "aliases_found": len(aliases),
             "aliases_resolved": resolved_count,
         },
+    )
+
+
+async def _job_snapshot_generation(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+) -> JobResult:
+    """Generate snapshots for active entity nodes.
+
+    Queries all active ENTITY nodes and generates an EntitySnapshot for each.
+    Snapshots are ephemeral (not persisted) but this job logs how many were
+    generated for observability. A future iteration may cache snapshots.
+    """
+    from prme.retrieval.snapshots import generate_entity_snapshot
+
+    from prme.types import NodeType
+
+    start = time.monotonic()
+
+    entities = await engine.query_nodes(
+        node_type=NodeType.ENTITY,
+        lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+        limit=500,
+    )
+
+    processed = 0
+    modified = 0
+    errors = 0
+
+    for entity in entities:
+        elapsed_ms = (time.monotonic() - start) * 1000.0
+        if elapsed_ms >= budget_ms:
+            break
+
+        processed += 1
+        try:
+            await generate_entity_snapshot(engine, str(entity.id))
+            modified += 1
+        except (ValueError, Exception):
+            errors += 1
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=processed,
+        nodes_modified=modified,
+        errors=errors,
+        duration_ms=round(duration_ms, 2),
+        details={"note": "Snapshots are ephemeral read-only views"},
     )
 
 

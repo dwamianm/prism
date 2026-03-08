@@ -1330,6 +1330,34 @@ class MemoryEngine:
         """
         await self._graph_store.archive(node_id)
 
+    # --- Snapshots ---
+
+    async def snapshot(
+        self,
+        entity_id: str,
+        *,
+        at_time: datetime | None = None,
+    ) -> Any:
+        """Generate a point-in-time snapshot for an entity.
+
+        Convenience method that delegates to
+        ``prme.retrieval.snapshots.generate_entity_snapshot``.
+
+        Args:
+            entity_id: String UUID of the entity node.
+            at_time: Optional temporal filter -- only include neighbors
+                and edges valid at this time.
+
+        Returns:
+            EntitySnapshot with grouped neighbors and summary text.
+
+        Raises:
+            ValueError: If the entity node does not exist or is not ENTITY type.
+        """
+        from prme.retrieval.snapshots import generate_entity_snapshot
+
+        return await generate_entity_snapshot(self, entity_id, at_time=at_time)
+
     # --- Reinforcement ---
 
     async def reinforce(
