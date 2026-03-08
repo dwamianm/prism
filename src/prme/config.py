@@ -117,6 +117,18 @@ class OrganizerConfig(BaseSettings):
         ge=0.0, le=1.0,
         description="Confidence below this triggers DEPRECATED at any salience",
     )
+    dedup_similarity_threshold: float = Field(
+        default=0.92,
+        ge=0.0,
+        le=1.0,
+        description="Minimum vector similarity for duplicate detection (issue #11) [HYPOTHESIS]",
+    )
+    alias_similarity_threshold: float = Field(
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+        description="Minimum vector similarity for alias detection (issue #11) [HYPOTHESIS]",
+    )
 
     model_config = {
         "env_prefix": "PRME_ORGANIZER_",
