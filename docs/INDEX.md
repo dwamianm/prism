@@ -52,6 +52,7 @@ This index covers the complete Revised Relational Memory Substrate (RMS) RFC sui
 | RFC-0007 | Decay and Forgetting Model | Draft | [RFC-0007-Decay-and-Forgetting.md](RFC-0007-Decay-and-Forgetting.md) |
 | RFC-0008 | Confidence Evolution and Reinforcement | Draft | [RFC-0008-Confidence-Evolution.md](RFC-0008-Confidence-Evolution.md) |
 | RFC-0009 | Memory Usage Feedback Loop | Draft | [RFC-0009-Memory-Usage-Feedback-Loop.md](RFC-0009-Memory-Usage-Feedback-Loop.md) |
+| RFC-0015 | Self-Organizing Memory Execution Model | Draft | [RFC-0015-Self-Organizing-Memory.md](RFC-0015-Self-Organizing-Memory.md) |
 
 ### Tier 4 — Advanced Capabilities
 
@@ -91,6 +92,8 @@ RFC-0001
     │                              │        │
     │                              │        └──► RFC-0009
     │                              │                 │
+    │                              │                 ├──► RFC-0015 (Self-Organizing Execution Model)
+    │                              │                 │
     │                              └─────────────────┴──► RFC-0010
     │                                                     RFC-0011
     │                                                     RFC-0012
@@ -109,7 +112,7 @@ An implementation claiming conformance at a given tier MUST satisfy all requirem
 | Tier 0 | RFC-0000, RFC-0001 | Core data model only. No storage, retrieval, or lifecycle. |
 | Tier 1 | + RFC-0002, 0003, 0004 | Persistent, epistemically-typed, namespace-isolated storage. |
 | Tier 2 | + RFC-0005, 0006 | Hybrid retrieval with context-efficient bundling. |
-| Tier 3 | + RFC-0007, 0008, 0009 | Adaptive lifecycle: decay, confidence evolution, feedback. |
+| Tier 3 | + RFC-0007, 0008, 0009, 0015 | Adaptive lifecycle: decay, confidence evolution, feedback, self-organizing execution. |
 | Tier 4 | + Any of RFC-0010–0014 | Advanced capabilities. Each is independently optional. |
 
 A system claiming "Tier 2 conformance" has implemented Tiers 0, 1, and 2 — not merely RFC-0002.

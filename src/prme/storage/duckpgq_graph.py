@@ -22,6 +22,7 @@ from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.types import (
     ALLOWED_TRANSITIONS,
+    DecayProfile,
     EdgeType,
     EpistemicType,
     LifecycleState,
@@ -287,6 +288,23 @@ class DuckPGQGraphStore:
         async with self._conn_lock:
             await asyncio.to_thread(self._archive_sync, node_id)
 
+    async def deprecate(self, node_id: str) -> None:
+        """Deprecate a node (mark as confirmed incorrect).
+
+        Valid transitions to DEPRECATED: CONTESTED -> DEPRECATED.
+        Used by the organizer for threshold-based deprecation when
+        confidence drops below the deprecate threshold.
+
+        Args:
+            node_id: String UUID of the node to deprecate.
+
+        Raises:
+            ValueError: If the node doesn't exist or the transition
+                is invalid.
+        """
+        async with self._conn_lock:
+            await asyncio.to_thread(self._deprecate_sync, node_id)
+
     # --- Graph Traversal ---
 
     async def get_neighborhood(
@@ -436,8 +454,11 @@ class DuckPGQGraphStore:
                 id, node_type, user_id, session_id, scope, content,
                 metadata, confidence, salience, lifecycle_state,
                 valid_from, valid_to, superseded_by, evidence_refs,
-                created_at, updated_at, epistemic_type, source_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                created_at, updated_at, epistemic_type, source_type,
+                decay_profile, last_reinforced_at, reinforcement_boost,
+                salience_base, confidence_base, pinned
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                      ?, ?, ?, ?, ?, ?)
             """,
             [
                 str(node.id),
@@ -458,6 +479,12 @@ class DuckPGQGraphStore:
                 node.updated_at,
                 node.epistemic_type.value,
                 node.source_type.value,
+                node.decay_profile.value,
+                node.last_reinforced_at,
+                node.reinforcement_boost,
+                node.salience_base,
+                node.confidence_base,
+                node.pinned,
             ],
         )
 
@@ -732,6 +759,32 @@ class DuckPGQGraphStore:
             raise ValueError(
                 f"Cannot archive: node is {current_state.value}, "
                 f"Archived nodes cannot be transitioned"
+            )
+
+        self._conn.execute(
+            """
+            UPDATE nodes
+            SET lifecycle_state = ?, updated_at = current_timestamp
+            WHERE id = ?
+            """,
+            [target_state.value, node_id],
+        )
+
+    def _deprecate_sync(self, node_id: str) -> None:
+        """Deprecate a node (sync)."""
+        row = self._conn.execute(
+            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Node {node_id} not found")
+
+        current_state = LifecycleState(row[0])
+        target_state = LifecycleState.DEPRECATED
+
+        if not validate_transition(current_state, target_state):
+            raise ValueError(
+                f"Cannot deprecate: node is {current_state.value}, "
+                f"transition to DEPRECATED not allowed"
             )
 
         self._conn.execute(
@@ -1296,6 +1349,14 @@ class DuckPGQGraphStore:
         raw_epistemic = row[16] if len(row) > 16 else "asserted"
         raw_source = row[17] if len(row) > 17 else "user_stated"
 
+        # Decay/reinforcement fields (RFC-0015) -- positions 18-23
+        raw_decay_profile = row[18] if len(row) > 18 else "medium"
+        raw_last_reinforced = row[19] if len(row) > 19 else None
+        raw_reinforcement_boost = row[20] if len(row) > 20 else 0.0
+        raw_salience_base = row[21] if len(row) > 21 else row[8]  # fallback to salience
+        raw_confidence_base = row[22] if len(row) > 22 else row[7]  # fallback to confidence
+        raw_pinned = row[23] if len(row) > 23 else False
+
         return MemoryNode(
             id=node_id,
             node_type=NodeType(row[1]),
@@ -1315,6 +1376,12 @@ class DuckPGQGraphStore:
             updated_at=ensure_tz(row[15]),
             epistemic_type=raw_epistemic,
             source_type=raw_source,
+            decay_profile=DecayProfile(raw_decay_profile),
+            last_reinforced_at=ensure_tz(raw_last_reinforced) or datetime.now(timezone.utc),
+            reinforcement_boost=raw_reinforcement_boost,
+            salience_base=raw_salience_base,
+            confidence_base=raw_confidence_base,
+            pinned=bool(raw_pinned),
         )
 
     def _row_to_edge(self, row: tuple) -> MemoryEdge:

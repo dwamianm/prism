@@ -38,6 +38,7 @@ from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
 from prme.types import (
+    DecayProfile,
     EpistemicType,
     LifecycleState,
     NodeType,
@@ -50,9 +51,12 @@ if TYPE_CHECKING:
     import asyncpg
 
     from prme.ingestion.pipeline import IngestionPipeline
+    from prme.organizer.models import OrganizeResult
     from prme.retrieval.config import ScoringWeights
     from prme.retrieval.models import RetrievalResponse
     from prme.retrieval.pipeline import RetrievalPipeline
+
+from prme.organizer.maintenance import MaintenanceRunner
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +90,7 @@ class MemoryEngine:
         epistemic_weights: dict[str, float] | None = None,
         unverified_confidence_threshold: float | None = None,
         pool: asyncpg.Pool | None = None,
+        config: PRMEConfig | None = None,
     ) -> None:
         self._conn = conn
         self._pool = pool
@@ -96,6 +101,8 @@ class MemoryEngine:
         self._write_queue = write_queue
         self._pipeline = pipeline
         self._retrieval_pipeline = retrieval_pipeline
+        self._config = config if config is not None else PRMEConfig()
+        self._maintenance_runner: MaintenanceRunner | None = None
 
         # Config-driven overrides with module-level defaults as fallback
         from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
@@ -217,7 +224,7 @@ class MemoryEngine:
             len(config.confidence_overrides),
         )
 
-        return cls(
+        engine = cls(
             conn=conn,
             event_store=event_store,
             graph_store=graph_store,
@@ -229,7 +236,10 @@ class MemoryEngine:
             confidence_matrix=_active_confidence_matrix,
             epistemic_weights=config.epistemic_weights,
             unverified_confidence_threshold=config.unverified_confidence_threshold,
+            config=config,
         )
+        engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
+        return engine
 
     @classmethod
     async def _create_postgres(cls, config: PRMEConfig) -> "MemoryEngine":
@@ -316,7 +326,7 @@ class MemoryEngine:
             config.packing.token_budget,
         )
 
-        return cls(
+        engine = cls(
             conn=None,
             pool=pool,
             event_store=event_store,
@@ -329,7 +339,10 @@ class MemoryEngine:
             confidence_matrix=_active_confidence_matrix,
             epistemic_weights=config.epistemic_weights,
             unverified_confidence_threshold=config.unverified_confidence_threshold,
+            config=config,
         )
+        engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
+        return engine
 
     # --- Core Operations ---
 
@@ -405,6 +418,11 @@ class MemoryEngine:
         )
 
         # Step 2: Create graph node via write queue
+        from prme.types import DEFAULT_DECAY_PROFILE_MAPPING
+
+        decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
+            epistemic_type, DecayProfile.MEDIUM
+        )
         node = MemoryNode(
             user_id=user_id,
             session_id=session_id,
@@ -413,9 +431,11 @@ class MemoryEngine:
             content=content,
             metadata=metadata,
             confidence=confidence,
+            confidence_base=confidence,
             epistemic_type=epistemic_type,
             source_type=source_type,
             evidence_refs=[event.id],
+            decay_profile=decay_profile,
         )
         node_id = await self._write_queue.submit(
             lambda n=node: self._graph_store.create_node(n),
@@ -480,7 +500,7 @@ class MemoryEngine:
             String UUID of the persisted event.
         """
         if self._pipeline is None:
-            return await self.store(
+            event_id = await self.store(
                 content,
                 user_id=user_id,
                 session_id=session_id,
@@ -488,15 +508,22 @@ class MemoryEngine:
                 scope=scope,
                 metadata=metadata,
             )
-        return await self._pipeline.ingest(
-            content,
-            user_id=user_id,
-            role=role,
-            session_id=session_id,
-            metadata=metadata,
-            wait_for_extraction=wait_for_extraction,
-            scope=scope,
-        )
+        else:
+            event_id = await self._pipeline.ingest(
+                content,
+                user_id=user_id,
+                role=role,
+                session_id=session_id,
+                metadata=metadata,
+                wait_for_extraction=wait_for_extraction,
+                scope=scope,
+            )
+
+        # Opportunistic maintenance (RFC-0015 Layer 2)
+        if self._maintenance_runner:
+            await self._maintenance_runner.maybe_run()
+
+        return event_id
 
     async def ingest_batch(
         self,
@@ -596,7 +623,7 @@ class MemoryEngine:
                 "to the constructor."
             )
 
-        return await self._retrieval_pipeline.retrieve(
+        result = await self._retrieval_pipeline.retrieve(
             query,
             user_id=user_id,
             scope=scope,
@@ -607,6 +634,12 @@ class MemoryEngine:
             min_fidelity=min_fidelity,
             include_cross_scope=include_cross_scope,
         )
+
+        # Opportunistic maintenance (RFC-0015 Layer 2)
+        if self._maintenance_runner:
+            await self._maintenance_runner.maybe_run()
+
+        return result
 
     async def search(
         self,
@@ -748,6 +781,90 @@ class MemoryEngine:
             ValueError: If the transition is invalid.
         """
         await self._graph_store.archive(node_id)
+
+    # --- Organization (RFC-0015) ---
+
+    async def organize(
+        self,
+        *,
+        user_id: str | None = None,
+        jobs: list[str] | None = None,
+        budget_ms: int = 5000,
+    ) -> OrganizeResult:
+        """Run explicit memory organization jobs (RFC-0015 Layer 3).
+
+        Iterates through requested jobs, calling each with a time budget.
+        Stops early if the total budget is exceeded.
+
+        Args:
+            user_id: Optional user scope for organization.
+            jobs: List of job names to run. Defaults to ALL_JOBS.
+            budget_ms: Total time budget in milliseconds.
+
+        Returns:
+            OrganizeResult with per-job results and timing.
+        """
+        from prme.organizer.jobs import ALL_JOBS, run_job
+        from prme.organizer.models import OrganizeResult
+
+        import time
+
+        if jobs is None:
+            jobs = list(ALL_JOBS)
+
+        start = time.monotonic()
+        result = OrganizeResult()
+
+        for job_name in jobs:
+            elapsed_ms = (time.monotonic() - start) * 1000.0
+            remaining_ms = budget_ms - elapsed_ms
+
+            if remaining_ms <= 0:
+                result.jobs_skipped.append(job_name)
+                continue
+
+            try:
+                job_result = await run_job(
+                    job_name, self, self._config.organizer, remaining_ms
+                )
+                result.jobs_run.append(job_name)
+                result.per_job[job_name] = job_result
+            except ValueError as exc:
+                logger.warning("Skipping invalid job %r: %s", job_name, exc)
+                result.jobs_skipped.append(job_name)
+            except Exception:
+                logger.warning(
+                    "Job %r failed during organize()", job_name, exc_info=True
+                )
+                result.jobs_skipped.append(job_name)
+
+        total_ms = (time.monotonic() - start) * 1000.0
+        result.duration_ms = round(total_ms, 2)
+        result.budget_remaining_ms = round(max(0.0, budget_ms - total_ms), 2)
+        return result
+
+    async def end_session(
+        self,
+        *,
+        user_id: str,
+        session_id: str | None = None,
+    ) -> OrganizeResult:
+        """Convenience: lightweight organize at end of conversation.
+
+        Runs promote and feedback_apply jobs with a 1-second budget.
+
+        Args:
+            user_id: User whose session is ending.
+            session_id: Optional session identifier.
+
+        Returns:
+            OrganizeResult from the lightweight organize pass.
+        """
+        return await self.organize(
+            user_id=user_id,
+            jobs=["promote", "feedback_apply"],
+            budget_ms=1000,
+        )
 
     # --- Resource Management ---
 
