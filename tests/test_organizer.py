@@ -826,13 +826,13 @@ class TestRunJob:
         assert result.job == "archive"
 
     @pytest.mark.asyncio
-    async def test_feedback_apply_placeholder(self, engine_parts):
-        """feedback_apply returns placeholder result."""
+    async def test_feedback_apply_no_signals(self, engine_parts):
+        """feedback_apply with no pending signals returns no_signals status."""
         engine, _, _ = engine_parts
         config = OrganizerConfig()
         result = await run_job("feedback_apply", engine, config, 5000.0)
         assert result.job == "feedback_apply"
-        assert result.details.get("status") == "placeholder"
+        assert result.details.get("status") == "no_signals"
 
     @pytest.mark.asyncio
     async def test_stub_jobs(self, engine_parts):

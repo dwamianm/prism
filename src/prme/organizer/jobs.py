@@ -296,14 +296,67 @@ async def _job_feedback_apply(
     config: OrganizerConfig,
     budget_ms: float,
 ) -> JobResult:
-    """Apply user feedback signals (placeholder).
+    """Apply user feedback signals to auto-tune retrieval scoring weights.
 
-    The full feedback loop (RFC-0009) will be implemented later.
-    Currently returns an empty result.
+    Retrieves pending feedback signals from the engine's FeedbackTracker,
+    runs the WeightTuner to compute adjusted weights, and updates the
+    engine's config with the new weights. The feedback tracker is then
+    cleared so signals are not re-processed.
+
+    This implements the feedback loop described in RFC-0009, extended by
+    issue #24 with gradient-free weight auto-tuning.
     """
+    start = time.monotonic()
+
+    tracker = engine._feedback_tracker
+    signals = tracker.get_signals(window_days=30)
+
+    if not signals:
+        return JobResult(
+            job=job_name,
+            details={"status": "no_signals", "note": "No pending feedback signals"},
+        )
+
+    # Run weight tuner
+    tuner = engine._weight_tuner
+    old_version = tuner.current_weights.version_id
+    new_weights = tuner.update(signals)
+    new_version = new_weights.version_id
+
+    # Update the engine config with new scoring weights.
+    # PRMEConfig.scoring is frozen, so we replace it via model_copy.
+    engine._config = engine._config.model_copy(
+        update={"scoring": new_weights},
+    )
+
+    # Also update the retrieval pipeline's weights if present.
+    if engine._retrieval_pipeline is not None:
+        engine._retrieval_pipeline._scoring_weights = new_weights
+
+    # Clear processed signals.
+    tracker.clear()
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+
+    logger.info(
+        "feedback_apply: processed %d signals, weights %s -> %s",
+        len(signals),
+        old_version,
+        new_version,
+    )
+
     return JobResult(
         job=job_name,
-        details={"status": "placeholder", "note": "RFC-0009 not yet implemented"},
+        nodes_processed=len(signals),
+        nodes_modified=1 if old_version != new_version else 0,
+        duration_ms=round(duration_ms, 2),
+        details={
+            "status": "applied",
+            "signals_processed": len(signals),
+            "old_weight_version": old_version,
+            "new_weight_version": new_version,
+            "weights_changed": old_version != new_version,
+        },
     )
 
 

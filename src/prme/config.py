@@ -260,6 +260,17 @@ class PRMEConfig(BaseSettings):
         ),
     )
 
+    # Per-namespace weight profiles (issue #24)
+    namespace_weights: dict[str, ScoringWeights] = Field(
+        default_factory=dict,
+        description=(
+            "Optional per-namespace scoring weight overrides. Keys are "
+            "namespace strings (e.g., 'project-x', 'personal'). When a "
+            "retrieve() call includes a namespace, the corresponding "
+            "weights are used instead of the global scoring weights."
+        ),
+    )
+
     # [HYPOTHESIS] parameter overrides
     epistemic_weights: dict[str, float] = Field(
         default={
