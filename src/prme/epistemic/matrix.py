@@ -33,6 +33,7 @@ class ConfidenceMatrix(BaseModel):
         # OBSERVED -- directly witnessed/recorded
         ("observed", "user_stated"): 0.90,          # User decision: 0.85-0.90
         ("observed", "user_demonstrated"): 0.85,    # [HYPOTHESIS]
+        ("observed", "system_inferred"): 0.70,      # [HYPOTHESIS]
         ("observed", "external_document"): 0.75,    # [HYPOTHESIS]
         ("observed", "tool_output"): 0.80,          # [HYPOTHESIS]
         # ASSERTED -- stated as fact, not independently verified
