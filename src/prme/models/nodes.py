@@ -49,6 +49,14 @@ class MemoryNode(MemoryObject):
         default=LifecycleState.TENTATIVE,
         description="Current lifecycle state",
     )
+    event_time: datetime | None = Field(
+        default=None,
+        description=(
+            "When the underlying event actually happened in the real world (UTC). "
+            "None means same as created_at (ingestion time). Enables bi-temporal "
+            "queries: created_at = ingestion_time vs event_time (issue #21)."
+        ),
+    )
     valid_from: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Start of temporal validity window (UTC)",
