@@ -30,6 +30,9 @@ import duckdb
 
 from prme.config import PRMEConfig
 from prme.models import Event, MemoryNode
+from prme.quality.feedback import FeedbackSignal, FeedbackTracker
+from prme.quality.metrics import QualityMetrics, compute_quality_metrics
+from prme.quality.tuner import WeightTuner
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.embedding import create_embedding_provider
 from prme.storage.event_store import EventStore
@@ -103,6 +106,12 @@ class MemoryEngine:
         self._retrieval_pipeline = retrieval_pipeline
         self._config = config if config is not None else PRMEConfig()
         self._maintenance_runner: MaintenanceRunner | None = None
+
+        # Quality assessment and auto-tuning (issue #24)
+        self._feedback_tracker = FeedbackTracker()
+        self._weight_tuner = WeightTuner(
+            self._config.scoring, learning_rate=0.01,
+        )
 
         # Config-driven overrides with module-level defaults as fallback
         from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
@@ -1098,6 +1107,53 @@ class MemoryEngine:
             updates["evidence_refs"] = new_refs
 
         await self._graph_store.update_node(node_id, **updates)
+
+    # --- Quality Feedback (Issue #24) ---
+
+    async def feedback(self, signal: FeedbackSignal) -> None:
+        """Record a feedback signal for quality tracking and auto-tuning.
+
+        Signals indicate whether surfaced memories were used, ignored,
+        corrected, or contradicted. Accumulated signals are processed
+        by the feedback_apply organizer job to auto-tune scoring weights.
+
+        Args:
+            signal: The feedback signal to record.
+        """
+        self._feedback_tracker.record(signal)
+        logger.debug(
+            "Feedback recorded: type=%s, query=%r, nodes=%d",
+            signal.signal_type.value,
+            signal.query[:50],
+            len(signal.surfaced_node_ids),
+        )
+
+    @property
+    def quality_metrics(self) -> QualityMetrics:
+        """Compute current quality metrics over the last 30 days.
+
+        Returns:
+            QualityMetrics with retrieval quality, signal rates,
+            and weight adjustment history.
+        """
+        signals = self._feedback_tracker.get_signals(window_days=30)
+
+        # Compute weight deltas from default.
+        from prme.retrieval.config import ScoringWeights as _SW
+
+        defaults = _SW()
+        current = self._config.scoring
+        adjustments = {}
+        for field_name in [
+            "w_semantic", "w_lexical", "w_graph",
+            "w_recency", "w_salience", "w_confidence",
+            "w_epistemic",
+        ]:
+            delta = getattr(current, field_name) - getattr(defaults, field_name)
+            if abs(delta) > 1e-9:
+                adjustments[field_name] = round(delta, 6)
+
+        return compute_quality_metrics(signals, adjustments)
 
     # --- Organization (RFC-0015) ---
 

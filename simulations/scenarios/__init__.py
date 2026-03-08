@@ -9,6 +9,7 @@ from simulations.scenarios.information_accumulation import (
     generate_accumulation_scenario,
 )
 from simulations.scenarios.oscillation import OSCILLATION_SCENARIO
+from simulations.scenarios.quality_tuning import QUALITY_TUNING_SCENARIO
 from simulations.scenarios.reinforcement import REINFORCEMENT_SCENARIO
 from simulations.scenarios.remention import REMENTION_SCENARIO
 from simulations.scenarios.surprise_gating import SURPRISE_GATING_SCENARIO
@@ -18,6 +19,7 @@ SCENARIOS: dict = {
     "decay_mechanics": DECAY_MECHANICS_SCENARIO,
     "information_accumulation": generate_accumulation_scenario(),
     "oscillation": OSCILLATION_SCENARIO,
+    "quality_tuning": QUALITY_TUNING_SCENARIO,
     "reinforcement": REINFORCEMENT_SCENARIO,
     "remention": REMENTION_SCENARIO,
     "surprise_gating": SURPRISE_GATING_SCENARIO,
