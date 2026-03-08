@@ -179,6 +179,14 @@ class PRMEConfig(BaseSettings):
             "Default False for backward compatibility."
         ),
     )
+    reinforce_similarity_threshold: float | None = Field(
+        default=None,
+        description=(
+            "When set, store() checks for existing similar nodes via vector search. "
+            "If similarity >= threshold, reinforces the existing node instead of "
+            "creating a duplicate. None (default) disables this behavior."
+        ),
+    )
 
     # [HYPOTHESIS] parameter overrides
     epistemic_weights: dict[str, float] = Field(
