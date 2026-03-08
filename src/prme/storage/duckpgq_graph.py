@@ -126,6 +126,21 @@ class DuckPGQGraphStore:
                 limit,
             )
 
+    # --- Node Update ---
+
+    async def update_node(self, node_id: str, **updates) -> None:
+        """Update specific fields on an existing node.
+
+        Args:
+            node_id: UUID string of the node to update.
+            **updates: Field names and values to update.
+
+        Raises:
+            ValueError: If node_id does not exist or no valid fields provided.
+        """
+        async with self._conn_lock:
+            await asyncio.to_thread(self._update_node_sync, node_id, updates)
+
     # --- Edge Operations ---
 
     async def create_edge(self, edge: MemoryEdge) -> str:
@@ -487,6 +502,78 @@ class DuckPGQGraphStore:
                 node.pinned,
             ],
         )
+
+    # Fields allowed for update_node. Maps Python field name -> SQL column name.
+    _UPDATE_ALLOWED_FIELDS: set[str] = {
+        "reinforcement_boost",
+        "last_reinforced_at",
+        "confidence_base",
+        "salience_base",
+        "decay_profile",
+        "pinned",
+        "evidence_refs",
+        "metadata",
+        "lifecycle_state",
+        "superseded_by",
+        "confidence",
+        "salience",
+        "updated_at",
+    }
+
+    def _update_node_sync(self, node_id: str, updates: dict) -> None:
+        """Build and execute a dynamic UPDATE statement for the given fields."""
+        # Filter to only allowed fields
+        valid_updates = {
+            k: v for k, v in updates.items()
+            if k in self._UPDATE_ALLOWED_FIELDS
+        }
+        if not valid_updates:
+            raise ValueError(
+                f"No valid fields to update. Allowed fields: "
+                f"{sorted(self._UPDATE_ALLOWED_FIELDS)}"
+            )
+
+        # Verify the node exists
+        existing = self._conn.execute(
+            "SELECT id FROM nodes WHERE id = ?", [node_id]
+        ).fetchone()
+        if existing is None:
+            raise ValueError(f"Node {node_id} not found")
+
+        # Always set updated_at to current timestamp
+        now = datetime.now(timezone.utc)
+        if "updated_at" not in valid_updates:
+            valid_updates["updated_at"] = now
+
+        # Build SET clause with parameterized placeholders
+        set_parts: list[str] = []
+        params: list = []
+
+        for field, value in valid_updates.items():
+            set_parts.append(f"{field} = ?")
+            # Serialize special types
+            if field == "evidence_refs" and value is not None:
+                params.append(json.dumps([str(u) for u in value]))
+            elif field == "metadata" and value is not None:
+                params.append(json.dumps(value))
+            elif field == "decay_profile" and isinstance(value, DecayProfile):
+                params.append(value.value)
+            elif field == "lifecycle_state" and isinstance(value, LifecycleState):
+                params.append(value.value)
+            elif field == "superseded_by" and value is not None:
+                params.append(str(value))
+            elif field == "last_reinforced_at" and isinstance(value, datetime):
+                if value.tzinfo is None:
+                    value = value.replace(tzinfo=timezone.utc)
+                params.append(value)
+            else:
+                params.append(value)
+
+        set_clause = ", ".join(set_parts)
+        params.append(node_id)
+
+        query = f"UPDATE nodes SET {set_clause} WHERE id = ?"
+        self._conn.execute(query, params)
 
     def _get_node_sync(
         self, node_id: str, include_superseded: bool
