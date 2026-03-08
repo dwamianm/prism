@@ -187,6 +187,49 @@ class PRMEConfig(BaseSettings):
             "creating a duplicate. None (default) disables this behavior."
         ),
     )
+    enable_surprise_gating: bool = Field(
+        default=False,
+        description=(
+            "When True, store() computes a novelty score for incoming content "
+            "by comparing against existing memory via vector similarity. "
+            "Novel content gets boosted salience; redundant content gets "
+            "reduced salience. Default False for backward compatibility."
+        ),
+    )
+    novelty_high_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Novelty score above which content receives a salience boost. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    novelty_low_threshold: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Novelty score below which content receives a salience penalty. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    novelty_salience_boost: float = Field(
+        default=0.15,
+        ge=0.0,
+        le=0.5,
+        description=(
+            "Salience boost applied to highly novel content. [HYPOTHESIS]"
+        ),
+    )
+    novelty_salience_penalty: float = Field(
+        default=0.10,
+        ge=0.0,
+        le=0.5,
+        description=(
+            "Salience penalty applied to redundant content. [HYPOTHESIS]"
+        ),
+    )
 
     # [HYPOTHESIS] parameter overrides
     epistemic_weights: dict[str, float] = Field(
