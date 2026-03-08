@@ -103,6 +103,10 @@ class SimScenario:
     description: str
     messages: list[SimMessage]
     checkpoints: list[SimCheckpoint]
+    config_overrides: dict = field(default_factory=dict)
+    # Optional PRMEConfig keyword overrides applied when no explicit config
+    # is passed to SimulationRunner.run(). Allows scenarios to enable
+    # features like surprise-gating without modifying the runner.
 
 
 # ---------------------------------------------------------------------------
@@ -253,11 +257,15 @@ class SimulationRunner:
         lexical_dir = Path(tmp) / "lexical_index"
         lexical_dir.mkdir(parents=True, exist_ok=True)
         if config is None:
-            config = PRMEConfig(
-                db_path=str(Path(tmp) / "memory.duckdb"),
-                vector_path=str(Path(tmp) / "vectors.usearch"),
-                lexical_path=str(lexical_dir),
-            )
+            config_kwargs: dict = {
+                "db_path": str(Path(tmp) / "memory.duckdb"),
+                "vector_path": str(Path(tmp) / "vectors.usearch"),
+                "lexical_path": str(lexical_dir),
+            }
+            # Apply scenario-level config overrides (e.g., enable_surprise_gating)
+            if scenario.config_overrides:
+                config_kwargs.update(scenario.config_overrides)
+            config = PRMEConfig(**config_kwargs)
 
         engine = await MemoryEngine.create(config)
 
