@@ -464,7 +464,81 @@ class MemoryEngine:
                 exc_info=True,
             )
 
+        # Step 4: Supersedence detection (opt-in)
+        if self._config.enable_store_supersedence:
+            try:
+                await self._check_store_supersedence(
+                    content, str(node.id), user_id
+                )
+            except Exception:
+                logger.warning(
+                    "Store supersedence check failed for node %s. "
+                    "Non-fatal; node is stored successfully.",
+                    node.id,
+                    exc_info=True,
+                )
+
         return event_id
+
+    async def _check_store_supersedence(
+        self, content: str, new_node_id: str, user_id: str
+    ) -> None:
+        """Check if new content supersedes existing nodes.
+
+        Uses keyword-based contradiction detection to find existing nodes
+        that the new content explicitly replaces. Non-fatal: any error is
+        caught by the caller so store() never fails due to this check.
+        """
+        from prme.organizer.contradiction import ContentContradictionDetector
+
+        detector = ContentContradictionDetector()
+        if not detector.has_contradiction_signal(content):
+            return
+
+        # Find similar existing nodes via vector search
+        try:
+            similar = await self._vector_index.search(content, user_id, k=10)
+        except Exception:
+            return  # Vector search failure is non-fatal
+
+        if not similar:
+            return
+
+        # Get the content of similar nodes (excluding the new node itself)
+        existing_contents: list[tuple[str, str]] = []
+        for result in similar:
+            sid = result["node_id"]
+            if sid == new_node_id:
+                continue
+            node = await self._graph_store.get_node(
+                sid, include_superseded=False
+            )
+            if node is not None:
+                existing_contents.append((sid, node.content))
+
+        if not existing_contents:
+            return
+
+        # Find which nodes are superseded
+        superseded_node_ids = detector.find_superseded_content(
+            content, existing_contents
+        )
+
+        # Mark them as superseded
+        for old_id in superseded_node_ids:
+            try:
+                await self.supersede(old_id, new_node_id)
+                logger.info(
+                    "Store supersedence: node %s superseded by %s",
+                    old_id,
+                    new_node_id,
+                )
+            except (ValueError, Exception):
+                logger.debug(
+                    "Could not supersede node %s (may already be superseded)",
+                    old_id,
+                    exc_info=True,
+                )
 
     # --- Ingestion Operations ---
 
