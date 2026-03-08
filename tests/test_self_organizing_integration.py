@@ -697,7 +697,7 @@ class TestExplicitOrganize:
 
     @pytest.mark.asyncio
     async def test_organize_deduplicate_runs_without_error(self, config):
-        """Stub job 'deduplicate' should run and return stub result."""
+        """Deduplicate job should run and return real results."""
         engine = await create_engine(config)
         try:
             result = await engine.organize(
@@ -707,7 +707,8 @@ class TestExplicitOrganize:
 
             assert "deduplicate" in result.jobs_run
             assert "deduplicate" in result.per_job
-            assert result.per_job["deduplicate"].details.get("status") == "stub"
+            # Now a real implementation, not a stub
+            assert "duplicates_found" in result.per_job["deduplicate"].details
         finally:
             await engine.close()
 
