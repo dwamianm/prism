@@ -39,6 +39,10 @@ def infer_epistemic_type(
         return EpistemicType.INFERRED
     if node_type == NodeType.EVENT:
         return EpistemicType.OBSERVED
+    # INSTRUCTION nodes default to OBSERVED (user-stated behavioral rules)
+    # but callers can override to INFERRED for system-learned rules.
+    if node_type == NodeType.INSTRUCTION:
+        return EpistemicType.OBSERVED
     # ENTITY, FACT, DECISION, PREFERENCE, TASK, NOTE
     return EpistemicType.ASSERTED
 

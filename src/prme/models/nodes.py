@@ -1,7 +1,8 @@
 """Memory node model for the graph store.
 
-MemoryNode represents all eight node types in the PRME graph:
-Entity, Event, Fact, Decision, Preference, Task, Summary, Note.
+MemoryNode represents all nine node types in the PRME graph:
+Entity, Event, Fact, Decision, Preference, Task, Summary, Note,
+and Instruction (procedural memory for learned behavioral rules).
 """
 
 from datetime import datetime, timezone

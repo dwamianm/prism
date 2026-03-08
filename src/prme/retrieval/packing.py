@@ -173,6 +173,8 @@ def classify_into_sections(candidate: RetrievalCandidate) -> str:
 
     node_type = candidate.node.node_type
 
+    if node_type == NodeType.INSTRUCTION:
+        return "system_instructions"
     if node_type == NodeType.ENTITY:
         return "entity_snapshots"
     if node_type in (NodeType.FACT, NodeType.NOTE):
@@ -259,8 +261,23 @@ def pack_context(
     # Track which candidates have been processed.
     processed_ids: set = set()
 
+    # --- Priority 0: System instructions (always include first) ---
+    # INSTRUCTION nodes shape LLM behavior and must be packed before
+    # all other content, including pinned items.
+    priority_0 = [
+        c for c in scored_candidates
+        if c.node.node_type == NodeType.INSTRUCTION
+    ]
+    priority_0.sort(key=lambda c: (-c.composite_score, str(c.node.id)))
+    for candidate in priority_0:
+        _try_include(candidate)
+        processed_ids.add(id(candidate))
+
     # --- Priority 1: Pinned + active tasks (always include) ---
-    priority_1 = [c for c in scored_candidates if _is_pinned_or_active_task(c)]
+    priority_1 = [
+        c for c in scored_candidates
+        if _is_pinned_or_active_task(c) and id(c) not in processed_ids
+    ]
     for candidate in priority_1:
         _try_include(candidate)
         processed_ids.add(id(candidate))

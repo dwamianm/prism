@@ -10,7 +10,8 @@ from enum import Enum
 class NodeType(str, Enum):
     """Types of memory graph nodes.
 
-    Seven spec-defined types plus a generic Note catch-all.
+    Seven spec-defined types, a generic Note catch-all, and INSTRUCTION
+    for learned behavioral rules (procedural memory).
     """
 
     ENTITY = "entity"
@@ -21,6 +22,7 @@ class NodeType(str, Enum):
     TASK = "task"
     SUMMARY = "summary"
     NOTE = "note"
+    INSTRUCTION = "instruction"
 
 
 class EdgeType(str, Enum):
@@ -164,6 +166,13 @@ DEFAULT_DECAY_PROFILE_MAPPING: dict[EpistemicType, DecayProfile] = {
     EpistemicType.CONDITIONAL: DecayProfile.MEDIUM,
     EpistemicType.DEPRECATED: DecayProfile.PERMANENT,
     EpistemicType.UNVERIFIED: DecayProfile.RAPID,
+}
+
+
+# Node types that override the epistemic-type-based decay profile.
+# INSTRUCTION nodes use SLOW decay because behavioral rules are long-lived.
+NODE_TYPE_DECAY_OVERRIDES: dict[NodeType, DecayProfile] = {
+    NodeType.INSTRUCTION: DecayProfile.SLOW,
 }
 
 
