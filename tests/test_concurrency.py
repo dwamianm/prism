@@ -73,6 +73,7 @@ async def engine(tmp_path):
     Uses tmp_path for all storage artifacts so tests are isolated.
     Yields the engine and closes it on teardown.
     """
+    import asyncio
     import duckdb
 
     # Create DuckDB connection in tmp_path
@@ -80,14 +81,17 @@ async def engine(tmp_path):
     conn = duckdb.connect(db_path)
     initialize_database(conn)
 
+    # Shared connection lock for DuckDB thread-safety (issue #19)
+    conn_lock = asyncio.Lock()
+
     # Create real backend stores
-    event_store = EventStore(conn)
-    graph_store = DuckPGQGraphStore(conn)
+    event_store = EventStore(conn, conn_lock)
+    graph_store = DuckPGQGraphStore(conn, conn_lock)
 
     # Create mock embedding provider and real vector index
     embedding_provider = MockEmbeddingProvider()
     vector_path = str(tmp_path / "vectors.usearch")
-    vector_index = VectorIndex(conn, vector_path, embedding_provider)
+    vector_index = VectorIndex(conn, vector_path, embedding_provider, conn_lock)
 
     # Create real lexical index in tmp_path (tantivy requires dir to exist)
     lexical_path = tmp_path / "lexical_index"

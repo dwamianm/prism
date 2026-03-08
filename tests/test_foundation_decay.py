@@ -295,9 +295,9 @@ class TestMemoryNodeDecayFields:
 class TestDuckDBSchemaMigration:
     """Tests for DuckDB schema migration adding decay fields."""
 
-    def test_initialize_creates_decay_columns(self):
+    def test_initialize_creates_decay_columns(self, tmp_path):
         """initialize_database() creates nodes table with decay columns."""
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(str(tmp_path / "test.duckdb"))
         initialize_database(conn)
 
         # Check that all 6 new columns exist
@@ -315,9 +315,9 @@ class TestDuckDBSchemaMigration:
         assert "pinned" in column_names
         conn.close()
 
-    def test_migration_idempotent(self):
+    def test_migration_idempotent(self, tmp_path):
         """Running initialize_database() twice does not fail."""
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(str(tmp_path / "test.duckdb"))
         initialize_database(conn)
         # Second call should be a no-op (idempotent)
         initialize_database(conn)
@@ -329,9 +329,9 @@ class TestDuckDBSchemaMigration:
         assert len(columns) == 1
         conn.close()
 
-    def test_migration_on_existing_db_without_decay(self):
+    def test_migration_on_existing_db_without_decay(self, tmp_path):
         """Migration adds decay columns to an existing DB lacking them."""
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(str(tmp_path / "test.duckdb"))
         # Create old-style schema without decay columns
         conn.execute("""
             CREATE TABLE nodes (
@@ -424,11 +424,12 @@ class TestDuckDBSchemaMigration:
 class TestDuckDBRoundTrip:
     """Tests for round-trip node persistence with decay fields via DuckDB graph store."""
 
-    def test_round_trip_default_decay_fields(self):
+    @pytest.mark.asyncio
+    async def test_round_trip_default_decay_fields(self, tmp_path):
         """Create node with default decay fields, read back, verify match."""
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(str(tmp_path / "test.duckdb"))
         initialize_database(conn)
-        store = DuckPGQGraphStore(conn)
+        store = DuckPGQGraphStore(conn, asyncio.Lock())
 
         node = MemoryNode(
             node_type=NodeType.FACT,
@@ -436,12 +437,8 @@ class TestDuckDBRoundTrip:
             content="Python is great",
         )
 
-        node_id = asyncio.get_event_loop().run_until_complete(
-            store.create_node(node)
-        )
-        retrieved = asyncio.get_event_loop().run_until_complete(
-            store.get_node(node_id)
-        )
+        node_id = await store.create_node(node)
+        retrieved = await store.get_node(node_id)
 
         assert retrieved is not None
         assert retrieved.decay_profile == DecayProfile.MEDIUM
@@ -452,11 +449,12 @@ class TestDuckDBRoundTrip:
         assert isinstance(retrieved.last_reinforced_at, datetime)
         conn.close()
 
-    def test_round_trip_custom_decay_fields(self):
+    @pytest.mark.asyncio
+    async def test_round_trip_custom_decay_fields(self, tmp_path):
         """Create node with custom decay fields, read back, verify match."""
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(str(tmp_path / "test.duckdb"))
         initialize_database(conn)
-        store = DuckPGQGraphStore(conn)
+        store = DuckPGQGraphStore(conn, asyncio.Lock())
 
         now = datetime.now(timezone.utc)
         node = MemoryNode(
@@ -471,12 +469,8 @@ class TestDuckDBRoundTrip:
             pinned=True,
         )
 
-        node_id = asyncio.get_event_loop().run_until_complete(
-            store.create_node(node)
-        )
-        retrieved = asyncio.get_event_loop().run_until_complete(
-            store.get_node(node_id)
-        )
+        node_id = await store.create_node(node)
+        retrieved = await store.get_node(node_id)
 
         assert retrieved is not None
         assert retrieved.decay_profile == DecayProfile.PERMANENT
@@ -486,13 +480,13 @@ class TestDuckDBRoundTrip:
         assert retrieved.pinned is True
         conn.close()
 
-    def test_round_trip_all_decay_profiles(self):
+    @pytest.mark.asyncio
+    async def test_round_trip_all_decay_profiles(self, tmp_path):
         """Round-trip every DecayProfile value to verify enum serialization."""
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(str(tmp_path / "test.duckdb"))
         initialize_database(conn)
-        store = DuckPGQGraphStore(conn)
+        store = DuckPGQGraphStore(conn, asyncio.Lock())
 
-        loop = asyncio.get_event_loop()
         for profile in DecayProfile:
             node = MemoryNode(
                 node_type=NodeType.NOTE,
@@ -500,19 +494,20 @@ class TestDuckDBRoundTrip:
                 content=f"Node with {profile.value} decay",
                 decay_profile=profile,
             )
-            node_id = loop.run_until_complete(store.create_node(node))
-            retrieved = loop.run_until_complete(store.get_node(node_id))
+            node_id = await store.create_node(node)
+            retrieved = await store.get_node(node_id)
             assert retrieved is not None
             assert retrieved.decay_profile == profile, (
                 f"Expected {profile}, got {retrieved.decay_profile}"
             )
         conn.close()
 
-    def test_round_trip_preserves_other_fields(self):
+    @pytest.mark.asyncio
+    async def test_round_trip_preserves_other_fields(self, tmp_path):
         """Decay field changes do not affect other MemoryNode fields."""
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(str(tmp_path / "test.duckdb"))
         initialize_database(conn)
-        store = DuckPGQGraphStore(conn)
+        store = DuckPGQGraphStore(conn, asyncio.Lock())
 
         node = MemoryNode(
             node_type=NodeType.DECISION,
@@ -526,9 +521,8 @@ class TestDuckDBRoundTrip:
             confidence_base=0.85,
         )
 
-        loop = asyncio.get_event_loop()
-        node_id = loop.run_until_complete(store.create_node(node))
-        retrieved = loop.run_until_complete(store.get_node(node_id))
+        node_id = await store.create_node(node)
+        retrieved = await store.get_node(node_id)
 
         assert retrieved is not None
         assert retrieved.node_type == NodeType.DECISION
