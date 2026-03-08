@@ -136,6 +136,7 @@ _CHECKPOINTS = [
         expected_keywords=["Alice", "Bob", "Charlie"],
         excluded_keywords=[],
         description="Long-lived observed facts (team members) should persist",
+        lifecycle_assertions={"stable": 1},  # At least 1 node promoted after 7+ days
     ),
     SimCheckpoint(
         day=40,
@@ -164,6 +165,7 @@ _CHECKPOINTS = [
         expected_keywords=["Alice", "Bob"],
         excluded_keywords=[],
         description="At 90 days, stable observed facts should still be retrievable",
+        lifecycle_assertions={"stable": 1},  # Stable nodes should persist at 90 days
     ),
     SimCheckpoint(
         day=90,

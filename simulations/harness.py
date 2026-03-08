@@ -17,7 +17,7 @@ from pathlib import Path
 
 from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine
-from prme.types import EpistemicType, NodeType, Scope
+from prme.types import EpistemicType, LifecycleState, NodeType, Scope
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,9 @@ class SimCheckpoint:
     expected_keywords: list[str]  # must appear in top results
     excluded_keywords: list[str]  # must NOT appear in top results
     description: str  # human-readable description
+    lifecycle_assertions: dict[str, int] = field(default_factory=dict)
+    # Maps lifecycle state name to minimum expected count.
+    # e.g., {"stable": 3} means "at least 3 nodes should be in stable state"
 
 
 @dataclass
@@ -75,6 +78,10 @@ class CheckpointResult:
     expected_found: list[str]  # expected keywords that were found
     expected_missing: list[str]  # expected keywords that were NOT found
     excluded_found: list[str]  # excluded keywords that appeared (bad)
+    lifecycle_failures: list[str] = field(default_factory=list)
+    # Diagnostic messages for failed lifecycle assertions
+    lifecycle_counts: dict[str, int] = field(default_factory=dict)
+    # Actual counts of each lifecycle state
 
 
 @dataclass
@@ -111,6 +118,14 @@ class SimulationReport:
                 print(f"    Missing expected: {', '.join(cr.expected_missing)}")
             if cr.excluded_found:
                 print(f"    Unwanted found: {', '.join(cr.excluded_found)}")
+
+            if cr.lifecycle_counts:
+                counts_str = ", ".join(
+                    f"{k}={v}" for k, v in sorted(cr.lifecycle_counts.items()) if v > 0
+                )
+                print(f"    Lifecycle states: {counts_str}")
+            if cr.lifecycle_failures:
+                print(f"    Lifecycle failures: {'; '.join(cr.lifecycle_failures)}")
 
             if cr.top_results:
                 print("    Top results:")
@@ -309,10 +324,37 @@ class SimulationRunner:
             if kw.lower() in top_content
         ]
 
-        # Pass if all expected found and no excluded found
+        # Lifecycle assertions: count nodes by lifecycle state
+        lifecycle_counts: dict[str, int] = {}
+        lifecycle_failures: list[str] = []
+        if checkpoint.lifecycle_assertions:
+            all_nodes = await engine.query_nodes(
+                limit=1000,
+                lifecycle_states=[
+                    LifecycleState.TENTATIVE,
+                    LifecycleState.STABLE,
+                    LifecycleState.SUPERSEDED,
+                    LifecycleState.ARCHIVED,
+                    LifecycleState.DEPRECATED,
+                    LifecycleState.CONTESTED,
+                ],
+            )
+            for node in all_nodes:
+                state_name = node.lifecycle_state.value
+                lifecycle_counts[state_name] = lifecycle_counts.get(state_name, 0) + 1
+
+            for state, min_count in checkpoint.lifecycle_assertions.items():
+                actual = lifecycle_counts.get(state, 0)
+                if actual < min_count:
+                    lifecycle_failures.append(
+                        f"Expected >= {min_count} nodes in '{state}', got {actual}"
+                    )
+
+        # Pass if all expected found, no excluded found, and no lifecycle failures
         passed = (
             len(expected_missing) == 0
             and len(excluded_found) == 0
+            and len(lifecycle_failures) == 0
         )
 
         return CheckpointResult(
@@ -322,4 +364,6 @@ class SimulationRunner:
             expected_found=expected_found,
             expected_missing=expected_missing,
             excluded_found=excluded_found,
+            lifecycle_failures=lifecycle_failures,
+            lifecycle_counts=lifecycle_counts,
         )
