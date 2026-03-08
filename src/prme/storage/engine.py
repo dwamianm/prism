@@ -856,6 +856,50 @@ class MemoryEngine:
         """
         await self._graph_store.archive(node_id)
 
+    # --- Reinforcement ---
+
+    async def reinforce(
+        self,
+        node_id: str,
+        evidence_id: str | None = None,
+    ) -> None:
+        """Reinforce a memory node, boosting its confidence and salience.
+
+        Bumps reinforcement_boost by +0.15 (capped at 0.5) and
+        confidence_base by +0.05 (capped at 0.95). Updates
+        last_reinforced_at to now. Optionally appends an evidence
+        reference.
+
+        Args:
+            node_id: The node to reinforce.
+            evidence_id: Optional event ID to append to evidence_refs.
+
+        Raises:
+            ValueError: If the node does not exist.
+        """
+        from datetime import timezone
+        from uuid import UUID
+
+        node = await self._graph_store.get_node(node_id, include_superseded=True)
+        if node is None:
+            raise ValueError(f"Node {node_id!r} not found")
+
+        new_boost = min(node.reinforcement_boost + 0.15, 0.5)
+        new_confidence_base = min(node.confidence_base + 0.05, 0.95)
+        now = datetime.now(timezone.utc)
+
+        updates: dict = {
+            "reinforcement_boost": new_boost,
+            "confidence_base": new_confidence_base,
+            "last_reinforced_at": now,
+        }
+
+        if evidence_id is not None:
+            new_refs = list(node.evidence_refs) + [UUID(evidence_id)]
+            updates["evidence_refs"] = new_refs
+
+        await self._graph_store.update_node(node_id, **updates)
+
     # --- Organization (RFC-0015) ---
 
     async def organize(
