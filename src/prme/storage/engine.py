@@ -417,12 +417,48 @@ class MemoryEngine:
             label=f"store.event:{event.id}",
         )
 
+        # Step 1.5: Novelty scoring (surprise-gated storage, issue #20)
+        novelty_result = None
+        if self._config.enable_surprise_gating:
+            try:
+                novelty_result = await self._compute_novelty(content, user_id)
+            except Exception:
+                logger.warning(
+                    "Novelty scoring failed for event %s. "
+                    "Non-fatal; proceeding with default salience.",
+                    event_id,
+                    exc_info=True,
+                )
+
         # Step 2: Create graph node via write queue
         from prme.types import DEFAULT_DECAY_PROFILE_MAPPING
 
         decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
             epistemic_type, DecayProfile.MEDIUM
         )
+
+        # Apply novelty adjustment to initial salience (issue #20)
+        salience_base = 0.5  # default
+        if novelty_result is not None:
+            salience_base = max(
+                0.0, min(1.0, 0.5 + novelty_result.salience_adjustment)
+            )
+
+        # Add novelty score to metadata if computed
+        if novelty_result is not None:
+            node_metadata = dict(metadata) if metadata else {}
+            node_metadata["novelty_score"] = round(
+                novelty_result.novelty_score, 4
+            )
+            node_metadata["max_similarity"] = round(
+                novelty_result.max_similarity, 4
+            )
+            if novelty_result.nearest_node_id:
+                node_metadata["nearest_node_id"] = (
+                    novelty_result.nearest_node_id
+                )
+            metadata = node_metadata
+
         node = MemoryNode(
             user_id=user_id,
             session_id=session_id,
@@ -432,6 +468,8 @@ class MemoryEngine:
             metadata=metadata,
             confidence=confidence,
             confidence_base=confidence,
+            salience=salience_base,
+            salience_base=salience_base,
             epistemic_type=epistemic_type,
             source_type=source_type,
             evidence_refs=[event.id],
@@ -638,6 +676,29 @@ class MemoryEngine:
                     sid,
                     exc_info=True,
                 )
+
+    async def _compute_novelty(self, content: str, user_id: str):
+        """Compute novelty score for incoming content.
+
+        Uses vector similarity to measure how surprising the content is
+        relative to existing knowledge. Higher novelty = more surprising.
+
+        Args:
+            content: Text content to evaluate.
+            user_id: Owner user ID for scoping vector search.
+
+        Returns:
+            NoveltyResult with score and salience adjustment.
+        """
+        from prme.ingestion.novelty import NoveltyScorer
+
+        scorer = NoveltyScorer(
+            high_novelty_threshold=self._config.novelty_high_threshold,
+            low_novelty_threshold=self._config.novelty_low_threshold,
+            salience_boost=self._config.novelty_salience_boost,
+            salience_penalty=self._config.novelty_salience_penalty,
+        )
+        return await scorer.score(content, user_id, self._vector_index)
 
     async def _check_oscillation(self, new_node_id: str) -> None:
         """Check if a new node is part of a flip-flop oscillation pattern.
