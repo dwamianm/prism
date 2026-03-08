@@ -178,7 +178,15 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+See `.planning/TODOS.md` for full details.
+
+- **TODO-001:** Surprise-Gated Storage (High priority, from Titans/Google research)
+- **TODO-002:** Bi-Temporal Data Model (High priority, from Zep/Graphiti)
+- **TODO-003:** Predictive Forgetting / Consolidation Pipeline (High priority, from neuroscience research)
+- **TODO-004:** Procedural Memory Node Type (Medium priority, from LangMem)
+- **TODO-005:** Memory Quality Self-Assessment & Auto-Tuning (Medium priority, from MEMTRACK)
+- **TODO-006:** Dual-Stream Ingestion Fast/Slow Path (Medium priority, from MAGMA)
+- **TODO-007:** Benchmark Suite — LoCoMo + LongMemEval + Custom Epistemic (High priority)
 
 ### Blockers/Concerns
 
