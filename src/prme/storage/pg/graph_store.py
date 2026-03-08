@@ -203,6 +203,98 @@ class PgGraphStore:
             rows = await conn.fetch(query, *params)
         return [self._record_to_node(row) for row in rows]
 
+    # --- Node Update ---
+
+    # Fields allowed for update_node. Maps Python field name -> SQL column name.
+    _UPDATE_ALLOWED_FIELDS: set[str] = {
+        "reinforcement_boost",
+        "last_reinforced_at",
+        "confidence_base",
+        "salience_base",
+        "decay_profile",
+        "pinned",
+        "evidence_refs",
+        "metadata",
+        "lifecycle_state",
+        "superseded_by",
+        "confidence",
+        "salience",
+        "updated_at",
+    }
+
+    async def update_node(self, node_id: str, **updates) -> None:
+        """Update specific fields on an existing node.
+
+        Args:
+            node_id: UUID string of the node to update.
+            **updates: Field names and values to update.
+
+        Raises:
+            ValueError: If node_id does not exist or no valid fields provided.
+        """
+        # Filter to only allowed fields
+        valid_updates = {
+            k: v for k, v in updates.items()
+            if k in self._UPDATE_ALLOWED_FIELDS
+        }
+        if not valid_updates:
+            raise ValueError(
+                f"No valid fields to update. Allowed fields: "
+                f"{sorted(self._UPDATE_ALLOWED_FIELDS)}"
+            )
+
+        # Always set updated_at to current timestamp
+        now = datetime.now(timezone.utc)
+        if "updated_at" not in valid_updates:
+            valid_updates["updated_at"] = now
+
+        # Build SET clause with PostgreSQL $N parameter placeholders
+        set_parts: list[str] = []
+        params: list = []
+        idx = 1
+
+        for field, value in valid_updates.items():
+            # Serialize special types
+            if field == "evidence_refs" and value is not None:
+                set_parts.append(f"{field} = ${idx}::jsonb")
+                params.append(json.dumps([str(u) for u in value]))
+            elif field == "metadata" and value is not None:
+                set_parts.append(f"{field} = ${idx}::jsonb")
+                params.append(json.dumps(value))
+            elif field == "decay_profile" and isinstance(value, DecayProfile):
+                set_parts.append(f"{field} = ${idx}")
+                params.append(value.value)
+            elif field == "lifecycle_state" and isinstance(value, LifecycleState):
+                set_parts.append(f"{field} = ${idx}")
+                params.append(value.value)
+            elif field == "superseded_by" and value is not None:
+                set_parts.append(f"{field} = ${idx}::uuid")
+                params.append(str(value))
+            elif field == "last_reinforced_at" and isinstance(value, datetime):
+                if value.tzinfo is None:
+                    value = value.replace(tzinfo=timezone.utc)
+                set_parts.append(f"{field} = ${idx}")
+                params.append(value)
+            else:
+                set_parts.append(f"{field} = ${idx}")
+                params.append(value)
+            idx += 1
+
+        set_clause = ", ".join(set_parts)
+        params.append(node_id)
+
+        query = f"UPDATE nodes SET {set_clause} WHERE id = ${idx}"
+
+        async with self._pool.acquire() as conn:
+            # Verify the node exists
+            existing = await conn.fetchrow(
+                "SELECT id FROM nodes WHERE id = $1", node_id
+            )
+            if existing is None:
+                raise ValueError(f"Node {node_id} not found")
+
+            await conn.execute(query, *params)
+
     # --- Edge Operations ---
 
     async def create_edge(self, edge: MemoryEdge) -> str:
