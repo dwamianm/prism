@@ -478,6 +478,17 @@ class MemoryEngine:
                     exc_info=True,
                 )
 
+            # Step 5: Oscillation detection (runs after supersedence)
+            try:
+                await self._check_oscillation(str(node.id))
+            except Exception:
+                logger.warning(
+                    "Oscillation check failed for node %s. "
+                    "Non-fatal; node is stored successfully.",
+                    node.id,
+                    exc_info=True,
+                )
+
         return event_id
 
     async def _check_store_supersedence(
@@ -538,6 +549,45 @@ class MemoryEngine:
                     "Could not supersede node %s (may already be superseded)",
                     old_id,
                     exc_info=True,
+                )
+
+    async def _check_oscillation(self, new_node_id: str) -> None:
+        """Check if a new node is part of a flip-flop oscillation pattern.
+
+        Traverses the supersedence chain backward and checks for content
+        similarity loops. If oscillation is detected, reduces confidence_base
+        on the new node. Non-fatal: any error is caught by the caller so
+        store() never fails due to this check.
+        """
+        from prme.organizer.oscillation import OscillationDetector
+
+        detector = OscillationDetector()
+        results = await detector.detect_oscillations(
+            self._graph_store, new_node_id
+        )
+
+        if not results:
+            return
+
+        for osc in results:
+            logger.info(
+                "Oscillation detected for node %s: topic=%r, cycles=%d, penalty=%.2f",
+                new_node_id,
+                osc.topic,
+                osc.cycle_count,
+                osc.confidence_penalty,
+            )
+
+            # Reduce confidence_base on the new node
+            node = await self._graph_store.get_node(
+                new_node_id, include_superseded=True
+            )
+            if node is not None:
+                new_confidence = max(
+                    0.0, node.confidence_base - osc.confidence_penalty
+                )
+                await self._graph_store.update_node(
+                    new_node_id, confidence_base=new_confidence
                 )
 
     # --- Ingestion Operations ---
