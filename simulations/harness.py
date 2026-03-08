@@ -48,6 +48,9 @@ class SimCheckpoint:
     expected_keywords: list[str]  # must appear in top results
     excluded_keywords: list[str]  # must NOT appear in top results
     description: str  # human-readable description
+    ranking_assertions: list[tuple[str, str]] = field(default_factory=list)
+    # Each tuple is (higher_keyword, lower_keyword) meaning higher_keyword
+    # must appear in a higher-ranked (lower index) result than lower_keyword
 
 
 @dataclass
@@ -75,6 +78,8 @@ class CheckpointResult:
     expected_found: list[str]  # expected keywords that were found
     expected_missing: list[str]  # expected keywords that were NOT found
     excluded_found: list[str]  # excluded keywords that appeared (bad)
+    ranking_failures: list[str] = field(default_factory=list)
+    # Diagnostic messages for failed ranking assertions
 
 
 @dataclass
@@ -111,6 +116,8 @@ class SimulationReport:
                 print(f"    Missing expected: {', '.join(cr.expected_missing)}")
             if cr.excluded_found:
                 print(f"    Unwanted found: {', '.join(cr.excluded_found)}")
+            if cr.ranking_failures:
+                print(f"    Ranking failures: {'; '.join(cr.ranking_failures)}")
 
             if cr.top_results:
                 print("    Top results:")
@@ -309,10 +316,42 @@ class SimulationRunner:
             if kw.lower() in top_content
         ]
 
-        # Pass if all expected found and no excluded found
+        # Evaluate ranking assertions
+        ranking_failures: list[str] = []
+        for higher_kw, lower_kw in checkpoint.ranking_assertions:
+            higher_rank = None
+            lower_rank = None
+            h_lower = higher_kw.lower()
+            l_lower = lower_kw.lower()
+            for idx, r in enumerate(top_results[:5]):
+                content_lower = r["content"].lower()
+                has_higher = h_lower in content_lower
+                has_lower = l_lower in content_lower
+                if higher_rank is None and has_higher:
+                    higher_rank = idx
+                # For the lower keyword, only count results that do NOT
+                # also contain the higher keyword (co-occurrence in the
+                # same result is not evidence that the lower item ranks
+                # at that position).
+                if lower_rank is None and has_lower and not has_higher:
+                    lower_rank = idx
+
+            if higher_rank is None:
+                ranking_failures.append(
+                    f"'{higher_kw}' not found in results"
+                )
+            elif lower_rank is not None and higher_rank >= lower_rank:
+                ranking_failures.append(
+                    f"'{higher_kw}' (rank {higher_rank + 1}) should rank "
+                    f"above '{lower_kw}' (rank {lower_rank + 1})"
+                )
+            # If lower_kw not found at all, the assertion passes
+
+        # Pass if all expected found, no excluded found, and no ranking failures
         passed = (
             len(expected_missing) == 0
             and len(excluded_found) == 0
+            and len(ranking_failures) == 0
         )
 
         return CheckpointResult(
@@ -322,4 +361,5 @@ class SimulationRunner:
             expected_found=expected_found,
             expected_missing=expected_missing,
             excluded_found=excluded_found,
+            ranking_failures=ranking_failures,
         )

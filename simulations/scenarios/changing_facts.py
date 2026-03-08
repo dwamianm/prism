@@ -122,6 +122,7 @@ _CHECKPOINTS = [
         expected_keywords=["PostgreSQL"],
         excluded_keywords=[],
         description="After MySQL->PostgreSQL migration, PostgreSQL should dominate",
+        ranking_assertions=[("PostgreSQL", "MySQL")],
     ),
     SimCheckpoint(
         day=15,
@@ -143,6 +144,7 @@ _CHECKPOINTS = [
         expected_keywords=["GraphQL"],
         excluded_keywords=[],
         description="After API migration, GraphQL should dominate retrieval",
+        ranking_assertions=[("GraphQL", "REST")],
     ),
     SimCheckpoint(
         day=40,
@@ -157,6 +159,7 @@ _CHECKPOINTS = [
         expected_keywords=["VS Code"],
         excluded_keywords=[],
         description="After switching back, VS Code should be the current editor",
+        ranking_assertions=[("VS Code", "Neovim")],
     ),
     SimCheckpoint(
         day=90,
