@@ -44,11 +44,16 @@ from prme.models.edges import MemoryEdge
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture
-async def graph_store_and_conn():
-    """Create in-memory DuckDB, initialize schema, yield (graph_store, conn)."""
-    conn = duckdb.connect(":memory:")
+async def graph_store_and_conn(tmp_path):
+    """Create isolated DuckDB, initialize schema, yield (graph_store, conn).
+
+    Uses file-backed DuckDB in tmp_path for test isolation (issue #19).
+    """
+    db_path = str(tmp_path / "test.duckdb")
+    conn = duckdb.connect(db_path)
     create_schema(conn)
-    graph_store = DuckPGQGraphStore(conn)
+    conn_lock = asyncio.Lock()
+    graph_store = DuckPGQGraphStore(conn, conn_lock)
     yield graph_store, conn
     conn.close()
 

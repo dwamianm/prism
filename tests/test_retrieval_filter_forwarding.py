@@ -125,14 +125,19 @@ async def backends(tmp_path):
     Yields (conn, graph_store, vector_index, lexical_index) tuple.
     Cleans up on teardown.
     """
+    import asyncio
+
     db_path = str(tmp_path / "test.duckdb")
     conn = duckdb.connect(db_path)
     initialize_database(conn)
 
-    graph_store = DuckPGQGraphStore(conn)
+    # Shared connection lock for DuckDB thread-safety (issue #19)
+    conn_lock = asyncio.Lock()
+
+    graph_store = DuckPGQGraphStore(conn, conn_lock)
     embedding_provider = MockEmbeddingProvider()
     vector_path = str(tmp_path / "vectors.usearch")
-    vector_index = VectorIndex(conn, vector_path, embedding_provider)
+    vector_index = VectorIndex(conn, vector_path, embedding_provider, conn_lock)
 
     lexical_path = tmp_path / "lexical_index"
     lexical_path.mkdir()
