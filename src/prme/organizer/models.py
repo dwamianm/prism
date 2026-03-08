@@ -34,6 +34,17 @@ class OrganizeResult(BaseModel):
     per_job: dict[str, JobResult] = Field(default_factory=dict)
 
 
+class ConsolidationResult(BaseModel):
+    """Result of the predictive forgetting / consolidation pipeline (issue #22)."""
+
+    clusters_found: int = 0
+    nodes_consolidated: int = 0
+    nodes_archived: int = 0
+    summaries_created: int = 0
+    duration_ms: float = 0.0
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
 @dataclass
 class MaintenanceResult:
     """Result of an opportunistic maintenance pass."""

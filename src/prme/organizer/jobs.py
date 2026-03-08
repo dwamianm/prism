@@ -33,6 +33,7 @@ ALL_JOBS: list[str] = [
     "feedback_apply",
     "centrality_boost",
     "tombstone_sweep",
+    "consolidate",
 ]
 
 
@@ -66,6 +67,7 @@ async def run_job(
         "summarize": _job_stub,
         "centrality_boost": _job_stub,
         "tombstone_sweep": _job_stub,
+        "consolidate": _job_consolidate,
     }
 
     handler = dispatch.get(job_name)
@@ -304,6 +306,42 @@ async def _job_feedback_apply(
     return JobResult(
         job=job_name,
         details={"status": "placeholder", "note": "RFC-0009 not yet implemented"},
+    )
+
+
+async def _job_consolidate(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+) -> JobResult:
+    """Run the predictive forgetting / consolidation pipeline (issue #22).
+
+    Clusters semantically similar episodic memories, creates summary
+    abstractions, and archives redundant individual memories. This is a
+    Layer 3 job -- pattern-based consolidation, not just time-based.
+    """
+    from prme.organizer.consolidation import run_consolidation_pipeline
+
+    start = time.monotonic()
+
+    consolidation_result = await run_consolidation_pipeline(
+        engine, config, budget_ms
+    )
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=consolidation_result.nodes_consolidated,
+        nodes_modified=consolidation_result.nodes_archived + consolidation_result.summaries_created,
+        errors=0,
+        duration_ms=round(duration_ms, 2),
+        details={
+            "clusters_found": consolidation_result.clusters_found,
+            "nodes_consolidated": consolidation_result.nodes_consolidated,
+            "nodes_archived": consolidation_result.nodes_archived,
+            "summaries_created": consolidation_result.summaries_created,
+        },
     )
 
 
