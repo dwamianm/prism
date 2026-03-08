@@ -66,7 +66,7 @@ async def run_job(
         "feedback_apply": _job_feedback_apply,
         "deduplicate": _job_deduplicate,
         "alias_resolve": _job_alias_resolve,
-        "summarize": _job_stub,
+        "summarize": _job_summarize,
         "centrality_boost": _job_stub,
         "tombstone_sweep": _job_tombstone_sweep,
         "snapshot_generation": _job_snapshot_generation,
@@ -635,6 +635,74 @@ async def _job_tombstone_sweep(
         errors=errors,
         duration_ms=round(duration_ms, 2),
         details={"note": "TTL-based archival (RFC-0007 S9, issue #12)"},
+    )
+
+
+async def _job_summarize(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+) -> JobResult:
+    """Run hierarchical summarization: daily -> weekly -> monthly.
+
+    Splits the time budget 50/30/20 across the three levels.
+    """
+    from prme.organizer.summarization import (
+        generate_daily_summaries,
+        roll_up_monthly,
+        roll_up_weekly,
+    )
+
+    start = time.monotonic()
+    total_processed = 0
+    total_modified = 0
+    total_errors = 0
+    details: dict = {}
+
+    # Budget split: 50% daily, 30% weekly, 20% monthly
+    daily_budget = budget_ms * 0.5
+    weekly_budget = budget_ms * 0.3
+    monthly_budget = budget_ms * 0.2
+
+    try:
+        daily_result = await generate_daily_summaries(engine, config, daily_budget)
+        total_processed += daily_result.nodes_processed
+        total_modified += daily_result.nodes_modified
+        total_errors += daily_result.errors
+        details["daily"] = daily_result.details
+    except Exception:
+        logger.warning("Daily summarization failed", exc_info=True)
+        total_errors += 1
+
+    try:
+        weekly_result = await roll_up_weekly(engine, config, weekly_budget)
+        total_processed += weekly_result.nodes_processed
+        total_modified += weekly_result.nodes_modified
+        total_errors += weekly_result.errors
+        details["weekly"] = weekly_result.details
+    except Exception:
+        logger.warning("Weekly rollup failed", exc_info=True)
+        total_errors += 1
+
+    try:
+        monthly_result = await roll_up_monthly(engine, config, monthly_budget)
+        total_processed += monthly_result.nodes_processed
+        total_modified += monthly_result.nodes_modified
+        total_errors += monthly_result.errors
+        details["monthly"] = monthly_result.details
+    except Exception:
+        logger.warning("Monthly rollup failed", exc_info=True)
+        total_errors += 1
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=total_processed,
+        nodes_modified=total_modified,
+        errors=total_errors,
+        duration_ms=round(duration_ms, 2),
+        details=details,
     )
 
 

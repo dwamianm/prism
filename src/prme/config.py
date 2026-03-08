@@ -170,6 +170,22 @@ class OrganizerConfig(BaseSettings):
             "(RFC-0007 S9, issue #12)"
         ),
     )
+    summarization_daily_min_events: int = Field(
+        default=5,
+        description="Minimum events per day to trigger a daily summary",
+    )
+    summarization_weekly_min_summaries: int = Field(
+        default=3,
+        description="Minimum daily summaries needed for weekly rollup",
+    )
+    summarization_monthly_min_summaries: int = Field(
+        default=2,
+        description="Minimum weekly summaries needed for monthly rollup",
+    )
+    summarization_max_items_per_summary: int = Field(
+        default=10,
+        description="Maximum items to include per summary",
+    )
 
     model_config = {
         "env_prefix": "PRME_ORGANIZER_",

@@ -183,6 +183,8 @@ def classify_into_sections(candidate: RetrievalCandidate) -> str:
         return "recent_decisions"
     if node_type == NodeType.TASK:
         return "active_tasks"
+    if node_type == NodeType.SUMMARY:
+        return "summaries"
     return "provenance_refs"
 
 

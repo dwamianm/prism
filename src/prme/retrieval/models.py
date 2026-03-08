@@ -30,6 +30,7 @@ BundleSection = Literal[
     "active_tasks",
     "provenance_refs",
     "contested_claims",
+    "summaries",
 ]
 
 

@@ -839,7 +839,7 @@ class TestRunJob:
         """Stub jobs return empty results with status note."""
         engine, _, _ = engine_parts
         config = OrganizerConfig()
-        for job_name in ["summarize", "centrality_boost", "tombstone_sweep"]:
+        for job_name in ["centrality_boost"]:
             result = await run_job(job_name, engine, config, 5000.0)
             assert result.job == job_name
             assert result.details.get("status") == "stub"
