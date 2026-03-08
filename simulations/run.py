@@ -6,6 +6,7 @@ Usage:
     python -m simulations.run --list             # list available scenarios
     python -m simulations.run --compare          # run changing_facts with/without organizing
     python -m simulations.run --deterministic changing_facts  # verify deterministic scores
+    python -m simulations.run --eval             # run evaluation mode with IR metrics
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from simulations.eval_runner import EvalRunner
 from simulations.harness import SimulationRunner
 
 
@@ -39,6 +41,11 @@ def main() -> None:
             print("Usage: python -m simulations --deterministic <scenario>")
             sys.exit(1)
         asyncio.run(_run_deterministic(scenario_name))
+        return
+
+    if "--eval" in args:
+        scenario_names = [a for a in args if a not in ("--eval",) and not a.startswith("-")]
+        asyncio.run(_run_eval(scenario_names))
         return
 
     if "--compare" in args:
@@ -186,6 +193,33 @@ async def _run_comparison(scenario_name: str) -> None:
     )
     print("=" * 70)
     print()
+
+
+async def _run_eval(names: list[str]) -> None:
+    """Run evaluation mode: collect IR metrics across scenarios."""
+    from simulations.scenarios import SCENARIOS
+
+    # Filter to requested scenarios or all.
+    if names:
+        scenarios = {}
+        for n in names:
+            if n not in SCENARIOS:
+                print(f"Unknown scenario: {n}")
+                print(f"Available: {', '.join(SCENARIOS.keys())}")
+                sys.exit(1)
+            scenarios[n] = SCENARIOS[n]
+    else:
+        scenarios = dict(SCENARIOS)
+
+    runner = EvalRunner()
+    report = await runner.run_evaluation(scenarios)
+
+    # Print individual scenario reports.
+    for name, sim_report in report.scenario_reports.items():
+        sim_report.print_report()
+
+    # Print aggregate eval table.
+    report.print_report()
 
 
 if __name__ == "__main__":

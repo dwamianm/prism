@@ -21,6 +21,13 @@ from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine
 from prme.types import EpistemicType, LifecycleState, NodeType, Scope
 
+from simulations.evaluation import (
+    EvalMetrics,
+    GroundTruth,
+    evaluate_retrieval,
+    aggregate_metrics,
+)
+
 logger = logging.getLogger(__name__)
 
 # Modules that call datetime.now() and affect scoring determinism.
@@ -93,6 +100,10 @@ class SimCheckpoint:
     lifecycle_assertions: dict[str, int] = field(default_factory=dict)
     # Maps lifecycle state name to minimum expected count.
     # e.g., {"stable": 3} means "at least 3 nodes should be in stable state"
+    ground_truth: GroundTruth | None = None
+    # Optional ground truth for computing IR evaluation metrics (precision@k,
+    # recall@k, nDCG@k, MRR, F1@k, hit rate).  When set, evaluation metrics
+    # are attached to the corresponding CheckpointResult.
 
 
 @dataclass
@@ -130,6 +141,8 @@ class CheckpointResult:
     # Diagnostic messages for failed lifecycle assertions
     lifecycle_counts: dict[str, int] = field(default_factory=dict)
     # Actual counts of each lifecycle state
+    eval_metrics: EvalMetrics | None = None
+    # IR evaluation metrics (populated when ground_truth is present)
 
 
 @dataclass
@@ -204,6 +217,17 @@ class SimulationReport:
             if cr.lifecycle_failures:
                 print(f"    Lifecycle failures: {'; '.join(cr.lifecycle_failures)}")
 
+            if cr.eval_metrics is not None:
+                em = cr.eval_metrics
+                print(f"    MRR: {em.mrr:.3f}  |  Hit rate: {em.hit_rate:.1f}")
+                for k in sorted(em.precision_at_k):
+                    print(
+                        f"    @{k}  P={em.precision_at_k[k]:.3f}  "
+                        f"R={em.recall_at_k[k]:.3f}  "
+                        f"F1={em.f1_at_k[k]:.3f}  "
+                        f"nDCG={em.ndcg_at_k[k]:.3f}"
+                    )
+
             if cr.top_results:
                 print("    Top results:")
                 for j, r in enumerate(cr.top_results[:5], 1):
@@ -219,6 +243,26 @@ class SimulationReport:
         print(f"  Summary: {passed}/{total} checkpoints passed")
         print(f"  Total nodes: {self.total_nodes}")
         print(f"  Duration: {self.duration_ms:.0f}ms")
+
+        # Print aggregate eval metrics when available.
+        eval_list = [
+            cr.eval_metrics
+            for cr in self.checkpoints
+            if cr.eval_metrics is not None
+        ]
+        if eval_list:
+            agg = aggregate_metrics(eval_list)
+            print()
+            print("  Aggregate evaluation metrics:")
+            print(f"    MRR: {agg.mrr:.3f}  |  Hit rate: {agg.hit_rate:.3f}")
+            for k in sorted(agg.precision_at_k):
+                print(
+                    f"    @{k}  P={agg.precision_at_k[k]:.3f}  "
+                    f"R={agg.recall_at_k[k]:.3f}  "
+                    f"F1={agg.f1_at_k[k]:.3f}  "
+                    f"nDCG={agg.ndcg_at_k[k]:.3f}"
+                )
+
         print("=" * 70)
         print()
 
@@ -548,6 +592,11 @@ class SimulationRunner:
                         f"Expected >= {min_count} nodes in '{state}', got {actual}"
                     )
 
+        # Compute eval metrics if ground truth is present.
+        eval_metrics: EvalMetrics | None = None
+        if checkpoint.ground_truth is not None:
+            eval_metrics = evaluate_retrieval(top_results, checkpoint.ground_truth)
+
         # Pass if all expected found, no excluded found, and no assertion failures
         passed = (
             len(expected_missing) == 0
@@ -566,4 +615,5 @@ class SimulationRunner:
             ranking_failures=ranking_failures,
             lifecycle_failures=lifecycle_failures,
             lifecycle_counts=lifecycle_counts,
+            eval_metrics=eval_metrics,
         )
