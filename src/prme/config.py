@@ -231,6 +231,23 @@ class PRMEConfig(BaseSettings):
         ),
     )
 
+    # Dual-stream ingestion (issue #25)
+    materialization_queue_size: int = Field(
+        default=500,
+        description=(
+            "Maximum number of pending items in the materialization queue. "
+            "When full, oldest items are dropped. Used by ingest_fast()."
+        ),
+    )
+    materialization_budget_ms: int = Field(
+        default=100,
+        description=(
+            "Time budget (ms) per materialization drain pass during "
+            "retrieve() or organize(). Controls how much deferred graph "
+            "work is processed per call."
+        ),
+    )
+
     # [HYPOTHESIS] parameter overrides
     epistemic_weights: dict[str, float] = Field(
         default={

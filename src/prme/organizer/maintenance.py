@@ -62,11 +62,28 @@ class MaintenanceRunner:
             return None
 
     async def _run_maintenance(self) -> MaintenanceResult:
-        """Run bounded maintenance pass: promote, archive, feedback_apply."""
+        """Run bounded maintenance pass: materialize, promote, archive, feedback_apply."""
         start = time.monotonic()
         result = MaintenanceResult()
         batch_size = self._config.opportunistic_batch_size
         now_dt = datetime.now(timezone.utc)
+
+        # --- Materialization drain (issue #25) ---
+        # Process pending fast-ingested items before other maintenance
+        try:
+            engine = self._engine
+            if engine._materialization_queue.debt_sync() > 0:
+                budget_ms = getattr(
+                    engine._config, "materialization_budget_ms", 100
+                )
+                await engine._materialization_queue.drain(
+                    engine, budget_ms=budget_ms
+                )
+        except Exception:
+            logger.warning(
+                "Materialization drain failed during maintenance",
+                exc_info=True,
+            )
 
         # --- Auto-promotion ---
         try:
