@@ -431,11 +431,19 @@ class MemoryEngine:
                 )
 
         # Step 2: Create graph node via write queue
-        from prme.types import DEFAULT_DECAY_PROFILE_MAPPING
+        from prme.types import DEFAULT_DECAY_PROFILE_MAPPING, NODE_TYPE_DECAY_OVERRIDES
 
-        decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
-            epistemic_type, DecayProfile.MEDIUM
-        )
+        # INSTRUCTION nodes override the epistemic-type-based decay profile
+        if node_type in NODE_TYPE_DECAY_OVERRIDES:
+            decay_profile = NODE_TYPE_DECAY_OVERRIDES[node_type]
+        else:
+            decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
+                epistemic_type, DecayProfile.MEDIUM
+            )
+
+        # INSTRUCTION nodes get higher default confidence (behavioral patterns)
+        if node_type == NodeType.INSTRUCTION and confidence == self._confidence_matrix.lookup_with_fallback(epistemic_type, source_type):
+            confidence = max(confidence, 0.7)
 
         # Apply novelty adjustment to initial salience (issue #20)
         salience_base = 0.5  # default
@@ -515,6 +523,22 @@ class MemoryEngine:
                     node.id,
                     exc_info=True,
                 )
+
+        # Step 3.6: Instruction reinforcement (always-on for INSTRUCTION nodes)
+        # When new content matches existing INSTRUCTION nodes, boost their
+        # confidence -- frequently validated behavioral rules get stronger.
+        # Uses a fixed similarity threshold of 0.5.
+        try:
+            await self._check_instruction_reinforcement(
+                content, str(node.id), user_id, event.id,
+            )
+        except Exception:
+            logger.warning(
+                "Instruction reinforcement check failed for node %s. "
+                "Non-fatal; node is stored successfully.",
+                node.id,
+                exc_info=True,
+            )
 
         # Step 4: Supersedence detection (opt-in)
         if self._config.enable_store_supersedence:
@@ -673,6 +697,71 @@ class MemoryEngine:
             except Exception:
                 logger.debug(
                     "Could not reinforce node %s during re-mention check",
+                    sid,
+                    exc_info=True,
+                )
+
+    async def _check_instruction_reinforcement(
+        self,
+        content: str,
+        new_node_id: str,
+        user_id: str,
+        event_id: str,
+    ) -> None:
+        """Reinforce existing INSTRUCTION nodes when new content validates them.
+
+        Always-on: runs for every store() call regardless of
+        reinforce_similarity_threshold. Searches for similar existing
+        INSTRUCTION nodes and reinforces matches. Uses a fixed threshold
+        of 0.5 similarity.
+
+        Args:
+            content: The newly stored content text.
+            new_node_id: The node ID of the just-created node (to skip).
+            user_id: Owner user ID for scoping vector search.
+            event_id: Event ID from the new store, passed as evidence_id.
+        """
+        _INSTRUCTION_REINFORCE_THRESHOLD = 0.5
+
+        try:
+            similar = await self._vector_index.search(content, user_id, k=5)
+        except Exception:
+            return  # Vector search failure is non-fatal
+
+        if not similar:
+            return
+
+        for result in similar:
+            sid = result["node_id"]
+            score = result.get("score", 0.0)
+
+            if sid == new_node_id:
+                continue
+
+            if score < _INSTRUCTION_REINFORCE_THRESHOLD:
+                continue
+
+            # Only reinforce INSTRUCTION nodes
+            existing_node = await self._graph_store.get_node(
+                sid, include_superseded=False
+            )
+            if existing_node is None:
+                continue
+            if existing_node.node_type != NodeType.INSTRUCTION:
+                continue
+
+            try:
+                await self.reinforce(sid, evidence_id=str(event_id))
+                logger.info(
+                    "Instruction reinforcement: node %s reinforced "
+                    "(similarity=%.3f) by new node %s",
+                    sid,
+                    score,
+                    new_node_id,
+                )
+            except Exception:
+                logger.debug(
+                    "Could not reinforce instruction %s",
                     sid,
                     exc_info=True,
                 )

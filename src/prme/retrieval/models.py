@@ -23,6 +23,7 @@ CandidateSource = Literal["GRAPH", "VECTOR", "LEXICAL", "PINNED"]
 
 # Bundle section type -- grouping key for memory bundle output.
 BundleSection = Literal[
+    "system_instructions",
     "entity_snapshots",
     "stable_facts",
     "recent_decisions",
@@ -181,6 +182,24 @@ class MemoryBundle(BaseModel):
         default=RepresentationLevel.REFERENCE,
         description="Minimum representation level used",
     )
+
+    def render_system_instructions(self) -> str:
+        """Render system instructions as a formatted prompt block.
+
+        Returns a string suitable for injection as system-level context
+        before factual content. Returns empty string if no instructions
+        are present.
+
+        Returns:
+            Formatted system instructions block, or empty string.
+        """
+        instructions = self.sections.get("system_instructions", [])
+        if not instructions:
+            return ""
+        lines = ["## System Instructions"]
+        for candidate in instructions:
+            lines.append(f"- {candidate.node.content}")
+        return "\n".join(lines) + "\n"
 
 
 class RetrievalMetadata(BaseModel):
