@@ -12,6 +12,7 @@ from simulations.scenarios.oscillation import OSCILLATION_SCENARIO
 from simulations.scenarios.reinforcement import REINFORCEMENT_SCENARIO
 from simulations.scenarios.remention import REMENTION_SCENARIO
 from simulations.scenarios.surprise_gating import SURPRISE_GATING_SCENARIO
+from simulations.scenarios.ttl_archival import TTL_ARCHIVAL_SCENARIO
 
 SCENARIOS: dict = {
     "changing_facts": CHANGING_FACTS_SCENARIO,
@@ -21,4 +22,5 @@ SCENARIOS: dict = {
     "reinforcement": REINFORCEMENT_SCENARIO,
     "remention": REMENTION_SCENARIO,
     "surprise_gating": SURPRISE_GATING_SCENARIO,
+    "ttl_archival": TTL_ARCHIVAL_SCENARIO,
 }

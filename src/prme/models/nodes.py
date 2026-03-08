@@ -94,3 +94,7 @@ class MemoryNode(MemoryObject):
         default=False,
         description="If True, exempt from all automated decay (RFC-0015)",
     )
+    ttl_days: int | None = Field(
+        default=None,
+        description="Time-to-live in days from created_at. None = no TTL (RFC-0007 S9).",
+    )

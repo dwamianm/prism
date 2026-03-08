@@ -471,9 +471,9 @@ class DuckPGQGraphStore:
                 valid_from, valid_to, superseded_by, evidence_refs,
                 created_at, updated_at, epistemic_type, source_type,
                 decay_profile, last_reinforced_at, reinforcement_boost,
-                salience_base, confidence_base, pinned
+                salience_base, confidence_base, pinned, ttl_days
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?)
+                      ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 str(node.id),
@@ -500,6 +500,7 @@ class DuckPGQGraphStore:
                 node.salience_base,
                 node.confidence_base,
                 node.pinned,
+                node.ttl_days,
             ],
         )
 
@@ -518,6 +519,7 @@ class DuckPGQGraphStore:
         "confidence",
         "salience",
         "updated_at",
+        "ttl_days",
     }
 
     def _update_node_sync(self, node_id: str, updates: dict) -> None:
@@ -1443,6 +1445,7 @@ class DuckPGQGraphStore:
         raw_salience_base = row[21] if len(row) > 21 else row[8]  # fallback to salience
         raw_confidence_base = row[22] if len(row) > 22 else row[7]  # fallback to confidence
         raw_pinned = row[23] if len(row) > 23 else False
+        raw_ttl_days = row[24] if len(row) > 24 else None
 
         return MemoryNode(
             id=node_id,
@@ -1469,6 +1472,7 @@ class DuckPGQGraphStore:
             salience_base=raw_salience_base,
             confidence_base=raw_confidence_base,
             pinned=bool(raw_pinned),
+            ttl_days=int(raw_ttl_days) if raw_ttl_days is not None else None,
         )
 
     def _row_to_edge(self, row: tuple) -> MemoryEdge:
