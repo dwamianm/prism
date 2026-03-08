@@ -133,6 +133,40 @@ class EpistemicType(str, Enum):
     UNVERIFIED = "unverified"
 
 
+class DecayProfile(str, Enum):
+    """Decay rate profiles for memory object salience/confidence decay (RFC-0015).
+
+    Each profile maps to a lambda decay rate coefficient.
+    Half-life = ln(2) / lambda days.
+    """
+
+    PERMANENT = "permanent"   # lambda = 0.000, no decay
+    SLOW      = "slow"        # lambda = 0.005, half-life ~139 days
+    MEDIUM    = "medium"      # lambda = 0.020, half-life ~35 days
+    FAST      = "fast"        # lambda = 0.070, half-life ~10 days
+    RAPID     = "rapid"       # lambda = 0.200, half-life ~3.5 days
+
+
+DECAY_LAMBDAS: dict[DecayProfile, float] = {
+    DecayProfile.PERMANENT: 0.000,
+    DecayProfile.SLOW: 0.005,
+    DecayProfile.MEDIUM: 0.020,
+    DecayProfile.FAST: 0.070,
+    DecayProfile.RAPID: 0.200,
+}
+
+
+DEFAULT_DECAY_PROFILE_MAPPING: dict[EpistemicType, DecayProfile] = {
+    EpistemicType.OBSERVED: DecayProfile.SLOW,
+    EpistemicType.ASSERTED: DecayProfile.MEDIUM,
+    EpistemicType.INFERRED: DecayProfile.FAST,
+    EpistemicType.HYPOTHETICAL: DecayProfile.RAPID,
+    EpistemicType.CONDITIONAL: DecayProfile.MEDIUM,
+    EpistemicType.DEPRECATED: DecayProfile.PERMANENT,
+    EpistemicType.UNVERIFIED: DecayProfile.RAPID,
+}
+
+
 class QueryIntent(str, Enum):
     """Classification of retrieval query intent.
 

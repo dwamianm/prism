@@ -46,7 +46,11 @@ def _make_node(
     """Create a MemoryNode stub for testing.
 
     epistemic_type is set directly via native MemoryNode field.
+    salience_base and confidence_base are set to match salience/confidence
+    so that virtual decay (RFC-0015) produces the expected raw values for
+    freshly-created nodes.
     """
+    ts = updated_at or datetime.now(timezone.utc)
     kwargs: dict = {
         "id": node_id or uuid4(),
         "user_id": user_id,
@@ -54,7 +58,10 @@ def _make_node(
         "content": "test content",
         "confidence": confidence,
         "salience": salience,
-        "updated_at": updated_at or datetime.now(timezone.utc),
+        "confidence_base": confidence,
+        "salience_base": salience,
+        "updated_at": ts,
+        "last_reinforced_at": ts,
     }
     if epistemic_type is not None:
         kwargs["epistemic_type"] = epistemic_type
@@ -157,14 +164,16 @@ class TestCompositeScoring:
         """Known inputs produce expected hand-calculated output.
 
         candidate: semantic=0.95, lexical=0.0, graph=0.0,
-                   salience=0.5, confidence=0.8, recency=30 days,
+                   salience_base=0.5, confidence_base=0.8, recency=30 days,
                    epistemic=OBSERVED, path_count=1
 
+        With OBSERVED and MEDIUM profile at 30 days:
+        - effective_salience = 0.5 * exp(-0.02*30) = 0.5 * 0.5488.. = 0.2744..
+        - effective_confidence = 0.8 (OBSERVED exempt from confidence decay < 180d)
+
         additive = 0.30*0.95 + 0.15*0.0 + 0.20*0.0
-                   + 0.10*exp(-0.02*30) + 0.10*0.5 + 0.15*0.8
-        = 0.285 + 0 + 0 + 0.10*0.5488.. + 0.05 + 0.12
-        = 0.285 + 0.05488.. + 0.05 + 0.12 = 0.50988..
-        * epistemic(OBSERVED=1.0) = 0.50988..
+                   + 0.10*exp(-0.02*30) + 0.10*eff_sal + 0.15*eff_conf
+        * epistemic(OBSERVED=1.0)
         path_score = min(1/3, 1.0) = 0.3333..
         """
         now = datetime.now(timezone.utc)
@@ -185,30 +194,33 @@ class TestCompositeScoring:
         )
 
         weights = DEFAULT_SCORING_WEIGHTS
-        trace = compute_composite_score(candidate, weights)
+        trace = compute_composite_score(candidate, weights, now=now)
+
+        # Virtual decay (RFC-0015): OBSERVED + MEDIUM at 30 days
+        expected_salience = 0.5 * math.exp(-0.02 * 30)
+        expected_confidence = 0.8  # OBSERVED: no confidence decay < 180 days
 
         # Verify individual components
         assert trace.semantic_similarity == 0.95
         assert trace.lexical_relevance == 0.0
         assert trace.graph_proximity == 0.0
-        assert trace.salience == 0.5
-        assert trace.confidence == 0.8
+        assert abs(trace.salience - expected_salience) < 1e-6
+        assert abs(trace.confidence - expected_confidence) < 1e-6
         assert trace.epistemic_weight == 1.0  # OBSERVED
         assert abs(trace.path_score - 1.0 / 3.0) < 1e-6
 
-        # Recency factor: exp(-0.02 * ~30 days)
+        # Recency factor: exp(-0.02 * 30 days)
         expected_recency = math.exp(-0.02 * 30)
-        assert abs(trace.recency_factor - expected_recency) < 0.01  # allow ~1 day drift
+        assert abs(trace.recency_factor - expected_recency) < 1e-6
 
         # Composite: additive * epistemic
-        # w_confidence is 0.15 per Plan 01 deviation (not 0.10)
         expected_additive = (
             0.30 * 0.95
             + 0.15 * 0.0
             + 0.20 * 0.0
             + 0.10 * expected_recency
-            + 0.10 * 0.5
-            + 0.15 * 0.8
+            + 0.10 * expected_salience
+            + 0.15 * expected_confidence
         )
         expected_composite = expected_additive * 1.0  # OBSERVED
         assert abs(trace.composite_score - round(expected_composite, 10)) < 1e-6
@@ -232,7 +244,7 @@ class TestCompositeScoring:
         weights = DEFAULT_SCORING_WEIGHTS
 
         scores = [
-            compute_composite_score(candidate, weights).composite_score
+            compute_composite_score(candidate, weights, now=now).composite_score
             for _ in range(100)
         ]
 
@@ -291,6 +303,7 @@ class TestCompositeScoring:
 
     def test_custom_weights_accepted(self):
         """Non-default weights that sum to 1.0 produce valid scoring."""
+        now = datetime.now(timezone.utc)
         custom_weights = ScoringWeights(
             w_semantic=0.50,
             w_lexical=0.10,
@@ -300,10 +313,11 @@ class TestCompositeScoring:
             w_confidence=0.10,
         )
 
+        five_days_ago = now - timedelta(days=5)
         node = _make_node(
             confidence=0.8,
             salience=0.6,
-            updated_at=datetime.now(timezone.utc) - timedelta(days=5),
+            updated_at=five_days_ago,
             epistemic_type=EpistemicType.OBSERVED,
         )
         candidate = _make_candidate(
@@ -314,27 +328,34 @@ class TestCompositeScoring:
             path_count=2,
         )
 
-        trace = compute_composite_score(candidate, custom_weights)
+        trace = compute_composite_score(candidate, custom_weights, now=now)
 
-        # Score should use custom weights
+        # Virtual decay: OBSERVED + MEDIUM at 5 days
+        lam = 0.020  # MEDIUM default
+        eff_salience = 0.6 * math.exp(-lam * 5)
+        eff_confidence = 0.8  # OBSERVED: no confidence decay < 180d
+
+        # Score should use custom weights with effective values
         expected_recency = math.exp(-custom_weights.recency_lambda * 5)
         expected_additive = (
             0.50 * 0.9
             + 0.10 * 0.7
             + 0.15 * 0.5
             + 0.10 * expected_recency
-            + 0.05 * 0.6
-            + 0.10 * 0.8
+            + 0.05 * eff_salience
+            + 0.10 * eff_confidence
         )
         expected_composite = expected_additive * 1.0  # OBSERVED
         assert abs(trace.composite_score - round(expected_composite, 10)) < 1e-6
 
     def test_score_trace_captures_all_components(self):
         """ScoreTrace has all 8 non-zero-where-expected values."""
+        now = datetime.now(timezone.utc)
+        two_days_ago = now - timedelta(days=2)
         node = _make_node(
             confidence=0.7,
             salience=0.8,
-            updated_at=datetime.now(timezone.utc) - timedelta(days=2),
+            updated_at=two_days_ago,
             epistemic_type=EpistemicType.INFERRED,
         )
         candidate = _make_candidate(
@@ -345,15 +366,18 @@ class TestCompositeScoring:
             path_count=3,
         )
 
-        trace = compute_composite_score(candidate, DEFAULT_SCORING_WEIGHTS)
+        trace = compute_composite_score(candidate, DEFAULT_SCORING_WEIGHTS, now=now)
 
         # All components should be populated
         assert trace.semantic_similarity == 0.85
         assert trace.lexical_relevance == 0.60
         assert trace.graph_proximity == 0.70
         assert trace.recency_factor > 0.0  # 2 days ago -> close to 1.0
-        assert trace.salience == 0.8
-        assert trace.confidence == 0.7
+        # Effective values after virtual decay (MEDIUM, 2 days, INFERRED)
+        assert trace.salience > 0.0
+        assert trace.salience <= 0.8  # decayed from base
+        assert trace.confidence > 0.0
+        assert trace.confidence <= 0.7  # decayed from base
         assert trace.epistemic_weight == EPISTEMIC_WEIGHTS[EpistemicType.INFERRED]
         assert trace.path_score == 1.0  # min(3/3, 1.0)
         assert trace.composite_score > 0.0
@@ -390,8 +414,8 @@ class TestCompositeScoring:
             path_count=1,
         )
 
-        trace_obs = compute_composite_score(candidate_obs, DEFAULT_SCORING_WEIGHTS)
-        trace_hyp = compute_composite_score(candidate_hyp, DEFAULT_SCORING_WEIGHTS)
+        trace_obs = compute_composite_score(candidate_obs, DEFAULT_SCORING_WEIGHTS, now=now)
+        trace_hyp = compute_composite_score(candidate_hyp, DEFAULT_SCORING_WEIGHTS, now=now)
 
         # OBSERVED weight = 1.0, HYPOTHETICAL weight = 0.3
         # So score_hyp / score_obs should be approximately 0.3

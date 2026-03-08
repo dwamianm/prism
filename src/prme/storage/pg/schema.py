@@ -65,6 +65,12 @@ CREATE TABLE IF NOT EXISTS nodes (
     updated_at TIMESTAMPTZ DEFAULT now(),
     epistemic_type VARCHAR NOT NULL DEFAULT 'asserted',
     source_type VARCHAR NOT NULL DEFAULT 'user_stated',
+    decay_profile VARCHAR DEFAULT 'medium',
+    last_reinforced_at TIMESTAMPTZ DEFAULT now(),
+    reinforcement_boost REAL DEFAULT 0.0,
+    salience_base REAL DEFAULT 0.5,
+    confidence_base REAL DEFAULT 0.5,
+    pinned BOOLEAN DEFAULT FALSE,
     content_tsv tsvector GENERATED ALWAYS AS (
         to_tsvector('english', content)
     ) STORED

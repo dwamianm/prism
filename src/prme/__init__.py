@@ -9,7 +9,15 @@ __version__ = "0.1.0"
 
 from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine
-from prme.types import EdgeType, LifecycleState, NodeType, Scope
+from prme.types import (
+    DECAY_LAMBDAS,
+    DEFAULT_DECAY_PROFILE_MAPPING,
+    DecayProfile,
+    EdgeType,
+    LifecycleState,
+    NodeType,
+    Scope,
+)
 
 
 def __getattr__(name: str):
@@ -30,6 +38,9 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "DECAY_LAMBDAS",
+    "DEFAULT_DECAY_PROFILE_MAPPING",
+    "DecayProfile",
     "EdgeType",
     "IngestionPipeline",
     "LifecycleState",

@@ -357,6 +357,11 @@ class IngestionPipeline:
                 )
 
                 # Create fact node via tracked writer
+                from prme.types import DEFAULT_DECAY_PROFILE_MAPPING, DecayProfile
+
+                fact_decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
+                    fact_epistemic_type, DecayProfile.MEDIUM
+                )
                 fact_node = MemoryNode(
                     node_type=node_type,
                     content=fact_content,
@@ -365,8 +370,10 @@ class IngestionPipeline:
                     scope=fact_scope,
                     lifecycle_state=LifecycleState.TENTATIVE,
                     confidence=matrix_confidence,
+                    confidence_base=matrix_confidence,
                     epistemic_type=fact_epistemic_type,
                     source_type=fact_source_type,
+                    decay_profile=fact_decay_profile,
                     metadata=fact_metadata,
                     evidence_refs=[event.id],
                 )
