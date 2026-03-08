@@ -24,10 +24,17 @@ from prme.retrieval.models import (
 from prme.retrieval.packing import pack_context
 from prme.retrieval.pipeline import RetrievalPipeline
 from prme.retrieval.scoring import compute_composite_score, score_and_rank
+from prme.retrieval.snapshots import (
+    EntitySnapshot,
+    generate_all_entity_snapshots,
+    generate_entity_snapshot,
+    render_snapshot_text,
+)
 
 __all__ = [
     "DEFAULT_PACKING_CONFIG",
     "DEFAULT_SCORING_WEIGHTS",
+    "EntitySnapshot",
     "ExcludedCandidate",
     "MemoryBundle",
     "PackingConfig",
@@ -40,6 +47,9 @@ __all__ = [
     "ScoringWeights",
     "compute_composite_score",
     "filter_epistemic",
+    "generate_all_entity_snapshots",
+    "generate_entity_snapshot",
     "pack_context",
+    "render_snapshot_text",
     "score_and_rank",
 ]
