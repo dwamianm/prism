@@ -5,6 +5,7 @@ Usage:
     python -m simulations.run changing_facts     # run specific scenario
     python -m simulations.run --list             # list available scenarios
     python -m simulations.run --compare          # run changing_facts with/without organizing
+    python -m simulations.run --deterministic changing_facts  # verify deterministic scores
 """
 
 from __future__ import annotations
@@ -25,6 +26,19 @@ def main() -> None:
 
     if "--list" in args:
         _list_scenarios()
+        return
+
+    if "--deterministic" in args:
+        scenario_name = None
+        for a in args:
+            if a not in ("--deterministic",):
+                scenario_name = a
+                break
+        if not scenario_name:
+            print("Error: --deterministic requires a scenario name")
+            print("Usage: python -m simulations --deterministic <scenario>")
+            sys.exit(1)
+        asyncio.run(_run_deterministic(scenario_name))
         return
 
     if "--compare" in args:
@@ -81,6 +95,30 @@ async def _run_scenarios(names: list[str]) -> None:
             all_passed = False
 
     if not all_passed:
+        sys.exit(1)
+
+
+async def _run_deterministic(scenario_name: str) -> None:
+    """Run a scenario twice and verify deterministic score reproducibility."""
+    from simulations.scenarios import SCENARIOS
+
+    if scenario_name not in SCENARIOS:
+        print(f"Unknown scenario: {scenario_name}")
+        print(f"Available: {', '.join(SCENARIOS.keys())}")
+        sys.exit(1)
+
+    scenario = SCENARIOS[scenario_name]
+    runner = SimulationRunner()
+
+    print()
+    print(f"  Running deterministic check for: {scenario_name}")
+    print(f"  (executing scenario twice with independent state)")
+    print()
+
+    result = await runner.run_deterministic_check(scenario)
+    result.print_report()
+
+    if not result.passed:
         sys.exit(1)
 
 
