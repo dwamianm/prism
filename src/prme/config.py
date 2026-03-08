@@ -130,6 +130,30 @@ class OrganizerConfig(BaseSettings):
         description="Minimum vector similarity for alias detection (issue #11) [HYPOTHESIS]",
     )
 
+    # Consolidation pipeline (issue #22)
+    consolidation_min_cluster_size: int = Field(
+        default=3,
+        ge=2,
+        description="Minimum memories in a cluster for consolidation [HYPOTHESIS]",
+    )
+    consolidation_similarity_threshold: float = Field(
+        default=0.80,
+        ge=0.0,
+        le=1.0,
+        description="Vector cosine similarity threshold for clustering [HYPOTHESIS]",
+    )
+    consolidation_preserve_recent_days: int = Field(
+        default=7,
+        ge=0,
+        description="Don't archive memories newer than this many days [HYPOTHESIS]",
+    )
+    consolidation_min_confidence_preserve: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Don't archive memories with confidence >= this value [HYPOTHESIS]",
+    )
+
     model_config = {
         "env_prefix": "PRME_ORGANIZER_",
     }

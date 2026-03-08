@@ -5,6 +5,7 @@ All built-in scenarios are exported in SCENARIOS for CLI discovery.
 
 from simulations.scenarios.bi_temporal import BI_TEMPORAL_SCENARIO
 from simulations.scenarios.changing_facts import CHANGING_FACTS_SCENARIO
+from simulations.scenarios.consolidation import CONSOLIDATION_SCENARIO
 from simulations.scenarios.decay_mechanics import DECAY_MECHANICS_SCENARIO
 from simulations.scenarios.deduplication import DEDUPLICATION_SCENARIO
 from simulations.scenarios.dual_stream import DUAL_STREAM_SCENARIO
@@ -27,6 +28,7 @@ from simulations.scenarios.surprise_gating import SURPRISE_GATING_SCENARIO
 SCENARIOS: dict = {
     "bi_temporal": BI_TEMPORAL_SCENARIO,
     "changing_facts": CHANGING_FACTS_SCENARIO,
+    "consolidation": CONSOLIDATION_SCENARIO,
     "decay_mechanics": DECAY_MECHANICS_SCENARIO,
     "deduplication": DEDUPLICATION_SCENARIO,
     "dual_stream": DUAL_STREAM_SCENARIO,
