@@ -7,7 +7,7 @@ DuckPGQ limitations.
 """
 
 from datetime import datetime
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
@@ -85,6 +85,24 @@ class GraphStore(Protocol):
 
         Returns:
             List of matching MemoryNodes.
+        """
+        ...
+
+    # --- Node Update ---
+
+    async def update_node(self, node_id: str, **updates: Any) -> None:
+        """Update specific fields on an existing node.
+
+        Args:
+            node_id: UUID string of the node to update.
+            **updates: Field names and values to update. Valid fields include:
+                reinforcement_boost, last_reinforced_at, confidence_base,
+                salience_base, decay_profile, pinned, evidence_refs,
+                metadata, lifecycle_state, superseded_by, confidence,
+                salience, updated_at.
+
+        Raises:
+            ValueError: If node_id does not exist or no valid fields provided.
         """
         ...
 
