@@ -47,6 +47,10 @@ postgres = [
     "asyncpg>=0.29.0",
     "pgvector>=0.3.0",
 ]
+api = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
 
 [dependency-groups]
 dev = [
