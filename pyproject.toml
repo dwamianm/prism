@@ -40,6 +40,7 @@ dependencies = [
     "anthropic>=0.80",
     "ollama>=0.6",
     "dateparser>=1.2",
+    "cryptography>=43.0",
 ]
 
 [project.optional-dependencies]

@@ -265,6 +265,25 @@ class PRMEConfig(BaseSettings):
         ),
     )
 
+    # Encryption at rest (RFC-0014 S10, issue #14)
+    encryption_enabled: bool = Field(
+        default=False,
+        description=(
+            "Master toggle for encryption at rest. When True and "
+            "encryption_key is set, memory pack files are encrypted "
+            "on close() and decrypted on create(). Default False "
+            "for backward compatibility."
+        ),
+    )
+    encryption_key: str | None = Field(
+        default=None,
+        description=(
+            "Encryption passphrase for at-rest encryption. "
+            "Used with PBKDF2-HMAC-SHA256 to derive a Fernet key. "
+            "None disables encryption regardless of encryption_enabled."
+        ),
+    )
+
     @model_validator(mode="after")
     def _validate_confidence_overrides(self) -> PRMEConfig:
         """Validate confidence_overrides key format and value range."""

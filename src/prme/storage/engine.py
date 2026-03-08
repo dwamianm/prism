@@ -104,6 +104,10 @@ class MemoryEngine:
         self._config = config if config is not None else PRMEConfig()
         self._maintenance_runner: MaintenanceRunner | None = None
 
+        # Encryption at rest (issue #14)
+        from prme.storage.encryption import EncryptionProvider
+        self._encryption_provider: EncryptionProvider | None = None
+
         # Config-driven overrides with module-level defaults as fallback
         from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
 
@@ -142,6 +146,37 @@ class MemoryEngine:
     @classmethod
     async def _create_duckdb(cls, config: PRMEConfig) -> "MemoryEngine":
         """Create a MemoryEngine backed by DuckDB (file-based)."""
+        from pathlib import Path
+
+        from prme.storage.encryption import EncryptionProvider
+
+        # --- Decrypt memory pack if encryption is enabled (issue #14) ---
+        encryption_provider: EncryptionProvider | None = None
+        if config.encryption_enabled and config.encryption_key:
+            encryption_provider = EncryptionProvider(config.encryption_key)
+
+            # Decrypt DuckDB file if encrypted version exists
+            db_enc = Path(config.db_path + ".enc")
+            if db_enc.exists():
+                encryption_provider.decrypt_file(db_enc)
+                logger.info("Decrypted DuckDB file: %s", db_enc)
+
+            # Decrypt vector index file if encrypted version exists
+            vec_enc = Path(config.vector_path + ".enc")
+            if vec_enc.exists():
+                encryption_provider.decrypt_file(vec_enc)
+                logger.info("Decrypted vector index: %s", vec_enc)
+
+            # Decrypt lexical index directory if it has encrypted files
+            lexical_dir = Path(config.lexical_path)
+            if lexical_dir.is_dir():
+                enc_files = list(lexical_dir.glob("*.enc"))
+                if enc_files:
+                    encryption_provider.decrypt_directory(lexical_dir)
+                    logger.info(
+                        "Decrypted %d lexical index files", len(enc_files)
+                    )
+
         # Open DuckDB connection
         conn = duckdb.connect(config.db_path)
 
@@ -238,6 +273,7 @@ class MemoryEngine:
             unverified_confidence_threshold=config.unverified_confidence_threshold,
             config=config,
         )
+        engine._encryption_provider = encryption_provider
         engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
         return engine
 
@@ -1226,3 +1262,106 @@ class MemoryEngine:
                 await self._pool.close()
             except Exception:
                 logger.warning("Error closing PostgreSQL pool", exc_info=True)
+
+        # --- Encrypt memory pack after all backends are closed (issue #14) ---
+        if self._encryption_provider is not None and self._config is not None:
+            try:
+                self._encrypt_memory_pack()
+            except Exception:
+                logger.warning(
+                    "Error encrypting memory pack on close", exc_info=True
+                )
+
+    # --- Encryption at rest helpers (issue #14) ---
+
+    def _encrypt_memory_pack(self) -> None:
+        """Encrypt all memory pack files after backends are closed.
+
+        Encrypts DuckDB, vector index, and lexical index files.
+        Writes a manifest.json listing encrypted files and metadata.
+        """
+        from pathlib import Path
+
+        from prme.storage.encryption import write_manifest
+
+        assert self._encryption_provider is not None
+        assert self._config is not None
+
+        encrypted_files: list[Path] = []
+
+        # Encrypt DuckDB file
+        db_path = Path(self._config.db_path)
+        if db_path.exists():
+            enc = self._encryption_provider.encrypt_file(db_path)
+            encrypted_files.append(enc)
+
+        # Encrypt vector index file
+        vec_path = Path(self._config.vector_path)
+        if vec_path.exists():
+            enc = self._encryption_provider.encrypt_file(vec_path)
+            encrypted_files.append(enc)
+
+        # Encrypt lexical index directory
+        lex_path = Path(self._config.lexical_path)
+        if lex_path.is_dir():
+            enc_list = self._encryption_provider.encrypt_directory(lex_path)
+            encrypted_files.extend(enc_list)
+
+        # Write manifest
+        if encrypted_files:
+            base_dir = db_path.parent
+            write_manifest(base_dir, encrypted_files)
+            logger.info(
+                "Encrypted %d memory pack files", len(encrypted_files)
+            )
+
+    def lock(self) -> None:
+        """Encrypt all memory pack files without closing the engine.
+
+        This is a convenience method for encrypting the pack while
+        the engine is still open. The engine must be closed before
+        calling this if backends hold file locks.
+
+        Raises:
+            RuntimeError: If encryption is not configured.
+        """
+        if self._encryption_provider is None:
+            raise RuntimeError(
+                "Cannot lock: encryption is not configured. "
+                "Set encryption_enabled=True and encryption_key in config."
+            )
+        self._encrypt_memory_pack()
+
+    def unlock(self) -> None:
+        """Decrypt all memory pack files.
+
+        This is a convenience method for decrypting an encrypted pack.
+        Should be called before opening backends that need the files.
+
+        Raises:
+            RuntimeError: If encryption is not configured.
+        """
+        from pathlib import Path
+
+        if self._encryption_provider is None:
+            raise RuntimeError(
+                "Cannot unlock: encryption is not configured. "
+                "Set encryption_enabled=True and encryption_key in config."
+            )
+
+        assert self._config is not None
+
+        # Decrypt DuckDB file
+        db_enc = Path(self._config.db_path + ".enc")
+        if db_enc.exists():
+            self._encryption_provider.decrypt_file(db_enc)
+
+        # Decrypt vector index file
+        vec_enc = Path(self._config.vector_path + ".enc")
+        if vec_enc.exists():
+            self._encryption_provider.decrypt_file(vec_enc)
+
+        # Decrypt lexical index directory
+        lex_dir = Path(self._config.lexical_path)
+        if lex_dir.is_dir():
+            self._encryption_provider.decrypt_directory(lex_dir)
