@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from prme.retrieval.pipeline import RetrievalPipeline
 
 from prme.organizer.maintenance import MaintenanceRunner
+from prme.storage.materialization_queue import MaterializationQueue
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,9 @@ class MemoryEngine:
         self._retrieval_pipeline = retrieval_pipeline
         self._config = config if config is not None else PRMEConfig()
         self._maintenance_runner: MaintenanceRunner | None = None
+        self._materialization_queue = MaterializationQueue(
+            max_size=self._config.materialization_queue_size,
+        )
 
         # Encryption at rest (issue #14)
         from prme.storage.encryption import EncryptionProvider
@@ -888,6 +892,103 @@ class MemoryEngine:
             scope=scope,
         )
 
+    # --- Fast Ingestion (issue #25) ---
+
+    async def ingest_fast(
+        self,
+        content: str,
+        *,
+        user_id: str,
+        role: str = "user",
+        session_id: str | None = None,
+        metadata: dict | None = None,
+        scope: Scope = Scope.PERSONAL,
+    ) -> str:
+        """Fast-path ingestion: event store + vector index only.
+
+        Guaranteed sub-50ms path for real-time conversational use.
+        Persists the event to the event store and indexes into the
+        vector index for immediate semantic search, then queues
+        graph materialization for later processing during the next
+        retrieve() or organize() call.
+
+        This method does NOT perform: graph writes, entity extraction,
+        supersedence detection, lexical indexing, or any LLM calls.
+
+        The queued materialization is in-memory only. If the process
+        restarts before drain, the events are still safe in the event
+        store and can be replayed.
+
+        Args:
+            content: The message text to ingest.
+            user_id: Owner user ID.
+            role: Message role ('user', 'assistant', or 'system').
+            session_id: Optional session identifier.
+            metadata: Optional structured metadata.
+            scope: Memory scope (personal, project, org).
+
+        Returns:
+            String UUID of the persisted event.
+        """
+        # Step 1: Persist event to event store (source of truth)
+        event = Event(
+            content=content,
+            user_id=user_id,
+            session_id=session_id,
+            role=role,
+            scope=scope,
+            metadata=metadata,
+        )
+        event_id = await self._write_queue.submit(
+            lambda ev=event: self._event_store.append(ev),
+            label=f"ingest_fast.event:{event.id}",
+        )
+
+        # Step 2: Index into vector store for immediate semantic search
+        try:
+            await self._write_queue.submit(
+                lambda eid=str(event.id), c=content, uid=user_id: (
+                    self._vector_index.index(eid, c, uid)
+                ),
+                label=f"ingest_fast.vector:{event.id}",
+            )
+        except Exception:
+            logger.warning(
+                "ingest_fast: vector indexing failed for event %s. "
+                "Event is persisted; vector index can be rebuilt.",
+                event_id,
+                exc_info=True,
+            )
+
+        # Step 3: Queue graph materialization for later
+        await self._materialization_queue.add(
+            event_id=event_id,
+            content=content,
+            user_id=user_id,
+            role=role,
+            metadata=metadata,
+        )
+
+        logger.info(
+            "ingest_fast.complete event_id=%s debt=%d",
+            event_id,
+            self._materialization_queue.debt_sync(),
+        )
+        return event_id
+
+    @property
+    def materialization_debt(self) -> int:
+        """Return the count of pending materialization items.
+
+        This is a synchronous best-effort read suitable for metrics
+        and logging. The count may be slightly stale under concurrent
+        access.
+
+        Returns:
+            Number of items awaiting graph materialization.
+        """
+        return self._materialization_queue.debt_sync()
+
     # --- Retrieval Operations ---
 
     async def retrieve(
@@ -952,6 +1053,22 @@ class MemoryEngine:
                 "to initialize with all backends, or pass a retrieval_pipeline "
                 "to the constructor."
             )
+
+        # Drain materialization queue before retrieval (issue #25)
+        if self._materialization_queue.debt_sync() > 0:
+            try:
+                drained = await self._materialization_queue.drain(
+                    self, budget_ms=self._config.materialization_budget_ms
+                )
+                if drained > 0:
+                    logger.debug(
+                        "retrieve: drained %d materialization items", drained
+                    )
+            except Exception:
+                logger.warning(
+                    "retrieve: materialization drain failed; continuing",
+                    exc_info=True,
+                )
 
         result = await self._retrieval_pipeline.retrieve(
             query,
@@ -1192,6 +1309,19 @@ class MemoryEngine:
         start = time.monotonic()
         result = OrganizeResult()
 
+        # Drain materialization queue first (issue #25)
+        materialized = 0
+        if self._materialization_queue.debt_sync() > 0:
+            try:
+                materialized = await self._materialization_queue.drain(
+                    self, budget_ms=self._config.materialization_budget_ms
+                )
+            except Exception:
+                logger.warning(
+                    "organize: materialization drain failed; continuing",
+                    exc_info=True,
+                )
+
         for job_name in jobs:
             elapsed_ms = (time.monotonic() - start) * 1000.0
             remaining_ms = budget_ms - elapsed_ms
@@ -1218,6 +1348,21 @@ class MemoryEngine:
         total_ms = (time.monotonic() - start) * 1000.0
         result.duration_ms = round(total_ms, 2)
         result.budget_remaining_ms = round(max(0.0, budget_ms - total_ms), 2)
+
+        # Include materialization debt in result details (issue #25)
+        if materialized > 0 or self._materialization_queue.debt_sync() > 0:
+            from prme.organizer.models import JobResult as _JobResult
+
+            result.per_job["materialization_drain"] = _JobResult(
+                job="materialization_drain",
+                nodes_processed=materialized,
+                nodes_modified=materialized,
+                details={
+                    "materialized": materialized,
+                    "debt_remaining": self._materialization_queue.debt_sync(),
+                },
+            )
+
         return result
 
     async def end_session(
