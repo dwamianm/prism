@@ -43,6 +43,9 @@ dependencies = [
     "cryptography>=43.0",
 ]
 
+[project.scripts]
+prme = "prme.cli:main"
+
 [project.optional-dependencies]
 postgres = [
     "asyncpg>=0.29.0",
