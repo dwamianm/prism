@@ -11,15 +11,54 @@ import asyncio
 import logging
 import tempfile
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine
 from prme.types import EpistemicType, NodeType, Scope
 
 logger = logging.getLogger(__name__)
+
+# Modules that call datetime.now() and affect scoring determinism.
+# Each uses ``from datetime import datetime`` so we patch the local name.
+_DATETIME_PATCH_TARGETS = [
+    "prme.retrieval.pipeline.datetime",
+    "prme.retrieval.scoring.datetime",
+    "prme.organizer.jobs.datetime",
+    "prme.organizer.maintenance.datetime",
+    "simulations.harness.datetime",
+]
+
+
+class _FrozenDatetime(datetime):
+    """datetime subclass whose now() always returns a fixed instant."""
+
+    _frozen_now: datetime | None = None
+
+    @classmethod
+    def now(cls, tz=None):  # type: ignore[override]
+        if cls._frozen_now is not None:
+            return cls._frozen_now
+        return super().now(tz=tz)
+
+
+@contextmanager
+def _freeze_time(instant: datetime):
+    """Context manager that freezes datetime.now() across scoring modules."""
+    _FrozenDatetime._frozen_now = instant
+    patches = [patch(target, _FrozenDatetime) for target in _DATETIME_PATCH_TARGETS]
+    for p in patches:
+        p.start()
+    try:
+        yield
+    finally:
+        for p in patches:
+            p.stop()
+        _FrozenDatetime._frozen_now = None
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +114,33 @@ class CheckpointResult:
     expected_found: list[str]  # expected keywords that were found
     expected_missing: list[str]  # expected keywords that were NOT found
     excluded_found: list[str]  # excluded keywords that appeared (bad)
+
+
+@dataclass
+class DeterministicResult:
+    """Result of running a scenario twice and comparing scores."""
+
+    passed: bool
+    max_score_delta: float
+    mismatches: list[dict]  # [{checkpoint_idx, rank, score_a, score_b, delta, content_preview}]
+    runs: int  # always 2
+
+    def print_report(self) -> None:
+        """Print a human-readable deterministic check report to stdout."""
+        print("=" * 70)
+        print("  Deterministic Rebuild Check")
+        print("=" * 70)
+        print(f"  Runs: {self.runs}")
+        print(f"  Result: {'PASS' if self.passed else 'FAIL'}")
+        print(f"  Max score delta: {self.max_score_delta:.2e}")
+        if self.mismatches:
+            print(f"  Mismatches: {len(self.mismatches)}")
+            for m in self.mismatches[:5]:
+                print(
+                    f"    Checkpoint {m['checkpoint_idx']}, rank {m['rank']}: "
+                    f"delta={m['delta']:.2e} ({m['content_preview'][:50]})"
+                )
+        print("=" * 70)
 
 
 @dataclass
@@ -205,6 +271,92 @@ class SimulationRunner:
             )
         finally:
             await engine.close()
+
+    async def run_deterministic_check(
+        self,
+        scenario: SimScenario,
+        config: PRMEConfig | None = None,
+        organize_at_checkpoints: bool = True,
+    ) -> DeterministicResult:
+        """Run a scenario twice and verify score reproducibility.
+
+        Both runs use fresh temp directories and identical configs.
+        Compares composite scores at each checkpoint position.
+
+        Args:
+            scenario: The scenario to run.
+            config: Ignored -- each run creates its own fresh config
+                with a unique temp directory to ensure independence.
+            organize_at_checkpoints: If True, run engine.organize() before
+                each checkpoint evaluation.
+
+        Returns:
+            DeterministicResult with comparison of both runs.
+        """
+        # Pin a single reference instant so both runs compute identical
+        # decay values despite wall-clock time advancing between them.
+        frozen_now = datetime.now(timezone.utc)
+
+        # Run the scenario twice, each with a fresh temp directory (config=None)
+        with _freeze_time(frozen_now):
+            report_a = await self.run(
+                scenario, config=None,
+                organize_at_checkpoints=organize_at_checkpoints,
+            )
+        with _freeze_time(frozen_now):
+            report_b = await self.run(
+                scenario, config=None,
+                organize_at_checkpoints=organize_at_checkpoints,
+            )
+
+        # Compare checkpoint results by index
+        mismatches: list[dict] = []
+        all_deltas: list[float] = []
+
+        for cp_idx, (cr_a, cr_b) in enumerate(
+            zip(report_a.checkpoints, report_b.checkpoints)
+        ):
+            # Match results by rank position
+            max_len = max(len(cr_a.top_results), len(cr_b.top_results))
+            for rank in range(max_len):
+                score_a = (
+                    cr_a.top_results[rank]["score"]
+                    if rank < len(cr_a.top_results)
+                    else 0.0
+                )
+                score_b = (
+                    cr_b.top_results[rank]["score"]
+                    if rank < len(cr_b.top_results)
+                    else 0.0
+                )
+                delta = abs(score_a - score_b)
+                all_deltas.append(delta)
+
+                if delta > 1e-9:
+                    content_preview = ""
+                    if rank < len(cr_a.top_results):
+                        content_preview = cr_a.top_results[rank]["content"]
+                    elif rank < len(cr_b.top_results):
+                        content_preview = cr_b.top_results[rank]["content"]
+
+                    mismatches.append({
+                        "checkpoint_idx": cp_idx,
+                        "rank": rank,
+                        "score_a": score_a,
+                        "score_b": score_b,
+                        "delta": delta,
+                        "content_preview": content_preview,
+                    })
+
+        max_score_delta = max(all_deltas) if all_deltas else 0.0
+        passed = len(mismatches) == 0
+
+        return DeterministicResult(
+            passed=passed,
+            max_score_delta=max_score_delta,
+            mismatches=mismatches,
+            runs=2,
+        )
 
     async def _store_messages(
         self,
