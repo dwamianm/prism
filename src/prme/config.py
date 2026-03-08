@@ -91,8 +91,11 @@ class OrganizerConfig(BaseSettings):
         description="Min age in days before auto-promotion [HYPOTHESIS]",
     )
     promotion_evidence_count: int = Field(
-        default=2,
-        description="Min evidence refs for auto-promotion [HYPOTHESIS]",
+        default=1,
+        description="Min evidence refs for auto-promotion. Default 1 matches "
+        "store() which creates exactly 1 evidence ref per node. "
+        "Higher values require evidence accumulation via reinforcement. "
+        "[HYPOTHESIS]",
     )
     archive_salience_threshold: float = Field(
         default=0.10,

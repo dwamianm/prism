@@ -124,7 +124,7 @@ class TestOrganizerConfig:
         assert c.opportunistic_batch_size == 50
         assert c.default_organize_budget_ms == 5000
         assert c.promotion_age_days == 7.0
-        assert c.promotion_evidence_count == 2
+        assert c.promotion_evidence_count == 1
         assert c.archive_salience_threshold == 0.10
         assert c.archive_confidence_threshold == 0.40
         assert c.force_archive_salience_threshold == 0.05
