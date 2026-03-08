@@ -2,8 +2,9 @@
 
 Implements RFC-0015 Layer 3 jobs. Each job is an async function that takes
 the engine, config, and time budget, and returns a JobResult. Implemented
-jobs: promote, decay_sweep, archive, feedback_apply. Remaining jobs are
-stubs that return empty results pending future RFC implementations.
+jobs: promote, decay_sweep, archive, feedback_apply, tombstone_sweep.
+Remaining jobs are stubs that return empty results pending future RFC
+implementations.
 """
 
 from __future__ import annotations
@@ -67,7 +68,7 @@ async def run_job(
         "alias_resolve": _job_alias_resolve,
         "summarize": _job_stub,
         "centrality_boost": _job_stub,
-        "tombstone_sweep": _job_stub,
+        "tombstone_sweep": _job_tombstone_sweep,
         "snapshot_generation": _job_snapshot_generation,
         "consolidate": _job_consolidate,
     }
@@ -534,6 +535,106 @@ async def _job_consolidate(
             "nodes_archived": consolidation_result.nodes_archived,
             "summaries_created": consolidation_result.summaries_created,
         },
+    )
+
+
+async def _job_tombstone_sweep(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+) -> JobResult:
+    """Archive nodes that have exceeded their TTL (issue #12, RFC-0007 S9).
+
+    Queries all active nodes, checks each for TTL expiry based on
+    ``created_at + ttl_days``. Nodes past their TTL are archived.
+    Pinned nodes and nodes with ``ttl_days=None`` are exempt.
+    Already-archived or deprecated nodes are skipped by the query filter.
+
+    Logs a TOMBSTONE_SWEEP operation for each archived node.
+    """
+    import json
+    import uuid
+
+    start = time.monotonic()
+    now = datetime.now(timezone.utc)
+
+    active_states = [
+        LifecycleState.TENTATIVE,
+        LifecycleState.STABLE,
+        LifecycleState.CONTESTED,
+    ]
+    nodes = await engine.query_nodes(
+        lifecycle_states=active_states,
+        limit=500,
+    )
+
+    processed = 0
+    modified = 0
+    errors = 0
+
+    for node in nodes:
+        # Check budget
+        elapsed_ms = (time.monotonic() - start) * 1000.0
+        if elapsed_ms >= budget_ms:
+            break
+
+        # Skip nodes without TTL
+        if node.ttl_days is None:
+            continue
+
+        # Skip pinned nodes
+        if node.pinned:
+            continue
+
+        processed += 1
+
+        # Check if TTL has expired
+        expiry = node.created_at + timedelta(days=node.ttl_days)
+        if expiry >= now:
+            continue  # not yet expired
+
+        # Archive the expired node
+        try:
+            await engine.archive(str(node.id))
+            modified += 1
+
+            # Log a TOMBSTONE_SWEEP operation
+            try:
+                op_id = str(uuid.uuid4())
+                payload = json.dumps({
+                    "target_id": str(node.id),
+                    "target_type": "memory_object",
+                    "reason": "retention_policy_expiry",
+                    "ttl_days": node.ttl_days,
+                    "created_at": node.created_at.isoformat(),
+                    "expired_at": expiry.isoformat(),
+                    "tombstone_ts": now.isoformat(),
+                })
+                engine._conn.execute(
+                    """
+                    INSERT INTO operations (id, op_type, target_id, payload, created_at)
+                    VALUES (?, 'TOMBSTONE_SWEEP', ?, ?::JSON, ?)
+                    """,
+                    [op_id, str(node.id), payload, now],
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to log TOMBSTONE_SWEEP operation for node %s",
+                    node.id,
+                    exc_info=True,
+                )
+        except ValueError:
+            errors += 1
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=processed,
+        nodes_modified=modified,
+        errors=errors,
+        duration_ms=round(duration_ms, 2),
+        details={"note": "TTL-based archival (RFC-0007 S9, issue #12)"},
     )
 
 

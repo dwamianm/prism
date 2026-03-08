@@ -153,6 +153,23 @@ class OrganizerConfig(BaseSettings):
         le=1.0,
         description="Don't archive memories with confidence >= this value [HYPOTHESIS]",
     )
+    default_ttl_days: dict[str, int | None] = Field(
+        default={
+            "entity": None,
+            "fact": None,
+            "event": 365,
+            "decision": 180,
+            "preference": None,
+            "task": 90,
+            "summary": 365,
+            "note": 90,
+        },
+        description=(
+            "Default TTL in days per NodeType. None means no expiry. "
+            "Applied at store() time when ttl_days is not explicitly set. "
+            "(RFC-0007 S9, issue #12)"
+        ),
+    )
 
     model_config = {
         "env_prefix": "PRME_ORGANIZER_",

@@ -88,6 +88,7 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             salience_base FLOAT DEFAULT 0.5,
             confidence_base FLOAT DEFAULT 0.5,
             pinned BOOLEAN DEFAULT FALSE,
+            ttl_days INTEGER,
             event_time TIMESTAMPTZ
         )
     """)
@@ -315,6 +316,34 @@ def _migrate_nodes_decay_fields(conn: duckdb.DuckDBPyConnection) -> None:
         )
 
 
+def _migrate_nodes_ttl_days(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add ttl_days column to nodes table if missing (issue #12).
+
+    For existing databases created before TTL-based archival was added,
+    this function detects the missing column and adds it. NULL means
+    no TTL (infinite retention). DuckDB 1.4.x ALTER TABLE ADD COLUMN
+    does not support NOT NULL, so we use a nullable column.
+
+    Safe to call on databases that already have the column (no-op).
+
+    Args:
+        conn: Active DuckDB connection.
+    """
+    result = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'nodes' AND column_name = 'ttl_days'
+    """).fetchone()
+    if result is None:
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN ttl_days INTEGER
+        """)
+        logger.info(
+            "Migrated nodes table: added ttl_days column "
+            "(issue #12, TTL-based archival)"
+        )
+
+
 def _migrate_events_event_time(conn: duckdb.DuckDBPyConnection) -> None:
     """Add event_time column to events table if missing (bi-temporal, issue #21).
 
@@ -467,6 +496,7 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     _verify_nodes_scope(conn)
     _migrate_nodes_epistemic_type(conn)
     _migrate_nodes_decay_fields(conn)
+    _migrate_nodes_ttl_days(conn)
     _migrate_events_event_time(conn)
     _migrate_nodes_event_time(conn)
     pgq_graph = create_property_graph(conn)

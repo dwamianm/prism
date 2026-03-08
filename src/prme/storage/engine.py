@@ -409,6 +409,7 @@ class MemoryEngine:
         epistemic_type: EpistemicType | None = None,
         source_type: SourceType | None = None,
         event_time: datetime | None = None,
+        ttl_days: int | None = ...,
     ) -> str:
         """Store content across all four backends in one call.
 
@@ -439,6 +440,9 @@ class MemoryEngine:
             event_time: Optional datetime of when the event actually happened
                 in the real world (UTC). None means same as ingestion time.
                 Enables bi-temporal queries (issue #21).
+            ttl_days: Time-to-live in days from creation. Ellipsis (default)
+                means look up from organizer config by node_type. None means
+                no TTL. An explicit int overrides the config default.
 
         Returns:
             String UUID of the created event (source of truth ID).
@@ -521,6 +525,14 @@ class MemoryEngine:
                 )
             metadata = node_metadata
 
+        # Resolve TTL: ellipsis = use config default; None = no TTL; int = explicit
+        if ttl_days is ...:
+            resolved_ttl = self._config.organizer.default_ttl_days.get(
+                node_type.value, None
+            )
+        else:
+            resolved_ttl = ttl_days
+
         node = MemoryNode(
             user_id=user_id,
             session_id=session_id,
@@ -537,6 +549,7 @@ class MemoryEngine:
             evidence_refs=[event.id],
             decay_profile=decay_profile,
             event_time=event_time,
+            ttl_days=resolved_ttl,
         )
         node_id = await self._write_queue.submit(
             lambda n=node: self._graph_store.create_node(n),

@@ -24,6 +24,7 @@ from simulations.scenarios.quality_tuning import QUALITY_TUNING_SCENARIO
 from simulations.scenarios.reinforcement import REINFORCEMENT_SCENARIO
 from simulations.scenarios.remention import REMENTION_SCENARIO
 from simulations.scenarios.surprise_gating import SURPRISE_GATING_SCENARIO
+from simulations.scenarios.ttl_archival import TTL_ARCHIVAL_SCENARIO
 
 SCENARIOS: dict = {
     "bi_temporal": BI_TEMPORAL_SCENARIO,
@@ -43,4 +44,5 @@ SCENARIOS: dict = {
     "reinforcement": REINFORCEMENT_SCENARIO,
     "remention": REMENTION_SCENARIO,
     "surprise_gating": SURPRISE_GATING_SCENARIO,
+    "ttl_archival": TTL_ARCHIVAL_SCENARIO,
 }
