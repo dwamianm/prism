@@ -38,6 +38,7 @@ from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
 from prme.types import (
+    DecayProfile,
     EpistemicType,
     LifecycleState,
     NodeType,
@@ -417,6 +418,11 @@ class MemoryEngine:
         )
 
         # Step 2: Create graph node via write queue
+        from prme.types import DEFAULT_DECAY_PROFILE_MAPPING
+
+        decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
+            epistemic_type, DecayProfile.MEDIUM
+        )
         node = MemoryNode(
             user_id=user_id,
             session_id=session_id,
@@ -425,9 +431,11 @@ class MemoryEngine:
             content=content,
             metadata=metadata,
             confidence=confidence,
+            confidence_base=confidence,
             epistemic_type=epistemic_type,
             source_type=source_type,
             evidence_refs=[event.id],
+            decay_profile=decay_profile,
         )
         node_id = await self._write_queue.submit(
             lambda n=node: self._graph_store.create_node(n),

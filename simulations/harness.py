@@ -152,8 +152,8 @@ class SimulationRunner:
         Args:
             scenario: The scenario to run.
             config: Optional PRMEConfig override.
-            organize_at_checkpoints: Currently unused (reserved for
-                future organizer integration).
+            organize_at_checkpoints: If True, run engine.organize() before
+                each checkpoint evaluation to apply maintenance jobs.
 
         Returns:
             SimulationReport with all checkpoint results.
@@ -181,7 +181,8 @@ class SimulationRunner:
             checkpoint_results = []
             for checkpoint in sorted(scenario.checkpoints, key=lambda c: c.day):
                 result = await self._evaluate_checkpoint(
-                    engine, checkpoint, scenario.messages, node_ids
+                    engine, checkpoint, scenario.messages, node_ids,
+                    organize=organize_at_checkpoints,
                 )
                 checkpoint_results.append(result)
 
@@ -232,6 +233,7 @@ class SimulationRunner:
         checkpoint: SimCheckpoint,
         messages: list[SimMessage],
         node_ids: list[str],
+        organize: bool = False,
     ) -> CheckpointResult:
         """Evaluate a single checkpoint by adjusting timestamps and retrieving.
 
@@ -252,13 +254,15 @@ class SimulationRunner:
             simulated_ts = now - timedelta(days=age_days)
             ts_str = simulated_ts.strftime("%Y-%m-%d %H:%M:%S.%f+00")
 
-            # Update both nodes and events tables
+            # Update both nodes and events tables (including last_reinforced_at
+            # so virtual decay computes correct elapsed time)
             conn.execute(
                 "UPDATE nodes SET created_at = ?::TIMESTAMPTZ, "
                 "updated_at = ?::TIMESTAMPTZ, "
-                "valid_from = ?::TIMESTAMPTZ "
+                "valid_from = ?::TIMESTAMPTZ, "
+                "last_reinforced_at = ?::TIMESTAMPTZ "
                 "WHERE content = ? AND user_id = ?",
-                [ts_str, ts_str, ts_str, msg.content, self.USER_ID],
+                [ts_str, ts_str, ts_str, ts_str, msg.content, self.USER_ID],
             )
             conn.execute(
                 "UPDATE events SET created_at = ?::TIMESTAMPTZ, "
@@ -266,6 +270,10 @@ class SimulationRunner:
                 "WHERE content = ? AND user_id = ?",
                 [ts_str, ts_str, msg.content, self.USER_ID],
             )
+
+        # Run organize to apply maintenance (promotion, archival, etc.)
+        if organize:
+            await engine.organize()
 
         # Run retrieval
         response = await engine.retrieve(

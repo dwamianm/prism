@@ -94,6 +94,8 @@ class EntityMerger:
         if description is not None:
             metadata["description"] = description
 
+        from prme.types import DecayProfile
+
         node = MemoryNode(
             node_type=NodeType.ENTITY,
             content=name,
@@ -102,6 +104,8 @@ class EntityMerger:
             scope=scope,
             lifecycle_state=LifecycleState.TENTATIVE,
             confidence=0.5,
+            confidence_base=0.5,
+            decay_profile=DecayProfile.SLOW,
             metadata=metadata,
             evidence_refs=evidence_refs,
         )

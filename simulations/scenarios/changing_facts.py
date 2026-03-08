@@ -167,7 +167,7 @@ _CHECKPOINTS = [
     ),
     SimCheckpoint(
         day=90,
-        query="What database and API does the project use?",
+        query="What database does the project use currently?",
         expected_keywords=["PostgreSQL"],
         excluded_keywords=[],
         description="At 90 days, stable facts (PostgreSQL) should persist",
