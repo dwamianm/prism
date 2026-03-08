@@ -839,10 +839,21 @@ class TestRunJob:
         """Stub jobs return empty results with status note."""
         engine, _, _ = engine_parts
         config = OrganizerConfig()
-        for job_name in ["deduplicate", "alias_resolve", "summarize", "centrality_boost", "tombstone_sweep"]:
+        for job_name in ["summarize", "centrality_boost", "tombstone_sweep"]:
             result = await run_job(job_name, engine, config, 5000.0)
             assert result.job == job_name
             assert result.details.get("status") == "stub"
+
+    @pytest.mark.asyncio
+    async def test_implemented_dedup_and_alias_jobs(self, engine_parts):
+        """deduplicate and alias_resolve jobs return real results (not stubs)."""
+        engine, _, _ = engine_parts
+        config = OrganizerConfig()
+        for job_name in ["deduplicate", "alias_resolve"]:
+            result = await run_job(job_name, engine, config, 5000.0)
+            assert result.job == job_name
+            # These are now real implementations, not stubs
+            assert result.details.get("status") != "stub"
 
     @pytest.mark.asyncio
     async def test_unknown_job_raises(self, engine_parts):

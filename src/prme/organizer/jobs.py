@@ -61,8 +61,8 @@ async def run_job(
         "decay_sweep": _job_decay_sweep,
         "archive": _job_archive,
         "feedback_apply": _job_feedback_apply,
-        "deduplicate": _job_stub,
-        "alias_resolve": _job_stub,
+        "deduplicate": _job_deduplicate,
+        "alias_resolve": _job_alias_resolve,
         "summarize": _job_stub,
         "centrality_boost": _job_stub,
         "tombstone_sweep": _job_stub,
@@ -304,6 +304,92 @@ async def _job_feedback_apply(
     return JobResult(
         job=job_name,
         details={"status": "placeholder", "note": "RFC-0009 not yet implemented"},
+    )
+
+
+async def _job_deduplicate(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+) -> JobResult:
+    """Find and merge duplicate memory nodes (issue #11).
+
+    Uses vector similarity and exact content matching to identify
+    duplicates, then merges them by archiving the lower-quality node
+    and creating a SUPERSEDES edge for audit trail.
+    """
+    from prme.organizer.deduplication import find_duplicates, merge_duplicates
+
+    start = time.monotonic()
+
+    try:
+        duplicates = await find_duplicates(
+            engine, config, budget_ms=budget_ms / 2,
+        )
+        merged_count = await merge_duplicates(engine, duplicates)
+    except Exception:
+        logger.warning("Deduplication job failed", exc_info=True)
+        duration_ms = (time.monotonic() - start) * 1000.0
+        return JobResult(
+            job=job_name,
+            errors=1,
+            duration_ms=round(duration_ms, 2),
+        )
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=len(duplicates),
+        nodes_modified=merged_count,
+        duration_ms=round(duration_ms, 2),
+        details={
+            "duplicates_found": len(duplicates),
+            "nodes_merged": merged_count,
+        },
+    )
+
+
+async def _job_alias_resolve(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+) -> JobResult:
+    """Find and resolve entity alias relationships (issue #11).
+
+    Detects abbreviations, case variations, and semantic aliases among
+    ENTITY nodes, then merges high-confidence aliases or links them
+    with RELATES_TO edges.
+    """
+    from prme.organizer.alias_resolution import find_aliases, resolve_aliases
+
+    start = time.monotonic()
+
+    try:
+        aliases = await find_aliases(
+            engine, config, budget_ms=budget_ms / 2,
+        )
+        resolved_count = await resolve_aliases(engine, aliases)
+    except Exception:
+        logger.warning("Alias resolution job failed", exc_info=True)
+        duration_ms = (time.monotonic() - start) * 1000.0
+        return JobResult(
+            job=job_name,
+            errors=1,
+            duration_ms=round(duration_ms, 2),
+        )
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=len(aliases),
+        nodes_modified=resolved_count,
+        duration_ms=round(duration_ms, 2),
+        details={
+            "aliases_found": len(aliases),
+            "aliases_resolved": resolved_count,
+        },
     )
 
 

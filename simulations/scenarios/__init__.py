@@ -5,11 +5,15 @@ All built-in scenarios are exported in SCENARIOS for CLI discovery.
 
 from simulations.scenarios.changing_facts import CHANGING_FACTS_SCENARIO
 from simulations.scenarios.decay_mechanics import DECAY_MECHANICS_SCENARIO
+<<<<<<< HEAD
 from simulations.scenarios.eval_retrieval import (
     FACTUAL_RETRIEVAL_SCENARIO,
     SUPERSEDENCE_HANDLING_SCENARIO,
     TEMPORAL_RETRIEVAL_SCENARIO,
 )
+=======
+from simulations.scenarios.deduplication import DEDUPLICATION_SCENARIO
+>>>>>>> feat/issue-11-dedup-alias-resolution
 from simulations.scenarios.information_accumulation import (
     generate_accumulation_scenario,
 )
@@ -21,6 +25,7 @@ from simulations.scenarios.surprise_gating import SURPRISE_GATING_SCENARIO
 SCENARIOS: dict = {
     "changing_facts": CHANGING_FACTS_SCENARIO,
     "decay_mechanics": DECAY_MECHANICS_SCENARIO,
+    "deduplication": DEDUPLICATION_SCENARIO,
     "information_accumulation": generate_accumulation_scenario(),
     "oscillation": OSCILLATION_SCENARIO,
     "reinforcement": REINFORCEMENT_SCENARIO,
