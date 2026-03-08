@@ -40,7 +40,8 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             session_id VARCHAR,
             scope VARCHAR NOT NULL DEFAULT 'personal',
             metadata JSON,
-            created_at TIMESTAMPTZ DEFAULT current_timestamp
+            created_at TIMESTAMPTZ DEFAULT current_timestamp,
+            event_time TIMESTAMPTZ
         )
     """)
     conn.execute(
@@ -86,7 +87,8 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             reinforcement_boost FLOAT DEFAULT 0.0,
             salience_base FLOAT DEFAULT 0.5,
             confidence_base FLOAT DEFAULT 0.5,
-            pinned BOOLEAN DEFAULT FALSE
+            pinned BOOLEAN DEFAULT FALSE,
+            event_time TIMESTAMPTZ
         )
     """)
     conn.execute(
@@ -313,6 +315,58 @@ def _migrate_nodes_decay_fields(conn: duckdb.DuckDBPyConnection) -> None:
         )
 
 
+def _migrate_events_event_time(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add event_time column to events table if missing (bi-temporal, issue #21).
+
+    For existing databases created before bi-temporal support, this function
+    detects the missing column and adds it. NULL means "same as ingestion
+    timestamp" -- no backfill needed.
+
+    Safe to call on databases that already have the column (no-op).
+
+    Args:
+        conn: Active DuckDB connection.
+    """
+    result = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'events' AND column_name = 'event_time'
+    """).fetchone()
+    if result is None:
+        conn.execute("""
+            ALTER TABLE events
+            ADD COLUMN event_time TIMESTAMPTZ
+        """)
+        logger.info(
+            "Migrated events table: added event_time column (bi-temporal, issue #21)"
+        )
+
+
+def _migrate_nodes_event_time(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add event_time column to nodes table if missing (bi-temporal, issue #21).
+
+    For existing databases created before bi-temporal support, this function
+    detects the missing column and adds it. NULL means "same as created_at
+    (ingestion time)" -- no backfill needed.
+
+    Safe to call on databases that already have the column (no-op).
+
+    Args:
+        conn: Active DuckDB connection.
+    """
+    result = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'nodes' AND column_name = 'event_time'
+    """).fetchone()
+    if result is None:
+        conn.execute("""
+            ALTER TABLE nodes
+            ADD COLUMN event_time TIMESTAMPTZ
+        """)
+        logger.info(
+            "Migrated nodes table: added event_time column (bi-temporal, issue #21)"
+        )
+
+
 def install_duckpgq(conn: duckdb.DuckDBPyConnection) -> bool:
     """Attempt to install and load the DuckPGQ community extension.
 
@@ -413,5 +467,7 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     _verify_nodes_scope(conn)
     _migrate_nodes_epistemic_type(conn)
     _migrate_nodes_decay_fields(conn)
+    _migrate_events_event_time(conn)
+    _migrate_nodes_event_time(conn)
     pgq_graph = create_property_graph(conn)
     return pgq_available and pgq_graph

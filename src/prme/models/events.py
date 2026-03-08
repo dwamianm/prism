@@ -23,7 +23,15 @@ class Event(MemoryObject):
 
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        description="Event timestamp (UTC)",
+        description="Ingestion timestamp (UTC) -- when the system recorded this event",
+    )
+    event_time: datetime | None = Field(
+        default=None,
+        description=(
+            "When the event actually happened in the real world (UTC). "
+            "None means same as ingestion timestamp. Enables bi-temporal "
+            "queries: ingestion_time vs event_time (issue #21)."
+        ),
     )
     role: str = Field(description="Role: 'user', 'assistant', or 'system'")
     content: str = Field(description="Event content text")

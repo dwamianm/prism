@@ -93,6 +93,9 @@ class RetrievalPipeline:
         scope: Scope | list[Scope] | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
+        knowledge_at: datetime | None = None,
+        event_time_from: datetime | None = None,
+        event_time_to: datetime | None = None,
         token_budget: int | None = None,
         weights: ScoringWeights | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -105,6 +108,12 @@ class RetrievalPipeline:
         stages in sequence and returns a RetrievalResponse with a packed
         MemoryBundle, scored results, metadata, and always-on score traces.
 
+        Bi-temporal query support (issue #21):
+        - ``knowledge_at``: Point-in-time knowledge snapshot. Post-filters
+          results to include only nodes with created_at <= knowledge_at.
+        - ``event_time_from``/``event_time_to``: Filters results by the
+          event_time field (when events actually happened).
+
         Args:
             query: Raw query text from the user.
             user_id: User ID for scoping all backend queries.
@@ -115,6 +124,10 @@ class RetrievalPipeline:
                 overrides any temporal signal from query analysis.
             time_to: Explicit end of temporal window. If provided,
                 overrides any temporal signal from query analysis.
+            knowledge_at: Point-in-time knowledge snapshot (bi-temporal).
+                Only includes nodes ingested on or before this datetime.
+            event_time_from: Filter by event_time >= this value (bi-temporal).
+            event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
             weights: Override default scoring weights for this request.
             min_fidelity: Override minimum representation level.
@@ -184,6 +197,30 @@ class RetrievalPipeline:
         # If VECTOR count is 0 but no explicit error, we check the flag
         # via the candidates module's logging. For now, infer from counts.
         embedding_mismatch = candidate_counts.get("VECTOR", 0) == 0
+
+        # --- Stage 3.5: Bi-temporal Post-Filtering (issue #21) ---
+        # Applied after candidate generation and before epistemic filtering.
+        # These filters operate on the MemoryNode fields attached to each
+        # candidate, so they work regardless of which backend generated them.
+        if knowledge_at is not None:
+            candidates = [
+                c for c in candidates
+                if c.node.created_at <= knowledge_at
+            ]
+        if event_time_from is not None:
+            # Include nodes whose event_time >= event_time_from.
+            # Nodes without event_time fall back to created_at (ingestion time).
+            candidates = [
+                c for c in candidates
+                if (c.node.event_time or c.node.created_at) >= event_time_from
+            ]
+        if event_time_to is not None:
+            # Include nodes whose event_time <= event_time_to.
+            # Nodes without event_time fall back to created_at (ingestion time).
+            candidates = [
+                c for c in candidates
+                if (c.node.event_time or c.node.created_at) <= event_time_to
+            ]
 
         # --- Stage 4: Epistemic Filtering ---
         filtered, excluded = filter_epistemic(

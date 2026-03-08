@@ -471,9 +471,9 @@ class DuckPGQGraphStore:
                 valid_from, valid_to, superseded_by, evidence_refs,
                 created_at, updated_at, epistemic_type, source_type,
                 decay_profile, last_reinforced_at, reinforcement_boost,
-                salience_base, confidence_base, pinned
+                salience_base, confidence_base, pinned, event_time
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?)
+                      ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 str(node.id),
@@ -500,6 +500,7 @@ class DuckPGQGraphStore:
                 node.salience_base,
                 node.confidence_base,
                 node.pinned,
+                node.event_time,
             ],
         )
 
@@ -518,6 +519,7 @@ class DuckPGQGraphStore:
         "confidence",
         "salience",
         "updated_at",
+        "event_time",
     }
 
     def _update_node_sync(self, node_id: str, updates: dict) -> None:
@@ -1444,6 +1446,9 @@ class DuckPGQGraphStore:
         raw_confidence_base = row[22] if len(row) > 22 else row[7]  # fallback to confidence
         raw_pinned = row[23] if len(row) > 23 else False
 
+        # Bi-temporal field (issue #21) -- position 24
+        raw_event_time = row[24] if len(row) > 24 else None
+
         return MemoryNode(
             id=node_id,
             node_type=NodeType(row[1]),
@@ -1469,6 +1474,7 @@ class DuckPGQGraphStore:
             salience_base=raw_salience_base,
             confidence_base=raw_confidence_base,
             pinned=bool(raw_pinned),
+            event_time=ensure_tz(raw_event_time),
         )
 
     def _row_to_edge(self, row: tuple) -> MemoryEdge:

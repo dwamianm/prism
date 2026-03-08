@@ -20,7 +20,7 @@ from prme.types import Scope
 # columns at the end rather than at the CREATE TABLE position).
 _EVENT_COLUMNS = (
     "id, timestamp, role, content, content_hash, "
-    "user_id, session_id, scope, metadata, created_at"
+    "user_id, session_id, scope, metadata, created_at, event_time"
 )
 
 
@@ -128,8 +128,9 @@ class EventStore:
             """
             INSERT INTO events (
                 id, timestamp, role, content, content_hash,
-                user_id, session_id, scope, metadata, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                user_id, session_id, scope, metadata, created_at,
+                event_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 str(event.id),
@@ -142,6 +143,7 @@ class EventStore:
                 event.scope.value,
                 metadata_json,
                 event.created_at,
+                event.event_time,
             ],
         )
 
@@ -221,30 +223,25 @@ class EventStore:
 
         Column order matches the explicit SELECT column list:
         id(0), timestamp(1), role(2), content(3), content_hash(4),
-        user_id(5), session_id(6), scope(7), metadata(8), created_at(9)
+        user_id(5), session_id(6), scope(7), metadata(8), created_at(9),
+        event_time(10)
         """
         raw_id = row[0]
         event_id = raw_id if isinstance(raw_id, UUID) else UUID(str(raw_id))
 
-        raw_ts = row[1]
-        if isinstance(raw_ts, datetime):
-            ts = (
-                raw_ts.replace(tzinfo=timezone.utc)
-                if raw_ts.tzinfo is None
-                else raw_ts
-            )
-        else:
-            ts = raw_ts
+        def _ensure_tz(dt: datetime | None) -> datetime | None:
+            if dt is None:
+                return None
+            if isinstance(dt, datetime) and dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt
 
-        raw_created = row[9]
-        if isinstance(raw_created, datetime):
-            created_at = (
-                raw_created.replace(tzinfo=timezone.utc)
-                if raw_created.tzinfo is None
-                else raw_created
-            )
-        else:
-            created_at = raw_created
+        ts = _ensure_tz(row[1]) if isinstance(row[1], datetime) else row[1]
+        created_at = _ensure_tz(row[9]) if isinstance(row[9], datetime) else row[9]
+
+        # Bi-temporal: event_time at column 10 (issue #21)
+        raw_event_time = row[10] if len(row) > 10 else None
+        event_time = _ensure_tz(raw_event_time)
 
         raw_metadata = row[8]
         if isinstance(raw_metadata, str):
@@ -261,6 +258,7 @@ class EventStore:
             {
                 "id": event_id,
                 "timestamp": ts,
+                "event_time": event_time,
                 "role": row[2],
                 "content": row[3],
                 "content_hash": row[4],

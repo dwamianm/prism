@@ -359,6 +359,7 @@ class MemoryEngine:
         confidence: float | None = None,
         epistemic_type: EpistemicType | None = None,
         source_type: SourceType | None = None,
+        event_time: datetime | None = None,
     ) -> str:
         """Store content across all four backends in one call.
 
@@ -386,6 +387,9 @@ class MemoryEngine:
                 from node_type via heuristic.
             source_type: Source provenance type. If None, inferred from
                 node_type and role via heuristic.
+            event_time: Optional datetime of when the event actually happened
+                in the real world (UTC). None means same as ingestion time.
+                Enables bi-temporal queries (issue #21).
 
         Returns:
             String UUID of the created event (source of truth ID).
@@ -411,6 +415,7 @@ class MemoryEngine:
             role=role,
             scope=scope,
             metadata=metadata,
+            event_time=event_time,
         )
         event_id = await self._write_queue.submit(
             lambda ev=event: self._event_store.append(ev),
@@ -474,6 +479,7 @@ class MemoryEngine:
             source_type=source_type,
             evidence_refs=[event.id],
             decay_profile=decay_profile,
+            event_time=event_time,
         )
         node_id = await self._write_queue.submit(
             lambda n=node: self._graph_store.create_node(n),
@@ -856,6 +862,9 @@ class MemoryEngine:
         scope: Scope | list[Scope] | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
+        knowledge_at: datetime | None = None,
+        event_time_from: datetime | None = None,
+        event_time_to: datetime | None = None,
         token_budget: int | None = None,
         weights: ScoringWeights | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -868,6 +877,14 @@ class MemoryEngine:
         candidate generation, epistemic filtering, scoring, context
         packing, and operation logging.
 
+        Bi-temporal query support (issue #21):
+        - ``knowledge_at``: Point-in-time knowledge snapshot. Only returns
+          nodes whose ingestion time (created_at) <= knowledge_at. Answers
+          "what did the system know as of this datetime?"
+        - ``event_time_from``/``event_time_to``: Filter by when events
+          actually happened in the real world. Answers "what happened
+          during this time period?"
+
         Args:
             query: Natural language query text.
             user_id: User ID for scoping all backend queries.
@@ -875,6 +892,10 @@ class MemoryEngine:
                 Scopes, or None (no filter -- returns results from all scopes).
             time_from: Explicit start of temporal window.
             time_to: Explicit end of temporal window.
+            knowledge_at: Point-in-time knowledge snapshot (bi-temporal).
+                Only includes nodes ingested on or before this datetime.
+            event_time_from: Filter by event_time >= this value (bi-temporal).
+            event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
             weights: Override default scoring weights.
             min_fidelity: Override minimum representation level.
@@ -902,6 +923,9 @@ class MemoryEngine:
             scope=scope,
             time_from=time_from,
             time_to=time_to,
+            knowledge_at=knowledge_at,
+            event_time_from=event_time_from,
+            event_time_to=event_time_to,
             token_budget=token_budget,
             weights=weights,
             min_fidelity=min_fidelity,
