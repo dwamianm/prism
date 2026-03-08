@@ -2,6 +2,13 @@
 
 Tests that fact supersedence and temporal decay work correctly when
 a user's tech stack, preferences, and team evolve over ~60 days.
+
+NOTE: With PRMEConfig(enable_store_supersedence=True), the store() path
+will automatically detect migration/replacement language in messages
+(e.g. "migrated from MySQL to PostgreSQL") and mark matching older nodes
+as superseded via keyword-based ContentContradictionDetector. This is
+disabled by default for backward compatibility. To enable, pass
+enable_store_supersedence=True in the config when creating the engine.
 """
 
 from simulations.harness import SimCheckpoint, SimMessage, SimScenario
