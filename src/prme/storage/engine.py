@@ -464,6 +464,20 @@ class MemoryEngine:
                 exc_info=True,
             )
 
+        # Step 3.5: Re-mention reinforcement (opt-in)
+        if self._config.reinforce_similarity_threshold is not None:
+            try:
+                await self._check_remention_reinforcement(
+                    content, str(node.id), user_id, event.id,
+                )
+            except Exception:
+                logger.warning(
+                    "Re-mention reinforcement check failed for node %s. "
+                    "Non-fatal; node is stored successfully.",
+                    node.id,
+                    exc_info=True,
+                )
+
         # Step 4: Supersedence detection (opt-in)
         if self._config.enable_store_supersedence:
             try:
@@ -548,6 +562,80 @@ class MemoryEngine:
                 logger.debug(
                     "Could not supersede node %s (may already be superseded)",
                     old_id,
+                    exc_info=True,
+                )
+
+    async def _check_remention_reinforcement(
+        self,
+        content: str,
+        new_node_id: str,
+        user_id: str,
+        event_id: str,
+    ) -> None:
+        """Reinforce existing similar nodes when new content re-mentions a topic.
+
+        When reinforce_similarity_threshold is set, searches for existing nodes
+        with similarity >= threshold and calls reinforce() on each match. The
+        new node itself is always skipped. Superseded/archived nodes are also
+        skipped. The entire block is non-fatal.
+
+        Args:
+            content: The newly stored content text.
+            new_node_id: The node ID of the just-created node (to skip).
+            user_id: Owner user ID for scoping vector search.
+            event_id: Event ID from the new store, passed as evidence_id.
+        """
+        threshold = self._config.reinforce_similarity_threshold
+        if threshold is None:
+            return
+
+        # Vector-search for similar existing nodes
+        try:
+            similar = await self._vector_index.search(content, user_id, k=5)
+        except Exception:
+            logger.debug(
+                "Vector search failed during re-mention check for node %s",
+                new_node_id,
+                exc_info=True,
+            )
+            return
+
+        if not similar:
+            return
+
+        for result in similar:
+            sid = result["node_id"]
+            score = result.get("score", 0.0)
+
+            # Skip the newly created node itself
+            if sid == new_node_id:
+                continue
+
+            # Check similarity threshold
+            if score < threshold:
+                continue
+
+            # Skip superseded/archived nodes
+            existing_node = await self._graph_store.get_node(
+                sid, include_superseded=False
+            )
+            if existing_node is None:
+                continue
+
+            # Reinforce the matching existing node
+            try:
+                await self.reinforce(sid, evidence_id=str(event_id))
+                logger.info(
+                    "Re-mention reinforcement: node %s reinforced "
+                    "(similarity=%.3f) by new node %s",
+                    sid,
+                    score,
+                    new_node_id,
+                )
+            except Exception:
+                logger.debug(
+                    "Could not reinforce node %s during re-mention check",
+                    sid,
                     exc_info=True,
                 )
 
