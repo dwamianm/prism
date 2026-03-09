@@ -4,4 +4,6 @@ my_memories/
 examples/logs/
 __pycache__/
 *.pyc
-scratch.md.claude/worktrees/
+data/
+scratch.md
+.claude/worktrees/

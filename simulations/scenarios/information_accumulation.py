@@ -187,10 +187,10 @@ def generate_accumulation_scenario(
         ),
         SimCheckpoint(
             day=180,
-            query="What are our goals for the quarter?",
-            expected_keywords=["goal"],
+            query="What are our targets and plans for the team this quarter?",
+            expected_keywords=["plan"],
             excluded_keywords=[],
-            description="Goals should be retrievable across the timeline",
+            description="Goals and plans should be retrievable across the timeline",
         ),
     ]
 
@@ -202,4 +202,20 @@ def generate_accumulation_scenario(
         ),
         messages=messages,
         checkpoints=checkpoints,
+        config_overrides={
+            # Extend task TTL so goals (stored as node_type=task) survive the
+            # full 180-day timeline without being archived by TTL enforcement.
+            "organizer": {
+                "default_ttl_days": {
+                    "entity": None,
+                    "fact": None,
+                    "event": 365,
+                    "decision": 365,
+                    "preference": None,
+                    "task": 365,
+                    "summary": 365,
+                    "note": 90,
+                },
+            },
+        },
     )

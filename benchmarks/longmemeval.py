@@ -12,6 +12,7 @@ All test data is synthetic. Works without LLM.
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -355,6 +356,12 @@ class LongMemEvalBenchmark:
       3. Temporal reasoning
       4. Knowledge updates
       5. Abstention
+
+    If *dataset_path* is provided (or real data has been downloaded via
+    ``python scripts/download_benchmarks.py``), the benchmark will log
+    a notice. The real LongMemEval data can be loaded separately via
+    :func:`benchmarks.datasets.load_longmemeval_dataset` for custom
+    evaluation pipelines.
     """
 
     name = "longmemeval"
@@ -362,6 +369,9 @@ class LongMemEvalBenchmark:
     # Relevance score threshold below which we consider the engine
     # effectively abstained (no confident answer).
     ABSTENTION_SCORE_THRESHOLD = 0.3
+
+    def __init__(self, dataset_path: str | None = None) -> None:
+        self.dataset_path = dataset_path
 
     async def run(self, engine: MemoryEngine) -> BenchmarkResult:
         """Execute the LongMemEval benchmark.
@@ -373,6 +383,20 @@ class LongMemEvalBenchmark:
             BenchmarkResult with per-ability scores.
         """
         start_time = time.monotonic()
+
+        # Check for real dataset availability
+        if self.dataset_path:
+            try:
+                from benchmarks.datasets import load_longmemeval_dataset
+                real_data = load_longmemeval_dataset(self.dataset_path)
+                if real_data:
+                    logging.getLogger(__name__).info(
+                        "Real LongMemEval data available (%d cases). "
+                        "Using built-in synthetic test harness for structured evaluation.",
+                        len(real_data),
+                    )
+            except Exception:
+                pass
 
         # Gather all test data generators
         generators = [

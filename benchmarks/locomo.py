@@ -404,12 +404,17 @@ class LoCoMoBenchmark:
     Generates synthetic 300+ turn conversations and evaluates PRME's
     ability to answer questions, summarize events, and perform
     temporal reasoning over extended dialogues.
+
+    If *dataset_path* is provided (or real data has been downloaded via
+    ``python scripts/download_benchmarks.py``), the benchmark will use
+    the real LoCoMo dataset instead of synthetic data.
     """
 
     name = "locomo"
 
-    def __init__(self, turns: int = 300) -> None:
+    def __init__(self, turns: int = 300, dataset_path: str | None = None) -> None:
         self.turns = turns
+        self.dataset_path = dataset_path
 
     async def run(self, engine: MemoryEngine) -> BenchmarkResult:
         """Execute the LoCoMo benchmark against the engine.
@@ -423,8 +428,38 @@ class LoCoMoBenchmark:
         """
         start_time = time.monotonic()
 
-        # Generate synthetic conversation
-        conversation, queries = generate_conversation(self.turns)
+        # Try loading real dataset; fall back to synthetic generation
+        conversation: list[ConversationTurn] | None = None
+        queries: list[GroundTruthQuery] | None = None
+        try:
+            from benchmarks.datasets import load_locomo_dataset
+            data = load_locomo_dataset(self.dataset_path)
+            if data and "turns" in data[0] and not data[0].get("conversation_id", "").startswith("synthetic"):
+                # Real dataset available -- convert to internal format
+                conv_data = data[0]  # use first conversation
+                conversation = [
+                    ConversationTurn(
+                        turn_number=i,
+                        day=t.get("day", 1 + i // 5),
+                        role=t["role"],
+                        content=t["content"],
+                    )
+                    for i, t in enumerate(conv_data["turns"])
+                ]
+                queries = [
+                    GroundTruthQuery(
+                        query=q["question"],
+                        category=q.get("category", "qa"),
+                        expected_keywords=[q["answer"]],
+                        day=110,
+                    )
+                    for q in conv_data.get("questions", [])
+                ]
+        except Exception:
+            pass  # fall through to synthetic
+
+        if conversation is None or queries is None:
+            conversation, queries = generate_conversation(self.turns)
 
         user_id = "bench-locomo"
 
