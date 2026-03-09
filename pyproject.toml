@@ -66,6 +66,9 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+markers = [
+    "stress: load and stress tests (deselect with '-m not stress')",
+]
 filterwarnings = [
     "ignore::DeprecationWarning:pytest_asyncio",
 ]
