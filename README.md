@@ -2,6 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/dwamianm/prism/actions/workflows/ci.yml/badge.svg)](https://github.com/dwamianm/prism/actions/workflows/ci.yml)
 
 **Local-first, embeddable memory substrate for LLM-powered systems.**
 
@@ -14,10 +15,12 @@ LLMs are stateless. Every conversation starts from zero. Existing solutions bolt
 PRME models memory the way it actually works:
 
 - **Event sourcing** — immutable append-only log, deterministic rebuild
-- **Graph-based relational model** — typed nodes (facts, preferences, decisions) with edges capturing relationships, supersedence, and temporal validity
-- **Epistemic state tracking** — memories have lifecycle states (tentative → stable → superseded → archived) and confidence scores
+- **Graph-based relational model** — 9 typed node kinds (entities, facts, preferences, decisions, tasks, instructions, summaries, events, notes) with edges capturing relationships, supersedence, and temporal validity
+- **Epistemic state tracking** — memories have lifecycle states (tentative → stable → superseded → archived), confidence scores, contradiction detection, and oscillation dampening
 - **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle
-- **Local-first** — everything lives in a single directory (DuckDB + usearch + Tantivy). No cloud dependency.
+- **Self-organizing memory** — 11 organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival automatically
+- **Dual-stream ingestion** — sub-50ms fast path for real-time use, with deferred graph materialization
+- **Local-first** — everything lives in a single directory (DuckDB + usearch + Tantivy). No cloud dependency. Optional PostgreSQL backend for production.
 
 ## Installation
 
@@ -25,10 +28,11 @@ PRME models memory the way it actually works:
 pip install prme
 ```
 
-With PostgreSQL backend support:
+With optional extras:
 
 ```bash
-pip install prme[postgres]
+pip install prme[postgres]   # PostgreSQL backend
+pip install prme[api]        # HTTP API (FastAPI)
 ```
 
 ### From source
@@ -97,31 +101,79 @@ events = await engine.ingest_batch(
 )
 ```
 
-See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a complete terminal chat app with persistent memory.
+For real-time use, the fast path skips graph extraction:
+
+```python
+# Guaranteed sub-50ms — event store + vector only
+await engine.ingest_fast(content, user_id="alice", scope=Scope.PERSONAL)
+```
+
+See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a terminal chat app with persistent memory.
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│                 PRME Engine                   │
-├──────────────┬──────────────┬────────────────┤
-│  Ingestion   │  Retrieval   │   Epistemic    │
-│  Pipeline    │  Pipeline    │   State Model  │
-├──────────────┴──────────────┴────────────────┤
-│              Storage Layer                    │
-│  ┌──────────┬───────────┬──────────────────┐ │
-│  │ DuckDB   │ usearch   │ Tantivy          │ │
-│  │ Events + │ HNSW      │ Full-text        │ │
-│  │ Graph    │ Vectors   │ Search           │ │
-│  └──────────┴───────────┴──────────────────┘ │
-│         Optional: PostgreSQL backend          │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                    PRME Engine                        │
+├──────────────┬──────────────┬────────────┬───────────┤
+│  Ingestion   │  Retrieval   │ Epistemic  │ Organizer │
+│  Pipeline    │  Pipeline    │ State      │ Jobs      │
+├──────────────┴──────────────┴────────────┴───────────┤
+│                   Storage Layer                       │
+│  ┌──────────┬───────────┬──────────────────────────┐ │
+│  │ DuckDB   │ usearch   │ Tantivy                  │ │
+│  │ Events + │ HNSW      │ Full-text                │ │
+│  │ Graph    │ Vectors   │ Search                   │ │
+│  └──────────┴───────────┴──────────────────────────┘ │
+│           Optional: PostgreSQL backend                │
+└──────────────────────────────────────────────────────┘
 ```
 
-- **Ingestion Pipeline** — stores raw events, optionally extracts entities/facts/relationships via LLM
-- **Retrieval Pipeline** — query analysis → multi-source candidate generation → deterministic scoring → context packing
-- **Epistemic State Model** — tracks confidence, lifecycle transitions, contradiction detection, and supersedence
-- **Storage** — DuckDB (events + graph), usearch (HNSW vectors), Tantivy (full-text). Optional PostgreSQL backend for production deployments.
+- **Ingestion Pipeline** — stores raw events, optionally extracts entities/facts/relationships via LLM (OpenAI, Anthropic, Ollama). Dual-stream mode provides a sub-50ms fast path with deferred graph materialization.
+- **Retrieval Pipeline** — query analysis → multi-source candidate generation → deterministic scoring → context packing. Supports bi-temporal queries with `knowledge_at` for point-in-time snapshots.
+- **Epistemic State Model** — tracks confidence, lifecycle transitions (tentative → stable → superseded → archived), contradiction detection, supersedence chains, oscillation dampening, and surprise-gated storage.
+- **Organizer** — 11 background jobs: `promote`, `decay_sweep`, `archive`, `deduplicate`, `alias_resolve`, `summarize`, `feedback_apply`, `centrality_boost`, `tombstone_sweep`, `snapshot_generation`, `consolidate`. Runs on schedule or opportunistically during retrieve/ingest.
+- **Storage** — DuckDB (events + graph), usearch (HNSW vectors), Tantivy (full-text). Optional PostgreSQL backend with asyncpg + pgvector.
+
+## CLI
+
+PRME includes a command-line tool for memory inspection:
+
+```bash
+prme info ./memory.duckdb          # Memory pack statistics
+prme nodes ./memory.duckdb         # List nodes (--type, --state, --limit)
+prme search ./memory.duckdb "query" # Run hybrid retrieval
+prme chain ./memory.duckdb <id>    # Show supersedence chain
+prme organize ./memory.duckdb     # Run organizer jobs
+prme stats ./memory.duckdb        # Detailed statistics
+prme export ./memory.duckdb       # Export as JSON
+```
+
+## HTTP API
+
+Install with `pip install prme[api]` and run:
+
+```bash
+uvicorn prme.api:app
+```
+
+Endpoints under `/v1`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/store` | Store a memory node |
+| `POST` | `/v1/ingest` | LLM-powered ingestion |
+| `POST` | `/v1/retrieve` | Hybrid retrieval |
+| `POST` | `/v1/organize` | Run organizer jobs |
+| `GET` | `/v1/nodes` | Query nodes with filters |
+| `GET` | `/v1/nodes/{id}` | Get single node |
+| `PUT` | `/v1/nodes/{id}/promote` | Promote lifecycle state |
+| `PUT` | `/v1/nodes/{id}/archive` | Archive node |
+| `PUT` | `/v1/nodes/{id}/reinforce` | Increase confidence |
+| `GET` | `/v1/nodes/{id}/neighborhood` | Graph neighborhood |
+| `GET` | `/v1/nodes/{id}/chain` | Supersedence chain |
+| `GET` | `/v1/health` | Health check |
+| `GET` | `/v1/stats` | Memory statistics |
 
 ## Configuration
 
@@ -135,6 +187,28 @@ PRME_EXTRACTION_MODEL=gpt-4o-mini
 # Embedding
 PRME_EMBEDDING_PROVIDER=fastembed      # fastembed (local, default) or openai
 PRME_EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5
+
+# Encryption at rest
+PRME_ENCRYPTION_KEY=your-secret-key    # Enables AES-128-CBC + HMAC encryption
+```
+
+## Testing
+
+```bash
+# Run all tests
+pytest tests/ -q
+
+# Run simulations (19 scenarios)
+python -m simulations --list           # List available scenarios
+python -m simulations                  # Run all
+python -m simulations changing_facts   # Run specific scenario
+
+# Run benchmarks
+python -m benchmarks                   # All benchmarks
+python -m benchmarks epistemic         # Epistemic benchmark only
+
+# Stress tests (opt-in)
+PRME_STRESS_TESTS=1 pytest tests/test_stress.py
 ```
 
 ## Documentation
@@ -147,8 +221,10 @@ Detailed technical documentation lives in [`docs/`](docs/):
 - [Epistemic State Model](docs/RFC-0003-Epistemic-State-Model.md)
 - [Namespace & Scope Isolation](docs/RFC-0004-Namespace-and-Scope-Isolation.md)
 - [Hybrid Retrieval Pipeline](docs/RFC-0005-Hybrid-Retrieval-Pipeline.md)
+- [Decay and Forgetting](docs/RFC-0007-Decay-and-Forgetting.md)
+- [Confidence Evolution](docs/RFC-0008-Confidence-Evolution.md)
 - [Integration Guide](docs/INTEGRATION.md)
-- [Full RFC Index](docs/INDEX.md)
+- [Full RFC Index](docs/INDEX.md) (15 RFCs)
 
 ## Contributing
 
