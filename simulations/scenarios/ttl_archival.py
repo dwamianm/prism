@@ -50,7 +50,7 @@ _CHECKPOINTS = [
     ),
     SimCheckpoint(
         day=100,
-        query="What security requirements exist?",
+        query="What must all production services use for TLS?",
         expected_keywords=["TLS"],
         excluded_keywords=[],
         description="Fact nodes (no TTL) remain retrievable after 100 days",

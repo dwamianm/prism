@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from prme.config import OrganizerConfig
 from prme.organizer.decay import compute_effective_confidence, compute_effective_salience
 from prme.organizer.models import MaintenanceResult
-from prme.types import LifecycleState
+from prme.types import LifecycleState, NodeType
 
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
@@ -180,6 +180,13 @@ class MaintenanceRunner:
 
             # Skip pinned nodes
             if node.pinned:
+                continue
+
+            # Skip permanent knowledge nodes (ENTITY/FACT with no TTL)
+            if node.ttl_days is None and node.node_type in (
+                NodeType.ENTITY,
+                NodeType.FACT,
+            ):
                 continue
 
             # Force archive: salience below force threshold

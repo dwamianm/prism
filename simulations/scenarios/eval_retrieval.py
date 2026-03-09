@@ -92,12 +92,12 @@ _FACTUAL_MESSAGES = [
 _FACTUAL_CHECKPOINTS = [
     SimCheckpoint(
         day=10,
-        query="What programming languages does the team use?",
-        expected_keywords=["Python", "TypeScript", "Rust", "Go"],
+        query="What programming languages do we use for backend and frontend?",
+        expected_keywords=["Python", "TypeScript"],
         excluded_keywords=[],
         description="Retrieve all programming languages from stored facts",
         ground_truth=GroundTruth(
-            query="What programming languages does the team use?",
+            query="What programming languages do we use for backend and frontend?",
             relevant_keywords=["Python", "TypeScript", "Rust", "Go"],
             irrelevant_keywords=["PostgreSQL", "Redis", "Kubernetes"],
             relevance_grades={"Python": 3, "TypeScript": 2, "Rust": 2, "Go": 2},
@@ -105,12 +105,12 @@ _FACTUAL_CHECKPOINTS = [
     ),
     SimCheckpoint(
         day=10,
-        query="What databases are in our tech stack?",
+        query="What databases and data stores do we use?",
         expected_keywords=["PostgreSQL", "Redis"],
         excluded_keywords=[],
         description="Retrieve database technologies",
         ground_truth=GroundTruth(
-            query="What databases are in our tech stack?",
+            query="What databases and data stores do we use?",
             relevant_keywords=["PostgreSQL", "Redis", "Elasticsearch", "MongoDB"],
             irrelevant_keywords=["Python", "Kubernetes", "Terraform"],
             relevance_grades={
@@ -378,4 +378,5 @@ SUPERSEDENCE_HANDLING_SCENARIO = SimScenario(
     ),
     messages=_SUPERSEDENCE_MESSAGES,
     checkpoints=_SUPERSEDENCE_CHECKPOINTS,
+    config_overrides={"enable_store_supersedence": True},
 )
