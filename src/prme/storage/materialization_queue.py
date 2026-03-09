@@ -34,6 +34,8 @@ class PendingMaterialization:
         content: Raw message text.
         user_id: Owner user ID.
         role: Message role ('user', 'assistant', or 'system').
+        session_id: Optional session identifier.
+        scope: Memory scope string (e.g., 'personal', 'project', 'org').
         metadata: Optional structured metadata from the original ingest.
         queued_at: Timestamp when the item was queued.
     """
@@ -42,6 +44,8 @@ class PendingMaterialization:
     content: str
     user_id: str
     role: str = "user"
+    session_id: str | None = None
+    scope: str | None = None
     metadata: dict[str, Any] | None = None
     queued_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -70,6 +74,8 @@ class MaterializationQueue:
         content: str,
         user_id: str,
         role: str = "user",
+        session_id: str | None = None,
+        scope: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Queue a materialization work item.
@@ -82,6 +88,8 @@ class MaterializationQueue:
             content: Raw message text.
             user_id: Owner user ID.
             role: Message role.
+            session_id: Optional session identifier.
+            scope: Memory scope string.
             metadata: Optional structured metadata.
         """
         async with self._lock:
@@ -100,6 +108,8 @@ class MaterializationQueue:
                     content=content,
                     user_id=user_id,
                     role=role,
+                    session_id=session_id,
+                    scope=scope,
                     metadata=metadata,
                 )
             )
@@ -140,12 +150,16 @@ class MaterializationQueue:
 
             # Materialize via engine.store() — this does full graph write
             try:
-                await engine.store(
-                    item.content,
-                    user_id=item.user_id,
-                    role=item.role,
-                    metadata=item.metadata,
-                )
+                store_kwargs: dict[str, Any] = {
+                    "user_id": item.user_id,
+                    "role": item.role,
+                    "metadata": item.metadata,
+                }
+                if item.session_id is not None:
+                    store_kwargs["session_id"] = item.session_id
+                if item.scope is not None:
+                    store_kwargs["scope"] = item.scope
+                await engine.store(item.content, **store_kwargs)
                 materialized += 1
                 logger.debug(
                     "materialization_queue.drained event_id=%s",

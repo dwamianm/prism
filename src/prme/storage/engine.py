@@ -1077,6 +1077,8 @@ class MemoryEngine:
             content=content,
             user_id=user_id,
             role=role,
+            session_id=session_id,
+            scope=scope.value if scope else None,
             metadata=metadata,
         )
 

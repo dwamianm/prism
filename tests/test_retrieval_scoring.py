@@ -294,7 +294,7 @@ class TestCompositeScoring:
         # Run 50 times with different input orderings
         for _ in range(50):
             ranked, traces = score_and_rank(
-                [candidate_b, candidate_a], weights
+                [candidate_b, candidate_a], weights, now=now
             )
             # Both should have the same composite score
             assert ranked[0].composite_score == ranked[1].composite_score

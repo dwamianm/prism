@@ -699,9 +699,12 @@ class TestMaintenanceRunner:
         )
         runner = MaintenanceRunner(engine, config)
 
-        # Create a node with very low base salience and old reinforcement
+        # Create a node with very low base salience and old reinforcement.
+        # Use EVENT type because ENTITY/FACT nodes with no TTL are exempt
+        # from decay-based archival (they represent permanent knowledge).
         old_time = datetime.now(timezone.utc) - timedelta(days=500)
         node = _make_node(
+            node_type=NodeType.EVENT,
             lifecycle_state=LifecycleState.TENTATIVE,
             salience_base=0.01,
             confidence_base=0.9,
@@ -893,9 +896,11 @@ class TestRunJob:
         engine, graph_store, _ = engine_parts
         config = OrganizerConfig(force_archive_salience_threshold=0.05)
 
-        # Create node with very low salience that will decay far
+        # Create EVENT node with very low salience that will decay far
+        # (ENTITY/FACT nodes with no TTL are exempt from decay archival)
         old_time = datetime.now(timezone.utc) - timedelta(days=500)
         node = _make_node(
+            node_type=NodeType.EVENT,
             lifecycle_state=LifecycleState.TENTATIVE,
             salience_base=0.01,
             last_reinforced_at=old_time,
@@ -934,9 +939,12 @@ class TestOrganizeIntegration:
         )
         await graph_store.create_node(promotable)
 
-        # Create node that should be archived (very low salience, old)
+        # Create node that should be archived (very low salience, old).
+        # Use EVENT type because ENTITY/FACT with no TTL are exempt from
+        # decay-based archival.
         very_old = datetime.now(timezone.utc) - timedelta(days=500)
         archivable = _make_node(
+            node_type=NodeType.EVENT,
             lifecycle_state=LifecycleState.TENTATIVE,
             salience_base=0.01,
             confidence_base=0.01,

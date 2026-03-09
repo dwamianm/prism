@@ -460,7 +460,7 @@ class TestOpportunisticMaintenance:
             await engine.store(
                 "Low salience node to be archived",
                 user_id="test-user",
-                node_type=NodeType.FACT,
+                node_type=NodeType.EVENT,
                 scope=Scope.PERSONAL,
             )
 
@@ -635,10 +635,12 @@ class TestExplicitOrganize:
         """organize(jobs=['archive']) archives nodes below threshold."""
         engine = await create_engine(config)
         try:
+            # Use EVENT type because ENTITY/FACT nodes with no TTL are exempt
+            # from decay-based archival (they represent permanent knowledge).
             await engine.store(
                 "Node with very low salience to archive",
                 user_id="test-user",
-                node_type=NodeType.FACT,
+                node_type=NodeType.EVENT,
                 scope=Scope.PERSONAL,
             )
 
@@ -671,7 +673,7 @@ class TestExplicitOrganize:
             await engine.store(
                 "Node for decay sweep archival",
                 user_id="test-user",
-                node_type=NodeType.FACT,
+                node_type=NodeType.EVENT,
                 scope=Scope.PERSONAL,
             )
 
@@ -1067,11 +1069,12 @@ class TestCombinedScenarios:
         )
         engine = await create_engine(config)
         try:
-            # 1. Store a node
+            # 1. Store a node (use EVENT type because ENTITY/FACT nodes with
+            # no TTL are exempt from decay-based archival).
             await engine.store(
                 "Full lifecycle test node",
                 user_id="test-user",
-                node_type=NodeType.FACT,
+                node_type=NodeType.EVENT,
                 scope=Scope.PERSONAL,
             )
 

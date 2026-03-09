@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 from prme.config import OrganizerConfig
 from prme.organizer.decay import compute_effective_confidence, compute_effective_salience
 from prme.organizer.models import JobResult
-from prme.types import LifecycleState
+from prme.types import LifecycleState, NodeType
 
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
@@ -169,6 +169,16 @@ async def _job_decay_sweep(
         if node.pinned:
             continue
 
+        # Skip ENTITY and FACT nodes with no TTL -- these represent
+        # permanent knowledge and should not be archived by decay alone.
+        # Only nodes with an explicit TTL or ephemeral types (EVENT, TASK,
+        # etc.) are subject to decay-based archival.
+        if node.ttl_days is None and node.node_type in (
+            NodeType.ENTITY,
+            NodeType.FACT,
+        ):
+            continue
+
         eff_salience = compute_effective_salience(
             salience_base=node.salience_base,
             reinforcement_boost=node.reinforcement_boost,
@@ -197,10 +207,13 @@ async def _job_decay_sweep(
                 errors += 1
             continue
 
-        # Deprecate: very low confidence
+        # Deprecate/archive: very low confidence
         if eff_confidence < config.deprecate_confidence_threshold:
             try:
-                await engine._graph_store.deprecate(str(node.id))
+                if node.lifecycle_state == LifecycleState.CONTESTED:
+                    await engine._graph_store.deprecate(str(node.id))
+                else:
+                    await engine.archive(str(node.id))
                 modified += 1
             except (ValueError, AttributeError):
                 try:
@@ -265,6 +278,13 @@ async def _job_archive(
             break
 
         if node.pinned:
+            continue
+
+        # Skip permanent knowledge nodes (ENTITY/FACT with no TTL)
+        if node.ttl_days is None and node.node_type in (
+            NodeType.ENTITY,
+            NodeType.FACT,
+        ):
             continue
 
         eff_salience = compute_effective_salience(
@@ -599,7 +619,7 @@ async def _job_tombstone_sweep(
             await engine.archive(str(node.id))
             modified += 1
 
-            # Log a TOMBSTONE_SWEEP operation
+            # Log a TOMBSTONE_SWEEP operation via write queue
             try:
                 op_id = str(uuid.uuid4())
                 payload = json.dumps({
@@ -611,13 +631,18 @@ async def _job_tombstone_sweep(
                     "expired_at": expiry.isoformat(),
                     "tombstone_ts": now.isoformat(),
                 })
-                engine._conn.execute(
-                    """
-                    INSERT INTO operations (id, op_type, target_id, payload, created_at)
-                    VALUES (?, 'TOMBSTONE_SWEEP', ?, ?::JSON, ?)
-                    """,
-                    [op_id, str(node.id), payload, now],
-                )
+                conn = getattr(engine, "_conn", None)
+                if conn is not None:
+                    await engine._write_queue.submit(
+                        lambda c=conn, oid=op_id, nid=str(node.id), p=payload, n=now: (
+                            c.execute(
+                                "INSERT INTO operations (id, op_type, target_id, payload, created_at) "
+                                "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?::JSON, ?)",
+                                [oid, nid, p, n],
+                            )
+                        ),
+                        label=f"tombstone_sweep.log:{node.id}",
+                    )
             except Exception:
                 logger.warning(
                     "Failed to log TOMBSTONE_SWEEP operation for node %s",
