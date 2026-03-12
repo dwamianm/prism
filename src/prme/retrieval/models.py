@@ -101,6 +101,10 @@ class ScoreTrace(BaseModel):
     path_score: float = Field(
         default=0.0, description="Multi-path corroboration score"
     )
+    temporal_affinity: float = Field(
+        default=0.0,
+        description="Temporal affinity score (0.0-1.0), active only for TEMPORAL queries",
+    )
     composite_score: float = Field(
         default=0.0, description="Final composite score"
     )

@@ -55,6 +55,14 @@ class ScoringWeights(BaseModel):
         default=0.02,
         description="Decay rate for recency factor: exp(-lambda * days)",
     )
+    temporal_boost: float = Field(
+        default=0.15,
+        description=(
+            "Extra weight for temporal affinity when query intent is TEMPORAL. "
+            "Added as a bonus on top of the additive score (not included in "
+            "the sum-to-1.0 constraint). Max +0.15 to composite score."
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_weights(self) -> ScoringWeights:
@@ -91,7 +99,8 @@ class ScoringWeights(BaseModel):
         payload = (
             f"{self.w_semantic}:{self.w_lexical}:{self.w_graph}:"
             f"{self.w_recency}:{self.w_salience}:{self.w_confidence}:"
-            f"{self.w_epistemic}:{self.w_paths}:{self.recency_lambda}"
+            f"{self.w_epistemic}:{self.w_paths}:{self.recency_lambda}:"
+            f"{self.temporal_boost}"
         )
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 

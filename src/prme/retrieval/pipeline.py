@@ -236,6 +236,7 @@ class RetrievalPipeline:
             filtered, effective_weights,
             epistemic_weights=self._epistemic_weights,
             now=scoring_now,
+            query_analysis=analysis,
         )
 
         # --- Stage 5.5: Conflict Metadata Annotation ---
@@ -307,6 +308,7 @@ class RetrievalPipeline:
                 if hint_candidates:
                     scored_hints, _ = score_and_rank(
                         hint_candidates, effective_weights, now=scoring_now,
+                        query_analysis=analysis,
                     )
                     # Only include top-N as cross-scope hints.
                     cross_scope_hints = scored_hints[
