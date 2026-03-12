@@ -139,6 +139,30 @@ class PackingConfig(BaseModel):
         default=512,
         description="Separate token budget for cross-scope hints [HYPOTHESIS]",
     )
+    session_context_window: int = Field(
+        default=3,
+        description=(
+            "Number of adjacent turns to include before and after a retrieved "
+            "node from the same session_id. Set to 0 to disable session context "
+            "expansion. Only applied to the top session_context_top_k scored "
+            "candidates."
+        ),
+    )
+    session_context_top_k: int = Field(
+        default=20,
+        description=(
+            "Number of top-scored candidates to expand with session context. "
+            "Limits the expansion to avoid blowing up the candidate list."
+        ),
+    )
+    session_context_score_decay: float = Field(
+        default=0.85,
+        description=(
+            "Score multiplier for session-context expanded nodes. Applied to "
+            "the triggering node's composite_score so context nodes rank just "
+            "below the node that caused their inclusion."
+        ),
+    )
 
 
 # Module-level default instances.

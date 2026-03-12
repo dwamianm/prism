@@ -1,11 +1,12 @@
-"""RetrievalPipeline orchestrator for the 6-stage hybrid retrieval pipeline.
+"""RetrievalPipeline orchestrator for the 7-stage hybrid retrieval pipeline.
 
-Chains all six stages in sequence:
+Chains all seven stages in sequence:
 1. Query Analysis (intent, entities, temporal signals)
 2. Candidate Generation (graph, vector, lexical, pinned -- parallel)
 3. Candidate Merging (deduplicate by node_id, track paths)
 4. Epistemic Filtering (exclude HYPOTHETICAL/DEPRECATED in DEFAULT mode)
 5. Scoring + Ranking (8-input composite score, deterministic sort)
+5.5b. Session Context Expansion (pull adjacent turns from same session)
 6. Context Packing (3-priority greedy bin-packing within token budget)
 
 Each retrieval generates a RETRIEVAL_REQUEST operation record with a unique
@@ -41,6 +42,7 @@ from prme.retrieval.models import (
 from prme.retrieval.packing import pack_context
 from prme.retrieval.query_analysis import analyze_query
 from prme.retrieval.scoring import score_and_rank
+from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, LifecycleState, RepresentationLevel, RetrievalMode, Scope
 
 if TYPE_CHECKING:
@@ -269,6 +271,24 @@ class RetrievalPipeline:
                         if str(c.node.id) == cid:
                             c.conflict_flag = True
                             c.contradicts_id = uuid.UUID(counterpart_id)
+
+        # --- Stage 5.5b: Session Context Expansion ---
+        # After scoring, expand top results with adjacent turns from the
+        # same session_id. This addresses the "orphaned question" problem
+        # where a question is retrieved but not its adjacent answer.
+        if effective_packing_config.session_context_window > 0:
+            try:
+                scored = await expand_session_context(
+                    scored,
+                    graph_store=self._graph_store,
+                    user_id=user_id,
+                    config=effective_packing_config,
+                )
+            except Exception:
+                logger.warning(
+                    "Session context expansion failed; continuing without expansion",
+                    exc_info=True,
+                )
 
         # --- Cross-Scope Hint Generation ---
         # When scope is active and include_cross_scope=True, run a secondary
