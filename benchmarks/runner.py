@@ -16,6 +16,7 @@ from pathlib import Path
 from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine
 
+from benchmarks.llm_judge import LLMJudgeConfig
 from benchmarks.models import BenchmarkResult
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ async def _create_engine(tmp_dir: Path) -> MemoryEngine:
 async def _run_single_benchmark(
     benchmark_name: str,
     benchmark_cls: type,
+    llm_config: LLMJudgeConfig | None = None,
 ) -> BenchmarkResult:
     """Run a single benchmark with its own isolated engine.
 
@@ -73,6 +75,9 @@ async def _run_single_benchmark(
     engine = await _create_engine(tmp_dir)
     try:
         benchmark = benchmark_cls()
+        # Pass llm_config to benchmarks that support it
+        if llm_config and llm_config.enabled and hasattr(benchmark, 'run_with_llm'):
+            return await benchmark.run_with_llm(engine, llm_config)
         return await benchmark.run(engine)
     finally:
         await engine.close()
@@ -89,8 +94,9 @@ class BenchmarkRunner:
         results = await runner.run(["locomo"], parallel=False)
     """
 
-    def __init__(self) -> None:
+    def __init__(self, llm_config: LLMJudgeConfig | None = None) -> None:
         self._registry = _ensure_registry()
+        self._llm_config = llm_config
 
     @property
     def available(self) -> list[str]:
@@ -159,7 +165,7 @@ class BenchmarkRunner:
 
         if parallel and len(resolved) > 1:
             tasks = [
-                _run_single_benchmark(name, self._registry[name])
+                _run_single_benchmark(name, self._registry[name], self._llm_config)
                 for name in resolved
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -189,7 +195,7 @@ class BenchmarkRunner:
             for name in resolved:
                 try:
                     result = await _run_single_benchmark(
-                        name, self._registry[name]
+                        name, self._registry[name], self._llm_config
                     )
                     results_list.append(result)
                 except Exception as exc:

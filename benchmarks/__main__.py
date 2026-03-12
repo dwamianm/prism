@@ -11,6 +11,10 @@ Examples::
     python -m benchmarks all-both                 # everything
     python -m benchmarks locomo-real --json r.json
     python -m benchmarks all --no-parallel
+
+    # LLM generation + judge scoring (requires API key):
+    python -m benchmarks locomo-real --llm
+    python -m benchmarks all-real --llm --llm-provider anthropic --llm-model claude-sonnet-4-20250514
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ import argparse
 import asyncio
 import sys
 
+from benchmarks.llm_judge import LLMJudgeConfig
 from benchmarks.runner import BenchmarkRunner
 from benchmarks.report import generate_json_report, print_summary
 
@@ -56,13 +61,39 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=False,
         help="Suppress human-readable output (only write JSON)",
     )
+    parser.add_argument(
+        "--llm",
+        action="store_true",
+        default=False,
+        help="Enable LLM generation + judge scoring (requires API key)",
+    )
+    parser.add_argument(
+        "--llm-provider",
+        default=None,
+        help="LLM provider (default: openai). Overrides PRME_EXTRACTION__PROVIDER.",
+    )
+    parser.add_argument(
+        "--llm-model",
+        default=None,
+        help="LLM model (default: gpt-4o-mini). Overrides PRME_EXTRACTION__MODEL.",
+    )
     return parser.parse_args(argv)
 
 
 async def _main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
 
-    runner = BenchmarkRunner()
+    # Build LLM config from CLI args + env vars
+    import os
+    llm_config = LLMJudgeConfig(
+        provider=args.llm_provider or os.environ.get("PRME_EXTRACTION__PROVIDER", "openai"),
+        model=args.llm_model or os.environ.get("PRME_EXTRACTION__MODEL", "gpt-4o-mini"),
+        enabled=args.llm,
+    )
+    if llm_config.enabled:
+        print(f"  LLM judge: {llm_config.provider_string}")
+
+    runner = BenchmarkRunner(llm_config=llm_config)
     try:
         results = await runner.run(
             args.benchmarks,

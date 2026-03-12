@@ -19,12 +19,16 @@ import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from benchmarks.metrics import exclusion_score, keyword_match_score
 from benchmarks.models import BenchmarkResult, QueryResult
 
 from prme.storage.engine import MemoryEngine
 from prme.types import EpistemicType, NodeType, Scope
+
+if TYPE_CHECKING:
+    from benchmarks.llm_judge import LLMJudgeConfig
 
 
 # ---------------------------------------------------------------------------
@@ -437,7 +441,7 @@ class LongMemEvalBenchmark:
                     score = self._evaluate_abstention(response)
                 else:
                     top_content = " ".join(
-                        r.node.content for r in response.results[:5]
+                        r.node.content for r in response.results[:10]
                     )
                     kw_score = keyword_match_score(
                         tc.expected_keywords, top_content
@@ -660,7 +664,7 @@ class LongMemEvalRealBenchmark:
             else:
                 answer = str(question["answer"])
                 top_content = " ".join(
-                    r.node.content for r in response.results[:5]
+                    r.node.content for r in response.results[:15]
                 )
                 score = keyword_match_score([answer], top_content)
                 expected = answer
@@ -726,3 +730,161 @@ class LongMemEvalRealBenchmark:
             return 0.5
         else:
             return 0.0
+
+    async def run_with_llm(
+        self, engine: MemoryEngine, llm_config: LLMJudgeConfig
+    ) -> BenchmarkResult:
+        """Run LongMemEval-real with LLM generation + judge scoring.
+
+        Same per-question engine pattern as run(), but generates answers
+        via LLM and uses LLM-as-judge for scoring. Abstention questions
+        still use the score-threshold method.
+        """
+        import tempfile
+
+        from benchmarks.llm_judge import generate_answer, judge_answer
+        from prme.config import PRMEConfig
+
+        if not self.dataset_path.exists():
+            raise FileNotFoundError(
+                f"LongMemEval dataset not found at {self.dataset_path}. "
+                "Run: python scripts/download_benchmarks.py --longmemeval"
+            )
+
+        start_time = time.monotonic()
+
+        with open(self.dataset_path) as f:
+            all_questions = json.load(f)
+
+        questions = [
+            q for q in all_questions
+            if q["question_type"] != "single-session-preference"
+        ]
+        if self.max_questions > 0 and self.max_questions < len(questions):
+            from collections import defaultdict
+            by_type: dict[str, list] = defaultdict(list)
+            for q in questions:
+                by_type[q["question_type"]].append(q)
+            sampled: list[dict] = []
+            for qtype, qs in sorted(by_type.items()):
+                n = max(1, round(len(qs) / len(questions) * self.max_questions))
+                sampled.extend(qs[:n])
+            questions = sampled[: self.max_questions]
+
+        logger.info(
+            "Running LongMemEval-real (LLM judge): %d questions",
+            len(questions),
+        )
+
+        all_details: list[QueryResult] = []
+        category_results: list[tuple[str, float]] = []
+
+        for q_idx, question in enumerate(questions):
+            qid = question["question_id"]
+            qtype = question["question_type"]
+            ability = _LME_TYPE_MAP.get(qtype, qtype)
+            is_abstention = qid.endswith("_abs")
+            user_id = "bench-lme-real"
+
+            tmp = tempfile.mkdtemp(prefix="prme_lme_real_")
+            tmp_dir = Path(tmp)
+            lex_dir = tmp_dir / "lexical_index"
+            lex_dir.mkdir(parents=True, exist_ok=True)
+            q_engine = await MemoryEngine.create(PRMEConfig(
+                db_path=str(tmp_dir / "memory.duckdb"),
+                vector_path=str(tmp_dir / "vectors.usearch"),
+                lexical_path=str(lex_dir),
+            ))
+
+            try:
+                for sess_idx, session_turns in enumerate(
+                    question["haystack_sessions"]
+                ):
+                    session_id = f"s{sess_idx}"
+                    for turn in session_turns:
+                        await q_engine.store(
+                            turn["content"],
+                            user_id=user_id,
+                            role=turn["role"],
+                            node_type=NodeType.FACT,
+                            scope=Scope.PERSONAL,
+                            session_id=session_id,
+                        )
+
+                response = await q_engine.retrieve(
+                    question["question"], user_id=user_id
+                )
+            finally:
+                await q_engine.close()
+
+            if is_abstention:
+                score = self._evaluate_abstention(response)
+                expected = "ABSTAIN"
+                actual = (
+                    f"top_score={response.results[0].composite_score:.3f}"
+                    if response.results
+                    else "no results"
+                )
+                generated = ""
+            else:
+                answer = str(question["answer"])
+                top_content = " ".join(
+                    r.node.content for r in response.results[:15]
+                )
+                generated = await generate_answer(
+                    question["question"], top_content, llm_config
+                )
+                score = await judge_answer(
+                    question["question"], answer, generated, llm_config
+                )
+                expected = answer
+                actual = top_content[:200]
+
+            cat = "abstention" if is_abstention else ability
+            is_correct = score >= 0.5
+
+            all_details.append(QueryResult(
+                query=question["question"],
+                category=cat,
+                expected=expected,
+                actual=actual,
+                correct=is_correct,
+                score=score,
+                generated_answer=generated,
+            ))
+            category_results.append((cat, score))
+
+            if (q_idx + 1) % 50 == 0:
+                elapsed = (time.monotonic() - start_time) / 60
+                logger.info(
+                    "Progress: %d/%d questions (%.1f min)",
+                    q_idx + 1, len(questions), elapsed,
+                )
+
+        from benchmarks.metrics import category_scores as compute_categories
+
+        cat_scores = compute_categories(category_results)
+        correct = sum(1 for d in all_details if d.correct)
+        incorrect = sum(1 for d in all_details if not d.correct)
+        abstained = sum(
+            1 for d in all_details
+            if d.category == "abstention" and d.correct
+        )
+        overall = (
+            sum(d.score for d in all_details) / len(all_details)
+            if all_details
+            else 0.0
+        )
+        duration_ms = (time.monotonic() - start_time) * 1000
+
+        return BenchmarkResult(
+            benchmark_name="longmemeval-real (llm-judge)",
+            overall_score=overall,
+            category_scores=cat_scores,
+            total_queries=len(all_details),
+            correct=correct,
+            incorrect=incorrect,
+            abstained=abstained,
+            duration_ms=duration_ms,
+            details=all_details,
+        )

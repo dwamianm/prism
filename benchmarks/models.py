@@ -20,6 +20,7 @@ class QueryResult:
     actual: str
     correct: bool
     score: float
+    generated_answer: str = ""
 
 
 @dataclass
@@ -74,6 +75,7 @@ class BenchmarkResult:
                     "actual": d.actual,
                     "correct": d.correct,
                     "score": round(d.score, 4),
+                    **({"generated_answer": d.generated_answer} if d.generated_answer else {}),
                 }
                 for d in self.details
             ],

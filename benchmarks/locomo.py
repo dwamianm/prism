@@ -23,6 +23,7 @@ from benchmarks.metrics import exclusion_score, keyword_match_score
 from benchmarks.models import BenchmarkResult, QueryResult
 
 if TYPE_CHECKING:
+    from benchmarks.llm_judge import LLMJudgeConfig
     from prme.storage.engine import MemoryEngine
 
 from prme.types import EpistemicType, NodeType, Scope
@@ -625,6 +626,7 @@ class LoCoMoRealBenchmark:
 
             # Ingest all sessions with speaker + date context
             total_turns = 0
+            speakers: set[str] = set()
             for sess_idx, (turns, date_str) in enumerate(sessions):
                 session_id = f"{sample_id}-s{sess_idx}"
                 # Extract date for temporal context (e.g. "1:56 pm on 8 May, 2023")
@@ -634,6 +636,8 @@ class LoCoMoRealBenchmark:
                     if len(text) < 15:
                         continue  # skip very short turns (greetings, "ok", etc.)
                     speaker = turn.get("speaker", "")
+                    if speaker:
+                        speakers.add(speaker)
                     enriched = f"{date_prefix}{speaker}: {text}"
                     await engine.store(
                         enriched,
@@ -704,6 +708,133 @@ class LoCoMoRealBenchmark:
 
         return BenchmarkResult(
             benchmark_name="locomo-real",
+            overall_score=overall,
+            category_scores=cat_scores,
+            total_queries=len(all_details),
+            correct=correct,
+            incorrect=incorrect,
+            abstained=0,
+            duration_ms=duration_ms,
+            details=all_details,
+        )
+
+    async def run_with_llm(
+        self, engine: MemoryEngine, llm_config: LLMJudgeConfig
+    ) -> BenchmarkResult:
+        """Run LoCoMo-real with LLM generation + judge scoring.
+
+        Same ingestion as run(), but after retrieval, generates an answer
+        via LLM and uses LLM-as-judge to score against the ground truth.
+        Keyword-match score is still computed for comparison.
+        """
+        from benchmarks.llm_judge import generate_answer, judge_answer
+
+        if not self.dataset_path.exists():
+            raise FileNotFoundError(
+                f"LoCoMo dataset not found at {self.dataset_path}. "
+                "Run: python scripts/download_benchmarks.py --locomo"
+            )
+
+        start_time = time.monotonic()
+
+        with open(self.dataset_path) as f:
+            all_conversations = json.load(f)
+
+        conversations = all_conversations[: self.max_conversations]
+        logger.info(
+            "Running LoCoMo-real (LLM judge) on %d/%d conversations",
+            len(conversations),
+            len(all_conversations),
+        )
+
+        all_details: list[QueryResult] = []
+        category_results: list[tuple[str, float]] = []
+
+        for conv_idx, conv_data in enumerate(conversations):
+            sample_id = conv_data.get("sample_id", f"conv-{conv_idx}")
+            user_id = f"bench-locomo-real-{sample_id}"
+            conversation = conv_data["conversation"]
+            sessions = _extract_sessions(conversation)
+
+            # Ingest all sessions (same as run())
+            total_turns = 0
+            for sess_idx, (turns, date_str) in enumerate(sessions):
+                session_id = f"{sample_id}-s{sess_idx}"
+                date_prefix = f"({date_str}) " if date_str else ""
+                for turn in turns:
+                    text = turn["text"].strip()
+                    if len(text) < 15:
+                        continue
+                    speaker = turn.get("speaker", "")
+                    enriched = f"{date_prefix}{speaker}: {text}"
+                    await engine.store(
+                        enriched,
+                        user_id=user_id,
+                        role="user",
+                        node_type=NodeType.FACT,
+                        scope=Scope.PERSONAL,
+                        session_id=session_id,
+                    )
+                    total_turns += 1
+
+            logger.info(
+                "Ingested %s: %d sessions, %d turns",
+                sample_id, len(sessions), total_turns,
+            )
+
+            # Evaluate QA with LLM generation + judge
+            qa_list = conv_data.get("qa", [])
+            for qa in qa_list:
+                cat_num = qa["category"]
+                if cat_num not in _LOCOMO_CATEGORIES:
+                    continue
+
+                cat_name = _LOCOMO_CATEGORIES[cat_num]
+                answer = str(qa.get("answer", ""))
+                if not answer:
+                    continue
+
+                response = await engine.retrieve(
+                    qa["question"], user_id=user_id
+                )
+                top_content = " ".join(
+                    r.node.content for r in response.results[:10]
+                )
+
+                # LLM generate + judge
+                generated = await generate_answer(
+                    qa["question"], top_content, llm_config
+                )
+                llm_score = await judge_answer(
+                    qa["question"], answer, generated, llm_config
+                )
+
+                is_correct = llm_score >= 0.5
+                all_details.append(QueryResult(
+                    query=qa["question"],
+                    category=cat_name,
+                    expected=answer,
+                    actual=top_content[:200],
+                    correct=is_correct,
+                    score=llm_score,
+                    generated_answer=generated,
+                ))
+                category_results.append((cat_name, llm_score))
+
+        from benchmarks.metrics import category_scores as compute_categories
+
+        cat_scores = compute_categories(category_results)
+        correct = sum(1 for d in all_details if d.correct)
+        incorrect = sum(1 for d in all_details if not d.correct)
+        overall = (
+            sum(d.score for d in all_details) / len(all_details)
+            if all_details
+            else 0.0
+        )
+        duration_ms = (time.monotonic() - start_time) * 1000
+
+        return BenchmarkResult(
+            benchmark_name="locomo-real (llm-judge)",
             overall_score=overall,
             category_scores=cat_scores,
             total_queries=len(all_details),
