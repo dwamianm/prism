@@ -182,6 +182,21 @@ class RetrievalPipeline:
         effective_time_from = time_from if time_from is not None else analysis.time_from
         effective_time_to = time_to if time_to is not None else analysis.time_to
 
+        # --- Aggregation boost: widen candidate pool for count/total queries ---
+        candidate_config = effective_packing_config
+        if analysis.is_aggregation:
+            mult = effective_packing_config.aggregation_k_multiplier
+            cap = effective_packing_config.aggregation_k_max
+            candidate_config = effective_packing_config.model_copy(
+                update={
+                    "vector_k": min(int(effective_packing_config.vector_k * mult), cap),
+                    "lexical_k": min(int(effective_packing_config.lexical_k * mult), cap),
+                    "graph_max_candidates": min(
+                        int(effective_packing_config.graph_max_candidates * mult), cap
+                    ),
+                }
+            )
+
         # --- Stages 2-3: Candidate Generation + Merging ---
         candidates, candidate_counts = await generate_candidates(
             analysis,
@@ -192,7 +207,7 @@ class RetrievalPipeline:
             scope=normalized_scope,
             time_from=effective_time_from,
             time_to=effective_time_to,
-            config=effective_packing_config,
+            config=candidate_config,
         )
 
         # Track embedding mismatch from candidates module.

@@ -43,6 +43,13 @@ _FACTUAL_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
+# Patterns indicating aggregation/count queries that need broader candidate pools.
+_AGGREGATION_KEYWORDS = re.compile(
+    r"\b(how\s+many|how\s+much|how\s+often|total|count"
+    r"|all\s+the\s+times|every\s+time|list\s+all|all\s+of\s+the)\b",
+    re.IGNORECASE,
+)
+
 # Heuristic for proper nouns: 1+ consecutive capitalized words not at
 # sentence start. We anchor on "not after sentence-start" by checking
 # that the match is not preceded by nothing or a sentence-ending punctuation.
@@ -216,6 +223,9 @@ async def analyze_query(
             resolved_time_from = min(resolved_dates)
             resolved_time_to = max(resolved_dates)
 
+    # Detect aggregation intent (count/total/list-all queries).
+    is_aggregation = bool(_AGGREGATION_KEYWORDS.search(query))
+
     return QueryAnalysis(
         query=query,
         intent=intent,
@@ -225,4 +235,5 @@ async def analyze_query(
         time_to=resolved_time_to,
         retrieval_mode=retrieval_mode,
         request_id=uuid4(),
+        is_aggregation=is_aggregation,
     )

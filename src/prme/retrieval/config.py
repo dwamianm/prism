@@ -163,6 +163,14 @@ class PackingConfig(BaseModel):
             "below the node that caused their inclusion."
         ),
     )
+    aggregation_k_multiplier: float = Field(
+        default=2.5,
+        description="Multiplier for candidate k values on aggregation/count queries",
+    )
+    aggregation_k_max: int = Field(
+        default=500,
+        description="Hard cap on candidate k values after aggregation multiplier",
+    )
 
 
 # Module-level default instances.

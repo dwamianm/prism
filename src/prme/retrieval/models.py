@@ -67,6 +67,10 @@ class QueryAnalysis(BaseModel):
         default_factory=uuid4,
         description="Unique identifier for this retrieval request",
     )
+    is_aggregation: bool = Field(
+        default=False,
+        description="Whether the query requires aggregation (count/total/list-all)",
+    )
 
 
 class ScoreTrace(BaseModel):
