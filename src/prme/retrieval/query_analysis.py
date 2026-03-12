@@ -43,10 +43,10 @@ _FACTUAL_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
-# Heuristic for proper nouns: 2+ consecutive capitalized words not at
+# Heuristic for proper nouns: 1+ consecutive capitalized words not at
 # sentence start. We anchor on "not after sentence-start" by checking
 # that the match is not preceded by nothing or a sentence-ending punctuation.
-_PROPER_NOUN_RE = re.compile(r"(?<!\A)(?<![.!?]\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)")
+_PROPER_NOUN_RE = re.compile(r"(?<!\A)(?<![.!?]\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)")
 
 # Quoted strings as entity references.
 _QUOTED_RE = re.compile(r'"([^"]+)"|\'([^\']+)\'')
@@ -94,7 +94,7 @@ def _extract_entities(query: str) -> list[str]:
     """Extract potential entity names from the query.
 
     Uses two heuristics:
-    1. Sequences of 2+ consecutive capitalized words (proper nouns).
+    1. Sequences of 1+ consecutive capitalized words (proper nouns).
     2. Quoted strings as explicit entity references.
     """
     entities: list[str] = []

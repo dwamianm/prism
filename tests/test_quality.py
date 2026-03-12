@@ -133,7 +133,7 @@ class TestWeightTuner:
     def test_used_increases_dominant_weight(self):
         weights = ScoringWeights()
         tuner = WeightTuner(weights, learning_rate=0.01)
-        # Default dominant component is w_semantic (0.30)
+        # Default dominant component is w_semantic (0.25)
         signal = _make_signal(FeedbackSignalType.USED)
         result = tuner.update([signal])
         # w_semantic should have increased relative to others
@@ -330,7 +330,7 @@ class TestNamespaceWeights:
         )
         config = PRMEConfig(namespace_weights={"ns": custom})
         # Global scoring should still be the default
-        assert config.scoring.w_semantic == pytest.approx(0.30)
+        assert config.scoring.w_semantic == pytest.approx(0.25)
 
 
 # ---------------------------------------------------------------------------
@@ -484,7 +484,7 @@ class TestEngineIntegration:
                 budget_ms=5000,
             )
 
-            # w_semantic is the dominant weight (0.30), so it should be
+            # w_semantic is the dominant weight (0.25), so it should be
             # boosted by USED signals. After normalization, the ratio
             # should increase.
             new_weights = engine._config.scoring

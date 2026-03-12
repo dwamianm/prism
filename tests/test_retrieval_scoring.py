@@ -171,8 +171,8 @@ class TestCompositeScoring:
         - effective_salience = 0.5 * exp(-0.02*30) = 0.5 * 0.5488.. = 0.2744..
         - effective_confidence = 0.8 (OBSERVED exempt from confidence decay < 180d)
 
-        additive = 0.30*0.95 + 0.15*0.0 + 0.20*0.0
-                   + 0.10*exp(-0.02*30) + 0.10*eff_sal + 0.15*eff_conf
+        additive = 0.25*0.95 + 0.20*0.0 + 0.20*0.0
+                   + 0.10*exp(-0.01*30) + 0.10*eff_sal + 0.15*eff_conf
         * epistemic(OBSERVED=1.0)
         path_score = min(1/3, 1.0) = 0.3333..
         """
@@ -209,18 +209,18 @@ class TestCompositeScoring:
         assert trace.epistemic_weight == 1.0  # OBSERVED
         assert abs(trace.path_score - 1.0 / 3.0) < 1e-6
 
-        # Recency factor: exp(-0.02 * 30 days)
-        expected_recency = math.exp(-0.02 * 30)
+        # Recency factor: exp(-0.01 * 30 days)
+        expected_recency = math.exp(-weights.recency_lambda * 30)
         assert abs(trace.recency_factor - expected_recency) < 1e-6
 
         # Composite: additive * epistemic
         expected_additive = (
-            0.30 * 0.95
-            + 0.15 * 0.0
-            + 0.20 * 0.0
-            + 0.10 * expected_recency
-            + 0.10 * expected_salience
-            + 0.15 * expected_confidence
+            weights.w_semantic * 0.95
+            + weights.w_lexical * 0.0
+            + weights.w_graph * 0.0
+            + weights.w_recency * expected_recency
+            + weights.w_salience * expected_salience
+            + weights.w_confidence * expected_confidence
         )
         expected_composite = expected_additive * 1.0  # OBSERVED
         assert abs(trace.composite_score - round(expected_composite, 10)) < 1e-6

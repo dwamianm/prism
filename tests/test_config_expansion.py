@@ -31,7 +31,7 @@ class TestPRMEConfigFields:
         """PRMEConfig has a scoring field of type ScoringWeights."""
         c = PRMEConfig()
         assert isinstance(c.scoring, ScoringWeights)
-        assert c.scoring.w_semantic == 0.30
+        assert c.scoring.w_semantic == 0.25
 
     def test_has_packing_field(self):
         """PRMEConfig has a packing field of type PackingConfig."""

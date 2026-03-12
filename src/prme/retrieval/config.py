@@ -28,10 +28,10 @@ class ScoringWeights(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     w_semantic: float = Field(
-        default=0.30, description="Semantic similarity weight (RFC-0005 default)"
+        default=0.25, description="Semantic similarity weight"
     )
     w_lexical: float = Field(
-        default=0.15, description="Lexical relevance weight"
+        default=0.20, description="Lexical relevance weight"
     )
     w_graph: float = Field(
         default=0.20, description="Graph proximity weight"
@@ -52,7 +52,7 @@ class ScoringWeights(BaseModel):
         default=0.00, description="Multi-path corroboration weight (tiebreaker only)"
     )
     recency_lambda: float = Field(
-        default=0.02,
+        default=0.01,
         description="Decay rate for recency factor: exp(-lambda * days)",
     )
 
@@ -119,14 +119,14 @@ class PackingConfig(BaseModel):
         description="Character-based token estimation default [HYPOTHESIS]",
     )
     graph_max_candidates: int = Field(
-        default=50,
-        description="Max candidates from graph traversal (RFC-0005 S4.1)",
+        default=75,
+        description="Max candidates from graph traversal",
     )
     vector_k: int = Field(
-        default=50, description="Max candidates from vector search"
+        default=100, description="Max candidates from vector search"
     )
     lexical_k: int = Field(
-        default=50, description="Max candidates from lexical search"
+        default=100, description="Max candidates from lexical search"
     )
     graph_max_hops: int = Field(
         default=3, description="Max hops for graph neighborhood (1-3 per RFC)"
