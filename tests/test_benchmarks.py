@@ -269,8 +269,10 @@ class TestBenchmarkRunner:
 
         runner = BenchmarkRunner()
         available = runner.available
-        assert len(available) == 3
+        assert len(available) == 5
         assert "epistemic" in available
+        assert "locomo-real" in available
+        assert "longmemeval-real" in available
 
 
 # ---------------------------------------------------------------------------

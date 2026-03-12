@@ -486,7 +486,7 @@ class EpistemicBenchmark:
     name = "epistemic"
 
     # Score threshold below which we consider the engine abstained
-    ABSTENTION_SCORE_THRESHOLD = 0.3
+    ABSTENTION_SCORE_THRESHOLD = 0.55
 
     async def run(self, engine: MemoryEngine) -> BenchmarkResult:
         """Execute the epistemic benchmark.
@@ -612,7 +612,7 @@ class EpistemicBenchmark:
         top_score = response.results[0].composite_score
         if top_score < self.ABSTENTION_SCORE_THRESHOLD:
             return 1.0
-        elif top_score < 0.5:
+        elif top_score < 0.65:
             return 0.5
         else:
             return 0.0

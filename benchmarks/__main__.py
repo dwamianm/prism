@@ -2,13 +2,14 @@
 
 Usage::
 
-    python -m benchmarks [locomo|longmemeval|epistemic|all]
+    python -m benchmarks [locomo|longmemeval|epistemic|locomo-real|longmemeval-real|all|all-real|all-both]
 
 Examples::
 
-    python -m benchmarks all
-    python -m benchmarks locomo epistemic
-    python -m benchmarks longmemeval --json report.json
+    python -m benchmarks all                     # synthetic only (fast)
+    python -m benchmarks all-real                 # real datasets only
+    python -m benchmarks all-both                 # everything
+    python -m benchmarks locomo-real --json r.json
     python -m benchmarks all --no-parallel
 """
 
@@ -32,8 +33,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         nargs="*",
         default=["all"],
         help=(
-            "Benchmarks to run: locomo, longmemeval, epistemic, or all. "
-            "Defaults to all."
+            "Benchmarks to run: locomo, longmemeval, epistemic, "
+            "locomo-real, longmemeval-real, all (synthetic), "
+            "all-real, or all-both. Defaults to all."
         ),
     )
     parser.add_argument(

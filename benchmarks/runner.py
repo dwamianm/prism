@@ -28,13 +28,15 @@ _BENCHMARK_REGISTRY: dict[str, type] = {}
 def _ensure_registry() -> dict[str, type]:
     """Populate the benchmark registry on first call."""
     if not _BENCHMARK_REGISTRY:
-        from benchmarks.locomo import LoCoMoBenchmark
-        from benchmarks.longmemeval import LongMemEvalBenchmark
+        from benchmarks.locomo import LoCoMoBenchmark, LoCoMoRealBenchmark
+        from benchmarks.longmemeval import LongMemEvalBenchmark, LongMemEvalRealBenchmark
         from benchmarks.epistemic import EpistemicBenchmark
 
         _BENCHMARK_REGISTRY["locomo"] = LoCoMoBenchmark
         _BENCHMARK_REGISTRY["longmemeval"] = LongMemEvalBenchmark
         _BENCHMARK_REGISTRY["epistemic"] = EpistemicBenchmark
+        _BENCHMARK_REGISTRY["locomo-real"] = LoCoMoRealBenchmark
+        _BENCHMARK_REGISTRY["longmemeval-real"] = LongMemEvalRealBenchmark
     return _BENCHMARK_REGISTRY
 
 
@@ -95,11 +97,20 @@ class BenchmarkRunner:
         """List of available benchmark names."""
         return sorted(self._registry.keys())
 
+    # Benchmarks that require downloaded datasets (excluded from "all")
+    _REAL_BENCHMARKS = {"locomo-real", "longmemeval-real"}
+
     def resolve_names(self, names: list[str]) -> list[str]:
-        """Resolve benchmark names, expanding "all" to every registered name.
+        """Resolve benchmark names, expanding groups.
+
+        Special groups:
+
+        - ``"all"`` — synthetic benchmarks only (fast, no downloads needed)
+        - ``"all-real"`` — real dataset benchmarks only
+        - ``"all-both"`` — everything
 
         Args:
-            names: List of benchmark names or ``["all"]``.
+            names: List of benchmark names or group names.
 
         Returns:
             Deduplicated list of valid benchmark names.
@@ -107,8 +118,12 @@ class BenchmarkRunner:
         Raises:
             ValueError: If an unknown benchmark name is given.
         """
-        if "all" in names:
+        if "all-both" in names:
             return self.available
+        if "all-real" in names:
+            return sorted(self._REAL_BENCHMARKS & set(self._registry))
+        if "all" in names:
+            return sorted(set(self.available) - self._REAL_BENCHMARKS)
 
         resolved: list[str] = []
         for name in names:

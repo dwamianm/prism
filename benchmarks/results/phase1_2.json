@@ -1,0 +1,673 @@
+{
+  "benchmarks": [
+    {
+      "benchmark_name": "epistemic",
+      "overall_score": 1.0,
+      "category_scores": {
+        "abstention": 1.0,
+        "belief_revision": 1.0,
+        "confidence": 1.0,
+        "contradiction": 1.0,
+        "supersedence": 1.0
+      },
+      "total_queries": 15,
+      "correct": 15,
+      "incorrect": 0,
+      "abstained": 5,
+      "duration_ms": 13209.2,
+      "timestamp": "2026-03-12T13:06:21.516236+00:00",
+      "details": [
+        {
+          "query": "Who is the current CTO?",
+          "category": "supersedence",
+          "expected": "James Wilson",
+          "actual": "top_score=0.575",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where is the company office located?",
+          "category": "supersedence",
+          "expected": "Portland",
+          "actual": "top_score=0.576",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What web framework does the backend use?",
+          "category": "supersedence",
+          "expected": "FastAPI",
+          "actual": "top_score=0.582",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the server uptime?",
+          "category": "confidence",
+          "expected": "99.99%",
+          "actual": "top_score=0.639",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What was Q4 revenue?",
+          "category": "confidence",
+          "expected": "8.2 million",
+          "actual": "top_score=0.663",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the API rate limit?",
+          "category": "contradiction",
+          "expected": "5000",
+          "actual": "top_score=0.599",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What are the team's working hours?",
+          "category": "contradiction",
+          "expected": "flexible",
+          "actual": "top_score=0.591",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where is data stored?",
+          "category": "contradiction",
+          "expected": "three regions",
+          "actual": "top_score=0.572",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What database does the analytics service use?",
+          "category": "belief_revision",
+          "expected": "MongoDB",
+          "actual": "top_score=0.673",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the current deployment tool?",
+          "category": "belief_revision",
+          "expected": "ArgoCD",
+          "actual": "top_score=0.637",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the marketing budget for next quarter?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.501",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "When was the company founded and by whom?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.512",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the office pet policy?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.499",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who are the main competitors and how do we compare?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.505",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What health insurance plan does the company offer?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.501",
+          "correct": true,
+          "score": 1.0
+        }
+      ]
+    },
+    {
+      "benchmark_name": "locomo",
+      "overall_score": 0.85,
+      "category_scores": {
+        "qa": 1.0,
+        "summarization": 0.0,
+        "temporal": 1.0
+      },
+      "total_queries": 20,
+      "correct": 17,
+      "incorrect": 3,
+      "abstained": 0,
+      "duration_ms": 56358.6,
+      "timestamp": "2026-03-12T13:07:04.665829+00:00",
+      "details": [
+        {
+          "query": "What is the main project called?",
+          "category": "qa",
+          "expected": "Neptune",
+          "actual": "Our main project is called Neptune and it's a data analytics platform. Switched project management from Jira to Linear. Linear is now our project management tool. The frontend is built with React 18 a",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who is the tech lead?",
+          "category": "qa",
+          "expected": "Alice",
+          "actual": "Alice is the tech lead, Bob handles backend, Carol does frontend. Alice is transitioning from tech lead to architect role. Bob is now leading the API team with 3 reports. Carol left the team. Grace is",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What database does the project use?",
+          "category": "qa",
+          "expected": "PostgreSQL",
+          "actual": "Our main project is called Neptune and it's a data analytics platform. Switched project management from Jira to Linear. Linear is now our project management tool. The database is PostgreSQL 15 with re",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What programming language does the team use?",
+          "category": "qa",
+          "expected": "Python",
+          "actual": "The team uses Python 3.11 as the primary language. We use Slack for team communication. Our main project is called Neptune and it's a data analytics platform. Team standup: all features on track for s",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who handles QA on the team?",
+          "category": "qa",
+          "expected": "Diana",
+          "actual": "Diana joined the team as a QA engineer. She has 8 years of experience. Team standup: all features on track for sprint deadline. Team standup: all features on track for sprint deadline. Team standup: a",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is used for caching?",
+          "category": "qa",
+          "expected": "Redis",
+          "actual": "We use Redis for caching and session management. Testing the new caching layer under high concurrency. Testing the new caching layer under high concurrency. Testing the new caching layer under high co",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What CI/CD tool does the team use?",
+          "category": "qa",
+          "expected": "GitHub Actions",
+          "actual": "Our CI/CD pipeline uses GitHub Actions. Docker on AWS with GitHub Actions CI/CD gives you good automation. We use Slack for team communication. Team standup: all features on track for sprint deadline.",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who is the data scientist on the team?",
+          "category": "qa",
+          "expected": "Frank",
+          "actual": "Frank joined as a data scientist for the ML features. Our main project is called Neptune and it's a data analytics platform. Bob is now leading the API team with 3 reports. Team standup: all features ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What authentication mechanism is used?",
+          "category": "qa",
+          "expected": "JWT",
+          "actual": "Decided to use JWT tokens for API authentication. Reviewing pull requests for the authentication module. Reviewing pull requests for the authentication module. Reviewing pull requests for the authenti",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the API rate limit?",
+          "category": "qa",
+          "expected": "1000",
+          "actual": "Implemented rate limiting on the API. Max 1000 requests per minute per user. Noted. I've tracked this update about rate-limiting. Starting to evaluate moving from REST to GraphQL for the API layer. De",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Summarize the team changes that happened",
+          "category": "summarization",
+          "expected": "Diana, Eve, Frank",
+          "actual": "Team standup: all features on track for sprint deadline. Team standup: all features on track for sprint deadline. Team standup: all features on track for sprint deadline. Team standup: all features on",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What technology migrations occurred?",
+          "category": "summarization",
+          "expected": "GraphQL",
+          "actual": "Database migration: added TimescaleDB extension for time-series data. Completed migration from Prometheus to Datadog. Datadog is now our monitoring tool. The monitoring stack is now Prometheus + Grafa",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What were the key milestones for Neptune?",
+          "category": "summarization",
+          "expected": "100,000",
+          "actual": "Update recorded for neptune. Update recorded for neptune. Started implementing GraphQL schema for Neptune. Starting to build ML-powered anomaly detection for Neptune. Planning to open-source the Neptu",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What API technology does the project currently use?",
+          "category": "temporal",
+          "expected": "GraphQL",
+          "actual": "Decided to use JWT tokens for API authentication. Updated the API documentation with the new GraphQL schemas. Updated the API documentation with the new GraphQL schemas. Updated the API documentation ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What frontend framework is being used now?",
+          "category": "temporal",
+          "expected": "SvelteKit",
+          "actual": "The frontend is being rewritten from React to SvelteKit for better performance. The frontend is built with React 18 and TypeScript. Switched project management from Jira to Linear. Linear is now our p",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What editor do I currently use?",
+          "category": "temporal",
+          "expected": "VS Code",
+          "actual": "I switched my editor from VS Code to Neovim. Switched back to VS Code from Neovim. The extensions are too useful. Discussing architecture for the new reporting module. Discussing architecture for the ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who is the current frontend lead?",
+          "category": "temporal",
+          "expected": "Grace",
+          "actual": "Alice is the tech lead, Bob handles backend, Carol does frontend. Carol left the team. Grace is the new frontend lead. The frontend is built with React 18 and TypeScript. Bob is now leading the API te",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What monitoring tool is currently used?",
+          "category": "temporal",
+          "expected": "Datadog",
+          "actual": "Completed migration from Prometheus to Datadog. Datadog is now our monitoring tool. The monitoring stack is now Prometheus + Grafana. Monitoring dashboard shows stable performance metrics. Monitoring ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What container orchestration does the team use?",
+          "category": "temporal",
+          "expected": "Kubernetes",
+          "actual": "We deploy on AWS using Docker containers. We use Slack for team communication. We switched from Docker Compose to Kubernetes for orchestration. Deployed feature flags using LaunchDarkly. Our CI/CD pip",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What project management tool is currently used?",
+          "category": "temporal",
+          "expected": "Linear",
+          "actual": "Switched project management from Jira to Linear. Linear is now our project management tool. Completed migration from Prometheus to Datadog. Datadog is now our monitoring tool. Our CI/CD pipeline uses ",
+          "correct": true,
+          "score": 1.0
+        }
+      ]
+    },
+    {
+      "benchmark_name": "longmemeval",
+      "overall_score": 1.0,
+      "category_scores": {
+        "abstention": 1.0,
+        "info_extraction": 1.0,
+        "knowledge_update": 1.0,
+        "multi_session": 1.0,
+        "temporal": 1.0
+      },
+      "total_queries": 40,
+      "correct": 40,
+      "incorrect": 0,
+      "abstained": 6,
+      "duration_ms": 21854.8,
+      "timestamp": "2026-03-12T13:06:30.163250+00:00",
+      "details": [
+        {
+          "query": "Where is the company headquarters?",
+          "category": "info_extraction",
+          "expected": "123 Innovation Drive, San Francisco",
+          "actual": "top_score=0.584",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What was the annual revenue?",
+          "category": "info_extraction",
+          "expected": "12.5 million",
+          "actual": "top_score=0.583",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many engineers are on the team?",
+          "category": "info_extraction",
+          "expected": "24",
+          "actual": "top_score=0.599",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "When is version 3.0 launching?",
+          "category": "info_extraction",
+          "expected": "March 15",
+          "actual": "top_score=0.611",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the SLA uptime guarantee?",
+          "category": "info_extraction",
+          "expected": "99.95%",
+          "actual": "top_score=0.582",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the max file upload size?",
+          "category": "info_extraction",
+          "expected": "500MB",
+          "actual": "top_score=0.617",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who handles billing issues?",
+          "category": "info_extraction",
+          "expected": "billing@example.com",
+          "actual": "top_score=0.595",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which AWS regions are used?",
+          "category": "info_extraction",
+          "expected": "us-east-1",
+          "actual": "top_score=0.602",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What API response formats are supported?",
+          "category": "info_extraction",
+          "expected": "JSON",
+          "actual": "top_score=0.603",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the 401k matching rate?",
+          "category": "info_extraction",
+          "expected": "6%",
+          "actual": "top_score=0.587",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How long are logs retained?",
+          "category": "info_extraction",
+          "expected": "90 days",
+          "actual": "top_score=0.579",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What are the integration partners?",
+          "category": "info_extraction",
+          "expected": "Salesforce",
+          "actual": "top_score=0.594",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who leads the Orion project and what architecture does it use?",
+          "category": "multi_session",
+          "expected": "Marcus, microservices",
+          "actual": "top_score=0.585",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How does the Orion team deploy and what methodology do they follow?",
+          "category": "multi_session",
+          "expected": "Tuesday, kanban",
+          "actual": "top_score=0.593",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the gateway service used for and what is its throughput?",
+          "category": "multi_session",
+          "expected": "authentication, 10,000",
+          "actual": "top_score=0.576",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What are Orion's performance targets and recent improvements?",
+          "category": "multi_session",
+          "expected": "200ms",
+          "actual": "top_score=0.582",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who does the Orion lead report to?",
+          "category": "multi_session",
+          "expected": "Sarah",
+          "actual": "top_score=0.581",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many services does Orion have and how are they deployed?",
+          "category": "multi_session",
+          "expected": "12",
+          "actual": "top_score=0.588",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What deployment strategy and rollback SLA does Orion have?",
+          "category": "multi_session",
+          "expected": "blue-green, 5 minutes",
+          "actual": "top_score=0.597",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What database does each Orion microservice use?",
+          "category": "multi_session",
+          "expected": "PostgreSQL",
+          "actual": "top_score=0.585",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What operating system is the server currently running?",
+          "category": "temporal",
+          "expected": "Alpine",
+          "actual": "top_score=0.582",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the current project budget?",
+          "category": "temporal",
+          "expected": "60,000",
+          "actual": "top_score=0.560",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What testing framework is being used now?",
+          "category": "temporal",
+          "expected": "pytest",
+          "actual": "top_score=0.576",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the latest version of the software?",
+          "category": "temporal",
+          "expected": "3.0",
+          "actual": "top_score=0.522",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the current average response time?",
+          "category": "temporal",
+          "expected": "50ms",
+          "actual": "top_score=0.591",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What was the server OS before Alpine?",
+          "category": "temporal",
+          "expected": "Ubuntu",
+          "actual": "top_score=0.590",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many features were in the first release?",
+          "category": "temporal",
+          "expected": "10",
+          "actual": "top_score=0.577",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What was the budget increase amount in Q2?",
+          "category": "temporal",
+          "expected": "75,000",
+          "actual": "top_score=0.578",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Who is the current CEO?",
+          "category": "knowledge_update",
+          "expected": "Jane Doe",
+          "actual": "top_score=0.589",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where is the main office located?",
+          "category": "knowledge_update",
+          "expected": "Austin",
+          "actual": "top_score=0.571",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How much does the basic plan cost?",
+          "category": "knowledge_update",
+          "expected": "39",
+          "actual": "top_score=0.608",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What language is the backend written in?",
+          "category": "knowledge_update",
+          "expected": "Go",
+          "actual": "top_score=0.579",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What are the customer support hours?",
+          "category": "knowledge_update",
+          "expected": "24/7",
+          "actual": "top_score=0.571",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What cloud provider hosts the services?",
+          "category": "knowledge_update",
+          "expected": "AWS",
+          "actual": "top_score=0.553",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the company's policy on remote work?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.520",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the employee vacation policy?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.493",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What are the stock option vesting terms?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.509",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the maternity leave policy?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.479",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the company's carbon footprint reduction plan?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.497",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What are the terms of the company's acquisition deal?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "top_score=0.494",
+          "correct": true,
+          "score": 1.0
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "benchmarks_run": 3,
+    "total_queries": 75,
+    "overall_score": 0.96,
+    "total_correct": 72,
+    "total_incorrect": 3,
+    "total_abstained": 11,
+    "total_duration_ms": 91422.6,
+    "per_benchmark": {
+      "epistemic": 1.0,
+      "locomo": 0.85,
+      "longmemeval": 1.0
+    }
+  }
+}

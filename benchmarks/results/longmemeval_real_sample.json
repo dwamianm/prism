@@ -1,0 +1,431 @@
+{
+  "benchmarks": [
+    {
+      "benchmark_name": "longmemeval-real",
+      "overall_score": 0.24,
+      "category_scores": {
+        "temporal": 0.24
+      },
+      "total_queries": 50,
+      "correct": 12,
+      "incorrect": 38,
+      "abstained": 0,
+      "duration_ms": 214637.6,
+      "timestamp": "2026-03-12T14:13:21.043416+00:00",
+      "details": [
+        {
+          "query": "What was the first issue I had with my new car after its first service?",
+          "category": "temporal",
+          "expected": "GPS system not functioning correctly",
+          "actual": "I'm thinking of getting my car detailed soon. Do you know any good detailers in the area or have any recommendations? By the way, I just got my car serviced for the first time on March 15th, and it wa",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which event did I attend first, the 'Effective Time Management' workshop or the 'Data Analysis using Python' webinar?",
+          "category": "temporal",
+          "expected": "'Data Analysis using Python' webinar",
+          "actual": "I've been thinking about my goals and priorities lately, and I realized that I want to focus more on learning new skills and expanding my knowledge in different areas. I've been attending various work",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which vehicle did I take care of first in February, the bike or the car?",
+          "category": "temporal",
+          "expected": "bike",
+          "actual": "I'm thinking of getting a new bike rack for my car. Do you have any recommendations? By the way, I've been having some issues with my bike lately - in mid-February, I had to take it in for repairs bec",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which device did I got first, the Samsung Galaxy S22 or the Dell XPS 13?",
+          "category": "temporal",
+          "expected": "Samsung Galaxy S22",
+          "actual": "I'm planning a trip to Hawaii and I need to pack the right adapters for my devices. Can you help me figure out what kind of power adapters I'll need for my new laptop, Dell XPS 13, and my new smartpho",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many days before the team meeting I was preparing for did I attend the workshop on 'Effective Communication in the Workplace'?",
+          "category": "temporal",
+          "expected": "7 days. 8 days (including the last day) is also acceptable.",
+          "actual": "I'm preparing for an upcoming meeting with my team and I want to make sure I'm effectively communicating our project updates. I recently attended a workshop on \"Effective Communication in the Workplac",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days had passed between the Sunday mass at St. Mary's Church and the Ash Wednesday service at the cathedral?",
+          "category": "temporal",
+          "expected": "30 days. 31 days (including the last day) is also acceptable.",
+          "actual": "I'm thinking of volunteering at a local charity event soon. Do you have any information on organizations that focus on serving the homeless? By the way, I recently attended the Sunday mass at St. Mary",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days did it take for me to find a house I loved after starting to work with Rachel?",
+          "category": "temporal",
+          "expected": "14 days. 15 days (including the last day) is also acceptable.",
+          "actual": "I'm looking for some advice on neighborhoods near my workplace. I've been working with a real estate agent, Rachel, and she's been helping me find a place that fits my needs. I'd love to know more abo",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which seeds were started first, the tomatoes or the marigolds?",
+          "category": "temporal",
+          "expected": "Tomatoes",
+          "actual": "I'm planning to plant some seedlings in my backyard soon. Can you tell me what's the ideal temperature for planting them outside? By the way, I just started some marigold seeds that arrived on March 3",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many days had passed between the Hindu festival of Holi and the Sunday mass at St. Mary's Church?",
+          "category": "temporal",
+          "expected": "21 days. 22 days (including the last day) is also acceptable.",
+          "actual": "I'm planning to volunteer at a local community event next weekend and I was wondering if you could suggest some ideas for fundraising activities that have been successful in the past. By the way, I ju",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days before the 'Rack Fest' did I participate in the 'Turbocharged Tuesdays' event?",
+          "category": "temporal",
+          "expected": "4 days.",
+          "actual": "I'm also looking for some advice on how to optimize my car's performance for auto racking events. Do you have any tips on how to improve my car's suspension and braking system? By the way, I received ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which pair of shoes did I clean last month?",
+          "category": "temporal",
+          "expected": "white Adidas sneakers",
+          "actual": "That's really helpful, thanks for the detailed comparison. I think I'll try on both pairs to see which one feels more comfortable. By the way, I wore my trusty old Converse Chuck Taylor All Star sneak",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which event happened first, the purchase of the coffee maker or the malfunction of the stand mixer?",
+          "category": "temporal",
+          "expected": "The malfunction of the stand mixer",
+          "actual": "I'm also thinking of organizing a dinner party soon, and I want to make sure I have all the necessary kitchen utensils and appliances in good condition. Speaking of which, I got my stand mixer back fr",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days had passed between the 'Walk for Hunger' event and the 'Coastal Cleanup' event?",
+          "category": "temporal",
+          "expected": "14 days. 8 days (including the last day) is also acceptable.",
+          "actual": "I'm looking to find some new charity events to participate in, particularly ones that involve walking or running. I just did the \"Walk for Hunger\" 5K walk on February 21st and had a great time, so I'm",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which item did I purchase first, the dog bed for Max or the training pads for Luna?",
+          "category": "temporal",
+          "expected": "Training pads for Luna",
+          "actual": "I'm thinking of getting some more supplies for my puppy, Luna. She's still in potty-training, and I've been using those eco-friendly training pads from Chewy.com. I got a set of 10 for $25 about a mon",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which task did I complete first, fixing the fence or trimming the goats' hooves?",
+          "category": "temporal",
+          "expected": "Fixing the fence",
+          "actual": "I'm thinking of hosting a farm open house event soon and I was wondering if you could help me come up with some fun activities for kids and adults alike. By the way, speaking of the farm, I've been do",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many charity events did I participate in before the 'Run for the Cure' event?",
+          "category": "temporal",
+          "expected": "4",
+          "actual": "The \"Run for the Cure\" event was truly inspiring, and I think what resonated with me the most was seeing so many people come together for a common cause. There were over 5,000 participants, and the en",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How long have I been working before I started my current job at NovaTech?",
+          "category": "temporal",
+          "expected": "4 years and 9 months",
+          "actual": "I'll start by saying that I'm a software engineer, specifically a backend developer, and I've been in this field since I graduated with a degree in Computer Science from the University of California, ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which book did I finish reading first, 'The Hate U Give' or 'The Nightingale'?",
+          "category": "temporal",
+          "expected": "'The Hate U Give'",
+          "actual": "I'm glad you liked \"The Hate U Give\". I've been trying to read more diversely, and that book was a great choice for our book club. I actually finished reading three fiction novels last weekend - \"The ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which device did I set up first, the smart thermostat or the mesh network system?",
+          "category": "temporal",
+          "expected": "Smart thermostat",
+          "actual": "I'm having some issues with my desktop computer, it's been freezing up on me randomly and I'm thinking of upgrading it. Can you help me figure out what specs I need and what kind of budget I'm looking",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many months ago did I book the Airbnb in San Francisco?",
+          "category": "temporal",
+          "expected": "Five months ago",
+          "actual": "I'm planning a trip to San Francisco and was wondering if you could recommend some good neighborhoods to stay in. By the way, I've had a great experience with Airbnb in the past, like when I stayed in",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long did I take to finish 'The Seven Husbands of Evelyn Hugo' and 'The Nightingale' combined?",
+          "category": "temporal",
+          "expected": "5.5 weeks",
+          "actual": "I'm looking for some new audiobook recommendations. I've been enjoying listening to them during my daily commute and I just finished \"The Seven Husbands of Evelyn Hugo\", which took me two and a half w",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What was the date on which I attended the first BBQ event in June?",
+          "category": "temporal",
+          "expected": "June 3rd",
+          "actual": "I'm looking for some recommendations on BBQ sauce brands. I recently used up my favorite Sweet Baby Ray's at my friend's place last Saturday, which was on the 17th of June, and I need to restock. I'm ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days before I bought the iPhone 13 Pro did I attend the Holiday Market?",
+          "category": "temporal",
+          "expected": "7 days. 8 days (including the last day) is also acceptable.",
+          "actual": "I'm looking to upgrade my phone case and screen protector. Can you show me some options for iPhone 13 Pro cases and screen protectors? By the way, I got my iPhone 13 Pro at a discounted price of $800 ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which show did I start watching first, 'The Crown' or 'Game of Thrones'?",
+          "category": "temporal",
+          "expected": "'Game of Thrones'",
+          "actual": "I'm looking for some new shows to watch on HBO Max. I've been meaning to check out \"Game of Thrones\" for a while, and I finally started it about a month ago. I've finished the first four seasons so fa",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long had I been a member of 'Book Lovers Unite' when I attended the meetup?",
+          "category": "temporal",
+          "expected": "Two weeks",
+          "actual": "I'm looking for some book recommendations. I just finished reading the latest bestseller by John Grisham and loved it. Speaking of which, I attended a meetup organized by Book Lovers Unite last week w",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long had I been watching stand-up comedy specials regularly when I attended the open mic night at the local comedy club?",
+          "category": "temporal",
+          "expected": "2 months",
+          "actual": "I'm looking for some advice on writing jokes. I've recently gotten into stand-up comedy and I'm trying to improve my craft. Last month, I finally worked up the courage to attend an open mic night at a",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What time do I wake up on Tuesdays and Thursdays?",
+          "category": "temporal",
+          "expected": "6:45 AM",
+          "actual": "I'm trying to create a personalized morning routine that works for me. I've recently started going for a 30-minute walk before work, which has been great. On Tuesdays and Thursdays, I've also started ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days had passed since I bought my Adidas running shoes when I realized one of the shoelaces on my old Converse sneakers had broken?",
+          "category": "temporal",
+          "expected": "14 days. 15 days (including the last day) is also acceptable.",
+          "actual": "I'm looking for some shoe cleaning tips. I've got a pair of sneakers that I wore to play basketball on February 1st and they got pretty dirty. By the way, speaking of shoes, I realized that one of the",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which event happened first, the road trip to the coast or the arrival of the new prime lens?",
+          "category": "temporal",
+          "expected": "The arrival of the new prime lens",
+          "actual": "I'm looking for some tips on editing photos of landscapes. I just got back from a road trip to the coast with friends last week and took some amazing shots of the cliffs and beaches. The coastal trip ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which airline did I fly with the most in March and April?",
+          "category": "temporal",
+          "expected": "United Airlines",
+          "actual": "I'm planning to travel to San Francisco from the 10th to the 14th of next month. I'll be flying into SFO. I'd prefer a round-trip ticket, and I'm open to flying out of my hometown airport at any time ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How long had I been bird watching when I attended the bird watching workshop?",
+          "category": "temporal",
+          "expected": "Two months",
+          "actual": "I'm considering getting a bird feeder for my backyard, but I'm not sure what type of seed to use. Can you recommend a good all-purpose seed mix that will attract a variety of birds? By the way, I rece",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which trip did I take first, the one to Europe with family or the solo trip to Thailand?",
+          "category": "temporal",
+          "expected": "The solo trip to Thailand",
+          "actual": "I think I'll definitely want to prioritize flexibility and autonomy in my trip, since I had to compromise a lot on the itinerary with my family in Europe. We had to consider everyone's opinions and en",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which device did I set up first, the smart thermostat or the new router?",
+          "category": "temporal",
+          "expected": "new router",
+          "actual": "I'm with XYZ Internet, and I currently have a 500 Mbps plan. I recently got a new router on January 15th, which has improved my Wi-Fi signal strength significantly. However, I still need to figure out",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which health issue did I deal with first, the persistent cough or the skin tag removal?",
+          "category": "temporal",
+          "expected": "Persistent cough",
+          "actual": "I've been having some stomach issues lately and I'm trying to figure out what's causing them. I've been keeping a food diary to track my symptoms, but I'm not sure what to make of the data. Can you he",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How old was I when I moved to the United States?",
+          "category": "temporal",
+          "expected": "27",
+          "actual": "When asked about your long-term plans in the United States, it's essential to be honest and forthright while also demonstrating your commitment to the job offer and your employer.\n\n**Understanding the",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long had I been using the new area rug when I rearranged my living room furniture?",
+          "category": "temporal",
+          "expected": "One week. Answers ranging from 7 days to 10 days are also acceptable.",
+          "actual": "I'm looking for some advice on plant care. I've recently started collecting indoor plants and I'm not sure how often to water them. I have a fern, snake plant, and spider plant in my living room, and ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days before my best friend's birthday party did I order her gift?",
+          "category": "temporal",
+          "expected": "7 days. 8 days (including the last day) is also acceptable.",
+          "actual": "That's really helpful, thanks! I think I'll go ahead with the Skagen Ancher. I'm sure my brother will love it. By the way, speaking of personalized gifts, I recently ordered a customized photo album f",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which trip did the narrator take first, the solo trip to Europe or the family road trip across the American Southwest?",
+          "category": "temporal",
+          "expected": "The family road trip across the American Southwest",
+          "actual": "I'm trying to plan a trip to Arizona and I was wondering if you could recommend some must-see attractions and activities. By the way, I've been to the Grand Canyon before with my family on a road trip",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long did I use my new binoculars before I saw the American goldfinches returning to the area?",
+          "category": "temporal",
+          "expected": "Two weeks",
+          "actual": "I'm looking for some tips on improving my bird identification skills. I've been listening to bird calls online for about a month now, and it's been helping, but I'm still not confident in my abilities",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Who did I meet first, Mark and Sarah or Tom?",
+          "category": "temporal",
+          "expected": "Tom",
+          "actual": "I'm planning a trip to visit my friends Mark and Sarah, who I met on a beach trip about a month ago, and I was wondering if you could help me find some good restaurants in their hometown? I'm planning",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many weeks have I been accepted into the exchange program when I started attending the pre-departure orientation sessions?",
+          "category": "temporal",
+          "expected": "one week",
+          "actual": "I'm heading to the US soon for a semester abroad and I need help with packing. Can you give me some general tips on what to bring and what to leave behind? By the way, I've been attending pre-departur",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which group did I join first, 'Page Turners' or 'Marketing Professionals'?",
+          "category": "temporal",
+          "expected": "Page Turners",
+          "actual": "I'm looking for some book recommendations. I just joined a new book club group called \"Page Turners\" last week, where we discuss our favorite novels and share recommendations. Do you have any suggesti",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How long had I been taking guitar lessons when I bought the new guitar amp?",
+          "category": "temporal",
+          "expected": "Four weeks",
+          "actual": "I've been using a metronome to help with my timing, but I'm not sure if I'm using it to its full potential. By the way, I recently bought a new guitar amp two weeks ago, which has made a huge differen",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which streaming service did I start using most recently?",
+          "category": "temporal",
+          "expected": "Disney+",
+          "actual": "I'm looking for some new shows to watch. I've been using Netflix, Hulu, and Amazon Prime for the past 6 months, and I'm open to trying out other services or finding new content on these platforms. Can",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many months before my anniversary did Rachel get engaged?",
+          "category": "temporal",
+          "expected": "2",
+          "actual": "I'm looking for some gift ideas for my sister-in-law's sister, who got married last December. I finally got around to buying a kitchen appliance from their registry, but I want to add a more personal ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which event happened first, the narrator losing their phone charger or the narrator receiving their new phone case?",
+          "category": "temporal",
+          "expected": "Receiving the new phone case",
+          "actual": "I'm actually planning to buy a new phone charger, since I lost my old one at the gym about two weeks ago. Buying a new phone charger is a great idea! Losing a charger can be frustrating, especially wh",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Who did I meet first, the woman selling jam at the farmer's market or the tourist from Australia?",
+          "category": "temporal",
+          "expected": "the woman selling jam at the farmer's market",
+          "actual": "Speaking of Sydney, I actually met a tourist from Australia last Thursday on the subway when I was on my way to work. He was lost in the city and I helped him navigate the subway map. We ended up chat",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which event happened first, the meeting with Rachel or the pride parade?",
+          "category": "temporal",
+          "expected": "The meeting with Rachel",
+          "actual": "I'm planning to discuss this with my mentor, Rachel, who I had a meeting with on April 10th. She's been a great source of guidance and support, and I think she'll be able to offer some valuable insigh",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which gift did I buy first, the necklace for my sister or the photo album for my mom?",
+          "category": "temporal",
+          "expected": "the photo album for my mom",
+          "actual": "That's wonderful! A customized photo album is a thoughtful and personalized gift that your mom will surely treasure. Shutterfly is a great platform for creating such gifts, and it's great to hear that",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which event did I participate in first, the volleyball league or the charity 5K run to raise money for a local children's hospital?",
+          "category": "temporal",
+          "expected": "volleyball league",
+          "actual": "Hi! I'm looking for some tips on how to improve my overall fitness. I've been playing volleyball regularly and trying to get to the gym more often, but I want to take it to the next level. By the way,",
+          "correct": false,
+          "score": 0.0
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "benchmarks_run": 1,
+    "total_queries": 50,
+    "overall_score": 0.24,
+    "total_correct": 12,
+    "total_incorrect": 38,
+    "total_abstained": 0,
+    "total_duration_ms": 214637.6,
+    "per_benchmark": {
+      "longmemeval-real": 0.24
+    }
+  }
+}

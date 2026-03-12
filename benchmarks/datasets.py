@@ -110,7 +110,7 @@ def load_longmemeval_dataset(path: str | None = None) -> list[dict]:
     data_dir = Path(path) if path else _DEFAULT_LONGMEMEVAL_PATH
 
     # Try real dataset first
-    for candidate in ["longmemeval.json", "longmemeval_stub.json"]:
+    for candidate in ["longmemeval_oracle.json", "longmemeval.json", "longmemeval_stub.json"]:
         filepath = data_dir / candidate
         if filepath.exists():
             logger.info("Loading LongMemEval data from %s", filepath)

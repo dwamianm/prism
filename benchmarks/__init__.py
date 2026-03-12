@@ -12,8 +12,8 @@ Provides standardized benchmarks for evaluating PRME's memory retrieval:
 Run via CLI: ``python -m benchmarks [locomo|longmemeval|epistemic|all]``
 """
 
-from benchmarks.locomo import LoCoMoBenchmark
-from benchmarks.longmemeval import LongMemEvalBenchmark
+from benchmarks.locomo import LoCoMoBenchmark, LoCoMoRealBenchmark
+from benchmarks.longmemeval import LongMemEvalBenchmark, LongMemEvalRealBenchmark
 from benchmarks.epistemic import EpistemicBenchmark
 from benchmarks.models import BenchmarkResult, QueryResult
 from benchmarks.runner import BenchmarkRunner
@@ -23,6 +23,8 @@ __all__ = [
     "BenchmarkRunner",
     "EpistemicBenchmark",
     "LoCoMoBenchmark",
+    "LoCoMoRealBenchmark",
     "LongMemEvalBenchmark",
+    "LongMemEvalRealBenchmark",
     "QueryResult",
 ]

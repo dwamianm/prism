@@ -1,0 +1,834 @@
+{
+  "benchmarks": [
+    {
+      "benchmark_name": "longmemeval-real",
+      "overall_score": 0.46,
+      "category_scores": {
+        "info_extraction": 0.6667,
+        "knowledge_update": 0.7059,
+        "multi_session": 0.3571,
+        "temporal": 0.2143
+      },
+      "total_queries": 100,
+      "correct": 46,
+      "incorrect": 54,
+      "abstained": 0,
+      "duration_ms": 415219.7,
+      "timestamp": "2026-03-12T14:20:56.249883+00:00",
+      "details": [
+        {
+          "query": "What was my personal best time in the charity 5K run?",
+          "category": "knowledge_update",
+          "expected": "25 minutes and 50 seconds (or 25:50)",
+          "actual": "I'm getting ready for a charity 5K run and I was wondering if you could give me some tips on how to improve my endurance. By the way, I'm hoping to beat my personal best time this time around. I'm tra",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many Korean restaurants have I tried in my city?",
+          "category": "knowledge_update",
+          "expected": "four",
+          "actual": "I think I'll go with kimchi and bokkeumbap. By the way, have you tried any good Korean restaurants in my city lately? I've tried four different ones so far, and I'm always looking for new recommendati",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where did Rachel move to after her recent relocation?",
+          "category": "knowledge_update",
+          "expected": "the suburbs",
+          "actual": "I'm also thinking about visiting my friend Rachel who recently moved to a new apartment in the city. Do you know what the weather is like in the city this time of year? She moved to Chicago. I'm happy",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What was the amount I was pre-approved for when I got my mortgage from Wells Fargo?",
+          "category": "knowledge_update",
+          "expected": "$400,000",
+          "actual": "I'm actually buying a $325,000 house, and I got pre-approved for $350,000 from Wells Fargo. What would be the estimated closing costs for my situation? I'm planning to move into my new home soon and I",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How often do I attend yoga classes to help with my anxiety?",
+          "category": "knowledge_update",
+          "expected": "Three times a week.",
+          "actual": "I'll definitely check out those book recommendations and online resources. I've been trying to educate myself more about anxiety and depression, and it's helpful to have a list of trusted resources to",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Is my mom using the same grocery list method as me?",
+          "category": "knowledge_update",
+          "expected": "Yes.",
+          "actual": "By the way, I was just thinking, my mom is actually using the same grocery list app as me now, so we can easily share lists and keep track of what we need. Anyway, thanks for the fajita tips, I think ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many hours have I spent on my abstract ocean sculpture?",
+          "category": "knowledge_update",
+          "expected": "10-12 hours",
+          "actual": "I've been working on an abstract ocean sculpture at home, and I've spent around 5-6 hours on it so far. Do you have any tips on how to achieve a weathered, driftwood-like effect on my sculpture? Maybe",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many bikes do I currently own?",
+          "category": "knowledge_update",
+          "expected": "4",
+          "actual": "I'm planning to use my road bike for the century ride, and I've been using it for long rides on the weekends. I've also been using my mountain bike for trail rides and my commuter bike for daily commu",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What day of the week do I take a cocktail-making class?",
+          "category": "knowledge_update",
+          "expected": "Friday",
+          "actual": "I'm looking for some inspiration for a new cocktail recipe. Do you have any ideas for a refreshing summer drink that incorporates tequila? By the way, I have a cocktail-making class on Fridays, so may",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where did I go on my most recent family trip?",
+          "category": "knowledge_update",
+          "expected": "Paris",
+          "actual": "I'm so excited to explore all these hidden gems in Tokyo! Since I've been thinking about my recent family trip to Paris, I was wondering if you could help me compare and contrast my experiences travel",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where do I initially keep my old sneakers?",
+          "category": "knowledge_update",
+          "expected": "under my bed",
+          "actual": "I'll definitely check out those brands and stores. Do you have any suggestions for a good cobbler to get my old sneakers polished and conditioned? That's really helpful! I'll definitely check out thos",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many short stories have I written since I started writing regularly?",
+          "category": "knowledge_update",
+          "expected": "seven",
+          "actual": "I like the idea of a writing calendar, especially since I've been enjoying writing short stories lately. Speaking of which, I was wondering, do you think it's a good idea to set a goal for a certain n",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many pages of 'A Short History of Nearly Everything' have I read so far?",
+          "category": "knowledge_update",
+          "expected": "220",
+          "actual": "I'm interested in learning more about renewable energy, can you recommend some online resources or documentaries that I can check out? By the way, I just finished reading about the discovery of DNA st",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many engineers do I lead when I just started my new role as Senior Software Engineer? How many engineers do I lead now?",
+          "category": "knowledge_update",
+          "expected": "When you just started your new role as Senior Software Engineer, you led 4 engineers. Now, you lead 5 engineers",
+          "actual": "I'll reach out to Samantha and ask about the Corporate Team Building Package for 6 people. I'll also consider the format and agenda for the team outing, and possibly plan for some structured activitie",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many titles are currently on my to-watch list?",
+          "category": "knowledge_update",
+          "expected": "25",
+          "actual": "I'll definitely check some of those out. I've been meaning to watch \"Victoria\" anyway. By the way, do you think you could suggest some historical dramas that are movies instead of series? I've got a l",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many stars do I need to reach the gold level on my Starbucks Rewards app?",
+          "category": "knowledge_update",
+          "expected": "120",
+          "actual": "I'm actually trying to reach the gold level on my Starbucks Rewards app, do you know how many stars I need for that? I actually forgot to ask, how many stars do I need to reach the gold level on my St",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How long have I been using my Fitbit Charge 3?",
+          "category": "knowledge_update",
+          "expected": "9 months",
+          "actual": "Cool, thanks for the suggestions! I'll definitely check them out. By the way, I've been using my Fitbit Charge 3 for 6 months now, and it's been helping me stay on track with my daily steps - speaking",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many items of clothing do I need to pick up or return from a store?",
+          "category": "multi_session",
+          "expected": "3",
+          "actual": "I think I'll use some boxes I have at home to store my winter clothes. By the way, I just exchanged a pair of boots I got from Zara on 2/5, and I still need to pick up the new pair. Do you have any ti",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many projects have I led or am currently leading?",
+          "category": "multi_session",
+          "expected": "2",
+          "actual": "With your background in marketing research and experience leading a data analysis team, you're off to a great start!\n\nChoosing between k-means and hierarchical clustering depends on your project's spe",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many model kits have I worked on or bought?",
+          "category": "multi_session",
+          "expected": "I have worked on or bought five model kits. The scales of the models are: Revell F-15 Eagle (scale not mentioned), Tamiya 1/48 scale Spitfire Mk.V, 1/16 scale German Tiger I tank, 1/72 scale B-29 bomber, and 1/24 scale '69 Camaro.",
+          "actual": "I'm planning to start working on the engine wiring and fuel lines for my '69 Camaro model. Do you have any tips on how to create a realistic wire bundle or wire wrap, and how to attach it to the engin",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days did I spend on camping trips in the United States this year?",
+          "category": "multi_session",
+          "expected": "8 days.",
+          "actual": "I'm planning a trip to Moab, Utah and was wondering if you could recommend some must-see attractions and trails in the area. By the way, I've been loving the scenic drives and hikes in Utah lately - w",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many weeks did it take me to watch all the Marvel Cinematic Universe movies and the main Star Wars films?",
+          "category": "multi_session",
+          "expected": "3.5 weeks",
+          "actual": "I'm trying to keep track of all the movies I've watched recently. Can you help me organize them in a list or something? By the way, I just finished a Star Wars marathon, watched all the main films in ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many plants did I acquire in the last month?",
+          "category": "multi_session",
+          "expected": "3",
+          "actual": "I'm also wondering if I should repot my snake plant, which I got from my sister last month. Do you think it would benefit from a bigger pot and some fresh potting mix? I'm having some issues with my b",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How much total money have I spent on bike-related expenses since the start of the year?",
+          "category": "multi_session",
+          "expected": "$185",
+          "actual": "I've been keeping track of my bike mileage, and as of last week, I've clocked 347 miles since the start of the year. My goal is to reach 1000 miles by the end of summer. Do you have any tips on how to",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many hours in total did I spend driving to my three road trip destinations combined?",
+          "category": "multi_session",
+          "expected": "15 hours for getting to the three destinations (or 30 hours for the round trip)",
+          "actual": "I'm planning another road trip and I'm thinking of going to a coastal town. Do you have any recommendations? By the way, I've had some great experiences with coastal trips, like my recent trip to Oute",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many different doctors did I visit?",
+          "category": "multi_session",
+          "expected": "I visited three different doctors: a primary care physician, an ENT specialist, and a dermatologist.",
+          "actual": "I'm glad you found the information helpful!\n\n**Excellent question** about asking your doctor questions during the consultation before the colonoscopy! It's essential to be prepared and informed about ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What time did I go to bed on the day before I had a doctor's appointment?",
+          "category": "multi_session",
+          "expected": "2 AM",
+          "actual": "I need some help with planning my day on Tuesday. I have a yoga class in the evening, and I want to make sure I get everything done before that. Can you help me prioritize my tasks and create a schedu",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many different types of citrus fruits have I used in my cocktail recipes?",
+          "category": "multi_session",
+          "expected": "3",
+          "actual": "That's a great selection of mixers and garnishes! I think I'll also add some flavored simple syrups, like strawberry and mint, to give guests even more options. By the way, I learned how to make flavo",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many movie festivals that I attended?",
+          "category": "multi_session",
+          "expected": "I attended four movie festivals.",
+          "actual": "That's a great point about the cinematography in \"Joker\"! I completely agree that the mix of camera formats added to the film's tension and unease. By the way, speaking of unease, I've been thinking a",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days did I take social media breaks in total?",
+          "category": "multi_session",
+          "expected": "17 days",
+          "actual": "Congratulations on taking a week-long break from social media! That's a great step towards digital detox and self-awareness. Here are some apps and tools that can help you track and manage your screen",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many tanks do I currently have, including the one I set up for my friend's kid?",
+          "category": "multi_session",
+          "expected": "3",
+          "actual": "I've also been taking care of a small 1-gallon tank that I set up for a friend's kid, which has a few guppies and some plants. I was wondering if the temperature requirements are the same for these pl",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What is the total amount I spent on luxury items in the past few months?",
+          "category": "multi_session",
+          "expected": "$2,500",
+          "actual": "Here's a simple expense tracker template you can use:\n\n**Income**\n\n* Monthly salary: $____________\n* Other income (e.g., freelance, investments): $____________\n* Total income: $____________\n\n**Fixed E",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many hours have I spent playing games in total?",
+          "category": "multi_session",
+          "expected": "140 hours",
+          "actual": "I spent around 70 hours playing Assassin's Creed Odyssey, and I found the combat to be engaging, but not overly complex. If The Witcher 3's combat is more challenging, I'm willing to give it a try. Ca",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many weddings have I attended in this year?",
+          "category": "multi_session",
+          "expected": "I attended three weddings. The couples were Rachel and Mike, Emily and Sarah, and Jen and Tom.",
+          "actual": "The guest list conundrum! It can be a challenging task, but I'm happy to offer some tips to help you navigate it:\n\n1. **Set a realistic number**: Decide on a rough headcount with your partner and stic",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many babies were born to friends and family members in the last few months?",
+          "category": "multi_session",
+          "expected": "5",
+          "actual": "I think I'll add a few more birthdays to the calendar, including my cousin Rachel's son Max, who was born in March. I should also add my friends Mike and Emma's daughter Charlotte, who was born around",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many pieces of furniture did I buy, assemble, sell, or fix in the past few months?",
+          "category": "multi_session",
+          "expected": "4",
+          "actual": "I'm thinking of getting some new throw pillows for my couch, can you recommend some good online stores that sell a wide variety of patterns and fabrics? Oh, and speaking of organizing, I finally assem",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many times did I bake something in the past two weeks?",
+          "category": "multi_session",
+          "expected": "4",
+          "actual": "Overmixing and short fermentation time can definitely affect the texture and structure of your bread. Being gentle when mixing and giving the dough more time to ferment can make a big difference. Reme",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many different museums or galleries did I visit in the month of February?",
+          "category": "multi_session",
+          "expected": "2",
+          "actual": "That's great, I'll definitely check out those resources! I've always been fascinated by the process of creating art, and I'm excited to learn more about abstract art and printmaking. By the way, I rec",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many different cuisines have I learned to cook or tried out in the past few months?",
+          "category": "multi_session",
+          "expected": "4",
+          "actual": "I'm looking for some ideas on meal prep for the week. I've been trying to cook more at home, and I want to make sure I'm using up all the ingredients I buy. By the way, I just tried out a recipe for K",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many properties did I view before making an offer on the townhouse in the Brookside neighborhood?",
+          "category": "multi_session",
+          "expected": "I viewed four properties before making an offer on the townhouse in the Brookside neighborhood. The reasons I didn't make an offer on them were: the kitchen of the bungalow needed serious renovation, the property in Cedar Creek was out of my budget, the noise from the highway was a deal-breaker for the 1-bedroom condo, and my offer on the 2-bedroom condo was rejected due to a higher bid.",
+          "actual": "I forgot to mention that I saw the 3-bedroom townhouse in the Brookside neighborhood on February 22nd. I put in an offer on February 25th, and after some negotiations, we agreed on a price of $340,000",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many different types of food delivery services have I used recently?",
+          "category": "multi_session",
+          "expected": "3",
+          "actual": "I'm looking for some healthy meal ideas for my busy weekdays. Do you have any recommendations? By the way, I've been relying on food delivery services a lot lately - I had Domino's Pizza three times l",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many hours of jogging and yoga did I do last week?",
+          "category": "multi_session",
+          "expected": "0.5 hours",
+          "actual": "I've been trying to get more organized with my time, so I was wondering if you could suggest some apps or tools to help me plan out my daily tasks and stay on top of my schedule? By the way, I used to",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which social media platform did I gain the most followers on over the past month?",
+          "category": "multi_session",
+          "expected": "TikTok",
+          "actual": "I'm looking to create a content calendar for my social media platforms. I've been posting quite regularly, but I want to make sure I'm consistent across all platforms. Can you help me with that? By th",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which grocery store did I spend the most money at in the past month?",
+          "category": "multi_session",
+          "expected": "Thrive Market",
+          "actual": "I'm trying to plan my meals for the upcoming week and was wondering if you could help me with some recipe suggestions. By the way, I just want to mention that I went grocery shopping last Saturday, ex",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How much more did I spend on accommodations per night in Hawaii compared to Tokyo?",
+          "category": "multi_session",
+          "expected": "$270",
+          "actual": "Thank you for the information. I stayed in a hostel in Tokyo that cost around $30 per night when I went solo last January, so it's possible for me to find good deals. I'm planning to visit some of the",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "I'm checking our previous chat about the shift rotation sheet for GM social media agents. Can you remind me what was the rotation for Admon on a Sunday?",
+          "category": "info_extraction",
+          "expected": "Admon was assigned to the 8 am - 4 pm (Day Shift) on Sundays.",
+          "actual": "Thank you for providing the agent names. Here's an updated version of the shift rotation sheet for GM social media agents with 7 agents, 4 shifts, and 2 days off for every agent for a week starting on",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "I'm planning to visit Bandung again and I was wondering if you could remind me of the name of that restaurant in Cihampelas Walk that serves a great Nasi Goreng?",
+          "category": "info_extraction",
+          "expected": "Miss Bee Providore",
+          "actual": "Sure! There are many good restaurants and cafes in the Cihampelas Walk area. Here are a few options:\n\n1. Miss Bee Providore: This restaurant serves a mix of western and Indonesian cuisine and has a co",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "I'm going back to our previous conversation about the children's book on dinosaurs. Can you remind me what color was the scaly body of the Plesiosaur in the image?",
+          "category": "info_extraction",
+          "expected": "The Plesiosaur had a blue scaly body.",
+          "actual": "\"The Amazing Adventures of Dinosaurs\"\n\nOnce upon a time, in a land far, far away, there lived a group of incredible creatures called dinosaurs. These fascinating creatures roamed the earth, ruled the ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "I'm planning to revisit Orlando. I was wondering if you could remind me of that unique dessert shop with the giant milkshakes we talked about last time?",
+          "category": "info_extraction",
+          "expected": "The Sugar Factory at Icon Park.",
+          "actual": "Wow, those tips are great! I'm excited to take on this dessert adventure with my family. Do you have any more recommendations for other fun and unique things to do in Orlando? Absolutely! Here are som",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Can you remind me of the name of the romantic Italian restaurant in Rome you recommended for dinner?",
+          "category": "info_extraction",
+          "expected": "Roscioli",
+          "actual": "Can you recommend some authentic Italian restaurants in Rome? Yes, here are some highly recommended authentic Italian restaurants in Rome:\n\n1. Trattoria Da Enzo al 29 - located in the Trastevere neigh",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "I remember you told me about the refining processes at CITGO's three refineries earlier. Can you remind me what kind of processes are used at the Lake Charles Refinery?",
+          "category": "info_extraction",
+          "expected": "Atmospheric distillation, fluid catalytic cracking (FCC), alkylation, and hydrotreating.",
+          "actual": "CITGO operates three refineries in the United States, located in Lake Charles, Louisiana; Lemont, Illinois; and Corpus Christi, Texas. Each refinery has its own set of refining processes, but here are",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "I'm planning my trip to Amsterdam again and I was wondering, what was the name of that hostel near the Red Light District that you recommended last time?",
+          "category": "info_extraction",
+          "expected": "International Budget Hostel",
+          "actual": "I don't have personal preferences or experiences in staying in hostels. however, i have thoroughly researched and provided you with some of the best budget-friendly hostels in amsterdam based on custo",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "I think we discussed work from home jobs for seniors earlier. Can you remind me what was the 7th job in the list you provided?",
+          "category": "info_extraction",
+          "expected": "Transcriptionist.",
+          "actual": "Brainstorm ideas for work from home jobs for seniors 1. Virtual customer service representative\n2. Telehealth professional\n3. Remote bookkeeper\n4. Virtual tutor or teacher\n5. Freelance writer or edito",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "In our previous chat, you suggested 'sexual compulsions' and a few other options for alternative terms for certain behaviors. Can you remind me what the other four options were?",
+          "category": "info_extraction",
+          "expected": "I suggested 'sexual fixations', 'problematic sexual behaviors', 'sexual impulsivity', and 'compulsive sexuality'.",
+          "actual": "I apologize if my previous suggestions were not helpful. Here are some other alternatives:\n\n1. Sexual fixations - This term implies a strong preoccupation with sexual thoughts or behaviors that may in",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "I wanted to check back on our previous conversation about Netflix. I mentioned that I wanted to be able to access all seasons of old shows? Do you remember what show I used as an example, the one that only had the last season available?",
+          "category": "info_extraction",
+          "expected": "Doc Martin",
+          "actual": "Yes. I have a comment. After a while Netflix takes down shows. I want to be able to have access to all seasons for old shows. I will give you an example, \"doc martin\" show went down after a while, and",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "I wanted to follow up on our previous conversation about binaural beats for anxiety and depression. Can you remind me how many subjects were in the study published in the journal Music and Medicine that found significant reductions in symptoms of depression, anxiety, and stress?",
+          "category": "info_extraction",
+          "expected": "38 subjects",
+          "actual": "Sure, here are a few studies that suggest the effectiveness of binaural beats in reducing symptoms of anxiety and depression:\n\n1. In a study published in the journal Alternative Therapies in Health an",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "I was thinking about our previous conversation about the Fifth Album, and I was wondering if you could remind me what song you said best exemplified the band's growth and development as artists?",
+          "category": "info_extraction",
+          "expected": "Evolution",
+          "actual": "Which song on the Fifth Album do you think best exemplifies the band's growth and development as artists, and how does it compare to their earlier work in terms of style, lyrics, and instrumentation? ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What degree did I graduate with?",
+          "category": "info_extraction",
+          "expected": "Business Administration",
+          "actual": "I graduated with a degree in Business Administration, which has definitely helped me in my new role. Do you have any advice on how to stay organized when it comes to paperwork and documentation, espec",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How long is my daily commute to work?",
+          "category": "info_extraction",
+          "expected": "45 minutes each way",
+          "actual": "I've been listening to audiobooks during my daily commute, which takes 45 minutes each way. I'm looking for some new fiction audiobook recommendations. I've been enjoying audiobooks a lot lately, espe",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where did I redeem a $5 coupon on coffee creamer?",
+          "category": "info_extraction",
+          "expected": "Target",
+          "actual": "I actually redeemed a $5 coupon on coffee creamer last Sunday, which was a nice surprise since I didn't know I had it in my email inbox. That's awesome! Redeeming a surprise coupon is always a great f",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What play did I attend at the local community theater?",
+          "category": "info_extraction",
+          "expected": "The Glass Menagerie",
+          "actual": "I'll definitely try those suggestions. By the way, I recently went to a play at the local community theater and was impressed by the lead actress's performance - she reminded me of my friend Emily, wh",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What is the name of the playlist I created on Spotify?",
+          "category": "info_extraction",
+          "expected": "Summer Vibes",
+          "actual": "What's a good music streaming service that can help me discover new music and artists, especially in the ambient and lo-fi genres? Also, by the way, I've been listening to this one playlist on Spotify",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What was my last name before I changed it?",
+          "category": "info_extraction",
+          "expected": "Johnson",
+          "actual": "I need to update my address with my health insurance provider. Can you walk me through the process or give me a phone number to call? By the way, I just recently changed my last name, and I'm still ge",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where do I take yoga classes?",
+          "category": "info_extraction",
+          "expected": "Serenity Yoga",
+          "actual": "I'm trying to plan a self-care day and was thinking of doing a morning yoga practice at home, then meeting a friend for brunch. Do you have any recommendations for healthy brunch spots near Serenity Y",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What color did I repaint my bedroom walls?",
+          "category": "info_extraction",
+          "expected": "a lighter shade of gray",
+          "actual": "I've heard great things about Snake Plants, but I'm also curious about the ZZ Plant. Can you tell me more about its watering schedule and how often it needs to be fertilized? By the way, I've been doi",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "When did I volunteer at the local animal shelter's fundraising dinner?",
+          "category": "info_extraction",
+          "expected": "February 14th",
+          "actual": "I'm most passionate about animal welfare and children's health, so anything related to those causes would be great. I'm open to attending different types of events, but I did really enjoy the \"Love is",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Where did I buy my new tennis racket from?",
+          "category": "info_extraction",
+          "expected": "the sports store downtown",
+          "actual": "I'll definitely do those exercises before playing tennis. By the way, I'm really happy with my new tennis racket, which I got from a sports store downtown. It's been performing really well, and I feel",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What was my previous occupation?",
+          "category": "info_extraction",
+          "expected": "Marketing specialist at a small startup",
+          "actual": "I'm actually thinking of automating some of the workflows in my new role as a senior marketing analyst. In my previous role at the startup, I was responsible for managing a team of interns, and I had ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How much did I spend on a designer handbag?",
+          "category": "info_extraction",
+          "expected": "$800",
+          "actual": "I think I'd like to start tracking my expenses. Can you recommend any good budgeting apps? I've been using my credit card a lot lately, and I'm pretty sure I spent a lot on luxury items last month. I ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many playlists do I have on Spotify?",
+          "category": "info_extraction",
+          "expected": "20",
+          "actual": "I've been listening to a mix of Lo-Fi hip hop beats and Tameca Jones' album on repeat lately, and I realized I want to create a new playlist for relaxing music. Can you suggest some mellow artists or ",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Where did I attend for my study abroad program?",
+          "category": "info_extraction",
+          "expected": "University of Melbourne in Australia",
+          "actual": "That sounds amazing! I've been to the Great Ocean Road before, and it's definitely a must-see in Australia. I actually went there with some friends during my study abroad program at the University of ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What was the discount I got on my first purchase from the new clothing brand?",
+          "category": "info_extraction",
+          "expected": "10%",
+          "actual": "I'm also thinking of exploring other platforms like Instagram and Twitter to promote my writing services. Do you have any tips on how to get started with those platforms, especially since I don't have",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "What was the first issue I had with my new car after its first service?",
+          "category": "temporal",
+          "expected": "GPS system not functioning correctly",
+          "actual": "I'm thinking of getting my car detailed soon. Do you know any good detailers in the area or have any recommendations? By the way, I just got my car serviced for the first time on March 15th, and it wa",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which event did I attend first, the 'Effective Time Management' workshop or the 'Data Analysis using Python' webinar?",
+          "category": "temporal",
+          "expected": "'Data Analysis using Python' webinar",
+          "actual": "I've been thinking about my goals and priorities lately, and I realized that I want to focus more on learning new skills and expanding my knowledge in different areas. I've been attending various work",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which vehicle did I take care of first in February, the bike or the car?",
+          "category": "temporal",
+          "expected": "bike",
+          "actual": "I'm thinking of getting a new bike rack for my car. Do you have any recommendations? By the way, I've been having some issues with my bike lately - in mid-February, I had to take it in for repairs bec",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which device did I got first, the Samsung Galaxy S22 or the Dell XPS 13?",
+          "category": "temporal",
+          "expected": "Samsung Galaxy S22",
+          "actual": "I'm planning a trip to Hawaii and I need to pack the right adapters for my devices. Can you help me figure out what kind of power adapters I'll need for my new laptop, Dell XPS 13, and my new smartpho",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many days before the team meeting I was preparing for did I attend the workshop on 'Effective Communication in the Workplace'?",
+          "category": "temporal",
+          "expected": "7 days. 8 days (including the last day) is also acceptable.",
+          "actual": "I'm preparing for an upcoming meeting with my team and I want to make sure I'm effectively communicating our project updates. I recently attended a workshop on \"Effective Communication in the Workplac",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days had passed between the Sunday mass at St. Mary's Church and the Ash Wednesday service at the cathedral?",
+          "category": "temporal",
+          "expected": "30 days. 31 days (including the last day) is also acceptable.",
+          "actual": "I'm thinking of volunteering at a local charity event soon. Do you have any information on organizations that focus on serving the homeless? By the way, I recently attended the Sunday mass at St. Mary",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days did it take for me to find a house I loved after starting to work with Rachel?",
+          "category": "temporal",
+          "expected": "14 days. 15 days (including the last day) is also acceptable.",
+          "actual": "I'm looking for some advice on neighborhoods near my workplace. I've been working with a real estate agent, Rachel, and she's been helping me find a place that fits my needs. I'd love to know more abo",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which seeds were started first, the tomatoes or the marigolds?",
+          "category": "temporal",
+          "expected": "Tomatoes",
+          "actual": "I'm planning to plant some seedlings in my backyard soon. Can you tell me what's the ideal temperature for planting them outside? By the way, I just started some marigold seeds that arrived on March 3",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many days had passed between the Hindu festival of Holi and the Sunday mass at St. Mary's Church?",
+          "category": "temporal",
+          "expected": "21 days. 22 days (including the last day) is also acceptable.",
+          "actual": "I'm planning to volunteer at a local community event next weekend and I was wondering if you could suggest some ideas for fundraising activities that have been successful in the past. By the way, I ju",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days before the 'Rack Fest' did I participate in the 'Turbocharged Tuesdays' event?",
+          "category": "temporal",
+          "expected": "4 days.",
+          "actual": "I'm also looking for some advice on how to optimize my car's performance for auto racking events. Do you have any tips on how to improve my car's suspension and braking system? By the way, I received ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which pair of shoes did I clean last month?",
+          "category": "temporal",
+          "expected": "white Adidas sneakers",
+          "actual": "That's really helpful, thanks for the detailed comparison. I think I'll try on both pairs to see which one feels more comfortable. By the way, I wore my trusty old Converse Chuck Taylor All Star sneak",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "Which event happened first, the purchase of the coffee maker or the malfunction of the stand mixer?",
+          "category": "temporal",
+          "expected": "The malfunction of the stand mixer",
+          "actual": "I'm also thinking of organizing a dinner party soon, and I want to make sure I have all the necessary kitchen utensils and appliances in good condition. Speaking of which, I got my stand mixer back fr",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days had passed between the 'Walk for Hunger' event and the 'Coastal Cleanup' event?",
+          "category": "temporal",
+          "expected": "14 days. 8 days (including the last day) is also acceptable.",
+          "actual": "I'm looking to find some new charity events to participate in, particularly ones that involve walking or running. I just did the \"Walk for Hunger\" 5K walk on February 21st and had a great time, so I'm",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which item did I purchase first, the dog bed for Max or the training pads for Luna?",
+          "category": "temporal",
+          "expected": "Training pads for Luna",
+          "actual": "I'm thinking of getting some more supplies for my puppy, Luna. She's still in potty-training, and I've been using those eco-friendly training pads from Chewy.com. I got a set of 10 for $25 about a mon",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which task did I complete first, fixing the fence or trimming the goats' hooves?",
+          "category": "temporal",
+          "expected": "Fixing the fence",
+          "actual": "I'm thinking of hosting a farm open house event soon and I was wondering if you could help me come up with some fun activities for kids and adults alike. By the way, speaking of the farm, I've been do",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many charity events did I participate in before the 'Run for the Cure' event?",
+          "category": "temporal",
+          "expected": "4",
+          "actual": "The \"Run for the Cure\" event was truly inspiring, and I think what resonated with me the most was seeing so many people come together for a common cause. There were over 5,000 participants, and the en",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How long have I been working before I started my current job at NovaTech?",
+          "category": "temporal",
+          "expected": "4 years and 9 months",
+          "actual": "I'll start by saying that I'm a software engineer, specifically a backend developer, and I've been in this field since I graduated with a degree in Computer Science from the University of California, ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which book did I finish reading first, 'The Hate U Give' or 'The Nightingale'?",
+          "category": "temporal",
+          "expected": "'The Hate U Give'",
+          "actual": "I'm glad you liked \"The Hate U Give\". I've been trying to read more diversely, and that book was a great choice for our book club. I actually finished reading three fiction novels last weekend - \"The ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which device did I set up first, the smart thermostat or the mesh network system?",
+          "category": "temporal",
+          "expected": "Smart thermostat",
+          "actual": "I'm having some issues with my desktop computer, it's been freezing up on me randomly and I'm thinking of upgrading it. Can you help me figure out what specs I need and what kind of budget I'm looking",
+          "correct": true,
+          "score": 1.0
+        },
+        {
+          "query": "How many months ago did I book the Airbnb in San Francisco?",
+          "category": "temporal",
+          "expected": "Five months ago",
+          "actual": "I'm planning a trip to San Francisco and was wondering if you could recommend some good neighborhoods to stay in. By the way, I've had a great experience with Airbnb in the past, like when I stayed in",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long did I take to finish 'The Seven Husbands of Evelyn Hugo' and 'The Nightingale' combined?",
+          "category": "temporal",
+          "expected": "5.5 weeks",
+          "actual": "I'm looking for some new audiobook recommendations. I've been enjoying listening to them during my daily commute and I just finished \"The Seven Husbands of Evelyn Hugo\", which took me two and a half w",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What was the date on which I attended the first BBQ event in June?",
+          "category": "temporal",
+          "expected": "June 3rd",
+          "actual": "I'm looking for some recommendations on BBQ sauce brands. I recently used up my favorite Sweet Baby Ray's at my friend's place last Saturday, which was on the 17th of June, and I need to restock. I'm ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days before I bought the iPhone 13 Pro did I attend the Holiday Market?",
+          "category": "temporal",
+          "expected": "7 days. 8 days (including the last day) is also acceptable.",
+          "actual": "I'm looking to upgrade my phone case and screen protector. Can you show me some options for iPhone 13 Pro cases and screen protectors? By the way, I got my iPhone 13 Pro at a discounted price of $800 ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Which show did I start watching first, 'The Crown' or 'Game of Thrones'?",
+          "category": "temporal",
+          "expected": "'Game of Thrones'",
+          "actual": "I'm looking for some new shows to watch on HBO Max. I've been meaning to check out \"Game of Thrones\" for a while, and I finally started it about a month ago. I've finished the first four seasons so fa",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long had I been a member of 'Book Lovers Unite' when I attended the meetup?",
+          "category": "temporal",
+          "expected": "Two weeks",
+          "actual": "I'm looking for some book recommendations. I just finished reading the latest bestseller by John Grisham and loved it. Speaking of which, I attended a meetup organized by Book Lovers Unite last week w",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long had I been watching stand-up comedy specials regularly when I attended the open mic night at the local comedy club?",
+          "category": "temporal",
+          "expected": "2 months",
+          "actual": "I'm looking for some advice on writing jokes. I've recently gotten into stand-up comedy and I'm trying to improve my craft. Last month, I finally worked up the courage to attend an open mic night at a",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What time do I wake up on Tuesdays and Thursdays?",
+          "category": "temporal",
+          "expected": "6:45 AM",
+          "actual": "I'm trying to create a personalized morning routine that works for me. I've recently started going for a 30-minute walk before work, which has been great. On Tuesdays and Thursdays, I've also started ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days had passed since I bought my Adidas running shoes when I realized one of the shoelaces on my old Converse sneakers had broken?",
+          "category": "temporal",
+          "expected": "14 days. 15 days (including the last day) is also acceptable.",
+          "actual": "I'm looking for some shoe cleaning tips. I've got a pair of sneakers that I wore to play basketball on February 1st and they got pretty dirty. By the way, speaking of shoes, I realized that one of the",
+          "correct": false,
+          "score": 0.0
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "benchmarks_run": 1,
+    "total_queries": 100,
+    "overall_score": 0.46,
+    "total_correct": 46,
+    "total_incorrect": 54,
+    "total_abstained": 0,
+    "total_duration_ms": 415219.7,
+    "per_benchmark": {
+      "longmemeval-real": 0.46
+    }
+  }
+}

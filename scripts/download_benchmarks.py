@@ -41,7 +41,8 @@ LOCOMO_URL = (
     "https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json"
 )
 LONGMEMEVAL_URL = (
-    "https://raw.githubusercontent.com/xiaowu0162/LongMemEval/main/data/longmemeval.json"
+    "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned"
+    "/resolve/main/longmemeval_oracle.json"
 )
 
 
@@ -169,7 +170,7 @@ def download_longmemeval(stub_only: bool = False) -> Path:
     LONGMEMEVAL_DIR.mkdir(parents=True, exist_ok=True)
 
     if not stub_only:
-        dest = LONGMEMEVAL_DIR / "longmemeval.json"
+        dest = LONGMEMEVAL_DIR / "longmemeval_oracle.json"
         if dest.exists():
             logger.info("LongMemEval dataset already exists at %s", dest)
             return LONGMEMEVAL_DIR

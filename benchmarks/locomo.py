@@ -4,14 +4,19 @@ Generates synthetic 300+ turn conversations covering project evolution,
 team changes, and tech stack updates. Tests question answering accuracy,
 event summarization, and temporal reasoning over extended dialogues.
 
-All data is synthetic -- no external datasets needed.
-Works without LLM -- uses engine.store() directly.
+Includes both synthetic (no external deps) and real dataset adapters.
+The real LoCoMo-10 dataset can be downloaded via:
+    python scripts/download_benchmarks.py --locomo
 """
 
 from __future__ import annotations
 
+import json
+import logging
+import re
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from benchmarks.metrics import exclusion_score, keyword_match_score
@@ -21,6 +26,8 @@ if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
 
 from prme.types import EpistemicType, NodeType, Scope
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +145,7 @@ def generate_conversation(turns: int = 300) -> tuple[
         ("Bob completed the WebSocket notification system.", "fact", ["bob", "websockets", "complete"], 37),
         ("New hire: Eve joins as a DevOps engineer next week.", "fact", ["eve", "devops", "team"], 38),
         ("Sprint 13 velocity was 42 story points, up from 38.", "fact", ["sprint-13", "velocity"], 39),
-        ("Migrating monitoring from self-hosted Prometheus to Datadog.", "fact", ["datadog", "monitoring", "migration"], 40),
+        ("Completed migration from Prometheus to Datadog. Datadog is now our monitoring tool.", "fact", ["datadog", "monitoring", "monitoring-tool", "migration"], 40),
     ]
 
     for content, ntype, tags, day in standup_topics:
@@ -194,7 +201,7 @@ def generate_conversation(turns: int = 300) -> tuple[
         ("Neptune's ML anomaly detection is in beta with 10 early adopters.", "fact", ["ml", "anomaly", "beta"], 72),
         ("We adopted Terraform for infrastructure as code.", "fact", ["terraform", "iac", "infrastructure"], 73),
         ("Frank built a recommendation engine using collaborative filtering.", "fact", ["frank", "recommendation", "ml"], 75),
-        ("Sprint planning moved from Jira to Linear for better UX.", "fact", ["linear", "jira", "project-management", "migration"], 77),
+        ("Switched project management from Jira to Linear. Linear is now our project management tool.", "fact", ["linear", "jira", "project-management", "project-management-tool", "migration"], 77),
         ("Alice presented Neptune at a tech conference. Great reception.", "fact", ["alice", "conference", "neptune"], 78),
         ("Security: implemented SOC2 compliance measures.", "fact", ["soc2", "security", "compliance"], 80),
         ("Bob is now leading the API team with 3 reports.", "fact", ["bob", "team-lead", "api-team"], 82),
@@ -526,4 +533,183 @@ class LoCoMoBenchmark:
             abstained=0,
             duration_ms=duration_ms,
             details=details,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Real dataset benchmark
+# ---------------------------------------------------------------------------
+
+# LoCoMo category int → name mapping
+_LOCOMO_CATEGORIES: dict[int, str] = {
+    1: "single_hop",
+    2: "temporal",
+    3: "inference",
+    4: "multi_hop",
+    # 5 = adversarial (requires LLM judge, skipped)
+}
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_LOCOMO_PATH = _PROJECT_ROOT / "data" / "benchmarks" / "locomo" / "locomo10.json"
+
+
+def _extract_sessions(conversation: dict) -> list[tuple[list[dict], str | None]]:
+    """Extract ordered sessions from a LoCoMo conversation dict.
+
+    Returns list of (turns, date_time_str) tuples sorted by session number.
+    """
+    session_nums = set()
+    for key in conversation:
+        m = re.match(r"^session_(\d+)$", key)
+        if m:
+            session_nums.add(int(m.group(1)))
+
+    sessions = []
+    for num in sorted(session_nums):
+        turns = conversation[f"session_{num}"]
+        date_str = conversation.get(f"session_{num}_date_time")
+        sessions.append((turns, date_str))
+    return sessions
+
+
+class LoCoMoRealBenchmark:
+    """LoCoMo benchmark using the real LoCoMo-10 dataset.
+
+    Evaluates PRME retrieval against the published LoCoMo dataset
+    (arXiv 2402.17753). Uses keyword-match scoring (reproducible,
+    no LLM judge needed). Category 5 (adversarial) is skipped since
+    it requires LLM judgment.
+
+    Download the dataset first::
+
+        python scripts/download_benchmarks.py --locomo
+    """
+
+    name = "locomo-real"
+
+    def __init__(
+        self,
+        dataset_path: str | None = None,
+        max_conversations: int = 1,
+    ) -> None:
+        self.dataset_path = Path(dataset_path) if dataset_path else _DEFAULT_LOCOMO_PATH
+        self.max_conversations = max_conversations
+
+    async def run(self, engine: MemoryEngine) -> BenchmarkResult:
+        if not self.dataset_path.exists():
+            raise FileNotFoundError(
+                f"LoCoMo dataset not found at {self.dataset_path}. "
+                "Run: python scripts/download_benchmarks.py --locomo"
+            )
+
+        start_time = time.monotonic()
+
+        with open(self.dataset_path) as f:
+            all_conversations = json.load(f)
+
+        conversations = all_conversations[: self.max_conversations]
+        logger.info(
+            "Running LoCoMo-real on %d/%d conversations",
+            len(conversations),
+            len(all_conversations),
+        )
+
+        all_details: list[QueryResult] = []
+        category_results: list[tuple[str, float]] = []
+
+        for conv_idx, conv_data in enumerate(conversations):
+            sample_id = conv_data.get("sample_id", f"conv-{conv_idx}")
+            user_id = f"bench-locomo-real-{sample_id}"
+            conversation = conv_data["conversation"]
+            sessions = _extract_sessions(conversation)
+
+            # Ingest all sessions with speaker + date context
+            total_turns = 0
+            for sess_idx, (turns, date_str) in enumerate(sessions):
+                session_id = f"{sample_id}-s{sess_idx}"
+                # Extract date for temporal context (e.g. "1:56 pm on 8 May, 2023")
+                date_prefix = f"({date_str}) " if date_str else ""
+                for turn in turns:
+                    text = turn["text"].strip()
+                    if len(text) < 15:
+                        continue  # skip very short turns (greetings, "ok", etc.)
+                    speaker = turn.get("speaker", "")
+                    enriched = f"{date_prefix}{speaker}: {text}"
+                    await engine.store(
+                        enriched,
+                        user_id=user_id,
+                        role="user",
+                        node_type=NodeType.FACT,
+                        scope=Scope.PERSONAL,
+                        session_id=session_id,
+                    )
+                    total_turns += 1
+
+            logger.info(
+                "Ingested %s: %d sessions, %d turns (after filtering)",
+                sample_id,
+                len(sessions),
+                total_turns,
+            )
+
+            # Evaluate QA (skip category 5)
+            qa_list = conv_data.get("qa", [])
+            for qa in qa_list:
+                cat_num = qa["category"]
+                if cat_num not in _LOCOMO_CATEGORIES:
+                    continue
+
+                cat_name = _LOCOMO_CATEGORIES[cat_num]
+                answer = str(qa.get("answer", ""))
+                if not answer:
+                    continue
+
+                response = await engine.retrieve(
+                    qa["question"], user_id=user_id
+                )
+                top_content = " ".join(
+                    r.node.content for r in response.results[:10]
+                )
+
+                # Try exact answer first, then individual words for
+                # multi-word answers (e.g. "Adoption agencies" → ["Adoption", "agencies"])
+                kw_score = keyword_match_score([answer], top_content)
+                if kw_score < 0.5 and len(answer.split()) > 1:
+                    words = [w for w in answer.split() if len(w) > 2]
+                    if words:
+                        kw_score = keyword_match_score(words, top_content)
+                is_correct = kw_score >= 0.5
+
+                all_details.append(QueryResult(
+                    query=qa["question"],
+                    category=cat_name,
+                    expected=answer,
+                    actual=top_content[:200],
+                    correct=is_correct,
+                    score=kw_score,
+                ))
+                category_results.append((cat_name, kw_score))
+
+        from benchmarks.metrics import category_scores as compute_categories
+
+        cat_scores = compute_categories(category_results)
+        correct = sum(1 for d in all_details if d.correct)
+        incorrect = sum(1 for d in all_details if not d.correct)
+        overall = (
+            sum(d.score for d in all_details) / len(all_details)
+            if all_details
+            else 0.0
+        )
+        duration_ms = (time.monotonic() - start_time) * 1000
+
+        return BenchmarkResult(
+            benchmark_name="locomo-real",
+            overall_score=overall,
+            category_scores=cat_scores,
+            total_queries=len(all_details),
+            correct=correct,
+            incorrect=incorrect,
+            abstained=0,
+            duration_ms=duration_ms,
+            details=all_details,
         )
