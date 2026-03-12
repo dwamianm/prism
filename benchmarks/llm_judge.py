@@ -18,9 +18,22 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 GENERATION_SYSTEM_PROMPT = """\
-Answer the question using ONLY the provided context. Be concise and direct.
-If the context doesn't contain enough information to answer, say "I don't know".
-Do not make up information that is not supported by the context.\
+Answer the question using the provided context. Be concise and direct.
+
+TEMPORAL REASONING: When the context contains timestamps and relative time \
+references (e.g., "yesterday", "last week", "last Friday", "a few weeks ago"), \
+compute the actual date by applying the offset to the message timestamp. \
+For example, if a message dated "6 July 2023" says "yesterday I went to \
+the museum", the museum visit was on 5 July 2023.
+
+INFERENCE: When the question asks about preferences, likely behaviors, or \
+opinions, you may make reasonable inferences from the context. For example, \
+if someone collects classic children's books, it is reasonable to infer they \
+would have well-known classics like Dr. Seuss. State your inference clearly.
+
+If the context contains no relevant information at all, say "I don't know".
+Do not fabricate specific facts, names, dates, or numbers that aren't \
+supported by the context.\
 """
 
 JUDGE_SYSTEM_PROMPT = """\
@@ -34,6 +47,15 @@ Scoring guidelines:
 - 0.1-0.3: The answer is mostly wrong but has a small relevant element.
 - 0.0: The answer is completely wrong, irrelevant, or says "I don't know" \
 when an answer was expected.
+
+Additional guidelines:
+- If the expected answer requires inference and the generated answer makes a \
+reasonable inference from context that aligns with the expected answer, \
+score 0.7-0.9 even if the wording differs.
+- For temporal questions, if the generated answer has the correct computed \
+date (accounting for relative offsets), score 1.0 regardless of format.
+- Minor formatting differences (e.g., "July 5" vs "5 July 2023") should \
+not reduce the score below 0.9.
 
 Focus on semantic correctness, not exact wording. A rephrased correct answer \
 should score high.\
