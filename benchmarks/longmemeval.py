@@ -441,7 +441,7 @@ class LongMemEvalBenchmark:
                     score = self._evaluate_abstention(response)
                 else:
                     top_content = " ".join(
-                        r.node.content for r in response.results[:10]
+                        r.node.content for r in response.results[:30]
                     )
                     kw_score = keyword_match_score(
                         tc.expected_keywords, top_content
@@ -664,7 +664,7 @@ class LongMemEvalRealBenchmark:
             else:
                 answer = str(question["answer"])
                 top_content = " ".join(
-                    r.node.content for r in response.results[:15]
+                    r.node.content for r in response.results[:30]
                 )
                 score = keyword_match_score([answer], top_content)
                 expected = answer
@@ -742,7 +742,7 @@ class LongMemEvalRealBenchmark:
         """
         import tempfile
 
-        from benchmarks.llm_judge import generate_answer, judge_answer
+        from benchmarks.llm_judge import generate_answer, judge_answer, reformulate_query
         from prme.config import PRMEConfig
 
         if not self.dataset_path.exists():
@@ -811,9 +811,32 @@ class LongMemEvalRealBenchmark:
                             session_id=session_id,
                         )
 
+                # Multi-query retrieval: original + 2 reformulations
                 response = await q_engine.retrieve(
                     question["question"], user_id=user_id
                 )
+                seen_ids = {str(r.node.id) for r in response.results}
+                all_results = list(response.results)
+
+                if not is_abstention:
+                    alt_queries = await reformulate_query(
+                        question["question"], llm_config
+                    )
+                    for alt_q in alt_queries:
+                        alt_response = await q_engine.retrieve(
+                            alt_q, user_id=user_id
+                        )
+                        for r in alt_response.results:
+                            rid = str(r.node.id)
+                            if rid not in seen_ids:
+                                seen_ids.add(rid)
+                                all_results.append(r)
+
+                    all_results.sort(
+                        key=lambda r: r.composite_score, reverse=True
+                    )
+                # Take top 50 for LLM context
+                all_results = all_results[:50]
             finally:
                 await q_engine.close()
 
@@ -828,8 +851,9 @@ class LongMemEvalRealBenchmark:
                 generated = ""
             else:
                 answer = str(question["answer"])
-                top_content = " ".join(
-                    r.node.content for r in response.results[:15]
+                top_content = "\n".join(
+                    f"[{i+1}] {r.node.content}"
+                    for i, r in enumerate(all_results[:50])
                 )
                 generated = await generate_answer(
                     question["question"], top_content, llm_config

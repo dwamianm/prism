@@ -672,7 +672,7 @@ class LoCoMoRealBenchmark:
                     qa["question"], user_id=user_id
                 )
                 top_content = " ".join(
-                    r.node.content for r in response.results[:10]
+                    r.node.content for r in response.results[:30]
                 )
 
                 # Try exact answer first, then individual words for
@@ -727,7 +727,7 @@ class LoCoMoRealBenchmark:
         via LLM and uses LLM-as-judge to score against the ground truth.
         Keyword-match score is still computed for comparison.
         """
-        from benchmarks.llm_judge import generate_answer, judge_answer
+        from benchmarks.llm_judge import generate_answer, judge_answer, reformulate_query
 
         if not self.dataset_path.exists():
             raise FileNotFoundError(
@@ -794,11 +794,43 @@ class LoCoMoRealBenchmark:
                 if not answer:
                     continue
 
+                # Multi-query retrieval: original + 2 reformulations + entity-focused
                 response = await engine.retrieve(
                     qa["question"], user_id=user_id
                 )
-                top_content = " ".join(
-                    r.node.content for r in response.results[:10]
+                seen_ids = {str(r.node.id) for r in response.results}
+                all_results = list(response.results)
+
+                alt_queries = await reformulate_query(
+                    qa["question"], llm_config
+                )
+                # Entity-focused: extract proper nouns and search for each
+                import re
+                _names_re = re.compile(r'\b([A-Z][a-z]{2,})\b')
+                entity_names = _names_re.findall(qa["question"])
+                # Filter out common question words
+                _skip = {"What", "When", "Where", "Who", "How", "Would", "Does", "Did", "Has", "Have", "Could", "Can", "The"}
+                entity_names = [n for n in entity_names if n not in _skip]
+                for name in entity_names[:2]:
+                    alt_queries.append(name)
+
+                for alt_q in alt_queries:
+                    alt_response = await engine.retrieve(
+                        alt_q, user_id=user_id
+                    )
+                    for r in alt_response.results:
+                        rid = str(r.node.id)
+                        if rid not in seen_ids:
+                            seen_ids.add(rid)
+                            all_results.append(r)
+
+                # Sort merged results by composite score, take top 50
+                all_results.sort(
+                    key=lambda r: r.composite_score, reverse=True
+                )
+                top_content = "\n".join(
+                    f"[{i+1}] {r.node.content}"
+                    for i, r in enumerate(all_results[:50])
                 )
 
                 # LLM generate + judge

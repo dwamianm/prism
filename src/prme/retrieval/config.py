@@ -128,14 +128,14 @@ class PackingConfig(BaseModel):
         description="Character-based token estimation default [HYPOTHESIS]",
     )
     graph_max_candidates: int = Field(
-        default=75,
+        default=150,
         description="Max candidates from graph traversal",
     )
     vector_k: int = Field(
-        default=100, description="Max candidates from vector search"
+        default=250, description="Max candidates from vector search"
     )
     lexical_k: int = Field(
-        default=100, description="Max candidates from lexical search"
+        default=250, description="Max candidates from lexical search"
     )
     graph_max_hops: int = Field(
         default=3, description="Max hops for graph neighborhood (1-3 per RFC)"
