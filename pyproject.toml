@@ -19,13 +19,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Database",
 ]
-
-[project.urls]
-Homepage = "https://github.com/dwamianm/prism"
-Documentation = "https://github.com/dwamianm/prism/tree/main/docs"
-Repository = "https://github.com/dwamianm/prism"
-Issues = "https://github.com/dwamianm/prism/issues"
-Changelog = "https://github.com/dwamianm/prism/blob/main/CHANGELOG.md"
 dependencies = [
     "duckdb>=1.2.0",
     "usearch>=2.16.0",
@@ -42,6 +35,13 @@ dependencies = [
     "dateparser>=1.2",
     "cryptography>=43.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dwamianm/prism"
+Documentation = "https://github.com/dwamianm/prism/tree/main/docs"
+Repository = "https://github.com/dwamianm/prism"
+Issues = "https://github.com/dwamianm/prism/issues"
+Changelog = "https://github.com/dwamianm/prism/blob/main/CHANGELOG.md"
 
 [project.scripts]
 prme = "prme.cli:main"
