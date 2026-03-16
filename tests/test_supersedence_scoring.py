@@ -393,30 +393,46 @@ class TestSupersedenceAwareScoring:
 
     def test_non_update_candidates_not_recency_boosted(self):
         """Even in current-state queries, candidates without update
-        language should not get the 1.5x recency boost."""
+        language should not get the 2.0x recency boost."""
         now = datetime.now(timezone.utc)
         one_day_ago = now - timedelta(days=1)
+        ten_days_ago = now - timedelta(days=10)
 
-        # Non-update content
-        candidate = _make_candidate(
+        # Recent candidate (recency reference point)
+        recent = _make_candidate(
+            content="Some recent fact",
+            semantic_score=0.50,
+            lexical_score=0.50,
+            updated_at=now,
+        )
+
+        # Older non-update content — should NOT get recency boost
+        older = _make_candidate(
             content="The database is PostgreSQL",
             semantic_score=0.80,
             lexical_score=0.70,
-            updated_at=one_day_ago,
+            updated_at=ten_days_ago,
         )
 
         analysis = _make_query_analysis("What is the current database?")
 
         ranked, traces = score_and_rank(
-            [candidate],
+            [recent, older],
             DEFAULT_SCORING_WEIGHTS,
             now=now,
             query_analysis=analysis,
         )
 
-        # The recency factor should be the raw exponential decay, not boosted.
-        expected_recency = math.exp(-DEFAULT_SCORING_WEIGHTS.recency_lambda * 1.0)
-        assert abs(traces[0].recency_factor - expected_recency) < 1e-6
+        # Find the trace for the older candidate (by content)
+        older_trace = next(
+            t for c, t in zip(ranked, traces) if c.node.content == "The database is PostgreSQL"
+        )
+
+        # The recency factor should be raw relative decay (10 days gap) with
+        # the current-state lambda (0.05), NOT the 2.0x update-language boost.
+        current_state_lambda = 0.05
+        expected_recency = math.exp(-current_state_lambda * 10.0)
+        assert abs(older_trace.recency_factor - expected_recency) < 1e-6
 
     def test_weight_redistribution_sums_to_one(self):
         """Adjusted weights for current-state queries must still sum to 1.0."""

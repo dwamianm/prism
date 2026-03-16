@@ -14,8 +14,10 @@ The real LongMemEval oracle dataset can be downloaded via:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -24,6 +26,7 @@ from typing import TYPE_CHECKING
 from benchmarks.metrics import exclusion_score, keyword_match_score
 from benchmarks.models import BenchmarkResult, QueryResult
 
+from prme.retrieval.context_formatter import format_for_llm
 from prme.storage.engine import MemoryEngine
 from prme.types import EpistemicType, NodeType, Scope
 
@@ -538,6 +541,21 @@ _DEFAULT_LME_PATH = (
     _PROJECT_ROOT / "data" / "benchmarks" / "longmemeval" / "longmemeval_oracle.json"
 )
 
+
+def _parse_haystack_date(date_str: str) -> datetime | None:
+    """Parse a LongMemEval haystack date like '2023/12/10 (Sun) 19:41'."""
+    from datetime import datetime, timezone
+    try:
+        # Strip day-of-week: '2023/12/10 (Sun) 19:41' -> '2023/12/10 19:41'
+        cleaned = date_str.split("(")[0].strip()
+        if ")" in date_str:
+            cleaned = date_str.split(")")[1].strip()
+            cleaned = date_str.split("(")[0].strip() + " " + cleaned
+        dt = datetime.strptime(cleaned.strip(), "%Y/%m/%d %H:%M")
+        return dt.replace(tzinfo=timezone.utc)
+    except (ValueError, IndexError):
+        return None
+
 logger = logging.getLogger(__name__)
 
 
@@ -603,55 +621,66 @@ class LongMemEvalRealBenchmark:
                 sampled.extend(qs[:n])
             questions = sampled[: self.max_questions]
 
+        concurrency = 5
         logger.info(
-            "Running LongMemEval-real: %d questions (%d preference skipped)",
+            "Running LongMemEval-real: %d questions (%d preference skipped), concurrency=%d",
             len(questions),
             len(all_questions) - len(questions),
+            concurrency,
         )
 
-        all_details: list[QueryResult] = []
-        category_results: list[tuple[str, float]] = []
+        semaphore = asyncio.Semaphore(concurrency)
+        completed = 0
 
-        for q_idx, question in enumerate(questions):
+        async def _process_question(
+            question: dict,
+        ) -> tuple[QueryResult, tuple[str, float]]:
+            nonlocal completed
             qid = question["question_id"]
             qtype = question["question_type"]
             ability = _LME_TYPE_MAP.get(qtype, qtype)
             is_abstention = qid.endswith("_abs")
             user_id = "bench-lme-real"
 
-            # Fresh engine per question to avoid index bloat
-            tmp = tempfile.mkdtemp(prefix="prme_lme_real_")
-            tmp_dir = Path(tmp)
-            lex_dir = tmp_dir / "lexical_index"
-            lex_dir.mkdir(parents=True, exist_ok=True)
-            q_engine = await MemoryEngine.create(PRMEConfig(
-                db_path=str(tmp_dir / "memory.duckdb"),
-                vector_path=str(tmp_dir / "vectors.usearch"),
-                lexical_path=str(lex_dir),
-            ))
+            async with semaphore:
+                tmp = tempfile.mkdtemp(prefix="prme_lme_real_")
+                tmp_dir = Path(tmp)
+                lex_dir = tmp_dir / "lexical_index"
+                lex_dir.mkdir(parents=True, exist_ok=True)
+                q_engine = await MemoryEngine.create(PRMEConfig(
+                    db_path=str(tmp_dir / "memory.duckdb"),
+                    vector_path=str(tmp_dir / "vectors.usearch"),
+                    lexical_path=str(lex_dir),
+                ))
 
-            try:
-                # Ingest haystack sessions
-                for sess_idx, session_turns in enumerate(
-                    question["haystack_sessions"]
-                ):
-                    session_id = f"s{sess_idx}"
-                    for turn in session_turns:
-                        await q_engine.store(
-                            turn["content"],
-                            user_id=user_id,
-                            role=turn["role"],
-                            node_type=NodeType.FACT,
-                            scope=Scope.PERSONAL,
-                            session_id=session_id,
+                try:
+                    haystack_dates = question.get("haystack_dates", [])
+                    for sess_idx, session_turns in enumerate(
+                        question["haystack_sessions"]
+                    ):
+                        session_id = f"s{sess_idx}"
+                        sess_time = (
+                            _parse_haystack_date(haystack_dates[sess_idx])
+                            if sess_idx < len(haystack_dates)
+                            else None
                         )
+                        for turn in session_turns:
+                            await q_engine.store(
+                                turn["content"],
+                                user_id=user_id,
+                                role=turn["role"],
+                                node_type=NodeType.FACT,
+                                scope=Scope.PERSONAL,
+                                session_id=session_id,
+                                event_time=sess_time,
+                            )
 
-                # Retrieve
-                response = await q_engine.retrieve(
-                    question["question"], user_id=user_id
-                )
-            finally:
-                await q_engine.close()
+                    response = await q_engine.retrieve(
+                        question["question"], user_id=user_id
+                    )
+                finally:
+                    await q_engine.close()
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
 
             if is_abstention:
                 score = self._evaluate_abstention(response)
@@ -670,26 +699,43 @@ class LongMemEvalRealBenchmark:
                 expected = answer
                 actual = top_content[:200]
 
-            # Use "abstention" category for abstention questions
             cat = "abstention" if is_abstention else ability
             is_correct = score >= 0.5
 
-            all_details.append(QueryResult(
-                query=question["question"],
-                category=cat,
-                expected=expected,
-                actual=actual,
-                correct=is_correct,
-                score=score,
-            ))
-            category_results.append((cat, score))
-
-            if (q_idx + 1) % 50 == 0:
+            completed += 1
+            if completed % 50 == 0:
                 elapsed = (time.monotonic() - start_time) / 60
                 logger.info(
                     "Progress: %d/%d questions (%.1f min)",
-                    q_idx + 1, len(questions), elapsed,
+                    completed, len(questions), elapsed,
                 )
+
+            return (
+                QueryResult(
+                    query=question["question"],
+                    category=cat,
+                    expected=expected,
+                    actual=actual,
+                    correct=is_correct,
+                    score=score,
+                ),
+                (cat, score),
+            )
+
+        results = await asyncio.gather(
+            *[_process_question(q) for q in questions],
+            return_exceptions=True,
+        )
+
+        all_details: list[QueryResult] = []
+        category_results: list[tuple[str, float]] = []
+        for r in results:
+            if isinstance(r, Exception):
+                logger.error("Question failed: %s", r)
+                continue
+            detail, cat_score = r
+            all_details.append(detail)
+            category_results.append(cat_score)
 
         from benchmarks.metrics import category_scores as compute_categories
 
@@ -771,74 +817,90 @@ class LongMemEvalRealBenchmark:
                 sampled.extend(qs[:n])
             questions = sampled[: self.max_questions]
 
+        concurrency = 10
+        llm_concurrency = 10  # 500K TPM on gpt-5-mini allows high parallelism
         logger.info(
-            "Running LongMemEval-real (LLM judge): %d questions",
-            len(questions),
+            "Running LongMemEval-real (LLM judge): %d questions, concurrency=%d, llm_concurrency=%d",
+            len(questions), concurrency, llm_concurrency,
         )
 
-        all_details: list[QueryResult] = []
-        category_results: list[tuple[str, float]] = []
+        semaphore = asyncio.Semaphore(concurrency)
+        llm_semaphore = asyncio.Semaphore(llm_concurrency)
+        completed = 0
 
-        for q_idx, question in enumerate(questions):
+        async def _process_question(
+            question: dict,
+        ) -> tuple[QueryResult, tuple[str, float]]:
+            nonlocal completed
             qid = question["question_id"]
             qtype = question["question_type"]
             ability = _LME_TYPE_MAP.get(qtype, qtype)
             is_abstention = qid.endswith("_abs")
             user_id = "bench-lme-real"
 
-            tmp = tempfile.mkdtemp(prefix="prme_lme_real_")
-            tmp_dir = Path(tmp)
-            lex_dir = tmp_dir / "lexical_index"
-            lex_dir.mkdir(parents=True, exist_ok=True)
-            q_engine = await MemoryEngine.create(PRMEConfig(
-                db_path=str(tmp_dir / "memory.duckdb"),
-                vector_path=str(tmp_dir / "vectors.usearch"),
-                lexical_path=str(lex_dir),
-            ))
+            async with semaphore:
+                tmp = tempfile.mkdtemp(prefix="prme_lme_real_")
+                tmp_dir = Path(tmp)
+                lex_dir = tmp_dir / "lexical_index"
+                lex_dir.mkdir(parents=True, exist_ok=True)
+                q_engine = await MemoryEngine.create(PRMEConfig(
+                    db_path=str(tmp_dir / "memory.duckdb"),
+                    vector_path=str(tmp_dir / "vectors.usearch"),
+                    lexical_path=str(lex_dir),
+                ))
 
-            try:
-                for sess_idx, session_turns in enumerate(
-                    question["haystack_sessions"]
-                ):
-                    session_id = f"s{sess_idx}"
-                    for turn in session_turns:
-                        await q_engine.store(
-                            turn["content"],
-                            user_id=user_id,
-                            role=turn["role"],
-                            node_type=NodeType.FACT,
-                            scope=Scope.PERSONAL,
-                            session_id=session_id,
+                try:
+                    haystack_dates = question.get("haystack_dates", [])
+                    for sess_idx, session_turns in enumerate(
+                        question["haystack_sessions"]
+                    ):
+                        session_id = f"s{sess_idx}"
+                        sess_time = (
+                            _parse_haystack_date(haystack_dates[sess_idx])
+                            if sess_idx < len(haystack_dates)
+                            else None
                         )
+                        for turn in session_turns:
+                            await q_engine.store(
+                                turn["content"],
+                                user_id=user_id,
+                                role=turn["role"],
+                                node_type=NodeType.FACT,
+                                scope=Scope.PERSONAL,
+                                session_id=session_id,
+                                event_time=sess_time,
+                            )
 
-                # Multi-query retrieval: original + 2 reformulations
-                response = await q_engine.retrieve(
-                    question["question"], user_id=user_id
-                )
-                seen_ids = {str(r.node.id) for r in response.results}
-                all_results = list(response.results)
-
-                if not is_abstention:
-                    alt_queries = await reformulate_query(
-                        question["question"], llm_config
+                    # Multi-query retrieval: original + 2 reformulations
+                    response = await q_engine.retrieve(
+                        question["question"], user_id=user_id
                     )
-                    for alt_q in alt_queries:
-                        alt_response = await q_engine.retrieve(
-                            alt_q, user_id=user_id
+                    seen_ids = {str(r.node.id) for r in response.results}
+                    all_results = list(response.results)
+
+                    if not is_abstention:
+                        async with llm_semaphore:
+                            alt_queries = await reformulate_query(
+                                question["question"], llm_config
+                            )
+                        for alt_q in alt_queries:
+                            alt_response = await q_engine.retrieve(
+                                alt_q, user_id=user_id
+                            )
+                            for r in alt_response.results:
+                                rid = str(r.node.id)
+                                if rid not in seen_ids:
+                                    seen_ids.add(rid)
+                                    all_results.append(r)
+
+                        all_results.sort(
+                            key=lambda r: r.composite_score, reverse=True
                         )
-                        for r in alt_response.results:
-                            rid = str(r.node.id)
-                            if rid not in seen_ids:
-                                seen_ids.add(rid)
-                                all_results.append(r)
-
-                    all_results.sort(
-                        key=lambda r: r.composite_score, reverse=True
-                    )
-                # Take top 50 for LLM context
-                all_results = all_results[:50]
-            finally:
-                await q_engine.close()
+                    # Take top 50 for LLM context
+                    all_results = all_results[:50]
+                finally:
+                    await q_engine.close()
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
 
             if is_abstention:
                 score = self._evaluate_abstention(response)
@@ -851,39 +913,64 @@ class LongMemEvalRealBenchmark:
                 generated = ""
             else:
                 answer = str(question["answer"])
-                top_content = "\n".join(
-                    f"[{i+1}] {r.node.content}"
-                    for i, r in enumerate(all_results[:50])
+                question_date_str = question.get("question_date", "")
+                qdt = _parse_haystack_date(question_date_str) if question_date_str else None
+
+                # Use PRME's context formatter for all categories
+                top_content = format_for_llm(
+                    results=all_results[:50],
+                    query=question["question"],
+                    question_date=qdt,
+                    context_hint="temporal" if ability == "temporal" else "default",
                 )
-                generated = await generate_answer(
-                    question["question"], top_content, llm_config
-                )
-                score = await judge_answer(
-                    question["question"], answer, generated, llm_config
-                )
+                async with llm_semaphore:
+                    generated = await generate_answer(
+                        question["question"], top_content, llm_config
+                    )
+                    score = await judge_answer(
+                        question["question"], answer, generated, llm_config
+                    )
                 expected = answer
                 actual = top_content[:200]
 
             cat = "abstention" if is_abstention else ability
             is_correct = score >= 0.5
 
-            all_details.append(QueryResult(
-                query=question["question"],
-                category=cat,
-                expected=expected,
-                actual=actual,
-                correct=is_correct,
-                score=score,
-                generated_answer=generated,
-            ))
-            category_results.append((cat, score))
-
-            if (q_idx + 1) % 50 == 0:
+            completed += 1
+            if completed % 50 == 0:
                 elapsed = (time.monotonic() - start_time) / 60
                 logger.info(
                     "Progress: %d/%d questions (%.1f min)",
-                    q_idx + 1, len(questions), elapsed,
+                    completed, len(questions), elapsed,
                 )
+
+            return (
+                QueryResult(
+                    query=question["question"],
+                    category=cat,
+                    expected=expected,
+                    actual=actual,
+                    correct=is_correct,
+                    score=score,
+                    generated_answer=generated,
+                ),
+                (cat, score),
+            )
+
+        results = await asyncio.gather(
+            *[_process_question(q) for q in questions],
+            return_exceptions=True,
+        )
+
+        all_details: list[QueryResult] = []
+        category_results: list[tuple[str, float]] = []
+        for r in results:
+            if isinstance(r, Exception):
+                logger.error("Question failed: %s", r)
+                continue
+            detail, cat_score = r
+            all_details.append(detail)
+            category_results.append(cat_score)
 
         from benchmarks.metrics import category_scores as compute_categories
 

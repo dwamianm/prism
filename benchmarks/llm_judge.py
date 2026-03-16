@@ -24,8 +24,8 @@ TEMPORAL REASONING — STEP BY STEP:
 1. When the context contains timestamps, first list all relevant dated events.
 2. For relative time references ("yesterday", "last week", "a few weeks ago", \
 "last Friday"), compute the actual date by applying the offset to the message \
-timestamp. Example: a message dated "6 July 2023" saying "yesterday I went to \
-the museum" means the museum visit was on 5 July 2023.
+timestamp. If the context includes a "COMPUTED:" line with the target date, \
+use it directly.
 3. For "how many days between X and Y" questions, identify exact dates for both \
 events, then subtract. Show your work: "Event A: March 5, Event B: April 2, \
 difference = 28 days."

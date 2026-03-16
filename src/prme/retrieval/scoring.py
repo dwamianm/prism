@@ -156,7 +156,17 @@ _UPDATE_LANGUAGE_RE = re.compile(
 
 # Compiled regex for detecting current-state query language.
 _CURRENT_STATE_QUERY_RE = re.compile(
-    r"\b(?:current|currently|now|latest|today|at\s+the\s+moment|these\s+days|presently)\b",
+    r"(?:"
+    r"\b(?:current|currently|now|latest|today|at\s+the\s+moment|these\s+days|presently)\b"
+    r"|\bso\s+far\b"
+    r"|\busually\b"
+    r"|\btypically\b"
+    r"|\bnormally\b"
+    r"|\bmost\s+recently\b"
+    r"|\bright\s+now\b"
+    r"|^(?:do|does|am|are|have|has)\s+I\b"  # questions about current state
+    r"|\bdo\s+I\s+(?:go|have|use|own|keep|play|attend|work)\b"
+    r")",
     re.IGNORECASE,
 )
 
@@ -257,6 +267,7 @@ def compute_composite_score(
     epistemic_weights: dict[str, float] | None = None,
     now: datetime | None = None,
     query_analysis: QueryAnalysis | None = None,
+    recency_reference: datetime | None = None,
 ) -> ScoreTrace:
     """Compute the 8-input composite score for a single candidate.
 
@@ -287,6 +298,12 @@ def compute_composite_score(
         query_analysis: Optional query analysis for temporal boost computation.
             When provided and intent is TEMPORAL, temporal affinity scoring
             is activated.
+        recency_reference: Optional reference timestamp for relative recency
+            computation. When provided, recency is computed as the time gap
+            between this candidate and the recency_reference (typically the
+            newest candidate in the batch), making recency meaningful even
+            when all events are old relative to ``now``. When None, falls
+            back to ``now``.
 
     Returns:
         ScoreTrace with all 8 component values and the composite score.
@@ -300,8 +317,12 @@ def compute_composite_score(
 
     # Recency factor: exponential decay based on days since last update.
     # Use updated_at if available, fall back to created_at.
+    # When recency_reference is provided, compute relative recency (gap
+    # between this candidate and the newest candidate) so that recency is
+    # meaningful even when all events are old relative to ``now``.
     reference_time = node.updated_at or node.created_at
-    days_since_update = (now - reference_time).total_seconds() / 86400.0
+    recency_anchor = recency_reference or now
+    days_since_update = max(0.0, (recency_anchor - reference_time).total_seconds() / 86400.0)
     recency = math.exp(-weights.recency_lambda * days_since_update)
 
     # Epistemic weight: config override dict (str keys) or module-level default (Enum keys).
@@ -369,9 +390,10 @@ def score_and_rank(
 
     Supersedence-aware scoring: when ``query_analysis`` indicates a
     current-state query and candidates contain update language, the
-    effective recency weight is increased (redistributed proportionally
-    from semantic and lexical) and the recency score for update-language
-    candidates is boosted by 1.5x (capped at 1.0).
+    effective recency weight is increased to 0.25 (redistributed from
+    semantic and lexical), recency_lambda is increased to 0.05 for
+    steeper decay, and update-language candidates get 2.0x recency
+    boost (capped at 1.0).
 
     Args:
         candidates: Candidates to score.
@@ -394,11 +416,14 @@ def score_and_rank(
     )
 
     # If current-state query, compute adjusted weights: increase recency
-    # from its configured value to 0.25, redistributing the difference
-    # proportionally from semantic and lexical weights.
+    # from its configured value to 0.25 and use a steeper recency_lambda
+    # (0.05 vs default 0.01) so that older sessions are more strongly
+    # penalized. This makes newer facts rank above older ones even when
+    # the older fact has higher semantic similarity.
     effective_weights = weights
     if is_current_query:
         target_recency = 0.25
+        target_lambda = max(weights.recency_lambda, 0.05)
         recency_increase = target_recency - weights.w_recency
         if recency_increase > 0:
             # Redistribute from semantic and lexical proportionally.
@@ -415,8 +440,21 @@ def score_and_rank(
                     w_confidence=weights.w_confidence,
                     w_epistemic=weights.w_epistemic,
                     w_paths=weights.w_paths,
-                    recency_lambda=weights.recency_lambda,
+                    recency_lambda=target_lambda,
                 )
+
+    # Compute relative recency reference: use the newest event_time (or
+    # updated_at/created_at) among all candidates. This makes the recency
+    # signal meaningful even when all events are old relative to ``now``
+    # (e.g., benchmark data from years ago evaluated today).
+    # Only used for current-state queries where we need to differentiate
+    # old vs new facts. For other queries (temporal, multi_session, etc.),
+    # relative recency would hurt by biasing toward newer events.
+    recency_ref: datetime | None = None
+    if is_current_query and candidates:
+        def _ref_time(c: RetrievalCandidate) -> datetime:
+            return c.node.event_time or c.node.updated_at or c.node.created_at
+        recency_ref = max(_ref_time(c) for c in candidates)
 
     traces: list[ScoreTrace] = []
 
@@ -424,12 +462,13 @@ def score_and_rank(
         trace = compute_composite_score(
             candidate, effective_weights, epistemic_weights, now=now,
             query_analysis=query_analysis,
+            recency_reference=recency_ref,
         )
 
         # Supersedence boost: for current-state queries, candidates with
-        # update language get their recency score boosted by 1.5x.
+        # update language get their recency score boosted by 2.0x.
         if is_current_query and _has_update_language(candidate.node.content):
-            boosted_recency = min(trace.recency_factor * 1.5, 1.0)
+            boosted_recency = min(trace.recency_factor * 2.0, 1.0)
             # Recompute the additive score with the boosted recency.
             additive = (
                 effective_weights.w_semantic * trace.semantic_similarity

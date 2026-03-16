@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shutil
 import tempfile
 import time
 from pathlib import Path
@@ -81,6 +82,7 @@ async def _run_single_benchmark(
         return await benchmark.run(engine)
     finally:
         await engine.close()
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 class BenchmarkRunner:

@@ -441,10 +441,14 @@ class TestScoringDecayIntegration:
 
         ranked, traces = score_and_rank([c1, c2], DEFAULT_SCORING_WEIGHTS, now=now)
 
-        # Both should have been scored with the same `now` value.
-        # Verify by recomputing with the same `now` and checking match.
-        trace1_direct = compute_composite_score(c1, DEFAULT_SCORING_WEIGHTS, now=now)
-        trace2_direct = compute_composite_score(c2, DEFAULT_SCORING_WEIGHTS, now=now)
+        # Without a current-state query, relative recency is NOT used.
+        # Both should be scored with `now` as the recency reference.
+        trace1_direct = compute_composite_score(
+            c1, DEFAULT_SCORING_WEIGHTS, now=now, recency_reference=None,
+        )
+        trace2_direct = compute_composite_score(
+            c2, DEFAULT_SCORING_WEIGHTS, now=now, recency_reference=None,
+        )
 
         # Find matched traces by node id
         for r, t in zip(ranked, traces):

@@ -52,7 +52,7 @@ class ScoringWeights(BaseModel):
         default=0.00, description="Multi-path corroboration weight (tiebreaker only)"
     )
     recency_lambda: float = Field(
-        default=0.01,
+        default=0.02,
         description="Decay rate for recency factor: exp(-lambda * days)",
     )
     temporal_boost: float = Field(

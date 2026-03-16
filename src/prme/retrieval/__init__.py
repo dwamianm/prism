@@ -11,6 +11,7 @@ from prme.retrieval.config import (
     PackingConfig,
     ScoringWeights,
 )
+from prme.retrieval.context_formatter import format_for_llm
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     ExcludedCandidate,
@@ -36,6 +37,7 @@ __all__ = [
     "DEFAULT_SCORING_WEIGHTS",
     "EntitySnapshot",
     "ExcludedCandidate",
+    "format_for_llm",
     "MemoryBundle",
     "PackingConfig",
     "QueryAnalysis",
