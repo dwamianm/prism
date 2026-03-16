@@ -5,6 +5,8 @@ memory packs. Uses argparse (no external dependencies) and handles
 async engine lifecycle internally.
 
 Commands:
+    prme init [directory]    -- Initialize a new memory directory
+    prme doctor [directory]  -- Check memory pack health
     prme info <db_path>      -- Show memory pack info
     prme nodes <db_path>     -- List nodes with filters
     prme edges <db_path>     -- List edges with filters
@@ -624,6 +626,145 @@ async def cmd_export(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Init and Doctor commands
+# ---------------------------------------------------------------------------
+
+
+async def cmd_init(args: argparse.Namespace) -> None:
+    """Initialize a new memory directory."""
+    from prme.client import config_from_directory
+
+    directory = os.path.abspath(args.directory)
+    config = config_from_directory(directory)
+
+    # Write .env.example
+    env_example = os.path.join(directory, ".env.example")
+    if not os.path.exists(env_example):
+        with open(env_example, "w") as f:
+            f.write(
+                "# PRME Configuration\n"
+                "# Copy this file to .env and fill in your values.\n"
+                "\n"
+                "# LLM extraction provider (openai | anthropic | ollama)\n"
+                "# PRME_EXTRACTION__PROVIDER=openai\n"
+                "# PRME_EXTRACTION__MODEL=gpt-4o-mini\n"
+                "\n"
+                "# API keys (set the one matching your provider)\n"
+                "# OPENAI_API_KEY=sk-...\n"
+                "# ANTHROPIC_API_KEY=sk-ant-...\n"
+                "\n"
+                "# Embedding (fastembed is local, no API key needed)\n"
+                "# PRME_EMBEDDING__PROVIDER=fastembed\n"
+                "# PRME_EMBEDDING__MODEL_NAME=BAAI/bge-small-en-v1.5\n"
+                "\n"
+                "# Encryption at rest (optional)\n"
+                "# PRME_ENCRYPTION_KEY=your-secret-key\n"
+            )
+
+    print(f"Initialized PRME memory directory: {directory}")
+    print()
+    print("  Files:")
+    print(f"    Database:    {config.db_path}")
+    print(f"    Vectors:     {config.vector_path}")
+    print(f"    Lexical:     {config.lexical_path}")
+    print(f"    Config:      {env_example}")
+    print()
+    print("  Next steps:")
+    print("    1. Copy .env.example to .env and add your API key")
+    print("    2. Use PRME in your code:")
+    print()
+    print("       from prme import MemoryClient")
+    print()
+    print(f'       with MemoryClient("{directory}") as client:')
+    print('           client.store("hello world", user_id="me")')
+    print()
+
+
+async def cmd_doctor(args: argparse.Namespace) -> None:
+    """Check memory pack health."""
+    import duckdb as _duckdb
+
+    directory = os.path.abspath(args.directory)
+    db_path = os.path.join(directory, "memory.duckdb")
+    vector_path = os.path.join(directory, "vectors.usearch")
+    lexical_path = os.path.join(directory, "lexical_index")
+
+    checks_passed = 0
+    checks_failed = 0
+    checks_warned = 0
+
+    def ok(msg: str) -> None:
+        nonlocal checks_passed
+        checks_passed += 1
+        print(f"  [OK]   {msg}")
+
+    def fail(msg: str) -> None:
+        nonlocal checks_failed
+        checks_failed += 1
+        print(f"  [FAIL] {msg}")
+
+    def warn(msg: str) -> None:
+        nonlocal checks_warned
+        checks_warned += 1
+        print(f"  [WARN] {msg}")
+
+    print(f"Checking memory pack: {directory}")
+    print()
+
+    # 1. Directory exists
+    if os.path.isdir(directory):
+        ok("Memory directory exists")
+    else:
+        fail(f"Memory directory not found: {directory}")
+        print(f"\n  Run 'prme init {directory}' to create it.")
+        sys.exit(1)
+
+    # 2. DuckDB file
+    if os.path.exists(db_path):
+        try:
+            conn = _duckdb.connect(db_path, read_only=True)
+            tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
+            conn.close()
+            if "events" in tables and "nodes" in tables:
+                ok(f"DuckDB database valid ({len(tables)} tables)")
+            else:
+                fail(f"DuckDB schema incomplete (tables: {tables})")
+        except Exception as e:
+            fail(f"DuckDB cannot open: {e}")
+    else:
+        warn("DuckDB file not found (will be created on first use)")
+
+    # 3. Vector index
+    if os.path.exists(vector_path):
+        size = os.path.getsize(vector_path)
+        ok(f"Vector index exists ({size:,} bytes)")
+    else:
+        warn("Vector index not found (will be created on first use)")
+
+    # 4. Lexical index
+    if os.path.isdir(lexical_path) and os.listdir(lexical_path):
+        ok("Lexical index exists")
+    else:
+        warn("Lexical index not found (will be created on first use)")
+
+    # 5. LLM provider (advisory)
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get(
+        "ANTHROPIC_API_KEY"
+    )
+    if api_key:
+        ok("LLM API key found in environment")
+    else:
+        warn("No LLM API key found (ingest() requires one; store() works without)")
+
+    # Summary
+    print()
+    total = checks_passed + checks_failed + checks_warned
+    print(f"  {checks_passed}/{total} passed, {checks_warned} warnings, {checks_failed} failures")
+    if checks_failed > 0:
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
 
@@ -710,6 +851,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_export = subparsers.add_parser("export", help="Export memory pack as JSON")
     p_export.add_argument("db_path", help="Path to DuckDB database file")
     p_export.set_defaults(func=cmd_export)
+
+    # init
+    p_init = subparsers.add_parser(
+        "init", help="Initialize a new memory directory"
+    )
+    p_init.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Directory to initialize (default: current directory)",
+    )
+    p_init.set_defaults(func=cmd_init)
+
+    # doctor
+    p_doctor = subparsers.add_parser(
+        "doctor", help="Check memory pack health"
+    )
+    p_doctor.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Memory directory to check (default: current directory)",
+    )
+    p_doctor.set_defaults(func=cmd_doctor)
 
     return parser
 

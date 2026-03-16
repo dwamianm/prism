@@ -22,6 +22,10 @@ from prme.types import (
 
 def __getattr__(name: str):
     """Lazy imports for heavy modules to avoid circular import chains."""
+    if name == "MemoryClient":
+        from prme.client import MemoryClient
+
+        return MemoryClient
     if name == "IngestionPipeline":
         from prme.ingestion.pipeline import IngestionPipeline
 
@@ -44,6 +48,7 @@ __all__ = [
     "EdgeType",
     "IngestionPipeline",
     "LifecycleState",
+    "MemoryClient",
     "MemoryEngine",
     "NodeType",
     "PRMEConfig",

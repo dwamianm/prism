@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import warnings
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -121,6 +122,8 @@ class MemoryEngine:
             self._config.scoring, learning_rate=0.01,
         )
 
+        self._closed = False
+
         # Config-driven overrides with module-level defaults as fallback
         from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
 
@@ -134,6 +137,22 @@ class MemoryEngine:
             if unverified_confidence_threshold is not None
             else 0.30
         )
+
+    @classmethod
+    @asynccontextmanager
+    async def open(cls, config: PRMEConfig | None = None):
+        """Async context manager for MemoryEngine lifecycle.
+
+        Usage::
+
+            async with MemoryEngine.open(config) as engine:
+                await engine.store(...)
+        """
+        engine = await cls.create(config)
+        try:
+            yield engine
+        finally:
+            await engine.close()
 
     @classmethod
     async def create(cls, config: PRMEConfig | None = None) -> "MemoryEngine":
@@ -1584,7 +1603,13 @@ class MemoryEngine:
         Shuts down the ingestion pipeline (cancels background tasks),
         stops the write queue, saves the VectorIndex to disk, closes
         the LexicalIndex, and closes the DuckDB connection.
+
+        Idempotent — safe to call multiple times.
         """
+        if self._closed:
+            return
+        self._closed = True
+
         # Shutdown pipeline first (cancel background extraction tasks)
         if self._pipeline is not None:
             try:
