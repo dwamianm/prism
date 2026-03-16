@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-16
+
 ### Added
 
 - **Bi-temporal data model** (issue #21) — `event_time` field distinguishes when something happened vs when system learned about it; `knowledge_at` parameter on retrieve() for point-in-time knowledge snapshots
@@ -23,11 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TTL-based archival** (issue #12) — `ttl_days` field on memory nodes; per-type default TTL configuration; `tombstone_sweep` organizer job with operation logging; policy-based retention enforcement
 - **Summarization pipeline** (issue #10) — Hierarchical daily -> weekly -> monthly summarization; configurable thresholds; time-budget-aware processing; `summarize` organizer job
 - **Benchmark suite** (issue #26) — LoCoMo long-conversation benchmark, LongMemEval 5-ability evaluation, custom epistemic benchmark (supersedence correctness, confidence calibration, contradiction detection, belief revision, abstention quality)
+- **Hybrid retrieval pipeline v2** — supersedence-aware scoring, lifecycle filtering (SUPERSEDED/ARCHIVED exclusion), query reformulation with LLM-generated alternative queries, session context expansion (top-20 with ±3 adjacent turns)
+- **Context formatter** — temporal annotations (days-ago, COMPUTED offsets), chronological sorting for temporal queries, relevance-ranked formatting with date annotations
+- **Benchmark infrastructure** — LLM-as-judge with configurable generation model, concurrent evaluation (semaphore-based throttling), resilient structured output for reasoning models
 
 ### Fixed
 
 - Integration test fixture (issue #18) — Added `examples/conftest.py` with engine/log fixtures
 - DuckDB segfault in concurrent tests (issue #19) — Isolated DuckDB connections per test with `conn_lock` protection
+- GeneratedAnswer schema resilient to reasoning models (gpt-5-mini) that embed answers in reasoning field
 
 ## [0.3.0] - 2026-03-08
 
@@ -80,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/dwamianm/prism/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dwamianm/prism/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dwamianm/prism/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dwamianm/prism/releases/tag/v0.1.0

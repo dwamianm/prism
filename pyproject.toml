@@ -1,6 +1,6 @@
 [project]
 name = "prme"
-version = "0.3.0"
+version = "0.4.0"
 description = "Portable Relational Memory Engine - local-first memory substrate for LLM-powered systems"
 readme = "README.md"
 authors = [
@@ -8,7 +8,7 @@ authors = [
 ]
 license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
-keywords = ["memory", "llm", "ai", "knowledge-graph", "vector-search", "event-sourcing", "duckdb", "agents"]
+keywords = ["memory", "llm", "ai", "knowledge-graph", "vector-search", "event-sourcing", "duckdb", "agents", "rag", "long-term-memory", "mcp"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

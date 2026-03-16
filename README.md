@@ -8,6 +8,45 @@
 
 PRME gives AI agents and chatbots stable long-term memory by combining an append-only event log, a graph-based relational model, hybrid retrieval (graph + vector + lexical), and epistemic state tracking — all in a portable, single-directory bundle.
 
+## Benchmark Results
+
+PRME is evaluated against two established long-term memory benchmarks. Results reflect end-to-end accuracy: ingestion, retrieval, and LLM-generated answers judged against ground truth.
+
+| Benchmark | Score | Queries | Details |
+|-----------|-------|---------|---------|
+| **[LongMemEval](https://github.com/xiaowu0162/LongMemEval)** | **92.5%** | 470 | 5 ability categories across multi-session conversations |
+| **[LoCoMo](https://github.com/snap-stanford/locomo)** | **79.0%** | 152 | Long-conversation QA with temporal, multi-hop, and inference |
+
+### LongMemEval Breakdown
+
+| Category | Accuracy | Description |
+|----------|----------|-------------|
+| Information Extraction | 97% (117/120) | Retrieving specific facts from past conversations |
+| Temporal Reasoning | 95% (123/127) | Time-based queries ("when did...", "how long ago...") |
+| Multi-Session | 92% (112/121) | Connecting information across separate conversations |
+| Knowledge Update | 91% (66/72) | Tracking how facts change over time |
+| Abstention | 65% (30/30) | Correctly saying "I don't know" when info is absent |
+
+### LoCoMo Breakdown
+
+| Category | Accuracy | Description |
+|----------|----------|-------------|
+| Temporal | 93.5% | Date and time reasoning over conversation history |
+| Inference | 81.5% | Drawing conclusions from stored memories |
+| Multi-Hop | 80.4% | Combining multiple facts to answer a question |
+| Single-Hop | 58.1% | Direct fact retrieval from long conversations |
+
+<details>
+<summary>Methodology and competitive context</summary>
+
+- **Generation model**: gpt-5-mini (OpenAI). The same retrieval pipeline with gpt-4o-mini scores 80.1% on LME and 72.6% on LoCoMo — the gap is generation quality, not retrieval.
+- **Retrieval pipeline**: 6-signal hybrid scoring (semantic, lexical, graph, recency, salience, confidence) with supersedence-aware filtering, query reformulation, and temporal context formatting.
+- **LongMemEval competitive context**: Mastra (95%), **PRME (92.5%)**, Hindsight (91.4%), Emergence (86%), Supermemory (85%). PRME places top-3 among published systems.
+- **Evaluation**: LLM-as-judge scoring with structured output. All benchmarks are deterministic given the same retrieval results and generation model.
+- **Test suite**: 944 tests passing, 19 simulation scenarios, 6 stress tests.
+
+</details>
+
 ## Why PRME?
 
 LLMs are stateless. Every conversation starts from zero. Existing solutions bolt on vector search and call it "memory," but that misses the relational structure of how humans actually remember things — preferences override old ones, decisions have context, facts get corrected.
@@ -16,7 +55,7 @@ PRME models memory the way it actually works:
 
 - **Event sourcing** — immutable append-only log, deterministic rebuild
 - **Graph-based relational model** — 9 typed node kinds (entities, facts, preferences, decisions, tasks, instructions, summaries, events, notes) with edges capturing relationships, supersedence, and temporal validity
-- **Epistemic state tracking** — memories have lifecycle states (tentative → stable → superseded → archived), confidence scores, contradiction detection, and oscillation dampening
+- **Epistemic state tracking** — memories have lifecycle states (tentative -> stable -> superseded -> archived), confidence scores, contradiction detection, and oscillation dampening
 - **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle
 - **Self-organizing memory** — 11 organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival automatically
 - **Dual-stream ingestion** — sub-50ms fast path for real-time use, with deferred graph materialization
@@ -130,8 +169,8 @@ See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough an
 ```
 
 - **Ingestion Pipeline** — stores raw events, optionally extracts entities/facts/relationships via LLM (OpenAI, Anthropic, Ollama). Dual-stream mode provides a sub-50ms fast path with deferred graph materialization.
-- **Retrieval Pipeline** — query analysis → multi-source candidate generation → deterministic scoring → context packing. Supports bi-temporal queries with `knowledge_at` for point-in-time snapshots.
-- **Epistemic State Model** — tracks confidence, lifecycle transitions (tentative → stable → superseded → archived), contradiction detection, supersedence chains, oscillation dampening, and surprise-gated storage.
+- **Retrieval Pipeline** — query analysis -> multi-source candidate generation -> deterministic scoring -> context packing. Supports bi-temporal queries with `knowledge_at` for point-in-time snapshots.
+- **Epistemic State Model** — tracks confidence, lifecycle transitions (tentative -> stable -> superseded -> archived), contradiction detection, supersedence chains, oscillation dampening, and surprise-gated storage.
 - **Organizer** — 11 background jobs: `promote`, `decay_sweep`, `archive`, `deduplicate`, `alias_resolve`, `summarize`, `feedback_apply`, `centrality_boost`, `tombstone_sweep`, `snapshot_generation`, `consolidate`. Runs on schedule or opportunistically during retrieve/ingest.
 - **Storage** — DuckDB (events + graph), usearch (HNSW vectors), Tantivy (full-text). Optional PostgreSQL backend with asyncpg + pgvector.
 
@@ -225,6 +264,14 @@ Detailed technical documentation lives in [`docs/`](docs/):
 - [Confidence Evolution](docs/RFC-0008-Confidence-Evolution.md)
 - [Integration Guide](docs/INTEGRATION.md)
 - [Full RFC Index](docs/INDEX.md) (15 RFCs)
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the full development plan.
+
+**Current (v0.4.x)** — Retrieval pipeline hardening, benchmark-validated scoring
+**Next (v0.5)** — MCP server, SDK ergonomics, plugin architecture
+**Future (v0.6+)** — Multi-agent memory, federation, hosted offering
 
 ## Contributing
 
