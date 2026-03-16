@@ -248,7 +248,29 @@ Within each priority tier, the Signal-to-Token Ratio (RFC-0006) determines which
 
 ---
 
-## 9. Retrieval Logging
+## 9. Generation Model Impact on End-to-End Accuracy
+
+The retrieval pipeline delivers a ranked, context-packed Memory Bundle to the consuming LLM. Benchmarking on LongMemEval (470 queries across 5 abilities) demonstrates that the choice of generation model has a larger impact on end-to-end accuracy than retrieval tuning once the pipeline reaches sufficient quality.
+
+**Observed results (same retrieval pipeline, different generation models):**
+
+| Generation Model | Overall | Info Extraction | Knowledge Update | Multi-Session | Temporal |
+|---|---|---|---|---|---|
+| gpt-4o-mini | 80.1% | 96% | 74% | 80% | 73% |
+| gpt-5-mini | 92.5% | 97% | 91% | 92% | 95% |
+
+The 12.5% gap is entirely attributable to generation quality, not retrieval. The largest gains are in temporal reasoning (+22%), multi-session aggregation/counting (+12%), and knowledge update recency selection (+17%). In all three categories, the retrieval pipeline delivers the relevant context — weaker models fail to correctly extract, count, or compute from that context.
+
+**Implications for implementers:**
+
+1. **Retrieval quality has diminishing returns past ~80% end-to-end.** Further scoring weight tuning yields <1% improvement when the generation model is the bottleneck.
+2. **Temporal and aggregation queries are generation-bound.** These require date arithmetic and enumeration that smaller models handle unreliably.
+3. **Benchmark results MUST report the generation model** alongside retrieval metrics. A retrieval improvement that shows +2% with a weak generation model may show +0% with a strong one (and vice versa).
+4. **Run-to-run variance with smaller models (e.g., gpt-4o-mini) is ~7-10 per category (470 queries).** Statistically significant retrieval improvements require either a stronger model or multiple averaged runs.
+
+---
+
+## 10. Retrieval Logging
 
 Every retrieval request MUST generate a retrieval log record in the operation log:
 
@@ -276,7 +298,7 @@ Retrieval logs are used by the feedback loop (RFC-0009) to track which objects w
 
 ---
 
-## 10. Determinism
+## 11. Determinism
 
 Given identical:
 - Query embedding
@@ -294,7 +316,7 @@ Non-determinism that MUST be guarded against:
 
 ---
 
-## 11. Conformance Requirements
+## 12. Conformance Requirements
 
 `[REQUIRED FOR TIER 2]`
 
@@ -309,7 +331,7 @@ Non-determinism that MUST be guarded against:
 
 ---
 
-## 12. Benchmark Requirement
+## 13. Benchmark Requirement
 
 Before this RFC progresses to Experimental status, implementers MUST publish:
 
