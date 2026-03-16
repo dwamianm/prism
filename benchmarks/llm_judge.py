@@ -13,7 +13,7 @@ import logging
 from dataclasses import dataclass, field
 
 import instructor
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,25 @@ class GeneratedAnswer(BaseModel):
         "list relevant dates and show computation. For aggregation, list all "
         "matching items before counting."
     )
-    answer: str = Field(description="The concise final answer to the question")
+    answer: str = Field(
+        default="",
+        description="The concise final answer to the question",
+    )
+
+    @model_validator(mode="after")
+    def _extract_answer_from_reasoning(self) -> "GeneratedAnswer":
+        """Fallback: if answer is empty, extract from reasoning text."""
+        if not self.answer.strip() and self.reasoning:
+            # Some reasoning models embed the answer at the end of reasoning
+            for marker in ("Answer:", "Answer :", "ANSWER:"):
+                idx = self.reasoning.rfind(marker)
+                if idx != -1:
+                    self.answer = self.reasoning[idx + len(marker) :].strip()
+                    break
+            if not self.answer.strip():
+                # Last resort: use the full reasoning as the answer
+                self.answer = self.reasoning
+        return self
 
 
 @dataclass
