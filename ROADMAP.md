@@ -23,15 +23,15 @@ The foundation: storage, ingestion, retrieval, and epistemic state management.
 
 ---
 
-## v0.5 — Integrations and Developer Experience
+## v0.5 — Integrations and Developer Experience (**In Progress**)
 
 Making PRME easy to adopt in existing agent frameworks.
 
-- [ ] **MCP server** — Model Context Protocol server so any MCP-compatible client (Claude, Cursor, etc.) can use PRME as a memory backend out of the box
-- [ ] **Python SDK refinements** — simplified `MemoryClient` wrapper, connection pooling, sync API for non-async codebases
+- [x] **MCP server** — Model Context Protocol server so any MCP-compatible client (Claude, Cursor, etc.) can use PRME as a memory backend out of the box
+- [x] **Python SDK refinements** — synchronous `MemoryClient` wrapper with dedicated event loop thread, works in scripts/notebooks/async contexts
 - [ ] **Framework adapters** — first-party integrations for LangChain, LlamaIndex, CrewAI, and AutoGen
 - [ ] **Plugin architecture** — pluggable storage backends, custom node types, user-defined organizer jobs
-- [ ] **Improved onboarding** — interactive tutorial, `prme init` scaffolding command, better error messages
+- [x] **Improved onboarding** — `prme init` scaffolding, `prme doctor` health checks, `examples/simple.py` getting-started example
 
 ---
 

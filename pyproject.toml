@@ -45,6 +45,7 @@ Changelog = "https://github.com/dwamianm/prism/blob/main/CHANGELOG.md"
 
 [project.scripts]
 prme = "prme.cli:main"
+prme-mcp = "prme.mcp:main"
 
 [project.optional-dependencies]
 postgres = [
@@ -54,6 +55,9 @@ postgres = [
 api = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
+]
+mcp = [
+    "mcp>=1.0.0",
 ]
 
 [dependency-groups]
