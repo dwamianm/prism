@@ -33,9 +33,11 @@ from prme.cli import (
     _truncate,
     build_parser,
     cmd_chain,
+    cmd_doctor,
     cmd_edges,
     cmd_export,
     cmd_info,
+    cmd_init,
     cmd_node,
     cmd_nodes,
     cmd_organize,
@@ -208,6 +210,30 @@ class TestParser:
         assert args.command == "organize"
         assert args.jobs == "promote,archive"
         assert args.budget_ms == 3000
+
+    def test_init_command(self):
+        parser = build_parser()
+        args = parser.parse_args(["init", "/tmp/test_dir"])
+        assert args.command == "init"
+        assert args.directory == "/tmp/test_dir"
+
+    def test_init_command_default(self):
+        parser = build_parser()
+        args = parser.parse_args(["init"])
+        assert args.command == "init"
+        assert args.directory == "."
+
+    def test_doctor_command(self):
+        parser = build_parser()
+        args = parser.parse_args(["doctor", "/tmp/test_dir"])
+        assert args.command == "doctor"
+        assert args.directory == "/tmp/test_dir"
+
+    def test_doctor_command_default(self):
+        parser = build_parser()
+        args = parser.parse_args(["doctor"])
+        assert args.command == "doctor"
+        assert args.directory == "."
 
     def test_no_command_exits(self):
         parser = build_parser()
@@ -626,3 +652,89 @@ class TestNodeToDict:
         assert isinstance(result, str)
         parsed = json.loads(result)
         assert parsed["id"] == str(node.id)
+
+
+# ---------------------------------------------------------------------------
+# Init command tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cmd_init(tmp_dir, capsys):
+    """init creates directory structure and .env.example."""
+    target = str(Path(tmp_dir) / "new_memory")
+    args = _make_args(directory=target)
+    await cmd_init(args)
+
+    captured = capsys.readouterr().out
+    assert "Initialized PRME memory directory" in captured
+    assert Path(target).is_dir()
+    assert Path(target, "lexical_index").is_dir()
+    assert Path(target, ".env.example").exists()
+
+
+@pytest.mark.asyncio
+async def test_cmd_init_existing_directory(tmp_dir, capsys):
+    """init works on an existing directory without errors."""
+    args = _make_args(directory=tmp_dir)
+    await cmd_init(args)
+
+    captured = capsys.readouterr().out
+    assert "Initialized PRME memory directory" in captured
+
+
+@pytest.mark.asyncio
+async def test_cmd_init_env_example_not_overwritten(tmp_dir, capsys):
+    """init does not overwrite an existing .env.example."""
+    env_path = Path(tmp_dir) / ".env.example"
+    env_path.write_text("CUSTOM=1\n")
+
+    args = _make_args(directory=tmp_dir)
+    await cmd_init(args)
+
+    assert env_path.read_text() == "CUSTOM=1\n"
+
+
+# ---------------------------------------------------------------------------
+# Doctor command tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cmd_doctor_fresh_dir(tmp_dir, capsys):
+    """doctor on a fresh directory reports warnings but no failures."""
+    args = _make_args(directory=tmp_dir)
+    await cmd_doctor(args)
+
+    captured = capsys.readouterr().out
+    assert "[OK]" in captured
+    assert "Memory directory exists" in captured
+    assert "0 failures" in captured
+
+
+@pytest.mark.asyncio
+async def test_cmd_doctor_with_db(config, capsys):
+    """doctor on a populated directory passes DB checks."""
+    from prme.storage.engine import MemoryEngine
+
+    # Create and populate, then close so doctor can open read-only
+    engine = await MemoryEngine.create(config)
+    await engine.store("test fact", user_id="test-user", node_type=NodeType.FACT)
+    await engine.close()
+
+    db_dir = str(Path(config.db_path).parent)
+    args = _make_args(directory=db_dir)
+    await cmd_doctor(args)
+
+    captured = capsys.readouterr().out
+    assert "[OK]" in captured
+    assert "DuckDB database valid" in captured
+    assert "0 failures" in captured
+
+
+@pytest.mark.asyncio
+async def test_cmd_doctor_missing_dir():
+    """doctor on a non-existent directory fails."""
+    args = _make_args(directory="/tmp/prme_nonexistent_dir_12345")
+    with pytest.raises(SystemExit):
+        await cmd_doctor(args)

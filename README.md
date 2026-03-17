@@ -85,8 +85,27 @@ pip install -e ".[dev]"
 ## Quickstart
 
 ```python
+from prme import MemoryClient
+
+with MemoryClient("./my_memories") as client:
+    # Store memories (no LLM needed)
+    client.store("Alice prefers dark mode in all her editors.", user_id="alice")
+    client.store("The team decided to use PostgreSQL.", user_id="alice")
+
+    # Retrieve with hybrid scoring
+    response = client.retrieve("What are Alice's preferences?", user_id="alice")
+    for result in response.results:
+        print(f"[{result.composite_score:.3f}] {result.node.content}")
+```
+
+`MemoryClient` is a synchronous wrapper — no `async`/`await` needed. It works everywhere: scripts, notebooks, FastAPI apps.
+
+<details>
+<summary>Async API (advanced)</summary>
+
+```python
 import asyncio
-from prme import MemoryEngine, PRMEConfig, NodeType, Scope
+from prme import MemoryEngine, PRMEConfig
 
 async def main():
     config = PRMEConfig(
@@ -96,25 +115,8 @@ async def main():
     )
     engine = await MemoryEngine.create(config)
 
-    # Store memories directly (no LLM needed)
-    await engine.store(
-        "Alice prefers dark mode in all her editors.",
-        user_id="alice",
-        node_type=NodeType.PREFERENCE,
-        scope=Scope.PERSONAL,
-    )
-    await engine.store(
-        "The team decided to use PostgreSQL for the backend.",
-        user_id="alice",
-        node_type=NodeType.DECISION,
-        scope=Scope.PROJECT,
-    )
-
-    # Retrieve with hybrid scoring
-    response = await engine.retrieve(
-        "What are Alice's preferences?",
-        user_id="alice",
-    )
+    await engine.store("Alice prefers dark mode.", user_id="alice")
+    response = await engine.retrieve("preferences?", user_id="alice")
     for result in response.results:
         print(f"[{result.composite_score:.3f}] {result.node.content}")
 
@@ -122,6 +124,8 @@ async def main():
 
 asyncio.run(main())
 ```
+
+</details>
 
 ### LLM-Powered Ingestion
 
@@ -176,9 +180,11 @@ See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough an
 
 ## CLI
 
-PRME includes a command-line tool for memory inspection:
+PRME includes a command-line tool for setup and memory inspection:
 
 ```bash
+prme init ./my_memories            # Initialize a new memory directory
+prme doctor ./my_memories          # Check memory pack health
 prme info ./memory.duckdb          # Memory pack statistics
 prme nodes ./memory.duckdb         # List nodes (--type, --state, --limit)
 prme search ./memory.duckdb "query" # Run hybrid retrieval
@@ -269,8 +275,8 @@ Detailed technical documentation lives in [`docs/`](docs/):
 
 See [ROADMAP.md](ROADMAP.md) for the full development plan.
 
-**Current (v0.4.x)** — Retrieval pipeline hardening, benchmark-validated scoring
-**Next (v0.5)** — MCP server, SDK ergonomics, plugin architecture
+**Current (v0.5)** — MCP server, SDK ergonomics (`MemoryClient` done), plugin architecture
+**Next (v0.6)** — Pre-aggregation, chunk-level retrieval, neural reranking
 **Future (v0.6+)** — Multi-agent memory, federation, hosted offering
 
 ## Contributing
