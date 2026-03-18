@@ -272,6 +272,9 @@ class MemoryEngine:
             packing_config=config.packing,
             epistemic_weights=config.epistemic_weights,
             unverified_confidence_threshold=config.unverified_confidence_threshold,
+            enable_reranker=config.enable_reranker,
+            reranker_model=config.reranker_model,
+            reranker_top_k=config.reranker_top_k,
         )
 
         # Run epistemic backfill migration for existing nodes
@@ -376,6 +379,9 @@ class MemoryEngine:
             packing_config=config.packing,
             epistemic_weights=config.epistemic_weights,
             unverified_confidence_threshold=config.unverified_confidence_threshold,
+            enable_reranker=config.enable_reranker,
+            reranker_model=config.reranker_model,
+            reranker_top_k=config.reranker_top_k,
         )
 
         # Run epistemic backfill migration

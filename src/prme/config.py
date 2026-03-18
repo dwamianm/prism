@@ -300,6 +300,20 @@ class PRMEConfig(BaseSettings):
         ),
     )
 
+    # Neural reranking (cross-encoder)
+    enable_reranker: bool = Field(
+        default=False,
+        description="Enable cross-encoder neural reranking after composite scoring. Requires: pip install prme[reranker]",
+    )
+    reranker_model: str = Field(
+        default="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        description="HuggingFace cross-encoder model for neural reranking.",
+    )
+    reranker_top_k: int = Field(
+        default=100,
+        description="Number of top candidates to rerank (controls latency vs quality).",
+    )
+
     # Dual-stream ingestion (issue #25)
     materialization_queue_size: int = Field(
         default=500,

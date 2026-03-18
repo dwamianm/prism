@@ -59,6 +59,9 @@ api = [
 mcp = [
     "mcp>=1.0.0",
 ]
+reranker = [
+    "sentence-transformers>=4.0",
+]
 
 [dependency-groups]
 dev = [

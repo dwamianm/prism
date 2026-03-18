@@ -75,6 +75,9 @@ class RetrievalPipeline:
         packing_config: PackingConfig = DEFAULT_PACKING_CONFIG,
         epistemic_weights: dict[str, float] | None = None,
         unverified_confidence_threshold: float | None = None,
+        enable_reranker: bool = False,
+        reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        reranker_top_k: int = 100,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -86,6 +89,14 @@ class RetrievalPipeline:
         self._packing_config = packing_config
         self._epistemic_weights = epistemic_weights
         self._unverified_confidence_threshold = unverified_confidence_threshold
+        self._reranker_top_k = reranker_top_k
+
+        # Lazy-init cross-encoder reranker when enabled.
+        self._reranker = None
+        if enable_reranker:
+            from prme.retrieval.reranker import CrossEncoderReranker
+
+            self._reranker = CrossEncoderReranker(model_name=reranker_model)
 
     async def retrieve(
         self,
@@ -255,6 +266,14 @@ class RetrievalPipeline:
             now=scoring_now,
             query_analysis=analysis,
         )
+
+        # --- Stage 5a: Neural Reranking (optional) ---
+        if self._reranker is not None:
+            scored = await self._reranker.rerank(
+                query=query,
+                candidates=scored,
+                top_k=self._reranker_top_k,
+            )
 
         # --- Stage 5.5: Conflict Metadata Annotation ---
         # Batch-annotate CONTESTED candidates with conflict_flag and
