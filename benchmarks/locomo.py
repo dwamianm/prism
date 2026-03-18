@@ -11,6 +11,7 @@ The real LoCoMo-10 dataset can be downloaded via:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -726,6 +727,9 @@ class LoCoMoRealBenchmark:
         Same ingestion as run(), but after retrieval, generates an answer
         via LLM and uses LLM-as-judge to score against the ground truth.
         Keyword-match score is still computed for comparison.
+
+        Uses concurrent evaluation (asyncio.gather + semaphores) to avoid
+        sequential bottleneck on LLM API calls.
         """
         from benchmarks.llm_judge import generate_answer, judge_answer, reformulate_query
 
@@ -747,8 +751,8 @@ class LoCoMoRealBenchmark:
             len(all_conversations),
         )
 
-        all_details: list[QueryResult] = []
-        category_results: list[tuple[str, float]] = []
+        # Phase 1: Ingest all conversations sequentially (shared engine)
+        qa_items: list[tuple[dict, str]] = []  # (qa_dict, user_id)
 
         for conv_idx, conv_data in enumerate(conversations):
             sample_id = conv_data.get("sample_id", f"conv-{conv_idx}")
@@ -756,7 +760,6 @@ class LoCoMoRealBenchmark:
             conversation = conv_data["conversation"]
             sessions = _extract_sessions(conversation)
 
-            # Ingest all sessions (same as run())
             total_turns = 0
             for sess_idx, (turns, date_str) in enumerate(sessions):
                 session_id = f"{sample_id}-s{sess_idx}"
@@ -782,34 +785,52 @@ class LoCoMoRealBenchmark:
                 sample_id, len(sessions), total_turns,
             )
 
-            # Evaluate QA with LLM generation + judge
-            qa_list = conv_data.get("qa", [])
-            for qa in qa_list:
+            # Collect QA items for concurrent evaluation
+            for qa in conv_data.get("qa", []):
                 cat_num = qa["category"]
                 if cat_num not in _LOCOMO_CATEGORIES:
                     continue
-
-                cat_name = _LOCOMO_CATEGORIES[cat_num]
                 answer = str(qa.get("answer", ""))
                 if not answer:
                     continue
+                qa_items.append((qa, user_id))
 
-                # Multi-query retrieval: original + 2 reformulations + entity-focused
+        # Phase 2: Evaluate all QA items concurrently
+        concurrency = 10
+        llm_concurrency = 10
+        semaphore = asyncio.Semaphore(concurrency)
+        llm_semaphore = asyncio.Semaphore(llm_concurrency)
+        completed = 0
+        _names_re = re.compile(r'\b([A-Z][a-z]{2,})\b')
+        _skip = {"What", "When", "Where", "Who", "How", "Would", "Does", "Did", "Has", "Have", "Could", "Can", "The"}
+
+        logger.info(
+            "Evaluating %d questions, concurrency=%d, llm_concurrency=%d",
+            len(qa_items), concurrency, llm_concurrency,
+        )
+
+        async def _process_qa(
+            qa: dict, user_id: str,
+        ) -> tuple[QueryResult, tuple[str, float]]:
+            nonlocal completed
+            cat_name = _LOCOMO_CATEGORIES[qa["category"]]
+            answer = str(qa["answer"])
+
+            # Retrieval (semaphore-gated to avoid overwhelming shared engine)
+            async with semaphore:
                 response = await engine.retrieve(
                     qa["question"], user_id=user_id
                 )
                 seen_ids = {str(r.node.id) for r in response.results}
                 all_results = list(response.results)
 
-                alt_queries = await reformulate_query(
-                    qa["question"], llm_config
-                )
+                async with llm_semaphore:
+                    alt_queries = await reformulate_query(
+                        qa["question"], llm_config
+                    )
+
                 # Entity-focused: extract proper nouns and search for each
-                import re
-                _names_re = re.compile(r'\b([A-Z][a-z]{2,})\b')
                 entity_names = _names_re.findall(qa["question"])
-                # Filter out common question words
-                _skip = {"What", "When", "Where", "Who", "How", "Would", "Does", "Did", "Has", "Have", "Could", "Can", "The"}
                 entity_names = [n for n in entity_names if n not in _skip]
                 for name in entity_names[:2]:
                     alt_queries.append(name)
@@ -824,16 +845,17 @@ class LoCoMoRealBenchmark:
                             seen_ids.add(rid)
                             all_results.append(r)
 
-                # Sort merged results by composite score, take top 50
                 all_results.sort(
                     key=lambda r: r.composite_score, reverse=True
                 )
-                top_content = "\n".join(
-                    f"[{i+1}] {r.node.content}"
-                    for i, r in enumerate(all_results[:50])
-                )
 
-                # LLM generate + judge
+            top_content = "\n".join(
+                f"[{i+1}] {r.node.content}"
+                for i, r in enumerate(all_results[:50])
+            )
+
+            # LLM generate + judge (semaphore-gated)
+            async with llm_semaphore:
                 generated = await generate_answer(
                     qa["question"], top_content, llm_config
                 )
@@ -841,8 +863,17 @@ class LoCoMoRealBenchmark:
                     qa["question"], answer, generated, llm_config
                 )
 
-                is_correct = llm_score >= 0.5
-                all_details.append(QueryResult(
+            is_correct = llm_score >= 0.5
+            completed += 1
+            if completed % 25 == 0:
+                elapsed = (time.monotonic() - start_time) / 60
+                logger.info(
+                    "Progress: %d/%d questions (%.1f min)",
+                    completed, len(qa_items), elapsed,
+                )
+
+            return (
+                QueryResult(
                     query=qa["question"],
                     category=cat_name,
                     expected=answer,
@@ -850,8 +881,24 @@ class LoCoMoRealBenchmark:
                     correct=is_correct,
                     score=llm_score,
                     generated_answer=generated,
-                ))
-                category_results.append((cat_name, llm_score))
+                ),
+                (cat_name, llm_score),
+            )
+
+        results = await asyncio.gather(
+            *[_process_qa(qa, uid) for qa, uid in qa_items],
+            return_exceptions=True,
+        )
+
+        all_details: list[QueryResult] = []
+        category_results: list[tuple[str, float]] = []
+        for r in results:
+            if isinstance(r, Exception):
+                logger.error("Question failed: %s", r)
+                continue
+            detail, cat_score = r
+            all_details.append(detail)
+            category_results.append(cat_score)
 
         from benchmarks.metrics import category_scores as compute_categories
 
