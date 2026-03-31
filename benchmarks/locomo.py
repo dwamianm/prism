@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 
 from benchmarks.metrics import exclusion_score, keyword_match_score
 from benchmarks.models import BenchmarkResult, QueryResult
+from prme.retrieval.context_formatter import format_for_llm
 
 if TYPE_CHECKING:
     from benchmarks.llm_judge import LLMJudgeConfig
@@ -816,6 +817,18 @@ class LoCoMoRealBenchmark:
             cat_name = _LOCOMO_CATEGORIES[qa["category"]]
             answer = str(qa["answer"])
 
+            # Query reformulation (LLM semaphore only — no retrieval lock)
+            async with llm_semaphore:
+                alt_queries = await reformulate_query(
+                    qa["question"], llm_config
+                )
+
+            # Entity-focused: extract proper nouns and search for each
+            entity_names = _names_re.findall(qa["question"])
+            entity_names = [n for n in entity_names if n not in _skip]
+            for name in entity_names[:2]:
+                alt_queries.append(name)
+
             # Retrieval (semaphore-gated to avoid overwhelming shared engine)
             async with semaphore:
                 response = await engine.retrieve(
@@ -823,17 +836,6 @@ class LoCoMoRealBenchmark:
                 )
                 seen_ids = {str(r.node.id) for r in response.results}
                 all_results = list(response.results)
-
-                async with llm_semaphore:
-                    alt_queries = await reformulate_query(
-                        qa["question"], llm_config
-                    )
-
-                # Entity-focused: extract proper nouns and search for each
-                entity_names = _names_re.findall(qa["question"])
-                entity_names = [n for n in entity_names if n not in _skip]
-                for name in entity_names[:2]:
-                    alt_queries.append(name)
 
                 for alt_q in alt_queries:
                     alt_response = await engine.retrieve(
@@ -848,6 +850,7 @@ class LoCoMoRealBenchmark:
                 all_results.sort(
                     key=lambda r: r.composite_score, reverse=True
                 )
+
 
             top_content = "\n".join(
                 f"[{i+1}] {r.node.content}"
@@ -865,11 +868,11 @@ class LoCoMoRealBenchmark:
 
             is_correct = llm_score >= 0.5
             completed += 1
-            if completed % 25 == 0:
+            if completed % 5 == 0:
                 elapsed = (time.monotonic() - start_time) / 60
-                logger.info(
-                    "Progress: %d/%d questions (%.1f min)",
-                    completed, len(qa_items), elapsed,
+                print(
+                    f"  Progress: {completed}/{len(qa_items)} questions ({elapsed:.1f} min)",
+                    flush=True,
                 )
 
             return (

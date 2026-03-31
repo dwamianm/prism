@@ -63,6 +63,31 @@ class ScoringWeights(BaseModel):
             "the sum-to-1.0 constraint). Max +0.15 to composite score."
         ),
     )
+    node_type_boost: dict[str, float] = Field(
+        default={
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.10,
+            "summary": 1.10,
+            "instruction": 1.10,
+        },
+        description=(
+            "Per-node-type multiplicative boost to composite score. "
+            "Types not listed default to 1.0. Semantic memory types "
+            "(fact, preference, summary) are boosted over episodic types "
+            "(event) per PRIME dual-memory research."
+        ),
+    )
+    relevance_floor: float = Field(
+        default=0.35,
+        description=(
+            "When the query-dependent signals (semantic + lexical) are below "
+            "this threshold, the composite score is capped at the relevance "
+            "value. This prevents query-independent signals (recency, salience, "
+            "confidence) from inflating scores for irrelevant candidates, "
+            "enabling abstention. Set to 0.0 to disable."
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_weights(self) -> ScoringWeights:
@@ -96,11 +121,14 @@ class ScoringWeights(BaseModel):
         Enables config traceability -- every retrieval response records
         which scoring config version produced it.
         """
+        ntb_sorted = ",".join(
+            f"{k}={v}" for k, v in sorted(self.node_type_boost.items())
+        )
         payload = (
             f"{self.w_semantic}:{self.w_lexical}:{self.w_graph}:"
             f"{self.w_recency}:{self.w_salience}:{self.w_confidence}:"
             f"{self.w_epistemic}:{self.w_paths}:{self.recency_lambda}:"
-            f"{self.temporal_boost}"
+            f"{self.temporal_boost}:{self.relevance_floor}:{ntb_sorted}"
         )
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 

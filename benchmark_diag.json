@@ -1,0 +1,355 @@
+{
+  "benchmarks": [
+    {
+      "benchmark_name": "longmemeval-real (llm-judge)",
+      "overall_score": 0.2027,
+      "category_scores": {
+        "abstention": 0.0,
+        "info_extraction": 0.1333,
+        "knowledge_update": 0.4857,
+        "multi_session": 0.4,
+        "temporal": 0.1625
+      },
+      "total_queries": 37,
+      "correct": 8,
+      "incorrect": 29,
+      "abstained": 0,
+      "duration_ms": 149866.3,
+      "timestamp": "2026-03-31T02:08:53.012055+00:00",
+      "details": [
+        {
+          "query": "Who became a parent first, Rachel or Alex?",
+          "category": "temporal",
+          "expected": "Alex",
+          "actual": "Rachel became a parent first \u2014 Rachel\u2019s twins were born Feb 12, 2022 (per the memory saying they were celebrating their first birthday), while Alex adopted in January 2023.",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "Rachel became a parent first \u2014 Rachel\u2019s twins were born Feb 12, 2022 (per the memory saying they were celebrating their first birthday), while Alex adopted in January 2023."
+        },
+        {
+          "query": "How long have I been working before I started my current job at Google?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.682 sem=0.634 lex=1.000 graph=0.000 content=I'm looking to get some advice on managing my time more efficiently. Lately, I'v",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "When did I book the Airbnb in Sacramento?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.655 sem=0.652 lex=1.000 graph=0.000 content=I'm planning a trip to San Francisco and was wondering if you could recommend so",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many different cuisines have I learned to cook or tried out in the past few months?",
+          "category": "multi_session",
+          "expected": "4",
+          "actual": "You\u2019ve learned to cook or tried dishes from 5 different cuisines: Korean, Vegan/plant-based, Indian, Ethiopian, and German/Central European (sauerkraut). If you don\u2019t count \u201cvegan\u201d as a cuisine, that\u2019",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "You\u2019ve learned to cook or tried dishes from 5 different cuisines: Korean, Vegan/plant-based, Indian, Ethiopian, and German/Central European (sauerkraut). If you don\u2019t count \u201cvegan\u201d as a cuisine, that\u2019s 4 regional cuisines."
+        },
+        {
+          "query": "How many hours of jogging and yoga did I do last week?",
+          "category": "multi_session",
+          "expected": "0.5 hours",
+          "actual": "Jogging = 0.5 hours; Yoga = I don't know (no data).",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Jogging = 0.5 hours; Yoga = I don't know (no data)."
+        },
+        {
+          "query": "How much total money did I spend on attending workshops in the last four months?",
+          "category": "multi_session",
+          "expected": "$720",
+          "actual": "$220",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "$220"
+        },
+        {
+          "query": "How many days did I spend in total traveling in Hawaii and in New York City?",
+          "category": "multi_session",
+          "expected": "15 days",
+          "actual": "I don't know the total \u2014 you spent 5 days in New York City, and the Hawaii trip length isn't specified in the provided information, so the combined total cannot be determined without that missing numb",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "I don't know the total \u2014 you spent 5 days in New York City, and the Hawaii trip length isn't specified in the provided information, so the combined total cannot be determined without that missing number."
+        },
+        {
+          "query": "How many fish are there in my 30-gallon tank?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.660 sem=0.669 lex=1.000 graph=0.000 content=That's a great list, thanks! I'm particularly interested in Java Moss and Anacha",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Where did Rachel move to after her recent relocation?",
+          "category": "knowledge_update",
+          "expected": "the suburbs",
+          "actual": "Chicago",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "Chicago"
+        },
+        {
+          "query": "What was the amount I was pre-approved for when I got my mortgage from Wells Fargo?",
+          "category": "knowledge_update",
+          "expected": "$400,000",
+          "actual": "You were pre-approved for $350,000 from Wells Fargo.",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "You were pre-approved for $350,000 from Wells Fargo."
+        },
+        {
+          "query": "Where did I go on my most recent family trip?",
+          "category": "knowledge_update",
+          "expected": "Paris",
+          "actual": "Paris",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Paris"
+        },
+        {
+          "query": "How many MCU films did I watch in the last 3 months?",
+          "category": "knowledge_update",
+          "expected": "5",
+          "actual": "The context is inconsistent \u2014 it says both 4 and 5. The latest memory states 5 MCU films in the last 3 months.",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "The context is inconsistent \u2014 it says both 4 and 5. The latest memory states 5 MCU films in the last 3 months."
+        },
+        {
+          "query": "What was my previous personal best time for the charity 5K run?",
+          "category": "knowledge_update",
+          "expected": "27 minutes and 45 seconds",
+          "actual": "27 minutes and 45 seconds (your previous PB); your later PB was 26:30 on 2023-07-30.",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "27 minutes and 45 seconds (your previous PB); your later PB was 26:30 on 2023-07-30."
+        },
+        {
+          "query": "How many followers do I have on Instagram now?",
+          "category": "knowledge_update",
+          "expected": "1300",
+          "actual": "Latest confirmed: 1250 followers (May 28, 2023). I don\u2019t know your exact current live count.",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Latest confirmed: 1250 followers (May 28, 2023). I don\u2019t know your exact current live count."
+        },
+        {
+          "query": "How many Italian restaurants have I tried in my city?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.651 sem=0.637 lex=1.000 graph=0.000 content=I think I'll go with kimchi and bokkeumbap. By the way, have you tried any good ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many engineers do I lead when I just started my new role as Software Engineer Manager?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.691 sem=0.791 lex=1.000 graph=0.000 content=I'll reach out to Samantha and ask about the Corporate Team Building Package for",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How long have I been living in my current apartment in Shinjuku?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.685 sem=0.652 lex=1.000 graph=0.000 content=I'm still getting used to living in Tokyo, but I've been enjoying the independen",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How often do I play table tennis with my friends at the local park?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.705 sem=0.768 lex=1.000 graph=0.000 content=Yeah, I'm planning to play tennis with my friends this Sunday at the local park.",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "Where do I currently keep my old sneakers?",
+          "category": "knowledge_update",
+          "expected": "in a shoe rack in my closet",
+          "actual": "You currently keep your old sneakers under your bed.",
+          "correct": false,
+          "score": 0.1,
+          "generated_answer": "You currently keep your old sneakers under your bed."
+        },
+        {
+          "query": "I was thinking back to our previous conversation about the Radiation Amplified zombie, and I was wondering if you remembered what we finally decided to name it?",
+          "category": "info_extraction",
+          "expected": "Fissionator.",
+          "actual": "I don\u2019t know \u2014 the conversation lists several name suggestions (e.g., \u201cRadialisk,\u201d \u201cFissionator,\u201d \u201cContaminated Colossus,\u201d Radik, Irradon, Nucleus, Radiatron, Isotopos, Meltdrone, Contamino, etc.) but",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "I don\u2019t know \u2014 the conversation lists several name suggestions (e.g., \u201cRadialisk,\u201d \u201cFissionator,\u201d \u201cContaminated Colossus,\u201d Radik, Irradon, Nucleus, Radiatron, Isotopos, Meltdrone, Contamino, etc.) but there\u2019s no record that you settled on one. Would you like me to pick a favorite or help narrow the list?"
+        },
+        {
+          "query": "I'm looking back at our previous conversation where you created two sad songs for me. Can you remind me what was the chord progression for the chorus in the second song?",
+          "category": "info_extraction",
+          "expected": "C D E F G A B A G F E D C",
+          "actual": "The chorus note progression in the second (sad) song is: G G G G A G F \u2014 repeated for each chorus line.",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "The chorus note progression in the second (sad) song is: G G G G A G F \u2014 repeated for each chorus line."
+        },
+        {
+          "query": "Where did I redeem a $5 coupon on coffee creamer?",
+          "category": "info_extraction",
+          "expected": "Target",
+          "actual": "I don\u2019t know \u2014 the context doesn\u2019t say where you redeemed it. (Event: redeemed the $5 coffee-creamer coupon on May 21, 2023.) Suggestion: check the confirmation email, receipt, or the app you used (e.",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "I don\u2019t know \u2014 the context doesn\u2019t say where you redeemed it. (Event: redeemed the $5 coffee-creamer coupon on May 21, 2023.) Suggestion: check the confirmation email, receipt, or the app you used (e.g., Cartwheel/Target)."
+        },
+        {
+          "query": "How long have I been collecting vintage films?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.676 sem=0.733 lex=1.000 graph=0.000 content=I've been collecting vintage cameras for three months now, and I've already amas",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many days passed between the day I started watering my herb garden and the day I harvested my first batch of fresh herbs?",
+          "category": "temporal",
+          "expected": "24 days. 25 days (including the last day) is also acceptable.",
+          "actual": "23 days",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "23 days"
+        },
+        {
+          "query": "How many weeks had passed since I recovered from the flu when I went on my 10th jog outdoors?",
+          "category": "temporal",
+          "expected": "15",
+          "actual": "11 weeks and 4 days (81 days) had passed between your recovery on Jan 18, 2023 and your 10th jog on Apr 9, 2023.",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "11 weeks and 4 days (81 days) had passed between your recovery on Jan 18, 2023 and your 10th jog on Apr 9, 2023."
+        },
+        {
+          "query": "What is the order of the concerts and musical events I attended in the past two months, starting from the earliest?",
+          "category": "temporal",
+          "expected": "The order of the concerts I attended is: 1. Billie Eilish concert at the Wells Fargo Center in Philly, 2. Free outdoor concert series in the park, 3. Music festival in Brooklyn, 4. Jazz night at a local bar, 5. Queen + Adam Lambert concert at the Prudential Center in Newark, NJ.",
+          "actual": "Earliest \u2192 latest (based on the dates in your memory):\n1. 2023-03-17 \u2014 Billie Eilish concert at the Wells Fargo Center (Philly)\n2. 2023-03-24 \u2014 Free outdoor concert series in the park\n3. 2023-04-08 \u2014 ",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Earliest \u2192 latest (based on the dates in your memory):\n1. 2023-03-17 \u2014 Billie Eilish concert at the Wells Fargo Center (Philly)\n2. 2023-03-24 \u2014 Free outdoor concert series in the park\n3. 2023-04-08 \u2014 Jazz night at a local bar\nNote: You also mentioned a music festival in Brooklyn where you saw Glass Animals, but no specific date for that event appears in the context, so I can\u2019t place it in the order."
+        },
+        {
+          "query": "How many days passed between the day I finished reading 'The Nightingale' and the day I started reading 'The Hitchhiker's Guide to the Galaxy'?",
+          "category": "temporal",
+          "expected": "1 day. 2 days (including the last day) is also acceptable.",
+          "actual": "0 days \u2014 you started Hitchhiker's the same day you finished The Nightingale (January 15, 2022).",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "0 days \u2014 you started Hitchhiker's the same day you finished The Nightingale (January 15, 2022)."
+        },
+        {
+          "query": "How many weeks have I been taking sculpting classes when I invested in my own set of sculpting tools?",
+          "category": "temporal",
+          "expected": "3",
+          "actual": "Approximately 9 weeks.",
+          "correct": false,
+          "score": 0.1,
+          "generated_answer": "Approximately 9 weeks."
+        },
+        {
+          "query": "I received a piece of jewelry last Saturday from whom?",
+          "category": "temporal",
+          "expected": "my aunt",
+          "actual": "I don't know who gave you a piece of jewelry last Saturday \u2014 the context has no mention of jewelry. If you meant the item you received on that day (2023-03-04), it was a crystal chandelier from your a",
+          "correct": false,
+          "score": 0.3,
+          "generated_answer": "I don't know who gave you a piece of jewelry last Saturday \u2014 the context has no mention of jewelry. If you meant the item you received on that day (2023-03-04), it was a crystal chandelier from your aunt."
+        },
+        {
+          "query": "Who did I go with to the music event last Saturday?",
+          "category": "temporal",
+          "expected": "my parents",
+          "actual": "I don't know \u2014 the provided context doesn't say who you went with to the music event on last Saturday (2023-04-15).",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "I don't know \u2014 the provided context doesn't say who you went with to the music event on last Saturday (2023-04-15)."
+        },
+        {
+          "query": "How much will I save by taking the train from the airport to my hotel instead of a taxi?",
+          "category": "multi_session",
+          "expected": "$50",
+          "actual": "You\u2019ll save roughly $110\u2013$170 by taking public transport instead of a taxi from Narita to Shinjuku. (More precisely: about $112\u2013$152 with the Narita Express, $115\u2013$153 with Skyliner+subway, $131\u2013$169 ",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "You\u2019ll save roughly $110\u2013$170 by taking public transport instead of a taxi from Narita to Shinjuku. (More precisely: about $112\u2013$152 with the Narita Express, $115\u2013$153 with Skyliner+subway, $131\u2013$169 with the cheapest commuter-train, or $111\u2013$151 with the limousine bus.)"
+        },
+        {
+          "query": "What was the page count of the two novels I finished in January and March?",
+          "category": "multi_session",
+          "expected": "856",
+          "actual": "I don\u2019t know which novels you finished in January and March \u2014 the context doesn\u2019t specify months. If you mean the two finished books mentioned in your notes, their page counts are 416 pages and 440 pa",
+          "correct": true,
+          "score": 0.9,
+          "generated_answer": "I don\u2019t know which novels you finished in January and March \u2014 the context doesn\u2019t specify months. If you mean the two finished books mentioned in your notes, their page counts are 416 pages and 440 pages."
+        },
+        {
+          "query": "How many pages do I have left to read in 'Sapiens'?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.661 sem=0.691 lex=1.000 graph=0.000 content=I'd be happy to help you calculate how many books you need to read per month to ",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How many plants did I initially plant for tomatoes and chili peppers?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.673 sem=0.721 lex=1.000 graph=0.000 content=I've been enjoying the harvest immensely! I planted 5 tomato plants initially, a",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "What is the total cost of my recently purchased headphones and the iPad?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.668 sem=0.619 lex=1.000 graph=0.000 content=I'm considering buying a new laptop and I'm looking for some recommendations. I'",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "At which university did I present a poster for my undergrad course research project?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.668 sem=0.701 lex=1.000 graph=0.000 content=I'm looking for some information on the latest trends in education technology. I",
+          "correct": false,
+          "score": 0.0
+        },
+        {
+          "query": "How much will I save by taking the bus from the airport to my hotel instead of a taxi?",
+          "category": "abstention",
+          "expected": "ABSTAIN",
+          "actual": "composite=0.670 sem=0.767 lex=0.928 graph=0.000 content=No, I'm pretty sure my friend said it's $10 to get from the airport to the hotel",
+          "correct": false,
+          "score": 0.0
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "benchmarks_run": 1,
+    "total_queries": 37,
+    "overall_score": 0.2027,
+    "total_correct": 8,
+    "total_incorrect": 29,
+    "total_abstained": 0,
+    "total_duration_ms": 149866.3,
+    "per_benchmark": {
+      "longmemeval-real (llm-judge)": 0.2027
+    }
+  }
+}

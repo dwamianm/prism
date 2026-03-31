@@ -213,7 +213,7 @@ class TestCompositeScoring:
         expected_recency = math.exp(-weights.recency_lambda * 30)
         assert abs(trace.recency_factor - expected_recency) < 1e-6
 
-        # Composite: additive * epistemic
+        # Composite: additive * epistemic * node_type_boost
         expected_additive = (
             weights.w_semantic * 0.95
             + weights.w_lexical * 0.0
@@ -222,8 +222,10 @@ class TestCompositeScoring:
             + weights.w_salience * expected_salience
             + weights.w_confidence * expected_confidence
         )
-        expected_composite = expected_additive * 1.0  # OBSERVED
+        node_type_boost = weights.node_type_boost.get("fact", 1.0)  # 1.15
+        expected_composite = expected_additive * 1.0 * node_type_boost  # OBSERVED
         assert abs(trace.composite_score - round(expected_composite, 10)) < 1e-6
+        assert trace.node_type_boost == node_type_boost
 
     def test_composite_score_determinism(self):
         """Same inputs 100 times produce identical output every time."""
@@ -345,7 +347,8 @@ class TestCompositeScoring:
             + 0.05 * eff_salience
             + 0.10 * eff_confidence
         )
-        expected_composite = expected_additive * 1.0  # OBSERVED
+        node_type_boost = custom_weights.node_type_boost.get("fact", 1.0)  # 1.15
+        expected_composite = expected_additive * 1.0 * node_type_boost  # OBSERVED
         assert abs(trace.composite_score - round(expected_composite, 10)) < 1e-6
 
     def test_score_trace_captures_all_components(self):

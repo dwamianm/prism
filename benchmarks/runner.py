@@ -65,6 +65,7 @@ async def _run_single_benchmark(
     benchmark_name: str,
     benchmark_cls: type,
     llm_config: LLMJudgeConfig | None = None,
+    only_questions: set[str] | None = None,
 ) -> BenchmarkResult:
     """Run a single benchmark with its own isolated engine.
 
@@ -78,7 +79,7 @@ async def _run_single_benchmark(
         benchmark = benchmark_cls()
         # Pass llm_config to benchmarks that support it
         if llm_config and llm_config.enabled and hasattr(benchmark, 'run_with_llm'):
-            return await benchmark.run_with_llm(engine, llm_config)
+            return await benchmark.run_with_llm(engine, llm_config, only_questions=only_questions)
         return await benchmark.run(engine)
     finally:
         await engine.close()
@@ -149,6 +150,7 @@ class BenchmarkRunner:
         names: list[str],
         *,
         parallel: bool = True,
+        only_questions: set[str] | None = None,
     ) -> list[BenchmarkResult]:
         """Run the specified benchmarks and return results.
 
@@ -156,6 +158,8 @@ class BenchmarkRunner:
             names: Benchmark names to run, or ``["all"]``.
             parallel: If True, run benchmarks concurrently via
                 ``asyncio.gather``. If False, run sequentially.
+            only_questions: If set, only run questions whose query text
+                matches one of these strings (for retrying failures).
 
         Returns:
             List of BenchmarkResult, one per benchmark.
@@ -167,7 +171,7 @@ class BenchmarkRunner:
 
         if parallel and len(resolved) > 1:
             tasks = [
-                _run_single_benchmark(name, self._registry[name], self._llm_config)
+                _run_single_benchmark(name, self._registry[name], self._llm_config, only_questions)
                 for name in resolved
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -197,7 +201,7 @@ class BenchmarkRunner:
             for name in resolved:
                 try:
                     result = await _run_single_benchmark(
-                        name, self._registry[name], self._llm_config
+                        name, self._registry[name], self._llm_config, only_questions
                     )
                     results_list.append(result)
                 except Exception as exc:

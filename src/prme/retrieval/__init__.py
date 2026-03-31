@@ -5,6 +5,7 @@ configuration, filtering, scoring, packing, and pipeline orchestrator
 are importable from this package.
 """
 
+from prme.retrieval.abstention import should_abstain
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
     DEFAULT_SCORING_WEIGHTS,
@@ -54,4 +55,5 @@ __all__ = [
     "pack_context",
     "render_snapshot_text",
     "score_and_rank",
+    "should_abstain",
 ]

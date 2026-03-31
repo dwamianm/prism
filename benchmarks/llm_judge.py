@@ -168,6 +168,34 @@ def _get_client(provider_string: str) -> instructor.AsyncInstructor:
     return _client_cache[provider_string]
 
 
+async def check_abstention(
+    query: str,
+    context: str,
+    config: LLMJudgeConfig,
+) -> bool:
+    """Check if the system should abstain from answering.
+
+    Delegates to ``prme.retrieval.abstention.should_abstain``.
+
+    Args:
+        query: The user's question.
+        context: Retrieved context (formatted for LLM).
+        config: LLM configuration.
+
+    Returns:
+        True if the system should abstain (context doesn't answer the question).
+    """
+    from prme.retrieval.abstention import should_abstain
+
+    return await should_abstain(
+        query,
+        context,
+        provider=config.provider,
+        model=config.model,
+        max_retries=config.max_retries,
+    )
+
+
 async def reformulate_query(
     query: str,
     config: LLMJudgeConfig,

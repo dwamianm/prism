@@ -109,6 +109,10 @@ class ScoreTrace(BaseModel):
         default=0.0,
         description="Temporal affinity score (0.0-1.0), active only for TEMPORAL queries",
     )
+    node_type_boost: float = Field(
+        default=1.0,
+        description="Node-type multiplicative boost (semantic types boosted per PRIME research)",
+    )
     composite_score: float = Field(
         default=0.0, description="Final composite score"
     )

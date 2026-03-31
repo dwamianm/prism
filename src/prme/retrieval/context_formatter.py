@@ -9,6 +9,20 @@ Applies context-type-specific formatting:
   LLM prioritizes the most recent values.
 - **default**: Relevance-ranked entries with date annotations.
 
+Additionally, implements two enhancements from the PRIME dual-memory research
+(Zhang et al., EMNLP 2025):
+
+- **Profile preamble**: Extracts stable/tentative Facts, Preferences, and
+  Instructions and prepends them as a compact user profile section.
+  "Personalized thinking" (profile-aware reasoning) is the single biggest
+  performance driver for LLM personalization.
+- **Conflict annotations**: When CONTESTED nodes appear in results, explicit
+  conflict mediation annotations are added so the LLM can handle
+  contradictions between episodic and semantic memory.
+
+Both enhancements are enabled by default (``include_profile=True``) and can
+be disabled for callers that need raw formatted results.
+
 Usage::
 
     from prme.retrieval.context_formatter import format_for_llm
@@ -176,6 +190,24 @@ def format_days_ago(event_dt: datetime, question_dt: datetime) -> str:
 # ---------------------------------------------------------------------------
 
 
+# Compiled patterns for knowledge-update auto-detection
+_AGGREGATION_GUARD_RE = re.compile(
+    r"\b(?:how\s+many|how\s+much|total|count|list\s+all|sum)\b",
+    re.IGNORECASE,
+)
+
+_CURRENT_STATE_RE = re.compile(
+    r"(?:"
+    r"\b(?:current|currently|now|presently|these\s+days)\b"
+    r"|\bmost\s+recently\b"
+    r"|\bright\s+now\b"
+    r"|\bafter\s+(?:\w+\s+)?(?:recent|latest)\b"
+    r"|\bdo\s+I\s+(?:have|keep|use|own|play|work)\b"
+    r")",
+    re.IGNORECASE,
+)
+
+
 def _detect_context_type(
     query: str,
     query_analysis: QueryAnalysis | None = None,
@@ -183,13 +215,31 @@ def _detect_context_type(
     """Auto-detect the best formatting strategy for this query.
 
     Returns one of: ``"temporal"``, ``"knowledge_update"``, ``"default"``.
+
+    Detection order:
+
+    1. **knowledge_update** — current-state queries (``"currently"``,
+       ``"now"``, ``"do I keep"``, ``"after recent"``…) that are NOT
+       aggregation queries.  Chronological sort + ``[LATEST]`` markers
+       help the LLM pick the most recent value.  Checked before temporal
+       because current-state queries often contain temporal keywords but
+       need update-oriented formatting.
+    2. **temporal** — explicit TEMPORAL intent or time-oriented keywords
+       (``"when"``, ``"ago"``, ``"last"``, ``"how long"``…).
+    3. **default** — relevance-ranked with date annotations.
     """
     from prme.types import QueryIntent
 
+    q = query.lower()
+
+    # Knowledge-update: current-state queries that are NOT aggregation.
+    # Aggregation queries ("how many X in the last Y?") need all entries
+    # visible, so chronological + [LATEST] markers would be misleading.
+    if not _AGGREGATION_GUARD_RE.search(q) and _CURRENT_STATE_RE.search(q):
+        return "knowledge_update"
+
     if query_analysis and query_analysis.intent == QueryIntent.TEMPORAL:
         return "temporal"
-
-    q = query.lower()
 
     # Temporal heuristics
     temporal_re = re.compile(
@@ -200,12 +250,137 @@ def _detect_context_type(
     if temporal_re.search(q):
         return "temporal"
 
-    # Knowledge-update heuristics are intentionally NOT auto-detected.
-    # Chronological sort + [LATEST] markers can hurt when the model needs
-    # to consider all entries (e.g., aggregation). Callers can still pass
-    # context_hint="knowledge_update" explicitly when appropriate.
-
     return "default"
+
+
+# ---------------------------------------------------------------------------
+# PRIME enhancements: profile preamble & conflict annotations
+# ---------------------------------------------------------------------------
+
+
+def _build_profile_preamble(
+    results: list[RetrievalCandidate],
+) -> str:
+    """Build a user profile preamble from semantic memory nodes.
+
+    Extracts stable/tentative Facts, Preferences, and Instructions from
+    the result set and formats them as a compact profile section. This
+    implements "personalized thinking" from the PRIME dual-memory research
+    (Zhang et al., EMNLP 2025): prepending a user profile summary helps
+    downstream LLMs reason through the user's lens.
+
+    Only includes nodes with lifecycle_state in (STABLE, TENTATIVE) to
+    avoid surfacing superseded or contested information in the profile.
+
+    Args:
+        results: The full set of retrieval candidates.
+
+    Returns:
+        Formatted profile section string, or empty string if no
+        semantic nodes are found.
+    """
+    from prme.types import LifecycleState, NodeType
+
+    # Semantic memory node types that belong in a user profile
+    PROFILE_TYPES = {NodeType.FACT, NodeType.PREFERENCE, NodeType.INSTRUCTION}
+    PROFILE_STATES = {LifecycleState.STABLE, LifecycleState.TENTATIVE}
+
+    profile_nodes = []
+    for r in results:
+        if (
+            r.node.node_type in PROFILE_TYPES
+            and r.node.lifecycle_state in PROFILE_STATES
+        ):
+            profile_nodes.append(r)
+
+    if not profile_nodes:
+        return ""
+
+    # Group by type, sorted by confidence descending within each group
+    from collections import defaultdict
+    by_type: dict[str, list[RetrievalCandidate]] = defaultdict(list)
+    for r in profile_nodes:
+        by_type[r.node.node_type.value].append(r)
+
+    lines: list[str] = ["## User Profile"]
+
+    # Order: preferences first (most actionable), then facts, then instructions
+    type_order = ["preference", "fact", "instruction"]
+    type_labels = {
+        "preference": "Preferences",
+        "fact": "Known Facts",
+        "instruction": "Learned Rules",
+    }
+
+    for ntype in type_order:
+        nodes = by_type.get(ntype, [])
+        if not nodes:
+            continue
+        # Sort by confidence descending
+        nodes.sort(key=lambda r: r.node.confidence, reverse=True)
+        lines.append(f"### {type_labels[ntype]}")
+        for r in nodes:
+            confidence_tag = ""
+            if r.node.lifecycle_state == LifecycleState.TENTATIVE:
+                confidence_tag = " (tentative)"
+            lines.append(f"- {r.node.content}{confidence_tag}")
+
+    return "\n".join(lines) + "\n"
+
+
+def _build_conflict_annotations(
+    results: list[RetrievalCandidate],
+) -> str:
+    """Build conflict annotations for CONTESTED nodes in results.
+
+    When recent Events contradict stable Facts, the LLM needs explicit
+    guidance to handle the conflict. This implements conflict mediation
+    from the PRIME dual-memory research: naively combining episodic and
+    semantic memory can underperform when conflicts exist.
+
+    Args:
+        results: The full set of retrieval candidates.
+
+    Returns:
+        Formatted conflict annotations, or empty string if no conflicts.
+    """
+    conflicts = [r for r in results if r.conflict_flag and r.contradicts_id]
+    if not conflicts:
+        return ""
+
+    # Build a lookup of all result node IDs for cross-referencing
+    node_lookup = {r.node.id: r for r in results}
+
+    lines: list[str] = ["## Conflicting Information"]
+    lines.append(
+        "The following items have unresolved contradictions. "
+        "Prefer the more recent or higher-confidence version."
+    )
+
+    seen: set = set()
+    for r in conflicts:
+        if r.node.id in seen:
+            continue
+        seen.add(r.node.id)
+
+        counterpart = node_lookup.get(r.contradicts_id)
+        if counterpart:
+            seen.add(counterpart.node.id)
+            # Determine which is newer
+            r_time = r.node.event_time or r.node.created_at
+            c_time = counterpart.node.event_time or counterpart.node.created_at
+            if r_time >= c_time:
+                newer, older = r, counterpart
+            else:
+                newer, older = counterpart, r
+            lines.append(
+                f"- NEWER: \"{newer.node.content}\" vs "
+                f"OLDER: \"{older.node.content}\""
+            )
+        else:
+            lines.append(f"- CONTESTED: \"{r.node.content}\" (contradicting memory not in results)")
+
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +396,7 @@ def format_for_llm(
     question_date: datetime | None = None,
     context_hint: str | None = None,
     max_results: int = 50,
+    include_profile: bool = True,
 ) -> str:
     """Format retrieval results as text optimized for LLM consumption.
 
@@ -234,6 +410,9 @@ def format_for_llm(
         context_hint: Override auto-detection with an explicit context type.
             One of ``"temporal"``, ``"knowledge_update"``, ``"default"``.
         max_results: Maximum number of results to include.
+        include_profile: When ``True`` (default), prepend a user profile
+            preamble and conflict annotations derived from the PRIME
+            dual-memory research. Set to ``False`` for raw formatted output.
 
     Returns:
         Formatted context string ready for injection into an LLM prompt.
@@ -245,10 +424,31 @@ def format_for_llm(
     ctx_type = context_hint or _detect_context_type(query, query_analysis)
 
     if ctx_type == "temporal":
-        return _format_temporal(display, query, question_date)
-    if ctx_type == "knowledge_update":
-        return _format_knowledge_update(display, question_date)
-    return _format_default(display, question_date)
+        body = _format_temporal(display, query, question_date)
+    elif ctx_type == "knowledge_update":
+        body = _format_knowledge_update(display, question_date)
+    else:
+        body = _format_default(display, question_date)
+
+    if not include_profile:
+        return body
+
+    # Prepend profile preamble and conflict annotations (PRIME enhancements)
+    parts: list[str] = []
+
+    profile = _build_profile_preamble(results[:max_results])
+    if profile:
+        parts.append(profile)
+
+    conflicts = _build_conflict_annotations(results[:max_results])
+    if conflicts:
+        parts.append(conflicts)
+
+    if parts:
+        parts.append("## Retrieved Memory\n" + body)
+        return "\n".join(parts)
+
+    return body
 
 
 # ---------------------------------------------------------------------------

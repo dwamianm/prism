@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 
 from benchmarks.llm_judge import LLMJudgeConfig
@@ -77,6 +78,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="LLM model (default: gpt-4o-mini). Overrides PRME_EXTRACTION__MODEL.",
     )
+    parser.add_argument(
+        "--retry-failed",
+        metavar="PATH",
+        default=None,
+        help="Path to a previous JSON report. Only reruns questions that failed.",
+    )
     return parser.parse_args(argv)
 
 
@@ -93,11 +100,24 @@ async def _main(argv: list[str] | None = None) -> int:
     if llm_config.enabled:
         print(f"  LLM judge: {llm_config.provider_string}")
 
+    # Load failed question IDs from previous report if --retry-failed
+    only_questions: set[str] | None = None
+    if args.retry_failed:
+        with open(args.retry_failed) as f:
+            prev_report = json.load(f)
+        only_questions = set()
+        for bench in prev_report.get("benchmarks", []):
+            for detail in bench.get("details", []):
+                if not detail.get("correct", True):
+                    only_questions.add(detail["query"])
+        print(f"  Retrying {len(only_questions)} failed questions from {args.retry_failed}")
+
     runner = BenchmarkRunner(llm_config=llm_config)
     try:
         results = await runner.run(
             args.benchmarks,
             parallel=not args.no_parallel,
+            only_questions=only_questions,
         )
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)

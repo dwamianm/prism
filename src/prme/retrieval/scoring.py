@@ -218,6 +218,34 @@ def _is_current_state_query(query_analysis: QueryAnalysis) -> bool:
     return False
 
 
+# Compiled regex for detecting recent-episodic query language.
+_RECENT_EPISODIC_QUERY_RE = re.compile(
+    r"(?:"
+    r"\b(?:recently|last\s+time|the\s+other\s+day|earlier\s+today"
+    r"|yesterday|this\s+(?:morning|afternoon|evening|week)"
+    r"|just\s+(?:now|told|said|mentioned|asked)"
+    r"|remember\s+when|did\s+(?:I|we)\s+(?:talk|discuss|mention|say))\b"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _is_recent_episodic_query(query_analysis: QueryAnalysis) -> bool:
+    """Detect queries about recent interactions/episodes.
+
+    Returns True if the query text contains recency-oriented episodic
+    language such as "recently", "last time", "yesterday", "this week",
+    "just told", "remember when", "did I talk about", etc.
+
+    Args:
+        query_analysis: The analyzed query.
+
+    Returns:
+        True if the query is about recent episodic interactions.
+    """
+    return bool(_RECENT_EPISODIC_QUERY_RE.search(query_analysis.query))
+
+
 def _compute_effective_scores(node: MemoryNode, now: datetime) -> tuple[float, float]:
     """Compute virtual effective salience and confidence per RFC-0015.
 
@@ -359,6 +387,19 @@ def compute_composite_score(
         temporal_affinity = _compute_temporal_affinity(candidate, query_analysis)
         composite += weights.temporal_boost * temporal_affinity
 
+    # Node-type boost: semantic memory types get a multiplicative boost
+    # per PRIME dual-memory research (Zhang et al., EMNLP 2025).
+    node_type_key = node.node_type.value
+    node_type_multiplier = weights.node_type_boost.get(node_type_key, 1.0)
+    composite *= node_type_multiplier
+
+    # Relevance floor: when query-dependent signals are weak, cap the
+    # composite score so that query-independent signals (recency, salience,
+    # confidence) cannot inflate it beyond the actual relevance level.
+    relevance = candidate.semantic_score + candidate.lexical_score
+    if weights.relevance_floor > 0 and relevance < weights.relevance_floor:
+        composite = min(composite, relevance)
+
     composite = round(composite, 10)
 
     return ScoreTrace(
@@ -372,6 +413,7 @@ def compute_composite_score(
         path_score=path_score,
         composite_score=composite,
         temporal_affinity=temporal_affinity,
+        node_type_boost=node_type_multiplier,
     )
 
 
@@ -441,6 +483,38 @@ def score_and_rank(
                     w_epistemic=weights.w_epistemic,
                     w_paths=weights.w_paths,
                     recency_lambda=target_lambda,
+                    temporal_boost=weights.temporal_boost,
+                    node_type_boost=weights.node_type_boost,
+                )
+
+    # Episodic recency boost: when query is about recent interactions,
+    # boost recency weight per PRIME finding that simple recency often
+    # beats semantic similarity for episodic recall.
+    is_episodic = (
+        not is_current_query
+        and query_analysis is not None
+        and _is_recent_episodic_query(query_analysis)
+    )
+    if is_episodic:
+        target_recency = 0.20
+        recency_increase = target_recency - effective_weights.w_recency
+        if recency_increase > 0:
+            sem_lex_total = effective_weights.w_semantic + effective_weights.w_lexical
+            if sem_lex_total > 0:
+                sem_reduction = recency_increase * (effective_weights.w_semantic / sem_lex_total)
+                lex_reduction = recency_increase * (effective_weights.w_lexical / sem_lex_total)
+                effective_weights = ScoringWeights(
+                    w_semantic=effective_weights.w_semantic - sem_reduction,
+                    w_lexical=effective_weights.w_lexical - lex_reduction,
+                    w_graph=effective_weights.w_graph,
+                    w_recency=target_recency,
+                    w_salience=effective_weights.w_salience,
+                    w_confidence=effective_weights.w_confidence,
+                    w_epistemic=effective_weights.w_epistemic,
+                    w_paths=effective_weights.w_paths,
+                    recency_lambda=effective_weights.recency_lambda,
+                    temporal_boost=effective_weights.temporal_boost,
+                    node_type_boost=effective_weights.node_type_boost,
                 )
 
     # Compute relative recency reference: use the newest event_time (or
@@ -478,7 +552,9 @@ def score_and_rank(
                 + effective_weights.w_salience * trace.salience
                 + effective_weights.w_confidence * trace.confidence
             )
-            composite = round(additive * trace.epistemic_weight, 10)
+            composite = round(
+                additive * trace.epistemic_weight * trace.node_type_boost, 10,
+            )
             # Create updated trace with boosted values.
             trace = ScoreTrace(
                 semantic_similarity=trace.semantic_similarity,
@@ -490,6 +566,7 @@ def score_and_rank(
                 epistemic_weight=trace.epistemic_weight,
                 path_score=trace.path_score,
                 composite_score=composite,
+                node_type_boost=trace.node_type_boost,
             )
 
         candidate.composite_score = trace.composite_score

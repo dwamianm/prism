@@ -778,17 +778,21 @@ class LongMemEvalRealBenchmark:
             return 0.0
 
     async def run_with_llm(
-        self, engine: MemoryEngine, llm_config: LLMJudgeConfig
+        self, engine: MemoryEngine, llm_config: LLMJudgeConfig,
+        only_questions: set[str] | None = None,
     ) -> BenchmarkResult:
         """Run LongMemEval-real with LLM generation + judge scoring.
 
         Same per-question engine pattern as run(), but generates answers
         via LLM and uses LLM-as-judge for scoring. Abstention questions
         still use the score-threshold method.
+
+        Args:
+            only_questions: If set, only run questions whose text matches.
         """
         import tempfile
 
-        from benchmarks.llm_judge import generate_answer, judge_answer, reformulate_query
+        from benchmarks.llm_judge import check_abstention, generate_answer, judge_answer, reformulate_query
         from prme.config import PRMEConfig
 
         if not self.dataset_path.exists():
@@ -806,7 +810,9 @@ class LongMemEvalRealBenchmark:
             q for q in all_questions
             if q["question_type"] != "single-session-preference"
         ]
-        if self.max_questions > 0 and self.max_questions < len(questions):
+        if only_questions:
+            questions = [q for q in questions if q["question"] in only_questions]
+        elif self.max_questions > 0 and self.max_questions < len(questions):
             from collections import defaultdict
             by_type: dict[str, list] = defaultdict(list)
             for q in questions:
@@ -817,8 +823,8 @@ class LongMemEvalRealBenchmark:
                 sampled.extend(qs[:n])
             questions = sampled[: self.max_questions]
 
-        concurrency = 10
-        llm_concurrency = 10  # 500K TPM on gpt-5-mini allows high parallelism
+        concurrency = 5
+        llm_concurrency = 3  # Keep low for 200K TPM on gpt-4o-mini
         logger.info(
             "Running LongMemEval-real (LLM judge): %d questions, concurrency=%d, llm_concurrency=%d",
             len(questions), concurrency, llm_concurrency,
@@ -903,13 +909,22 @@ class LongMemEvalRealBenchmark:
                     shutil.rmtree(tmp_dir, ignore_errors=True)
 
             if is_abstention:
-                score = self._evaluate_abstention(response)
                 expected = "ABSTAIN"
-                actual = (
-                    f"top_score={response.results[0].composite_score:.3f}"
-                    if response.results
-                    else "no results"
-                )
+                if not response.results:
+                    score = 1.0
+                    actual = "no results"
+                else:
+                    # Use LLM to check if context actually answers the question
+                    top_content = format_for_llm(
+                        results=list(response.results)[:20],
+                        query=question["question"],
+                    )
+                    async with llm_semaphore:
+                        should_abstain = await check_abstention(
+                            question["question"], top_content, llm_config
+                        )
+                    score = 1.0 if should_abstain else 0.0
+                    actual = f"abstained={should_abstain} composite={response.results[0].composite_score:.3f}"
                 generated = ""
             else:
                 answer = str(question["answer"])
@@ -921,7 +936,7 @@ class LongMemEvalRealBenchmark:
                     results=all_results[:50],
                     query=question["question"],
                     question_date=qdt,
-                    context_hint="temporal" if ability == "temporal" else "default",
+                    context_hint="temporal" if ability == "temporal" else None,
                 )
                 async with llm_semaphore:
                     generated = await generate_answer(
@@ -931,7 +946,7 @@ class LongMemEvalRealBenchmark:
                         question["question"], answer, generated, llm_config
                     )
                 expected = answer
-                actual = top_content[:200]
+                actual = generated[:200] if generated else top_content[:200]
 
             cat = "abstention" if is_abstention else ability
             is_correct = score >= 0.5

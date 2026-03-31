@@ -21,12 +21,13 @@ def _make_candidate(
     event_time: datetime | None = None,
     created_at: datetime | None = None,
     score: float = 0.5,
+    node_type: NodeType = NodeType.EVENT,
 ) -> RetrievalCandidate:
     """Create a minimal RetrievalCandidate for testing."""
     now = created_at or datetime(2023, 6, 1, tzinfo=timezone.utc)
     node = MemoryNode(
         user_id="test",
-        node_type=NodeType.FACT,
+        node_type=node_type,
         scope=Scope.PERSONAL,
         content=content,
         created_at=now,
@@ -223,8 +224,8 @@ class TestFormatForLlm:
         # Should auto-detect temporal and include COMPUTED
         assert "COMPUTED:" in result
 
-    def test_knowledge_update_not_auto_detected(self):
-        """Knowledge-update formatting is only used with explicit hint."""
+    def test_knowledge_update_auto_detected_for_current_state(self):
+        """Knowledge-update formatting is auto-detected for current-state queries."""
         candidates = [
             _make_candidate(
                 f"Value {i}",
@@ -236,7 +237,24 @@ class TestFormatForLlm:
             candidates,
             "What is the current status?",
         )
-        # Should NOT auto-detect knowledge_update — uses default instead
+        # Should auto-detect knowledge_update and include [LATEST] markers
+        assert "[LATEST]" in result
+        assert "chronological order" in result
+
+    def test_knowledge_update_not_triggered_for_aggregation(self):
+        """Aggregation queries should NOT get knowledge_update formatting."""
+        candidates = [
+            _make_candidate(
+                f"Value {i}",
+                event_time=datetime(2023, 1 + i, 1, tzinfo=timezone.utc),
+            )
+            for i in range(6)
+        ]
+        result = format_for_llm(
+            candidates,
+            "How many items do I currently have?",
+        )
+        # "How many" is aggregation — should NOT auto-detect knowledge_update
         assert "[LATEST]" not in result
 
     def test_knowledge_update_with_explicit_hint(self):
