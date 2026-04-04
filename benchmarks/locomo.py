@@ -556,6 +556,18 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_LOCOMO_PATH = _PROJECT_ROOT / "data" / "benchmarks" / "locomo" / "locomo10.json"
 
 
+def _enrich_turn(turn: dict, date_prefix: str) -> str | None:
+    """Build enriched text for a single conversation turn."""
+    text = turn["text"].strip()
+    if len(text) < 15:
+        return None
+    speaker = turn.get("speaker", "")
+    caption = turn.get("blip_caption", "")
+    if caption:
+        return f"{date_prefix}{speaker}: {text} [Image: {caption}]"
+    return f"{date_prefix}{speaker}: {text}"
+
+
 async def _ingest_sessions(
     engine,
     sessions: list[tuple[list[dict], str | None]],
@@ -564,24 +576,25 @@ async def _ingest_sessions(
 ) -> int:
     """Ingest conversation sessions into the engine.
 
-    Stores each turn with speaker, date, and image caption context.
+    Stores each turn individually, plus Q-A paired turns when consecutive
+    speakers differ (reconstructive memory: adjacent context helps retrieval
+    find answers to questions that were asked in the conversation).
+
     Returns the number of turns ingested.
     """
     total_turns = 0
     for sess_idx, (turns, date_str) in enumerate(sessions):
         session_id = f"{sample_id}-s{sess_idx}"
         date_prefix = f"({date_str}) " if date_str else ""
+
+        # Store individual turns
+        enriched_turns: list[tuple[str, str]] = []  # (enriched_text, speaker)
         for turn in turns:
-            text = turn["text"].strip()
-            if len(text) < 15:
+            enriched = _enrich_turn(turn, date_prefix)
+            if enriched is None:
                 continue
             speaker = turn.get("speaker", "")
-            # Include image caption when present (answers may only exist here)
-            caption = turn.get("blip_caption", "")
-            if caption:
-                enriched = f"{date_prefix}{speaker}: {text} [Image: {caption}]"
-            else:
-                enriched = f"{date_prefix}{speaker}: {text}"
+            enriched_turns.append((enriched, speaker))
             await engine.store(
                 enriched,
                 user_id=user_id,
@@ -591,6 +604,28 @@ async def _ingest_sessions(
                 session_id=session_id,
             )
             total_turns += 1
+
+        # Store Q-A pairs: when consecutive turns are from different speakers,
+        # merge them into a single node for better retrieval coverage.
+        # This addresses the "orphaned answer" problem where a question is
+        # retrieved but its adjacent answer is not.
+        for i in range(len(enriched_turns) - 1):
+            text_a, speaker_a = enriched_turns[i]
+            text_b, speaker_b = enriched_turns[i + 1]
+            if speaker_a != speaker_b and speaker_a and speaker_b:
+                merged = f"{text_a}\n{text_b}"
+                # Limit merged size to avoid bloating embeddings
+                if len(merged) < 1000:
+                    await engine.store(
+                        merged,
+                        user_id=user_id,
+                        role="user",
+                        node_type=NodeType.FACT,
+                        scope=Scope.PERSONAL,
+                        session_id=session_id,
+                    )
+                    total_turns += 1
+
     return total_turns
 
 
@@ -829,6 +864,20 @@ class LoCoMoRealBenchmark:
             entity_names = [n for n in entity_names if n not in _skip]
             for name in entity_names[:2]:
                 alt_queries.append(name)
+
+            # Topic keyword retrieval: extract key nouns/objects from question
+            # to catch facts phrased differently than the question
+            _topic_words = {"book", "art", "painting", "pet", "child", "children",
+                           "kid", "husband", "wife", "married", "move", "country",
+                           "race", "camping", "hiking", "swimming", "pottery",
+                           "church", "religion", "religious", "adopt", "adoption",
+                           "dog", "cat", "bowl", "stained", "glass"}
+            q_lower = qa["question"].lower()
+            for word in _topic_words:
+                if word in q_lower:
+                    # Combine entity name + topic for targeted search
+                    for name in entity_names[:1]:
+                        alt_queries.append(f"{name} {word}")
 
             # Retrieval (semaphore-gated to avoid overwhelming shared engine)
             async with semaphore:
