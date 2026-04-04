@@ -1,0 +1,1402 @@
+{
+  "benchmarks": [
+    {
+      "benchmark_name": "locomo-real (llm-judge)",
+      "overall_score": 0.8914,
+      "category_scores": {
+        "inference": 0.9154,
+        "multi_hop": 0.95,
+        "single_hop": 0.7062,
+        "temporal": 0.9324
+      },
+      "total_queries": 152,
+      "correct": 142,
+      "incorrect": 10,
+      "abstained": 0,
+      "duration_ms": 679542.2,
+      "timestamp": "2026-04-04T20:07:27.585489+00:00",
+      "details": [
+        {
+          "query": "When did Caroline go to the LGBTQ support group?",
+          "category": "temporal",
+          "expected": "7 May 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:56 pm on 8 May, 2023) Caroline: I went to a LGBTQ support group yesterday and it was so powerful.\n(1:56 pm on 8 May, 2023) Melanie: Wow, that's cool, Caroline! Wha",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She went on 7 May 2023."
+        },
+        {
+          "query": "When did Melanie paint a sunrise?",
+          "category": "temporal",
+          "expected": "2022",
+          "actual": "## User Profile\n### Known Facts\n- (1:56 pm on 8 May, 2023) Melanie: Yeah, I painted that lake sunrise last year! It's special to me. (tentative)\n- (1:56 pm on 8 May, 2023) Melanie: Yeah, I painted tha",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She painted the sunrise in 2022 (sometime before May 8, 2023)."
+        },
+        {
+          "query": "What fields would Caroline be likely to pursue in her educaton?",
+          "category": "inference",
+          "expected": "Psychology, counseling certification",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Melanie: Woah, Caroline, it sounds like you're doing some impressive work. It's inspiring to see your dedication to helping others. What m",
+          "correct": true,
+          "score": 0.9,
+          "generated_answer": "Most likely: counseling (clinical/counseling mental-health programs), clinical/counseling psychology, social work/human services, LGBTQ/gender studies or advocacy training, art therapy/expressive therapies, and community mental health or nonprofit/public\u2011health programs \u2014 each supported by Caroline\u2019s stated interest in counseling, workshops/conferences about trans mental health, mentoring, advocacy, and use of art as therapy."
+        },
+        {
+          "query": "What did Caroline research?",
+          "category": "single_hop",
+          "expected": "Adoption agencies",
+          "actual": "## User Profile\n### Known Facts\n- (1:56 pm on 8 May, 2023) Caroline: Totally agree, Mel. Relaxing and expressing ourselves is key. Well, I'm off to go do some research. (tentative)\n- (8:56 pm on 20 Ju",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She was researching adoption agencies (the adoption process)."
+        },
+        {
+          "query": "What is Caroline's identity?",
+          "category": "single_hop",
+          "expected": "Transgender woman",
+          "actual": "## User Profile\n### Known Facts\n- (2:24 pm on 14 August, 2023) Caroline: Thanks, Melanie. Here's one- 'Embracing Identity' is all about finding comfort and love in being yourself. The woman in the pai",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Caroline is a transgender woman (a trans woman)."
+        },
+        {
+          "query": "When did Melanie run a charity race?",
+          "category": "temporal",
+          "expected": "The sunday before 25 May 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Melanie: Hey Caroline, since we last chatted, I've had a lot of things happening to me. I ran a charity race for mental health last Saturday",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "She ran the charity race on Saturday, 20 May 2023."
+        },
+        {
+          "query": "When is Melanie planning on going camping?",
+          "category": "temporal",
+          "expected": "June 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Melanie: Thanks, Caroline. It's still a work in progress, but I'm doing my best. My kids are so excited about summer break! We're thinking a",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "June 2023."
+        },
+        {
+          "query": "What is Caroline's relationship status?",
+          "category": "single_hop",
+          "expected": "Single",
+          "actual": "## User Profile\n### Known Facts\n- (12:09 am on 13 September, 2023) Melanie: Wow, Caro, that painting is amazing! You've made so much progress. I'm super proud of you for being your true self. What eff",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "I don't know \u2014 the messages do not state Caroline's relationship status."
+        },
+        {
+          "query": "When did Caroline give a speech at a school?",
+          "category": "temporal",
+          "expected": "The week before 9 June 2023",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Caroline: Thanks, Mel! My friends, family and mentors are my rocks \u2013 they motivate me and give me the strength to push on. Here's a pic from",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Early June 2023 \u2014 during the week of June 2\u20138, 2023 (she reported it on 9 June 2023 saying it was \u201clast week\u201d)."
+        },
+        {
+          "query": "When did Caroline meet up with her friends, family, and mentors?",
+          "category": "temporal",
+          "expected": "The week before 9 June 2023",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Caroline: Thanks, Mel! My friends, family and mentors are my rocks \u2013 they motivate me and give me the strength to push on. Here's a pic from",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Around 2 June 2023 (the week before her 9 June 2023 message)."
+        },
+        {
+          "query": "How long has Caroline had her current group of friends for?",
+          "category": "temporal",
+          "expected": "4 years",
+          "actual": "## User Profile\n### Known Facts\n- (1:50 pm on 17 August, 2023) Caroline: I'm always here for you, Mel! We had a blast last year at the Pride fest. Those supportive friends definitely make everything w",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "4 years"
+        },
+        {
+          "query": "Where did Caroline move from 4 years ago?",
+          "category": "single_hop",
+          "expected": "Sweden",
+          "actual": "## User Profile\n### Known Facts\n- (9:55 am on 22 October, 2023) Melanie: Absolutely! I'm so glad we can always be there for each other. (tentative)\n- (8:56 pm on 20 July, 2023) Melanie: Yeah, they sur",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "She moved from her home country (the specific country isn\u2019t given in the context)."
+        },
+        {
+          "query": "How long ago was Caroline's 18th birthday?",
+          "category": "temporal",
+          "expected": "10 years ago",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Caroline: I'm so lucky to have such a great support system around me. Their love and encouragement has really helped me accept and grow into",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "Caroline\u2019s 18th birthday was around 27 June 2013 (10 years before her 27 June 2023 message). As of 4 April 2026 that was about 12 years, 9 months, and 8 days ago."
+        },
+        {
+          "query": "What career path has Caroline decided to persue?",
+          "category": "single_hop",
+          "expected": "counseling or mental health for Transgender people",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Caroline: Lately, I've been looking into counseling and mental health as a career. I want to help people who have gone through the same th",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She's pursuing a career in counseling and mental health \u2014 aiming to work as a counselor supporting trans people."
+        },
+        {
+          "query": "Would Caroline still want to pursue counseling as a career if she hadn't received support growing up?",
+          "category": "inference",
+          "expected": "Likely no",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Caroline: Lately, I've been looking into counseling and mental health as a career. I want to help people who have gone through the same th",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Probably less likely. The context repeatedly ties her career motivation to the support she received (June 27, July 12, Oct 22, 2023), so without that experience her drive to \"pass that same support\" would likely be weaker \u2014 though her personal struggles could still motivate her in a different way."
+        },
+        {
+          "query": "What activities does Melanie partake in?",
+          "category": "single_hop",
+          "expected": "pottery, camping, painting, swimming",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Melanie: That's awesome, Caroline! You drew it? What does it mean to you? (tentative)\n- (1:36 pm on 3 July, 2023) Melanie: Wow, Carolin",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Melanie does pottery (took a pottery class, makes bowls), hikes/explores forests and mountains, attends shows/concerts and listens to music, and enjoys outdoor/nature experiences (e.g., beach visits)."
+        },
+        {
+          "query": "When did Melanie sign up for a pottery class?",
+          "category": "temporal",
+          "expected": "2 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:36 pm on 3 July, 2023) Melanie: Wow, Caroline! That's great! I just signed up for a pottery class yesterday. It's like therapy for me, letting me express myself an",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie signed up on July 2, 2023."
+        },
+        {
+          "query": "When is Caroline going to the transgender conference?",
+          "category": "temporal",
+          "expected": "July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:36 pm on 3 July, 2023) Caroline: Thanks Mel! I'm going to a transgender conference this month. I'm so excited to meet other people in the community and learn more ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She said she was going \u201cthis month\u201d in the message dated July 3, 2023 \u2014 i.e. July 2023. In a later message (July 12) she reports she went two days earlier, so the conference took place on July 10, 2023."
+        },
+        {
+          "query": "Where has Melanie camped?",
+          "category": "single_hop",
+          "expected": "beach, mountains, forest",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Caroline: I'm so lucky to have such a great support system around me. Their love and encouragement has really helped me accept and grow into",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie has camped in the mountains, at the beach, and in the forest."
+        },
+        {
+          "query": "What do Melanie's kids like?",
+          "category": "single_hop",
+          "expected": "dinosaurs, nature",
+          "actual": "## User Profile\n### Known Facts\n- (8:56 pm on 20 July, 2023) Caroline: Sounds fun! What was the best part? Do you do it often with the kids? (tentative)\n- (10:31 am on 13 October, 2023) Melanie: Yeah,",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Melanie\u2019s kids like creative activities (pottery/clay work and painting) and outdoor adventures (beach and kite play, hiking/exploring forests, camping and campfires/roasting marshmallows). They also go swimming."
+        },
+        {
+          "query": "When did Melanie go to the museum?",
+          "category": "temporal",
+          "expected": "5 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Melanie: That's awesome, Caroline! Congrats on following your dreams. Yesterday I took the kids to the museum - it was so cool spending time",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She went to the museum on July 5, 2023."
+        },
+        {
+          "query": "When did Caroline have a picnic?",
+          "category": "temporal",
+          "expected": "The week before 6 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Caroline: Wow, that's great! It sure shows how important friendship and compassion are. It's made me appreciate how lucky I am to have my fr",
+          "correct": true,
+          "score": 0.9,
+          "generated_answer": "June 29, 2023"
+        },
+        {
+          "query": "Would Caroline likely have Dr. Seuss books on her bookshelf?",
+          "category": "inference",
+          "expected": "Yes, since she collects classic children's books",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Melanie: Wow, Caroline! Books have such an awesome power! Which one has been your favorite guide?\n(4:33 pm on 12 July, 2023) Caroline: I lo",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Yes. It\u2019s likely she would have Dr. Seuss books: she says she owns lots of children\u2019s \u201cclassics\u201d and is building a kids\u2019 library, so Dr. Seuss titles are a probable match (though not guaranteed)."
+        },
+        {
+          "query": "What books has Melanie read?",
+          "category": "single_hop",
+          "expected": "\"Nothing is Impossible\", \"Charlotte's Web\"",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Caroline: Thanks so much, Mel! Seeing this pic just made me appreciate my love of reading even more. Books guide me, motivate me and help m",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Explicitly named: \"Charlotte's Web\" (Melanie said she loved reading it as a kid, 8:18 pm on 6 July, 2023). She also mentioned reading \"a book I read last year\" that inspired her (4:33 pm on 12 July, 2023) and \"that book you recommended\" (10:31 am on 13 October, 2023), but no titles were provided for those."
+        },
+        {
+          "query": "What does Melanie do to destress?",
+          "category": "single_hop",
+          "expected": "Running, pottery",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Melanie: Caroline, congrats! So proud of you for taking this step. How does it feel? Also, do you have any pets? (tentative)\n- (10:31 am ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She goes for runs to destress and clear her mind \u2014 and she also does pottery, which she finds relaxing and peaceful."
+        },
+        {
+          "query": "When did Caroline go to the LGBTQ conference?",
+          "category": "temporal",
+          "expected": "10 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:36 pm on 3 July, 2023) Caroline: Thanks Mel! I'm going to a transgender conference this month. I'm so excited to meet other people in the community and learn more ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "July 10, 2023."
+        },
+        {
+          "query": "When did Melanie read the book \"nothing is impossible\"?",
+          "category": "temporal",
+          "expected": "2022",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Caroline: Being a mom is awesome. I'm creating a library for when I have kids. I'm really looking forward to reading to them and opening up ",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "I don't know. The conversation doesn't mention Melanie reading a book titled \"nothing is impossible.\" The only related line is Melanie\u2019s 12 July 2023 message saying she\u2019d read \u201cthis book\u201d \u201clast year\u201d (which would mean 2022), but the book title isn\u2019t specified, so we can\u2019t confirm it was \"nothing is impossible.\""
+        },
+        {
+          "query": "Would Caroline pursue writing as a career option?",
+          "category": "inference",
+          "expected": "LIkely no; though she likes reading, she wants to be a counselor",
+          "actual": "## User Profile\n### Known Facts\n- (1:56 pm on 8 May, 2023) Caroline: Gonna continue my edu and check out career options, which is pretty exciting! (tentative)\n- (1:56 pm on 8 May, 2023) Caroline: Gonn",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "No \u2014 the context gives no indication Caroline intends to pursue writing as a career. She consistently expresses career goals in counseling/mental health, activism, and visual art; writing is not mentioned as a career (only reading and creative/art interests)."
+        },
+        {
+          "query": "When did Caroline go to the adoption meeting?",
+          "category": "temporal",
+          "expected": "The friday before 15 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: That photo is stunning! So glad you bonded over our love of nature. Last Friday I went to a council meeting for adoption. It was ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "July 14, 2023."
+        },
+        {
+          "query": "When did Melanie go to the pottery workshop?",
+          "category": "temporal",
+          "expected": "The Friday before 15 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Melanie: Hey Caroline, it's been super busy here. So much since we talked! Last Fri I finally took my kids to a pottery workshop. We all ma",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie went to the pottery workshop on July 14, 2023."
+        },
+        {
+          "query": "Would Melanie be considered a member of the LGBTQ community?",
+          "category": "inference",
+          "expected": "Likely no, she does not refer to herself as part of it",
+          "actual": "## User Profile\n### Known Facts\n- (1:33 pm on 25 August, 2023) Melanie: Wow, Caroline, that's awesome! Can't wait to see your show - the LGBTQ community needs more platforms like this!\n(1:33 pm on 25 ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "No \u2014 the messages contain no explicit statement that Melanie is LGBTQ. She consistently appears as a supportive ally, but membership cannot be determined from the provided context."
+        },
+        {
+          "query": "When did Melanie go camping in June?",
+          "category": "temporal",
+          "expected": "The week before 27 June 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Melanie: Thanks, Caroline. It's still a work in progress, but I'm doing my best. My kids are so excited about summer break! We're thinking a",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She went camping the week before June 27, 2023 \u2014 computed as around June 20, 2023."
+        },
+        {
+          "query": "What LGBTQ+ events has Caroline participated in?",
+          "category": "single_hop",
+          "expected": "Pride parade, school speech, support group",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Melanie: Hey Caroline! Great to hear from you. Sounds like your event was amazing! I'm so proud of you for spreading awareness and getting o",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Caroline has taken part in:\n\n- An LGBTQ support group (attended on 7 May 2023).\n- A school event where she gave a talk about her transgender journey (early June 2023, week of June 2\u20138, 2023).\n- A pride parade (late June 2023, week of June 26\u2013July 2, 2023) and another pride event in June 2023 she attended with her mentee.\n- An LGBTQ conference (10 July 2023).\n- Joining an activist group (Connected LGBTQ Activists) on 18 July 2023.\n- Planning/hosting an LGBTQ art show as an artist/organizer (August 2023, late Aug).\n- Attendance at an advocacy event (August 2023).\n- A transgender poetry reading (described on 13 Oct 2023)."
+        },
+        {
+          "query": "When did Caroline go to a pride parade during the summer?",
+          "category": "temporal",
+          "expected": "The week before 3 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: Wow, nice pic! You both looked amazing. One special memory for me was this pride parade I went to a few weeks ago. [Image: a phot",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "She went in late June 2023 (around the week of June 26\u2013July 2, 2023) and again on Friday, 11 August 2023."
+        },
+        {
+          "query": "What events has Caroline participated in to help children?",
+          "category": "single_hop",
+          "expected": "Mentoring program, school speech",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Melanie: Yeah, Caroline, my family's been great - their love and support really helped me through tough times. It's awesome! We even went o",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "Caroline has participated in the following events to help children:\n\n- School event (early June 2023): spoke at a school about her journey and encouraged students.\n- Mentoring a transgender teen (noted 17 Jul 2023; pride event in June 2023): ongoing one-on-one support for a teen.\n- Council meeting for adoption (14 Jul 2023): attended a meeting focused on creating loving homes for children.\n- Organizing a talent show for kids (planned for Sept 2023): helping put together a kids\u2019 talent show."
+        },
+        {
+          "query": "When did Melanie go camping in July?",
+          "category": "temporal",
+          "expected": "two weekends before 17 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (8:56 pm on 20 July, 2023) Melanie: I'll always remember our camping trip last year when we saw the Perseid meteor shower. It was so amazing lying there and watching ",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Early July 2023 \u2014 around the weekend of July 1\u20133, 2023 (Melanie said on July 17 they\u2019d gone camping \u201ctwo weekends ago\u201d), and there\u2019s a camping photo dated July 6, 2023."
+        },
+        {
+          "query": "When did Caroline join a mentorship program?",
+          "category": "temporal",
+          "expected": "The weekend before 17 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (2:31 pm on 17 July, 2023) Caroline: Hey Melanie! That sounds great! Last weekend I joined a mentorship program for LGBTQ youth - it's really rewarding to help the co",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She joined over the weekend of July 15\u201316, 2023 (she said \"last weekend\" in a message dated July 17, 2023)."
+        },
+        {
+          "query": "What did Melanie paint recently?",
+          "category": "single_hop",
+          "expected": "sunset",
+          "actual": "## User Profile\n### Known Facts\n- (1:33 pm on 25 August, 2023) Melanie: Painting landscapes and still life is my favorite! Nature's amazing, here's a painting I did recently. [Image: a photo of a pain",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Most recently she painted a sunset. She\u2019d also recently painted a sunflower and a horse."
+        },
+        {
+          "query": "What activities has Melanie done with her family?",
+          "category": "single_hop",
+          "expected": "Pottery, painting, camping, museum, swimming, hiking",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Caroline: Thanks, Melanie! This support network has been amazing. They've been there for me every step of the way giving me love, guidance, ",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Activities Melanie has done with her family: hiking in the mountains; exploring forests; camping (forest camping and beach camping); sitting around campfires; beach trips/ enjoying sunsets; family outings; and road trips/relaxing together."
+        },
+        {
+          "query": "In what ways is Caroline participating in the LGBTQ community?",
+          "category": "single_hop",
+          "expected": "Joining activist group, going to pride parades, participating in an art show, mentoring program",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Melanie: Hey Caroline! Great to hear from you. Sounds like your event was amazing! I'm so proud of you for spreading awareness and getting o",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Caroline participates in multiple ways: public speaking (school talk, pride/conference attendance), activism (member of 'Connected LGBTQ Activists', planning events/campaigns), mentoring and volunteering (LGBTQ youth mentorship program and ongoing volunteer work at a youth center), artistic advocacy (making/trans-themed art and organizing an LGBTQ art show), and supporting LGBTQ-friendly adoption services."
+        },
+        {
+          "query": "How many times has Melanie gone to the beach in 2023?",
+          "category": "single_hop",
+          "expected": "2",
+          "actual": "## User Profile\n### Known Facts\n- (1:50 pm on 17 August, 2023) Caroline: I'm always here for you, Mel! We had a blast last year at the Pride fest. Those supportive friends definitely make everything w",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "2 times."
+        },
+        {
+          "query": "When did Caroline join a new activist group?",
+          "category": "temporal",
+          "expected": "The Tuesday before 20 July 2023",
+          "actual": "## User Profile\n### Known Facts\n- (8:56 pm on 20 July, 2023) Caroline: Hey Mel! A lot's happened since we last chatted - I just joined a new LGBTQ activist group last Tues. I'm meeting so many cool pe",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Tuesday, July 18, 2023"
+        },
+        {
+          "query": "Would Melanie be more interested in going to a national park or a theme park?",
+          "category": "inference",
+          "expected": "National park; she likes the outdoors",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Melanie: That's so cool, Caroline! That's a great way to show off and be proud of everyone's skills. You know I love live music. Can't wa",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "National park. The context shows Melanie prefers outdoor/nature family outings (parks, beach, running, picnics) and no evidence she seeks theme-park thrills."
+        },
+        {
+          "query": "What kind of art does Caroline make?",
+          "category": "single_hop",
+          "expected": "abstract art",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Caroline: The room was electric with energy and support! The posters were amazing, so much pride and strength! It inspired me to make s",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "Caroline makes paintings and drawings \u2014 figurative/symbolic art (portraits, flowers, hearts, trees) that express her trans experience and LGBTQ+ and self\u2011acceptance themes."
+        },
+        {
+          "query": "When is Melanie's daughter's birthday?",
+          "category": "temporal",
+          "expected": "13 August",
+          "actual": "## User Profile\n### Known Facts\n- (2:24 pm on 14 August, 2023) Melanie: Hey Caroline! Last night was amazing! We celebrated my daughter's birthday with a concert surrounded by music, joy and the warm ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "August 13, 2023"
+        },
+        {
+          "query": "When did Caroline attend a pride parade in August?",
+          "category": "temporal",
+          "expected": "The Friday before 14 August 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: Wow, nice pic! You both looked amazing. One special memory for me was this pride parade I went to a few weeks ago. [Image: a phot",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Friday, August 11, 2023."
+        },
+        {
+          "query": "Would Melanie be considered an ally to the transgender community?",
+          "category": "inference",
+          "expected": "Yes, she is supportive",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Caroline: Thanks, Mel! Your backing really means a lot. I felt super powerful giving my talk. I shared my own journey, the struggles I had a",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Yes. Based on repeated, dated supportive messages (listed above), Melanie would be considered an ally to the transgender community."
+        },
+        {
+          "query": "Who supports Caroline when she has a negative experience?",
+          "category": "single_hop",
+          "expected": "Her mentors, family, and friends",
+          "actual": "## User Profile\n### Known Facts\n- (12:09 am on 13 September, 2023) Caroline: Phew! Glad it all worked out and you had a good time at the park! (tentative)\n- (8:56 pm on 20 July, 2023) Caroline: Hey Me",
+          "correct": true,
+          "score": 0.6,
+          "generated_answer": "Her support system \u2014 especially her support group and friends like Melanie (and other accepting friends/family)."
+        },
+        {
+          "query": "What types of pottery have Melanie and her kids made?",
+          "category": "single_hop",
+          "expected": "bowls, cup",
+          "actual": "## User Profile\n### Known Facts\n- (1:33 pm on 25 August, 2023) Melanie: Yeah, I made it in pottery class yesterday. I love it! Pottery's so relaxing and creative. Have you tried it yet? (tentative)\n- ",
+          "correct": true,
+          "score": 0.9,
+          "generated_answer": "They\u2019ve made: bowls (including a bowl with a black-and-white flower design \u2014 3 Jul 2023), a plate (Melanie \u2014 25 Aug 2023), cups (the kids made a cup with a dog face \u2014 15 Jul 2023), and a set/group of bowls plus a starfish-shaped decoration or motif (Melanie \u2014 13 Sep 2023). More generally they\u2019ve made \"pots\" at workshops."
+        },
+        {
+          "query": "When did Caroline and Melanie go to a pride fesetival together?",
+          "category": "temporal",
+          "expected": "2022",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Caroline: Cool! Got any fav tunes? (tentative)\n- (1:51 pm on 15 July, 2023) Caroline: Wow, nice pic! You both looked amazing. One special",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They went together \u201clast year\u201d relative to the 17 Aug 2023 message \u2014 i.e., in 2022."
+        },
+        {
+          "query": "What would Caroline's political leaning likely be?",
+          "category": "inference",
+          "expected": "Liberal",
+          "actual": "## User Profile\n### Known Facts\n- (6:55 pm on 20 October, 2023) Caroline: Glad you've got people to lean on, Melanie. It helps during tougher times. (tentative)\n- (6:55 pm on 20 October, 2023) Melanie",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Caroline most likely leans liberal/progressive."
+        },
+        {
+          "query": "What has Melanie painted?",
+          "category": "single_hop",
+          "expected": "Horse, sunset, sunrise",
+          "actual": "## User Profile\n### Known Facts\n- (12:09 am on 13 September, 2023) Melanie: Wow, Caro, that painting is amazing! You've made so much progress. I'm super proud of you for being your true self. What eff",
+          "correct": true,
+          "score": 0.9,
+          "generated_answer": "Melanie has painted: 1) a lake sunrise; 2) a sunset with a palm tree (with her kids); 3) a horse (painted on a wooden wall); 4) a sunflower (still life); 5) a sunset with a pink sky; and 6) an abstract/blue painting."
+        },
+        {
+          "query": "What are Melanie's pets' names?",
+          "category": "single_hop",
+          "expected": "Oliver, Luna, Bailey",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Caroline: Ah, they're adorable! What are their names? Pets sure do bring so much joy to us! (tentative)\n- (4:33 pm on 12 July, 2023) Caroli",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie's pets are Luna and Oliver; she later mentions getting another cat named Bailey."
+        },
+        {
+          "query": "When did Caroline apply to adoption agencies?",
+          "category": "temporal",
+          "expected": "The week of 23 August 2023",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: Hi Melanie! Hope you're doing good. Guess what I did this week? I took the first step towards becoming a mom - I applied to ado",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She applied in the week of 23 August 2023 \u2014 she reported doing so in a message timestamped 3:31 pm on 23 August 2023."
+        },
+        {
+          "query": "When did Caroline draw a self-portrait?",
+          "category": "temporal",
+          "expected": "The week before 23 August 2023",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: Painting's great for expressing myself. I love creating art! Here's a recent self-portrait I made last week. [Image: a photo of",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Caroline drew the self-portrait \"last week\" as of her message on 23 August 2023 \u2014 most likely sometime between 16 and 22 August 2023."
+        },
+        {
+          "query": "What subject have Caroline and Melanie both painted?",
+          "category": "single_hop",
+          "expected": "Sunsets",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Melanie: Thanks, Caroline! We both helped with the painting - it was great bonding over it and chatting about nature. We found these lovely",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Sunsets."
+        },
+        {
+          "query": "What symbols are important to Caroline?",
+          "category": "single_hop",
+          "expected": "Rainbow flag, transgender symbol",
+          "actual": "## User Profile\n### Known Facts\n- (1:33 pm on 25 August, 2023) Caroline: The rainbow flag mural is important to me as it reflects the courage and strength of the trans community. The eagle symbolizes ",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Caroline values the rainbow (the rainbow-flag mural and rainbow colors) and the eagle. She also uses color symbolism in her art \u2014 red and blue for the binary gender system and mixed colors to represent breaking that binary and inclusivity."
+        },
+        {
+          "query": "When did Caroline encounter people on a hike and have a negative experience?",
+          "category": "temporal",
+          "expected": "The week before 25 August 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:50 pm on 17 August, 2023) Caroline: Hey Mel! How're ya doin'? Recently, I had a not-so-great experience on a hike. I ran into a group of religious conservatives wh",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "She reported the negative hike encounter in mid\u2011August 2023: in a message dated 1:50 pm on 17 August 2023, and again (reported 25 August 2023) referring to a hike that took place during the week of August 18\u201324, 2023."
+        },
+        {
+          "query": "When did Melanie make a plate in pottery class?",
+          "category": "temporal",
+          "expected": "24 August 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:33 pm on 25 August, 2023) Caroline: Thanks, Melanie! That plate is awesome! Did you make it?\n(1:33 pm on 25 August, 2023) Melanie: Yeah, I made it in pottery class",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie made the plate on August 24, 2023."
+        },
+        {
+          "query": "Would Caroline be considered religious?",
+          "category": "inference",
+          "expected": "Somewhat, but not extremely religious",
+          "actual": "## User Profile\n### Known Facts\n- (1:50 pm on 17 August, 2023) Caroline: Hey Mel! How're ya doin'? Recently, I had a not-so-great experience on a hike. I ran into a group of religious conservatives wh",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "No \u2014 there\u2019s no clear evidence Caroline is religious. The only religion-related event (17 Aug 2023) describes her being upset by religious conservatives; she doesn\u2019t state any personal religious beliefs or practices."
+        },
+        {
+          "query": "What instruments does Melanie play?",
+          "category": "single_hop",
+          "expected": "clarinet and violin",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Caroline: Thanks, Melanie! Appreciate it. You play any instruments? (tentative)\n- (3:19 pm on 28 August, 2023) Caroline: Thanks, Melanie!",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Clarinet and violin."
+        },
+        {
+          "query": "What musical artists/bands has Melanie seen?",
+          "category": "single_hop",
+          "expected": "Summer Sounds, Matt Patterson",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Melanie: Cool! What type of music do you play? (tentative)\n- (3:19 pm on 28 August, 2023) Melanie: Music's amazing, isn't it? Any songs t",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "None are named. The context mentions Melanie attended shows/concerts (e.g., a show pictured, her daughter\u2019s birthday concert) and that she likes Bach, Mozart and Ed Sheeran, but it does not specify any particular artist or band she has seen."
+        },
+        {
+          "query": "When did Melanie go to the park?",
+          "category": "temporal",
+          "expected": "27 August 2023",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Melanie: That's so cool, Caroline! That's a great way to show off and be proud of everyone's skills. You know I love live music. Can't wa",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She went to the park on August 27, 2023."
+        },
+        {
+          "query": "When is Caroline's youth center putting on a talent show?",
+          "category": "temporal",
+          "expected": "September 2023",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Caroline: We're putting together a talent show for the kids next month. I'm looking forward to seeing how much fun everyone has and how p",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "In September 2023 (no specific date was provided)."
+        },
+        {
+          "query": "Would Melanie likely enjoy the song \"The Four Seasons\" by Vivaldi?",
+          "category": "inference",
+          "expected": "Yes; it's classical music",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Melanie: Music's amazing, isn't it? Any songs that have deep meaning for you?\n(3:19 pm on 28 August, 2023) Caroline: Yeah totally! \"Brave",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Yes \u2014 very likely. Melanie specifically says she enjoys classical composers like Bach and Mozart, and Vivaldi\u2019s \"The Four Seasons\" is a well-known Baroque classical work that fits that preference."
+        },
+        {
+          "query": "What are some changes Caroline has faced during her transition journey?",
+          "category": "single_hop",
+          "expected": "Changes to her body, losing unsupportive friends",
+          "actual": "## User Profile\n### Known Facts\n- (12:09 am on 13 September, 2023) Melanie: Wow, Caro, that painting is amazing! You've made so much progress. I'm super proud of you for being your true self. What eff",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "See the concise list above."
+        },
+        {
+          "query": "What does Melanie do with her family on hikes?",
+          "category": "single_hop",
+          "expected": "Roast marshmallows, tell stories",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: Awesome, Mel! Family support's huge. What else do you guys like doing together? [Image: a photo of a family walking through a for",
+          "correct": true,
+          "score": 0.6,
+          "generated_answer": "She hikes in the mountains and explores forests with her family \u2014 they explore nature, hike to scenic viewpoints, and on camping trips roast marshmallows around the campfire."
+        },
+        {
+          "query": "When did Caroline go biking with friends?",
+          "category": "temporal",
+          "expected": "The weekend before 13 September 2023",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: That's so funny! I used to go horseback riding with my dad when I was a kid, we'd go through the fields, feeling the wind. It w",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Weekend of September 9\u201310, 2023 (the weekend before her 12:09 am message on September 13, 2023)."
+        },
+        {
+          "query": "How long has Melanie been practicing art?",
+          "category": "temporal",
+          "expected": "Since 2016",
+          "actual": "## User Profile\n### Known Facts\n- (12:09 am on 13 September, 2023) Melanie: Wow, Caroline, that looks awesome! I love how it shows the togetherness and power you were talking about. How long have you ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Seven years (as of September 13, 2023)."
+        },
+        {
+          "query": "What personality traits might Melanie say Caroline has?",
+          "category": "inference",
+          "expected": "Thoughtful, authentic, driven",
+          "actual": "## User Profile\n### Known Facts\n- (8:56 pm on 20 July, 2023) Caroline: Hey Melanie! Just wanted to say hi! (tentative)\n- (8:56 pm on 20 July, 2023) Caroline: Hey Melanie! Just wanted to say hi!\n(8:56 ",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "Melanie would likely describe Caroline as: courageous, community-minded/altruistic, creative/artistic, empathetic/supportive, resilient/authentic, and organized/proactive \u2014 supported by Caroline\u2019s participation in support groups, volunteering at a youth center, organizing an LGBTQ art show, and creating and sharing art (see dates above)."
+        },
+        {
+          "query": "What transgender-specific events has Caroline attended?",
+          "category": "single_hop",
+          "expected": "Poetry reading, conference",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Melanie: Wow, sounds amazing! What was the event like? Those posters are great! (tentative)\n- (3:31 pm on 23 August, 2023) Caroline: Hi",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Explicitly transgender-focused events Caroline attended:\n1) School event where she spoke about her transgender journey \u2014 approximately 2 June 2023 (reported 9 Jun 2023 as \"last week\").\n2) Transgender poetry reading \u2014 Friday, 6 October 2023 (reported 13 Oct 2023 as \"last Fri\").\n\nShe also attended broader LGBTQ events (LGBTQ conference on ~10 July 2023 and pride/parade around late June\u2013mid July 2023) but those are not described as transgender-specific."
+        },
+        {
+          "query": "What book did Melanie read from Caroline's suggestion?",
+          "category": "single_hop",
+          "expected": "\"Becoming Nicole\"",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Caroline: I've got lots of kids' books- classics, stories from different cultures, educational books, all of that. What's a favorite book yo",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "\"Becoming Nicole\" by Amy Ellis Nutt."
+        },
+        {
+          "query": "When did Melanie's friend adopt a child?",
+          "category": "temporal",
+          "expected": "2022",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: Hi Melanie! Hope you're doing good. Guess what I did this week? I took the first step towards becoming a mom - I applied to ado",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Sometime in 2022."
+        },
+        {
+          "query": "When did Melanie get hurt?",
+          "category": "temporal",
+          "expected": "September 2023",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Melanie: Thanks for the tip, Caroline. Doing research and readying myself emotionally makes sense. I'll do that. BTW, recently I had a ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Sometime in September 2023 (Melanie said on Oct 13, 2023 that she was hurt \"last month\")."
+        },
+        {
+          "query": "When did Melanie's family go on a roadtrip?",
+          "category": "temporal",
+          "expected": "The weekend before 20 October 2023",
+          "actual": "## User Profile\n### Known Facts\n- (6:55 pm on 20 October, 2023) Melanie: Hey Caroline, that roadtrip this past weekend was insane! We were all freaked when my son got into an accident. We were so luck",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They went on the roadtrip the weekend of October 14\u201315, 2023."
+        },
+        {
+          "query": "How many children does Melanie have?",
+          "category": "single_hop",
+          "expected": "3",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Melanie: Caroline, congrats! So proud of you for taking this step. How does it feel? Also, do you have any pets? (tentative)\n- (3:31 pm o",
+          "correct": true,
+          "score": 0.9,
+          "generated_answer": "Most likely three children."
+        },
+        {
+          "query": "When did Melanie go on a hike after the roadtrip?",
+          "category": "single_hop",
+          "expected": "19 October 2023",
+          "actual": "## User Profile\n### Known Facts\n- (1:50 pm on 17 August, 2023) Melanie: Sounds great, Caroline! Let's plan something special! (tentative)\n- (1:33 pm on 25 August, 2023) Melanie: I'm feeling inspired b",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "October 19, 2023."
+        },
+        {
+          "query": "Would Melanie go on another roadtrip soon?",
+          "category": "inference",
+          "expected": "Likely no; since this one went badly",
+          "actual": "## User Profile\n### Known Facts\n- (1:56 pm on 8 May, 2023) Melanie: Yep, Caroline. Taking care of ourselves is vital. I'm off to go swimming with the kids. Talk to you soon! (tentative)\n- (1:56 pm on ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Unlikely in the near term \u2014 she enjoys family trips but the Oct 20, 2023 roadtrip involved a scary accident, and there\u2019s no later message saying she\u2019s planning another one; she may travel again later once she feels ready."
+        },
+        {
+          "query": "What items has Melanie bought?",
+          "category": "single_hop",
+          "expected": "Figurines, shoes",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Melanie: That's gorgeous, Caroline! It's awesome what items can mean so much to us, right? Got any other objects that you treasure, like t",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "Melanie bought figurines \u2014 specifically a couple of wooden dolls (mentioned 9:55 am on 22 Oct 2023)."
+        },
+        {
+          "query": "When did Caroline pass the adoption interview?",
+          "category": "temporal",
+          "expected": "The Friday before 22 October 2023",
+          "actual": "## User Profile\n### Known Facts\n- (9:55 am on 22 October, 2023) Caroline: Woohoo Melanie! I passed the adoption agency interviews last Friday! I'm so excited and thankful. This is a big move towards m",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She passed the adoption interviews on Friday, October 20, 2023."
+        },
+        {
+          "query": "When did Melanie buy the figurines?",
+          "category": "temporal",
+          "expected": "21 October 2023",
+          "actual": "## User Profile\n### Known Facts\n- (9:55 am on 22 October, 2023) Melanie: Congrats, Caroline! Adoption sounds awesome. I'm so happy for you. These figurines I bought yesterday remind me of family love.",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She bought the figurines on October 21, 2023."
+        },
+        {
+          "query": "Would Caroline want to move back to her home country soon?",
+          "category": "inference",
+          "expected": "No; she's in the process of adopting children.",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Caroline: Yeah, I'm really lucky to have them. They've been there through everything, I've known these friends for 4 years, since I moved fr",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "No \u2014 based on the messages, Caroline appears settled and is taking concrete steps (job search, adoption interviews, local community involvement). There\u2019s sentimental connection to her home country, but no sign she plans to move back soon."
+        },
+        {
+          "query": "What did the charity race raise awareness for?",
+          "category": "multi_hop",
+          "expected": "mental health",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Caroline: That charity race sounds great, Mel! Making a difference & raising awareness for mental health is super rewarding - I'm really pro",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "It raised awareness for mental health."
+        },
+        {
+          "query": "What did Melanie realize after the charity race?",
+          "category": "multi_hop",
+          "expected": "self-care is important",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Caroline: That charity race sounds great, Mel! Making a difference & raising awareness for mental health is super rewarding - I'm really pro",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She realized that self-care \u2014 looking after her mental health \u2014 is important, and that when she looks after herself she\u2019s better able to look after her family."
+        },
+        {
+          "query": "How does Melanie prioritize self-care?",
+          "category": "multi_hop",
+          "expected": "by carving out some me-time each day for activities like running, reading, or playing the violin",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Caroline: I totally agree, Melanie. Taking care of ourselves is so important - even if it's not always easy. Great that you're prioritizing ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She sets aside daily \u201cme-time\u201d (running, reading, playing her violin), treats creative outlets as therapy, leans on family/supportive events, and views self-care as an ongoing journey that helps her be present for her family."
+        },
+        {
+          "query": "What are Caroline's plans for the summer?",
+          "category": "multi_hop",
+          "expected": "researching adoption agencies",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Melanie: Thanks, Caroline. It's still a work in progress, but I'm doing my best. My kids are so excited about summer break! We're thinking a",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "She\u2019s suggesting a summer family outing or planning something special just the two of them\u2014basically a trip to catch up and explore nature."
+        },
+        {
+          "query": "What type of individuals does the adoption agency Caroline is considering support?",
+          "category": "multi_hop",
+          "expected": "LGBTQ+ individuals",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Caroline: Thanks, Mel! My goal is to give kids a loving home. I'm truly grateful for all the support I've got from friends and mentors. Now ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They support LGBTQ+ individuals (LGBTQ+ folks)."
+        },
+        {
+          "query": "Why did Caroline choose the adoption agency?",
+          "category": "multi_hop",
+          "expected": "because of their inclusivity and support for LGBTQ+ individuals",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: Hi Melanie! Hope you're doing good. Guess what I did this week? I took the first step towards becoming a mom - I applied to ado",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She picked that agency because they help LGBTQ+ people with adoption \u2014 their inclusivity and support spoke to her."
+        },
+        {
+          "query": "What is Caroline excited about in the adoption process?",
+          "category": "multi_hop",
+          "expected": "creating a family for kids who need one",
+          "actual": "## User Profile\n### Known Facts\n- (1:14 pm on 25 May, 2023) Melanie: That's great, Caroline! Loving the inclusivity and support. Anything you're excited for in the adoption process? (tentative)\n- (1:1",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Caroline is excited to become a mom and build a loving, safe home for kids in need \u2014 she\u2019s enthusiastic about taking concrete steps in the process (applying, interviews) and about working with an LGBTQ+-inclusive agency."
+        },
+        {
+          "query": "What does Melanie think about Caroline's decision to adopt?",
+          "category": "multi_hop",
+          "expected": "she thinks Caroline is doing something amazing and will be an awesome mom",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: Hi Melanie! Hope you're doing good. Guess what I did this week? I took the first step towards becoming a mom - I applied to ado",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie thinks Caroline's decision to adopt is wonderful \u2014 she's proud, supportive, encouraging, and excited for her."
+        },
+        {
+          "query": "How long have Mel and her husband been married?",
+          "category": "multi_hop",
+          "expected": "Mel and her husband have been married for 5 years.",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Melanie: I'm lucky to have my husband and kids; they keep me motivated. [Image: a photo of a man and a little girl standing in front of a wa",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They\u2019ve been married 5 years (Mel said this on June 9, 2023)."
+        },
+        {
+          "query": "What does Caroline's necklace symbolize?",
+          "category": "multi_hop",
+          "expected": "love, faith, and strength",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Melanie: That's awesome, Caroline! You drew it? What does it mean to you? (tentative)\n- (10:37 am on 27 June, 2023) Melanie: That's gor",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "It symbolizes love, faith, and strength \u2014 a reminder of her roots and the love/support she got from her grandmother."
+        },
+        {
+          "query": "What country is Caroline's grandma from?",
+          "category": "multi_hop",
+          "expected": "Sweden",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Caroline: Thanks, Melanie! This necklace is super special to me - a gift from my grandma in my home country, Sweden. She gave it to me whe",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Sweden"
+        },
+        {
+          "query": "What was grandma's gift to Caroline?",
+          "category": "multi_hop",
+          "expected": "necklace",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Caroline: Thanks, Melanie! This necklace is super special to me - a gift from my grandma in my home country, Sweden. She gave it to me whe",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "A necklace."
+        },
+        {
+          "query": "What is Melanie's hand-painted bowl a reminder of?",
+          "category": "multi_hop",
+          "expected": "art and self-expression",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Caroline: Yep, Melanie! I've got some other stuff with sentimental value, like my hand-painted bowl. A friend made it for my 18th birthday",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "The bowl is a reminder of art and self-expression."
+        },
+        {
+          "query": "What did Melanie and her family do while camping?",
+          "category": "multi_hop",
+          "expected": "explored nature, roasted marshmallows, and went on a hike",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Melanie: Yeah, Caroline, my family's been great - their love and support really helped me through tough times. It's awesome! We even went o",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They roasted marshmallows, told stories around the campfire and enjoyed each other\u2019s company (unplugged and relaxed). They also hiked/explored forests and mountains, camped on the beach sometimes, and once watched the Perseid meteor shower and made wishes."
+        },
+        {
+          "query": "What kind of counseling and mental health services is Caroline interested in pursuing?",
+          "category": "multi_hop",
+          "expected": "working with trans people, helping them accept themselves and supporting their mental health",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Melanie: Sounds great! What kind of counseling and mental health services do you want to persue? (tentative)\n- (10:37 am on 27 June, 2023)",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She\u2019s interested in counseling and mental-health work focused on trans people/LGBTQ+ counseling \u2014 trans-affirming support to help them accept themselves \u2014 and more broadly counseling to support people with similar mental-health experiences."
+        },
+        {
+          "query": "What workshop did Caroline attend recently?",
+          "category": "multi_hop",
+          "expected": "LGBTQ+ counseling workshop",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Melanie: We've got a pup and a kitty. That's the dog, and here's our cat! They brighten up our day and always make us smile. [Image: a phot",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "An LGBTQ+ counseling workshop."
+        },
+        {
+          "query": "What was discussed in the LGBTQ+ counseling workshop?",
+          "category": "multi_hop",
+          "expected": "therapeutic methods and how to best work with trans people",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Melanie: Sounds great! What kind of counseling and mental health services do you want to persue?\n(10:37 am on 27 June, 2023) Caroline: I'm",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "The workshop (attended around June 23, 2023) covered different therapeutic methods and how to best work with trans people, with an emphasis on creating safe, supportive spaces."
+        },
+        {
+          "query": "What motivated Caroline to pursue counseling?",
+          "category": "multi_hop",
+          "expected": "her own journey and the support she received, and how counseling improved her life",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Melanie: Woah, Caroline, it sounds like you're doing some impressive work. It's inspiring to see your dedication to helping others. What m",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She was motivated by her own mental-health journey and the support she received\u2014seeing counseling and support groups improve her life\u2014plus community experiences (an LGBTQ+ workshop, Pride conversations) and a desire to give back and help trans people."
+        },
+        {
+          "query": "What kind of place does Caroline want to create for people?",
+          "category": "multi_hop",
+          "expected": "a safe and inviting place for people to grow",
+          "actual": "## User Profile\n### Known Facts\n- (10:37 am on 27 June, 2023) Caroline: Thanks, Melanie. It really mattered. My own journey and the support I got made a huge difference. Now I want to help people go t",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She wants to create a safe, inviting place where people can grow."
+        },
+        {
+          "query": "Did Melanie make the black and white bowl in the photo?",
+          "category": "multi_hop",
+          "expected": "Yes",
+          "actual": "## User Profile\n### Known Facts\n- (1:36 pm on 3 July, 2023) Caroline: That bowl is gorgeous! The black and white design looks so fancy. Did you make it? (tentative)\n- (1:36 pm on 3 July, 2023) Melanie",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Yes \u2014 Melanie said at 1:36 pm on July 3, 2023 that she made the black-and-white bowl in her class."
+        },
+        {
+          "query": "What kind of books does Caroline have in her library?",
+          "category": "multi_hop",
+          "expected": "kids' books - classics, stories from different cultures, educational books",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Melanie: Sounds great! What kind of books you got in your library? (tentative)\n- (8:18 pm on 6 July, 2023) Caroline: Being a mom is awesome.",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She has lots of kids' books: classics, stories from different cultures, and educational books."
+        },
+        {
+          "query": "What was Melanie's favorite book from her childhood?",
+          "category": "multi_hop",
+          "expected": "\"Charlotte's Web\"",
+          "actual": "## User Profile\n### Known Facts\n- (8:18 pm on 6 July, 2023) Caroline: I've got lots of kids' books- classics, stories from different cultures, educational books, all of that. What's a favorite book yo",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie's favorite childhood book was \"Charlotte's Web.\""
+        },
+        {
+          "query": "What book did Caroline recommend to Melanie?",
+          "category": "multi_hop",
+          "expected": "\"Becoming Nicole\"",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Melanie: Thanks, Caroline. It was tough, but I'm doing ok. Been reading that book you recommended a while ago and painting to keep busy",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "\"Becoming Nicole\" by Amy Ellis Nutt."
+        },
+        {
+          "query": "What did Caroline take away from the book \"Becoming Nicole\"?",
+          "category": "multi_hop",
+          "expected": "Lessons on self-acceptance and finding support",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Caroline: I loved \"Becoming Nicole\" by Amy Ellis Nutt. It's a real inspiring true story about a trans girl and her family. It made me feel ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She took away self-acceptance and how to find support, plus a sense of connection and hope for her own path \u2014 reassurance that tough times don\u2019t last and that hope and love exist (and a note that pets bring joy)."
+        },
+        {
+          "query": "What are the new shoes that Melanie got used for?",
+          "category": "multi_hop",
+          "expected": "Running",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Melanie: Luna and Oliver! They are so sweet and playful - they really liven up the house! Just got some new shoes, too! [Image: a photo of ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Running."
+        },
+        {
+          "query": "What is Melanie's reason for getting into running?",
+          "category": "multi_hop",
+          "expected": "To de-stress and clear her mind",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Caroline: Wow! What got you into running?\n(4:33 pm on 12 July, 2023) Melanie: I've been running farther to de-stress, which has been great ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "To de-stress and improve her headspace \u2014 as a form of me-time that refreshes her and helps her mental health."
+        },
+        {
+          "query": "What does Melanie say running has been great for?",
+          "category": "multi_hop",
+          "expected": "Her mental health",
+          "actual": "## User Profile\n### Known Facts\n- (4:33 pm on 12 July, 2023) Caroline: Wow! What got you into running?\n(4:33 pm on 12 July, 2023) Melanie: I've been running farther to de-stress, which has been great ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Her headspace."
+        },
+        {
+          "query": "What did Mel and her kids make during the pottery workshop?",
+          "category": "multi_hop",
+          "expected": "pots",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Melanie: Hey Caroline, it's been super busy here. So much since we talked! Last Fri I finally took my kids to a pottery workshop. We all ma",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They made their own pots \u2014 for example, a cup (one had a dog face) and other pottery like bowls."
+        },
+        {
+          "query": "What kind of pot did Mel and her kids make with clay?",
+          "category": "multi_hop",
+          "expected": "a cup with a dog face on it",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: Hey Mel, what's up? Been a busy week since we talked.\n(1:51 pm on 15 July, 2023) Melanie: Hey Caroline, it's been super busy here",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They made a cup \u2014 specifically a cup decorated with a dog face."
+        },
+        {
+          "query": "What creative project do Mel and her kids do together besides pottery?",
+          "category": "multi_hop",
+          "expected": "painting",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: Aww, that's so sweet! That cup is so cute. It's awesome to see how kids show their personalities through art. What other creative",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Painting \u2014 especially nature-inspired painting."
+        },
+        {
+          "query": "What did Mel and her kids paint in their latest project in July 2023?",
+          "category": "multi_hop",
+          "expected": "a sunset with a palm tree",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: Aww, that's so sweet! That cup is so cute. It's awesome to see how kids show their personalities through art. What other creative",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "A nature-inspired painting of a sunset with a palm tree."
+        },
+        {
+          "query": "What did Caroline see at the council meeting for adoption?",
+          "category": "multi_hop",
+          "expected": "many people wanting to create loving homes for children in need",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: That photo is stunning! So glad you bonded over our love of nature. Last Friday I went to a council meeting for adoption. It was ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She saw many people who wanted to create loving homes for children in need (the meeting was inspiring and emotional)."
+        },
+        {
+          "query": "What do sunflowers represent according to Caroline?",
+          "category": "multi_hop",
+          "expected": "warmth and happiness",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Caroline: Thanks Melanie - love the blue vase in the pic! Blue's my fave, it makes me feel relaxed. Sunflowers mean warmth and happiness, r",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Sunflowers represent warmth and happiness."
+        },
+        {
+          "query": "Why are flowers important to Melanie?",
+          "category": "multi_hop",
+          "expected": "They remind her to appreciate the small moments and were a part of her wedding decor",
+          "actual": "## User Profile\n### Known Facts\n- (1:51 pm on 15 July, 2023) Melanie: Flowers bring joy. They represent growth, beauty and reminding us to appreciate the small moments. They were an important part of ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Because they bring her joy, symbolize growth and beauty, help her appreciate small moments, and remind her of her wedding (they were an important part of her wedding decor)."
+        },
+        {
+          "query": "What inspired Caroline's painting for the art show?",
+          "category": "multi_hop",
+          "expected": "visiting an LGBTQ center and wanting to capture unity and strength",
+          "actual": "## User Profile\n### Known Facts\n- (2:31 pm on 17 July, 2023) Caroline: Check out my painting for the art show! Hope you like it. [Image: a photography of a painting of a tree with a bright sun in the ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She was inspired by a visit to an LGBTQ center \u2014 she wanted to capture everyone\u2019s unity and strength."
+        },
+        {
+          "query": "How often does Melanie go to the beach with her kids?",
+          "category": "multi_hop",
+          "expected": "once or twice a year",
+          "actual": "## User Profile\n### Known Facts\n- (8:56 pm on 20 July, 2023) Caroline: Sounds fun! What was the best part? Do you do it often with the kids?\n(8:56 pm on 20 July, 2023) Melanie: Seeing my kids' faces s",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She goes about once or twice a year."
+        },
+        {
+          "query": "What did Melanie and her family see during their camping trip last year?",
+          "category": "multi_hop",
+          "expected": "Perseid meteor shower",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: Wow, Melanie, that's amazing! Love all the details and how you got the horse's grace and strength. Do you like painting animals",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They saw the Perseid meteor shower \u2014 meteors streaking across the night sky."
+        },
+        {
+          "query": "How did Melanie feel while watching the meteor shower?",
+          "category": "multi_hop",
+          "expected": "in awe of the universe",
+          "actual": "## User Profile\n### Known Facts\n- (8:56 pm on 20 July, 2023) Melanie: I'll always remember our camping trip last year when we saw the Perseid meteor shower. It was so amazing lying there and watching ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She felt amazed and awe\u2011inspired \u2014 tiny yet connected, \"at one with the universe.\""
+        },
+        {
+          "query": "Whose birthday did Melanie celebrate recently?",
+          "category": "multi_hop",
+          "expected": "Melanie's daughter",
+          "actual": "## User Profile\n### Known Facts\n- (2:24 pm on 14 August, 2023) Melanie: Hey Caroline! Last night was amazing! We celebrated my daughter's birthday with a concert surrounded by music, joy and the warm ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She celebrated her daughter's birthday."
+        },
+        {
+          "query": "Who performed at the concert at Melanie's daughter's birthday?",
+          "category": "multi_hop",
+          "expected": "Matt Patterson",
+          "actual": "## User Profile\n### Known Facts\n- (2:24 pm on 14 August, 2023) Melanie: Hey Caroline! Last night was amazing! We celebrated my daughter's birthday with a concert surrounded by music, joy and the warm ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Matt Patterson."
+        },
+        {
+          "query": "Why did Melanie choose to use colors and patterns in her pottery project?",
+          "category": "multi_hop",
+          "expected": "She wanted to catch the eye and make people smile.",
+          "actual": "## User Profile\n### Known Facts\n- (1:50 pm on 17 August, 2023) Caroline: Sure thing, Melanie! Can't wait to see your pottery project.  I'm happy you found something that makes you happy. Show me when ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She wanted the piece to catch people\u2019s eye and make them smile, and used colors/patterns as a way to express her feelings and creativity\u2014\u2018each stroke carries a part of me.\u2019"
+        },
+        {
+          "query": "What pet does Caroline have?",
+          "category": "multi_hop",
+          "expected": "guinea pig",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Melanie: Caroline, congrats! So proud of you for taking this step. How does it feel? Also, do you have any pets? (tentative)\n- (4:33 pm o",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Caroline has a guinea pig named Oscar."
+        },
+        {
+          "query": "What pets does Melanie have?",
+          "category": "multi_hop",
+          "expected": "Two cats and a dog",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Melanie: Caroline, congrats! So proud of you for taking this step. How does it feel? Also, do you have any pets? (tentative)\n- (3:31 pm o",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie has a dog (Oliver) and two cats (Luna and Bailey)."
+        },
+        {
+          "query": "Where did Oliver hide his bone once?",
+          "category": "multi_hop",
+          "expected": "In Melanie's slipper",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Melanie: Oliver's hilarious! He hid his bone in my slipper once! Cute, right? Almost as silly as when I got to feed a horse a carrot. [Im",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "He hid it in Melanie\u2019s slipper."
+        },
+        {
+          "query": "What activity did Caroline used to do with her dad?",
+          "category": "multi_hop",
+          "expected": "Horseback riding",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: That's so funny! I used to go horseback riding with my dad when I was a kid, we'd go through the fields, feeling the wind. It w",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She used to go horseback riding with her dad."
+        },
+        {
+          "query": "What did Caroline make for a local church?",
+          "category": "multi_hop",
+          "expected": "a stained glass window",
+          "actual": "## User Profile\n### Known Facts\n- (1:33 pm on 25 August, 2023) Caroline: Thanks! It was made for a local church and shows time changing our lives. I made it to show my own journey as a transgender wom",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She made a stained-glass window for a local church."
+        },
+        {
+          "query": "What did Caroline find in her neighborhood during her walk?",
+          "category": "multi_hop",
+          "expected": "a rainbow sidewalk",
+          "actual": "## User Profile\n### Known Facts\n- (1:33 pm on 25 August, 2023) Melanie: Wow, that's gorgeous! Where did you find it?\n(1:33 pm on 25 August, 2023) Caroline: I was out walking in my neighborhood when I ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She found a rainbow sidewalk painted for Pride Month."
+        },
+        {
+          "query": "Which song motivates Caroline to be courageous?",
+          "category": "multi_hop",
+          "expected": "Brave by Sara Bareilles",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Melanie: Yes, Caroline! We can do it. Your courage is inspiring. I want to be couragous for my family- they motivate me and give me love. Wh",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "\"Brave\" by Sara Bareilles."
+        },
+        {
+          "query": "Which  classical musicians does Melanie enjoy listening to?",
+          "category": "multi_hop",
+          "expected": "Bach and Mozart",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Melanie: I'm a fan of both classical like Bach and Mozart, as well as modern music like Ed Sheeran's \"Perfect\". [Image: a photo of a lapt",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Bach and Mozart."
+        },
+        {
+          "query": "Who is Melanie a fan of in terms of modern music?",
+          "category": "multi_hop",
+          "expected": "Ed Sheeran",
+          "actual": "## User Profile\n### Known Facts\n- (3:19 pm on 28 August, 2023) Melanie: I'm a fan of both classical like Bach and Mozart, as well as modern music like Ed Sheeran's \"Perfect\". [Image: a photo of a lapt",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Ed Sheeran \u2014 specifically the song \"Perfect\"."
+        },
+        {
+          "query": "How long has Melanie been creating art?",
+          "category": "multi_hop",
+          "expected": "7 years",
+          "actual": "## User Profile\n### Known Facts\n- (1:36 pm on 3 July, 2023) Caroline: That bowl is gorgeous! The black and white design looks so fancy. Did you make it? (tentative)\n- (4:33 pm on 12 July, 2023) Caroli",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Seven years (Melanie said \u201cSeven years now\u201d on 12:09 am, 13 September 2023)."
+        },
+        {
+          "query": "What precautionary sign did Melanie see at the caf\u00e9?",
+          "category": "multi_hop",
+          "expected": "A sign stating that someone is not being able to leave",
+          "actual": "## User Profile\n### Known Facts\n- (12:09 am on 13 September, 2023) Melanie: Caroline, it's got to be tough dealing with those changes. Glad you've found people who uplift and accept you! Here's to a g",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "A precautionary sign on the caf\u00e9 door that said someone was not able to leave (described in the image as a sign posted on a door stating that someone is not being able to leave)."
+        },
+        {
+          "query": "What advice does Caroline give for getting started with adoption?",
+          "category": "multi_hop",
+          "expected": "Do research, find an adoption agency or lawyer, gather necessary documents, and prepare emotionally.",
+          "actual": "## User Profile\n### Known Facts\n- (3:31 pm on 23 August, 2023) Caroline: Hi Melanie! Hope you're doing good. Guess what I did this week? I took the first step towards becoming a mom - I applied to ado",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Research and find an adoption agency or lawyer to guide you; gather necessary documents (references, financial information, medical checks); and prepare emotionally for a possibly long wait."
+        },
+        {
+          "query": "What setback did Melanie face in October 2023?",
+          "category": "multi_hop",
+          "expected": "She got hurt and had to take a break from pottery.",
+          "actual": "## User Profile\n### Known Facts\n- (2:24 pm on 14 August, 2023) Melanie: Wow, Caroline, that's gorgeous! I love the self-acceptance and love theme. How does art help you with your self-discovery and ac",
+          "correct": true,
+          "score": 0.5,
+          "generated_answer": "She said she\u2019d been hurt (in September 2023) and had to take a break from pottery."
+        },
+        {
+          "query": "What does Melanie do to keep herself busy during her pottery break?",
+          "category": "multi_hop",
+          "expected": "Read a book and paint.",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Caroline: Oh man, sorry to hear that, Melanie. I hope you're okay. Pottery's a great way to relax, so it must have been tough taking a ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She\u2019s been reading the book Caroline recommended and painting to keep busy."
+        },
+        {
+          "query": "What painting did Melanie show to Caroline on October 13, 2023?",
+          "category": "multi_hop",
+          "expected": "A painting inspired by sunsets with a pink sky.",
+          "actual": "## User Profile\n### Known Facts\n- (2:24 pm on 14 August, 2023) Melanie: Great chatting with you! Feel free to reach out any time. (tentative)\n- (3:19 pm on 28 August, 2023) Melanie: Was connecting wit",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She showed a sunset painting \u2014 specifically a painting of a sunset with a pink sky."
+        },
+        {
+          "query": "What kind of painting did Caroline share with Melanie on October 13, 2023?",
+          "category": "multi_hop",
+          "expected": "An abstract painting with blue streaks on a wall.",
+          "actual": "## User Profile\n### Known Facts\n- (2:24 pm on 14 August, 2023) Melanie: Great chatting with you! Feel free to reach out any time. (tentative)\n- (3:19 pm on 28 August, 2023) Melanie: Was connecting wit",
+          "correct": false,
+          "score": 0.0,
+          "generated_answer": "A painting of a sunset (with a pink sky)."
+        },
+        {
+          "query": "What was the poetry reading that Caroline attended about?",
+          "category": "multi_hop",
+          "expected": "It was a transgender poetry reading where transgender people shared their stories.",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Melanie: Nope, never been to something like that. What was it about? What made it so special?\n(10:31 am on 13 October, 2023) Caroline: ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "It was a transgender poetry reading \u2014 transgender people shared their stories through poetry in a safe, empowering space for self\u2011expression."
+        },
+        {
+          "query": "What did the posters at the poetry reading say?",
+          "category": "multi_hop",
+          "expected": "\"Trans Lives Matter\"",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Caroline: It was a transgender poetry reading where transgender people shared their stories through poetry. It was extra special 'cause",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "The posters said \"Trans Lives Matter.\""
+        },
+        {
+          "query": "What does Caroline's drawing symbolize for her?",
+          "category": "multi_hop",
+          "expected": "Freedom and being true to herself.",
+          "actual": "## User Profile\n### Known Facts\n- (10:31 am on 13 October, 2023) Caroline: The room was electric with energy and support! The posters were amazing, so much pride and strength! It inspired me to make s",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "It symbolizes freedom and being real \u2014 a nudge to stay true to herself and embrace her womanhood (linked to expressing her trans experience and pride)."
+        },
+        {
+          "query": "How do Melanie and Caroline describe their journey through life together?",
+          "category": "multi_hop",
+          "expected": "An ongoing adventure of learning and growing.",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Melanie: Thanks, Caroline, for letting me join your journey. I'm so proud to be part of the difference you're making. Let's keep motivating ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They describe it as a shared, supportive journey \u2014 motivating and helping each other, spreading love and understanding, tackling life\u2019s challenges together, and an ongoing adventure of learning, growing, and making a real impact."
+        },
+        {
+          "query": "What happened to Melanie's son on their road trip?",
+          "category": "multi_hop",
+          "expected": "He got into an accident",
+          "actual": "## User Profile\n### Known Facts\n- (6:55 pm on 20 October, 2023) Melanie: Yeah, our trip got off to a bad start. I was really scared when we got into the accident. Thankfully, my son's ok and that was ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "He was involved in a (car) accident during the road trip, but Melanie says her son was okay."
+        },
+        {
+          "query": "How did Melanie's son handle the accident?",
+          "category": "multi_hop",
+          "expected": "He was scared but reassured by his family",
+          "actual": "## User Profile\n### Known Facts\n- (6:55 pm on 20 October, 2023) Caroline: The kids look so cute, Mel! I bet they bring lots of joy. How did they handle the accident? (tentative)\n- (6:55 pm on 20 Octob",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "He was scared at first but, after being reassured, he was okay."
+        },
+        {
+          "query": "How did Melanie feel about her family after the accident?",
+          "category": "multi_hop",
+          "expected": "They are important and mean the world to her",
+          "actual": "## User Profile\n### Known Facts\n- (6:55 pm on 20 October, 2023) Melanie: Yeah, you're right, Caroline. Family's super important to me. Especially after the accident, I've thought a lot about how much ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She felt that her family was extremely important and precious\u2014grateful, more reliant on them, and determined to cherish them after the accident."
+        },
+        {
+          "query": "How did Melanie's children handle the accident?",
+          "category": "multi_hop",
+          "expected": "They were scared but resilient",
+          "actual": "## User Profile\n### Known Facts\n- (1:56 pm on 8 May, 2023) Melanie: Thanks, Caroline! Painting's a fun way to express my feelings and get creative. It's a great way to relax after a long day. (tentati",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "They were scared, but Melanie and the family reassured them and explained their brother would be OK \u2014 Melanie called them \u201ctough kids.\u201d"
+        },
+        {
+          "query": "How did Melanie feel after the accident?",
+          "category": "multi_hop",
+          "expected": "Grateful and thankful for her family",
+          "actual": "## User Profile\n### Known Facts\n- (1:36 pm on 3 July, 2023) Melanie: Thanks, Caroline! Your kind words mean a lot. Pottery is a huge part of my life, not just a hobby - it helps me express my emotions",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She felt scared and \u201cfreaked\u201d by the accident, relieved and grateful that her son was okay, and more appreciative/closer to her family \u2014 the experience reminded her that life is precious."
+        },
+        {
+          "query": "What was Melanie's reaction to her children enjoying the Grand Canyon?",
+          "category": "multi_hop",
+          "expected": "She was happy and thankful",
+          "actual": "## User Profile\n### Known Facts\n- (6:55 pm on 20 October, 2023) Melanie: Yeah, you're right, Caroline. Family's super important to me. Especially after the accident, I've thought a lot about how much ",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "She expressed gratitude and relief \u2014 saying she was thankful, that her family means the world to her, and was glad the kids enjoyed the Grand Canyon."
+        },
+        {
+          "query": "What do Melanie's family give her?",
+          "category": "multi_hop",
+          "expected": "Strength and motivation",
+          "actual": "## User Profile\n### Known Facts\n- (7:55 pm on 9 June, 2023) Melanie: Yes, Caroline! We can do it. Your courage is inspiring. I want to be couragous for my family- they motivate me and give me love. Wh",
+          "correct": true,
+          "score": 0.8,
+          "generated_answer": "Love (and also motivation, support, joy and strength)."
+        },
+        {
+          "query": "How did Melanie feel about her family supporting her?",
+          "category": "multi_hop",
+          "expected": "She appreciated them a lot",
+          "actual": "## User Profile\n### Known Facts\n- (8:56 pm on 20 July, 2023) Caroline: That's great, Mel! What other good memories do you have that make you feel thankful for life?\n(8:56 pm on 20 July, 2023) Melanie:",
+          "correct": true,
+          "score": 1.0,
+          "generated_answer": "Melanie felt grateful and appreciative \u2014 she saw her family as supportive, essential, and a source of love, help through tough times, peace, and motivation."
+        },
+        {
+          "query": "What did Melanie do after the road trip to relax?",
+          "category": "multi_hop",
+          "expected": "Went on a nature walk or hike",
+          "actual": "## User Profile\n### Known Facts\n- (6:55 pm on 20 October, 2023) Melanie: Thanks, Caroline! Yup, we just did it yesterday! The kids loved it and it was a nice way to relax after the road trip. (tentati",
+          "correct": false,
+          "score": 0.2,
+          "generated_answer": "She went camping with her family \u2014 the camping trip (mentioned as \u201cyesterday\u201d from Oct 20, 2023) on Oct 19, 2023, was how she relaxed after the road trip."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "benchmarks_run": 1,
+    "total_queries": 152,
+    "overall_score": 0.8914,
+    "total_correct": 142,
+    "total_incorrect": 10,
+    "total_abstained": 0,
+    "total_duration_ms": 679542.2,
+    "per_benchmark": {
+      "locomo-real (llm-judge)": 0.8914
+    }
+  }
+}
