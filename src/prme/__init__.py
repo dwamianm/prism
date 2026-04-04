@@ -5,7 +5,7 @@ Combines event sourcing, graph-based relational modeling, hybrid retrieval,
 and scheduled memory reorganization.
 """
 
-__version__ = "0.4.0"
+__version__ = "0.6.0"
 
 from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine

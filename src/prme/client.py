@@ -229,6 +229,24 @@ class MemoryClient:
         """Query nodes with filters. Returns list of MemoryNode."""
         return self._run(self._engine.query_nodes(**kwargs))
 
+    def get_events(
+        self,
+        user_id: str,
+        *,
+        session_id: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Any]:
+        """Retrieve events for a user. Returns list of Event."""
+        return self._run(
+            self._engine.get_events(
+                user_id,
+                session_id=session_id,
+                limit=limit,
+                offset=offset,
+            )
+        )
+
     def organize(
         self,
         *,

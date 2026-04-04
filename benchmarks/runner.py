@@ -79,7 +79,11 @@ async def _run_single_benchmark(
         benchmark = benchmark_cls()
         # Pass llm_config to benchmarks that support it
         if llm_config and llm_config.enabled and hasattr(benchmark, 'run_with_llm'):
-            return await benchmark.run_with_llm(engine, llm_config, only_questions=only_questions)
+            import inspect
+            sig = inspect.signature(benchmark.run_with_llm)
+            if 'only_questions' in sig.parameters:
+                return await benchmark.run_with_llm(engine, llm_config, only_questions=only_questions)
+            return await benchmark.run_with_llm(engine, llm_config)
         return await benchmark.run(engine)
     finally:
         await engine.close()

@@ -1,6 +1,6 @@
 [project]
 name = "prme"
-version = "0.4.0"
+version = "0.6.0"
 description = "Portable Relational Memory Engine - local-first memory substrate for LLM-powered systems"
 readme = "README.md"
 authors = [
@@ -61,6 +61,12 @@ mcp = [
 ]
 reranker = [
     "sentence-transformers>=4.0",
+]
+langchain = [
+    "langchain-core>=0.3",
+]
+llamaindex = [
+    "llama-index-core>=0.12",
 ]
 
 [dependency-groups]
