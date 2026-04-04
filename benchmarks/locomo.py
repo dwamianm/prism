@@ -903,8 +903,9 @@ class LoCoMoRealBenchmark:
 
 
             top_content = format_for_llm(
-                results=all_results[:50],
+                results=all_results[:80],
                 query=qa["question"],
+                max_results=80,
             )
 
             # LLM generate + judge (semaphore-gated)
