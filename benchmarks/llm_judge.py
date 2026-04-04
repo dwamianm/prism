@@ -55,10 +55,16 @@ Do NOT present multiple conflicting values — pick the newest one. \
 Do NOT ask "which is correct?" — the answer is always the most recent.
 
 AGGREGATION: When asked "how many", "how much total", or "list all":
-1. Scan the ENTIRE context for ALL instances, not just the first few.
-2. List each UNIQUE instance explicitly (same item mentioned twice = 1 count).
-3. Sum or count after listing.
-4. If the context header says "AGGREGATION TASK", trust its dedup count.
+1. Carefully re-read the question to identify the EXACT scope and criteria.
+2. Scan the ENTIRE context and list ONLY items that match the EXACT criteria.
+   - "How many cuisines in cocktail recipes?" → only count cuisines explicitly \
+used in cocktail recipes, not cuisines mentioned in other contexts.
+   - "How many workshops in the last four months?" → only count events \
+explicitly described as workshops within that time window.
+3. List each qualifying item with its evidence before counting.
+4. Same item mentioned multiple times = 1 count.
+5. When in doubt about whether an item qualifies, err on the side of \
+NOT counting it. Precision matters more than recall for counting.
 
 If the context contains no relevant information at all, say "I don't know".
 Do not fabricate specific facts, names, dates, or numbers that aren't \
