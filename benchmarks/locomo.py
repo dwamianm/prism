@@ -556,6 +556,44 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_LOCOMO_PATH = _PROJECT_ROOT / "data" / "benchmarks" / "locomo" / "locomo10.json"
 
 
+async def _ingest_sessions(
+    engine,
+    sessions: list[tuple[list[dict], str | None]],
+    sample_id: str,
+    user_id: str,
+) -> int:
+    """Ingest conversation sessions into the engine.
+
+    Stores each turn with speaker, date, and image caption context.
+    Returns the number of turns ingested.
+    """
+    total_turns = 0
+    for sess_idx, (turns, date_str) in enumerate(sessions):
+        session_id = f"{sample_id}-s{sess_idx}"
+        date_prefix = f"({date_str}) " if date_str else ""
+        for turn in turns:
+            text = turn["text"].strip()
+            if len(text) < 15:
+                continue
+            speaker = turn.get("speaker", "")
+            # Include image caption when present (answers may only exist here)
+            caption = turn.get("blip_caption", "")
+            if caption:
+                enriched = f"{date_prefix}{speaker}: {text} [Image: {caption}]"
+            else:
+                enriched = f"{date_prefix}{speaker}: {text}"
+            await engine.store(
+                enriched,
+                user_id=user_id,
+                role="user",
+                node_type=NodeType.FACT,
+                scope=Scope.PERSONAL,
+                session_id=session_id,
+            )
+            total_turns += 1
+    return total_turns
+
+
 def _extract_sessions(conversation: dict) -> list[tuple[list[dict], str | None]]:
     """Extract ordered sessions from a LoCoMo conversation dict.
 
@@ -626,30 +664,9 @@ class LoCoMoRealBenchmark:
             conversation = conv_data["conversation"]
             sessions = _extract_sessions(conversation)
 
-            # Ingest all sessions with speaker + date context
-            total_turns = 0
-            speakers: set[str] = set()
-            for sess_idx, (turns, date_str) in enumerate(sessions):
-                session_id = f"{sample_id}-s{sess_idx}"
-                # Extract date for temporal context (e.g. "1:56 pm on 8 May, 2023")
-                date_prefix = f"({date_str}) " if date_str else ""
-                for turn in turns:
-                    text = turn["text"].strip()
-                    if len(text) < 15:
-                        continue  # skip very short turns (greetings, "ok", etc.)
-                    speaker = turn.get("speaker", "")
-                    if speaker:
-                        speakers.add(speaker)
-                    enriched = f"{date_prefix}{speaker}: {text}"
-                    await engine.store(
-                        enriched,
-                        user_id=user_id,
-                        role="user",
-                        node_type=NodeType.FACT,
-                        scope=Scope.PERSONAL,
-                        session_id=session_id,
-                    )
-                    total_turns += 1
+            total_turns = await _ingest_sessions(
+                engine, sessions, sample_id, user_id,
+            )
 
             logger.info(
                 "Ingested %s: %d sessions, %d turns (after filtering)",
@@ -761,25 +778,9 @@ class LoCoMoRealBenchmark:
             conversation = conv_data["conversation"]
             sessions = _extract_sessions(conversation)
 
-            total_turns = 0
-            for sess_idx, (turns, date_str) in enumerate(sessions):
-                session_id = f"{sample_id}-s{sess_idx}"
-                date_prefix = f"({date_str}) " if date_str else ""
-                for turn in turns:
-                    text = turn["text"].strip()
-                    if len(text) < 15:
-                        continue
-                    speaker = turn.get("speaker", "")
-                    enriched = f"{date_prefix}{speaker}: {text}"
-                    await engine.store(
-                        enriched,
-                        user_id=user_id,
-                        role="user",
-                        node_type=NodeType.FACT,
-                        scope=Scope.PERSONAL,
-                        session_id=session_id,
-                    )
-                    total_turns += 1
+            total_turns = await _ingest_sessions(
+                engine, sessions, sample_id, user_id,
+            )
 
             logger.info(
                 "Ingested %s: %d sessions, %d turns",
@@ -852,9 +853,9 @@ class LoCoMoRealBenchmark:
                 )
 
 
-            top_content = "\n".join(
-                f"[{i+1}] {r.node.content}"
-                for i, r in enumerate(all_results[:50])
+            top_content = format_for_llm(
+                results=all_results[:50],
+                query=qa["question"],
             )
 
             # LLM generate + judge (semaphore-gated)

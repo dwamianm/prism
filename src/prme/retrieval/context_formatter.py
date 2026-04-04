@@ -214,28 +214,30 @@ def _detect_context_type(
 ) -> str:
     """Auto-detect the best formatting strategy for this query.
 
-    Returns one of: ``"temporal"``, ``"knowledge_update"``, ``"default"``.
+    Returns one of: ``"aggregation"``, ``"temporal"``, ``"knowledge_update"``,
+    ``"default"``.
 
     Detection order:
 
-    1. **knowledge_update** — current-state queries (``"currently"``,
-       ``"now"``, ``"do I keep"``, ``"after recent"``…) that are NOT
-       aggregation queries.  Chronological sort + ``[LATEST]`` markers
-       help the LLM pick the most recent value.  Checked before temporal
-       because current-state queries often contain temporal keywords but
-       need update-oriented formatting.
-    2. **temporal** — explicit TEMPORAL intent or time-oriented keywords
-       (``"when"``, ``"ago"``, ``"last"``, ``"how long"``…).
+    0. **aggregation** — count/total/list-all queries. Needs all entries
+       visible with dedup guidance. Checked first because aggregation
+       keywords co-occur with temporal keywords.
+    1. **knowledge_update** — current-state queries that are NOT aggregation.
+    2. **temporal** — explicit TEMPORAL intent or time-oriented keywords.
     3. **default** — relevance-ranked with date annotations.
     """
     from prme.types import QueryIntent
 
     q = query.lower()
 
+    # Aggregation: count/total/list-all queries need exhaustive display.
+    if query_analysis and query_analysis.is_aggregation:
+        return "aggregation"
+    if _AGGREGATION_GUARD_RE.search(q):
+        return "aggregation"
+
     # Knowledge-update: current-state queries that are NOT aggregation.
-    # Aggregation queries ("how many X in the last Y?") need all entries
-    # visible, so chronological + [LATEST] markers would be misleading.
-    if not _AGGREGATION_GUARD_RE.search(q) and _CURRENT_STATE_RE.search(q):
+    if _CURRENT_STATE_RE.search(q):
         return "knowledge_update"
 
     if query_analysis and query_analysis.intent == QueryIntent.TEMPORAL:
@@ -423,7 +425,9 @@ def format_for_llm(
 
     ctx_type = context_hint or _detect_context_type(query, query_analysis)
 
-    if ctx_type == "temporal":
+    if ctx_type == "aggregation":
+        body = _format_aggregation(display, query, question_date)
+    elif ctx_type == "temporal":
         body = _format_temporal(display, query, question_date)
     elif ctx_type == "knowledge_update":
         body = _format_knowledge_update(display, question_date)
@@ -513,6 +517,53 @@ def _format_knowledge_update(
         "NOTE: Entries are in chronological order. "
         "When values change over time, the LATEST entry is correct.\n\n"
     )
+    return header + "\n".join(lines)
+
+
+def _format_aggregation(
+    results: list[RetrievalCandidate],
+    query: str,
+    question_date: datetime | None,
+) -> str:
+    """Aggregation formatting: chronological, deduplicated, with counting guidance."""
+    results.sort(key=_get_event_dt)
+
+    lines: list[str] = []
+    seen_content: set[str] = set()
+    unique_count = 0
+    for r in results:
+        # Basic dedup: skip near-identical content
+        content_key = r.node.content.strip().lower()[:100]
+        if content_key in seen_content:
+            continue
+        seen_content.add(content_key)
+        unique_count += 1
+
+        event_dt = _get_event_dt(r)
+        if question_date:
+            ago = format_days_ago(event_dt, question_date)
+            lines.append(
+                f"[{unique_count}] ({event_dt.strftime('%Y-%m-%d')}, {ago}) {r.node.content}"
+            )
+        else:
+            lines.append(
+                f"[{unique_count}] ({event_dt.strftime('%Y-%m-%d')}) {r.node.content}"
+            )
+
+    header = (
+        "AGGREGATION TASK: The question asks for a count, total, or list.\n"
+        f"Below are {unique_count} unique entries (duplicates removed) "
+        "in chronological order.\n"
+        "IMPORTANT: Count ONLY distinct items that match the question. "
+        "Two mentions of the same item = 1 count.\n"
+    )
+    if question_date:
+        header += f"Today's date: {question_date.strftime('%Y-%m-%d')}\n"
+        computed = compute_time_offsets(query, question_date)
+        if computed:
+            header += computed + "\n"
+    header += "\n"
+
     return header + "\n".join(lines)
 
 

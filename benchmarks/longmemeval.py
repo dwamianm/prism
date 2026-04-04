@@ -931,12 +931,17 @@ class LongMemEvalRealBenchmark:
                 question_date_str = question.get("question_date", "")
                 qdt = _parse_haystack_date(question_date_str) if question_date_str else None
 
-                # Use PRME's context formatter for all categories
+                # Use PRME's context formatter with intent-aware hints
+                if ability == "temporal":
+                    hint = "temporal"
+                else:
+                    hint = None  # let auto-detect handle aggregation etc.
                 top_content = format_for_llm(
-                    results=all_results[:50],
+                    results=all_results[:100],
                     query=question["question"],
                     question_date=qdt,
-                    context_hint="temporal" if ability == "temporal" else None,
+                    context_hint=hint,
+                    max_results=100,
                 )
                 async with llm_semaphore:
                     generated = await generate_answer(
