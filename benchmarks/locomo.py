@@ -703,11 +703,37 @@ class LoCoMoRealBenchmark:
                 engine, sessions, sample_id, user_id,
             )
 
+            # Ingest observations as distilled facts
+            obs_count = 0
+            observations = conv_data.get("observation", {})
+            for obs_key, speaker_obs in observations.items():
+                if not isinstance(speaker_obs, dict):
+                    continue
+                for speaker, fact_lists in speaker_obs.items():
+                    for fact_entry in fact_lists:
+                        if isinstance(fact_entry, list) and len(fact_entry) >= 1:
+                            fact_text = fact_entry[0]
+                        elif isinstance(fact_entry, str):
+                            fact_text = fact_entry
+                        else:
+                            continue
+                        if len(fact_text) < 10:
+                            continue
+                        await engine.store(
+                            f"[Observation] {fact_text}",
+                            user_id=user_id,
+                            role="user",
+                            node_type=NodeType.FACT,
+                            scope=Scope.PERSONAL,
+                        )
+                        obs_count += 1
+
             logger.info(
-                "Ingested %s: %d sessions, %d turns (after filtering)",
+                "Ingested %s: %d sessions, %d turns, %d observations",
                 sample_id,
                 len(sessions),
                 total_turns,
+                obs_count,
             )
 
             # Evaluate QA (skip category 5)
@@ -817,9 +843,36 @@ class LoCoMoRealBenchmark:
                 engine, sessions, sample_id, user_id,
             )
 
+            # Ingest observations as distilled facts (entity knowledge).
+            # These are pre-extracted facts per session per speaker from the
+            # LoCoMo dataset — equivalent to entity knowledge cards.
+            obs_count = 0
+            observations = conv_data.get("observation", {})
+            for obs_key, speaker_obs in observations.items():
+                if not isinstance(speaker_obs, dict):
+                    continue
+                for speaker, fact_lists in speaker_obs.items():
+                    for fact_entry in fact_lists:
+                        if isinstance(fact_entry, list) and len(fact_entry) >= 1:
+                            fact_text = fact_entry[0]
+                        elif isinstance(fact_entry, str):
+                            fact_text = fact_entry
+                        else:
+                            continue
+                        if len(fact_text) < 10:
+                            continue
+                        await engine.store(
+                            f"[Observation] {fact_text}",
+                            user_id=user_id,
+                            role="user",
+                            node_type=NodeType.FACT,
+                            scope=Scope.PERSONAL,
+                        )
+                        obs_count += 1
+
             logger.info(
-                "Ingested %s: %d sessions, %d turns",
-                sample_id, len(sessions), total_turns,
+                "Ingested %s: %d sessions, %d turns, %d observations",
+                sample_id, len(sessions), total_turns, obs_count,
             )
 
             # Collect QA items for concurrent evaluation
