@@ -501,21 +501,30 @@ def _format_knowledge_update(
     results: list[RetrievalCandidate],
     question_date: datetime | None,
 ) -> str:
-    """Knowledge-update formatting: chronological sort, [LATEST] markers."""
+    """Knowledge-update formatting: chronological sort, strong recency markers."""
     results.sort(key=_get_event_dt)
 
     n = len(results)
     lines: list[str] = []
     for i, r in enumerate(results):
         event_dt = _get_event_dt(r)
-        marker = " [LATEST]" if i >= n - 5 else ""
+        if i == n - 1:
+            marker = " [MOST RECENT — USE THIS VALUE]"
+        elif i >= n - 3:
+            marker = " [RECENT]"
+        elif i < n - 5:
+            marker = " [OLDER]"
+        else:
+            marker = ""
         lines.append(
             f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}{marker}) {r.node.content}"
         )
 
     header = (
-        "NOTE: Entries are in chronological order. "
-        "When values change over time, the LATEST entry is correct.\n\n"
+        "IMPORTANT: Entries are in chronological order (oldest first, newest last).\n"
+        "When the same attribute appears multiple times with different values, "
+        "the MOST RECENT entry supersedes all earlier ones. "
+        "ALWAYS use the latest value — earlier values are outdated.\n\n"
     )
     return header + "\n".join(lines)
 
@@ -554,8 +563,11 @@ def _format_aggregation(
         "AGGREGATION TASK: The question asks for a count, total, or list.\n"
         f"Below are {unique_count} unique entries (duplicates removed) "
         "in chronological order.\n"
-        "IMPORTANT: Count ONLY distinct items that match the question. "
-        "Two mentions of the same item = 1 count.\n"
+        "IMPORTANT COUNTING RULES:\n"
+        "- Count ONLY items that EXACTLY match the question's criteria.\n"
+        "- Two mentions of the same item = 1 count (not 2).\n"
+        "- If an entry is about a related but different topic, do NOT count it.\n"
+        "- List each qualifying item before giving the final count.\n"
     )
     if question_date:
         header += f"Today's date: {question_date.strftime('%Y-%m-%d')}\n"

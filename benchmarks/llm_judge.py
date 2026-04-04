@@ -27,12 +27,16 @@ TEMPORAL REASONING — STEP BY STEP:
 timestamp. If the context includes a "COMPUTED:" line with the target date, \
 use it directly.
 3. For "how many days between X and Y" questions, identify exact dates for both \
-events, then subtract. Show your work: "Event A: March 5, Event B: April 2, \
-difference = 28 days."
-4. For ordering questions ("which came first?"), list each event with its date \
+events, then subtract. Show your arithmetic: "Event A: March 5, Event B: March 29, \
+difference = 29 - 5 = 24 days." Count inclusively if the question says "including".
+4. For "how many weeks" questions, compute the exact day count first, then divide \
+by 7. Show: "84 days ÷ 7 = 12 weeks."
+5. For ordering questions ("which came first?"), list each event with its date \
 before answering.
-5. For counting questions ("how many events before X?"), list ALL matching events \
+6. For counting questions ("how many events before X?"), list ALL matching events \
 with dates, then count them.
+7. CRITICAL: Use the dates shown in the context entries (in parentheses). When \
+entries show days-ago annotations, trust those computations.
 
 INFERENCE: When the question asks about preferences, likely behaviors, opinions, \
 political leanings, religious beliefs, or personality traits, make reasonable \
@@ -44,10 +48,17 @@ For example, someone who regularly volunteers at progressive causes and advocate
 for social justice likely leans liberal. State your inference with the supporting \
 evidence.
 
+KNOWLEDGE UPDATES: When the context shows the same fact changing over time \
+(e.g., location, amount, time, count), ALWAYS use the most recent value. \
+Entries marked [MOST RECENT] or [LATEST] supersede all earlier entries. \
+Do NOT present multiple conflicting values — pick the newest one. \
+Do NOT ask "which is correct?" — the answer is always the most recent.
+
 AGGREGATION: When asked "how many", "how much total", or "list all":
 1. Scan the ENTIRE context for ALL instances, not just the first few.
-2. List each instance explicitly.
+2. List each UNIQUE instance explicitly (same item mentioned twice = 1 count).
 3. Sum or count after listing.
+4. If the context header says "AGGREGATION TASK", trust its dedup count.
 
 If the context contains no relevant information at all, say "I don't know".
 Do not fabricate specific facts, names, dates, or numbers that aren't \
@@ -82,15 +93,16 @@ should score high.\
 
 REFORMULATION_SYSTEM_PROMPT = """\
 You are a search query reformulator. Given a question about a conversation \
-history, generate 2 alternative search queries that would help find the \
+history, generate 3 alternative search queries that would help find the \
 relevant information in the conversation logs.
 
 Rules:
 - Each reformulation should use different keywords and phrasing than the original
 - Focus on the key entities (people, places, things) and actions mentioned
-- One reformulation should be a simple keyword-style query
-- One reformulation should rephrase the question from the perspective of the \
-conversation participants
+- One reformulation should be a simple keyword-style query (2-4 words)
+- One reformulation should rephrase from the perspective of conversation participants
+- One reformulation should focus on the ANSWER rather than the question \
+(e.g., for "Where did X move from?" try "X Sweden" or "X home country")
 - Keep each reformulation under 30 words\
 """
 
@@ -99,9 +111,9 @@ class QueryReformulations(BaseModel):
     """Structured output for query reformulation."""
 
     queries: list[str] = Field(
-        description="2 alternative search queries",
+        description="3 alternative search queries",
         min_length=2,
-        max_length=2,
+        max_length=3,
     )
 
 
