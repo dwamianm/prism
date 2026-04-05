@@ -330,6 +330,44 @@ def _build_profile_preamble(
     return "\n".join(lines) + "\n"
 
 
+def _build_reasoning_guidance(ctx_type: str) -> str:
+    """Build reasoning guidance hints based on context type.
+
+    Instructs downstream LLMs to connect facts across entries rather
+    than treating each entry in isolation. This implements the
+    reconstructive memory principle: answers are reconstructed from
+    multiple cues, not found in a single entry.
+
+    Args:
+        ctx_type: The detected context type.
+
+    Returns:
+        Reasoning guidance string, or empty string if not needed.
+    """
+    lines = ["## Reasoning Guidance"]
+
+    lines.append(
+        "- Connect information across entries: if entry A says "
+        "\"grandma in Sweden\" and entry B says \"moved from home country\", "
+        "conclude \"moved from Sweden\"."
+    )
+    lines.append(
+        "- Combine evidence: mentions of \"son\", \"daughter\", "
+        "\"youngest child\" across entries may indicate 3 children total."
+    )
+
+    if ctx_type == "knowledge_update":
+        lines.append(
+            "- When values change over time, ONLY the most recent is correct."
+        )
+    elif ctx_type == "aggregation":
+        lines.append(
+            "- Count only items that EXACTLY match the question's criteria."
+        )
+
+    return "\n".join(lines) + "\n"
+
+
 def _build_conflict_annotations(
     results: list[RetrievalCandidate],
 ) -> str:
@@ -437,7 +475,7 @@ def format_for_llm(
     if not include_profile:
         return body
 
-    # Prepend profile preamble and conflict annotations (PRIME enhancements)
+    # Prepend profile preamble, reasoning hints, and conflict annotations
     parts: list[str] = []
 
     profile = _build_profile_preamble(results[:max_results])
@@ -447,6 +485,10 @@ def format_for_llm(
     conflicts = _build_conflict_annotations(results[:max_results])
     if conflicts:
         parts.append(conflicts)
+
+    # Add reasoning guidance when context has multiple entries
+    if len(display) > 3:
+        parts.append(_build_reasoning_guidance(ctx_type))
 
     if parts:
         parts.append("## Retrieved Memory\n" + body)
