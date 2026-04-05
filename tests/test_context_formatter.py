@@ -194,7 +194,7 @@ class TestFormatForLlm:
             "What is the current price?",
             context_hint="knowledge_update",
         )
-        assert "[LATEST]" in result
+        assert "[MOST RECENT" in result
         assert "chronological order" in result
 
     def test_knowledge_update_sorts_chronologically(self):
@@ -238,7 +238,7 @@ class TestFormatForLlm:
             "What is the current status?",
         )
         # Should auto-detect knowledge_update and include [LATEST] markers
-        assert "[LATEST]" in result
+        assert "[MOST RECENT" in result
         assert "chronological order" in result
 
     def test_knowledge_update_not_triggered_for_aggregation(self):
@@ -254,8 +254,8 @@ class TestFormatForLlm:
             candidates,
             "How many items do I currently have?",
         )
-        # "How many" is aggregation — should NOT auto-detect knowledge_update
-        assert "[LATEST]" not in result
+        # "How many" is aggregation — should get aggregation formatting instead
+        assert "AGGREGATION TASK" in result
 
     def test_knowledge_update_with_explicit_hint(self):
         candidates = [
@@ -270,7 +270,7 @@ class TestFormatForLlm:
             "What is the current status?",
             context_hint="knowledge_update",
         )
-        assert "[LATEST]" in result
+        assert "[MOST RECENT" in result
 
     def test_context_hint_overrides_auto_detection(self):
         c = _make_candidate("Event")
