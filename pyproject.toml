@@ -1,6 +1,6 @@
 [project]
 name = "prme"
-version = "0.7.0"
+version = "0.8.0"
 description = "Portable Relational Memory Engine - local-first memory substrate for LLM-powered systems"
 readme = "README.md"
 authors = [
