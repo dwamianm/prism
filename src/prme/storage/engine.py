@@ -1640,6 +1640,154 @@ class MemoryEngine:
 
         return result
 
+    async def consolidate_knowledge(
+        self,
+        *,
+        user_id: str,
+        entity_names: list[str] | None = None,
+        max_profile_tokens: int = 500,
+    ) -> int:
+        """Build entity knowledge profiles from stored nodes.
+
+        Groups all active nodes for a user by detected entity names,
+        then creates SUMMARY nodes containing consolidated knowledge
+        per entity. These profiles are indexed for retrieval, making
+        entity-centric facts directly searchable.
+
+        This works without LLM extraction — it uses simple name matching
+        to detect entity mentions in node content.
+
+        Args:
+            user_id: User whose knowledge to consolidate.
+            entity_names: Optional list of entity names to consolidate.
+                If None, auto-detects names from content (proper nouns).
+            max_profile_tokens: Approximate max tokens per profile node.
+
+        Returns:
+            Number of entity profiles created.
+        """
+        import re
+
+        # Fetch all active nodes for this user
+        all_nodes = await self._graph_store.query_nodes(
+            user_id=user_id,
+            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+            limit=5000,
+        )
+
+        if not all_nodes:
+            return 0
+
+        # Auto-detect entity names if not provided
+        if entity_names is None:
+            name_counts: dict[str, int] = {}
+            name_re = re.compile(r'\b([A-Z][a-z]{2,})\b')
+            skip = {"The", "This", "That", "What", "When", "Where", "How",
+                    "Who", "Why", "Does", "Did", "Has", "Have", "Was",
+                    "Will", "Can", "Could", "Would", "Should", "May",
+                    "Also", "Just", "Very", "Really", "Some", "Most",
+                    "Each", "Every", "After", "Before", "Since", "Until",
+                    "About", "From", "Into", "Over", "With", "Note",
+                    "Image", "Observation", "Known", "Facts", "LATEST",
+                    "OLDER", "RECENT", "MOST", "USE", "THIS", "VALUE",
+                    "AGGREGATION", "TASK", "IMPORTANT"}
+            for node in all_nodes:
+                names = name_re.findall(node.content)
+                for name in names:
+                    if name not in skip and len(name) > 2:
+                        name_counts[name] = name_counts.get(name, 0) + 1
+            # Keep names that appear 3+ times (likely real entities)
+            entity_names = [
+                name for name, count in name_counts.items()
+                if count >= 3
+            ]
+
+        if not entity_names:
+            return 0
+
+        profiles_created = 0
+        for entity_name in entity_names:
+            # Find all nodes mentioning this entity
+            related = []
+            entity_lower = entity_name.lower()
+            for node in all_nodes:
+                if entity_lower in node.content.lower():
+                    related.append(node)
+
+            if len(related) < 2:
+                continue
+
+            # Sort by creation time and build profile
+            related.sort(key=lambda n: n.event_time or n.created_at)
+
+            # Deduplicate similar content
+            seen: set[str] = set()
+            unique_facts: list[str] = []
+            for node in related:
+                key = node.content.strip().lower()[:80]
+                if key not in seen:
+                    seen.add(key)
+                    unique_facts.append(node.content.strip())
+
+            # Build profile text within token budget (~4 chars per token)
+            char_budget = max_profile_tokens * 4
+            profile_lines = [f"[Knowledge Profile: {entity_name}]"]
+            used = len(profile_lines[0])
+            for fact in unique_facts:
+                line = f"- {fact}"
+                if used + len(line) > char_budget:
+                    break
+                profile_lines.append(line)
+                used += len(line)
+
+            if len(profile_lines) < 2:
+                continue
+
+            profile_text = "\n".join(profile_lines)
+
+            # Store as SUMMARY node
+            profile_node = MemoryNode(
+                user_id=user_id,
+                node_type=NodeType.SUMMARY,
+                scope=Scope.PERSONAL,
+                content=profile_text,
+                metadata={"entity_profile": True, "entity_name": entity_name},
+                confidence=0.8,
+                confidence_base=0.8,
+                salience=0.7,
+                salience_base=0.7,
+                epistemic_type=EpistemicType.OBSERVED,
+                source_type=SourceType.SYSTEM_INFERRED,
+                decay_profile=DecayProfile.SLOW,
+            )
+            node_id = await self._write_queue.submit(
+                lambda n=profile_node: self._graph_store.create_node(n),
+                label=f"consolidate.profile:{entity_name}",
+            )
+            # Index for retrieval
+            try:
+                await self._write_queue.submit(
+                    lambda nid=node_id, c=profile_text, uid=user_id: (
+                        self._vector_index.index(nid, c, uid)
+                    ),
+                    label=f"consolidate.vector:{entity_name}",
+                )
+                await self._write_queue.submit(
+                    lambda nid=node_id, c=profile_text, uid=user_id: (
+                        self._lexical_index.index(nid, c, uid, "summary", "personal")
+                    ),
+                    label=f"consolidate.lexical:{entity_name}",
+                )
+            except Exception:
+                logger.debug(
+                    "Profile indexing failed for %s; non-fatal",
+                    entity_name,
+                    exc_info=True,
+                )
+            profiles_created += 1
+
+        return profiles_created
+
     async def end_session(
         self,
         *,

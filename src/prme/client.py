@@ -247,6 +247,20 @@ class MemoryClient:
             )
         )
 
+    def consolidate_knowledge(
+        self,
+        *,
+        user_id: str,
+        entity_names: list[str] | None = None,
+    ) -> int:
+        """Build entity knowledge profiles. Returns count of profiles created."""
+        return self._run(
+            self._engine.consolidate_knowledge(
+                user_id=user_id,
+                entity_names=entity_names,
+            )
+        )
+
     def organize(
         self,
         *,
