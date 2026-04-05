@@ -902,8 +902,8 @@ class LongMemEvalRealBenchmark:
                         all_results.sort(
                             key=lambda r: r.composite_score, reverse=True
                         )
-                    # Take top 50 for LLM context
-                    all_results = all_results[:50]
+                    # Keep more results for aggregation queries (need all items)
+                    all_results = all_results[:150]
                 finally:
                     await q_engine.close()
                     shutil.rmtree(tmp_dir, ignore_errors=True)

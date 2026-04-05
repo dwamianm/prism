@@ -582,49 +582,41 @@ async def _ingest_sessions(
 
     Returns the number of turns ingested.
     """
+    # Track speakers to assign alternating roles — this enables the
+    # core engine's Q-A turn pairing (which triggers on role changes
+    # within a session).
+    speakers = set()
+    for sess_turns, _ in sessions:
+        for turn in sess_turns:
+            s = turn.get("speaker", "")
+            if s:
+                speakers.add(s)
+    speaker_list = sorted(speakers)
+    speaker_roles = {s: ("user" if i % 2 == 0 else "assistant")
+                     for i, s in enumerate(speaker_list)}
+
     total_turns = 0
     for sess_idx, (turns, date_str) in enumerate(sessions):
         session_id = f"{sample_id}-s{sess_idx}"
         date_prefix = f"({date_str}) " if date_str else ""
 
-        # Store individual turns
-        enriched_turns: list[tuple[str, str]] = []  # (enriched_text, speaker)
         for turn in turns:
             enriched = _enrich_turn(turn, date_prefix)
             if enriched is None:
                 continue
             speaker = turn.get("speaker", "")
-            enriched_turns.append((enriched, speaker))
+            # Use speaker-based role so the engine's Q-A pairing triggers
+            # automatically when speakers alternate.
+            role = speaker_roles.get(speaker, "user")
             await engine.store(
                 enriched,
                 user_id=user_id,
-                role="user",
+                role=role,
                 node_type=NodeType.FACT,
                 scope=Scope.PERSONAL,
                 session_id=session_id,
             )
             total_turns += 1
-
-        # Store Q-A pairs: when consecutive turns are from different speakers,
-        # merge them into a single node for better retrieval coverage.
-        # This addresses the "orphaned answer" problem where a question is
-        # retrieved but its adjacent answer is not.
-        for i in range(len(enriched_turns) - 1):
-            text_a, speaker_a = enriched_turns[i]
-            text_b, speaker_b = enriched_turns[i + 1]
-            if speaker_a != speaker_b and speaker_a and speaker_b:
-                merged = f"{text_a}\n{text_b}"
-                # Limit merged size to avoid bloating embeddings
-                if len(merged) < 1000:
-                    await engine.store(
-                        merged,
-                        user_id=user_id,
-                        role="user",
-                        node_type=NodeType.FACT,
-                        scope=Scope.PERSONAL,
-                        session_id=session_id,
-                    )
-                    total_turns += 1
 
     return total_turns
 
@@ -931,19 +923,19 @@ class LoCoMoRealBenchmark:
             for name in entity_names[:2]:
                 alt_queries.append(name)
 
-            # Topic keyword retrieval: extract key nouns/objects from question
-            # to catch facts phrased differently than the question
-            _topic_words = {"book", "art", "painting", "pet", "child", "children",
-                           "kid", "husband", "wife", "married", "move", "country",
-                           "race", "camping", "hiking", "swimming", "pottery",
-                           "church", "religion", "religious", "adopt", "adoption",
-                           "dog", "cat", "bowl", "stained", "glass"}
-            q_lower = qa["question"].lower()
-            for word in _topic_words:
-                if word in q_lower:
-                    # Combine entity name + topic for targeted search
-                    for name in entity_names[:1]:
-                        alt_queries.append(f"{name} {word}")
+            # Entity + keyword combinations for targeted search
+            # (generic, not hardcoded — extracts content words from query)
+            import re as _re
+            _stop = {"what", "when", "where", "who", "how", "would", "does",
+                     "did", "has", "have", "could", "can", "the", "many",
+                     "much", "been", "are", "was", "were", "from", "with"}
+            content_words = [
+                w for w in _re.findall(r'\b[a-z]{3,}\b', qa["question"].lower())
+                if w not in _stop
+            ]
+            for name in entity_names[:1]:
+                for word in content_words[:2]:
+                    alt_queries.append(f"{name} {word}")
 
             # Retrieval (semaphore-gated to avoid overwhelming shared engine)
             async with semaphore:
