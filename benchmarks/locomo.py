@@ -883,21 +883,9 @@ class LoCoMoRealBenchmark:
                         )
                         obs_count += 1
 
-            # Consolidate entity knowledge profiles
-            speakers = set()
-            for sess_turns, _ in sessions:
-                for turn in sess_turns:
-                    s = turn.get("speaker", "")
-                    if s:
-                        speakers.add(s)
-            profile_count = await engine.consolidate_knowledge(
-                user_id=user_id,
-                entity_names=list(speakers) if speakers else None,
-            )
-
             logger.info(
-                "Ingested %s: %d sessions, %d turns, %d observations, %d profiles",
-                sample_id, len(sessions), total_turns, obs_count, profile_count,
+                "Ingested %s: %d sessions, %d turns, %d observations",
+                sample_id, len(sessions), total_turns, obs_count,
             )
 
             # Collect QA items for concurrent evaluation
