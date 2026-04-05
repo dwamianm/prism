@@ -201,11 +201,11 @@ class PackingConfig(BaseModel):
         ),
     )
     aggregation_k_multiplier: float = Field(
-        default=2.5,
+        default=3.0,
         description="Multiplier for candidate k values on aggregation/count queries",
     )
     aggregation_k_max: int = Field(
-        default=500,
+        default=2000,
         description="Hard cap on candidate k values after aggregation multiplier",
     )
 

@@ -221,6 +221,40 @@ class RetrievalPipeline:
             config=candidate_config,
         )
 
+        # --- Stage 2.5: Entity-Focused Retrieval Expansion ---
+        # When entities are extracted from the query, run additional lexical
+        # searches for each entity name to catch facts that vector similarity
+        # misses (e.g., "Sweden" mentioned once in a tangential context).
+        if analysis.entities:
+            existing_ids = {str(c.node.id) for c in candidates}
+            for entity_name in analysis.entities[:3]:
+                try:
+                    entity_hits = await self._lexical_index.search(
+                        entity_name,
+                        user_id=user_id,
+                        limit=20,
+                    )
+                    for hit in entity_hits:
+                        nid = hit["node_id"]
+                        if nid in existing_ids:
+                            continue
+                        existing_ids.add(nid)
+                        node = await self._graph_store.get_node(nid)
+                        if node is not None:
+                            candidates.append(RetrievalCandidate(
+                                node=node,
+                                paths=["LEXICAL"],
+                                path_count=1,
+                                lexical_score=hit.get("score", 0.0),
+                            ))
+                            candidate_counts["LEXICAL"] = candidate_counts.get("LEXICAL", 0) + 1
+                except Exception:
+                    logger.debug(
+                        "Entity-focused retrieval failed for '%s'; continuing",
+                        entity_name,
+                        exc_info=True,
+                    )
+
         # Track embedding mismatch from candidates module.
         # If VECTOR count is 0 but no explicit error, we check the flag
         # via the candidates module's logging. For now, infer from counts.

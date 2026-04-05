@@ -116,15 +116,15 @@ async def test_relational_query_not_aggregation():
 
 
 def test_aggregation_k_multiplier_default():
-    """Default aggregation_k_multiplier should be 2.5."""
+    """Default aggregation_k_multiplier should be 3.0."""
     config = PackingConfig()
-    assert config.aggregation_k_multiplier == 2.5
+    assert config.aggregation_k_multiplier == 3.0
 
 
 def test_aggregation_k_max_default():
-    """Default aggregation_k_max should be 500."""
+    """Default aggregation_k_max should be 2000."""
     config = PackingConfig()
-    assert config.aggregation_k_max == 500
+    assert config.aggregation_k_max == 2000
 
 
 def test_k_values_multiplied_for_aggregation():
@@ -137,9 +137,9 @@ def test_k_values_multiplied_for_aggregation():
     new_lexical_k = min(int(config.lexical_k * mult), cap)
     new_graph_k = min(int(config.graph_max_candidates * mult), cap)
 
-    assert new_vector_k == 250
-    assert new_lexical_k == 250
-    assert new_graph_k == 187  # int(75 * 2.5) = 187
+    assert new_vector_k == 300   # int(100 * 3.0) = 300
+    assert new_lexical_k == 300
+    assert new_graph_k == 225   # int(75 * 3.0) = 225
 
 
 def test_k_values_capped_at_maximum():

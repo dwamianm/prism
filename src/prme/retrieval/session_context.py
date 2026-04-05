@@ -74,26 +74,25 @@ async def expand_session_context(
     if not session_triggers:
         return scored
 
-    # Fetch all nodes for each unique session_id.
+    # Fetch all nodes once and group by session_id (avoids repeated queries).
     session_nodes: dict[str, list[MemoryNode]] = {}
-    for sid in session_triggers:
-        try:
-            nodes = await graph_store.query_nodes(
-                user_id=user_id,
-                limit=500,
-            )
-            # Filter to only nodes from this session, sorted by created_at.
-            session_nodes[sid] = sorted(
-                [n for n in nodes if n.session_id == sid],
-                key=lambda n: n.created_at,
-            )
-        except Exception:
-            logger.warning(
-                "Failed to fetch session nodes for session_id=%s; skipping",
-                sid,
-                exc_info=True,
-            )
-            continue
+    try:
+        all_nodes = await graph_store.query_nodes(
+            user_id=user_id,
+            limit=2000,
+        )
+        for n in all_nodes:
+            if n.session_id in session_triggers:
+                session_nodes.setdefault(n.session_id, []).append(n)
+        # Sort each session's nodes by created_at.
+        for sid in session_nodes:
+            session_nodes[sid].sort(key=lambda n: n.created_at)
+    except Exception:
+        logger.warning(
+            "Failed to fetch session nodes for user_id=%s; skipping expansion",
+            user_id,
+            exc_info=True,
+        )
 
     # Build context expansion candidates.
     # We collect them keyed by trigger candidate to interleave properly.

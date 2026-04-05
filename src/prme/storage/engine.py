@@ -124,6 +124,14 @@ class MemoryEngine:
 
         self._closed = False
 
+        # Session turn tracking for automatic Q-A pairing.
+        # Maps (user_id, session_id) -> (role, content, node_type, scope)
+        # When consecutive messages in the same session have different roles,
+        # a merged Q-A node is created for better retrieval coverage.
+        self._last_session_turn: dict[
+            tuple[str, str], tuple[str, str, NodeType, Scope]
+        ] = {}
+
         # Config-driven overrides with module-level defaults as fallback
         from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
 
@@ -657,6 +665,60 @@ class MemoryEngine:
                     node.id,
                     exc_info=True,
                 )
+
+        # Step 6: Q-A Turn Pairing (reconstructive memory)
+        # When consecutive messages in the same session are from different
+        # roles, create a merged node for better retrieval coverage.
+        # This addresses the "orphaned answer" problem where a question is
+        # retrievable but the adjacent answer is not.
+        if session_id is not None and self._config.enable_qa_pairing:
+            session_key = (user_id, session_id)
+            prev = self._last_session_turn.get(session_key)
+            if prev is not None:
+                prev_role, prev_content, prev_nt, prev_scope = prev
+                if prev_role != role and len(prev_content) + len(content) < 1000:
+                    merged = f"{prev_content}\n{content}"
+                    try:
+                        merged_node = MemoryNode(
+                            user_id=user_id,
+                            session_id=session_id,
+                            node_type=node_type,
+                            scope=scope,
+                            content=merged,
+                            metadata={"qa_pair": True},
+                            confidence=confidence,
+                            confidence_base=confidence,
+                            salience=salience_base,
+                            salience_base=salience_base,
+                            epistemic_type=epistemic_type,
+                            source_type=source_type,
+                            evidence_refs=[event.id],
+                            decay_profile=decay_profile,
+                            event_time=event_time,
+                        )
+                        merged_id = await self._write_queue.submit(
+                            lambda n=merged_node: self._graph_store.create_node(n),
+                            label=f"store.qa_pair:{merged_node.id}",
+                        )
+                        await self._write_queue.submit(
+                            lambda nid=merged_id, c=merged, uid=user_id: (
+                                self._vector_index.index(nid, c, uid)
+                            ),
+                            label=f"store.qa_vector:{merged_id}",
+                        )
+                        await self._write_queue.submit(
+                            lambda nid=merged_id, c=merged, uid=user_id, nt=node_type.value, sc=scope.value: (
+                                self._lexical_index.index(nid, c, uid, nt, sc)
+                            ),
+                            label=f"store.qa_lexical:{merged_id}",
+                        )
+                    except Exception:
+                        logger.debug(
+                            "Q-A pair creation failed for session %s; non-fatal",
+                            session_id,
+                            exc_info=True,
+                        )
+            self._last_session_turn[session_key] = (role, content, node_type, scope)
 
         return event_id
 

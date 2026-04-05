@@ -256,6 +256,15 @@ class PRMEConfig(BaseSettings):
             "creating a duplicate. None (default) disables this behavior."
         ),
     )
+    enable_qa_pairing: bool = Field(
+        default=True,
+        description=(
+            "When True, store() automatically creates merged Q-A nodes "
+            "when consecutive messages in the same session have different "
+            "roles. This improves retrieval by co-locating questions with "
+            "their answers. Requires session_id to be set."
+        ),
+    )
     enable_surprise_gating: bool = Field(
         default=False,
         description=(

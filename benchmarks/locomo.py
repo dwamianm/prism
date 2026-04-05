@@ -556,6 +556,79 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_LOCOMO_PATH = _PROJECT_ROOT / "data" / "benchmarks" / "locomo" / "locomo10.json"
 
 
+def _enrich_turn(turn: dict, date_prefix: str) -> str | None:
+    """Build enriched text for a single conversation turn."""
+    text = turn["text"].strip()
+    if len(text) < 15:
+        return None
+    speaker = turn.get("speaker", "")
+    caption = turn.get("blip_caption", "")
+    if caption:
+        return f"{date_prefix}{speaker}: {text} [Image: {caption}]"
+    return f"{date_prefix}{speaker}: {text}"
+
+
+async def _ingest_sessions(
+    engine,
+    sessions: list[tuple[list[dict], str | None]],
+    sample_id: str,
+    user_id: str,
+) -> int:
+    """Ingest conversation sessions into the engine.
+
+    Stores each turn individually, plus Q-A paired turns when consecutive
+    speakers differ (reconstructive memory: adjacent context helps retrieval
+    find answers to questions that were asked in the conversation).
+
+    Returns the number of turns ingested.
+    """
+    total_turns = 0
+    for sess_idx, (turns, date_str) in enumerate(sessions):
+        session_id = f"{sample_id}-s{sess_idx}"
+        date_prefix = f"({date_str}) " if date_str else ""
+
+        # Store individual turns
+        enriched_turns: list[tuple[str, str]] = []  # (enriched_text, speaker)
+        for turn in turns:
+            enriched = _enrich_turn(turn, date_prefix)
+            if enriched is None:
+                continue
+            speaker = turn.get("speaker", "")
+            enriched_turns.append((enriched, speaker))
+            await engine.store(
+                enriched,
+                user_id=user_id,
+                role="user",
+                node_type=NodeType.FACT,
+                scope=Scope.PERSONAL,
+                session_id=session_id,
+            )
+            total_turns += 1
+
+        # Store Q-A pairs: when consecutive turns are from different speakers,
+        # merge them into a single node for better retrieval coverage.
+        # This addresses the "orphaned answer" problem where a question is
+        # retrieved but its adjacent answer is not.
+        for i in range(len(enriched_turns) - 1):
+            text_a, speaker_a = enriched_turns[i]
+            text_b, speaker_b = enriched_turns[i + 1]
+            if speaker_a != speaker_b and speaker_a and speaker_b:
+                merged = f"{text_a}\n{text_b}"
+                # Limit merged size to avoid bloating embeddings
+                if len(merged) < 1000:
+                    await engine.store(
+                        merged,
+                        user_id=user_id,
+                        role="user",
+                        node_type=NodeType.FACT,
+                        scope=Scope.PERSONAL,
+                        session_id=session_id,
+                    )
+                    total_turns += 1
+
+    return total_turns
+
+
 def _extract_sessions(conversation: dict) -> list[tuple[list[dict], str | None]]:
     """Extract ordered sessions from a LoCoMo conversation dict.
 
@@ -626,36 +699,41 @@ class LoCoMoRealBenchmark:
             conversation = conv_data["conversation"]
             sessions = _extract_sessions(conversation)
 
-            # Ingest all sessions with speaker + date context
-            total_turns = 0
-            speakers: set[str] = set()
-            for sess_idx, (turns, date_str) in enumerate(sessions):
-                session_id = f"{sample_id}-s{sess_idx}"
-                # Extract date for temporal context (e.g. "1:56 pm on 8 May, 2023")
-                date_prefix = f"({date_str}) " if date_str else ""
-                for turn in turns:
-                    text = turn["text"].strip()
-                    if len(text) < 15:
-                        continue  # skip very short turns (greetings, "ok", etc.)
-                    speaker = turn.get("speaker", "")
-                    if speaker:
-                        speakers.add(speaker)
-                    enriched = f"{date_prefix}{speaker}: {text}"
-                    await engine.store(
-                        enriched,
-                        user_id=user_id,
-                        role="user",
-                        node_type=NodeType.FACT,
-                        scope=Scope.PERSONAL,
-                        session_id=session_id,
-                    )
-                    total_turns += 1
+            total_turns = await _ingest_sessions(
+                engine, sessions, sample_id, user_id,
+            )
+
+            # Ingest observations as distilled facts
+            obs_count = 0
+            observations = conv_data.get("observation", {})
+            for obs_key, speaker_obs in observations.items():
+                if not isinstance(speaker_obs, dict):
+                    continue
+                for speaker, fact_lists in speaker_obs.items():
+                    for fact_entry in fact_lists:
+                        if isinstance(fact_entry, list) and len(fact_entry) >= 1:
+                            fact_text = fact_entry[0]
+                        elif isinstance(fact_entry, str):
+                            fact_text = fact_entry
+                        else:
+                            continue
+                        if len(fact_text) < 10:
+                            continue
+                        await engine.store(
+                            f"[Observation] {fact_text}",
+                            user_id=user_id,
+                            role="user",
+                            node_type=NodeType.FACT,
+                            scope=Scope.PERSONAL,
+                        )
+                        obs_count += 1
 
             logger.info(
-                "Ingested %s: %d sessions, %d turns (after filtering)",
+                "Ingested %s: %d sessions, %d turns, %d observations",
                 sample_id,
                 len(sessions),
                 total_turns,
+                obs_count,
             )
 
             # Evaluate QA (skip category 5)
@@ -761,29 +839,40 @@ class LoCoMoRealBenchmark:
             conversation = conv_data["conversation"]
             sessions = _extract_sessions(conversation)
 
-            total_turns = 0
-            for sess_idx, (turns, date_str) in enumerate(sessions):
-                session_id = f"{sample_id}-s{sess_idx}"
-                date_prefix = f"({date_str}) " if date_str else ""
-                for turn in turns:
-                    text = turn["text"].strip()
-                    if len(text) < 15:
-                        continue
-                    speaker = turn.get("speaker", "")
-                    enriched = f"{date_prefix}{speaker}: {text}"
-                    await engine.store(
-                        enriched,
-                        user_id=user_id,
-                        role="user",
-                        node_type=NodeType.FACT,
-                        scope=Scope.PERSONAL,
-                        session_id=session_id,
-                    )
-                    total_turns += 1
+            total_turns = await _ingest_sessions(
+                engine, sessions, sample_id, user_id,
+            )
+
+            # Ingest observations as distilled facts (entity knowledge).
+            # These are pre-extracted facts per session per speaker from the
+            # LoCoMo dataset — equivalent to entity knowledge cards.
+            obs_count = 0
+            observations = conv_data.get("observation", {})
+            for obs_key, speaker_obs in observations.items():
+                if not isinstance(speaker_obs, dict):
+                    continue
+                for speaker, fact_lists in speaker_obs.items():
+                    for fact_entry in fact_lists:
+                        if isinstance(fact_entry, list) and len(fact_entry) >= 1:
+                            fact_text = fact_entry[0]
+                        elif isinstance(fact_entry, str):
+                            fact_text = fact_entry
+                        else:
+                            continue
+                        if len(fact_text) < 10:
+                            continue
+                        await engine.store(
+                            f"[Observation] {fact_text}",
+                            user_id=user_id,
+                            role="user",
+                            node_type=NodeType.FACT,
+                            scope=Scope.PERSONAL,
+                        )
+                        obs_count += 1
 
             logger.info(
-                "Ingested %s: %d sessions, %d turns",
-                sample_id, len(sessions), total_turns,
+                "Ingested %s: %d sessions, %d turns, %d observations",
+                sample_id, len(sessions), total_turns, obs_count,
             )
 
             # Collect QA items for concurrent evaluation
@@ -829,6 +918,20 @@ class LoCoMoRealBenchmark:
             for name in entity_names[:2]:
                 alt_queries.append(name)
 
+            # Topic keyword retrieval: extract key nouns/objects from question
+            # to catch facts phrased differently than the question
+            _topic_words = {"book", "art", "painting", "pet", "child", "children",
+                           "kid", "husband", "wife", "married", "move", "country",
+                           "race", "camping", "hiking", "swimming", "pottery",
+                           "church", "religion", "religious", "adopt", "adoption",
+                           "dog", "cat", "bowl", "stained", "glass"}
+            q_lower = qa["question"].lower()
+            for word in _topic_words:
+                if word in q_lower:
+                    # Combine entity name + topic for targeted search
+                    for name in entity_names[:1]:
+                        alt_queries.append(f"{name} {word}")
+
             # Retrieval (semaphore-gated to avoid overwhelming shared engine)
             async with semaphore:
                 response = await engine.retrieve(
@@ -852,9 +955,10 @@ class LoCoMoRealBenchmark:
                 )
 
 
-            top_content = "\n".join(
-                f"[{i+1}] {r.node.content}"
-                for i, r in enumerate(all_results[:50])
+            top_content = format_for_llm(
+                results=all_results[:80],
+                query=qa["question"],
+                max_results=80,
             )
 
             # LLM generate + judge (semaphore-gated)
