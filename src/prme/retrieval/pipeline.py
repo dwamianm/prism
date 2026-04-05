@@ -208,6 +208,50 @@ class RetrievalPipeline:
                 }
             )
 
+        # --- Aggregation: exhaustive keyword scan ---
+        # For aggregation queries, supplement embedding search with a
+        # comprehensive lexical scan using key terms from the query.
+        # This catches events that embedding similarity misses.
+        aggregation_extra: list[RetrievalCandidate] = []
+        if analysis.is_aggregation:
+            import re
+            # Extract content words (nouns, verbs) from the query
+            stop = {"how", "many", "much", "total", "did", "do", "have",
+                    "has", "the", "and", "or", "in", "on", "at", "to",
+                    "of", "for", "with", "from", "last", "past", "all",
+                    "what", "list", "count", "number", "been", "was",
+                    "were", "are", "is", "my", "me", "few", "spend",
+                    "spent", "any", "some", "each", "every", "a", "an",
+                    "that", "this", "those", "these", "it", "its"}
+            words = re.findall(r'\b[a-z]{3,}\b', query.lower())
+            keywords = [w for w in words if w not in stop]
+            # Search for each keyword pair for better precision
+            search_terms = keywords[:5]
+            if len(search_terms) >= 2:
+                # Also try bigrams
+                for i in range(len(search_terms) - 1):
+                    search_terms.append(f"{keywords[i]} {keywords[i+1]}")
+            agg_seen_ids: set[str] = set()
+            for term in search_terms:
+                try:
+                    hits = await self._lexical_index.search(
+                        term, user_id=user_id, limit=50,
+                    )
+                    for hit in hits:
+                        nid = hit["node_id"]
+                        if nid not in agg_seen_ids:
+                            agg_seen_ids.add(nid)
+                            node = await self._graph_store.get_node(nid)
+                            if node is not None:
+                                aggregation_extra.append(RetrievalCandidate(
+                                    node=node,
+                                    paths=["LEXICAL"],
+                                    path_count=1,
+                                    lexical_score=hit.get("score", 0.0),
+                                ))
+                except Exception:
+                    pass
+
         # --- Stages 2-3: Candidate Generation + Merging ---
         candidates, candidate_counts = await generate_candidates(
             analysis,
@@ -220,6 +264,18 @@ class RetrievalPipeline:
             time_to=effective_time_to,
             config=candidate_config,
         )
+
+        # Merge aggregation extras into candidate pool
+        if aggregation_extra:
+            existing_ids = {str(c.node.id) for c in candidates}
+            added = 0
+            for c in aggregation_extra:
+                if str(c.node.id) not in existing_ids:
+                    existing_ids.add(str(c.node.id))
+                    candidates.append(c)
+                    added += 1
+            if added:
+                candidate_counts["LEXICAL_AGG"] = added
 
         # --- Stage 2.5: Entity-Focused Retrieval Expansion ---
         # When entities are extracted from the query, run additional lexical
