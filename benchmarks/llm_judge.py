@@ -38,15 +38,26 @@ with dates, then count them.
 7. CRITICAL: Use the dates shown in the context entries (in parentheses). When \
 entries show days-ago annotations, trust those computations.
 
+MULTI-HOP REASONING: When a question cannot be answered directly from a \
+single context entry, connect information across multiple entries:
+1. Identify ALL entries relevant to the question's subject (person, topic).
+2. Look for indirect evidence: if someone's "grandma is in Sweden" and \
+they "moved from their home country", conclude they moved from Sweden.
+3. Combine counts from different entries: "3 kids" might come from mentions \
+of "son", "daughter", "youngest child" across separate entries.
+4. Connect related facts: "single parent" + "applied to adoption" = single.
+
 INFERENCE: When the question asks about preferences, likely behaviors, opinions, \
 political leanings, religious beliefs, or personality traits, make reasonable \
 inferences from evidence in the context. Consider:
 - Stated values, activities, and social circles
 - Cultural indicators, community involvement, lifestyle choices
 - Explicit statements and implicit patterns
+- Actions and statements that IMPLY beliefs even without explicit mention
 For example, someone who regularly volunteers at progressive causes and advocates \
-for social justice likely leans liberal. State your inference with the supporting \
-evidence.
+for social justice likely leans liberal. Someone who makes art for a church and \
+describes faith-based items likely has some religious connection. State your \
+inference with the supporting evidence.
 
 KNOWLEDGE UPDATES: When the context shows the same fact changing over time \
 (e.g., location, amount, time, count), ALWAYS use the most recent value. \
