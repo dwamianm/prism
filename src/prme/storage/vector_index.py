@@ -45,12 +45,20 @@ class VectorIndex:
         index_path: str,
         embedding_provider: EmbeddingProvider,
         conn_lock: asyncio.Lock | None = None,
+        save_interval: int = 64,
     ) -> None:
         self._conn = conn
         self._index_path = index_path
         self._provider = embedding_provider
         self._write_lock = asyncio.Lock()
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
+
+        # Debounced save: the full USearch index file is rewritten on each
+        # save, so saving on every insert is O(N^2) total write volume.
+        # We save only once every ``save_interval`` inserts and flush any
+        # remaining pending writes on close(). Set to 1 for save-per-insert.
+        self._save_interval = max(1, save_interval)
+        self._unsaved_inserts = 0
 
         # Create metadata table and sequence in DuckDB
         self._init_metadata_table()
@@ -162,34 +170,67 @@ class VectorIndex:
         vector = np.array(embedding[0], dtype=np.float32)
 
         async with self._write_lock:
-            # Get next key from sequence
-            key = self._conn.execute(
-                "SELECT nextval('vector_key_seq')"
-            ).fetchone()[0]
+            # DuckDB + USearch writes are synchronous; run them off the
+            # event loop and serialize DuckDB access through conn_lock to
+            # match the other storage backends (event-loop blocking and
+            # thread-safety fix, issue #39). The full index save is
+            # debounced to avoid O(N^2) disk rewrites during ingestion.
+            async with self._conn_lock:
+                key = await asyncio.to_thread(
+                    self._do_index, node_id, content, user_id, vector
+                )
 
-            # Insert metadata
-            self._conn.execute(
-                """
-                INSERT INTO vector_metadata
-                    (vector_key, node_id, user_id, embedding_model,
-                     embedding_version, embedding_dim)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                [
-                    key,
-                    node_id,
-                    user_id,
-                    self._provider.model_name,
-                    self._provider.model_version,
-                    self._provider.dimension,
-                ],
-            )
+        return key
 
-            # Add to USearch index
-            self._index.add(key, vector)
+    def _do_index(
+        self,
+        node_id: str,
+        content: str,
+        user_id: str,
+        vector: np.ndarray,
+    ) -> int:
+        """Synchronous insert + (debounced) save (runs in thread pool).
 
-            # Persist to disk
-            self._index.save(self._index_path)
+        Returns the assigned vector key. Caller must hold both
+        ``_write_lock`` and ``_conn_lock``.
+        """
+        # Get next key from sequence
+        key = self._conn.execute(
+            "SELECT nextval('vector_key_seq')"
+        ).fetchone()[0]
+
+        # Insert metadata
+        self._conn.execute(
+            """
+            INSERT INTO vector_metadata
+                (vector_key, node_id, user_id, embedding_model,
+                 embedding_version, embedding_dim)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                key,
+                node_id,
+                user_id,
+                self._provider.model_name,
+                self._provider.model_version,
+                self._provider.dimension,
+            ],
+        )
+
+        # Add to USearch index
+        self._index.add(key, vector)
+
+        # Persist to disk on the debounce interval only. Remaining
+        # unsaved inserts are flushed by save()/close(). The counter is
+        # reset in a finally so a failed save does not re-trigger on every
+        # subsequent insert (the vector is already in the in-memory index
+        # and will be persisted by the next interval save or by close()).
+        self._unsaved_inserts += 1
+        if self._unsaved_inserts >= self._save_interval:
+            try:
+                self._index.save(self._index_path)
+            finally:
+                self._unsaved_inserts = 0
 
         return key
 
@@ -262,14 +303,14 @@ class VectorIndex:
         """
         query_vector = np.array(vector, dtype=np.float32)
 
-        # Over-fetch to compensate for post-filtering
-        fetch_k = min(k * self._OVERFETCH_FACTOR, len(self._index))
-        if fetch_k == 0:
+        # Run the USearch read under _write_lock and off the event loop.
+        # Index writes now happen in a worker thread (issue #39), so a
+        # concurrent full-index save() could otherwise interleave with a
+        # search traversal. The lock serializes the USearch index access;
+        # to_thread keeps the (CPU-bound) search off the event loop.
+        matched_keys = await self._search_index(query_vector, k)
+        if matched_keys is None:
             return []
-
-        # Search USearch
-        matches = self._index.search(query_vector, fetch_k)
-        matched_keys = [int(matches.keys[i]) for i in range(len(matches.keys))]
 
         # Check only the matched keys against DuckDB (inverted filter:
         # WHERE vector_key IN (...) bounded at fetch_k rows, instead of
@@ -277,6 +318,7 @@ class VectorIndex:
         # filters JOIN with the nodes table. All DuckDB access is
         # serialized through conn_lock to prevent concurrent thread
         # access during asyncio.gather parallelism.
+        candidate_keys = [key for key, _distance in matched_keys]
         async with self._conn_lock:
             allowed_keys = await asyncio.to_thread(
                 self._fetch_allowed_keys,
@@ -284,15 +326,12 @@ class VectorIndex:
                 scope,
                 time_from,
                 time_to,
-                matched_keys,
+                candidate_keys,
             )
 
         # Filter and map results
         results = []
-        for i in range(len(matches.keys)):
-            key = int(matches.keys[i])
-            distance = float(matches.distances[i])
-
+        for key, distance in matched_keys:
             if key not in allowed_keys:
                 continue
 
@@ -307,10 +346,43 @@ class VectorIndex:
 
         return results
 
-    async def save(self) -> None:
-        """Persist the USearch index to disk."""
+    async def _search_index(
+        self, query_vector: np.ndarray, k: int
+    ) -> list[tuple[int, float]] | None:
+        """Run the USearch nearest-neighbor read under the write lock.
+
+        Returns a list of ``(key, distance)`` tuples ordered by ascending
+        distance, or ``None`` when the index is empty. Held under
+        ``_write_lock`` and executed off the event loop so it cannot
+        interleave with a concurrent index ``add``/``save`` (issue #39).
+        """
         async with self._write_lock:
-            self._index.save(self._index_path)
+            return await asyncio.to_thread(self._do_search_index, query_vector, k)
+
+    def _do_search_index(
+        self, query_vector: np.ndarray, k: int
+    ) -> list[tuple[int, float]] | None:
+        """Synchronous USearch read (runs in thread pool under _write_lock)."""
+        # Over-fetch to compensate for post-filtering
+        fetch_k = min(k * self._OVERFETCH_FACTOR, len(self._index))
+        if fetch_k == 0:
+            return None
+
+        matches = self._index.search(query_vector, fetch_k)
+        return [
+            (int(matches.keys[i]), float(matches.distances[i]))
+            for i in range(len(matches.keys))
+        ]
+
+    async def save(self) -> None:
+        """Persist the USearch index to disk, flushing pending inserts.
+
+        Always writes the index regardless of the debounce counter, then
+        resets it. Runs off the event loop under the write lock.
+        """
+        async with self._write_lock:
+            await asyncio.to_thread(self._index.save, self._index_path)
+            self._unsaved_inserts = 0
 
     async def close(self) -> None:
         """Save index and clean up resources."""

@@ -234,10 +234,20 @@ class MemoryEngine:
         embedding_provider = create_embedding_provider(config.embedding)
 
         # Create vector index
-        vector_index = VectorIndex(conn, config.vector_path, embedding_provider, conn_lock)
+        vector_index = VectorIndex(
+            conn,
+            config.vector_path,
+            embedding_provider,
+            conn_lock,
+            save_interval=config.vector_save_interval,
+        )
 
         # Create lexical index
-        lexical_index = LexicalIndex(config.lexical_path)
+        lexical_index = LexicalIndex(
+            config.lexical_path,
+            commit_interval=config.lexical_commit_interval,
+            commit_max_delay_s=config.lexical_commit_max_delay_s,
+        )
 
         # Create and start write queue
         write_queue = WriteQueue(maxsize=config.write_queue_size)
@@ -266,6 +276,7 @@ class MemoryEngine:
             write_queue=write_queue,
             graph_writer=graph_writer,
             confidence_matrix=_active_confidence_matrix,
+            max_concurrent_extractions=config.max_concurrent_extractions,
         )
 
         from prme.retrieval.pipeline import RetrievalPipeline
@@ -372,6 +383,7 @@ class MemoryEngine:
             write_queue=write_queue,
             graph_writer=graph_writer,
             confidence_matrix=_active_confidence_matrix,
+            max_concurrent_extractions=config.max_concurrent_extractions,
         )
 
         from prme.retrieval.pipeline import RetrievalPipeline
