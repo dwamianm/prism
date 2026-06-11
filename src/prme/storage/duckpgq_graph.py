@@ -124,6 +124,8 @@ class DuckPGQGraphStore:
         min_confidence: float | None = None,
         min_salience: float | None = None,
         content_contains_any: list[str] | None = None,
+        created_before: datetime | None = None,
+        oldest_first: bool = False,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters.
@@ -142,6 +144,8 @@ class DuckPGQGraphStore:
             min_salience: Minimum salience threshold.
             content_contains_any: Case-insensitive substring filters
                 (matches content containing ANY of the strings).
+            created_before: Only return nodes with created_at <= this value.
+            oldest_first: Order by created_at ASC instead of the default DESC.
             limit: Max results.
 
         Returns:
@@ -160,6 +164,8 @@ class DuckPGQGraphStore:
                 min_confidence,
                 min_salience,
                 content_contains_any,
+                created_before,
+                oldest_first,
                 limit,
             )
 
@@ -741,6 +747,8 @@ class DuckPGQGraphStore:
         min_confidence: float | None,
         min_salience: float | None,
         content_contains_any: list[str] | None,
+        created_before: datetime | None,
+        oldest_first: bool,
         limit: int,
     ) -> list[MemoryNode]:
         """Query nodes with dynamic WHERE clause (sync)."""
@@ -803,11 +811,16 @@ class DuckPGQGraphStore:
                 f"%{self._escape_like(p.lower())}%" for p in content_contains_any
             )
 
+        if created_before is not None:
+            conditions.append("created_at <= ?")
+            params.append(created_before)
+
         where_clause = " AND ".join(conditions) if conditions else "1=1"
+        order_direction = "ASC" if oldest_first else "DESC"
         query = f"""
             SELECT * FROM nodes
             WHERE {where_clause}
-            ORDER BY created_at DESC
+            ORDER BY created_at {order_direction}
             LIMIT ?
         """
         params.append(limit)

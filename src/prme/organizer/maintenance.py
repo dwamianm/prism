@@ -116,19 +116,27 @@ class MaintenanceRunner:
         at least promotion_evidence_count evidence refs, then promotes
         each via engine.promote().
 
+        The age cutoff is pushed into SQL (created_before) and results are
+        ordered oldest-first so each bounded pass drains the oldest eligible
+        nodes. Because promotion moves a node out of the TENTATIVE state,
+        successive passes advance through the backlog instead of repeatedly
+        re-examining the newest window (which would starve older nodes).
+
         Returns count of nodes promoted.
         """
         cutoff = now - timedelta(days=self._config.promotion_age_days)
 
-        # Query tentative nodes created before cutoff
+        # Query the oldest tentative nodes created at/before the cutoff.
         tentative_nodes = await self._engine.query_nodes(
             lifecycle_states=[LifecycleState.TENTATIVE],
+            created_before=cutoff,
+            oldest_first=True,
             limit=batch_size,
         )
 
         promoted = 0
         for node in tentative_nodes:
-            if node.created_at <= cutoff and len(node.evidence_refs) >= self._config.promotion_evidence_count:
+            if len(node.evidence_refs) >= self._config.promotion_evidence_count:
                 try:
                     await self._engine.promote(str(node.id))
                     promoted += 1

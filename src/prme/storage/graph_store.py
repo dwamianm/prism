@@ -96,6 +96,8 @@ class GraphStore(Protocol):
         min_confidence: float | None = None,
         min_salience: float | None = None,
         content_contains_any: list[str] | None = None,
+        created_before: datetime | None = None,
+        oldest_first: bool = False,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with filters.
@@ -115,6 +117,13 @@ class GraphStore(Protocol):
             content_contains_any: Case-insensitive substring filters --
                 matches nodes whose content contains ANY of the given
                 strings (pushed into SQL as LIKE clauses).
+            created_before: Only return nodes created at or before this time
+                (``created_at <= created_before``). Pushes age-based cutoffs
+                into SQL so the limit applies after filtering.
+            oldest_first: Order by ``created_at`` ascending instead of the
+                default descending. Combined with ``created_before`` this lets
+                age-gated scans drain the oldest eligible nodes first instead
+                of repeatedly re-examining the newest window.
             limit: Maximum results to return.
 
         Returns:

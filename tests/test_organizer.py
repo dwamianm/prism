@@ -690,6 +690,112 @@ class TestMaintenanceRunner:
         assert refreshed.lifecycle_state == LifecycleState.STABLE
 
     @pytest.mark.asyncio
+    async def test_auto_promotion_reaches_old_node_behind_newer_batch(
+        self, engine_parts
+    ):
+        """Old eligible nodes promote even when newer nodes fill the batch.
+
+        Regression for the starvation bug (#40): the previous query returned
+        the newest ``batch_size`` tentative nodes ordered created_at DESC and
+        applied the age cutoff in Python, so an old eligible node sitting
+        behind a full batch of newer (ineligible) nodes was never examined.
+        With the cutoff pushed into SQL and oldest-first ordering, the old
+        node is reached within the same bounded batch.
+        """
+        engine, graph_store, _ = engine_parts
+        batch_size = 3
+        config = OrganizerConfig(
+            opportunistic_cooldown=0,
+            opportunistic_batch_size=batch_size,
+            promotion_age_days=1.0,
+            promotion_evidence_count=1,
+        )
+        runner = MaintenanceRunner(engine, config)
+
+        now = datetime.now(timezone.utc)
+
+        # Newer tentative nodes that are NOT yet old enough to promote.
+        # There are more of these than batch_size, so under the old
+        # DESC-ordered query they would monopolise the window.
+        recent_nodes = []
+        for i in range(batch_size + 2):
+            recent = _make_node(
+                lifecycle_state=LifecycleState.TENTATIVE,
+                created_at=now - timedelta(hours=i),
+                evidence_refs=[uuid4()],
+            )
+            await graph_store.create_node(recent)
+            recent_nodes.append(recent)
+
+        # One old, eligible tentative node hiding behind the newer batch.
+        old_node = _make_node(
+            lifecycle_state=LifecycleState.TENTATIVE,
+            created_at=now - timedelta(days=30),
+            evidence_refs=[uuid4()],
+        )
+        await graph_store.create_node(old_node)
+
+        result = await runner.maybe_run()
+        assert result is not None
+        assert result.nodes_promoted >= 1
+
+        # The old node must have been reached and promoted.
+        refreshed = await graph_store.get_node(
+            str(old_node.id), include_superseded=True
+        )
+        assert refreshed is not None
+        assert refreshed.lifecycle_state == LifecycleState.STABLE
+
+        # The newer nodes are below the age cutoff, so they must stay
+        # tentative -- this guards against the SQL cutoff being dropped
+        # while ordering is kept.
+        for recent in recent_nodes:
+            still_tentative = await graph_store.get_node(
+                str(recent.id), include_superseded=True
+            )
+            assert still_tentative is not None
+            assert still_tentative.lifecycle_state == LifecycleState.TENTATIVE
+
+    @pytest.mark.asyncio
+    async def test_auto_promotion_includes_node_at_exact_cutoff(self, engine_parts):
+        """A node created exactly at the cutoff is eligible (inclusive <=).
+
+        The age cutoff moved from a Python ``created_at <= cutoff`` guard into
+        the SQL ``created_before`` predicate. This pins the boundary as
+        inclusive so the two implementations cannot silently diverge on the
+        ``<`` vs ``<=`` edge.
+        """
+        engine, graph_store, _ = engine_parts
+        promotion_age_days = 7.0
+        config = OrganizerConfig(
+            opportunistic_cooldown=0,
+            promotion_age_days=promotion_age_days,
+            promotion_evidence_count=1,
+        )
+        runner = MaintenanceRunner(engine, config)
+
+        # Place the node a hair older than the cutoff to avoid losing the
+        # race against the slightly-later ``now`` computed inside the runner
+        # (a node created after that ``now`` - age would fall outside).
+        cutoff = datetime.now(timezone.utc) - timedelta(days=promotion_age_days)
+        at_cutoff = _make_node(
+            lifecycle_state=LifecycleState.TENTATIVE,
+            created_at=cutoff - timedelta(seconds=1),
+            evidence_refs=[uuid4()],
+        )
+        await graph_store.create_node(at_cutoff)
+
+        result = await runner.maybe_run()
+        assert result is not None
+        assert result.nodes_promoted >= 1
+
+        refreshed = await graph_store.get_node(
+            str(at_cutoff.id), include_superseded=True
+        )
+        assert refreshed is not None
+        assert refreshed.lifecycle_state == LifecycleState.STABLE
+
+    @pytest.mark.asyncio
     async def test_threshold_archival_archives_low_salience(self, engine_parts):
         """Threshold archival archives nodes with very low effective salience."""
         engine, graph_store, _ = engine_parts
@@ -889,6 +995,60 @@ class TestRunJob:
 
         refreshed = await graph_store.get_node(str(node.id), include_superseded=True)
         assert refreshed.lifecycle_state == LifecycleState.STABLE
+
+    @pytest.mark.asyncio
+    async def test_promote_job_reaches_old_node_behind_newer_window(
+        self, engine_parts
+    ):
+        """promote job reaches old eligible nodes behind a full newer window.
+
+        Regression for #40: the scheduled promote job queried the newest
+        tentative nodes (created_at DESC) and filtered the age cutoff in
+        Python, so an old eligible node behind many newer nodes was never
+        promoted. The cutoff now lives in SQL with oldest-first ordering.
+        """
+        engine, graph_store, _ = engine_parts
+        config = OrganizerConfig(
+            promotion_age_days=1.0,
+            promotion_evidence_count=1,
+        )
+
+        now = datetime.now(timezone.utc)
+
+        # Many newer, not-yet-eligible tentative nodes.
+        recent_nodes = []
+        for i in range(10):
+            recent = _make_node(
+                lifecycle_state=LifecycleState.TENTATIVE,
+                created_at=now - timedelta(hours=i),
+                evidence_refs=[uuid4()],
+            )
+            await graph_store.create_node(recent)
+            recent_nodes.append(recent)
+
+        # One old, eligible node behind them.
+        old_node = _make_node(
+            lifecycle_state=LifecycleState.TENTATIVE,
+            created_at=now - timedelta(days=30),
+            evidence_refs=[uuid4()],
+        )
+        await graph_store.create_node(old_node)
+
+        result = await run_job("promote", engine, config, 5000.0)
+        assert result.nodes_modified >= 1
+
+        refreshed = await graph_store.get_node(
+            str(old_node.id), include_superseded=True
+        )
+        assert refreshed.lifecycle_state == LifecycleState.STABLE
+
+        # Nodes below the age cutoff must not be promoted -- confirms the
+        # cutoff is enforced, not just the ordering.
+        for recent in recent_nodes:
+            still_tentative = await graph_store.get_node(
+                str(recent.id), include_superseded=True
+            )
+            assert still_tentative.lifecycle_state == LifecycleState.TENTATIVE
 
     @pytest.mark.asyncio
     async def test_archive_job_archives_low_salience(self, engine_parts):
