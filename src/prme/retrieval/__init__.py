@@ -25,6 +25,7 @@ from prme.retrieval.models import (
 )
 from prme.retrieval.packing import pack_context
 from prme.retrieval.pipeline import RetrievalPipeline
+from prme.retrieval.reformulation import reformulate_query
 from prme.retrieval.scoring import compute_composite_score, score_and_rank
 from prme.retrieval.snapshots import (
     EntitySnapshot,
@@ -53,6 +54,7 @@ __all__ = [
     "generate_all_entity_snapshots",
     "generate_entity_snapshot",
     "pack_context",
+    "reformulate_query",
     "render_snapshot_text",
     "score_and_rank",
     "should_abstain",

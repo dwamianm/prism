@@ -1,9 +1,11 @@
-"""RetrievalPipeline orchestrator for the 7-stage hybrid retrieval pipeline.
+"""RetrievalPipeline orchestrator for the hybrid retrieval pipeline.
 
-Chains all seven stages in sequence:
+Chains the stages in sequence:
 1. Query Analysis (intent, entities, temporal signals)
 2. Candidate Generation (graph, vector, lexical, pinned -- parallel)
 3. Candidate Merging (deduplicate by node_id, track paths)
+2.5. Entity-Focused Expansion (per-entity lexical fan-out)
+2.6. Multi-Query Reformulation (opt-in LLM alt-query fan-out, issue #43)
 4. Epistemic Filtering (exclude HYPOTHETICAL/DEPRECATED in DEFAULT mode)
 5. Scoring + Ranking (8-input composite score, deterministic sort)
 5.5b. Session Context Expansion (pull adjacent turns from same session)
@@ -54,11 +56,12 @@ logger = logging.getLogger(__name__)
 
 
 class RetrievalPipeline:
-    """6-stage retrieval pipeline orchestrator.
+    """Hybrid retrieval pipeline orchestrator.
 
-    Chains query analysis, candidate generation, epistemic filtering,
-    scoring, context packing, and operation logging into a single
-    ``retrieve()`` call that returns a RetrievalResponse.
+    Chains query analysis, candidate generation, optional multi-query
+    reformulation, epistemic filtering, scoring, context packing, and
+    operation logging into a single ``retrieve()`` call that returns a
+    RetrievalResponse.
 
     All backend references and configuration are injected at construction.
     """
@@ -78,6 +81,10 @@ class RetrievalPipeline:
         enable_reranker: bool = False,
         reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
         reranker_top_k: int = 100,
+        enable_query_reformulation: bool = False,
+        query_reformulation_count: int = 2,
+        query_reformulation_provider: str = "openai",
+        query_reformulation_model: str = "gpt-4o-mini",
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -90,6 +97,10 @@ class RetrievalPipeline:
         self._epistemic_weights = epistemic_weights
         self._unverified_confidence_threshold = unverified_confidence_threshold
         self._reranker_top_k = reranker_top_k
+        self._enable_query_reformulation = enable_query_reformulation
+        self._query_reformulation_count = query_reformulation_count
+        self._query_reformulation_provider = query_reformulation_provider
+        self._query_reformulation_model = query_reformulation_model
 
         # Lazy-init cross-encoder reranker when enabled.
         self._reranker = None
@@ -115,7 +126,7 @@ class RetrievalPipeline:
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
     ) -> RetrievalResponse:
-        """Execute the full 6-stage retrieval pipeline.
+        """Execute the full hybrid retrieval pipeline.
 
         This is the unified entry point for hybrid retrieval. Runs all
         stages in sequence and returns a RetrievalResponse with a packed
@@ -346,6 +357,25 @@ class RetrievalPipeline:
                         "Entity-focused node resolution failed; continuing",
                         exc_info=True,
                     )
+
+        # --- Stage 2.6: Multi-Query Reformulation (opt-in, issue #43) ---
+        # When enabled, ask an LLM for alternative phrasings of the query, run
+        # each as an additional candidate-generation pass, and merge the new
+        # hits (deduplicated by node id) into the candidate pool. Off by
+        # default: retrieve() makes no LLM calls unless this is configured.
+        if self._enable_query_reformulation:
+            reform_added = await self._expand_reformulated_queries(
+                query,
+                candidates=candidates,
+                user_id=user_id,
+                scope=normalized_scope,
+                time_from=effective_time_from,
+                time_to=effective_time_to,
+                retrieval_mode=analysis.retrieval_mode,
+                config=candidate_config,
+            )
+            if reform_added:
+                candidate_counts["REFORMULATION"] = reform_added
 
         # Track embedding mismatch from candidates module.
         # If VECTOR count is 0 but no explicit error, we check the flag
@@ -589,3 +619,91 @@ class RetrievalPipeline:
             filter_metadata=filter_meta,
             cross_scope_hints=cross_scope_hints,
         )
+
+    async def _expand_reformulated_queries(
+        self,
+        query: str,
+        *,
+        candidates: list[RetrievalCandidate],
+        user_id: str,
+        scope: list[Scope] | None,
+        time_from: datetime | None,
+        time_to: datetime | None,
+        retrieval_mode: RetrievalMode,
+        config: PackingConfig,
+    ) -> int:
+        """Run LLM-reformulated alternate queries and merge new candidates.
+
+        Asks the configured LLM for alternative phrasings of ``query``, runs
+        each through the same rule-based analysis + candidate generation as the
+        original, and appends candidates whose node id is not already present
+        in ``candidates`` (mutated in place). Each alternate query reuses the
+        original's effective scope, temporal window, and retrieval mode so
+        results stay comparable.
+
+        ``reformulate_query`` never raises (it returns an empty list on any
+        failure), and the per-query candidate-generation passes run via
+        ``asyncio.gather(..., return_exceptions=True)`` so a single failing
+        alternate query cannot break the others or the original retrieval --
+        on total failure no candidates are added and the original query's
+        results stand.
+
+        Returns:
+            The number of new candidates appended across all alternate queries.
+        """
+        from prme.retrieval.reformulation import reformulate_query
+
+        alt_queries = await reformulate_query(
+            query,
+            provider=self._query_reformulation_provider,
+            model=self._query_reformulation_model,
+            count=self._query_reformulation_count,
+        )
+        if not alt_queries:
+            return 0
+
+        # Fan out the alternate-query passes concurrently (matching the
+        # aggregation-scan and entity-expansion stages above), then merge.
+        async def _gen(alt_q: str) -> list[RetrievalCandidate]:
+            alt_analysis = await analyze_query(
+                alt_q,
+                time_from=time_from,
+                time_to=time_to,
+                retrieval_mode=retrieval_mode,
+            )
+            alt_candidates, _ = await generate_candidates(
+                alt_analysis,
+                graph_store=self._graph_store,
+                vector_index=self._vector_index,
+                lexical_index=self._lexical_index,
+                user_id=user_id,
+                scope=scope,
+                time_from=time_from,
+                time_to=time_to,
+                config=config,
+            )
+            return alt_candidates
+
+        results = await asyncio.gather(
+            *[_gen(alt_q) for alt_q in alt_queries],
+            return_exceptions=True,
+        )
+
+        existing_ids = {str(c.node.id) for c in candidates}
+        added = 0
+        for alt_q, alt_candidates in zip(alt_queries, results):
+            if isinstance(alt_candidates, BaseException):
+                logger.debug(
+                    "Reformulated query retrieval failed for %r; skipping",
+                    alt_q,
+                    exc_info=alt_candidates,
+                )
+                continue
+            for c in alt_candidates:
+                nid = str(c.node.id)
+                if nid in existing_ids:
+                    continue
+                existing_ids.add(nid)
+                candidates.append(c)
+                added += 1
+        return added
