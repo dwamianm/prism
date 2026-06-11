@@ -153,7 +153,7 @@ engine.unlock()  # Decrypt memory pack
 ### Security
 
 - Set `PRME_ENCRYPTION_ENABLED=true` for data at rest
-- The HTTP API enables CORS `*` by default — restrict `allow_origins` in production
+- The HTTP API binds to `127.0.0.1` and disables CORS by default; set `PRME_API_API_KEY` before exposing it on `0.0.0.0`, and pin `PRME_API_CORS_ORIGINS` if browser clients need access
 - The MCP server runs over stdio (no network exposure) by default
 - Never commit `.env` files with API keys to version control
 
@@ -173,6 +173,8 @@ ENV PRME_LEXICAL_PATH=/data/lexical_index
 VOLUME /data
 EXPOSE 8000
 
+# 0.0.0.0 is required inside the container; pass PRME_API_API_KEY at
+# `docker run` time so the exposed port requires authentication.
 CMD ["uvicorn", "prme.api:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 

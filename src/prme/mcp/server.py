@@ -55,6 +55,17 @@ def _get_engine(ctx: Context) -> Any:
     return ctx.request_context.lifespan_context["engine"]
 
 
+def _internal_error(operation: str, exc: Exception) -> str:
+    """Log an unexpected error server-side and return a generic payload.
+
+    Raw exception strings can leak internal paths, SQL fragments, or
+    library internals to remote callers (issue #34) — details go to the
+    server log only.
+    """
+    logger.error("Unexpected error in %s", operation, exc_info=exc)
+    return json.dumps({"error": f"Internal error in {operation}"})
+
+
 # ---------------------------------------------------------------------------
 # Lifespan
 # ---------------------------------------------------------------------------
@@ -85,9 +96,10 @@ async def engine_lifespan(server: FastMCP):
 # Server
 # ---------------------------------------------------------------------------
 
+# Note: mcp>=1.x FastMCP takes "instructions" (formerly "description").
 mcp = FastMCP(
     "prme",
-    description="PRME — Portable Relational Memory Engine. "
+    instructions="PRME — Portable Relational Memory Engine. "
     "Store, retrieve, and organize long-term memory for AI agents.",
     lifespan=engine_lifespan,
 )
@@ -153,7 +165,7 @@ async def memory_store(
 
         return json.dumps({"event_id": event_id, "node_id": node_id})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory_store", e)
 
 
 @mcp.tool()
@@ -216,7 +228,7 @@ async def memory_retrieve(
             "count": len(results),
         })
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory_retrieve", e)
 
 
 @mcp.tool()
@@ -255,7 +267,7 @@ async def memory_ingest(
         )
         return json.dumps({"event_id": event_id})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory_ingest", e)
 
 
 @mcp.tool()
@@ -292,7 +304,7 @@ async def memory_organize(
             "duration_ms": result.duration_ms,
         })
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory_organize", e)
 
 
 @mcp.tool()
@@ -316,7 +328,7 @@ async def memory_get_node(
             return json.dumps({"error": f"Node {node_id!r} not found"})
         return json.dumps(_node_to_dict(node))
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory_get_node", e)
 
 
 @mcp.tool()
@@ -346,9 +358,10 @@ async def memory_promote_node(
             return json.dumps({"error": f"Node {node_id!r} not found after promote"})
         return json.dumps(_node_to_dict(updated))
     except ValueError as e:
+        # Controlled validation message (e.g. invalid lifecycle transition).
         return json.dumps({"error": str(e)})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory_promote_node", e)
 
 
 @mcp.tool()
@@ -378,9 +391,10 @@ async def memory_archive_node(
             return json.dumps({"error": f"Node {node_id!r} not found after archive"})
         return json.dumps(_node_to_dict(updated))
     except ValueError as e:
+        # Controlled validation message (e.g. invalid lifecycle transition).
         return json.dumps({"error": str(e)})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory_archive_node", e)
 
 
 # ---------------------------------------------------------------------------
@@ -404,10 +418,9 @@ async def resource_stats() -> str:
     node_count = 0
     backend = "duckdb"
     try:
-        nodes = await engine.query_nodes(limit=10000)
-        node_count = len(nodes)
+        node_count = await engine.count_nodes()
     except Exception:
-        pass
+        logger.warning("Failed to count nodes for stats", exc_info=True)
 
     try:
         backend = engine._config.backend
@@ -434,7 +447,7 @@ async def resource_node(node_id: str) -> str:
             return json.dumps({"error": f"Node {node_id!r} not found"})
         return json.dumps(_node_to_dict(node))
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return _internal_error("memory://nodes resource", e)
 
 
 # ---------------------------------------------------------------------------

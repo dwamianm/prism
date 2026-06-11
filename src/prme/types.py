@@ -242,6 +242,15 @@ DEFAULT_EXCLUDED_EPISTEMIC: set[EpistemicType] = {
     EpistemicType.DEPRECATED,
 }
 
+# Active lifecycle states — the default filter for node queries and counts.
+# CONTESTED is included: contested nodes have unresolved conflicts but are
+# still valid retrieval candidates (RFC-0003).
+ACTIVE_LIFECYCLE_STATES: tuple[LifecycleState, ...] = (
+    LifecycleState.TENTATIVE,
+    LifecycleState.STABLE,
+    LifecycleState.CONTESTED,
+)
+
 
 def validate_transition(current: LifecycleState, target: LifecycleState) -> bool:
     """Check whether a lifecycle state transition is valid.

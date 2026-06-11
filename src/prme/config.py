@@ -63,6 +63,40 @@ class EmbeddingConfig(BaseSettings):
     }
 
 
+class APIConfig(BaseSettings):
+    """Configuration for the HTTP API server (security hardening, issue #34)."""
+
+    api_key: str | None = Field(
+        default=None,
+        description=(
+            "API key for bearer-token authentication. When set, every "
+            "endpoint except /v1/health requires "
+            "'Authorization: Bearer <api_key>'. None (default) disables "
+            "authentication — only safe for single-user localhost use."
+        ),
+    )
+    cors_origins: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Allowed CORS origins. Empty (default) disables CORS entirely. "
+            "Pin explicit origins (e.g. ['http://localhost:3000']) for "
+            "browser clients. Avoid '*' — credentials are never allowed "
+            "with a wildcard origin."
+        ),
+    )
+    cors_allow_credentials: bool = Field(
+        default=False,
+        description=(
+            "Allow credentialed CORS requests. Only honored when "
+            "cors_origins pins explicit origins (no '*')."
+        ),
+    )
+
+    model_config = {
+        "env_prefix": "PRME_API_",
+    }
+
+
 class OrganizerConfig(BaseSettings):
     """Configuration for self-organizing memory (RFC-0015)."""
 
@@ -238,6 +272,10 @@ class PRMEConfig(BaseSettings):
     organizer: OrganizerConfig = Field(
         default_factory=OrganizerConfig,
         description="Self-organizing memory configuration (RFC-0015)",
+    )
+    api: APIConfig = Field(
+        default_factory=APIConfig,
+        description="HTTP API server configuration (auth, CORS)",
     )
     enable_store_supersedence: bool = Field(
         default=False,

@@ -21,6 +21,7 @@ import duckdb
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.types import (
+    ACTIVE_LIFECYCLE_STATES,
     ALLOWED_TRANSITIONS,
     DecayProfile,
     EdgeType,
@@ -124,6 +125,29 @@ class DuckPGQGraphStore:
                 valid_at,
                 min_confidence,
                 limit,
+            )
+
+    async def count_nodes(
+        self,
+        *,
+        user_id: str | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+    ) -> int:
+        """Count nodes matching the filters via SELECT COUNT(*).
+
+        Defaults to counting active states (tentative + stable +
+        contested), matching query_nodes().
+
+        Args:
+            user_id: Filter by user.
+            lifecycle_states: Lifecycle filter (defaults to active).
+
+        Returns:
+            Number of matching nodes.
+        """
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._count_nodes_sync, user_id, lifecycle_states
             )
 
     # --- Node Update ---
@@ -619,11 +643,7 @@ class DuckPGQGraphStore:
         # per Research Pitfall 3 -- contested nodes are active with unresolved
         # conflicts but still valid candidates for retrieval).
         if lifecycle_states is None:
-            lifecycle_states = [
-                LifecycleState.TENTATIVE,
-                LifecycleState.STABLE,
-                LifecycleState.CONTESTED,
-            ]
+            lifecycle_states = list(ACTIVE_LIFECYCLE_STATES)
 
         # Build lifecycle IN clause
         placeholders = ", ".join(["?" for _ in lifecycle_states])
@@ -663,6 +683,33 @@ class DuckPGQGraphStore:
 
         rows = self._conn.execute(query, params).fetchall()
         return [self._row_to_node(row) for row in rows]
+
+    def _count_nodes_sync(
+        self,
+        user_id: str | None,
+        lifecycle_states: list[LifecycleState] | None,
+    ) -> int:
+        """Count nodes with SELECT COUNT(*) (sync)."""
+        conditions: list[str] = []
+        params: list = []
+
+        # Same default lifecycle filter as _query_nodes_sync.
+        if lifecycle_states is None:
+            lifecycle_states = list(ACTIVE_LIFECYCLE_STATES)
+
+        placeholders = ", ".join(["?" for _ in lifecycle_states])
+        conditions.append(f"lifecycle_state IN ({placeholders})")
+        params.extend([s.value for s in lifecycle_states])
+
+        if user_id is not None:
+            conditions.append("user_id = ?")
+            params.append(user_id)
+
+        where_clause = " AND ".join(conditions)
+        query = f"SELECT COUNT(*) FROM nodes WHERE {where_clause}"
+
+        row = self._conn.execute(query, params).fetchone()
+        return int(row[0]) if row else 0
 
     def _create_edge_sync(self, edge: MemoryEdge) -> None:
         """Insert an edge into the edges table (sync)."""

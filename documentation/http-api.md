@@ -17,10 +17,28 @@ uvicorn prme.api:app
 Or with custom host/port:
 
 ```bash
-uvicorn prme.api:app --host 0.0.0.0 --port 8000
+uvicorn prme.api:app --host 127.0.0.1 --port 8000
 ```
 
+The server binds to `127.0.0.1` (loopback only) by default. Binding to `0.0.0.0` exposes the API to the network and is an explicit opt-in — set an API key first (see [Authentication](#authentication)) or put the server behind an authenticating reverse proxy. `python -m prme.api` logs a warning when binding to a non-loopback address.
+
 The API reads configuration from environment variables (`PRME_*` prefix). Set `PRME_DB_PATH`, `PRME_VECTOR_PATH`, and `PRME_LEXICAL_PATH` to point at your memory directory.
+
+## Authentication
+
+Authentication is disabled by default (suitable for single-user localhost use). To require bearer-token auth on all endpoints except `/v1/health`:
+
+```bash
+export PRME_API_API_KEY="your-secret-key"
+```
+
+Clients must then send:
+
+```
+Authorization: Bearer your-secret-key
+```
+
+Requests with a missing or wrong key receive `401 {"detail": "Invalid or missing API key"}`.
 
 ## Endpoints
 
@@ -269,7 +287,11 @@ Health check.
 
 ### GET /v1/stats
 
-System statistics.
+System statistics. Node counting uses `COUNT(*)` (no rows are materialized).
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `user_id` | string | | Scope the node count to one user |
 
 **Response (200):**
 
@@ -284,7 +306,14 @@ System statistics.
 
 ## CORS
 
-CORS is enabled by default with `allow_origins=["*"]`. Suitable for development; restrict origins in production.
+CORS is disabled by default — browser pages cannot read API responses cross-origin. To allow specific origins:
+
+```bash
+export PRME_API_CORS_ORIGINS='["http://localhost:3000"]'
+export PRME_API_CORS_ALLOW_CREDENTIALS=true   # optional
+```
+
+Credentialed CORS is only honored when origins are explicitly pinned; a wildcard (`*`) origin never allows credentials.
 
 ## Error Responses
 
@@ -298,6 +327,8 @@ All errors follow this format:
 
 | Status | Meaning |
 |--------|---------|
+| 401 | Missing or invalid API key (when auth is enabled) |
 | 404 | Node/resource not found |
 | 422 | Invalid input (bad enum value, invalid state transition) |
+| 500 | Unexpected internal error (details logged server-side only) |
 | 503 | Engine not initialized |

@@ -7,9 +7,11 @@ No business logic belongs here — delegate everything to the engine.
 from __future__ import annotations
 
 import logging
+import secrets
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from prme.api.models import (
     ErrorResponse,
@@ -31,7 +33,45 @@ from prme.types import LifecycleState, NodeType, Scope
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1")
+
+# ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+async def require_api_key(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> None:
+    """Require a valid bearer token when an API key is configured.
+
+    When ``config.api.api_key`` is None (the default), authentication is
+    disabled and all requests pass — appropriate for single-user
+    localhost deployments. When set, every protected route requires
+    ``Authorization: Bearer <api_key>``.
+    """
+    config = getattr(request.app.state, "config", None)
+    api_key = config.api.api_key if config is not None else None
+    if api_key is None:
+        return
+    if credentials is None or not secrets.compare_digest(
+        credentials.credentials, api_key
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+# Protected router: all memory operations require authentication when
+# an API key is configured.
+router = APIRouter(prefix="/v1", dependencies=[Depends(require_api_key)])
+
+# Public router: liveness/health checks only — never requires auth.
+public_router = APIRouter(prefix="/v1")
 
 
 # ---------------------------------------------------------------------------
@@ -433,7 +473,7 @@ async def get_chain(
 # ---------------------------------------------------------------------------
 
 
-@router.get(
+@public_router.get(
     "/health",
     response_model=HealthResponse,
     summary="Health check",
@@ -448,8 +488,8 @@ async def health(request: Request) -> HealthResponse:
     response_model=StatsResponse,
     summary="System statistics",
 )
-async def stats(request: Request) -> StatsResponse:
-    """Get system statistics."""
+async def stats(request: Request, user_id: str | None = None) -> StatsResponse:
+    """Get system statistics, optionally scoped to a single user."""
     engine = _get_engine(request)
 
     node_count = 0
@@ -458,9 +498,7 @@ async def stats(request: Request) -> StatsResponse:
     details: dict[str, Any] = {}
 
     try:
-        # Count nodes via query_nodes with high limit
-        nodes = await engine.query_nodes(limit=10000)
-        node_count = len(nodes)
+        node_count = await engine.count_nodes(user_id=user_id)
     except Exception:
         logger.warning("Failed to count nodes for stats", exc_info=True)
 

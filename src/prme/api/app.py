@@ -11,8 +11,9 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from prme.config import PRMEConfig
 
@@ -55,18 +56,50 @@ def create_app(config: PRMEConfig | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS middleware — enabled by default for broad compatibility
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # Expose config to request handlers (auth dependency reads it).
+    app.state.config = config
+    app.state.engine = None
+
+    # CORS — disabled unless origins are explicitly pinned (issue #34).
+    # Credentials are never allowed with a wildcard origin: Starlette
+    # reflects the request Origin in that combination, letting any
+    # website read responses cross-origin.
+    cors_origins = config.api.cors_origins
+    if cors_origins:
+        allow_credentials = (
+            config.api.cors_allow_credentials and "*" not in cors_origins
+        )
+        if config.api.cors_allow_credentials and not allow_credentials:
+            logger.warning(
+                "cors_allow_credentials ignored: wildcard origin in "
+                "cors_origins. Pin explicit origins to allow credentials."
+            )
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=allow_credentials,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+    # Generic handler for unexpected errors: log details server-side,
+    # never echo internals to the caller (issue #34).
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        logger.error(
+            "Unhandled error on %s %s", request.method, request.url.path,
+            exc_info=exc,
+        )
+        return JSONResponse(
+            status_code=500, content={"detail": "Internal server error"}
+        )
 
     # Register routes
-    from prme.api.routes import router
+    from prme.api.routes import public_router, router
 
+    app.include_router(public_router)
     app.include_router(router)
 
     return app
