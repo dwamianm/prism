@@ -26,8 +26,9 @@ class VectorIndex:
     version, and dimension for re-embedding detection after model switches.
 
     User_id filtering uses post-filter strategy: retrieve extra candidates
-    from USearch, then filter by user_id via metadata lookup. This is
-    simpler and sufficient for Phase 1 scale.
+    from USearch, then validate only those matched keys against the
+    metadata table (WHERE vector_key IN (...)), so the lookup is bounded
+    by the over-fetch size rather than the user's total vector count.
 
     Args:
         conn: DuckDB connection for metadata storage.
@@ -95,50 +96,51 @@ class VectorIndex:
         scope: list[str] | None,
         time_from: datetime | None,
         time_to: datetime | None,
+        candidate_keys: list[int],
     ) -> dict[int, str]:
-        """Fetch allowed vector keys from DuckDB (sync, runs in thread pool)."""
+        """Fetch allowed vector keys from DuckDB (sync, runs in thread pool).
+
+        Only the HNSW-matched ``candidate_keys`` are checked (inverted
+        filter): the query is bounded at O(k) rows instead of scanning
+        every vector_metadata row for the user.
+        """
+        if not candidate_keys:
+            return {}
+
         # Lifecycle states eligible for retrieval (exclude superseded/archived)
         _ACTIVE_STATES = ("tentative", "stable", "contested")
 
-        if scope is not None or time_from is not None or time_to is not None:
-            sql = (
-                "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
-                "JOIN nodes n ON vm.node_id = n.id "
-                "WHERE vm.user_id = ?"
-                " AND COALESCE(n.lifecycle_state, 'tentative') IN (?, ?, ?)"
+        key_placeholders = ", ".join("?" for _ in candidate_keys)
+        sql = (
+            "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
+            "JOIN nodes n ON vm.node_id = n.id "
+            f"WHERE vm.vector_key IN ({key_placeholders})"
+            " AND vm.user_id = ?"
+            " AND COALESCE(n.lifecycle_state, 'tentative') IN (?, ?, ?)"
+        )
+        params: list = [*candidate_keys, user_id, *_ACTIVE_STATES]
+
+        if scope is not None and scope:
+            placeholders = ", ".join("?" for _ in scope)
+            sql += f" AND n.scope IN ({placeholders})"
+            params.extend(scope)
+
+        if time_from is not None:
+            sql += (
+                " AND (n.valid_to IS NULL OR n.valid_to > ? "
+                "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
             )
-            params: list = [user_id, *_ACTIVE_STATES]
+            params.append(time_from)
 
-            if scope is not None and scope:
-                placeholders = ", ".join("?" for _ in scope)
-                sql += f" AND n.scope IN ({placeholders})"
-                params.extend(scope)
+        if time_to is not None:
+            sql += (
+                " AND (n.valid_from <= ? "
+                "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
+            )
+            params.append(time_to)
 
-            if time_from is not None:
-                sql += (
-                    " AND (n.valid_to IS NULL OR n.valid_to > ? "
-                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
-                )
-                params.append(time_from)
-
-            if time_to is not None:
-                sql += (
-                    " AND (n.valid_from <= ? "
-                    "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
-                )
-                params.append(time_to)
-
-            rows = self._conn.execute(sql, params).fetchall()
-            return {row[0]: row[1] for row in rows}
-        else:
-            rows = self._conn.execute(
-                "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
-                "JOIN nodes n ON vm.node_id = n.id "
-                "WHERE vm.user_id = ?"
-                " AND COALESCE(n.lifecycle_state, 'tentative') IN (?, ?, ?)",
-                [user_id, *_ACTIVE_STATES],
-            ).fetchall()
-            return {row[0]: row[1] for row in rows}
+        rows = self._conn.execute(sql, params).fetchall()
+        return {row[0]: row[1] for row in rows}
 
     async def index(self, node_id: str, content: str, user_id: str) -> int:
         """Embed content and add to the vector index.
@@ -267,14 +269,22 @@ class VectorIndex:
 
         # Search USearch
         matches = self._index.search(query_vector, fetch_k)
+        matched_keys = [int(matches.keys[i]) for i in range(len(matches.keys))]
 
-        # Build set of allowed keys via DuckDB query with scope/temporal filtering.
-        # When scope or temporal filters are active, JOIN with nodes table.
-        # All DuckDB access is serialized through conn_lock to prevent
-        # concurrent thread access during asyncio.gather parallelism.
+        # Check only the matched keys against DuckDB (inverted filter:
+        # WHERE vector_key IN (...) bounded at fetch_k rows, instead of
+        # loading every vector_metadata row for the user). Scope/temporal
+        # filters JOIN with the nodes table. All DuckDB access is
+        # serialized through conn_lock to prevent concurrent thread
+        # access during asyncio.gather parallelism.
         async with self._conn_lock:
             allowed_keys = await asyncio.to_thread(
-                self._fetch_allowed_keys, user_id, scope, time_from, time_to
+                self._fetch_allowed_keys,
+                user_id,
+                scope,
+                time_from,
+                time_to,
+                matched_keys,
             )
 
         # Filter and map results

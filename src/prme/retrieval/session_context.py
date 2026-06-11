@@ -74,11 +74,14 @@ async def expand_session_context(
     if not session_triggers:
         return scored
 
-    # Fetch all nodes once and group by session_id (avoids repeated queries).
+    # Fetch the triggering sessions' nodes in one query (session_id IN
+    # (...) is pushed into SQL instead of hydrating the newest 2000 nodes
+    # and filtering in Python).
     session_nodes: dict[str, list[MemoryNode]] = {}
     try:
         all_nodes = await graph_store.query_nodes(
             user_id=user_id,
+            session_ids=list(session_triggers.keys()),
             limit=2000,
         )
         for n in all_nodes:
