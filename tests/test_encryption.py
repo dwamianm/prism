@@ -14,13 +14,11 @@ Validates:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import tempfile
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 
 from prme.storage.encryption import (
     EncryptionError,
@@ -482,3 +480,247 @@ class TestLockUnlock:
         with pytest.raises(RuntimeError, match="encryption is not configured"):
             engine.unlock()
         await engine.close()
+
+
+# ---------------------------------------------------------------------------
+# Atomic writes (issue #37)
+# ---------------------------------------------------------------------------
+
+
+class TestAtomicWrite:
+    """encrypt_file / decrypt_file write atomically (temp + os.replace)."""
+
+    def test_encrypt_leaves_no_temp_file_on_success(self, provider, tmp_dir):
+        f = tmp_dir / "payload.txt"
+        f.write_text("plaintext payload")
+        enc = provider.encrypt_file(f)
+        # No stray temp file, plaintext gone, ciphertext present.
+        leftovers = [c.name for c in tmp_dir.iterdir() if ".tmp-" in c.name]
+        assert leftovers == []
+        assert enc.exists()
+        assert not f.exists()
+
+    def test_decrypt_leaves_no_temp_file_on_success(self, provider, tmp_dir):
+        f = tmp_dir / "payload.txt"
+        f.write_text("plaintext payload")
+        enc = provider.encrypt_file(f)
+        dec = provider.decrypt_file(enc)
+        leftovers = [c.name for c in tmp_dir.iterdir() if ".tmp-" in c.name]
+        assert leftovers == []
+        assert dec.read_text() == "plaintext payload"
+        assert not enc.exists()
+
+    def test_encrypt_failure_preserves_plaintext_and_cleans_temp(
+        self, provider, tmp_dir, monkeypatch
+    ):
+        """If the atomic rename fails, plaintext survives and no temp lingers."""
+        f = tmp_dir / "payload.txt"
+        f.write_text("important plaintext")
+
+        def boom(*_args, **_kwargs):
+            raise OSError("disk full")
+
+        monkeypatch.setattr("os.replace", boom)
+        with pytest.raises(EncryptionError):
+            provider.encrypt_file(f)
+
+        # Plaintext is still intact (never destroyed), and no temp remains.
+        assert f.exists()
+        assert f.read_text() == "important plaintext"
+        leftovers = [c.name for c in tmp_dir.iterdir() if ".tmp-" in c.name]
+        assert leftovers == []
+
+
+# ---------------------------------------------------------------------------
+# Explicit key-type prefixes (issue #37)
+# ---------------------------------------------------------------------------
+
+
+class TestKeyTypePrefixes:
+    """raw_key: / passphrase: prefixes disambiguate key handling."""
+
+    def test_raw_key_prefix_uses_raw_fernet_key(self):
+        from cryptography.fernet import Fernet
+
+        raw = Fernet.generate_key().decode("ascii")
+        p = EncryptionProvider("raw_key:" + raw)
+        assert p._fernet_key == raw.encode("ascii")
+        assert p._passphrase is None
+
+    def test_passphrase_prefix_forces_derivation_on_base64(self):
+        """A 44-char base64 value with passphrase: prefix is derived, not raw."""
+        from cryptography.fernet import Fernet
+
+        looks_like_key = Fernet.generate_key().decode("ascii")
+        assert len(looks_like_key) == 44  # would auto-detect as raw without prefix
+        p = EncryptionProvider("passphrase:" + looks_like_key)
+        assert p._passphrase == looks_like_key
+        assert p._fernet_key is None
+
+    def test_unprefixed_autodetect_unchanged_raw(self):
+        from cryptography.fernet import Fernet
+
+        raw = Fernet.generate_key().decode("ascii")
+        p = EncryptionProvider(raw)
+        assert p._fernet_key == raw.encode("ascii")
+        assert p._passphrase is None
+
+    def test_unprefixed_autodetect_unchanged_passphrase(self):
+        p = EncryptionProvider("a-normal-human-passphrase")
+        assert p._passphrase == "a-normal-human-passphrase"
+        assert p._fernet_key is None
+
+    def test_raw_key_prefix_roundtrip(self, sample_file):
+        from cryptography.fernet import Fernet
+
+        raw = Fernet.generate_key().decode("ascii")
+        original = sample_file.read_text()
+        enc = EncryptionProvider("raw_key:" + raw).encrypt_file(sample_file)
+        dec = EncryptionProvider("raw_key:" + raw).decrypt_file(enc)
+        assert dec.read_text() == original
+
+    def test_passphrase_prefix_roundtrip(self, sample_file):
+        original = sample_file.read_text()
+        enc = EncryptionProvider("passphrase:secret").encrypt_file(sample_file)
+        dec = EncryptionProvider("passphrase:secret").decrypt_file(enc)
+        assert dec.read_text() == original
+
+
+# ---------------------------------------------------------------------------
+# SecretStr config fields (issue #37)
+# ---------------------------------------------------------------------------
+
+
+class TestSecretConfigFields:
+    """The three secret config fields are SecretStr and never leak."""
+
+    def test_encryption_key_is_secret_and_masked(self):
+        from pydantic import SecretStr
+
+        from prme.config import PRMEConfig
+
+        c = PRMEConfig(encryption_enabled=True, encryption_key="topsecret")
+        assert isinstance(c.encryption_key, SecretStr)
+        assert c.encryption_key.get_secret_value() == "topsecret"
+        # Secret must not appear in repr or model_dump string form.
+        assert "topsecret" not in repr(c.encryption_key)
+        assert "topsecret" not in str(c)
+        assert "topsecret" not in str(c.model_dump())
+
+    def test_database_url_is_secret(self):
+        from pydantic import SecretStr
+
+        from prme.config import PRMEConfig
+
+        c = PRMEConfig(database_url="postgresql://u:p@host/db")
+        assert isinstance(c.database_url, SecretStr)
+        assert c.database_url.get_secret_value() == "postgresql://u:p@host/db"
+        assert "p@host" not in repr(c.database_url)
+
+    def test_embedding_api_key_is_secret(self):
+        from pydantic import SecretStr
+
+        from prme.config import EmbeddingConfig
+
+        c = EmbeddingConfig(api_key="sk-secret")
+        assert isinstance(c.api_key, SecretStr)
+        assert c.api_key.get_secret_value() == "sk-secret"
+        assert "sk-secret" not in repr(c)
+
+    def test_backend_property_with_secret_url(self):
+        from prme.config import PRMEConfig
+
+        assert PRMEConfig(database_url="postgresql://localhost/db").backend == "postgres"
+        assert PRMEConfig(database_url=None).backend == "duckdb"
+        # Empty url string is falsy -> duckdb (semantics preserved under SecretStr).
+        assert PRMEConfig(database_url="").backend == "duckdb"
+
+
+# ---------------------------------------------------------------------------
+# Fail-closed close() and atexit safety net (issue #37)
+# ---------------------------------------------------------------------------
+
+
+class TestFailClosedClose:
+    """close() surfaces encryption failures instead of silently leaving plaintext."""
+
+    @pytest.fixture
+    def enc_dir(self, tmp_dir):
+        lexical = tmp_dir / "lexical_index"
+        lexical.mkdir()
+        return tmp_dir
+
+    @pytest.fixture
+    def enc_config(self, enc_dir):
+        from prme.config import PRMEConfig
+
+        return PRMEConfig(
+            db_path=str(enc_dir / "memory.duckdb"),
+            vector_path=str(enc_dir / "vectors.usearch"),
+            lexical_path=str(enc_dir / "lexical_index"),
+            encryption_enabled=True,
+            encryption_key="fail-closed-passphrase",
+        )
+
+    @pytest.mark.asyncio
+    async def test_close_reraises_on_encryption_failure(self, enc_config):
+        from prme.storage.engine import MemoryEngine
+
+        engine = await MemoryEngine.create(enc_config)
+        await engine.store(content="data", user_id="user-1")
+
+        # Force encryption to fail at close time.
+        def boom():
+            raise RuntimeError("simulated encrypt failure")
+
+        engine._encrypt_memory_pack = boom  # type: ignore[method-assign]
+        with pytest.raises(EncryptionError, match="plaintext on disk"):
+            await engine.close()
+
+    @pytest.mark.asyncio
+    async def test_atexit_registered_when_encryption_enabled(self, enc_config):
+        from prme.storage.engine import MemoryEngine
+
+        engine = await MemoryEngine.create(enc_config)
+        try:
+            assert engine._atexit_registered is True
+        finally:
+            await engine.close()
+
+    @pytest.mark.asyncio
+    async def test_atexit_unregistered_after_clean_close(self, enc_config):
+        from prme.storage.engine import MemoryEngine
+
+        engine = await MemoryEngine.create(enc_config)
+        await engine.store(content="data", user_id="user-1")
+        await engine.close()
+        assert engine._atexit_registered is False
+
+    @pytest.mark.asyncio
+    async def test_atexit_handler_noop_after_close(self, enc_config):
+        from prme.storage.engine import MemoryEngine
+
+        engine = await MemoryEngine.create(enc_config)
+        await engine.store(content="data", user_id="user-1")
+        await engine.close()
+        # Re-encryption already happened; calling the handler must not raise
+        # or double-encrypt (early-returns on _closed).
+        engine._atexit_encrypt()
+
+    @pytest.mark.asyncio
+    async def test_not_registered_without_encryption(self, tmp_dir):
+        from prme.config import PRMEConfig
+        from prme.storage.engine import MemoryEngine
+
+        lexical = tmp_dir / "lexical_index"
+        lexical.mkdir()
+        config = PRMEConfig(
+            db_path=str(tmp_dir / "memory.duckdb"),
+            vector_path=str(tmp_dir / "vectors.usearch"),
+            lexical_path=str(lexical),
+        )
+        engine = await MemoryEngine.create(config)
+        try:
+            assert engine._atexit_registered is False
+        finally:
+            await engine.close()

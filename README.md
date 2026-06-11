@@ -234,8 +234,19 @@ PRME_EMBEDDING_PROVIDER=fastembed      # fastembed (local, default) or openai
 PRME_EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5
 
 # Encryption at rest
-PRME_ENCRYPTION_KEY=your-secret-key    # Enables AES-128-CBC + HMAC encryption
+PRME_ENCRYPTION_ENABLED=true           # Master toggle (default false)
+PRME_ENCRYPTION_KEY=your-secret-key    # Passphrase (PBKDF2 -> Fernet AES-128-CBC + HMAC)
+# Optional explicit key type (avoids passphrase/raw-key ambiguity):
+#   PRME_ENCRYPTION_KEY=passphrase:your-secret-key   # always derive via PBKDF2
+#   PRME_ENCRYPTION_KEY=raw_key:<44-char-fernet-key> # use a raw Fernet key
 ```
+
+> **Plaintext window.** When the engine is open, pack files are decrypted to
+> plaintext on disk and are re-encrypted on a clean `close()` (an `atexit`
+> handler also re-encrypts on normal process exit as a best-effort safety
+> net). A hard crash (`SIGKILL`, power loss) can leave the pack plaintext on
+> disk until the next clean `close()`. Encryption secrets are held as
+> `SecretStr` so they are never rendered by config dumps or tracebacks.
 
 ## Testing
 

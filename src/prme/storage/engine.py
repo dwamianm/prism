@@ -21,6 +21,7 @@ error handling, and lifecycle transitions are managed here.
 from __future__ import annotations
 
 import asyncio
+import atexit
 import logging
 import warnings
 from contextlib import asynccontextmanager
@@ -36,6 +37,7 @@ from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.embedding import create_embedding_provider
+from prme.storage.encryption import EncryptionError
 from prme.storage.event_store import EventStore
 from prme.storage.lexical_index import LexicalIndex
 from prme.storage.schema import initialize_database
@@ -115,6 +117,9 @@ class MemoryEngine:
         # Encryption at rest (issue #14)
         from prme.storage.encryption import EncryptionProvider
         self._encryption_provider: EncryptionProvider | None = None
+        # Best-effort atexit re-encryption guard (issue #37). Registered in
+        # the create() classmethods once an encryption provider exists.
+        self._atexit_registered = False
 
         # Quality assessment and auto-tuning (issue #24)
         self._feedback_tracker = FeedbackTracker()
@@ -192,8 +197,14 @@ class MemoryEngine:
 
         # --- Decrypt memory pack if encryption is enabled (issue #14) ---
         encryption_provider: EncryptionProvider | None = None
-        if config.encryption_enabled and config.encryption_key:
-            encryption_provider = EncryptionProvider(config.encryption_key)
+        if (
+            config.encryption_enabled
+            and config.encryption_key
+            and config.encryption_key.get_secret_value()
+        ):
+            encryption_provider = EncryptionProvider(
+                config.encryption_key.get_secret_value()
+            )
 
             # Decrypt DuckDB file if encrypted version exists
             db_enc = Path(config.db_path + ".enc")
@@ -333,6 +344,7 @@ class MemoryEngine:
         )
         engine._encryption_provider = encryption_provider
         engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
+        engine._register_atexit_encrypt()
         return engine
 
     @classmethod
@@ -350,7 +362,7 @@ class MemoryEngine:
         assert config.database_url is not None
 
         # Create asyncpg pool and initialize schema
-        pool = await create_pool(config.database_url)
+        pool = await create_pool(config.database_url.get_secret_value())
         await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
 
         # Create Pg backends
@@ -1853,6 +1865,15 @@ class MemoryEngine:
         the LexicalIndex, and closes the DuckDB connection.
 
         Idempotent — safe to call multiple times.
+
+        When encryption at rest is enabled, the memory pack is re-encrypted
+        after all backends are closed. If that encryption fails the pack is
+        left plaintext on disk, so this method fails closed: it logs at ERROR
+        and raises ``EncryptionError`` rather than returning silently (issue
+        #37).
+
+        Raises:
+            EncryptionError: If re-encrypting the memory pack on close fails.
         """
         if self._closed:
             return
@@ -1894,15 +1915,69 @@ class MemoryEngine:
                 logger.warning("Error closing PostgreSQL pool", exc_info=True)
 
         # --- Encrypt memory pack after all backends are closed (issue #14) ---
+        # Fail closed: if encryption fails the pack is plaintext on disk, so
+        # the caller MUST be told rather than silently shipping plaintext
+        # (issue #37). The backends are already closed at this point, so
+        # re-raising here only surfaces the encryption failure; it does not
+        # leak resources.
         if self._encryption_provider is not None and self._config is not None:
+            # close() encrypts authoritatively, so drop the best-effort
+            # atexit net to avoid a redundant second pass at exit.
+            if self._atexit_registered:
+                atexit.unregister(self._atexit_encrypt)
+                self._atexit_registered = False
             try:
                 self._encrypt_memory_pack()
-            except Exception:
-                logger.warning(
-                    "Error encrypting memory pack on close", exc_info=True
+            except Exception as exc:
+                logger.error(
+                    "Failed to encrypt memory pack on close; pack remains "
+                    "PLAINTEXT on disk at %s",
+                    self._config.db_path,
+                    exc_info=True,
                 )
+                raise EncryptionError(
+                    "Failed to encrypt memory pack on close; the pack is "
+                    "plaintext on disk. See logs for the underlying error."
+                ) from exc
 
     # --- Encryption at rest helpers (issue #14) ---
+
+    def _register_atexit_encrypt(self) -> None:
+        """Register a best-effort atexit handler to re-encrypt on exit.
+
+        This is a safety net for the plaintext-on-disk window (issue #37):
+        if the process exits normally without a clean ``close()``, the pack
+        is still re-encrypted. It is *best effort only* — a hard crash
+        (``SIGKILL``, power loss) bypasses ``atexit`` entirely, and if the
+        backends still hold the DuckDB file lock the re-encryption may fail.
+        The authoritative path remains an explicit ``await close()``.
+        """
+        if self._encryption_provider is None or self._atexit_registered:
+            return
+        atexit.register(self._atexit_encrypt)
+        self._atexit_registered = True
+
+    def _atexit_encrypt(self) -> None:
+        """Best-effort synchronous re-encryption on interpreter exit.
+
+        Swallows all errors: at interpreter shutdown there is no caller to
+        propagate to, and a failure here is no worse than the pre-existing
+        plaintext-on-disk state. Errors are logged so the window is visible.
+        """
+        if self._closed or self._encryption_provider is None:
+            return
+        try:
+            self._encrypt_memory_pack()
+            logger.warning(
+                "Re-encrypted memory pack via atexit handler; the engine was "
+                "not closed cleanly. Prefer an explicit close()."
+            )
+        except Exception:
+            logger.error(
+                "atexit re-encryption failed; memory pack may remain "
+                "plaintext on disk",
+                exc_info=True,
+            )
 
     def _encrypt_memory_pack(self) -> None:
         """Encrypt all memory pack files after backends are closed.

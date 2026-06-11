@@ -6,7 +6,7 @@ environment variables (PRME_ prefix), .env files, and direct arguments.
 
 from __future__ import annotations
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
@@ -53,7 +53,7 @@ class EmbeddingConfig(BaseSettings):
     dimension: int = Field(
         default=384, description="Embedding vector dimension"
     )
-    api_key: str | None = Field(
+    api_key: SecretStr | None = Field(
         default=None,
         description="API key for API-based embedding providers (e.g., OpenAI)",
     )
@@ -234,7 +234,7 @@ class PRMEConfig(BaseSettings):
     double-underscore delimiter (e.g., PRME_EMBEDDING__DIMENSION=384).
     """
 
-    database_url: str | None = Field(
+    database_url: SecretStr | None = Field(
         default=None,
         description="PostgreSQL connection string. When set, all storage uses PostgreSQL.",
     )
@@ -506,12 +506,15 @@ class PRMEConfig(BaseSettings):
             "for backward compatibility."
         ),
     )
-    encryption_key: str | None = Field(
+    encryption_key: SecretStr | None = Field(
         default=None,
         description=(
-            "Encryption passphrase for at-rest encryption. "
-            "Used with PBKDF2-HMAC-SHA256 to derive a Fernet key. "
-            "None disables encryption regardless of encryption_enabled."
+            "Encryption passphrase (or raw key) for at-rest encryption. "
+            "Used with PBKDF2-HMAC-SHA256 to derive a Fernet key. Prefix "
+            "with 'raw_key:' to supply a raw Fernet key explicitly or "
+            "'passphrase:' to force derivation; an unprefixed value is "
+            "auto-detected for backward compatibility. None disables "
+            "encryption regardless of encryption_enabled."
         ),
     )
 
@@ -534,7 +537,8 @@ class PRMEConfig(BaseSettings):
     @property
     def backend(self) -> str:
         """Return 'postgres' when database_url is set, else 'duckdb'."""
-        return "postgres" if self.database_url else "duckdb"
+        url = self.database_url
+        return "postgres" if url and url.get_secret_value() else "duckdb"
 
     model_config = {
         "env_prefix": "PRME_",
