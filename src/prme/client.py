@@ -278,7 +278,16 @@ class MemoryClient:
         )
 
     def close(self) -> None:
-        """Shut down the engine and background event loop."""
+        """Shut down the engine and background event loop.
+
+        Raises:
+            EncryptionError: If encryption-at-rest is enabled and the pack
+                could not be re-encrypted on close. The pack is plaintext on
+                disk in that case, so the failure is surfaced rather than
+                swallowed (fail closed). Loop and thread teardown still
+                completes before the error is raised. Other (non-encryption)
+                shutdown errors are logged and swallowed as best effort.
+        """
         if self._closed:
             return
         self._closed = True
@@ -288,18 +297,28 @@ class MemoryClient:
         except Exception:
             pass
 
-        # Close the engine on the background loop.
+        # Close the engine on the background loop. Capture an encryption
+        # failure so the pack-is-plaintext signal is not lost, but still
+        # finish tearing down the loop/thread before re-raising it.
+        from prme.storage.encryption import EncryptionError
+
+        encryption_error: EncryptionError | None = None
         try:
             future = asyncio.run_coroutine_threadsafe(
                 self._engine.close(), self._loop
             )
             future.result(timeout=30)
+        except EncryptionError as exc:
+            encryption_error = exc
         except Exception:
             logger.warning("Error closing engine", exc_info=True)
 
         # Stop the event loop and join the thread.
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join(timeout=5)
+
+        if encryption_error is not None:
+            raise encryption_error
 
     def __del__(self) -> None:
         if not self._closed:

@@ -340,7 +340,11 @@ def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
     elif config.provider == "openai":
         provider = OpenAIEmbeddingProvider(
             model_name=config.model_name,
-            api_key=config.api_key,
+            api_key=(
+                config.api_key.get_secret_value()
+                if config.api_key is not None
+                else None
+            ),
             dimension=config.dimension,
         )
     else:

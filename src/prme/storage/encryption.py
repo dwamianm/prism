@@ -13,6 +13,19 @@ Fernet tokens are self-contained (include IV/nonce and HMAC).
 Usage is transparent to the rest of PRME: files are decrypted on engine
 open and re-encrypted on engine close.
 
+Plaintext window (important)
+----------------------------
+Files are decrypted to plaintext on disk while the engine is open and are
+only re-encrypted on a clean ``close()`` / ``lock()``. The engine registers
+a best-effort ``atexit`` handler to re-encrypt on normal interpreter exit,
+but a hard crash (``SIGKILL``, power loss, OOM) leaves the pack plaintext on
+disk until the next clean ``close()`` re-encrypts it. File writes here are
+atomic (temp file + ``os.replace``) so a crash never leaves a truncated or
+partial file, but it cannot eliminate the plaintext-at-rest window itself.
+Eliminating that window entirely would require native database encryption
+(e.g. DuckDB ``ATTACH ... (ENCRYPTION_KEY ...)``); that is a separate,
+format-changing effort tracked apart from this lifecycle hardening.
+
 See RFC-0014 Section 10 for security requirements.
 """
 
@@ -48,11 +61,27 @@ class EncryptionProvider:
 
     Args:
         key: A Fernet key (bytes or base64 str) **or** a passphrase
-            string. If the value is exactly 44 characters of url-safe
-            base64 it is treated as a raw Fernet key; otherwise it is
-            treated as a passphrase and ``derive_key`` is called
-            on-demand with a per-file random salt.
+            string. Key-type resolution, first match wins:
+
+            1. ``bytes`` are always treated as a raw Fernet key.
+            2. A string with the ``raw_key:`` prefix is treated as a raw
+               Fernet key (the prefix is stripped). Use this to remove any
+               ambiguity for keys that look like passphrases, or to force
+               passphrases that happen to be valid base64 to be derived —
+               see point 4.
+            3. A string with the ``passphrase:`` prefix is always run
+               through PBKDF2, even if it is valid 44-char base64.
+            4. An unprefixed string is auto-detected: exactly 44 characters
+               of valid url-safe base64 (32 decoded bytes) is treated as a
+               raw Fernet key; anything else is treated as a passphrase.
+               This auto-detection is unchanged from prior releases and
+               remains the default so existing packs keep decrypting; the
+               explicit prefixes above are the recommended way to avoid the
+               ambiguity going forward.
     """
+
+    _RAW_KEY_PREFIX = "raw_key:"
+    _PASSPHRASE_PREFIX = "passphrase:"
 
     def __init__(self, key: bytes | str | None = None) -> None:
         if key is None:
@@ -65,15 +94,24 @@ class EncryptionProvider:
             # Raw Fernet key
             self._fernet_key = key
         elif isinstance(key, str):
-            # Try to interpret as base64 Fernet key (exactly 44 chars)
-            try:
-                decoded = base64.urlsafe_b64decode(key)
-                if len(decoded) == 32 and len(key) == 44:
-                    self._fernet_key = key.encode("ascii")
-                else:
+            if key.startswith(self._RAW_KEY_PREFIX):
+                # Explicit raw key -- no derivation, no guessing.
+                self._fernet_key = key[len(self._RAW_KEY_PREFIX):].encode("ascii")
+            elif key.startswith(self._PASSPHRASE_PREFIX):
+                # Explicit passphrase -- always derive, even if it is base64.
+                self._passphrase = key[len(self._PASSPHRASE_PREFIX):]
+            else:
+                # Backward-compatible auto-detection: a 44-char valid
+                # url-safe base64 string (32 decoded bytes) is a raw Fernet
+                # key; otherwise it is a passphrase.
+                try:
+                    decoded = base64.urlsafe_b64decode(key)
+                    if len(decoded) == 32 and len(key) == 44:
+                        self._fernet_key = key.encode("ascii")
+                    else:
+                        self._passphrase = key
+                except Exception:
                     self._passphrase = key
-            except Exception:
-                self._passphrase = key
 
     @staticmethod
     def derive_key(passphrase: str, salt: bytes | None = None) -> tuple[bytes, bytes]:
@@ -122,11 +160,43 @@ class EncryptionProvider:
         fernet_key, salt = self.derive_key(self._passphrase, existing_salt)
         return Fernet(fernet_key), salt
 
+    @staticmethod
+    def _atomic_write(target: Path, data: bytes) -> None:
+        """Write ``data`` to ``target`` atomically (temp file + fsync + rename).
+
+        Writes to a sibling temp file, flushes it to disk, then renames it
+        over ``target``. ``os.replace`` is atomic on the same filesystem, so
+        a crash mid-write never leaves a partial or truncated file at
+        ``target`` -- a reader sees either the old contents (if the rename
+        had not happened) or the complete new contents, never a half-written
+        mix.
+
+        Args:
+            target: Final destination path.
+            data: Bytes to write.
+        """
+        tmp = target.with_name(f".{target.name}.tmp-{os.getpid()}")
+        try:
+            with open(tmp, "wb") as fh:
+                fh.write(data)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, target)
+        except Exception:
+            # Never leave a stray temp file behind on failure.
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+            raise
+
     def encrypt_file(self, path: Path) -> Path:
         """Encrypt a file in-place, producing a ``.enc`` file.
 
-        The original unencrypted file is removed after successful
-        encryption. File format: ``[16-byte salt][Fernet token]``.
+        The original unencrypted file is removed only after the encrypted
+        file is fully and durably written, so a crash during encryption can
+        never destroy the plaintext without leaving a complete ciphertext.
+        File format: ``[16-byte salt][Fernet token]``.
 
         Args:
             path: Path to the plaintext file.
@@ -152,9 +222,12 @@ class EncryptionProvider:
             ciphertext = fernet.encrypt(plaintext)
 
             enc_path = path.with_suffix(path.suffix + _ENC_EXTENSION)
-            enc_path.write_bytes(salt + ciphertext)
+            # Atomic write: the ciphertext is fully durable on disk before
+            # the plaintext is removed. A crash leaves the plaintext intact
+            # (recoverable) rather than a truncated/partial .enc file.
+            self._atomic_write(enc_path, salt + ciphertext)
 
-            # Remove original after successful write
+            # Remove original only after the encrypted file is durable.
             path.unlink()
             logger.debug("Encrypted %s -> %s", path, enc_path)
             return enc_path
@@ -198,9 +271,12 @@ class EncryptionProvider:
 
             # Restore original path (strip .enc suffix)
             dec_path = path.with_suffix("")
-            dec_path.write_bytes(plaintext)
+            # Atomic write: the plaintext is fully durable before the .enc
+            # file is removed, so a crash mid-decrypt leaves the encrypted
+            # file intact rather than a truncated plaintext.
+            self._atomic_write(dec_path, plaintext)
 
-            # Remove encrypted file after successful write
+            # Remove encrypted file only after the plaintext is durable.
             path.unlink()
             logger.debug("Decrypted %s -> %s", path, dec_path)
             return dec_path

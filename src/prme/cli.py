@@ -657,7 +657,8 @@ async def cmd_init(args: argparse.Namespace) -> None:
                 "# PRME_EMBEDDING__PROVIDER=fastembed\n"
                 "# PRME_EMBEDDING__MODEL_NAME=BAAI/bge-small-en-v1.5\n"
                 "\n"
-                "# Encryption at rest (optional)\n"
+                "# Encryption at rest (optional). Both are required to enable it.\n"
+                "# PRME_ENCRYPTION_ENABLED=true\n"
                 "# PRME_ENCRYPTION_KEY=your-secret-key\n"
             )
 
