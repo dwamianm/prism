@@ -81,6 +81,7 @@ class IngestionPipeline:
         write_queue: WriteQueue,
         graph_writer: GraphWriter | None = None,
         confidence_matrix: object | None = None,
+        max_concurrent_extractions: int = 8,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -89,6 +90,12 @@ class IngestionPipeline:
         self._extraction_provider = extraction_provider
         self._write_queue = write_queue
         self._graph_writer = graph_writer
+
+        # Bound concurrent background extraction tasks. Without this an
+        # ingest_batch of N launches N concurrent LLM calls (issue #39).
+        self._extraction_semaphore = asyncio.Semaphore(
+            max(1, max_concurrent_extractions)
+        )
 
         # Config-driven confidence matrix with module-level default fallback
         if confidence_matrix is not None:
@@ -228,9 +235,12 @@ class IngestionPipeline:
             scope: Ingestion-level scope for fallback when LLM does not classify.
         """
         try:
-            result = await self._extraction_provider.extract(
-                event.content, role=event.role
-            )
+            # Bound concurrent LLM extraction across all in-flight tasks
+            # so a large ingest_batch cannot fan out unbounded calls.
+            async with self._extraction_semaphore:
+                result = await self._extraction_provider.extract(
+                    event.content, role=event.role
+                )
             result = validate_grounding(result, event.content)
             await self._materialize(result, event, event_id, scope)
             logger.info(

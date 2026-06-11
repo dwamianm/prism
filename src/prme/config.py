@@ -378,6 +378,56 @@ class PRMEConfig(BaseSettings):
         ),
     )
 
+    # Index write-path batching (issue #39)
+    vector_save_interval: int = Field(
+        default=64,
+        ge=1,
+        description=(
+            "Number of vector inserts between full USearch index saves to "
+            "disk. The index is rewritten in full on each save, so saving on "
+            "every insert makes ingestion O(N^2) in write volume. Any "
+            "pending writes are always flushed on close(). Set to 1 to save "
+            "after every insert (legacy behavior)."
+        ),
+    )
+    lexical_commit_interval: int = Field(
+        default=64,
+        ge=1,
+        description=(
+            "Number of lexical documents added between tantivy commits. "
+            "Per-document commits cause segment explosion and merge churn. "
+            "Documents are buffered in a long-lived writer and committed "
+            "once this many are pending (or lexical_commit_max_delay_s "
+            "elapses). Pending documents are always committed on close(). "
+            "Set to 1 to commit after every document (legacy behavior). "
+            "Note: buffered documents are not searchable until committed."
+        ),
+    )
+    lexical_commit_max_delay_s: float = Field(
+        default=2.0,
+        ge=0.0,
+        description=(
+            "Maximum seconds a lexical document may sit uncommitted in the "
+            "writer buffer before a commit is forced, bounding search "
+            "staleness when fewer than lexical_commit_interval documents "
+            "arrive. The bound is evaluated when the next document is "
+            "indexed (there is no background timer); search() always "
+            "flushes pending writes first, so a query never misses its own "
+            "writes regardless of this value. 0 disables the time bound "
+            "(commit only on interval/search/close)."
+        ),
+    )
+    max_concurrent_extractions: int = Field(
+        default=8,
+        ge=1,
+        description=(
+            "Maximum number of concurrent background LLM extraction tasks "
+            "in the ingestion pipeline. Bounds memory and outbound LLM "
+            "request fan-out when ingesting large batches (ingest_batch of "
+            "N would otherwise launch N concurrent extractions)."
+        ),
+    )
+
     # Per-namespace weight profiles (issue #24)
     namespace_weights: dict[str, ScoringWeights] = Field(
         default_factory=dict,
