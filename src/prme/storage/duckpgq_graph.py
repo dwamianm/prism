@@ -22,14 +22,11 @@ from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
-    ALLOWED_TRANSITIONS,
     DecayProfile,
     EdgeType,
-    EpistemicType,
     LifecycleState,
     NodeType,
     Scope,
-    SourceType,
     validate_transition,
 )
 
@@ -88,15 +85,45 @@ class DuckPGQGraphStore:
                 self._get_node_sync, node_id, include_superseded
             )
 
+    async def get_nodes(
+        self,
+        node_ids: list[str],
+        *,
+        include_superseded: bool = False,
+    ) -> list[MemoryNode]:
+        """Retrieve multiple nodes by ID in a single round trip.
+
+        Batch equivalent of get_node() with identical visibility
+        semantics. Missing IDs are silently omitted.
+
+        Args:
+            node_ids: String UUIDs of the nodes to fetch.
+            include_superseded: If False, superseded/archived nodes
+                are omitted.
+
+        Returns:
+            List of found, visible MemoryNodes.
+        """
+        if not node_ids:
+            return []
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_nodes_sync, node_ids, include_superseded
+            )
+
     async def query_nodes(
         self,
         *,
         node_type: NodeType | None = None,
         user_id: str | None = None,
         scope: Scope | None = None,
+        scopes: list[Scope] | None = None,
+        session_ids: list[str] | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
+        min_salience: float | None = None,
+        content_contains_any: list[str] | None = None,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters.
@@ -106,10 +133,15 @@ class DuckPGQGraphStore:
         Args:
             node_type: Filter by node type.
             user_id: Filter by user.
-            scope: Filter by scope.
+            scope: Filter by a single scope.
+            scopes: Filter by multiple scopes (scope IN (...)).
+            session_ids: Filter by session IDs (session_id IN (...)).
             lifecycle_states: Lifecycle filter (defaults to active).
             valid_at: Temporal validity filter.
             min_confidence: Minimum confidence threshold.
+            min_salience: Minimum salience threshold.
+            content_contains_any: Case-insensitive substring filters
+                (matches content containing ANY of the strings).
             limit: Max results.
 
         Returns:
@@ -121,9 +153,13 @@ class DuckPGQGraphStore:
                 node_type,
                 user_id,
                 scope,
+                scopes,
+                session_ids,
                 lifecycle_states,
                 valid_at,
                 min_confidence,
+                min_salience,
+                content_contains_any,
                 limit,
             )
 
@@ -185,6 +221,7 @@ class DuckPGQGraphStore:
         *,
         source_id: str | None = None,
         target_id: str | None = None,
+        node_ids: list[str] | None = None,
         edge_type: EdgeType | None = None,
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
@@ -194,6 +231,8 @@ class DuckPGQGraphStore:
         Args:
             source_id: Filter by source node.
             target_id: Filter by target node.
+            node_ids: Filter to edges touching ANY of these node IDs
+                (source or target).
             edge_type: Filter by edge type.
             valid_at: Temporal validity filter.
             min_confidence: Minimum confidence threshold.
@@ -206,6 +245,7 @@ class DuckPGQGraphStore:
                 self._get_edges_sync,
                 source_id,
                 target_id,
+                node_ids,
                 edge_type,
                 valid_at,
                 min_confidence,
@@ -376,6 +416,45 @@ class DuckPGQGraphStore:
         async with self._conn_lock:
             return await asyncio.to_thread(
                 self._get_neighborhood_sync,
+                node_id,
+                max_hops,
+                edge_types,
+                valid_at,
+                min_confidence,
+                include_superseded,
+            )
+
+    async def get_neighborhood_with_depth(
+        self,
+        node_id: str,
+        *,
+        max_hops: int = 2,
+        edge_types: list[EdgeType] | None = None,
+        valid_at: datetime | None = None,
+        min_confidence: float | None = None,
+        include_superseded: bool = False,
+    ) -> list[tuple[MemoryNode, int]]:
+        """Get nodes within N hops along with their minimum hop distance.
+
+        Runs a single cycle-guarded recursive CTE and returns each
+        reachable node once with MIN(depth), so callers don't need to
+        re-traverse the neighborhood per hop level.
+
+        Args:
+            node_id: Starting node ID.
+            max_hops: Maximum number of hops (default 2).
+            edge_types: Only traverse edges of these types.
+            valid_at: Temporal filter for nodes.
+            min_confidence: Minimum node confidence.
+            include_superseded: Include superseded/archived nodes.
+
+        Returns:
+            List of (MemoryNode, min_depth) tuples, excluding the
+            starting node.
+        """
+        async with self._conn_lock:
+            return await asyncio.to_thread(
+                self._get_neighborhood_with_depth_sync,
                 node_id,
                 max_hops,
                 edge_types,
@@ -625,14 +704,43 @@ class DuckPGQGraphStore:
             return None
         return self._row_to_node(result)
 
+    def _get_nodes_sync(
+        self, node_ids: list[str], include_superseded: bool
+    ) -> list[MemoryNode]:
+        """Retrieve multiple nodes by ID with one IN query (sync)."""
+        placeholders = ", ".join(["?" for _ in node_ids])
+        if include_superseded:
+            query = f"SELECT * FROM nodes WHERE id IN ({placeholders})"
+        else:
+            query = f"""
+                SELECT * FROM nodes
+                WHERE id IN ({placeholders})
+                AND lifecycle_state IN ('tentative', 'stable')
+            """
+        rows = self._conn.execute(query, list(node_ids)).fetchall()
+        return [self._row_to_node(row) for row in rows]
+
+    @staticmethod
+    def _escape_like(pattern: str) -> str:
+        """Escape LIKE wildcards in a user-supplied substring."""
+        return (
+            pattern.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+
     def _query_nodes_sync(
         self,
         node_type: NodeType | None,
         user_id: str | None,
         scope: Scope | None,
+        scopes: list[Scope] | None,
+        session_ids: list[str] | None,
         lifecycle_states: list[LifecycleState] | None,
         valid_at: datetime | None,
         min_confidence: float | None,
+        min_salience: float | None,
+        content_contains_any: list[str] | None,
         limit: int,
     ) -> list[MemoryNode]:
         """Query nodes with dynamic WHERE clause (sync)."""
@@ -662,6 +770,16 @@ class DuckPGQGraphStore:
             conditions.append("scope = ?")
             params.append(scope.value)
 
+        if scopes is not None and scopes:
+            scope_placeholders = ", ".join(["?" for _ in scopes])
+            conditions.append(f"scope IN ({scope_placeholders})")
+            params.extend([s.value for s in scopes])
+
+        if session_ids is not None and session_ids:
+            sid_placeholders = ", ".join(["?" for _ in session_ids])
+            conditions.append(f"session_id IN ({sid_placeholders})")
+            params.extend(session_ids)
+
         if valid_at is not None:
             conditions.append(
                 "valid_from <= ? AND (valid_to IS NULL OR valid_to > ?)"
@@ -671,6 +789,19 @@ class DuckPGQGraphStore:
         if min_confidence is not None:
             conditions.append("confidence >= ?")
             params.append(min_confidence)
+
+        if min_salience is not None:
+            conditions.append("salience >= ?")
+            params.append(min_salience)
+
+        if content_contains_any is not None and content_contains_any:
+            like_clauses = " OR ".join(
+                ["LOWER(content) LIKE ? ESCAPE '\\'" for _ in content_contains_any]
+            )
+            conditions.append(f"({like_clauses})")
+            params.extend(
+                f"%{self._escape_like(p.lower())}%" for p in content_contains_any
+            )
 
         where_clause = " AND ".join(conditions) if conditions else "1=1"
         query = f"""
@@ -748,6 +879,7 @@ class DuckPGQGraphStore:
         self,
         source_id: str | None,
         target_id: str | None,
+        node_ids: list[str] | None,
         edge_type: EdgeType | None,
         valid_at: datetime | None,
         min_confidence: float | None,
@@ -763,6 +895,15 @@ class DuckPGQGraphStore:
         if target_id is not None:
             conditions.append("target_id = ?")
             params.append(target_id)
+
+        if node_ids is not None and node_ids:
+            id_placeholders = ", ".join(["?" for _ in node_ids])
+            conditions.append(
+                f"(source_id IN ({id_placeholders}) "
+                f"OR target_id IN ({id_placeholders}))"
+            )
+            params.extend(node_ids)
+            params.extend(node_ids)
 
         if edge_type is not None:
             conditions.append("edge_type = ?")
@@ -1185,9 +1326,35 @@ class DuckPGQGraphStore:
     ) -> list[MemoryNode]:
         """Get neighborhood via recursive CTE (sync).
 
-        Traverses edges in both directions to find the full neighborhood.
-        Uses a single UNION ALL recursive CTE with bidirectional traversal
-        in both the base and recursive cases.
+        Delegates to the depth-aware variant and discards depths -- the
+        reachable node set is identical.
+        """
+        results = self._get_neighborhood_with_depth_sync(
+            node_id,
+            max_hops,
+            edge_types,
+            valid_at,
+            min_confidence,
+            include_superseded,
+        )
+        return [node for node, _depth in results]
+
+    def _get_neighborhood_with_depth_sync(
+        self,
+        node_id: str,
+        max_hops: int,
+        edge_types: list[EdgeType] | None,
+        valid_at: datetime | None,
+        min_confidence: float | None,
+        include_superseded: bool,
+    ) -> list[tuple[MemoryNode, int]]:
+        """Get neighborhood with min hop depth via recursive CTE (sync).
+
+        Traverses edges in both directions. The recursive CTE tracks the
+        path of visited nodes per branch and refuses to revisit a node
+        already on the path (cycle guard), preventing A->B->A oscillation
+        from enumerating exponentially many paths. Each reachable node is
+        returned once with its minimum depth (GROUP BY id, MIN(depth)).
         """
         logger.debug(
             "get_neighborhood using recursive CTE (SQL fallback)",
@@ -1231,7 +1398,10 @@ class DuckPGQGraphStore:
 
         # Recursive CTE: base case finds direct neighbors (both directions),
         # recursive case expands from there. Uses CASE to handle bidirectional
-        # traversal in a single UNION ALL.
+        # traversal in a single UNION ALL. Each branch carries the list of
+        # nodes on its path; the recursive step skips nodes already visited
+        # on that path (cycle guard). The outer query collapses paths to one
+        # row per node with the minimum depth.
         query = f"""
             WITH RECURSIVE neighborhood AS (
                 -- Base case: direct neighbors in both directions
@@ -1240,33 +1410,59 @@ class DuckPGQGraphStore:
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    1 AS depth
+                    1 AS depth,
+                    [CAST(? AS UUID),
+                     CASE WHEN e.source_id = CAST(? AS UUID)
+                          THEN e.target_id
+                          ELSE e.source_id
+                     END] AS path
                 FROM edges e
                 WHERE (e.source_id = CAST(? AS UUID) OR e.target_id = CAST(? AS UUID))
                     {edge_where}
 
                 UNION ALL
 
-                -- Recursive case: expand from discovered neighbors
+                -- Recursive case: expand from discovered neighbors,
+                -- skipping nodes already on this branch's path.
                 SELECT
                     CASE WHEN e.source_id = nb.id
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    nb.depth + 1 AS depth
+                    nb.depth + 1 AS depth,
+                    list_append(
+                        nb.path,
+                        CASE WHEN e.source_id = nb.id
+                             THEN e.target_id
+                             ELSE e.source_id
+                        END
+                    ) AS path
                 FROM neighborhood nb
                 JOIN edges e ON (e.source_id = nb.id OR e.target_id = nb.id)
                     {edge_where}
                 WHERE nb.depth < ?
+                    AND NOT list_contains(
+                        nb.path,
+                        CASE WHEN e.source_id = nb.id
+                             THEN e.target_id
+                             ELSE e.source_id
+                        END
+                    )
             )
-            SELECT DISTINCT n.*
-            FROM neighborhood nb
+            SELECT n.*, nb.min_depth
+            FROM (
+                SELECT id, MIN(depth) AS min_depth
+                FROM neighborhood
+                GROUP BY id
+            ) nb
             JOIN nodes n ON nb.id = n.id
             WHERE n.id != CAST(? AS UUID) {node_where}
         """
 
         params: list = []
-        # Base case: 3 refs to node_id + edge_params
+        # Base case: 5 refs to node_id + edge_params
+        params.append(node_id)
+        params.append(node_id)
         params.append(node_id)
         params.append(node_id)
         params.append(node_id)
@@ -1279,7 +1475,9 @@ class DuckPGQGraphStore:
         params.extend(node_params)
 
         rows = self._conn.execute(query, params).fetchall()
-        return [self._row_to_node(row) for row in rows]
+        # The depth column trails the full nodes row; _row_to_node reads
+        # fixed positions and ignores trailing columns.
+        return [(self._row_to_node(row), int(row[-1])) for row in rows]
 
     def _find_shortest_path_sync(
         self,

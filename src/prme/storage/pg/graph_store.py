@@ -21,11 +21,9 @@ from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
     EdgeType,
-    EpistemicType,
     LifecycleState,
     NodeType,
     Scope,
-    SourceType,
     validate_transition,
 )
 
@@ -39,6 +37,12 @@ _NODE_COLUMNS = (
     "created_at, updated_at, epistemic_type, source_type, "
     "decay_profile, last_reinforced_at, reinforcement_boost, "
     "salience_base, confidence_base, pinned"
+)
+
+# Node columns qualified with the "n." alias for queries that join
+# nodes against other relations exposing an "id" column.
+_NODE_COLUMNS_QUALIFIED = ", ".join(
+    f"n.{col.strip()}" for col in _NODE_COLUMNS.split(",")
 )
 
 _EDGE_COLUMNS = (
@@ -136,15 +140,56 @@ class PgGraphStore:
             return None
         return self._record_to_node(row)
 
+    async def get_nodes(
+        self,
+        node_ids: list[str],
+        *,
+        include_superseded: bool = False,
+    ) -> list[MemoryNode]:
+        """Retrieve multiple nodes by ID in a single round trip.
+
+        Batch equivalent of get_node() with identical visibility
+        semantics. Missing IDs are silently omitted.
+        """
+        if not node_ids:
+            return []
+        if include_superseded:
+            query = (
+                f"SELECT {_NODE_COLUMNS} FROM nodes "
+                "WHERE id = ANY($1::uuid[])"
+            )
+        else:
+            query = (
+                f"SELECT {_NODE_COLUMNS} FROM nodes "
+                "WHERE id = ANY($1::uuid[]) "
+                "AND lifecycle_state IN ('tentative', 'stable')"
+            )
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, node_ids)
+        return [self._record_to_node(row) for row in rows]
+
+    @staticmethod
+    def _escape_like(pattern: str) -> str:
+        """Escape LIKE wildcards in a user-supplied substring."""
+        return (
+            pattern.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+
     async def query_nodes(
         self,
         *,
         node_type: NodeType | None = None,
         user_id: str | None = None,
         scope: Scope | None = None,
+        scopes: list[Scope] | None = None,
+        session_ids: list[str] | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
+        min_salience: float | None = None,
+        content_contains_any: list[str] | None = None,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters."""
@@ -175,6 +220,16 @@ class PgGraphStore:
             params.append(scope.value)
             idx += 1
 
+        if scopes is not None and scopes:
+            conditions.append(f"scope = ANY(${idx}::text[])")
+            params.append([s.value for s in scopes])
+            idx += 1
+
+        if session_ids is not None and session_ids:
+            conditions.append(f"session_id = ANY(${idx}::text[])")
+            params.append(list(session_ids))
+            idx += 1
+
         if valid_at is not None:
             conditions.append(
                 f"valid_from <= ${idx} AND (valid_to IS NULL OR valid_to > ${idx + 1})"
@@ -185,6 +240,18 @@ class PgGraphStore:
         if min_confidence is not None:
             conditions.append(f"confidence >= ${idx}")
             params.append(min_confidence)
+            idx += 1
+
+        if min_salience is not None:
+            conditions.append(f"salience >= ${idx}")
+            params.append(min_salience)
+            idx += 1
+
+        if content_contains_any is not None and content_contains_any:
+            conditions.append(f"LOWER(content) LIKE ANY(${idx}::text[])")
+            params.append(
+                [f"%{self._escape_like(p.lower())}%" for p in content_contains_any]
+            )
             idx += 1
 
         where = " AND ".join(conditions) if conditions else "1=1"
@@ -362,6 +429,7 @@ class PgGraphStore:
         *,
         source_id: str | None = None,
         target_id: str | None = None,
+        node_ids: list[str] | None = None,
         edge_type: EdgeType | None = None,
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
@@ -379,6 +447,14 @@ class PgGraphStore:
         if target_id is not None:
             conditions.append(f"target_id = ${idx}::uuid")
             params.append(target_id)
+            idx += 1
+
+        if node_ids is not None and node_ids:
+            conditions.append(
+                f"(source_id = ANY(${idx}::uuid[]) "
+                f"OR target_id = ANY(${idx}::uuid[]))"
+            )
+            params.append(list(node_ids))
             idx += 1
 
         if edge_type is not None:
@@ -751,7 +827,38 @@ class PgGraphStore:
         min_confidence: float | None = None,
         include_superseded: bool = False,
     ) -> list[MemoryNode]:
-        """Get nodes within N hops of a starting node via recursive CTE."""
+        """Get nodes within N hops of a starting node via recursive CTE.
+
+        Delegates to the depth-aware variant and discards depths -- the
+        reachable node set is identical.
+        """
+        results = await self.get_neighborhood_with_depth(
+            node_id,
+            max_hops=max_hops,
+            edge_types=edge_types,
+            valid_at=valid_at,
+            min_confidence=min_confidence,
+            include_superseded=include_superseded,
+        )
+        return [node for node, _depth in results]
+
+    async def get_neighborhood_with_depth(
+        self,
+        node_id: str,
+        *,
+        max_hops: int = 2,
+        edge_types: list[EdgeType] | None = None,
+        valid_at: datetime | None = None,
+        min_confidence: float | None = None,
+        include_superseded: bool = False,
+    ) -> list[tuple[MemoryNode, int]]:
+        """Get nodes within N hops with their minimum hop distance.
+
+        Single cycle-guarded recursive CTE: each branch carries the array
+        of visited node IDs and refuses to revisit one (preventing
+        A->B->A oscillation), and the outer query collapses paths to one
+        row per node with MIN(depth).
+        """
         # Build edge filter
         edge_filter_parts: list[str] = []
         params: list = [node_id]
@@ -800,34 +907,54 @@ class PgGraphStore:
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    1 AS depth
+                    1 AS depth,
+                    ARRAY[$1::uuid,
+                          CASE WHEN e.source_id = $1::uuid
+                               THEN e.target_id
+                               ELSE e.source_id
+                          END] AS path
                 FROM edges e
                 WHERE (e.source_id = $1::uuid OR e.target_id = $1::uuid)
                     {edge_filter}
 
-                UNION
+                UNION ALL
 
-                -- Recursive case
+                -- Recursive case: expand from discovered neighbors,
+                -- skipping nodes already on this branch's path.
                 SELECT
                     CASE WHEN e.source_id = nb.id
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    nb.depth + 1 AS depth
+                    nb.depth + 1 AS depth,
+                    nb.path || CASE WHEN e.source_id = nb.id
+                                    THEN e.target_id
+                                    ELSE e.source_id
+                               END AS path
                 FROM neighborhood nb
                 JOIN edges e ON (e.source_id = nb.id OR e.target_id = nb.id)
                     {edge_filter}
                 WHERE nb.depth < ${max_hops_idx}
+                    AND CASE WHEN e.source_id = nb.id
+                             THEN e.target_id
+                             ELSE e.source_id
+                        END != ALL(nb.path)
             )
-            SELECT DISTINCT {_NODE_COLUMNS}
-            FROM (SELECT DISTINCT id FROM neighborhood) nb_ids
-            JOIN nodes n ON nb_ids.id = n.id
+            SELECT {_NODE_COLUMNS_QUALIFIED}, nb.min_depth
+            FROM (
+                SELECT id, MIN(depth) AS min_depth
+                FROM neighborhood
+                GROUP BY id
+            ) nb
+            JOIN nodes n ON nb.id = n.id
             WHERE n.id != $1::uuid {node_filter}
         """
 
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
-        return [self._record_to_node(row) for row in rows]
+        return [
+            (self._record_to_node(row), int(row["min_depth"])) for row in rows
+        ]
 
     async def find_shortest_path(
         self,

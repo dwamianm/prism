@@ -67,9 +67,10 @@ async def _generate_graph_candidates(
 ) -> list[dict]:
     """Generate candidates from graph neighborhood traversal.
 
-    Seeds are entity nodes matching extracted entity names. For each seed,
-    runs get_neighborhood at 1-hop, 2-hop, and 3-hop to determine per-node
-    hop distances for graph_proximity scoring.
+    Seeds are entity nodes matching extracted entity names (matched in
+    SQL via content LIKE filters). For each seed, runs a single
+    depth-aware neighborhood query to determine per-node hop distances
+    for graph_proximity scoring.
 
     Scope and temporal filters are forwarded to query_nodes() for seed
     discovery and used for post-filter on neighborhood results.
@@ -79,34 +80,17 @@ async def _generate_graph_candidates(
     if not analysis.entities:
         return []
 
-    # Find seed nodes matching extracted entity names.
-    # For multi-scope, iterate and union (query_nodes takes single Scope).
-    if scope is not None and scope:
-        all_entity_nodes = []
-        seen_entity_ids: set[str] = set()
-        for s in scope:
-            nodes = await graph_store.query_nodes(
-                user_id=user_id,
-                node_type=NodeType.ENTITY,
-                scope=s,
-            )
-            for n in nodes:
-                nid = str(n.id)
-                if nid not in seen_entity_ids:
-                    seen_entity_ids.add(nid)
-                    all_entity_nodes.append(n)
-    else:
-        all_entity_nodes = await graph_store.query_nodes(
-            user_id=user_id,
-            node_type=NodeType.ENTITY,
-        )
+    # Find seed nodes matching extracted entity names. The substring
+    # match is pushed into SQL (LOWER(content) LIKE ...) so only matching
+    # entity nodes are hydrated.
+    all_entity_nodes = await graph_store.query_nodes(
+        user_id=user_id,
+        node_type=NodeType.ENTITY,
+        scopes=scope if scope else None,
+        content_contains_any=list(analysis.entities),
+    )
 
-    seed_ids: list[str] = []
-    for node in all_entity_nodes:
-        for entity_name in analysis.entities:
-            if entity_name.lower() in node.content.lower():
-                seed_ids.append(str(node.id))
-                break
+    seed_ids = [str(node.id) for node in all_entity_nodes]
 
     if not seed_ids:
         return []
@@ -114,8 +98,8 @@ async def _generate_graph_candidates(
     # Determine valid_at for neighborhood queries if temporal filter is set.
     valid_at = time_from if time_from is not None else time_to
 
-    # For each seed, determine hop distances via incremental neighborhood
-    # queries: 1-hop, 2-hop (minus 1-hop), 3-hop (minus 1&2-hop).
+    # For each seed, determine hop distances via a single depth-aware
+    # neighborhood query (one traversal instead of one per hop level).
     node_proximity: dict[str, float] = {}  # node_id -> best proximity
     node_map: dict[str, MemoryNode] = {}  # node_id -> MemoryNode
 
@@ -123,42 +107,38 @@ async def _generate_graph_candidates(
     _TEMPORAL_EXEMPT_TYPES = {NodeType.ENTITY, NodeType.PREFERENCE}
 
     max_hops = min(config.graph_max_hops, 3)
+    _HOP_PROXIMITY = {1: 1.0, 2: 0.7, 3: 0.4}
 
     for seed_id in seed_ids:
-        seen_at_previous_hops: set[str] = {seed_id}
+        neighbors = await graph_store.get_neighborhood_with_depth(
+            seed_id, max_hops=max_hops, valid_at=valid_at,
+        )
 
-        for hop in range(1, max_hops + 1):
-            proximity = {1: 1.0, 2: 0.7, 3: 0.4}.get(hop, 0.4)
+        for neighbor, depth in neighbors:
+            nid = str(neighbor.id)
+            if nid == seed_id:
+                continue
+            proximity = _HOP_PROXIMITY.get(depth, 0.4)
 
-            neighbors = await graph_store.get_neighborhood(
-                seed_id, max_hops=hop, valid_at=valid_at,
-            )
+            # Scope filter: skip neighbors outside requested scopes.
+            if scope is not None and scope:
+                if neighbor.scope not in scope:
+                    continue
 
-            for neighbor in neighbors:
-                nid = str(neighbor.id)
-                if nid not in seen_at_previous_hops:
-                    # Scope filter: skip neighbors outside requested scopes.
-                    if scope is not None and scope:
-                        if neighbor.scope not in scope:
-                            continue
+            # Temporal filter: skip nodes outside temporal window,
+            # but exempt ENTITY and PREFERENCE types.
+            if neighbor.node_type not in _TEMPORAL_EXEMPT_TYPES:
+                if time_from is not None and neighbor.valid_to is not None:
+                    if neighbor.valid_to <= time_from:
+                        continue
+                if time_to is not None and neighbor.valid_from is not None:
+                    if neighbor.valid_from > time_to:
+                        continue
 
-                    # Temporal filter: skip nodes outside temporal window,
-                    # but exempt ENTITY and PREFERENCE types.
-                    if neighbor.node_type not in _TEMPORAL_EXEMPT_TYPES:
-                        if time_from is not None and neighbor.valid_to is not None:
-                            if neighbor.valid_to <= time_from:
-                                continue
-                        if time_to is not None and neighbor.valid_from is not None:
-                            if neighbor.valid_from > time_to:
-                                continue
-
-                    # First time seeing this node -- it's at this hop distance.
-                    if nid not in node_proximity or proximity > node_proximity[nid]:
-                        node_proximity[nid] = proximity
-                    node_map[nid] = neighbor
-
-            # Add all IDs from this hop level to seen set.
-            seen_at_previous_hops.update(str(n.id) for n in neighbors)
+            # Keep the best proximity across seeds.
+            if nid not in node_proximity or proximity > node_proximity[nid]:
+                node_proximity[nid] = proximity
+            node_map[nid] = neighbor
 
     # Post-filter to max_candidates: sort by confidence DESC, created_at DESC.
     candidates = [
@@ -246,38 +226,40 @@ async def _generate_pinned_candidates(
 
     Pinned = salience == 1.0. Active tasks = TASK type with lifecycle
     in (TENTATIVE, STABLE). Scope filter limits to requested scopes.
+
+    Both predicates are pushed into SQL (one query each) instead of
+    hydrating a window of recent nodes and filtering in Python.
     """
-    # For multi-scope, iterate and union (query_nodes takes single Scope).
-    if scope is not None and scope:
-        all_nodes = []
-        seen_ids: set[str] = set()
-        for s in scope:
-            nodes = await graph_store.query_nodes(
-                user_id=user_id,
-                scope=s,
-                min_confidence=None,
-                lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
-                limit=500,
-            )
-            for n in nodes:
-                nid = str(n.id)
-                if nid not in seen_ids:
-                    seen_ids.add(nid)
-                    all_nodes.append(n)
-    else:
-        # No scope filter -- get all active nodes.
-        all_nodes = await graph_store.query_nodes(
+    scopes = scope if scope else None
+    active_states = [LifecycleState.TENTATIVE, LifecycleState.STABLE]
+
+    # Pinned nodes: salience == 1.0 (salience is capped at 1.0, so a
+    # >= 1.0 SQL predicate is equivalent).
+    pinned_nodes, task_nodes = await asyncio.gather(
+        graph_store.query_nodes(
             user_id=user_id,
+            scopes=scopes,
             min_confidence=None,
-            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+            min_salience=1.0,
+            lifecycle_states=active_states,
             limit=500,
-        )
+        ),
+        graph_store.query_nodes(
+            user_id=user_id,
+            scopes=scopes,
+            node_type=NodeType.TASK,
+            min_confidence=None,
+            lifecycle_states=active_states,
+            limit=500,
+        ),
+    )
 
     pinned: list[MemoryNode] = []
-    for node in all_nodes:
-        is_pinned = node.salience == 1.0
-        is_active_task = node.node_type == NodeType.TASK
-        if is_pinned or is_active_task:
+    seen_ids: set[str] = set()
+    for node in [*pinned_nodes, *task_nodes]:
+        nid = str(node.id)
+        if nid not in seen_ids:
+            seen_ids.add(nid)
             pinned.append(node)
 
     return pinned
@@ -392,6 +374,16 @@ def merge_candidates(
     return merged
 
 
+async def _empty_graph_candidates() -> list[dict]:
+    """No-op graph backend used when graph candidates are disabled."""
+    return []
+
+
+async def _empty_pinned_candidates() -> list[MemoryNode]:
+    """No-op pinned backend used when pinned candidates are disabled."""
+    return []
+
+
 async def generate_candidates(
     analysis: QueryAnalysis,
     *,
@@ -403,6 +395,8 @@ async def generate_candidates(
     time_from: datetime | None = None,
     time_to: datetime | None = None,
     config: PackingConfig = DEFAULT_PACKING_CONFIG,
+    include_graph: bool = True,
+    include_pinned: bool = True,
 ) -> tuple[list[RetrievalCandidate], dict[str, int]]:
     """Generate and merge candidates from all four backends in parallel.
 
@@ -423,17 +417,23 @@ async def generate_candidates(
         time_to: Optional temporal window end. Forwarded to graph and
             vector backends. ENTITY and PREFERENCE types are exempt.
         config: PackingConfig controlling candidate limits.
+        include_graph: Run the graph neighborhood backend. Disabled for
+            cheap secondary passes (e.g. cross-scope hints).
+        include_pinned: Run the pinned/active-task backend. Disabled for
+            cheap secondary passes (e.g. cross-scope hints).
 
     Returns:
         Tuple of (merged_candidates, candidate_counts_per_backend).
         candidate_counts_per_backend maps backend name to pre-merge count.
     """
-    # Run all four backends in parallel, forwarding scope and temporal filters.
+    # Run the enabled backends in parallel, forwarding scope and temporal
+    # filters. Disabled backends are replaced with no-op coroutines so
+    # result unpacking stays positional.
     results = await asyncio.gather(
         _generate_graph_candidates(
             analysis, graph_store, user_id, config,
             scope=scope, time_from=time_from, time_to=time_to,
-        ),
+        ) if include_graph else _empty_graph_candidates(),
         _generate_vector_candidates(
             analysis, vector_index, user_id, config,
             scope=scope, time_from=time_from, time_to=time_to,
@@ -442,7 +442,8 @@ async def generate_candidates(
             analysis, lexical_index, user_id, config,
             scope=scope,
         ),
-        _generate_pinned_candidates(graph_store, user_id, scope=scope),
+        _generate_pinned_candidates(graph_store, user_id, scope=scope)
+        if include_pinned else _empty_pinned_candidates(),
         return_exceptions=True,
     )
 
@@ -502,10 +503,11 @@ async def generate_candidates(
     for node in pinned_cands:
         resolved_nodes[str(node.id)] = node
 
-    for node_id in node_ids_to_resolve:
-        node = await graph_store.get_node(node_id)
-        if node is not None:
-            resolved_nodes[node_id] = node
+    # Batch resolution: one WHERE id IN (...) round trip instead of one
+    # sequential get_node() call per candidate.
+    if node_ids_to_resolve:
+        for node in await graph_store.get_nodes(list(node_ids_to_resolve)):
+            resolved_nodes[str(node.id)] = node
 
     # Merge all candidates.
     merged = merge_candidates(

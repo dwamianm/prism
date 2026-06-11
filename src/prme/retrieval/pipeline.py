@@ -231,24 +231,41 @@ class RetrievalPipeline:
                 # Also try bigrams
                 for i in range(len(search_terms) - 1):
                     search_terms.append(f"{keywords[i]} {keywords[i+1]}")
+            # Run all term searches concurrently, then resolve the unique
+            # hits with a single batched node fetch (instead of sequential
+            # searches with one get_node round trip per hit).
+            term_results = await asyncio.gather(
+                *[
+                    self._lexical_index.search(term, user_id=user_id, limit=50)
+                    for term in search_terms
+                ],
+                return_exceptions=True,
+            )
             agg_seen_ids: set[str] = set()
-            for term in search_terms:
+            agg_hits: list[dict] = []
+            for hits in term_results:
+                if isinstance(hits, BaseException):
+                    continue
+                for hit in hits:
+                    nid = hit["node_id"]
+                    if nid not in agg_seen_ids:
+                        agg_seen_ids.add(nid)
+                        agg_hits.append(hit)
+            if agg_hits:
                 try:
-                    hits = await self._lexical_index.search(
-                        term, user_id=user_id, limit=50,
+                    agg_nodes = await self._graph_store.get_nodes(
+                        [hit["node_id"] for hit in agg_hits]
                     )
-                    for hit in hits:
-                        nid = hit["node_id"]
-                        if nid not in agg_seen_ids:
-                            agg_seen_ids.add(nid)
-                            node = await self._graph_store.get_node(nid)
-                            if node is not None:
-                                aggregation_extra.append(RetrievalCandidate(
-                                    node=node,
-                                    paths=["LEXICAL"],
-                                    path_count=1,
-                                    lexical_score=hit.get("score", 0.0),
-                                ))
+                    agg_node_map = {str(n.id): n for n in agg_nodes}
+                    for hit in agg_hits:
+                        node = agg_node_map.get(hit["node_id"])
+                        if node is not None:
+                            aggregation_extra.append(RetrievalCandidate(
+                                node=node,
+                                paths=["LEXICAL"],
+                                path_count=1,
+                                lexical_score=hit.get("score", 0.0),
+                            ))
                 except Exception:
                     pass
 
@@ -283,19 +300,39 @@ class RetrievalPipeline:
         # misses (e.g., "Sweden" mentioned once in a tangential context).
         if analysis.entities:
             existing_ids = {str(c.node.id) for c in candidates}
-            for entity_name in analysis.entities[:3]:
-                try:
-                    entity_hits = await self._lexical_index.search(
-                        entity_name,
-                        user_id=user_id,
-                        limit=20,
+            # Run the per-entity searches concurrently, then resolve the
+            # unique new hits with a single batched node fetch.
+            entity_names = analysis.entities[:3]
+            entity_results = await asyncio.gather(
+                *[
+                    self._lexical_index.search(name, user_id=user_id, limit=20)
+                    for name in entity_names
+                ],
+                return_exceptions=True,
+            )
+            entity_hits: list[dict] = []
+            for name, hits in zip(entity_names, entity_results):
+                if isinstance(hits, BaseException):
+                    logger.debug(
+                        "Entity-focused retrieval failed for '%s'; continuing",
+                        name,
+                        exc_info=hits,
                     )
+                    continue
+                for hit in hits:
+                    nid = hit["node_id"]
+                    if nid in existing_ids:
+                        continue
+                    existing_ids.add(nid)
+                    entity_hits.append(hit)
+            if entity_hits:
+                try:
+                    entity_nodes = await self._graph_store.get_nodes(
+                        [hit["node_id"] for hit in entity_hits]
+                    )
+                    entity_node_map = {str(n.id): n for n in entity_nodes}
                     for hit in entity_hits:
-                        nid = hit["node_id"]
-                        if nid in existing_ids:
-                            continue
-                        existing_ids.add(nid)
-                        node = await self._graph_store.get_node(nid)
+                        node = entity_node_map.get(hit["node_id"])
                         if node is not None:
                             candidates.append(RetrievalCandidate(
                                 node=node,
@@ -306,8 +343,7 @@ class RetrievalPipeline:
                             candidate_counts["LEXICAL"] = candidate_counts.get("LEXICAL", 0) + 1
                 except Exception:
                     logger.debug(
-                        "Entity-focused retrieval failed for '%s'; continuing",
-                        entity_name,
+                        "Entity-focused node resolution failed; continuing",
                         exc_info=True,
                     )
 
@@ -375,14 +411,22 @@ class RetrievalPipeline:
             if c.node.lifecycle_state == LifecycleState.CONTESTED
         ]
         if contested_ids:
+            # Fetch CONTRADICTS edges touching ANY contested node in one
+            # batched query (instead of 2 queries per contested node),
+            # and index scored candidates by id once.
+            contradicts_edges = await self._graph_store.get_edges(
+                node_ids=contested_ids, edge_type=EdgeType.CONTRADICTS
+            )
+            scored_by_id = {str(c.node.id): c for c in scored}
             for cid in contested_ids:
-                # Look up CONTRADICTS edges in both directions
-                edges_out = await self._graph_store.get_edges(
-                    source_id=cid, edge_type=EdgeType.CONTRADICTS
-                )
-                edges_in = await self._graph_store.get_edges(
-                    target_id=cid, edge_type=EdgeType.CONTRADICTS
-                )
+                # Preserve direction priority: outgoing edges first, then
+                # incoming, matching the previous per-node query order.
+                edges_out = [
+                    e for e in contradicts_edges if str(e.source_id) == cid
+                ]
+                edges_in = [
+                    e for e in contradicts_edges if str(e.target_id) == cid
+                ]
                 all_edges = edges_out + edges_in
                 if all_edges:
                     # Find the counterpart node ID
@@ -392,10 +436,10 @@ class RetrievalPipeline:
                         else str(edge.source_id)
                     )
                     # Annotate the candidate
-                    for c in scored:
-                        if str(c.node.id) == cid:
-                            c.conflict_flag = True
-                            c.contradicts_id = uuid.UUID(counterpart_id)
+                    candidate = scored_by_id.get(cid)
+                    if candidate is not None:
+                        candidate.conflict_flag = True
+                        candidate.contradicts_id = uuid.UUID(counterpart_id)
 
         # --- Stage 5.5b: Session Context Expansion ---
         # After scoring, expand top results with adjacent turns from the
@@ -431,6 +475,9 @@ class RetrievalPipeline:
                     }
                 )
                 # Secondary generation: no scope filter, WITH temporal filter.
+                # Cheapest backends only (vector + lexical): the graph and
+                # pinned backends are skipped so the hint pass doesn't
+                # repeat the full candidate pipeline.
                 hint_candidates, _ = await generate_candidates(
                     analysis,
                     graph_store=self._graph_store,
@@ -441,6 +488,8 @@ class RetrievalPipeline:
                     time_from=effective_time_from,
                     time_to=effective_time_to,
                     config=hint_config,
+                    include_graph=False,
+                    include_pinned=False,
                 )
                 # Filter to only results NOT in primary scopes.
                 primary_scope_values = {s.value for s in normalized_scope}

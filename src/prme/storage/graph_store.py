@@ -60,15 +60,42 @@ class GraphStore(Protocol):
         """
         ...
 
+    async def get_nodes(
+        self,
+        node_ids: list[str],
+        *,
+        include_superseded: bool = False,
+    ) -> list[MemoryNode]:
+        """Retrieve multiple nodes by ID in a single round trip.
+
+        Batch equivalent of get_node() — one ``WHERE id IN (...)`` query
+        instead of N sequential lookups. Visibility semantics match
+        get_node(): superseded/archived nodes are excluded unless
+        include_superseded is True. Missing IDs are silently omitted.
+
+        Args:
+            node_ids: String UUIDs of the nodes to fetch.
+            include_superseded: If False (default), superseded/archived
+                nodes are omitted from the result.
+
+        Returns:
+            List of found, visible MemoryNodes (order not guaranteed).
+        """
+        ...
+
     async def query_nodes(
         self,
         *,
         node_type: NodeType | None = None,
         user_id: str | None = None,
         scope: Scope | None = None,
+        scopes: list[Scope] | None = None,
+        session_ids: list[str] | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
+        min_salience: float | None = None,
+        content_contains_any: list[str] | None = None,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with filters.
@@ -76,11 +103,18 @@ class GraphStore(Protocol):
         Args:
             node_type: Filter by node type.
             user_id: Filter by owner user.
-            scope: Filter by memory scope.
+            scope: Filter by a single memory scope.
+            scopes: Filter by multiple scopes (``scope IN (...)``).
+                Mutually exclusive with ``scope``.
+            session_ids: Filter by session IDs (``session_id IN (...)``).
             lifecycle_states: Filter by lifecycle states. Defaults to
                 active states (TENTATIVE, STABLE, CONTESTED).
             valid_at: Temporal filter -- return nodes valid at this time.
             min_confidence: Minimum confidence threshold.
+            min_salience: Minimum salience threshold.
+            content_contains_any: Case-insensitive substring filters --
+                matches nodes whose content contains ANY of the given
+                strings (pushed into SQL as LIKE clauses).
             limit: Maximum results to return.
 
         Returns:
@@ -143,6 +177,7 @@ class GraphStore(Protocol):
         *,
         source_id: str | None = None,
         target_id: str | None = None,
+        node_ids: list[str] | None = None,
         edge_type: EdgeType | None = None,
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
@@ -152,6 +187,9 @@ class GraphStore(Protocol):
         Args:
             source_id: Filter by source node ID.
             target_id: Filter by target node ID.
+            node_ids: Filter to edges touching ANY of these node IDs
+                (``source_id IN (...) OR target_id IN (...)``). Batch
+                equivalent of querying each node in both directions.
             edge_type: Filter by edge type.
             valid_at: Temporal filter.
             min_confidence: Minimum confidence threshold.
@@ -185,6 +223,36 @@ class GraphStore(Protocol):
 
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
+        """
+        ...
+
+    async def get_neighborhood_with_depth(
+        self,
+        node_id: str,
+        *,
+        max_hops: int = 2,
+        edge_types: list[EdgeType] | None = None,
+        valid_at: datetime | None = None,
+        min_confidence: float | None = None,
+        include_superseded: bool = False,
+    ) -> list[tuple[MemoryNode, int]]:
+        """Get nodes within N hops along with their minimum hop distance.
+
+        Single-query variant of get_neighborhood() that also returns the
+        minimum depth at which each node was reached, so callers can
+        derive hop-distance scores without re-traversing per hop level.
+
+        Args:
+            node_id: Starting node ID.
+            max_hops: Maximum number of hops (default 2).
+            edge_types: Only traverse edges of these types.
+            valid_at: Temporal filter for edges.
+            min_confidence: Minimum edge confidence.
+            include_superseded: Include superseded/archived nodes.
+
+        Returns:
+            List of (MemoryNode, min_depth) tuples, excluding the
+            starting node. min_depth is 1 for direct neighbors.
         """
         ...
 
