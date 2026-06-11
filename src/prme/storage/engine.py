@@ -1360,6 +1360,18 @@ class MemoryEngine:
         """
         return await self._graph_store.query_nodes(**kwargs)
 
+    async def count_nodes(self, **kwargs) -> int:
+        """Count nodes matching the filters without materializing them.
+
+        Defaults to active lifecycle states (tentative + stable + contested).
+        Accepts the keyword arguments supported by GraphStore.count_nodes()
+        (user_id, lifecycle_states).
+
+        Returns:
+            Number of matching nodes.
+        """
+        return await self._graph_store.count_nodes(**kwargs)
+
     # --- Event Operations (delegated to EventStore) ---
 
     async def get_event(self, event_id: str) -> Event | None:

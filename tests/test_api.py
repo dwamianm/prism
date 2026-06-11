@@ -14,7 +14,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from prme.api.app import create_app
-from prme.config import PRMEConfig
+from prme.config import APIConfig, PRMEConfig
 from prme.storage.engine import MemoryEngine
 
 
@@ -420,3 +420,204 @@ class TestErrorHandling:
     def test_nonexistent_endpoint_returns_404(self, client):
         resp = client.get("/v1/nonexistent")
         assert resp.status_code in (404, 405)
+
+
+# ---------------------------------------------------------------------------
+# Authentication (issue #34)
+# ---------------------------------------------------------------------------
+
+TEST_API_KEY = "test-secret-key"
+
+
+@pytest.fixture
+def auth_config(tmp_dir):
+    """Config with bearer-token auth enabled."""
+    lexical_path = Path(tmp_dir) / "lexical_index"
+    lexical_path.mkdir(exist_ok=True)
+    return PRMEConfig(
+        db_path=str(Path(tmp_dir) / "memory.duckdb"),
+        vector_path=str(Path(tmp_dir) / "vectors.usearch"),
+        lexical_path=str(lexical_path),
+        api=APIConfig(api_key=TEST_API_KEY),
+    )
+
+
+@pytest.fixture
+def auth_client(auth_config):
+    """TestClient against an app that requires an API key."""
+    with TestClient(create_app(auth_config), raise_server_exceptions=True) as c:
+        yield c
+
+
+class TestAuth:
+    def test_missing_token_returns_401(self, auth_client):
+        resp = auth_client.get("/v1/nodes")
+        assert resp.status_code == 401
+        assert resp.headers.get("WWW-Authenticate") == "Bearer"
+
+    def test_wrong_token_returns_401(self, auth_client):
+        resp = auth_client.get(
+            "/v1/nodes",
+            headers={"Authorization": "Bearer wrong-key"},
+        )
+        assert resp.status_code == 401
+
+    def test_valid_token_succeeds(self, auth_client):
+        resp = auth_client.get(
+            "/v1/nodes",
+            headers={"Authorization": f"Bearer {TEST_API_KEY}"},
+        )
+        assert resp.status_code == 200
+
+    def test_post_route_requires_token(self, auth_client):
+        resp = auth_client.post(
+            "/v1/store",
+            json={"content": "secret fact", "user_id": "auth-user"},
+        )
+        assert resp.status_code == 401
+
+    def test_post_route_with_token_succeeds(self, auth_client):
+        resp = auth_client.post(
+            "/v1/store",
+            json={"content": "secret fact", "user_id": "auth-user"},
+            headers={"Authorization": f"Bearer {TEST_API_KEY}"},
+        )
+        assert resp.status_code == 200
+
+    def test_health_open_without_token(self, auth_client):
+        """Liveness checks must work without credentials."""
+        resp = auth_client.get("/v1/health")
+        assert resp.status_code == 200
+
+    def test_stats_requires_token(self, auth_client):
+        resp = auth_client.get("/v1/stats")
+        assert resp.status_code == 401
+
+    def test_no_api_key_configured_allows_access(self, client):
+        """Auth is a no-op when no API key is set (default client fixture)."""
+        resp = client.get("/v1/nodes")
+        assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# CORS (issue #34)
+# ---------------------------------------------------------------------------
+
+
+class TestCORS:
+    def test_cors_disabled_by_default(self, client):
+        """No Access-Control-Allow-Origin header without pinned origins."""
+        resp = client.get(
+            "/v1/health",
+            headers={"Origin": "http://evil.example"},
+        )
+        assert resp.status_code == 200
+        assert "access-control-allow-origin" not in resp.headers
+
+    def test_cors_pinned_origin_allowed(self, tmp_dir):
+        lexical_path = Path(tmp_dir) / "lexical_index"
+        lexical_path.mkdir(exist_ok=True)
+        config = PRMEConfig(
+            db_path=str(Path(tmp_dir) / "memory.duckdb"),
+            vector_path=str(Path(tmp_dir) / "vectors.usearch"),
+            lexical_path=str(lexical_path),
+            api=APIConfig(
+                cors_origins=["http://localhost:3000"],
+                cors_allow_credentials=True,
+            ),
+        )
+        with TestClient(create_app(config)) as c:
+            resp = c.get(
+                "/v1/health",
+                headers={"Origin": "http://localhost:3000"},
+            )
+            assert (
+                resp.headers.get("access-control-allow-origin")
+                == "http://localhost:3000"
+            )
+            assert resp.headers.get("access-control-allow-credentials") == "true"
+
+            # Unpinned origins get no CORS headers.
+            resp = c.get(
+                "/v1/health",
+                headers={"Origin": "http://evil.example"},
+            )
+            assert "access-control-allow-origin" not in resp.headers
+
+    def test_cors_wildcard_never_allows_credentials(self, tmp_dir):
+        lexical_path = Path(tmp_dir) / "lexical_index"
+        lexical_path.mkdir(exist_ok=True)
+        config = PRMEConfig(
+            db_path=str(Path(tmp_dir) / "memory.duckdb"),
+            vector_path=str(Path(tmp_dir) / "vectors.usearch"),
+            lexical_path=str(lexical_path),
+            api=APIConfig(
+                cors_origins=["*"],
+                cors_allow_credentials=True,
+            ),
+        )
+        with TestClient(create_app(config)) as c:
+            resp = c.get(
+                "/v1/health",
+                headers={"Origin": "http://anywhere.example"},
+            )
+            assert "access-control-allow-credentials" not in resp.headers
+
+
+# ---------------------------------------------------------------------------
+# Stats counting (issue #34)
+# ---------------------------------------------------------------------------
+
+
+class TestStatsCounting:
+    def test_stats_counts_stored_nodes(self, client):
+        client.post(
+            "/v1/store",
+            json={"content": "Fact one", "user_id": "stats-user-a"},
+        )
+        client.post(
+            "/v1/store",
+            json={"content": "Fact two", "user_id": "stats-user-b"},
+        )
+
+        resp = client.get("/v1/stats")
+        assert resp.status_code == 200
+        assert resp.json()["node_count"] >= 2
+
+    def test_stats_scoped_by_user(self, client):
+        client.post(
+            "/v1/store",
+            json={"content": "Scoped fact", "user_id": "stats-scoped-user"},
+        )
+        client.post(
+            "/v1/store",
+            json={"content": "Other user's fact", "user_id": "stats-other-user"},
+        )
+
+        scoped = client.get(
+            "/v1/stats", params={"user_id": "stats-scoped-user"}
+        ).json()
+        unscoped = client.get("/v1/stats").json()
+
+        assert scoped["node_count"] >= 1
+        assert unscoped["node_count"] > scoped["node_count"]
+
+    def test_stats_unknown_user_counts_zero(self, client):
+        resp = client.get("/v1/stats", params={"user_id": "nobody-here"})
+        assert resp.status_code == 200
+        assert resp.json()["node_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Server defaults (issue #34)
+# ---------------------------------------------------------------------------
+
+
+class TestServerDefaults:
+    def test_run_server_defaults_to_loopback(self):
+        import inspect
+
+        from prme.api.server import run_server
+
+        host_default = inspect.signature(run_server).parameters["host"].default
+        assert host_default == "127.0.0.1"

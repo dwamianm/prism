@@ -18,6 +18,7 @@ import asyncpg
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.types import (
+    ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
     EdgeType,
     EpistemicType,
@@ -152,11 +153,7 @@ class PgGraphStore:
         idx = 1
 
         if lifecycle_states is None:
-            lifecycle_states = [
-                LifecycleState.TENTATIVE,
-                LifecycleState.STABLE,
-                LifecycleState.CONTESTED,
-            ]
+            lifecycle_states = list(ACTIVE_LIFECYCLE_STATES)
 
         placeholders = ", ".join(f"${idx + i}" for i in range(len(lifecycle_states)))
         conditions.append(f"lifecycle_state IN ({placeholders})")
@@ -202,6 +199,41 @@ class PgGraphStore:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
         return [self._record_to_node(row) for row in rows]
+
+    async def count_nodes(
+        self,
+        *,
+        user_id: str | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+    ) -> int:
+        """Count nodes matching the filters via SELECT COUNT(*).
+
+        Defaults to counting active states (tentative + stable +
+        contested), matching query_nodes().
+        """
+        conditions: list[str] = []
+        params: list = []
+        idx = 1
+
+        if lifecycle_states is None:
+            lifecycle_states = list(ACTIVE_LIFECYCLE_STATES)
+
+        placeholders = ", ".join(f"${idx + i}" for i in range(len(lifecycle_states)))
+        conditions.append(f"lifecycle_state IN ({placeholders})")
+        params.extend(s.value for s in lifecycle_states)
+        idx += len(lifecycle_states)
+
+        if user_id is not None:
+            conditions.append(f"user_id = ${idx}")
+            params.append(user_id)
+            idx += 1
+
+        where = " AND ".join(conditions)
+        query = f"SELECT COUNT(*) FROM nodes WHERE {where}"
+
+        async with self._pool.acquire() as conn:
+            count = await conn.fetchval(query, *params)
+        return int(count or 0)
 
     # --- Node Update ---
 

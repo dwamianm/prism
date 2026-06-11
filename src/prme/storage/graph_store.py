@@ -78,13 +78,32 @@ class GraphStore(Protocol):
             user_id: Filter by owner user.
             scope: Filter by memory scope.
             lifecycle_states: Filter by lifecycle states. Defaults to
-                [TENTATIVE, STABLE] (active only).
+                active states (TENTATIVE, STABLE, CONTESTED).
             valid_at: Temporal filter -- return nodes valid at this time.
             min_confidence: Minimum confidence threshold.
             limit: Maximum results to return.
 
         Returns:
             List of matching MemoryNodes.
+        """
+        ...
+
+    async def count_nodes(
+        self,
+        *,
+        user_id: str | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+    ) -> int:
+        """Count nodes matching the filters without materializing them.
+
+        Args:
+            user_id: Filter by owner user.
+            lifecycle_states: Filter by lifecycle states. Defaults to
+                active states (TENTATIVE, STABLE, CONTESTED), matching
+                query_nodes().
+
+        Returns:
+            Number of matching nodes.
         """
         ...
 

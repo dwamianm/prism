@@ -16,7 +16,12 @@ def main() -> None:
         prog="python -m prme.api",
     )
     parser.add_argument(
-        "--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)"
+        "--host",
+        default="127.0.0.1",
+        help=(
+            "Bind address (default: 127.0.0.1). Use 0.0.0.0 only with an "
+            "API key (PRME_API_API_KEY) or behind an authenticating proxy."
+        ),
     )
     parser.add_argument(
         "--port", type=int, default=8000, help="Port (default: 8000)"
