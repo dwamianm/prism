@@ -361,6 +361,29 @@ class PRMEConfig(BaseSettings):
         description="Number of top candidates to rerank (controls latency vs quality).",
     )
 
+    # Multi-query reformulation (issue #43)
+    enable_query_reformulation: bool = Field(
+        default=False,
+        description=(
+            "When True, retrieve() asks an LLM for alternative phrasings of "
+            "the query, runs each as an additional retrieval pass, and merges "
+            "the results (deduplicated by node id) with the original query's "
+            "results. Improves recall on tangential/keyword-mismatched facts "
+            "at the cost of one LLM call plus N extra retrievals per query. "
+            "Uses the extraction provider/model. Default False; with this off, "
+            "retrieve() makes no LLM calls (RFC-0005 S3)."
+        ),
+    )
+    query_reformulation_count: int = Field(
+        default=2,
+        ge=1,
+        le=5,
+        description=(
+            "Number of alternative queries to generate per retrieve() call "
+            "when enable_query_reformulation is True. [HYPOTHESIS]"
+        ),
+    )
+
     # Dual-stream ingestion (issue #25)
     materialization_queue_size: int = Field(
         default=500,

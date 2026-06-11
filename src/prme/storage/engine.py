@@ -294,6 +294,10 @@ class MemoryEngine:
             enable_reranker=config.enable_reranker,
             reranker_model=config.reranker_model,
             reranker_top_k=config.reranker_top_k,
+            enable_query_reformulation=config.enable_query_reformulation,
+            query_reformulation_count=config.query_reformulation_count,
+            query_reformulation_provider=config.extraction.provider,
+            query_reformulation_model=config.extraction.model,
         )
 
         # Run epistemic backfill migration for existing nodes
@@ -402,6 +406,10 @@ class MemoryEngine:
             enable_reranker=config.enable_reranker,
             reranker_model=config.reranker_model,
             reranker_top_k=config.reranker_top_k,
+            enable_query_reformulation=config.enable_query_reformulation,
+            query_reformulation_count=config.query_reformulation_count,
+            query_reformulation_provider=config.extraction.provider,
+            query_reformulation_model=config.extraction.model,
         )
 
         # Run epistemic backfill migration
