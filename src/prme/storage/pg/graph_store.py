@@ -190,6 +190,8 @@ class PgGraphStore:
         min_confidence: float | None = None,
         min_salience: float | None = None,
         content_contains_any: list[str] | None = None,
+        created_before: datetime | None = None,
+        oldest_first: bool = False,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters."""
@@ -254,11 +256,17 @@ class PgGraphStore:
             )
             idx += 1
 
+        if created_before is not None:
+            conditions.append(f"created_at <= ${idx}")
+            params.append(created_before)
+            idx += 1
+
         where = " AND ".join(conditions) if conditions else "1=1"
+        order_direction = "ASC" if oldest_first else "DESC"
         query = (
             f"SELECT {_NODE_COLUMNS} FROM nodes "
             f"WHERE {where} "
-            f"ORDER BY created_at DESC "
+            f"ORDER BY created_at {order_direction} "
             f"LIMIT ${idx}"
         )
         params.append(limit)

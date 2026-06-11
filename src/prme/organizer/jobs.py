@@ -89,8 +89,11 @@ async def _job_promote(
     """Promote eligible tentative nodes to stable.
 
     Queries tentative nodes older than promotion_age_days with at least
-    promotion_evidence_count evidence refs. Processes until budget is
-    exhausted.
+    promotion_evidence_count evidence refs. The age cutoff is pushed into
+    SQL and results are ordered oldest-first so each run drains the oldest
+    eligible nodes rather than re-scanning the newest window (which would
+    starve older nodes once the tentative backlog exceeds the query limit).
+    Processes until budget is exhausted.
     """
     start = time.monotonic()
     now = datetime.now(timezone.utc)
@@ -98,6 +101,8 @@ async def _job_promote(
 
     tentative_nodes = await engine.query_nodes(
         lifecycle_states=[LifecycleState.TENTATIVE],
+        created_before=cutoff,
+        oldest_first=True,
         limit=500,
     )
 
@@ -111,7 +116,7 @@ async def _job_promote(
         if elapsed_ms >= budget_ms:
             break
 
-        if node.created_at <= cutoff and len(node.evidence_refs) >= config.promotion_evidence_count:
+        if len(node.evidence_refs) >= config.promotion_evidence_count:
             processed += 1
             try:
                 await engine.promote(str(node.id))
