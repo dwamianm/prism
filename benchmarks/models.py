@@ -12,7 +12,14 @@ from datetime import datetime, timezone
 
 @dataclass
 class QueryResult:
-    """Result of evaluating a single benchmark query."""
+    """Result of evaluating a single benchmark query.
+
+    ``run_id`` tags which run produced this result so the mixed-run guardrail
+    (``benchmarks.scoring``) can detect a report that splices together details
+    from different runs. ``judge_error`` flags an infrastructure failure during
+    judging/generation so it is reported separately from a wrong answer rather
+    than counted against accuracy.
+    """
 
     query: str
     category: str
@@ -21,6 +28,8 @@ class QueryResult:
     correct: bool
     score: float
     generated_answer: str = ""
+    run_id: str | None = None
+    judge_error: bool = False
 
 
 @dataclass
@@ -74,8 +83,12 @@ class BenchmarkResult:
                     "expected": d.expected,
                     "actual": d.actual,
                     "correct": d.correct,
-                    "score": round(d.score, 4),
+                    # An infrastructure-error score is NaN, which is not valid
+                    # JSON — emit null so reports stay portable to strict parsers.
+                    "score": None if d.judge_error else round(d.score, 4),
                     **({"generated_answer": d.generated_answer} if d.generated_answer else {}),
+                    **({"run_id": d.run_id} if d.run_id is not None else {}),
+                    **({"judge_error": True} if d.judge_error else {}),
                 }
                 for d in self.details
             ],

@@ -31,7 +31,7 @@ from prme.storage.engine import MemoryEngine
 from prme.types import EpistemicType, NodeType, Scope
 
 if TYPE_CHECKING:
-    from benchmarks.llm_judge import LLMJudgeConfig
+    from benchmarks.llm_judge import LLMJudgeConfig, VerdictCache
 
 
 # ---------------------------------------------------------------------------
@@ -780,6 +780,7 @@ class LongMemEvalRealBenchmark:
     async def run_with_llm(
         self, engine: MemoryEngine, llm_config: LLMJudgeConfig,
         only_questions: set[str] | None = None,
+        verdict_cache: "VerdictCache | None" = None,
     ) -> BenchmarkResult:
         """Run LongMemEval-real with LLM generation + judge scoring.
 
@@ -789,10 +790,19 @@ class LongMemEvalRealBenchmark:
 
         Args:
             only_questions: If set, only run questions whose text matches.
+            verdict_cache: Optional judge-verdict cache for deterministic,
+                lower-cost re-runs.
         """
         import tempfile
 
-        from benchmarks.llm_judge import check_abstention, generate_answer, judge_answer, reformulate_query
+        from benchmarks.llm_judge import (
+            check_abstention,
+            generate_answer,
+            is_judge_error,
+            judge_answer,
+            reformulate_query,
+        )
+        from benchmarks.scoring import CORRECT_THRESHOLD
         from prme.config import PRMEConfig
 
         if not self.dataset_path.exists():
@@ -952,13 +962,19 @@ class LongMemEvalRealBenchmark:
                         question["question"], top_content, llm_config
                     )
                     score = await judge_answer(
-                        question["question"], answer, generated, llm_config
+                        question["question"], answer, generated, llm_config,
+                        cache=verdict_cache,
                     )
                 expected = answer
                 actual = generated[:200] if generated else top_content[:200]
 
             cat = "abstention" if is_abstention else ability
-            is_correct = score >= 0.5
+            # An infrastructure error (NaN sentinel) is not a wrong answer: keep
+            # the sentinel on the result so downstream aggregation excludes it
+            # instead of counting it as a wrong answer. (Abstention questions
+            # always produce a real 0.0/1.0, so is_judge_error is False there.)
+            judge_error = is_judge_error(score)
+            is_correct = (not judge_error) and score >= CORRECT_THRESHOLD
 
             completed += 1
             if completed % 50 == 0:
@@ -976,7 +992,8 @@ class LongMemEvalRealBenchmark:
                     actual=actual,
                     correct=is_correct,
                     score=score,
-                    generated_answer=generated,
+                    generated_answer=generated or "",
+                    judge_error=judge_error,
                 ),
                 (cat, score),
             )
@@ -994,20 +1011,27 @@ class LongMemEvalRealBenchmark:
                 continue
             detail, cat_score = r
             all_details.append(detail)
-            category_results.append(cat_score)
+            # Exclude infrastructure-error questions from category and overall
+            # scoring — they were not measured, so they must not drag accuracy.
+            if not detail.judge_error:
+                category_results.append(cat_score)
 
         from benchmarks.metrics import category_scores as compute_categories
 
         cat_scores = compute_categories(category_results)
-        correct = sum(1 for d in all_details if d.correct)
-        incorrect = sum(1 for d in all_details if not d.correct)
+        scored = [d for d in all_details if not d.judge_error]
+        errors = sum(1 for d in all_details if d.judge_error)
+        if errors:
+            logger.warning("%d question(s) hit a judge/generation error and were excluded", errors)
+        correct = sum(1 for d in scored if d.correct)
+        incorrect = sum(1 for d in scored if not d.correct)
         abstained = sum(
-            1 for d in all_details
+            1 for d in scored
             if d.category == "abstention" and d.correct
         )
         overall = (
-            sum(d.score for d in all_details) / len(all_details)
-            if all_details
+            sum(d.score for d in scored) / len(scored)
+            if scored
             else 0.0
         )
         duration_ms = (time.monotonic() - start_time) * 1000
