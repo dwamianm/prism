@@ -9,8 +9,12 @@ Uses the same instructor + provider pattern as prme.ingestion.extraction.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
-from dataclasses import dataclass, field
+import threading
+from dataclasses import dataclass
+from pathlib import Path
 
 import instructor
 from pydantic import BaseModel, Field, model_validator
@@ -172,17 +176,33 @@ class GeneratedAnswer(BaseModel):
 
 @dataclass
 class LLMJudgeConfig:
-    """Configuration for the LLM generation and judging layer."""
+    """Configuration for the LLM generation and judging layer.
+
+    The judge can be pinned to a model independent of the answering model
+    (``judge_provider`` / ``judge_model``). When those are left unset the
+    judge falls back to the answering model, preserving the prior behaviour.
+    Pinning a separate, stronger judge avoids the same-family leniency bias
+    that arises when one model both generates and grades its own answers.
+    """
 
     provider: str = "openai"
     model: str = "gpt-4o-mini"
     temperature: float = 0.0
     max_retries: int = 2
     enabled: bool = False
+    # Pinned judge model — independent of the answering model. Falls back to
+    # ``provider`` / ``model`` when unset so existing runs are unaffected.
+    judge_provider: str | None = None
+    judge_model: str | None = None
 
     @property
     def provider_string(self) -> str:
         return f"{self.provider}/{self.model}"
+
+    @property
+    def judge_provider_string(self) -> str:
+        """Provider string for the judge, pinned or falling back to the answerer."""
+        return f"{self.judge_provider or self.provider}/{self.judge_model or self.model}"
 
 
 _client_cache: dict[str, instructor.AsyncInstructor] = {}
@@ -195,6 +215,94 @@ def _get_client(provider_string: str) -> instructor.AsyncInstructor:
             provider_string, async_client=True
         )
     return _client_cache[provider_string]
+
+
+# Sentinel returned when a judge call fails for infrastructure reasons (API
+# error, timeout) rather than producing a real verdict. A genuine 0.0 means
+# "the answer is wrong"; JUDGE_ERROR means "we could not measure it". Callers
+# must distinguish the two so infra errors are not silently counted as failures.
+JUDGE_ERROR: float = float("nan")
+
+
+def is_judge_error(score: float) -> bool:
+    """True if *score* is the infrastructure-error sentinel (not a real verdict)."""
+    return score != score  # NaN is the only value not equal to itself
+
+
+class VerdictCache:
+    """File-backed cache of judge verdicts keyed by (judge model, Q, A pair).
+
+    Caching judge verdicts makes repeated/multi-run scoring deterministic for
+    an unchanged (question, expected, generated) triple and cuts API cost on
+    re-runs. The cache key includes the judge's provider string so swapping the
+    judge model invalidates stale verdicts rather than reusing them.
+
+    Error sentinels are never cached — a failed judge call should be retried on
+    the next run, not frozen into the cache.
+    """
+
+    # Flush to disk after this many new verdicts. Avoids rewriting the whole
+    # file on every put (an O(n^2) blocking write in the async eval loop) while
+    # still bounding how much is lost if a run is interrupted.
+    _FLUSH_EVERY = 50
+
+    def __init__(self, path: Path | str | None = None) -> None:
+        self.path = Path(path) if path is not None else None
+        self._lock = threading.Lock()
+        self._store: dict[str, float] = {}
+        self._dirty = 0
+        if self.path is not None and self.path.exists():
+            try:
+                self._store = {
+                    k: float(v)
+                    for k, v in json.loads(self.path.read_text(encoding="utf-8")).items()
+                }
+            except (json.JSONDecodeError, ValueError, OSError):
+                logger.warning("Could not load verdict cache at %s; starting empty", self.path)
+                self._store = {}
+
+    @staticmethod
+    def make_key(judge_provider_string: str, query: str, expected: str, generated: str) -> str:
+        """Stable SHA-256 key over the judge model and the scored triple.
+
+        Fields are joined with a NUL separator so distinct triples cannot
+        collide by concatenation (e.g. ("ab","c") vs ("a","bc")).
+        """
+        payload = "\x00".join((judge_provider_string, query, expected, generated))
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def get(self, key: str) -> float | None:
+        with self._lock:
+            return self._store.get(key)
+
+    def put(self, key: str, score: float) -> None:
+        if is_judge_error(score):
+            return  # never persist infrastructure errors
+        with self._lock:
+            self._store[key] = score
+            self._dirty += 1
+            if self.path is not None and self._dirty >= self._FLUSH_EVERY:
+                self._flush_locked()
+
+    def flush(self) -> None:
+        """Persist any buffered verdicts to disk. Safe to call repeatedly."""
+        with self._lock:
+            self._flush_locked()
+
+    def _flush_locked(self) -> None:
+        """Write the store to disk. Caller must hold ``self._lock``."""
+        if self.path is None or self._dirty == 0:
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(
+            json.dumps(self._store, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        self._dirty = 0
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._store)
 
 
 async def check_abstention(
@@ -258,7 +366,7 @@ async def generate_answer(
     query: str,
     context: str,
     config: LLMJudgeConfig,
-) -> str:
+) -> str | None:
     """Generate an answer from retrieval context using an LLM.
 
     Args:
@@ -267,7 +375,9 @@ async def generate_answer(
         config: LLM configuration.
 
     Returns:
-        Generated answer string. Returns empty string on failure.
+        Generated answer string. Returns ``None`` on an infrastructure failure
+        (API error/timeout) so callers can distinguish "could not generate"
+        from a genuinely empty answer and avoid scoring it as a wrong answer.
     """
     try:
         client = _get_client(config.provider_string)
@@ -288,31 +398,52 @@ async def generate_answer(
             "LLM generation failed",
             exc_info=True,
         )
-        return ""
+        return None
 
 
 async def judge_answer(
     query: str,
     expected: str,
-    generated: str,
+    generated: str | None,
     config: LLMJudgeConfig,
+    cache: VerdictCache | None = None,
 ) -> float:
     """Score how well a generated answer matches the expected answer.
+
+    Uses the pinned judge model (``config.judge_provider_string``) which is
+    independent of the answering model when configured. When *cache* is given,
+    an unchanged (judge model, question, expected, generated) triple reuses its
+    prior verdict instead of re-querying the judge.
 
     Args:
         query: The original question.
         expected: The expected/ground-truth answer.
         generated: The LLM-generated answer.
         config: LLM configuration.
+        cache: Optional verdict cache for deterministic, lower-cost re-runs.
 
     Returns:
-        Score in [0.0, 1.0]. Returns 0.0 on failure.
+        Score in [0.0, 1.0]. A real 0.0 means "wrong answer". Returns
+        ``JUDGE_ERROR`` (NaN) on an infrastructure failure (including a ``None``
+        *generated* from a failed generation) — distinguishable via
+        :func:`is_judge_error` so it is not counted as a wrong answer.
     """
+    if generated is None:
+        # Generation itself failed (infra error), not a wrong answer.
+        return JUDGE_ERROR
     if not generated or generated.strip().lower() in ("i don't know", ""):
         return 0.0
 
+    judge_provider_string = config.judge_provider_string
+    key: str | None = None
+    if cache is not None:
+        key = VerdictCache.make_key(judge_provider_string, query, expected, generated)
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+
     try:
-        client = _get_client(config.provider_string)
+        client = _get_client(judge_provider_string)
         result = await client.create(
             response_model=JudgeScore,
             messages=[
@@ -328,10 +459,13 @@ async def judge_answer(
             ],
             max_retries=config.max_retries,
         )
-        return result.score
     except Exception:
         logger.error(
             "LLM judge failed",
             exc_info=True,
         )
-        return 0.0
+        return JUDGE_ERROR
+
+    if cache is not None and key is not None:
+        cache.put(key, result.score)
+    return result.score

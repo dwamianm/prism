@@ -25,7 +25,7 @@ from benchmarks.models import BenchmarkResult, QueryResult
 from prme.retrieval.context_formatter import format_for_llm
 
 if TYPE_CHECKING:
-    from benchmarks.llm_judge import LLMJudgeConfig
+    from benchmarks.llm_judge import LLMJudgeConfig, VerdictCache
     from prme.storage.engine import MemoryEngine
 
 from prme.types import EpistemicType, NodeType, Scope
@@ -804,7 +804,9 @@ class LoCoMoRealBenchmark:
         )
 
     async def run_with_llm(
-        self, engine: MemoryEngine, llm_config: LLMJudgeConfig
+        self, engine: MemoryEngine, llm_config: LLMJudgeConfig,
+        only_questions: set[str] | None = None,
+        verdict_cache: "VerdictCache | None" = None,
     ) -> BenchmarkResult:
         """Run LoCoMo-real with LLM generation + judge scoring.
 
@@ -814,8 +816,20 @@ class LoCoMoRealBenchmark:
 
         Uses concurrent evaluation (asyncio.gather + semaphores) to avoid
         sequential bottleneck on LLM API calls.
+
+        Args:
+            only_questions: If set, only evaluate questions whose text matches
+                (used by ``--retry-failed`` to rerun only prior failures).
+            verdict_cache: Optional judge-verdict cache for deterministic,
+                lower-cost re-runs.
         """
-        from benchmarks.llm_judge import generate_answer, judge_answer, reformulate_query
+        from benchmarks.llm_judge import (
+            generate_answer,
+            is_judge_error,
+            judge_answer,
+            reformulate_query,
+        )
+        from benchmarks.scoring import CORRECT_THRESHOLD
 
         if not self.dataset_path.exists():
             raise FileNotFoundError(
@@ -887,6 +901,8 @@ class LoCoMoRealBenchmark:
                     continue
                 answer = str(qa.get("answer", ""))
                 if not answer:
+                    continue
+                if only_questions is not None and qa["question"] not in only_questions:
                     continue
                 qa_items.append((qa, user_id))
 
@@ -966,16 +982,22 @@ class LoCoMoRealBenchmark:
                 max_results=80,
             )
 
-            # LLM generate + judge (semaphore-gated)
+            # LLM generate + judge (semaphore-gated). generate_answer returns
+            # None on an infra failure; judge_answer maps that to JUDGE_ERROR.
             async with llm_semaphore:
                 generated = await generate_answer(
                     qa["question"], top_content, llm_config
                 )
                 llm_score = await judge_answer(
-                    qa["question"], answer, generated, llm_config
+                    qa["question"], answer, generated, llm_config,
+                    cache=verdict_cache,
                 )
 
-            is_correct = llm_score >= 0.5
+            # An infrastructure error (NaN sentinel) is not a wrong answer: keep
+            # the sentinel on the result so downstream aggregation excludes it
+            # instead of counting it as a wrong answer.
+            judge_error = is_judge_error(llm_score)
+            is_correct = (not judge_error) and llm_score >= CORRECT_THRESHOLD
             completed += 1
             if completed % 5 == 0:
                 elapsed = (time.monotonic() - start_time) / 60
@@ -992,7 +1014,8 @@ class LoCoMoRealBenchmark:
                     actual=top_content[:200],
                     correct=is_correct,
                     score=llm_score,
-                    generated_answer=generated,
+                    generated_answer=generated or "",
+                    judge_error=judge_error,
                 ),
                 (cat_name, llm_score),
             )
@@ -1010,16 +1033,23 @@ class LoCoMoRealBenchmark:
                 continue
             detail, cat_score = r
             all_details.append(detail)
-            category_results.append(cat_score)
+            # Exclude infrastructure-error questions from category and overall
+            # scoring — they were not measured, so they must not drag accuracy.
+            if not detail.judge_error:
+                category_results.append(cat_score)
 
         from benchmarks.metrics import category_scores as compute_categories
 
         cat_scores = compute_categories(category_results)
-        correct = sum(1 for d in all_details if d.correct)
-        incorrect = sum(1 for d in all_details if not d.correct)
+        scored = [d for d in all_details if not d.judge_error]
+        errors = sum(1 for d in all_details if d.judge_error)
+        if errors:
+            logger.warning("%d question(s) hit a judge/generation error and were excluded", errors)
+        correct = sum(1 for d in scored if d.correct)
+        incorrect = sum(1 for d in scored if not d.correct)
         overall = (
-            sum(d.score for d in all_details) / len(all_details)
-            if all_details
+            sum(d.score for d in scored) / len(scored)
+            if scored
             else 0.0
         )
         duration_ms = (time.monotonic() - start_time) * 1000

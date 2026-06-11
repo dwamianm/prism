@@ -10,6 +10,29 @@ import json
 from pathlib import Path
 
 from benchmarks.models import BenchmarkResult
+from benchmarks.scoring import assert_single_run_provenance
+
+
+def load_report(path: Path | str) -> dict:
+    """Load a JSON benchmark report, rejecting hand-merged mixed-run files.
+
+    Applies the mixed-run guardrail so a report that splices details from more
+    than one run (which would silently inflate scores) raises rather than being
+    trusted. Use this anywhere a previously written report is read back in.
+
+    Args:
+        path: Path to a JSON report previously written by
+            :func:`generate_json_report`.
+
+    Returns:
+        The parsed report dict.
+
+    Raises:
+        MixedRunReportError: If the report merges details from multiple runs.
+    """
+    report = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert_single_run_provenance(report)
+    return report
 
 
 def generate_json_report(
