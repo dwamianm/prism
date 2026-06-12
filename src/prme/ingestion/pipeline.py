@@ -489,8 +489,14 @@ class IngestionPipeline:
                 event_id=event_id,
                 exc_info=True,
             )
-            # Rollback all graph artifacts from this event
-            await tracker.rollback(self._graph_store, self._write_queue)
+            # Rollback all graph artifacts from this event, including any
+            # vector/lexical index entries written before the failure.
+            await tracker.rollback(
+                self._graph_store,
+                self._write_queue,
+                vector_index=self._vector_index,
+                lexical_index=self._lexical_index,
+            )
             logger.info(
                 "ingestion.rollback_complete",
                 event_id=event_id,

@@ -171,12 +171,12 @@ class WriteTracker:
     order (edges first for referential integrity, then nodes) via
     the WriteQueue to maintain serialization.
 
-    Note: Graph rollback only. Vector and lexical index entries for
-    rolled-back nodes will be orphaned -- these stores currently lack
-    delete methods. Orphaned entries are harmless (search returns an
-    ID, get_node returns None, caller handles gracefully). Vector and
-    lexical cleanup will be added when those delete methods are
-    implemented.
+    Vector and lexical index entries for rolled-back nodes are also
+    evicted when the corresponding indexes are passed to rollback(), so a
+    failed materialization does not leave orphaned search-index entries.
+    Eviction is best-effort: a failure to evict from an index is logged
+    and does not abort the rest of the rollback (any residual drift is
+    reconciled by the organizer's index_compaction job).
     """
 
     def __init__(self) -> None:
@@ -201,18 +201,28 @@ class WriteTracker:
         """Return a copy of recorded edge IDs."""
         return list(self._created_edge_ids)
 
-    async def rollback(self, graph_store: object, write_queue: WriteQueue) -> None:
+    async def rollback(
+        self,
+        graph_store: object,
+        write_queue: WriteQueue,
+        vector_index: object | None = None,
+        lexical_index: object | None = None,
+    ) -> None:
         """Delete all tracked writes in reverse order via WriteQueue.
 
         Edges first (referential integrity), then nodes. Best-effort:
         logs warnings on individual delete failures but continues with
-        remaining items.
+        remaining items. When ``vector_index``/``lexical_index`` are
+        provided, each rolled-back node is also evicted from those search
+        indexes so no orphaned entries remain.
 
         Args:
             graph_store: GraphStore instance with delete_node/delete_edge
                 methods. Typed as object to avoid circular import with
                 the GraphStore Protocol.
             write_queue: WriteQueue for serialized delete execution.
+            vector_index: Optional VectorIndex with delete_by_node_id.
+            lexical_index: Optional LexicalIndex with delete_by_node_id.
         """
         for edge_id in reversed(self._created_edge_ids):
             try:
@@ -236,11 +246,24 @@ class WriteTracker:
                     "rollback.node_failed", node_id=node_id, exc_info=True
                 )
 
-        if self._created_node_ids or self._created_edge_ids:
-            logger.warning(
-                "rollback.orphaned_indexes",
-                node_count=len(self._created_node_ids),
-                edge_count=len(self._created_edge_ids),
-                detail="Vector and lexical index entries for rolled-back "
-                "nodes may be orphaned (cleanup deferred to future phase)",
-            )
+            # Evict the node's search-index entries so they are not orphaned.
+            if vector_index is not None:
+                try:
+                    await write_queue.submit(
+                        lambda nid=node_id: vector_index.delete_by_node_id(nid),  # type: ignore[attr-defined]
+                        label=f"rollback.vector:{node_id}",
+                    )
+                except Exception:
+                    logger.warning(
+                        "rollback.vector_failed", node_id=node_id, exc_info=True
+                    )
+            if lexical_index is not None:
+                try:
+                    await write_queue.submit(
+                        lambda nid=node_id: lexical_index.delete_by_node_id(nid),  # type: ignore[attr-defined]
+                        label=f"rollback.lexical:{node_id}",
+                    )
+                except Exception:
+                    logger.warning(
+                        "rollback.lexical_failed", node_id=node_id, exc_info=True
+                    )

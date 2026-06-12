@@ -1132,3 +1132,141 @@ class TestOrganizeIntegration:
             str(archivable.id), include_superseded=True
         )
         assert refreshed_archivable.lifecycle_state == LifecycleState.ARCHIVED
+
+
+# ---------------------------------------------------------------------------
+# Index deletion / compaction (issue #41)
+# ---------------------------------------------------------------------------
+
+
+def _vector_keys(conn, node_id: str) -> list[int]:
+    """Return the vector_metadata keys recorded for a node."""
+    return [
+        row[0]
+        for row in conn.execute(
+            "SELECT vector_key FROM vector_metadata WHERE node_id = ?",
+            [node_id],
+        ).fetchall()
+    ]
+
+
+class TestIndexDeletion:
+    """Lexical/vector eviction on lifecycle transitions and compaction (#41)."""
+
+    @pytest.mark.asyncio
+    async def test_archive_evicts_from_indexes(self, engine_parts):
+        """engine.archive() removes the node from both search indexes."""
+        engine, graph_store, conn = engine_parts
+
+        node = _make_node(content="archivable content about Saturn")
+        await graph_store.create_node(node)
+        await engine._vector_index.index(str(node.id), node.content, node.user_id)
+        await engine._lexical_index.index(
+            str(node.id), node.content, node.user_id, "fact", "PERSONAL"
+        )
+        assert _vector_keys(conn, str(node.id)) != []
+
+        await engine.archive(str(node.id))
+
+        # Vector metadata is gone and lexical search no longer returns it.
+        assert _vector_keys(conn, str(node.id)) == []
+        lex = await engine._lexical_index.search("Saturn", node.user_id, limit=10)
+        assert all(r["node_id"] != str(node.id) for r in lex)
+
+    @pytest.mark.asyncio
+    async def test_supersede_evicts_old_node(self, engine_parts):
+        """engine.supersede() evicts the superseded node from the indexes."""
+        engine, graph_store, conn = engine_parts
+
+        old = _make_node(content="old value about Jupiter")
+        new = _make_node(content="new value about Jupiter")
+        await graph_store.create_node(old)
+        await graph_store.create_node(new)
+        await engine._vector_index.index(str(old.id), old.content, old.user_id)
+        await engine._lexical_index.index(
+            str(old.id), old.content, old.user_id, "fact", "PERSONAL"
+        )
+
+        await engine.supersede(str(old.id), str(new.id))
+
+        assert _vector_keys(conn, str(old.id)) == []
+        lex = await engine._lexical_index.search("Jupiter", old.user_id, limit=10)
+        assert all(r["node_id"] != str(old.id) for r in lex)
+
+    @pytest.mark.asyncio
+    async def test_index_compaction_job_reconciles_stale_entries(
+        self, engine_parts
+    ):
+        """The compaction job evicts vectors whose node is no longer active."""
+        engine, graph_store, conn = engine_parts
+        config = OrganizerConfig()
+
+        active = _make_node(content="active fact")
+        stale = _make_node(content="stale fact")
+        await graph_store.create_node(active)
+        await graph_store.create_node(stale)
+        await engine._vector_index.index(str(active.id), active.content, "test-user")
+        await engine._vector_index.index(str(stale.id), stale.content, "test-user")
+
+        # Archive the node directly in the graph (bypassing engine eviction)
+        # to simulate index drift the compaction job must repair.
+        await graph_store.archive(str(stale.id))
+        assert _vector_keys(conn, str(stale.id)) != []  # drift present
+
+        result = await run_job("index_compaction", engine, config, 5000.0)
+
+        assert isinstance(result, JobResult)
+        assert result.job == "index_compaction"
+        assert result.nodes_modified >= 1
+        # Stale node evicted; active node untouched.
+        assert _vector_keys(conn, str(stale.id)) == []
+        assert _vector_keys(conn, str(active.id)) != []
+
+    @pytest.mark.asyncio
+    async def test_index_compaction_evicts_orphaned_vectors(self, engine_parts):
+        """Vectors whose graph node was deleted entirely are reconciled."""
+        engine, graph_store, conn = engine_parts
+        config = OrganizerConfig()
+
+        node = _make_node(content="will be orphaned")
+        await graph_store.create_node(node)
+        await engine._vector_index.index(str(node.id), node.content, "test-user")
+        # Delete the graph node without touching the index (orphan the vector).
+        await graph_store.delete_node(str(node.id))
+        assert _vector_keys(conn, str(node.id)) != []
+
+        await run_job("index_compaction", engine, config, 5000.0)
+
+        assert _vector_keys(conn, str(node.id)) == []
+
+    @pytest.mark.asyncio
+    async def test_consolidate_knowledge_upserts_profile(self, engine_parts):
+        """Re-running consolidation replaces the entity profile, not duplicates."""
+        engine, graph_store, conn = engine_parts
+
+        # Several nodes mentioning the same entity so a profile is built.
+        for i in range(4):
+            n = _make_node(
+                content=f"Aurora reported metric {i} during the review",
+            )
+            await graph_store.create_node(n)
+
+        first = await engine.consolidate_knowledge(
+            user_id="test-user", entity_names=["Aurora"]
+        )
+        assert first == 1
+
+        def _active_profiles() -> int:
+            return conn.execute(
+                "SELECT COUNT(*) FROM nodes "
+                "WHERE node_type = 'summary' "
+                "AND lifecycle_state IN ('tentative', 'stable', 'contested')"
+            ).fetchone()[0]
+
+        assert _active_profiles() == 1
+
+        # Re-run: the prior profile is archived, a fresh one created -> still 1.
+        await engine.consolidate_knowledge(
+            user_id="test-user", entity_names=["Aurora"]
+        )
+        assert _active_profiles() == 1

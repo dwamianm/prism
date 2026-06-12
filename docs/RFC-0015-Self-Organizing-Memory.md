@@ -238,6 +238,9 @@ async def organize(
 | `feedback_apply` | Apply all pending feedback signals | RFC-0008, RFC-0009 |
 | `centrality_boost` | Recalculate graph centrality salience boost | RFC-0007 §11 |
 | `tombstone_sweep` | Enforce retention policies and create tombstones | RFC-0007 §9 |
+| `snapshot_generation` | Generate entity snapshots for active entities | RFC-0006 |
+| `consolidate` | Cluster similar memories into summary abstractions | RFC-0006 |
+| `index_compaction` | Evict vector/lexical entries for inactive nodes | RFC-0002 |
 
 ### 5.4 OrganizeResult
 

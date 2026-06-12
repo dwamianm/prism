@@ -9,6 +9,7 @@ implementations.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -17,7 +18,7 @@ from typing import TYPE_CHECKING
 from prme.config import OrganizerConfig
 from prme.organizer.decay import compute_effective_confidence, compute_effective_salience
 from prme.organizer.models import JobResult
-from prme.types import LifecycleState, NodeType
+from prme.types import ACTIVE_LIFECYCLE_STATES, LifecycleState, NodeType
 
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
@@ -36,6 +37,7 @@ ALL_JOBS: list[str] = [
     "tombstone_sweep",
     "snapshot_generation",
     "consolidate",
+    "index_compaction",
 ]
 
 
@@ -71,6 +73,7 @@ async def run_job(
         "tombstone_sweep": _job_tombstone_sweep,
         "snapshot_generation": _job_snapshot_generation,
         "consolidate": _job_consolidate,
+        "index_compaction": _job_index_compaction,
     }
 
     handler = dispatch.get(job_name)
@@ -733,6 +736,87 @@ async def _job_summarize(
         errors=total_errors,
         duration_ms=round(duration_ms, 2),
         details=details,
+    )
+
+
+async def _job_index_compaction(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+) -> JobResult:
+    """Reconcile the vector/lexical indexes against active graph nodes (#41).
+
+    Lifecycle transitions evict nodes from the search indexes inline, but a
+    crash between the graph write and the index delete can leave a stale
+    entry behind. This job is the backstop: it finds every node that still
+    has a ``vector_metadata`` row but is no longer active (superseded,
+    deprecated, archived, or deleted) and evicts it from both indexes so
+    the indexes do not accumulate orphaned content.
+
+    The vector_metadata table is the reconciliation anchor because every
+    indexed node has a row there; the matching lexical doc is evicted by
+    node_id at the same time.
+    """
+    start = time.monotonic()
+
+    conn = getattr(engine, "_conn", None)
+    if conn is None:
+        # PostgreSQL backend reconciles via its own mechanisms; nothing to do.
+        duration_ms = (time.monotonic() - start) * 1000.0
+        return JobResult(
+            job=job_name,
+            duration_ms=round(duration_ms, 2),
+            details={"note": "No DuckDB connection; compaction skipped"},
+        )
+
+    # Use the canonical active-state set so this stays in sync with the
+    # lifecycle filter applied at retrieval time (vector_index search).
+    active = [s.value for s in ACTIVE_LIFECYCLE_STATES]
+    placeholders = ", ".join("?" for _ in active)
+
+    def _find_stale() -> list[str]:
+        # Node either missing from the graph (LEFT JOIN NULL) or in a
+        # non-active lifecycle state. DISTINCT so a node with several
+        # vectors is evicted once.
+        rows = conn.execute(
+            "SELECT DISTINCT vm.node_id FROM vector_metadata vm "
+            "LEFT JOIN nodes n ON vm.node_id = n.id "
+            "WHERE n.id IS NULL "
+            f"OR COALESCE(n.lifecycle_state, 'tentative') NOT IN ({placeholders})",
+            active,
+        ).fetchall()
+        return [row[0] for row in rows]
+
+    stale_ids = await asyncio.to_thread(_find_stale)
+
+    processed = 0
+    modified = 0
+    errors = 0
+    for node_id in stale_ids:
+        elapsed_ms = (time.monotonic() - start) * 1000.0
+        if elapsed_ms >= budget_ms:
+            break
+        processed += 1
+        try:
+            await engine._evict_from_indexes(node_id)
+            modified += 1
+        except Exception:
+            logger.warning(
+                "index_compaction.evict_failed",
+                extra={"node_id": node_id},
+                exc_info=True,
+            )
+            errors += 1
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=processed,
+        nodes_modified=modified,
+        errors=errors,
+        duration_ms=round(duration_ms, 2),
+        details={"stale_found": len(stale_ids)},
     )
 
 

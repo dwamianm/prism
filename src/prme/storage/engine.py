@@ -1464,6 +1464,10 @@ class MemoryEngine:
         await self._graph_store.supersede(
             old_node_id, new_node_id, evidence_id=evidence_id
         )
+        # Evict the superseded node from the search indexes so its content
+        # stops surfacing and the indexes do not grow without bound. The
+        # event log remains the source of truth, so this is reconstructable.
+        await self._evict_from_indexes(old_node_id)
 
     async def archive(self, node_id: str) -> None:
         """Archive a node (terminal state).
@@ -1475,6 +1479,38 @@ class MemoryEngine:
             ValueError: If the transition is invalid.
         """
         await self._graph_store.archive(node_id)
+        # Archived content is not retrievable, so drop it from the indexes.
+        await self._evict_from_indexes(node_id)
+
+    async def _evict_from_indexes(self, node_id: str) -> None:
+        """Remove a node's entries from the vector and lexical indexes.
+
+        Best-effort: a failure to evict from a search index must not undo a
+        completed graph lifecycle transition (the node is already marked
+        superseded/archived and is filtered out of vector retrieval by
+        lifecycle state). Each delete is serialized through the WriteQueue
+        to match the rest of the write path, and failures are logged and
+        swallowed. Index drift left by a failure is reconciled by the
+        organizer's index_compaction job.
+        """
+        try:
+            await self._write_queue.submit(
+                lambda nid=node_id: self._vector_index.delete_by_node_id(nid),
+                label=f"evict.vector:{node_id}",
+            )
+        except Exception:
+            logger.warning(
+                "evict.vector_failed", extra={"node_id": node_id}, exc_info=True
+            )
+        try:
+            await self._write_queue.submit(
+                lambda nid=node_id: self._lexical_index.delete_by_node_id(nid),
+                label=f"evict.lexical:{node_id}",
+            )
+        except Exception:
+            logger.warning(
+                "evict.lexical_failed", extra={"node_id": node_id}, exc_info=True
+            )
 
     # --- Snapshots ---
 
@@ -1722,6 +1758,23 @@ class MemoryEngine:
         if not all_nodes:
             return 0
 
+        # Index existing entity-profile SUMMARY nodes by entity name so a
+        # re-run upserts the profile (archive + evict the stale one) instead
+        # of appending a duplicate SUMMARY on every call.
+        existing_profiles: dict[str, list[str]] = {}
+        existing_summaries = await self._graph_store.query_nodes(
+            user_id=user_id,
+            node_type=NodeType.SUMMARY,
+            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+            limit=5000,
+        )
+        for node in existing_summaries:
+            meta = node.metadata or {}
+            if meta.get("entity_profile"):
+                name = meta.get("entity_name")
+                if name:
+                    existing_profiles.setdefault(name, []).append(str(node.id))
+
         # Auto-detect entity names if not provided
         if entity_names is None:
             name_counts: dict[str, int] = {}
@@ -1788,6 +1841,15 @@ class MemoryEngine:
                 continue
 
             profile_text = "\n".join(profile_lines)
+
+            # Upsert: archive and evict any prior profile for this entity so
+            # the SUMMARY is replaced, not duplicated, on each consolidation.
+            for stale_id in existing_profiles.get(entity_name, []):
+                try:
+                    await self.archive(stale_id)
+                except ValueError:
+                    # Already in a terminal state — evict from indexes anyway.
+                    await self._evict_from_indexes(stale_id)
 
             # Store as SUMMARY node
             profile_node = MemoryNode(
