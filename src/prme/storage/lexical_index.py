@@ -287,24 +287,42 @@ class LexicalIndex:
             self._do_search, query_text, user_id, node_type, limit, scope
         )
 
-    async def delete_by_node_id(self, node_id: str) -> None:
-        """Delete a document by node_id (stub for future re-indexing).
+    def _do_delete(self, node_id: str) -> None:
+        """Synchronous delete + commit (runs in thread pool).
 
-        tantivy-py's selective deletion API is not fully documented.
-        For Phase 1, this is a stub that logs a warning. Full re-index
-        via delete_all + re-add is the recommended approach if needed.
+        Removes every document whose ``node_id`` term matches and commits
+        immediately so the deletion is durable and visible to subsequent
+        searches. The ``node_id`` field uses the ``raw`` tokenizer, so the
+        term matches the stored id exactly (no stemming/punctuation
+        surprises). Any documents still buffered in the current batch are
+        committed first so the delete cannot miss a not-yet-committed add
+        for the same node_id.
+        """
+        # Flush any buffered adds so a delete cannot race an uncommitted
+        # add of the same document.
+        if self._uncommitted > 0:
+            self._commit_locked()
+        writer = self._index.writer(heap_size=50_000_000)
+        try:
+            writer.delete_documents_by_term("node_id", node_id)
+            writer.commit()
+            self._index.reload()
+        finally:
+            writer.wait_merging_threads()
+
+    async def delete_by_node_id(self, node_id: str) -> None:
+        """Delete all documents for ``node_id`` from the index.
+
+        Used to evict superseded, archived, or rolled-back content so it
+        no longer surfaces in search and the index does not grow without
+        bound. The delete is committed immediately (its own short-lived
+        writer), so it is durable and visible to the next ``search``.
 
         Args:
-            node_id: The node_id of the document to delete.
+            node_id: The node_id of the document(s) to delete.
         """
-        import structlog
-
-        logger = structlog.get_logger()
-        logger.warning(
-            "lexical_index.delete_by_node_id is a stub",
-            node_id=node_id,
-            hint="Use full re-index if deletion is needed",
-        )
+        async with self._write_lock:
+            await asyncio.to_thread(self._do_delete, node_id)
 
     async def close(self) -> None:
         """Flush buffered documents and release the writer.

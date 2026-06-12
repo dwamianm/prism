@@ -16,7 +16,6 @@ import logging
 from datetime import datetime
 
 import asyncpg
-import numpy as np
 
 from prme.storage.embedding import EmbeddingProvider
 
@@ -172,6 +171,33 @@ class PgVectorIndex:
                 "distance": distance,
             })
         return results
+
+    async def delete_by_node_id(self, node_id: str) -> int:
+        """Clear the stored vector for a node so it stops surfacing (#41).
+
+        pgvector stores the vector in the ``nodes.embedding`` column, so
+        eviction nulls that column rather than removing a row. Mirrors the
+        DuckDB ``VectorIndex.delete_by_node_id`` contract (returns the number
+        of vectors removed) so lifecycle eviction and the index_compaction
+        job work identically across backends.
+
+        Args:
+            node_id: UUID string of the node whose vector to clear.
+
+        Returns:
+            1 if a stored vector was cleared, 0 otherwise.
+        """
+        async with self._pool.acquire() as conn:
+            result = await conn.execute(
+                "UPDATE nodes SET embedding = NULL "
+                "WHERE id = $1 AND embedding IS NOT NULL",
+                node_id,
+            )
+        # asyncpg returns a status string like "UPDATE 1".
+        try:
+            return int(result.split()[-1])
+        except (ValueError, IndexError):
+            return 0
 
     async def save(self) -> None:
         """No-op — PostgreSQL persists automatically."""

@@ -8,6 +8,7 @@ a DuckDB metadata table. All queries are scoped by user_id.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from datetime import datetime
 
@@ -16,6 +17,8 @@ import numpy as np
 from usearch.index import Index
 
 from prme.storage.embedding import EmbeddingProvider
+
+logger = logging.getLogger(__name__)
 
 
 class VectorIndex:
@@ -233,6 +236,60 @@ class VectorIndex:
                 self._unsaved_inserts = 0
 
         return key
+
+    async def delete_by_node_id(self, node_id: str) -> int:
+        """Remove all vectors for a node from USearch and DuckDB metadata.
+
+        Used to evict superseded, archived, or rolled-back content so the
+        vector keys no longer inflate the per-search candidate scan and the
+        HNSW index does not grow without bound. The index is persisted after
+        a removal so the deletion survives a restart.
+
+        Args:
+            node_id: UUID string of the node whose vectors to remove.
+
+        Returns:
+            The number of vector keys removed (0 if the node had none).
+        """
+        async with self._write_lock:
+            async with self._conn_lock:
+                return await asyncio.to_thread(self._do_delete, node_id)
+
+    def _do_delete(self, node_id: str) -> int:
+        """Synchronous delete from USearch + metadata (runs in thread pool).
+
+        Returns the number of keys removed. Caller must hold both
+        ``_write_lock`` and ``_conn_lock``.
+        """
+        rows = self._conn.execute(
+            "SELECT vector_key FROM vector_metadata WHERE node_id = ?",
+            [node_id],
+        ).fetchall()
+        if not rows:
+            return 0
+
+        keys = [row[0] for row in rows]
+        for key in keys:
+            # USearch raises if the key is absent; tolerate that so a
+            # metadata/index drift (key in metadata but missing from the
+            # HNSW index) does not abort the whole eviction. Logged at
+            # debug for observability rather than silently swallowed.
+            try:
+                self._index.remove(key)
+            except (KeyError, ValueError, RuntimeError) as exc:
+                logger.debug(
+                    "vector_index.remove_missing_key",
+                    extra={"vector_key": key, "node_id": node_id, "error": str(exc)},
+                )
+
+        self._conn.execute(
+            "DELETE FROM vector_metadata WHERE node_id = ?", [node_id]
+        )
+        # Persist immediately so the removal is not lost if the process
+        # exits before the next debounced save.
+        self._index.save(self._index_path)
+        self._unsaved_inserts = 0
+        return len(keys)
 
     async def search(
         self,

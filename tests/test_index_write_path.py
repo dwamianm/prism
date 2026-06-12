@@ -343,3 +343,84 @@ async def test_extraction_concurrency_is_bounded(tmp_path: Path, conn) -> None:
     await pipeline.shutdown()
     await wq.stop()
     assert provider.peak <= 3
+
+
+# --- Index deletion (issue #41) ------------------------------------------
+
+
+async def test_vector_delete_by_node_id_removes_vector(
+    tmp_path: Path, conn
+) -> None:
+    """delete_by_node_id drops the vector and its metadata; search misses it."""
+    vidx = VectorIndex(
+        conn, str(tmp_path / "v.usearch"), MockEmbeddingProvider(), save_interval=1
+    )
+    await vidx.index("keep", "alpha content", "u1")
+    await vidx.index("drop", "beta content", "u1")
+
+    # Two vectors are present in the raw HNSW index before deletion.
+    assert len(vidx._index) == 2
+
+    removed = await vidx.delete_by_node_id("drop")
+    assert removed == 1
+
+    # Metadata row for the dropped node is gone; the kept one remains.
+    dropped = conn.execute(
+        "SELECT COUNT(*) FROM vector_metadata WHERE node_id = ?", ["drop"]
+    ).fetchone()[0]
+    assert dropped == 0
+    kept = conn.execute(
+        "SELECT COUNT(*) FROM vector_metadata WHERE node_id = ?", ["keep"]
+    ).fetchone()[0]
+    assert kept == 1
+
+    # The key is removed from the HNSW index itself, not just the metadata.
+    assert len(vidx._index) == 1
+
+    await vidx.close()
+
+
+async def test_vector_delete_missing_node_is_noop(tmp_path: Path, conn) -> None:
+    """Deleting a node with no vectors returns 0 and does not raise."""
+    vidx = VectorIndex(
+        conn, str(tmp_path / "v.usearch"), MockEmbeddingProvider(), save_interval=1
+    )
+    removed = await vidx.delete_by_node_id("never-indexed")
+    assert removed == 0
+    await vidx.close()
+
+
+async def test_lexical_delete_by_node_id_removes_doc(tmp_path: Path) -> None:
+    """delete_by_node_id removes a document so it no longer surfaces."""
+    lex_path = tmp_path / "lexical"
+    lex_path.mkdir()
+    lidx = LexicalIndex(str(lex_path), commit_interval=100, commit_max_delay_s=0.0)
+
+    await lidx.index("keep", "shared keyword here", "u1", "fact", "PERSONAL")
+    await lidx.index("drop", "shared keyword too", "u1", "fact", "PERSONAL")
+
+    await lidx.delete_by_node_id("drop")
+
+    results = await lidx.search("shared keyword", "u1", limit=10)
+    ids = {r["node_id"] for r in results}
+    assert "keep" in ids
+    assert "drop" not in ids
+
+    await lidx.close()
+
+
+async def test_lexical_delete_then_reindex_same_node(tmp_path: Path) -> None:
+    """A node can be re-indexed after deletion (delete flushes buffered adds)."""
+    lex_path = tmp_path / "lexical"
+    lex_path.mkdir()
+    lidx = LexicalIndex(str(lex_path), commit_interval=100, commit_max_delay_s=0.0)
+
+    await lidx.index("n1", "first version", "u1", "fact", "PERSONAL")
+    await lidx.delete_by_node_id("n1")
+    assert await lidx.search("first version", "u1", limit=5) == []
+
+    await lidx.index("n1", "second version", "u1", "fact", "PERSONAL")
+    results = await lidx.search("second version", "u1", limit=5)
+    assert any(r["node_id"] == "n1" for r in results)
+
+    await lidx.close()
