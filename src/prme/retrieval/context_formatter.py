@@ -41,6 +41,8 @@ import re
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
+from prme.retrieval.packing import estimate_token_cost
+
 if TYPE_CHECKING:
     from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
 
@@ -193,6 +195,41 @@ def _sanitize_content(content: str) -> str:
     text = _HEADER_RE.sub(r"\1" + _ZW + r"\2", text)
 
     return text
+
+
+# ---------------------------------------------------------------------------
+# Cross-section deduplication
+# ---------------------------------------------------------------------------
+#
+# Stored content reaches the formatter through several paths that overlap: a
+# Q-A merged pair node carries the full text of both turns while the individual
+# turn nodes are independently retrievable, and session expansion can pull the
+# same turn a third time. Profile-eligible nodes (Facts/Preferences/
+# Instructions) are additionally rendered in the ``## User Profile`` preamble.
+# Without dedup the same text appears two or three times in a single bundle,
+# inflating tokens ~20-30% with no added signal.
+#
+# ``_content_key`` is the canonical key used to collapse near-identical
+# entries. It mirrors the original aggregation-only heuristic (strip, lowercase,
+# first 100 chars) so behavior there is unchanged, and is now shared by every
+# format variant and the profile/body de-overlap.
+
+
+# Approximate token reserve for each entry's "[N] (YYYY-MM-DD, ~2 weeks ago) "
+# prefix when charging entries against a token budget. A deliberate rough
+# estimate (the exact prefix varies by format), kept as a named constant
+# matching the file's ``_*`` convention rather than an inline literal.
+_PER_ENTRY_PREFIX_TOKENS = 8
+
+
+def _content_key(content: str) -> str:
+    """Canonical dedup key for a node's content.
+
+    Strips surrounding whitespace, lowercases, and truncates to the first 100
+    characters so trivially different phrasings (case, trailing whitespace,
+    long-tail divergence) collapse to one entry.
+    """
+    return content.strip().lower()[:100]
 
 
 def compute_time_offsets(query: str, question_dt: datetime) -> str:
@@ -368,7 +405,7 @@ def _detect_context_type(
 
 def _build_profile_preamble(
     results: list[RetrievalCandidate],
-) -> str:
+) -> tuple[str, set[str]]:
     """Build a user profile preamble from semantic memory nodes.
 
     Extracts stable/tentative Facts, Preferences, and Instructions from
@@ -384,8 +421,11 @@ def _build_profile_preamble(
         results: The full set of retrieval candidates.
 
     Returns:
-        Formatted profile section string, or empty string if no
-        semantic nodes are found.
+        A ``(section, consumed_keys)`` tuple. ``section`` is the formatted
+        profile string (empty if no semantic nodes are found), and
+        ``consumed_keys`` is the set of ``_content_key`` values rendered into
+        the preamble so the caller can exclude them from the retrieved-memory
+        body (the same text appearing in both sections is pure redundancy).
     """
     from prme.types import LifecycleState, NodeType
 
@@ -402,7 +442,7 @@ def _build_profile_preamble(
             profile_nodes.append(r)
 
     if not profile_nodes:
-        return ""
+        return "", set()
 
     # Group by type, sorted by confidence descending within each group
     from collections import defaultdict
@@ -411,6 +451,7 @@ def _build_profile_preamble(
         by_type[r.node.node_type.value].append(r)
 
     lines: list[str] = ["## User Profile"]
+    consumed_keys: set[str] = set()
 
     # Order: preferences first (most actionable), then facts, then instructions
     type_order = ["preference", "fact", "instruction"]
@@ -424,16 +465,18 @@ def _build_profile_preamble(
         nodes = by_type.get(ntype, [])
         if not nodes:
             continue
-        # Sort by confidence descending
-        nodes.sort(key=lambda r: r.node.confidence, reverse=True)
+        # Sort by confidence descending (sorted() — never mutate the caller's
+        # result list, which by_type aliases by reference)
+        nodes = sorted(nodes, key=lambda r: r.node.confidence, reverse=True)
         lines.append(f"### {type_labels[ntype]}")
         for r in nodes:
             confidence_tag = ""
             if r.node.lifecycle_state == LifecycleState.TENTATIVE:
                 confidence_tag = " (tentative)"
             lines.append(f"- {_sanitize_content(r.node.content)}{confidence_tag}")
+            consumed_keys.add(_content_key(r.node.content))
 
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines) + "\n", consumed_keys
 
 
 def _build_reasoning_guidance(ctx_type: str) -> str:
@@ -546,6 +589,7 @@ def format_for_llm(
     context_hint: str | None = None,
     max_results: int = 50,
     include_profile: bool = True,
+    token_budget: int | None = None,
 ) -> str:
     """Format retrieval results as text optimized for LLM consumption.
 
@@ -562,42 +606,71 @@ def format_for_llm(
         include_profile: When ``True`` (default), prepend a user profile
             preamble and conflict annotations derived from the PRIME
             dual-memory research. Set to ``False`` for raw formatted output.
+        token_budget: Approximate token ceiling for the retrieved-memory
+            body. When set, the lowest-ranked body entries are dropped until
+            the body fits, so a caller's configured budget (e.g.
+            ``PackingConfig.token_budget``) actually bounds what is sent to
+            the LLM instead of being silently ignored. ``None`` (default)
+            disables trimming and formats every (deduplicated) entry — this
+            preserves exhaustive aggregation, where every item must stay
+            visible for counting. The budget bounds the body entries only;
+            the always-kept profile preamble, conflict annotations, and
+            reasoning guidance are reserved against it but the per-format
+            headers are not, so the rendered string may exceed it by a small
+            header margin.
 
     Returns:
         Formatted context string ready for injection into an LLM prompt.
     """
+    # Operate on a private copy. The format variants sort and dedup in place,
+    # so we must never mutate the caller's list (callers reuse ``response``).
     display = list(results[:max_results])
     if not display:
         return ""
 
     ctx_type = context_hint or _detect_context_type(query, query_analysis)
 
+    parts: list[str] = []
+    # Content keys already rendered elsewhere (profile preamble) so the body
+    # can skip them — the same text in two sections is pure redundancy.
+    exclude_keys: set[str] = set()
+
+    if include_profile:
+        profile, profile_keys = _build_profile_preamble(display)
+        if profile:
+            parts.append(profile)
+            exclude_keys |= profile_keys
+
+        conflicts = _build_conflict_annotations(display)
+        if conflicts:
+            parts.append(conflicts)
+
+        # Add reasoning guidance when context has multiple entries
+        if len(display) > 3:
+            parts.append(_build_reasoning_guidance(ctx_type))
+
+    # Reserve the budget already consumed by the always-kept scaffolding so the
+    # body trimming targets the *total* output size, not just the body.
+    scaffold_tokens = estimate_token_cost("\n".join(parts)) if parts else 0
+    body_budget = None if token_budget is None else max(token_budget - scaffold_tokens, 0)
+
     if ctx_type == "aggregation":
-        body = _format_aggregation(display, query, question_date)
+        body = _format_aggregation(
+            display, query, question_date, exclude_keys, body_budget
+        )
     elif ctx_type == "temporal":
-        body = _format_temporal(display, query, question_date)
+        body = _format_temporal(
+            display, query, question_date, exclude_keys, body_budget
+        )
     elif ctx_type == "knowledge_update":
-        body = _format_knowledge_update(display, question_date)
+        body = _format_knowledge_update(
+            display, question_date, exclude_keys, body_budget
+        )
     else:
-        body = _format_default(display, question_date)
+        body = _format_default(display, question_date, exclude_keys, body_budget)
 
     if not include_profile:
         return body
-
-    # Prepend profile preamble, reasoning hints, and conflict annotations
-    parts: list[str] = []
-
-    profile = _build_profile_preamble(results[:max_results])
-    if profile:
-        parts.append(profile)
-
-    conflicts = _build_conflict_annotations(results[:max_results])
-    if conflicts:
-        parts.append(conflicts)
-
-    # Add reasoning guidance when context has multiple entries
-    if len(display) > 3:
-        parts.append(_build_reasoning_guidance(ctx_type))
 
     if parts:
         parts.append("## Retrieved Memory\n" + _DATA_NOTICE + body)
@@ -616,16 +689,67 @@ def _get_event_dt(candidate) -> datetime:
     return candidate.node.event_time or candidate.node.created_at
 
 
+def _select_entries(
+    results: list[RetrievalCandidate],
+    exclude_keys: set[str] | None,
+    token_budget: int | None,
+) -> list[RetrievalCandidate]:
+    """Pick the body entries to render: dedup, exclude, and fit the budget.
+
+    Entries are evaluated in the order given (callers pass relevance-ranked
+    results), so when ``token_budget`` forces a cut it is always the
+    *lowest-ranked* entries that are dropped — the budget bounds the output
+    without discarding the most relevant memories. At least one entry is always
+    emitted (the highest-ranked survivor) even if it alone exceeds the budget.
+
+    Distinct from :func:`prme.retrieval.packing.pack_context`, which bin-packs
+    candidates into a sectioned ``MemoryBundle`` with representation downgrade
+    and STR re-ranking. This trims a flat, already-ranked list whose order is
+    load-bearing (chronological markers downstream), so it must not re-rank.
+
+    Args:
+        results: Candidates in priority order (most relevant first).
+        exclude_keys: Content keys already rendered elsewhere (e.g. the profile
+            preamble) to skip in the body. ``None`` means exclude nothing.
+        token_budget: Approximate token ceiling for the rendered entries, or
+            ``None`` for no ceiling. Estimated from each entry's content so the
+            count is independent of the per-format scaffolding.
+
+    Returns:
+        The surviving candidates, in the same order they were given.
+    """
+    seen: set[str] = set(exclude_keys) if exclude_keys else set()
+    selected: list[RetrievalCandidate] = []
+    used_tokens = 0
+    for r in results:
+        key = _content_key(r.node.content)
+        if key in seen:
+            continue
+        seen.add(key)
+        if token_budget is not None:
+            cost = estimate_token_cost(r.node.content) + _PER_ENTRY_PREFIX_TOKENS
+            if selected and used_tokens + cost > token_budget:
+                break
+            used_tokens += cost
+        selected.append(r)
+    return selected
+
+
 def _format_temporal(
     results: list[RetrievalCandidate],
     query: str,
     question_date: datetime | None,
+    exclude_keys: set[str] | None = None,
+    token_budget: int | None = None,
 ) -> str:
     """Temporal formatting: chronological sort, days-ago, offset computation."""
-    results.sort(key=_get_event_dt)
+    # Select by relevance rank (dedup + budget), then display chronologically.
+    # ``sorted`` rather than ``.sort`` — never mutate the caller's list.
+    selected = _select_entries(results, exclude_keys, token_budget)
+    ordered = sorted(selected, key=_get_event_dt)
 
     lines: list[str] = []
-    for i, r in enumerate(results):
+    for i, r in enumerate(ordered):
         event_dt = _get_event_dt(r)
         if question_date:
             ago = format_days_ago(event_dt, question_date)
@@ -653,13 +777,18 @@ def _format_temporal(
 def _format_knowledge_update(
     results: list[RetrievalCandidate],
     question_date: datetime | None,
+    exclude_keys: set[str] | None = None,
+    token_budget: int | None = None,
 ) -> str:
     """Knowledge-update formatting: chronological sort, strong recency markers."""
-    results.sort(key=_get_event_dt)
+    # Select by relevance rank (dedup + budget), then display chronologically
+    # so the recency markers ([MOST RECENT]/[OLDER]) line up with event order.
+    selected = _select_entries(results, exclude_keys, token_budget)
+    ordered = sorted(selected, key=_get_event_dt)
 
-    n = len(results)
+    n = len(ordered)
     lines: list[str] = []
-    for i, r in enumerate(results):
+    for i, r in enumerate(ordered):
         event_dt = _get_event_dt(r)
         if i == n - 1:
             marker = " [MOST RECENT — USE THIS VALUE]"
@@ -687,19 +816,18 @@ def _format_aggregation(
     results: list[RetrievalCandidate],
     query: str,
     question_date: datetime | None,
+    exclude_keys: set[str] | None = None,
+    token_budget: int | None = None,
 ) -> str:
     """Aggregation formatting: chronological, deduplicated, with counting guidance."""
-    results.sort(key=_get_event_dt)
+    # Dedup (incl. profile-overlap) and budget via the shared selector, then
+    # display chronologically. ``sorted`` — never mutate the caller's list.
+    selected = _select_entries(results, exclude_keys, token_budget)
+    ordered = sorted(selected, key=_get_event_dt)
 
     lines: list[str] = []
-    seen_content: set[str] = set()
     unique_count = 0
-    for r in results:
-        # Basic dedup: skip near-identical content
-        content_key = r.node.content.strip().lower()[:100]
-        if content_key in seen_content:
-            continue
-        seen_content.add(content_key)
+    for r in ordered:
         unique_count += 1
 
         event_dt = _get_event_dt(r)
@@ -738,10 +866,15 @@ def _format_aggregation(
 def _format_default(
     results: list[RetrievalCandidate],
     question_date: datetime | None,
+    exclude_keys: set[str] | None = None,
+    token_budget: int | None = None,
 ) -> str:
     """Default formatting: relevance-ranked with dates."""
+    # Keep relevance order; dedup and budget via the shared selector.
+    selected = _select_entries(results, exclude_keys, token_budget)
+
     lines: list[str] = []
-    for i, r in enumerate(results):
+    for i, r in enumerate(selected):
         event_dt = _get_event_dt(r)
         lines.append(
             f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}) "
