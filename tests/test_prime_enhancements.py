@@ -346,7 +346,7 @@ class TestProfilePreamble:
             lifecycle_state=LifecycleState.STABLE,
         )
 
-        result = _build_profile_preamble([fact_cand, pref_cand])
+        result, _ = _build_profile_preamble([fact_cand, pref_cand])
 
         assert "## User Profile" in result
         assert "### Known Facts" in result
@@ -372,7 +372,7 @@ class TestProfilePreamble:
             lifecycle_state=LifecycleState.STABLE,
         )
 
-        result = _build_profile_preamble([fact_cand, pref_cand, instr_cand])
+        result, _ = _build_profile_preamble([fact_cand, pref_cand, instr_cand])
 
         pref_idx = result.index("### Preferences")
         fact_idx = result.index("### Known Facts")
@@ -388,7 +388,7 @@ class TestProfilePreamble:
             lifecycle_state=LifecycleState.TENTATIVE,
         )
 
-        result = _build_profile_preamble([tentative_cand])
+        result, _ = _build_profile_preamble([tentative_cand])
 
         assert "(tentative)" in result
         assert "User might be vegan (tentative)" in result
@@ -416,7 +416,7 @@ class TestProfilePreamble:
             lifecycle_state=LifecycleState.ARCHIVED,
         )
 
-        result = _build_profile_preamble(
+        result, _ = _build_profile_preamble(
             [stable_cand, superseded_cand, contested_cand, archived_cand]
         )
 
@@ -433,9 +433,10 @@ class TestProfilePreamble:
             lifecycle_state=LifecycleState.STABLE,
         )
 
-        result = _build_profile_preamble([event_cand])
+        result, keys = _build_profile_preamble([event_cand])
 
         assert result == ""
+        assert keys == set()
 
     def test_confidence_sorting(self):
         """Higher confidence nodes appear first within group."""
@@ -453,7 +454,7 @@ class TestProfilePreamble:
         )
 
         # Pass low before high to verify sorting reorders
-        result = _build_profile_preamble([low_conf, high_conf])
+        result, _ = _build_profile_preamble([low_conf, high_conf])
 
         high_idx = result.index("high confidence fact")
         low_idx = result.index("low confidence fact")
