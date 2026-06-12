@@ -413,6 +413,22 @@ class PRMEConfig(BaseSettings):
             "after every insert (legacy behavior)."
         ),
     )
+    vector_exact_search: bool = Field(
+        default=True,
+        description=(
+            "When True, vector search uses brute-force exact cosine nearest "
+            "neighbors instead of the approximate HNSW graph traversal. HNSW "
+            "construction is order- and thread-dependent, so two rebuilds "
+            "from the same event log can return different neighbor sets, "
+            "violating the 'identical log + config -> identical retrieval' "
+            "determinism claim. Exact search is order-independent and makes "
+            "retrieval reproducible. At current corpus sizes (<100k vectors) "
+            "brute-force cosine is fast. Set to False to trade determinism "
+            "for sub-linear ANN latency on very large corpora. Applies to "
+            "the DuckDB/USearch backend only; the PostgreSQL backend uses "
+            "pgvector's own index and ignores this flag."
+        ),
+    )
     lexical_commit_interval: int = Field(
         default=64,
         ge=1,

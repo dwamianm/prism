@@ -49,12 +49,19 @@ class VectorIndex:
         embedding_provider: EmbeddingProvider,
         conn_lock: asyncio.Lock | None = None,
         save_interval: int = 64,
+        exact_search: bool = True,
     ) -> None:
         self._conn = conn
         self._index_path = index_path
         self._provider = embedding_provider
         self._write_lock = asyncio.Lock()
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
+
+        # Exact (brute-force) vs approximate (HNSW) nearest-neighbor search.
+        # HNSW traversal is order/thread-dependent, so two rebuilds from the
+        # same event log can return different neighbor sets. Exact search is
+        # order-independent and makes retrieval reproducible (issue #45).
+        self._exact_search = exact_search
 
         # Debounced save: the full USearch index file is rewritten on each
         # save, so saving on every insert is O(N^2) total write volume.
@@ -425,7 +432,10 @@ class VectorIndex:
         if fetch_k == 0:
             return None
 
-        matches = self._index.search(query_vector, fetch_k)
+        # exact=True forces brute-force cosine over all vectors, which is
+        # order-independent and reproducible. exact=False uses the HNSW graph
+        # (faster on large corpora, but order/thread-dependent neighbor sets).
+        matches = self._index.search(query_vector, fetch_k, exact=self._exact_search)
         return [
             (int(matches.keys[i]), float(matches.distances[i]))
             for i in range(len(matches.keys))
@@ -440,6 +450,36 @@ class VectorIndex:
         async with self._write_lock:
             await asyncio.to_thread(self._index.save, self._index_path)
             self._unsaved_inserts = 0
+
+    async def clear(self) -> None:
+        """Drop every vector and its metadata, leaving an empty index.
+
+        Resets the in-memory USearch index and the vector_metadata table to
+        a clean slate so the index can be rebuilt from the durable graph
+        nodes (issue #45). The empty index is persisted immediately so a
+        crash mid-rebuild leaves a consistent (empty) artifact rather than a
+        stale one. Caller is responsible for re-indexing afterwards.
+        """
+        async with self._write_lock:
+            async with self._conn_lock:
+                await asyncio.to_thread(self._do_clear)
+
+    def _do_clear(self) -> None:
+        """Synchronous index + metadata reset (runs in thread pool).
+
+        Caller must hold both ``_write_lock`` and ``_conn_lock``.
+        """
+        # Recreate an empty USearch index with the same geometry.
+        self._index = Index(
+            ndim=self._provider.dimension,
+            metric="cos",
+            dtype="f32",
+        )
+        self._conn.execute("DELETE FROM vector_metadata")
+        # The sequence is intentionally not reset: keys stay monotonic so a
+        # rebuild never reuses a key that an in-flight reference might hold.
+        self._index.save(self._index_path)
+        self._unsaved_inserts = 0
 
     async def close(self) -> None:
         """Save index and clean up resources."""
