@@ -14,6 +14,7 @@ Commands:
     prme chain <db_path> <id> -- Show supersedence chain
     prme search <db_path> <q> -- Run retrieval query
     prme organize <db_path>  -- Run organizer jobs
+    prme rebuild <db_path>   -- Rebuild indexes from the durable graph
     prme stats <db_path>     -- Show memory statistics
     prme export <db_path>    -- Export memory pack as JSON
 """
@@ -490,6 +491,28 @@ async def cmd_organize(args: argparse.Namespace) -> None:
         await engine.close()
 
 
+async def cmd_rebuild(args: argparse.Namespace) -> None:
+    """Rebuild the vector and lexical indexes from the durable graph.
+
+    Drops the derived search indexes and re-materializes them from the
+    active nodes already persisted in the pack. The event log and graph
+    nodes are never modified, so the rebuild is safe to re-run.
+    """
+    engine = await _create_engine(args.db_path)
+    try:
+        summary = await engine.rebuild_indexes(batch_size=args.batch_size)
+
+        if args.format == "json":
+            print(json.dumps(summary, indent=2))
+        else:
+            print("Rebuild complete:")
+            print(f"  Nodes indexed:  {summary['nodes_indexed']}")
+            print(f"  Nodes skipped:  {summary['nodes_skipped']}")
+            print(f"  Active nodes:   {summary['total_active']}")
+    finally:
+        await engine.close()
+
+
 async def cmd_stats(args: argparse.Namespace) -> None:
     """Show statistics: nodes by type, by state, avg confidence, etc."""
     engine = await _create_engine(args.db_path)
@@ -842,6 +865,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Time budget in milliseconds (default: 5000)",
     )
     p_organize.set_defaults(func=cmd_organize)
+
+    # rebuild
+    p_rebuild = subparsers.add_parser(
+        "rebuild",
+        help="Rebuild vector and lexical indexes from the durable graph",
+    )
+    add_common(p_rebuild)
+    p_rebuild.add_argument(
+        "--batch-size",
+        type=int,
+        default=256,
+        help="Nodes fetched from the graph per page (default: 256)",
+    )
+    p_rebuild.set_defaults(func=cmd_rebuild)
 
     # stats
     p_stats = subparsers.add_parser("stats", help="Show memory statistics")

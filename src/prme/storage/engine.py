@@ -44,6 +44,7 @@ from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
 from prme.types import (
+    ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
     EpistemicType,
     LifecycleState,
@@ -251,6 +252,7 @@ class MemoryEngine:
             embedding_provider,
             conn_lock,
             save_interval=config.vector_save_interval,
+            exact_search=config.vector_exact_search,
         )
 
         # Create lexical index
@@ -1511,6 +1513,144 @@ class MemoryEngine:
             logger.warning(
                 "evict.lexical_failed", extra={"node_id": node_id}, exc_info=True
             )
+
+    # --- Rebuild (issue #45) ---
+
+    async def rebuild_indexes(self, *, batch_size: int = 256) -> dict[str, int]:
+        """Rebuild the vector and lexical indexes from the durable graph.
+
+        Drops both derived search indexes and re-materializes them from the
+        active nodes already persisted in the graph store (the ``nodes``
+        table in the DuckDB pack), embedding each node's content afresh.
+
+        This delivers the rebuildability claim while staying bounded and
+        non-destructive: it touches only the *derived* search artifacts
+        (``vectors.usearch`` and the lexical index directory). The event log
+        and the graph nodes/edges -- the durable source of truth -- are never
+        modified, so a rebuild is safe to re-run and idempotent. It is the
+        clean recovery path for index corruption, embedding-model migration,
+        and the index drift left when an eviction fails (the same drift the
+        ``index_compaction`` organizer job reconciles, issue #41).
+
+        Only nodes in active lifecycle states (tentative/stable/contested)
+        are re-indexed, matching the visibility contract that vector and
+        lexical search already enforce (issue #38) -- superseded, archived,
+        and deprecated nodes are intentionally left out of the indexes.
+
+        Nodes are processed in deterministic ``id`` order so that, combined
+        with exact vector search (``vector_exact_search``), two rebuilds from
+        the same pack produce identical indexes and identical retrieval.
+
+        Args:
+            batch_size: Number of nodes to fetch from the graph per page.
+                Bounds peak memory on large packs; does not affect results.
+
+        Returns:
+            A summary dict with counts: ``nodes_indexed`` (rows written to
+            both indexes), ``nodes_skipped`` (active rows with empty content,
+            which cannot be embedded), and ``total_active`` (active rows
+            seen).
+        """
+        if self._conn is None:
+            raise RuntimeError(
+                "rebuild_indexes is only supported on the DuckDB backend"
+            )
+
+        active_states = [s.value for s in ACTIVE_LIFECYCLE_STATES]
+
+        # Clear both derived indexes first (serialized through the write
+        # queue like every other index mutation). After this point the
+        # indexes are empty; the re-index loop below repopulates them.
+        await self._write_queue.submit(
+            lambda: self._vector_index.clear(),
+            label="rebuild.clear.vector",
+        )
+        await self._write_queue.submit(
+            lambda: self._lexical_index.clear(),
+            label="rebuild.clear.lexical",
+        )
+
+        nodes_indexed = 0
+        nodes_skipped = 0
+        total_active = 0
+        offset = 0
+        placeholders = ", ".join("?" for _ in active_states)
+
+        while True:
+            # Page through active nodes in deterministic id order. Reading
+            # the nodes table directly (rather than the graph_store query
+            # API) keeps the rebuild user-agnostic -- every active node in
+            # the pack is re-indexed regardless of owner -- and lets us
+            # ORDER BY id for reproducibility (query_nodes orders by
+            # created_at). The rebuild is already gated to the DuckDB
+            # backend above, so direct SQL is safe here.
+            rows = await asyncio.to_thread(
+                lambda ph=placeholders, off=offset: self._conn.execute(
+                    "SELECT id, content, user_id, node_type, scope "
+                    "FROM nodes "
+                    f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({ph}) "
+                    "ORDER BY id "
+                    "LIMIT ? OFFSET ?",
+                    [*active_states, batch_size, off],
+                ).fetchall(),
+            )
+            if not rows:
+                break
+
+            for row in rows:
+                total_active += 1
+                node_id = str(row[0])
+                content = row[1]
+                user_id = row[2]
+                node_type = row[3]
+                scope = row[4]
+
+                if not content or not content.strip():
+                    # Empty content cannot be embedded; skip but count it so
+                    # the caller can reconcile against total node counts.
+                    nodes_skipped += 1
+                    continue
+
+                await self._write_queue.submit(
+                    lambda nid=node_id, c=content, uid=user_id: (
+                        self._vector_index.index(nid, c, uid)
+                    ),
+                    label=f"rebuild.vector:{node_id}",
+                )
+                await self._write_queue.submit(
+                    lambda nid=node_id, c=content, uid=user_id, nt=node_type, sc=scope: (
+                        self._lexical_index.index(nid, c, uid, nt, sc)
+                    ),
+                    label=f"rebuild.lexical:{node_id}",
+                )
+                nodes_indexed += 1
+
+            offset += batch_size
+
+        # Flush pending index writes to disk so the rebuilt artifacts are
+        # durable even if the process exits before the next debounced save.
+        await self._write_queue.submit(
+            lambda: self._vector_index.save(),
+            label="rebuild.save.vector",
+        )
+        await self._write_queue.submit(
+            lambda: self._lexical_index.flush(),
+            label="rebuild.flush.lexical",
+        )
+
+        logger.info(
+            "rebuild_indexes.complete",
+            extra={
+                "nodes_indexed": nodes_indexed,
+                "nodes_skipped": nodes_skipped,
+                "total_active": total_active,
+            },
+        )
+        return {
+            "nodes_indexed": nodes_indexed,
+            "nodes_skipped": nodes_skipped,
+            "total_active": total_active,
+        }
 
     # --- Snapshots ---
 

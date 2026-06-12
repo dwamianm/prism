@@ -41,6 +41,7 @@ from prme.cli import (
     cmd_node,
     cmd_nodes,
     cmd_organize,
+    cmd_rebuild,
     cmd_search,
     cmd_stats,
 )
@@ -490,6 +491,44 @@ async def test_cmd_organize_json(populated_engine, config, capsys):
     data = json.loads(captured)
     assert "jobs_run" in data
     assert "duration_ms" in data
+
+
+@pytest.mark.asyncio
+async def test_cmd_rebuild_table(populated_engine, config, capsys):
+    """rebuild command rebuilds indexes and reports counts."""
+    # Release the populated engine's index locks before the CLI command
+    # opens its own engine on the same pack to run the rebuild.
+    await populated_engine.close()
+
+    args = _make_args(db_path=config.db_path, format="table", batch_size=256)
+    await cmd_rebuild(args)
+
+    captured = capsys.readouterr().out
+    assert "Rebuild complete:" in captured
+    assert "Nodes indexed:" in captured
+
+
+@pytest.mark.asyncio
+async def test_cmd_rebuild_json(populated_engine, config, capsys):
+    """rebuild command outputs valid JSON with index counts."""
+    await populated_engine.close()
+
+    args = _make_args(db_path=config.db_path, format="json", batch_size=256)
+    await cmd_rebuild(args)
+
+    captured = capsys.readouterr().out
+    data = json.loads(captured)
+    assert data["nodes_indexed"] == 3
+    assert data["total_active"] == 3
+    assert data["nodes_skipped"] == 0
+
+
+def test_build_parser_includes_rebuild():
+    """The rebuild subcommand is registered with its handler and flag."""
+    parser = build_parser()
+    args = parser.parse_args(["rebuild", "/tmp/x.duckdb", "--batch-size", "10"])
+    assert args.func is cmd_rebuild
+    assert args.batch_size == 10
 
 
 @pytest.mark.asyncio

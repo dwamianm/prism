@@ -324,6 +324,38 @@ class LexicalIndex:
         async with self._write_lock:
             await asyncio.to_thread(self._do_delete, node_id)
 
+    def _do_clear(self) -> None:
+        """Synchronous delete-all + commit (runs in thread pool).
+
+        Drops every document so the index can be rebuilt from the durable
+        graph nodes (issue #45). Any buffered adds are discarded first, then
+        a short-lived writer deletes all documents and commits so the empty
+        state is durable and visible to subsequent searches.
+        """
+        # Drop any buffered adds: they are about to be re-indexed from the
+        # graph, so committing them first would be wasted work.
+        self._writer = None
+        self._uncommitted = 0
+        self._oldest_uncommitted_at = None
+        writer = self._index.writer(heap_size=50_000_000)
+        try:
+            writer.delete_all_documents()
+            writer.commit()
+            self._index.reload()
+        finally:
+            writer.wait_merging_threads()
+
+    async def clear(self) -> None:
+        """Delete every document, leaving an empty index.
+
+        Resets the lexical index to a clean slate so it can be rebuilt from
+        the durable graph nodes (issue #45). The deletion is committed
+        immediately so a crash mid-rebuild leaves a consistent (empty) index.
+        Caller is responsible for re-indexing afterwards.
+        """
+        async with self._write_lock:
+            await asyncio.to_thread(self._do_clear)
+
     async def close(self) -> None:
         """Flush buffered documents and release the writer.
 
