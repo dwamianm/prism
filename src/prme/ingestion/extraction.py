@@ -130,8 +130,12 @@ class InstructorExtractionProvider:
 
     Args:
         provider_string: Provider/model string (e.g., 'openai/gpt-4o-mini',
-            'anthropic/claude-3-5-sonnet-20241022', 'ollama/llama3.2').
-        model: Optional model override (unused, reserved for future use).
+            'anthropic/claude-3-5-sonnet-20241022', 'ollama/llama3.2',
+            'bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0').
+        model: Optional model id passed to client.create(). Required for the
+            'bedrock' provider, whose instructor client is NOT pre-bound to a
+            model by from_provider(). When None, the model is derived from the
+            provider_string.
         max_retries: Number of instructor retries for schema validation failures.
         timeout: Timeout in seconds per extraction call.
     """
@@ -174,6 +178,22 @@ class InstructorExtractionProvider:
         """Return the full provider/model string."""
         return self._provider_string
 
+    def _resolve_model_id(self) -> str | None:
+        """Model id to pass to client.create().
+
+        instructor.from_provider() pre-binds the model into the client for most
+        providers (openai, anthropic, ...), but NOT for 'bedrock' -- there the
+        model string is only used to pick a mode, so client.create() raises
+        "Missing required parameter: modelId" unless we pass the model
+        explicitly. Passing it for every provider is safe: create()'s model
+        overrides the client default when both are set.
+        """
+        if self._model:
+            return self._model
+        if "/" in self._provider_string:
+            return self._provider_string.split("/", 1)[1]
+        return None
+
     async def extract(
         self, content: str, *, role: str = "user"
     ) -> ExtractionResult:
@@ -190,14 +210,18 @@ class InstructorExtractionProvider:
         """
         try:
             client = self._ensure_client()
-            result = await client.create(
-                response_model=ExtractionResult,
-                messages=[
+            create_kwargs: dict = {
+                "response_model": ExtractionResult,
+                "messages": [
                     {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
                     {"role": role, "content": content},
                 ],
-                max_retries=self._max_retries,
-            )
+                "max_retries": self._max_retries,
+            }
+            model_id = self._resolve_model_id()
+            if model_id:
+                create_kwargs["model"] = model_id
+            result = await client.create(**create_kwargs)
             return result
         except Exception:
             logger.error(
@@ -226,6 +250,7 @@ def create_extraction_provider(
     provider_string = f"{config.provider}/{config.model}"
     return InstructorExtractionProvider(
         provider_string,
+        model=config.model,
         max_retries=config.max_retries,
         timeout=config.timeout,
     )
