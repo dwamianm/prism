@@ -1,0 +1,9 @@
+{
+  "baseBranch": "main",
+  "includeLabels": [],
+  "excludeLabels": ["research", "question", "wontfix", "duplicate", "needs-human", "blocked"],
+  "assignedOnly": false,
+  "testCommand": "uv run pytest -q",
+  "intervalMinutes": 5,
+  "maxIterations": 20
+}
