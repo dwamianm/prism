@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-15
+
+### Added
+
+- **Deterministic vector search + `prme rebuild`** (issue #45) — Reproducible vector retrieval and full reconstruction of derived indexes (vector, lexical) from the durable event/graph store via `prme rebuild`
+- **Multi-query reformulation** (issue #43) — Opt-in retrieval mode that expands a query into multiple reformulations for broader candidate generation
+
+### Changed
+
+- **REST API hardening** (issue #34) — Authentication, loopback-only bind by default, CORS restrictions, and error-message sanitization
+- **Encryption-at-rest lifecycle hardening** (issue #37) — Tightened key handling and encrypt/decrypt lifecycle for memory pack files
+- **Stored memory neutralized in LLM context** (issue #36) — Retrieved memory is delimited and neutralized before entering the LLM context to prevent prompt injection from stored content
+- **Ingestion index write path batched** (issue #39) — Batched writes across the ingestion indexing path
+- **Retrieval hot path DB round-trips reduced** — Fewer database round-trips on the retrieval hot path
+- **Benchmark measurement rigor** (issue #44) — Pinned judge model, cached verdicts, and multi-run scoring for reproducible benchmark numbers
+
+### Fixed
+
+- **Bedrock provider extraction** (issue #59) — Pass model through to `client.create()` so the Bedrock provider works during extraction
+- **Context formatter token budget + dedup** (issue #42) — Enforce the token budget and deduplicate entries in the context formatter
+- **Index eviction on supersedence/archival** (issue #41) — Evict superseded/archived content from the lexical and vector indexes
+- **Auto-promotion coverage** (issue #40) — Auto-promote now reaches older eligible nodes, not just the newest batch
+
 ## [0.4.0] - 2026-03-16
 
 ### Added
@@ -86,7 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/dwamianm/prism/compare/v0.9.0...v0.10.0
 [0.4.0]: https://github.com/dwamianm/prism/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dwamianm/prism/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dwamianm/prism/compare/v0.1.0...v0.2.0
