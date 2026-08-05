@@ -12,6 +12,7 @@ of decayed nodes.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -35,17 +36,72 @@ class MaintenanceRunner:
         self._engine = engine
         self._config = config
         self._last_maintained_at: float = 0.0  # epoch seconds, 0 = never run
+        self._task: asyncio.Task[MaintenanceResult | None] | None = None
 
-    async def maybe_run(self) -> MaintenanceResult | None:
-        """Check cooldown and run maintenance if due. Returns None if skipped."""
+    def _is_due(self) -> bool:
+        """Whether a maintenance pass is enabled and past its cooldown."""
         if not self._config.opportunistic_enabled:
+            return False
+        # First call always runs (last_maintained_at == 0)
+        if self._last_maintained_at <= 0:
+            return True
+        elapsed = time.monotonic() - self._last_maintained_at
+        return elapsed >= self._config.opportunistic_cooldown
+
+    def schedule(self) -> None:
+        """Start a maintenance pass in the background if one is due.
+
+        Callers on the user-visible path (retrieve, ingest) use this instead
+        of awaiting ``maybe_run()``: the pass produces nothing the response
+        depends on, and its time budget would otherwise land on the caller's
+        latency (issue #62). At most one pass runs at a time, and the cooldown
+        is marked at launch so a burst of concurrent calls cannot stampede.
+        """
+        if self._task is not None and not self._task.done():
+            return
+        if not self._is_due():
+            return
+
+        self._last_maintained_at = time.monotonic()
+        self._task = asyncio.create_task(self._run_scheduled())
+
+    async def _run_scheduled(self) -> MaintenanceResult | None:
+        """Background wrapper: never lets a failure escape as a task error."""
+        try:
+            result = await self._run_maintenance()
+            self._last_maintained_at = time.monotonic()
+            return result
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.warning(
+                "Opportunistic maintenance failed; continuing normally",
+                exc_info=True,
+            )
+            self._last_maintained_at = time.monotonic()
             return None
 
-        now = time.monotonic()
-        elapsed = now - self._last_maintained_at
+    async def drain(self) -> None:
+        """Await an in-flight background pass, if any.
 
-        # First call always runs (last_maintained_at == 0)
-        if self._last_maintained_at > 0 and elapsed < self._config.opportunistic_cooldown:
+        Called on engine close so a scheduled pass finishes (or surfaces its
+        failure) before the write queue and connections go away.
+        """
+        task = self._task
+        if task is None or task.done():
+            return
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    async def maybe_run(self) -> MaintenanceResult | None:
+        """Check cooldown and run maintenance if due. Returns None if skipped.
+
+        Runs the pass inline. ``schedule()`` is the non-blocking variant used
+        on the hot path.
+        """
+        if not self._is_due():
             return None
 
         try:

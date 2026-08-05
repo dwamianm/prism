@@ -433,6 +433,9 @@ class TestOpportunisticMaintenance:
 
             # Trigger retrieve to fire opportunistic maintenance
             await engine.retrieve("promotion test", user_id="test-user")
+            # Maintenance runs in the background now (issue #62); wait
+            # for the scheduled pass before asserting on its effects.
+            await engine._maintenance_runner.drain()
 
             # Check the node was promoted
             node_after = await engine.get_node(node_id, include_superseded=True)
@@ -477,6 +480,9 @@ class TestOpportunisticMaintenance:
 
             # Trigger retrieve to fire opportunistic maintenance
             await engine.retrieve("archival test", user_id="test-user")
+            # Maintenance runs in the background now (issue #62); wait
+            # for the scheduled pass before asserting on its effects.
+            await engine._maintenance_runner.drain()
 
             # Check the node was archived
             node_after = await engine.get_node(node_id, include_superseded=True)
@@ -563,6 +569,9 @@ class TestOpportunisticMaintenance:
                 "Another message to trigger maintenance",
                 user_id="test-user",
             )
+            # Maintenance runs in the background now (issue #62); wait
+            # for the scheduled pass before asserting on its effects.
+            await engine._maintenance_runner.drain()
 
             # Check promotion happened
             node_after = await engine.get_node(node_id, include_superseded=True)

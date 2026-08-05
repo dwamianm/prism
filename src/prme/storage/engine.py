@@ -1072,9 +1072,11 @@ class MemoryEngine:
                 scope=scope,
             )
 
-        # Opportunistic maintenance (RFC-0015 Layer 2)
+        # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
+        # than awaited: nothing in the response depends on it, so its time
+        # budget must not land on the caller's latency (issue #62).
         if self._maintenance_runner:
-            await self._maintenance_runner.maybe_run()
+            self._maintenance_runner.schedule()
 
         return event_id
 
@@ -1321,9 +1323,11 @@ class MemoryEngine:
             include_cross_scope=include_cross_scope,
         )
 
-        # Opportunistic maintenance (RFC-0015 Layer 2)
+        # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
+        # than awaited: nothing in the response depends on it, so its time
+        # budget must not land on the caller's latency (issue #62).
         if self._maintenance_runner:
-            await self._maintenance_runner.maybe_run()
+            self._maintenance_runner.schedule()
 
         return result
 
@@ -2082,6 +2086,16 @@ class MemoryEngine:
         if self._closed:
             return
         self._closed = True
+
+        # Let any scheduled maintenance pass finish before the write queue
+        # and connections it uses go away (issue #62).
+        if self._maintenance_runner is not None:
+            try:
+                await self._maintenance_runner.drain()
+            except Exception:
+                logger.warning(
+                    "Error draining opportunistic maintenance", exc_info=True
+                )
 
         # Shutdown pipeline first (cancel background extraction tasks)
         if self._pipeline is not None:
