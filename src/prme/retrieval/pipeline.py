@@ -22,6 +22,7 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -42,7 +43,7 @@ from prme.retrieval.models import (
     RetrievalResponse,
 )
 from prme.retrieval.packing import pack_context
-from prme.retrieval.query_analysis import analyze_query
+from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, LifecycleState, RepresentationLevel, RetrievalMode, Scope
@@ -85,6 +86,7 @@ class RetrievalPipeline:
         query_reformulation_count: int = 2,
         query_reformulation_provider: str = "openai",
         query_reformulation_model: str = "gpt-4o-mini",
+        temporal_languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -101,6 +103,7 @@ class RetrievalPipeline:
         self._query_reformulation_count = query_reformulation_count
         self._query_reformulation_provider = query_reformulation_provider
         self._query_reformulation_model = query_reformulation_model
+        self._temporal_languages = temporal_languages
 
         # Lazy-init cross-encoder reranker when enabled.
         self._reranker = None
@@ -197,6 +200,7 @@ class RetrievalPipeline:
             time_from=time_from,
             time_to=time_to,
             retrieval_mode=retrieval_mode,
+            languages=self._temporal_languages,
         )
 
         # Determine effective temporal window: explicit params take priority
@@ -670,6 +674,7 @@ class RetrievalPipeline:
                 time_from=time_from,
                 time_to=time_to,
                 retrieval_mode=retrieval_mode,
+                languages=self._temporal_languages,
             )
             alt_candidates, _ = await generate_candidates(
                 alt_analysis,

@@ -311,6 +311,7 @@ class MemoryEngine:
             query_reformulation_count=config.query_reformulation_count,
             query_reformulation_provider=config.extraction.provider,
             query_reformulation_model=config.extraction.model,
+            temporal_languages=config.temporal_languages,
         )
 
         # Run epistemic backfill migration for existing nodes
@@ -424,6 +425,7 @@ class MemoryEngine:
             query_reformulation_count=config.query_reformulation_count,
             query_reformulation_provider=config.extraction.provider,
             query_reformulation_model=config.extraction.model,
+            temporal_languages=config.temporal_languages,
         )
 
         # Run epistemic backfill migration
