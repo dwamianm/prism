@@ -63,6 +63,7 @@ class MemoryCluster:
 async def cluster_similar_memories(
     engine: MemoryEngine,
     *,
+    user_id: str | None = None,
     min_cluster_size: int = 3,
     similarity_threshold: float = 0.80,
 ) -> list[MemoryCluster]:
@@ -75,11 +76,12 @@ async def cluster_similar_memories(
 
     Args:
         engine: The MemoryEngine for storage operations.
+        user_id: When given, only this user's memories are clustered.
         min_cluster_size: Minimum members to form a valid cluster.
         similarity_threshold: Minimum cosine similarity to include in cluster.
 
     Returns:
-        List of MemoryCluster objects.
+        List of MemoryCluster objects, each with a single owner.
     """
     # Fetch active episodic nodes
     episodic_types = [NodeType.FACT, NodeType.EVENT, NodeType.NOTE]
@@ -88,6 +90,7 @@ async def cluster_similar_memories(
     all_nodes: list[MemoryNode] = []
     for ntype in episodic_types:
         nodes = await engine.query_nodes(
+            user_id=user_id,
             node_type=ntype,
             lifecycle_states=active_states,
             limit=500,
@@ -131,6 +134,10 @@ async def cluster_similar_memories(
             if rid in assigned:
                 continue
             if rid not in node_map:
+                continue
+            # A cluster becomes one summary node with one owner, so members
+            # from another tenant would leak content into it (issue #66).
+            if node_map[rid].user_id != node.user_id:
                 continue
             if score < similarity_threshold:
                 continue
@@ -201,6 +208,21 @@ async def consolidate_cluster(
     if not members:
         raise ValueError("No valid member nodes found for consolidation")
 
+    # A summary carries one user_id, so drop any member that does not share
+    # the centroid's owner rather than folding its content in (issue #66).
+    owner = next(
+        (m.user_id for m in members if str(m.id) == cluster.centroid_id),
+        members[0].user_id,
+    )
+    foreign = [m for m in members if m.user_id != owner]
+    if foreign:
+        logger.warning(
+            "Dropping %d cross-user member(s) from cluster centroid=%s",
+            len(foreign),
+            cluster.centroid_id,
+        )
+        members = [m for m in members if m.user_id == owner]
+
     # Extractive summary: pick the highest-confidence content
     # and combine unique content from top members
     sorted_members = sorted(members, key=lambda n: n.confidence, reverse=True)
@@ -228,8 +250,7 @@ async def consolidate_cluster(
     max_salience = max(m.salience for m in members)
     evidence_refs = [m.id for m in members]
 
-    # Determine user_id from first member
-    user_id = members[0].user_id
+    user_id = owner
 
     # Store the summary node via engine.store()
     event_id = await engine.store(
@@ -284,6 +305,7 @@ async def forget_consolidated(
     cluster: MemoryCluster,
     summary_node_id: str,
     *,
+    user_id: str | None = None,
     preserve_recent_days: int = 7,
     min_confidence_preserve: float = 0.8,
 ) -> int:
@@ -299,6 +321,8 @@ async def forget_consolidated(
         engine: The MemoryEngine for storage operations.
         cluster: The cluster whose members to consider for archival.
         summary_node_id: ID of the summary node that supersedes members.
+        user_id: Owner of the summary; members belonging to anyone else are
+            left alone.
         preserve_recent_days: Don't archive memories newer than this.
         min_confidence_preserve: Don't archive memories with confidence >= this.
 
@@ -310,7 +334,9 @@ async def forget_consolidated(
     archived_count = 0
 
     for mid in cluster.member_ids:
-        node = await engine.get_node(mid, include_superseded=False)
+        node = await engine.get_node(
+            mid, include_superseded=False, user_id=user_id
+        )
         if node is None:
             continue
 
@@ -332,7 +358,7 @@ async def forget_consolidated(
 
         # Archive via supersede (marks superseded_by and transitions state)
         try:
-            await engine.supersede(mid, summary_node_id)
+            await engine.supersede(mid, summary_node_id, user_id=user_id)
             archived_count += 1
         except ValueError:
             # Node may already be in a terminal state
@@ -340,7 +366,7 @@ async def forget_consolidated(
                 "Could not supersede node %s, attempting direct archive", mid
             )
             try:
-                await engine.archive(mid)
+                await engine.archive(mid, user_id=user_id)
                 archived_count += 1
             except ValueError:
                 logger.debug("Could not archive node %s, skipping", mid)
@@ -352,6 +378,7 @@ async def run_consolidation_pipeline(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> ConsolidationResult:
     """Run the full consolidation pipeline: cluster, consolidate, forget.
 
@@ -362,6 +389,7 @@ async def run_consolidation_pipeline(
         engine: The MemoryEngine for storage operations.
         config: OrganizerConfig with consolidation parameters.
         budget_ms: Time budget in milliseconds.
+        user_id: When given, only this user's memories are consolidated.
 
     Returns:
         ConsolidationResult with pipeline statistics.
@@ -372,6 +400,7 @@ async def run_consolidation_pipeline(
     # Stage 1: Cluster similar memories
     clusters = await cluster_similar_memories(
         engine,
+        user_id=user_id,
         min_cluster_size=config.consolidation_min_cluster_size,
         similarity_threshold=config.consolidation_similarity_threshold,
     )
@@ -407,6 +436,7 @@ async def run_consolidation_pipeline(
                 engine,
                 cluster,
                 str(summary_node.id),
+                user_id=summary_node.user_id,
                 preserve_recent_days=config.consolidation_preserve_recent_days,
                 min_confidence_preserve=config.consolidation_min_confidence_preserve,
             )

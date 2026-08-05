@@ -1865,7 +1865,12 @@ class MemoryEngine:
         Stops early if the total budget is exceeded.
 
         Args:
-            user_id: Optional user scope for organization.
+            user_id: When given, every job only reads and mutates nodes owned
+                by this user. Multi-tenant deployments must pass it and drive
+                maintenance as a loop over tenants: an unscoped run merges
+                duplicate and alias pairs across tenant boundaries. Omitting
+                it keeps the single-tenant behaviour of covering the whole
+                store.
             jobs: List of job names to run. Defaults to ALL_JOBS.
             budget_ms: Total time budget in milliseconds.
 
@@ -1906,7 +1911,7 @@ class MemoryEngine:
 
             try:
                 job_result = await run_job(
-                    job_name, self, self._config.organizer, remaining_ms
+                    job_name, self, self._config.organizer, remaining_ms, user_id
                 )
                 result.jobs_run.append(job_name)
                 result.per_job[job_name] = job_result

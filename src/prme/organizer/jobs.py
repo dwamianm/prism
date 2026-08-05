@@ -46,6 +46,7 @@ async def run_job(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Dispatch to the appropriate job function.
 
@@ -54,6 +55,11 @@ async def run_job(
         engine: The MemoryEngine for storage operations.
         config: OrganizerConfig with threshold parameters.
         budget_ms: Time budget for this job in milliseconds.
+        user_id: When given, the job only reads and mutates nodes owned by
+            this user. Omitting it keeps the single-tenant behaviour of
+            operating over every node in the store. Multi-tenant deployments
+            must pass it: several jobs merge node pairs, and an unscoped run
+            can pair nodes belonging to different tenants (issue #66).
 
     Returns:
         JobResult with execution details.
@@ -80,7 +86,7 @@ async def run_job(
     if handler is None:
         raise ValueError(f"Unknown organizer job: {job_name!r}")
 
-    return await handler(job_name, engine, config, budget_ms)
+    return await handler(job_name, engine, config, budget_ms, user_id)
 
 
 async def _job_promote(
@@ -88,6 +94,7 @@ async def _job_promote(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Promote eligible tentative nodes to stable.
 
@@ -103,6 +110,7 @@ async def _job_promote(
     cutoff = now - timedelta(days=config.promotion_age_days)
 
     tentative_nodes = await engine.query_nodes(
+        user_id=user_id,
         lifecycle_states=[LifecycleState.TENTATIVE],
         created_before=cutoff,
         oldest_first=True,
@@ -122,7 +130,7 @@ async def _job_promote(
         if len(node.evidence_refs) >= config.promotion_evidence_count:
             processed += 1
             try:
-                await engine.promote(str(node.id))
+                await engine.promote(str(node.id), user_id=user_id)
                 modified += 1
             except ValueError:
                 errors += 1
@@ -142,6 +150,7 @@ async def _job_decay_sweep(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Evaluate all active nodes for threshold transitions based on virtual decay.
 
@@ -159,6 +168,7 @@ async def _job_decay_sweep(
         LifecycleState.CONTESTED,
     ]
     nodes = await engine.query_nodes(
+        user_id=user_id,
         lifecycle_states=active_states,
         limit=500,
     )
@@ -209,7 +219,7 @@ async def _job_decay_sweep(
         # Force archive: very low salience
         if eff_salience < config.force_archive_salience_threshold:
             try:
-                await engine.archive(str(node.id))
+                await engine.archive(str(node.id), user_id=user_id)
                 modified += 1
             except ValueError:
                 errors += 1
@@ -221,11 +231,11 @@ async def _job_decay_sweep(
                 if node.lifecycle_state == LifecycleState.CONTESTED:
                     await engine._graph_store.deprecate(str(node.id))
                 else:
-                    await engine.archive(str(node.id))
+                    await engine.archive(str(node.id), user_id=user_id)
                 modified += 1
             except (ValueError, AttributeError):
                 try:
-                    await engine.archive(str(node.id))
+                    await engine.archive(str(node.id), user_id=user_id)
                     modified += 1
                 except ValueError:
                     errors += 1
@@ -237,7 +247,7 @@ async def _job_decay_sweep(
             and eff_confidence < config.archive_confidence_threshold
         ):
             try:
-                await engine.archive(str(node.id))
+                await engine.archive(str(node.id), user_id=user_id)
                 modified += 1
             except ValueError:
                 errors += 1
@@ -257,6 +267,7 @@ async def _job_archive(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Archive nodes below force_archive_salience_threshold.
 
@@ -272,6 +283,7 @@ async def _job_archive(
         LifecycleState.CONTESTED,
     ]
     nodes = await engine.query_nodes(
+        user_id=user_id,
         lifecycle_states=active_states,
         limit=500,
     )
@@ -308,7 +320,7 @@ async def _job_archive(
 
         if eff_salience < config.force_archive_salience_threshold:
             try:
-                await engine.archive(str(node.id))
+                await engine.archive(str(node.id), user_id=user_id)
                 modified += 1
             except ValueError:
                 errors += 1
@@ -328,6 +340,7 @@ async def _job_feedback_apply(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Apply user feedback signals to auto-tune retrieval scoring weights.
 
@@ -338,6 +351,12 @@ async def _job_feedback_apply(
 
     This implements the feedback loop described in RFC-0009, extended by
     issue #24 with gradient-free weight auto-tuning.
+
+    ``user_id`` is accepted but cannot be honoured: the feedback tracker and
+    the scoring weights are both engine-global and FeedbackSignal carries no
+    user, so there is no per-tenant slice to apply. A scoped run still tunes
+    weights for everyone. Per-tenant tuning needs a user dimension on the
+    signal itself (issue #66).
     """
     start = time.monotonic()
 
@@ -348,6 +367,13 @@ async def _job_feedback_apply(
         return JobResult(
             job=job_name,
             details={"status": "no_signals", "note": "No pending feedback signals"},
+        )
+
+    if user_id is not None:
+        logger.warning(
+            "feedback_apply ignores its %r scope: scoring weights are "
+            "engine-global and apply to every user",
+            user_id,
         )
 
     # Run weight tuner
@@ -389,6 +415,7 @@ async def _job_feedback_apply(
             "old_weight_version": old_version,
             "new_weight_version": new_version,
             "weights_changed": old_version != new_version,
+            "scope": "global",
         },
     )
 
@@ -398,6 +425,7 @@ async def _job_deduplicate(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Find and merge duplicate memory nodes (issue #11).
 
@@ -411,7 +439,7 @@ async def _job_deduplicate(
 
     try:
         duplicates = await find_duplicates(
-            engine, config, budget_ms=budget_ms / 2,
+            engine, config, budget_ms=budget_ms / 2, user_id=user_id,
         )
         merged_count = await merge_duplicates(engine, duplicates)
     except Exception:
@@ -441,6 +469,7 @@ async def _job_alias_resolve(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Find and resolve entity alias relationships (issue #11).
 
@@ -454,7 +483,7 @@ async def _job_alias_resolve(
 
     try:
         aliases = await find_aliases(
-            engine, config, budget_ms=budget_ms / 2,
+            engine, config, budget_ms=budget_ms / 2, user_id=user_id,
         )
         resolved_count = await resolve_aliases(engine, aliases)
     except Exception:
@@ -484,6 +513,7 @@ async def _job_snapshot_generation(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Generate snapshots for active entity nodes.
 
@@ -498,6 +528,7 @@ async def _job_snapshot_generation(
     start = time.monotonic()
 
     entities = await engine.query_nodes(
+        user_id=user_id,
         node_type=NodeType.ENTITY,
         lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
         limit=500,
@@ -535,6 +566,7 @@ async def _job_consolidate(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Run the predictive forgetting / consolidation pipeline (issue #22).
 
@@ -547,7 +579,7 @@ async def _job_consolidate(
     start = time.monotonic()
 
     consolidation_result = await run_consolidation_pipeline(
-        engine, config, budget_ms
+        engine, config, budget_ms, user_id=user_id
     )
 
     duration_ms = (time.monotonic() - start) * 1000.0
@@ -571,6 +603,7 @@ async def _job_tombstone_sweep(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Archive nodes that have exceeded their TTL (issue #12, RFC-0007 S9).
 
@@ -593,6 +626,7 @@ async def _job_tombstone_sweep(
         LifecycleState.CONTESTED,
     ]
     nodes = await engine.query_nodes(
+        user_id=user_id,
         lifecycle_states=active_states,
         limit=500,
     )
@@ -624,7 +658,7 @@ async def _job_tombstone_sweep(
 
         # Archive the expired node
         try:
-            await engine.archive(str(node.id))
+            await engine.archive(str(node.id), user_id=user_id)
             modified += 1
 
             # Log a TOMBSTONE_SWEEP operation via write queue
@@ -641,14 +675,27 @@ async def _job_tombstone_sweep(
                 })
                 conn = getattr(engine, "_conn", None)
                 if conn is not None:
+                    # The write queue awaits what the factory returns, so the
+                    # insert has to be wrapped rather than handed over as a
+                    # bare conn.execute() (which returns a connection).
+                    async def _log(
+                        c=conn,
+                        oid=op_id,
+                        nid=str(node.id),
+                        aid=node.user_id,
+                        p=payload,
+                        n=now,
+                    ) -> None:
+                        await asyncio.to_thread(
+                            c.execute,
+                            "INSERT INTO operations "
+                            "(id, op_type, target_id, actor_id, payload, created_at) "
+                            "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?, ?::JSON, ?)",
+                            [oid, nid, aid, p, n],
+                        )
+
                     await engine._write_queue.submit(
-                        lambda c=conn, oid=op_id, nid=str(node.id), p=payload, n=now: (
-                            c.execute(
-                                "INSERT INTO operations (id, op_type, target_id, payload, created_at) "
-                                "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?::JSON, ?)",
-                                [oid, nid, p, n],
-                            )
-                        ),
+                        _log,
                         label=f"tombstone_sweep.log:{node.id}",
                     )
             except Exception:
@@ -676,6 +723,7 @@ async def _job_summarize(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Run hierarchical summarization: daily -> weekly -> monthly.
 
@@ -699,7 +747,9 @@ async def _job_summarize(
     monthly_budget = budget_ms * 0.2
 
     try:
-        daily_result = await generate_daily_summaries(engine, config, daily_budget)
+        daily_result = await generate_daily_summaries(
+            engine, config, daily_budget, user_id
+        )
         total_processed += daily_result.nodes_processed
         total_modified += daily_result.nodes_modified
         total_errors += daily_result.errors
@@ -709,7 +759,7 @@ async def _job_summarize(
         total_errors += 1
 
     try:
-        weekly_result = await roll_up_weekly(engine, config, weekly_budget)
+        weekly_result = await roll_up_weekly(engine, config, weekly_budget, user_id)
         total_processed += weekly_result.nodes_processed
         total_modified += weekly_result.nodes_modified
         total_errors += weekly_result.errors
@@ -719,7 +769,7 @@ async def _job_summarize(
         total_errors += 1
 
     try:
-        monthly_result = await roll_up_monthly(engine, config, monthly_budget)
+        monthly_result = await roll_up_monthly(engine, config, monthly_budget, user_id)
         total_processed += monthly_result.nodes_processed
         total_modified += monthly_result.nodes_modified
         total_errors += monthly_result.errors
@@ -744,6 +794,7 @@ async def _job_index_compaction(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Reconcile the vector/lexical indexes against active graph nodes (#41).
 
@@ -757,6 +808,10 @@ async def _job_index_compaction(
     The vector_metadata table is the reconciliation anchor because every
     indexed node has a row there; the matching lexical doc is evicted by
     node_id at the same time.
+
+    Under a user scope only that user's stale entries are evicted. Rows whose
+    node has vanished from the graph entirely can no longer be attributed to
+    a user, so they are left for an unscoped run to collect.
     """
     start = time.monotonic()
 
@@ -779,6 +834,18 @@ async def _job_index_compaction(
         # Node either missing from the graph (LEFT JOIN NULL) or in a
         # non-active lifecycle state. DISTINCT so a node with several
         # vectors is evicted once.
+        if user_id is not None:
+            # An orphaned row has no owner to compare against, so a scoped
+            # run can only reach nodes that still exist.
+            rows = conn.execute(
+                "SELECT DISTINCT vm.node_id FROM vector_metadata vm "
+                "JOIN nodes n ON vm.node_id = n.id "
+                "WHERE n.user_id = ? "
+                f"AND n.lifecycle_state NOT IN ({placeholders})",
+                [user_id, *active],
+            ).fetchall()
+            return [row[0] for row in rows]
+
         rows = conn.execute(
             "SELECT DISTINCT vm.node_id FROM vector_metadata vm "
             "LEFT JOIN nodes n ON vm.node_id = n.id "
@@ -825,6 +892,7 @@ async def _job_stub(
     engine: MemoryEngine,
     config: OrganizerConfig,
     budget_ms: float,
+    user_id: str | None = None,
 ) -> JobResult:
     """Stub job returning an empty result.
 

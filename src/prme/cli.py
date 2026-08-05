@@ -467,6 +467,7 @@ async def cmd_organize(args: argparse.Namespace) -> None:
     try:
         jobs = args.jobs.split(",") if args.jobs else None
         result = await engine.organize(
+            user_id=getattr(args, "user_id", None),
             jobs=jobs,
             budget_ms=args.budget_ms,
         )
@@ -854,6 +855,13 @@ def build_parser() -> argparse.ArgumentParser:
     # organize
     p_organize = subparsers.add_parser("organize", help="Run the organizer")
     add_common(p_organize)
+    p_organize.add_argument(
+        "--user-id",
+        help=(
+            "Scope every job to one user. Multi-tenant stores should run "
+            "once per tenant; an unscoped run merges across tenants"
+        ),
+    )
     p_organize.add_argument(
         "--jobs",
         help="Comma-separated list of jobs to run (e.g. promote,archive)",
