@@ -658,7 +658,7 @@ async def _job_tombstone_sweep(
 
         # Archive the expired node
         try:
-            await engine.archive(str(node.id))
+            await engine.archive(str(node.id), user_id=user_id)
             modified += 1
 
             # Log a TOMBSTONE_SWEEP operation via write queue
@@ -675,14 +675,27 @@ async def _job_tombstone_sweep(
                 })
                 conn = getattr(engine, "_conn", None)
                 if conn is not None:
+                    # The write queue awaits what the factory returns, so the
+                    # insert has to be wrapped rather than handed over as a
+                    # bare conn.execute() (which returns a connection).
+                    async def _log(
+                        c=conn,
+                        oid=op_id,
+                        nid=str(node.id),
+                        aid=node.user_id,
+                        p=payload,
+                        n=now,
+                    ) -> None:
+                        await asyncio.to_thread(
+                            c.execute,
+                            "INSERT INTO operations "
+                            "(id, op_type, target_id, actor_id, payload, created_at) "
+                            "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?, ?::JSON, ?)",
+                            [oid, nid, aid, p, n],
+                        )
+
                     await engine._write_queue.submit(
-                        lambda c=conn, oid=op_id, nid=str(node.id), p=payload, n=now: (
-                            c.execute(
-                                "INSERT INTO operations (id, op_type, target_id, payload, created_at) "
-                                "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?::JSON, ?)",
-                                [oid, nid, p, n],
-                            )
-                        ),
+                        _log,
                         label=f"tombstone_sweep.log:{node.id}",
                     )
             except Exception:

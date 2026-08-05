@@ -196,6 +196,25 @@ async def test_organize_user_scope_confines_tombstone_sweep(engine):
     assert await _states_for(engine, "bob") == [LifecycleState.TENTATIVE]
 
 
+async def test_tombstone_sweep_logs_the_operation_with_its_actor(engine):
+    # The insert used to be handed to the write queue as a bare
+    # conn.execute(), which is not awaitable, so every log silently failed
+    # and the operations table stayed empty.
+    await engine.store(
+        "alice ephemeral note", user_id="alice", node_type=NodeType.NOTE,
+        ttl_days=0,
+    )
+
+    await engine.organize(
+        user_id="alice", jobs=["tombstone_sweep"], budget_ms=5000
+    )
+
+    rows = engine._conn.execute(
+        "SELECT actor_id FROM operations WHERE op_type = 'TOMBSTONE_SWEEP'"
+    ).fetchall()
+    assert [r[0] for r in rows] == ["alice"]
+
+
 async def test_organize_user_scope_confines_deduplicate(engine):
     for user in ("alice", "bob"):
         await engine.store("shared note", user_id=user, node_type=NodeType.FACT)
