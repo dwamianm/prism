@@ -22,6 +22,7 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -42,7 +43,7 @@ from prme.retrieval.models import (
     RetrievalResponse,
 )
 from prme.retrieval.packing import pack_context
-from prme.retrieval.query_analysis import analyze_query
+from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, LifecycleState, RepresentationLevel, RetrievalMode, Scope
@@ -53,6 +54,33 @@ if TYPE_CHECKING:
     from prme.storage.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_bitemporal_filters(
+    candidates: list[RetrievalCandidate],
+    knowledge_at: datetime | None,
+    event_time_from: datetime | None,
+    event_time_to: datetime | None,
+) -> list[RetrievalCandidate]:
+    """Drop candidates outside the bi-temporal window (issue #21).
+
+    Operates on the MemoryNode attached to each candidate, so it works
+    regardless of which stage produced the candidate. Nodes without an
+    ``event_time`` fall back to ``created_at`` (ingestion time).
+    """
+    if knowledge_at is not None:
+        candidates = [c for c in candidates if c.node.created_at <= knowledge_at]
+    if event_time_from is not None:
+        candidates = [
+            c for c in candidates
+            if (c.node.event_time or c.node.created_at) >= event_time_from
+        ]
+    if event_time_to is not None:
+        candidates = [
+            c for c in candidates
+            if (c.node.event_time or c.node.created_at) <= event_time_to
+        ]
+    return candidates
 
 
 class RetrievalPipeline:
@@ -85,6 +113,7 @@ class RetrievalPipeline:
         query_reformulation_count: int = 2,
         query_reformulation_provider: str = "openai",
         query_reformulation_model: str = "gpt-4o-mini",
+        temporal_languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -101,6 +130,7 @@ class RetrievalPipeline:
         self._query_reformulation_count = query_reformulation_count
         self._query_reformulation_provider = query_reformulation_provider
         self._query_reformulation_model = query_reformulation_model
+        self._temporal_languages = temporal_languages
 
         # Lazy-init cross-encoder reranker when enabled.
         self._reranker = None
@@ -176,6 +206,11 @@ class RetrievalPipeline:
             normalized_scope = scope
         # else: None means "all scopes, no filter"
 
+        # String form used by the lexical/vector index scope filters.
+        scope_values = (
+            [s.value for s in normalized_scope] if normalized_scope else None
+        )
+
         # Resolve effective configuration.
         effective_weights = weights if weights is not None else self._scoring_weights
         effective_packing_config = self._packing_config
@@ -197,6 +232,7 @@ class RetrievalPipeline:
             time_from=time_from,
             time_to=time_to,
             retrieval_mode=retrieval_mode,
+            languages=self._temporal_languages,
         )
 
         # Determine effective temporal window: explicit params take priority
@@ -245,9 +281,14 @@ class RetrievalPipeline:
             # Run all term searches concurrently, then resolve the unique
             # hits with a single batched node fetch (instead of sequential
             # searches with one get_node round trip per hit).
+            # The scope filter is forwarded here as it is on the main lexical
+            # path: without it this scan pulls other scopes' nodes straight
+            # into the primary result list (issue #60).
             term_results = await asyncio.gather(
                 *[
-                    self._lexical_index.search(term, user_id=user_id, limit=50)
+                    self._lexical_index.search(
+                        term, user_id=user_id, limit=50, scope=scope_values,
+                    )
                     for term in search_terms
                 ],
                 return_exceptions=True,
@@ -316,7 +357,9 @@ class RetrievalPipeline:
             entity_names = analysis.entities[:3]
             entity_results = await asyncio.gather(
                 *[
-                    self._lexical_index.search(name, user_id=user_id, limit=20)
+                    self._lexical_index.search(
+                        name, user_id=user_id, limit=20, scope=scope_values,
+                    )
                     for name in entity_names
                 ],
                 return_exceptions=True,
@@ -384,27 +427,9 @@ class RetrievalPipeline:
 
         # --- Stage 3.5: Bi-temporal Post-Filtering (issue #21) ---
         # Applied after candidate generation and before epistemic filtering.
-        # These filters operate on the MemoryNode fields attached to each
-        # candidate, so they work regardless of which backend generated them.
-        if knowledge_at is not None:
-            candidates = [
-                c for c in candidates
-                if c.node.created_at <= knowledge_at
-            ]
-        if event_time_from is not None:
-            # Include nodes whose event_time >= event_time_from.
-            # Nodes without event_time fall back to created_at (ingestion time).
-            candidates = [
-                c for c in candidates
-                if (c.node.event_time or c.node.created_at) >= event_time_from
-            ]
-        if event_time_to is not None:
-            # Include nodes whose event_time <= event_time_to.
-            # Nodes without event_time fall back to created_at (ingestion time).
-            candidates = [
-                c for c in candidates
-                if (c.node.event_time or c.node.created_at) <= event_time_to
-            ]
+        candidates = _apply_bitemporal_filters(
+            candidates, knowledge_at, event_time_from, event_time_to
+        )
 
         # --- Stage 4: Epistemic Filtering ---
         filtered, excluded = filter_epistemic(
@@ -477,12 +502,28 @@ class RetrievalPipeline:
         # where a question is retrieved but not its adjacent answer.
         if effective_packing_config.session_context_window > 0:
             try:
-                scored = await expand_session_context(
+                expanded = await expand_session_context(
                     scored,
                     graph_store=self._graph_store,
                     user_id=user_id,
                     config=effective_packing_config,
+                    scope=normalized_scope,
                 )
+                # Expansion appends adjacent turns that never went through
+                # Stages 3.5 and 4, so the same predicates run once more over
+                # the expanded set (issue #60). Nodes that already passed are
+                # unaffected; only the newly appended ones can be dropped.
+                if len(expanded) != len(scored):
+                    expanded = _apply_bitemporal_filters(
+                        expanded, knowledge_at, event_time_from, event_time_to
+                    )
+                    expanded, late_excluded = filter_epistemic(
+                        expanded,
+                        analysis.retrieval_mode,
+                        unverified_threshold=self._unverified_confidence_threshold,
+                    )
+                    excluded.extend(late_excluded)
+                scored = expanded
             except Exception:
                 logger.warning(
                     "Session context expansion failed; continuing without expansion",
@@ -527,6 +568,17 @@ class RetrievalPipeline:
                     c for c in hint_candidates
                     if c.node.scope.value not in primary_scope_values
                 ]
+                # Crossing the scope boundary is the point of this pass; the
+                # bi-temporal window and the epistemic filter still apply
+                # (issue #60).
+                hint_candidates = _apply_bitemporal_filters(
+                    hint_candidates, knowledge_at, event_time_from, event_time_to
+                )
+                hint_candidates, _ = filter_epistemic(
+                    hint_candidates,
+                    analysis.retrieval_mode,
+                    unverified_threshold=self._unverified_confidence_threshold,
+                )
                 # Score the hints using the same weights and timestamp.
                 if hint_candidates:
                     scored_hints, _ = score_and_rank(
@@ -670,6 +722,7 @@ class RetrievalPipeline:
                 time_from=time_from,
                 time_to=time_to,
                 retrieval_mode=retrieval_mode,
+                languages=self._temporal_languages,
             )
             alt_candidates, _ = await generate_candidates(
                 alt_analysis,

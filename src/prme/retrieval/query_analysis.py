@@ -8,7 +8,9 @@ matching only -- no blocking LLM calls per RFC-0005 S3.
 from __future__ import annotations
 
 import logging
+import asyncio
 import re
+from collections.abc import Sequence
 from datetime import datetime
 from uuid import uuid4
 
@@ -72,6 +74,49 @@ _KNOWN_TEMPORAL_WORDS = frozenset({
     "nov", "dec", "mon", "tue", "wed", "thu", "fri", "sat", "sun",
 })
 
+# --- dateparser cost control (issue #61) ---
+#
+# search_dates() is the single most expensive call in the retrieval hot path:
+# 70ms per query with no language pin (dateparser tries its full locale set)
+# versus 0.3ms pinned to English. Two guards keep it off the critical path:
+# a language pin, and a cue pre-gate so queries with no date-like token skip
+# the call entirely.
+
+# Default language set for temporal parsing. English is already assumed
+# elsewhere in the pipeline (tantivy English stemming, the English stopword
+# list in the aggregation scan). Pass languages=None to restore dateparser's
+# auto-detection at its original cost.
+DEFAULT_TEMPORAL_LANGUAGES: tuple[str, ...] = ("en",)
+
+# Words that can appear in a multi-word temporal expression without being a
+# temporal match on their own ("two weeks ago", "the day after tomorrow").
+# The pre-gate needs them so it stays a superset of what dateparser finds.
+_RELATIVE_TIME_WORDS = frozenset({
+    "now", "next", "past", "coming", "upcoming", "tonight", "weekend",
+    "day", "days", "night", "nights", "week", "weeks", "month", "months",
+    "year", "years", "hour", "hours", "minute", "minutes", "second",
+    "seconds", "morning", "afternoon", "evening", "midnight", "noon",
+    "decade", "decades", "fortnight", "quarter", "century",
+})
+
+# A query is worth handing to dateparser only if it contains a digit or one of
+# these words. Every signal the extractor keeps satisfies one of the two:
+# matches with digits, single-word matches restricted to _KNOWN_TEMPORAL_WORDS,
+# and multi-word matches, which need a unit or qualifier word to parse.
+_TEMPORAL_GATE_WORDS = _KNOWN_TEMPORAL_WORDS | _RELATIVE_TIME_WORDS
+
+_DIGIT_RE = re.compile(r"\d")
+_WORD_RE = re.compile(r"[a-z]+")
+
+
+def _has_temporal_cue(query: str) -> bool:
+    """Cheap pre-check for whether a query can contain a date expression."""
+    if _DIGIT_RE.search(query):
+        return True
+    return any(
+        word in _TEMPORAL_GATE_WORDS for word in _WORD_RE.findall(query.lower())
+    )
+
 
 def _classify_intent(query: str, has_temporal_signals: bool) -> QueryIntent:
     """Classify query intent using keyword/pattern matching.
@@ -121,17 +166,29 @@ def _extract_entities(query: str) -> list[str]:
     return entities
 
 
-def _extract_temporal_signals(query: str) -> list[dict]:
+def _extract_temporal_signals(
+    query: str,
+    languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
+) -> list[dict]:
     """Extract temporal expressions from the query via dateparser.
 
     Returns a list of dicts with keys: type, value, resolved.
     Falls back to empty list if dateparser is unavailable or fails.
+
+    Args:
+        query: Raw query text.
+        languages: Languages to parse against. None restores dateparser's
+            own language detection, which costs ~70ms per query.
     """
+    if not _has_temporal_cue(query):
+        return []
+
     try:
         from dateparser.search import search_dates
 
         results = search_dates(
             query,
+            languages=list(languages) if languages else None,
             settings={
                 "RETURN_AS_TIMEZONE_AWARE": True,
                 "TIMEZONE": "UTC",
@@ -186,6 +243,7 @@ async def analyze_query(
     time_from: datetime | None = None,
     time_to: datetime | None = None,
     retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
+    languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
 ) -> QueryAnalysis:
     """Analyze a query into intent, entities, and temporal signals.
 
@@ -197,13 +255,19 @@ async def analyze_query(
         time_from: Explicit start of temporal window (overrides extraction).
         time_to: Explicit end of temporal window (overrides extraction).
         retrieval_mode: Retrieval mode controlling epistemic filtering.
+        languages: Languages for temporal parsing. None restores dateparser's
+            own language detection at its original cost.
 
     Returns:
         QueryAnalysis with classified intent, extracted entities,
         temporal signals, and a unique request_id.
     """
-    # Extract temporal signals from query text.
-    temporal_signals = _extract_temporal_signals(query)
+    # Extract temporal signals from query text. dateparser is CPU-bound and
+    # can take milliseconds on a long query, so it runs off the event loop
+    # (issue #61) -- otherwise concurrent retrievals serialize behind it.
+    temporal_signals = await asyncio.to_thread(
+        _extract_temporal_signals, query, languages
+    )
     has_temporal_signals = len(temporal_signals) > 0
 
     # Classify intent (temporal detection feeds into intent classification).

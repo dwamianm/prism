@@ -384,6 +384,19 @@ class PRMEConfig(BaseSettings):
         ),
     )
 
+    # Temporal parsing cost control (issue #61)
+    temporal_languages: list[str] = Field(
+        default=["en"],
+        description=(
+            "Languages used to parse date expressions out of query text. "
+            "dateparser costs ~70ms per query when it has to detect the "
+            "language itself versus ~0.3ms with a single language pinned, and "
+            "that detection was 85% of retrieval latency. Set to an empty list "
+            "to restore dateparser's auto-detection for multilingual queries "
+            "at that cost."
+        ),
+    )
+
     # Dual-stream ingestion (issue #25)
     materialization_queue_size: int = Field(
         default=500,

@@ -311,6 +311,7 @@ class MemoryEngine:
             query_reformulation_count=config.query_reformulation_count,
             query_reformulation_provider=config.extraction.provider,
             query_reformulation_model=config.extraction.model,
+            temporal_languages=config.temporal_languages,
         )
 
         # Run epistemic backfill migration for existing nodes
@@ -424,6 +425,7 @@ class MemoryEngine:
             query_reformulation_count=config.query_reformulation_count,
             query_reformulation_provider=config.extraction.provider,
             query_reformulation_model=config.extraction.model,
+            temporal_languages=config.temporal_languages,
         )
 
         # Run epistemic backfill migration
@@ -1070,9 +1072,11 @@ class MemoryEngine:
                 scope=scope,
             )
 
-        # Opportunistic maintenance (RFC-0015 Layer 2)
+        # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
+        # than awaited: nothing in the response depends on it, so its time
+        # budget must not land on the caller's latency (issue #62).
         if self._maintenance_runner:
-            await self._maintenance_runner.maybe_run()
+            self._maintenance_runner.schedule()
 
         return event_id
 
@@ -1319,9 +1323,11 @@ class MemoryEngine:
             include_cross_scope=include_cross_scope,
         )
 
-        # Opportunistic maintenance (RFC-0015 Layer 2)
+        # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
+        # than awaited: nothing in the response depends on it, so its time
+        # budget must not land on the caller's latency (issue #62).
         if self._maintenance_runner:
-            await self._maintenance_runner.maybe_run()
+            self._maintenance_runner.schedule()
 
         return result
 
@@ -1364,21 +1370,71 @@ class MemoryEngine:
 
     # --- Node Operations (delegated to GraphStore) ---
 
+    async def _owned_node(
+        self,
+        node_id: str,
+        user_id: str | None,
+        *,
+        include_superseded: bool = True,
+    ) -> MemoryNode | None:
+        """Fetch a node, enforcing ownership when a user is supplied.
+
+        Node-ID operations are otherwise unscoped: knowing an ID is enough to
+        read or mutate another user's memory (issue #35). Passing ``user_id``
+        makes the operation fail exactly as it would for a nonexistent node,
+        so a caller cannot learn that an ID they do not own exists -- RFC-0004
+        S6 forbids revealing the existence of objects outside the caller's
+        namespace.
+
+        Returns None when the node is missing or owned by someone else.
+        """
+        node = await self._graph_store.get_node(
+            node_id, include_superseded=include_superseded
+        )
+        if node is None:
+            return None
+        if user_id is not None and node.user_id != user_id:
+            logger.warning(
+                "Ownership check rejected node %s for user %r",
+                node_id,
+                user_id,
+            )
+            return None
+        return node
+
+    async def _require_owned(self, node_id: str, user_id: str) -> MemoryNode:
+        """Return a node the user owns, or raise the standard not-found error.
+
+        The message matches the graph store's own wording so an unauthorized
+        mutation is indistinguishable from one against a nonexistent node.
+        """
+        node = await self._owned_node(node_id, user_id)
+        if node is None:
+            raise ValueError(f"Node {node_id} not found")
+        return node
+
     async def get_node(
         self,
         node_id: str,
         *,
         include_superseded: bool = False,
+        user_id: str | None = None,
     ) -> MemoryNode | None:
         """Retrieve a node by ID.
 
         Args:
             node_id: String UUID of the node.
             include_superseded: If True, return superseded/archived nodes.
+            user_id: When given, the node is returned only if this user owns
+                it. A node owned by anyone else reads as not found.
 
         Returns:
             The MemoryNode if found and visible, None otherwise.
         """
+        if user_id is not None:
+            return await self._owned_node(
+                node_id, user_id, include_superseded=include_superseded
+            )
         return await self._graph_store.get_node(
             node_id, include_superseded=include_superseded
         )
@@ -1435,15 +1491,20 @@ class MemoryEngine:
 
     # --- Lifecycle Transitions (delegated to GraphStore) ---
 
-    async def promote(self, node_id: str) -> None:
+    async def promote(self, node_id: str, *, user_id: str | None = None) -> None:
         """Promote a tentative node to stable.
 
         Args:
             node_id: Node to promote.
+            user_id: When given, the promotion only applies to a node this
+                user owns; anyone else's node raises as if it did not exist.
 
         Raises:
-            ValueError: If the transition is invalid.
+            ValueError: If the transition is invalid, or the node is missing
+                or owned by another user.
         """
+        if user_id is not None:
+            await self._require_owned(node_id, user_id)
         await self._graph_store.promote(node_id)
 
     async def supersede(
@@ -1452,6 +1513,7 @@ class MemoryEngine:
         new_node_id: str,
         *,
         evidence_id: str | None = None,
+        user_id: str | None = None,
     ) -> None:
         """Mark a node as superseded by another.
 
@@ -1459,10 +1521,17 @@ class MemoryEngine:
             old_node_id: Node being replaced.
             new_node_id: Replacement node.
             evidence_id: Optional event ID for provenance.
+            user_id: When given, both nodes must belong to this user. A
+                supersedence edge that crosses users is never legitimate: it
+                would let one user's memory retire another's.
 
         Raises:
-            ValueError: If the transition is invalid.
+            ValueError: If the transition is invalid, or either node is
+                missing or owned by another user.
         """
+        if user_id is not None:
+            await self._require_owned(old_node_id, user_id)
+            await self._require_owned(new_node_id, user_id)
         await self._graph_store.supersede(
             old_node_id, new_node_id, evidence_id=evidence_id
         )
@@ -1471,15 +1540,20 @@ class MemoryEngine:
         # event log remains the source of truth, so this is reconstructable.
         await self._evict_from_indexes(old_node_id)
 
-    async def archive(self, node_id: str) -> None:
+    async def archive(self, node_id: str, *, user_id: str | None = None) -> None:
         """Archive a node (terminal state).
 
         Args:
             node_id: Node to archive.
+            user_id: When given, the archival only applies to a node this
+                user owns; anyone else's node raises as if it did not exist.
 
         Raises:
-            ValueError: If the transition is invalid.
+            ValueError: If the transition is invalid, or the node is missing
+                or owned by another user.
         """
+        if user_id is not None:
+            await self._require_owned(node_id, user_id)
         await self._graph_store.archive(node_id)
         # Archived content is not retrievable, so drop it from the indexes.
         await self._evict_from_indexes(node_id)
@@ -1686,6 +1760,8 @@ class MemoryEngine:
         self,
         node_id: str,
         evidence_id: str | None = None,
+        *,
+        user_id: str | None = None,
     ) -> None:
         """Reinforce a memory node, boosting its confidence and salience.
 
@@ -1697,14 +1773,17 @@ class MemoryEngine:
         Args:
             node_id: The node to reinforce.
             evidence_id: Optional event ID to append to evidence_refs.
+            user_id: When given, only a node this user owns is reinforced;
+                anyone else's node raises as if it did not exist.
 
         Raises:
-            ValueError: If the node does not exist.
+            ValueError: If the node does not exist, or is owned by another
+                user when user_id is given.
         """
         from datetime import timezone
         from uuid import UUID
 
-        node = await self._graph_store.get_node(node_id, include_superseded=True)
+        node = await self._owned_node(node_id, user_id)
         if node is None:
             raise ValueError(f"Node {node_id!r} not found")
 
@@ -2080,6 +2159,16 @@ class MemoryEngine:
         if self._closed:
             return
         self._closed = True
+
+        # Let any scheduled maintenance pass finish before the write queue
+        # and connections it uses go away (issue #62).
+        if self._maintenance_runner is not None:
+            try:
+                await self._maintenance_runner.drain()
+            except Exception:
+                logger.warning(
+                    "Error draining opportunistic maintenance", exc_info=True
+                )
 
         # Shutdown pipeline first (cancel background extraction tasks)
         if self._pipeline is not None:
