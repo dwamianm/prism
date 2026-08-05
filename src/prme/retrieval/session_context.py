@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import RetrievalCandidate
 
+from prme.types import Scope
+
 if TYPE_CHECKING:
     from prme.models.nodes import MemoryNode
     from prme.storage.graph_store import GraphStore
@@ -29,6 +31,7 @@ async def expand_session_context(
     graph_store: GraphStore,
     user_id: str,
     config: PackingConfig,
+    scope: list[Scope] | None = None,
 ) -> list[RetrievalCandidate]:
     """Expand top-scored candidates with adjacent session turns.
 
@@ -48,6 +51,9 @@ async def expand_session_context(
         graph_store: GraphStore for querying session nodes.
         user_id: User ID for scoping graph queries.
         config: PackingConfig with session context settings.
+        scope: Optional scope filter, forwarded to the session-node query so
+            expansion cannot pull in adjacent turns from another scope
+            (issue #60). None means no scope filter.
 
     Returns:
         Expanded candidate list with context nodes interleaved after
@@ -82,6 +88,7 @@ async def expand_session_context(
         all_nodes = await graph_store.query_nodes(
             user_id=user_id,
             session_ids=list(session_triggers.keys()),
+            scopes=scope if scope else None,
             limit=2000,
         )
         for n in all_nodes:
