@@ -148,6 +148,7 @@ async def find_aliases(
     config: OrganizerConfig,
     batch_size: int = 100,
     budget_ms: float = 5000.0,
+    user_id: str | None = None,
 ) -> list[AliasCandidate]:
     """Find alias relationships between entity nodes.
 
@@ -163,15 +164,17 @@ async def find_aliases(
         config: OrganizerConfig with alias_similarity_threshold.
         batch_size: Max entity nodes to scan per call.
         budget_ms: Time budget in milliseconds.
+        user_id: When given, only this user's entities are scanned.
 
     Returns:
-        List of AliasCandidate pairs.
+        List of AliasCandidate pairs, never spanning two users.
     """
     start = time.monotonic()
     threshold = config.alias_similarity_threshold
 
     # Fetch active entity nodes
     entities = await engine.query_nodes(
+        user_id=user_id,
         node_type=NodeType.ENTITY,
         lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
         limit=batch_size,
@@ -187,6 +190,11 @@ async def find_aliases(
             return candidates
 
         for j in range(i + 1, len(entities)):
+            # An unscoped run sees every tenant's entities; two tenants both
+            # holding "PostgreSQL" and "postgres" must not be paired (#66).
+            if entities[i].user_id != entities[j].user_id:
+                continue
+
             a_id = str(entities[i].id)
             b_id = str(entities[j].id)
             pair_key = (min(a_id, b_id), max(a_id, b_id))
@@ -242,8 +250,8 @@ async def find_aliases(
             if pair_key in seen_pairs:
                 continue
 
-            # Verify the other node is also an ENTITY
-            other_node = await engine.get_node(other_id)
+            # Verify the other node is also an ENTITY owned by the same user
+            other_node = await engine.get_node(other_id, user_id=entity.user_id)
             if other_node is None or other_node.node_type != NodeType.ENTITY:
                 continue
 
@@ -293,6 +301,15 @@ async def resolve_aliases(
         node_b = await engine.get_node(alias.entity_b_id)
 
         if node_a is None or node_b is None:
+            continue
+
+        # Never merge or link across owners (issue #66).
+        if node_a.user_id != node_b.user_id:
+            logger.warning(
+                "Refusing to resolve cross-user alias pair (%s, %s)",
+                alias.entity_a_id,
+                alias.entity_b_id,
+            )
             continue
 
         if node_a.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
