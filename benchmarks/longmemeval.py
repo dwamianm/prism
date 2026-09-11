@@ -730,9 +730,16 @@ class LongMemEvalRealBenchmark:
 
         all_details: list[QueryResult] = []
         category_results: list[tuple[str, float]] = []
-        for r in results:
+        for question, r in zip(questions, results, strict=True):
             if isinstance(r, Exception):
                 logger.error("Question failed: %s", r)
+                is_abstention = question["question_id"].endswith("_abs")
+                qtype = question["question_type"]
+                all_details.append(QueryResult.failed(
+                    question["question"],
+                    "abstention" if is_abstention else _LME_TYPE_MAP.get(qtype, qtype),
+                    "ABSTAIN" if is_abstention else str(question["answer"]), r,
+                ))
                 continue
             detail, cat_score = r
             all_details.append(detail)
@@ -741,15 +748,16 @@ class LongMemEvalRealBenchmark:
         from benchmarks.metrics import category_scores as compute_categories
 
         cat_scores = compute_categories(category_results)
-        correct = sum(1 for d in all_details if d.correct)
-        incorrect = sum(1 for d in all_details if not d.correct)
+        scored = [d for d in all_details if not d.judge_error]
+        correct = sum(1 for d in scored if d.correct)
+        incorrect = sum(1 for d in scored if not d.correct)
         abstained = sum(
-            1 for d in all_details
+            1 for d in scored
             if d.category == "abstention" and d.correct
         )
         overall = (
-            sum(d.score for d in all_details) / len(all_details)
-            if all_details
+            sum(d.score for d in scored) / len(scored)
+            if scored
             else 0.0
         )
         duration_ms = (time.monotonic() - start_time) * 1000
@@ -950,8 +958,7 @@ class LongMemEvalRealBenchmark:
             cat = "abstention" if is_abstention else ability
             # An infrastructure error (NaN sentinel) is not a wrong answer: keep
             # the sentinel on the result so downstream aggregation excludes it
-            # instead of counting it as a wrong answer. (Abstention questions
-            # always produce a real 0.0/1.0, so is_judge_error is False there.)
+            # instead of counting it as a wrong answer.
             judge_error = is_judge_error(score)
             is_correct = (not judge_error) and score >= CORRECT_THRESHOLD
 
@@ -984,9 +991,16 @@ class LongMemEvalRealBenchmark:
 
         all_details: list[QueryResult] = []
         category_results: list[tuple[str, float]] = []
-        for r in results:
+        for question, r in zip(questions, results, strict=True):
             if isinstance(r, Exception):
                 logger.error("Question failed: %s", r)
+                is_abstention = question["question_id"].endswith("_abs")
+                qtype = question["question_type"]
+                all_details.append(QueryResult.failed(
+                    question["question"],
+                    "abstention" if is_abstention else _LME_TYPE_MAP.get(qtype, qtype),
+                    "ABSTAIN" if is_abstention else str(question["answer"]), r,
+                ))
                 continue
             detail, cat_score = r
             all_details.append(detail)
@@ -1001,7 +1015,7 @@ class LongMemEvalRealBenchmark:
         scored = [d for d in all_details if not d.judge_error]
         errors = sum(1 for d in all_details if d.judge_error)
         if errors:
-            logger.warning("%d question(s) hit a judge/generation error and were excluded", errors)
+            logger.warning("%d question(s) could not be evaluated; run is incomplete", errors)
         correct = sum(1 for d in scored if d.correct)
         incorrect = sum(1 for d in scored if not d.correct)
         abstained = sum(

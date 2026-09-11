@@ -92,6 +92,7 @@ async def should_abstain(
     provider: str = "openai",
     model: str = "gpt-4o-mini",
     max_retries: int = 2,
+    raise_on_error: bool = False,
 ) -> bool:
     """Check if the system should abstain from answering a query.
 
@@ -107,6 +108,8 @@ async def should_abstain(
         provider: LLM provider name (default: "openai").
         model: LLM model name (default: "gpt-4o-mini").
         max_retries: Max retries on LLM failure.
+        raise_on_error: Propagate provider failures instead of returning the
+            application fallback. Use for evaluation to avoid scoring outages.
 
     Returns:
         True if the system should abstain (context doesn't answer
@@ -128,6 +131,8 @@ async def should_abstain(
         )
         return not result.can_answer
     except Exception:
+        if raise_on_error:
+            raise
         logger.warning(
             "Abstention check failed, defaulting to not abstain",
             exc_info=True,

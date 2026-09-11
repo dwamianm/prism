@@ -85,6 +85,11 @@ def print_summary(results: list[BenchmarkResult]) -> None:
     print("-" * 70)
     print(f"  Benchmarks run:  {summary['benchmarks_run']}")
     print(f"  Total queries:   {summary['total_queries']}")
+    print(f"  Scored queries:  {summary['scored_queries']}")
+    print(f"  Coverage:        {summary['coverage']:.1%}")
+    print(f"  Evaluation errors: {summary['error_count']}")
+    print(f"  Failed benchmarks: {summary['failed_benchmarks']}")
+    print(f"  Complete:        {summary['complete']}")
     print(f"  Overall score:   {summary['overall_score']:.4f}")
     print(f"  Total correct:   {summary['total_correct']}")
     print(f"  Total incorrect: {summary['total_incorrect']}")
@@ -99,6 +104,9 @@ def _print_benchmark_result(result: BenchmarkResult) -> None:
     print(f"  [{result.benchmark_name.upper()}]")
     print(f"    Score:    {result.overall_score:.4f}")
     print(f"    Queries:  {result.total_queries}")
+    print(f"    Coverage: {result.scored_queries}/{result.total_queries} ({result.coverage:.1%})")
+    if result.benchmark_error:
+        print(f"    Benchmark failed: {result.benchmark_error}")
     print(
         f"    Correct:  {result.correct}  |  "
         f"Incorrect: {result.incorrect}  |  "
@@ -113,7 +121,7 @@ def _print_benchmark_result(result: BenchmarkResult) -> None:
             print(f"      {cat:<25s} {score:.4f}  {bar}")
 
     # Show failed queries (max 5 per benchmark)
-    failed = [d for d in result.details if not d.correct]
+    failed = [d for d in result.details if not d.correct and not d.judge_error]
     if failed:
         show = failed[:5]
         print(f"    Failed queries ({len(failed)} total, showing {len(show)}):")
@@ -121,6 +129,11 @@ def _print_benchmark_result(result: BenchmarkResult) -> None:
             print(f"      [{d.category}] {d.query}")
             print(f"        Expected: {d.expected}")
             print(f"        Got:      {d.actual[:100]}")
+    errors = [d for d in result.details if d.judge_error]
+    if errors:
+        print(f"    Evaluation errors ({len(errors)} total; run incomplete):")
+        for d in errors[:5]:
+            print(f"      [{d.category}] {d.query}")
     print()
 
 
@@ -133,22 +146,30 @@ def _score_bar(score: float, width: int = 20) -> str:
 def _build_summary(results: list[BenchmarkResult]) -> dict:
     """Build an aggregate summary dictionary."""
     total_queries = sum(r.total_queries for r in results)
+    scored_queries = sum(r.scored_queries for r in results)
+    error_count = sum(r.error_count for r in results)
     total_correct = sum(r.correct for r in results)
     total_incorrect = sum(r.incorrect for r in results)
     total_abstained = sum(r.abstained for r in results)
     total_duration = sum(r.duration_ms for r in results)
 
-    # Weighted average by query count
-    if total_queries > 0:
+    # Each benchmark's mean excludes evaluation errors. Weight by the same
+    # measured denominator, while reporting missing measurements separately.
+    if scored_queries > 0:
         overall_score = sum(
-            r.overall_score * r.total_queries for r in results
-        ) / total_queries
+            r.overall_score * r.scored_queries for r in results
+        ) / scored_queries
     else:
         overall_score = 0.0
 
     return {
         "benchmarks_run": len(results),
         "total_queries": total_queries,
+        "scored_queries": scored_queries,
+        "error_count": error_count,
+        "coverage": round(scored_queries / total_queries, 4) if total_queries else 0.0,
+        "failed_benchmarks": sum(r.benchmark_error is not None for r in results),
+        "complete": all(r.complete for r in results),
         "overall_score": round(overall_score, 4),
         "total_correct": total_correct,
         "total_incorrect": total_incorrect,

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Benchmark measurement
+- Preserve per-question evaluation failures in reports and retry selection.
+- Report scored coverage and whole-benchmark failures; weight summary accuracy by
+  measured questions and fail the CLI when any repeated run is incomplete.
+- Propagate abstention-provider failures during evaluation instead of treating
+  the application's fallback as a measured verdict.
+
 ### Fixed
 
 - Disable redundant Tantivy background reader reloads so a closed lexical

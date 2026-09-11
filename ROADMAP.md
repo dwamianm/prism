@@ -14,7 +14,7 @@ The foundation already includes local DuckDB/USearch/Tantivy storage, optional P
 - Remove dataset observations, copied answer examples, and harness-only query expansion from benchmark evaluation.
 - Replace stale accuracy claims with explicit measurement limits.
 - **Merged in PR #69:** organizer isolation, shared DuckDB connection locking, and restored CI coverage for main.
-- Retrieval and benchmark changes are available in draft PR #70.
+- **Merged in PR #70:** filtered vector recall, benchmark evidence boundaries, and corrected performance documentation (#63).
 
 Adaptive vector search repairs recall but does not implement RFC-0004 index-level namespace partitioning. Highly selective searches may scan the full index; measure latency before scaling this approach.
 

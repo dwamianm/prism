@@ -209,6 +209,7 @@ class BenchmarkRunner:
                             abstained=0,
                             duration_ms=0.0,
                             details=[],
+                            benchmark_error=type(result).__name__,
                         )
                     )
                 else:
@@ -236,6 +237,7 @@ class BenchmarkRunner:
                             abstained=0,
                             duration_ms=0.0,
                             details=[],
+                            benchmark_error=type(exc).__name__,
                         )
                     )
 
