@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Disable redundant Tantivy background reader reloads so a closed lexical
+  index cannot recreate metadata lock files during pack cleanup or movement.
+
 - Expand vector searches when tenant, scope, lifecycle, or temporal filters leave
   fewer than the requested number of distinct memory nodes.
 
