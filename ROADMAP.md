@@ -1,107 +1,61 @@
-# PRME Roadmap
+# PRME roadmap
 
-This document outlines the development direction for PRME. Phases are roughly ordered by priority but may shift based on community feedback.
+Updated 2026-09-11. Current package: v0.10.0. Product priority: **best possible retrieval quality**.
 
-Status legend: **Done** | **In Progress** | Planned
+## Direction
 
----
+Find the right evidence, preserve changing facts, and fit useful context into an application's token budget. Evaluate retrieval separately from the model generating the final answer. See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract.
 
-## v0.1 — v0.4 (Done)
+The foundation already includes local DuckDB/USearch/Tantivy storage, optional PostgreSQL, hybrid and temporal retrieval, ingestion and organizer pipelines, context packing, index rebuilds, MCP/REST, MemoryClient, and LangChain/LlamaIndex adapters. Additional frameworks and federation are deferred while retrieval quality is established.
 
-The foundation: storage, ingestion, retrieval, and epistemic state management.
+## First delivery
 
-- **Storage layer** — append-only event store (DuckDB), graph model, vector index (usearch HNSW), lexical search (Tantivy), optional PostgreSQL backend
-- **Ingestion pipeline** — LLM-powered entity/fact/relationship extraction (OpenAI, Anthropic, Ollama), dual-stream ingestion with sub-50ms fast path
-- **Hybrid retrieval** — 6-signal scoring (semantic, lexical, graph, recency, salience, confidence), supersedence-aware filtering, query reformulation, temporal context formatting
-- **Epistemic state model** — lifecycle states (tentative -> stable -> superseded -> archived), confidence tracking, contradiction detection, oscillation dampening
-- **Self-organizing memory** — 11 organizer jobs (promote, decay, archive, deduplicate, alias resolve, summarize, consolidate, snapshot generation, etc.)
-- **CLI** — `prme` command for memory inspection, search, export
-- **HTTP API** — FastAPI REST API for all memory operations
-- **Encryption at rest** — Fernet (AES-128-CBC + HMAC) with PBKDF2 key derivation
-- **Benchmark suite** — LongMemEval (92.5%), LoCoMo (79.0%), custom epistemic evaluation
-- **Testing** — 944 tests, 19 simulation scenarios, stress tests, CI matrix (Python 3.11-3.13)
+- Repair vector candidate starvation under user, scope, lifecycle, and temporal filters; count distinct nodes rather than vector entries.
+- Remove dataset observations, copied answer examples, and harness-only query expansion from benchmark evaluation.
+- Replace stale accuracy claims with explicit measurement limits.
+- Review and complete organizer isolation PR #69, including shared DuckDB connection locking.
+- Restore CI coverage for the actual default branch, main.
 
----
+Adaptive vector search repairs recall but does not implement RFC-0004 index-level namespace partitioning. Highly selective searches may scan the full index; measure latency before scaling this approach.
 
-## v0.5 — Integrations and Developer Experience (**In Progress**)
+## Prioritized work
 
-Making PRME easy to adopt in existing agent frameworks.
+Effort: S = 1–2 focused days, M = 3–5 days, L = more than a week. Estimates are provisional; research experiments may stop after a negative result.
 
-- [x] **MCP server** — Model Context Protocol server so any MCP-compatible client (Claude, Cursor, etc.) can use PRME as a memory backend out of the box
-- [x] **Python SDK refinements** — synchronous `MemoryClient` wrapper with dedicated event loop thread, works in scripts/notebooks/async contexts
-- [ ] **Framework adapters** — first-party integrations for LangChain, LlamaIndex, CrewAI, and AutoGen
-- [ ] **Plugin architecture** — pluggable storage backends, custom node types, user-defined organizer jobs
-- [x] **Improved onboarding** — `prme init` scaffolding, `prme doctor` health checks, `examples/simple.py` getting-started example
+| Priority | Work | Effort | Acceptance criterion |
+|---|---|---|---|
+| P0 | [#64 Measurement](https://github.com/dwamianm/prism/issues/64), [#63 Documentation](https://github.com/dwamianm/prism/issues/63) | M | Held-out baseline; evidence recall and packing quality separate from answer scores; full run provenance and repeated-run spread |
+| P0 | [#66 Organizer isolation](https://github.com/dwamianm/prism/issues/66), [PR #69](https://github.com/dwamianm/prism/pull/69) | S | Scoped jobs leave other tenants untouched; unscoped pairwise jobs never merge across owners |
+| P0 for shared deployments | [#35 Server-bound identity](https://github.com/dwamianm/prism/issues/35) | M | REST/MCP callers cannot choose another user's identity; all read/write surfaces covered |
+| P1 | [#29 Complete aggregation](https://github.com/dwamianm/prism/issues/29) | L | Scoped enumeration with explicit completeness/truncation; correct counts beyond top-k and context limits |
+| P1 | [#30 Temporal entity state](https://github.com/dwamianm/prism/issues/30) | L | Current and historical answers respect event time, knowledge time, provenance, and unresolved contradictions |
+| P1 | [#65 Public API gaps](https://github.com/dwamianm/prism/issues/65) | M | Reliable event-to-node resolution under concurrent writes; retrieval modes work through candidate generation and public APIs |
+| P2 | [#27 Entity state](https://github.com/dwamianm/prism/issues/27), [#31 Fact-first packing](https://github.com/dwamianm/prism/issues/31) | M | Improve support recall at fixed token budgets without losing qualifiers, negations, or provenance |
+| P2 | [#32 Near-miss disambiguation](https://github.com/dwamianm/prism/issues/32) | M | Held-out near-miss and abstention improvement justifies added ingestion cost |
+| P2 for PostgreSQL deployments | [#67 Database isolation](https://github.com/dwamianm/prism/issues/67) | L | Restricted-role RLS tests, including pooled connection reuse; depends on server identity and PostgreSQL CI |
 
----
+Measurement comes first because unreliable scores cannot guide optimization. Aggregation and temporal state address identifiable retrieval limitations. Entity cards, compression, and contrastive encoding remain experiments until they demonstrate gains against that baseline.
 
-## v0.6 — Retrieval Intelligence
+## Backlog decisions
 
-Pushing retrieval accuracy further with smarter strategies.
+Reviewed all 16 open issues and added scope/dependency guidance to the 11 retained issues above. Closed:
 
-- [ ] **Pre-aggregation during ingestion** — compute entity counts and aggregate facts at store time for instant answers to "how many times did X..." queries
-- [ ] **Chunk-level retrieval** — index conversation segments as retrievable units for better single-hop recall on long conversations
-- [ ] **Neural reranking** — optional cross-encoder reranking stage after candidate generation for higher precision
-- [ ] **Adaptive retrieval profiles** — learn per-user scoring weights from feedback signals over time
-- [ ] **Timeline query detection** — automatically detect "how has X changed" queries and return chronological fact evolution
+| Issue | Decision | Reason |
+|---|---|---|
+| [#60](https://github.com/dwamianm/prism/issues/60) | Completed | Late-stage filtering fixed in bc64244; regression tests pass |
+| [#61](https://github.com/dwamianm/prism/issues/61) | Completed | Language pin, cue gate, and threaded parsing in ddeb9cf; tests pass |
+| [#62](https://github.com/dwamianm/prism/issues/62) | Completed | Scheduled maintenance and shutdown draining in 5fc73c6; tests pass |
+| [#28](https://github.com/dwamianm/prism/issues/28) | Not planned | Umbrella reconstruction redesign overlaps measurable work in #27, #29, and #30 |
+| [#33](https://github.com/dwamianm/prism/issues/33) | Not planned | Arbitrary 98% target conflates retrieval and answer-model quality without a trustworthy baseline; replaced by #64 |
 
----
+Issue #35 remains open: engine ownership checks landed, but identity binding did not. Issue #67's original claim of no PostgreSQL CI job is stale: the job exists, but branch triggers were wrong.
 
-## v0.7 — Multi-Agent and Collaboration
+## Release gates
 
-Memory that works across agents, teams, and time.
+- Core tests and relevant simulations pass on supported Python versions.
+- PostgreSQL changes pass against a live database using the intended application role.
+- Quality improvements preserve scope, temporal, lifecycle, and provenance rules.
+- Benchmark reports identify dataset subsets, models, configuration, and costs.
+- API changes preserve compatibility or supply a documented migration path.
 
-- [ ] **Multi-agent memory semantics** — scoped memory sharing between agents with configurable visibility (private, shared, broadcast)
-- [ ] **Memory federation** — sync memory packs between instances with conflict resolution (CRDT-based merge)
-- [ ] **Access control** — role-based permissions on memory scopes, audit logging
-- [ ] **Collaborative memory** — agents can annotate, reinforce, or challenge each other's memories with attribution tracking
-
----
-
-## v0.8 — Production Hardening
-
-Getting PRME ready for production deployments at scale.
-
-- [ ] **Memory branching** — create isolated memory branches for simulation, A/B testing, and rollback
-- [ ] **Streaming ingestion** — Kafka/Redis Streams consumer for high-throughput ingestion pipelines
-- [ ] **Observability** — OpenTelemetry traces for retrieval pipeline, Prometheus metrics, structured audit log
-- [ ] **Performance benchmarks** — published latency/throughput numbers at 10K, 100K, 1M memory nodes
-- [ ] **Migration tooling** — import from existing memory systems (Mem0, Zep, ChromaDB) with validation
-
----
-
-## v1.0 — Stable Release
-
-Production-ready with API stability guarantees.
-
-- [ ] **API stability commitment** — semver guarantees, deprecation policy, migration guides
-- [ ] **RFC graduation** — promote core RFCs from Draft to Stable status
-- [ ] **Security audit** — third-party review of encryption, access control, and data handling
-- [ ] **Comprehensive documentation** — API reference, architecture guide, deployment cookbook
-- [ ] **PyPI stable release** — published package with long-term support commitment
-
----
-
-## Future Exploration
-
-Ideas under consideration for post-1.0 development.
-
-- **Hosted PRME** — managed memory service with team features, usage analytics, and SLA
-- **Intent and goal memory** — track user goals and agent objectives as first-class memory objects
-- **Predictive memory** — anticipate what context an agent will need before it asks
-- **Memory compression** — progressive summarization that preserves retrieval quality while reducing storage
-- **Visual memory explorer** — web UI for browsing, searching, and debugging memory graphs
-- **Voice/multimodal memory** — store and retrieve memories from audio, images, and structured data
-
----
-
-## How to Influence the Roadmap
-
-We prioritize based on real-world usage and community input:
-
-- **Feature requests** — [open an issue](https://github.com/dwamianm/prism/issues) with the `enhancement` label
-- **Bug reports** — [open an issue](https://github.com/dwamianm/prism/issues) with the `bug` label
-- **Discussions** — share your use case in [GitHub Discussions](https://github.com/dwamianm/prism/discussions)
-- **Contributions** — see [CONTRIBUTING.md](CONTRIBUTING.md) for how to get involved
-
-Priorities can shift. If something you need isn't listed, tell us — the best roadmaps are shaped by the people using the software.
+A stable release follows demonstrated behavior and maintainable APIs. No date or accuracy percentage is promised before the corresponding evidence exists.

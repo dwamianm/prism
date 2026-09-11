@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Expand vector searches when tenant, scope, lifecycle, or temporal filters leave
+  fewer than the requested number of distinct memory nodes.
+
+### Changed
+
+- Remove dataset observations, answer-revealing prompt examples, and benchmark-only
+  query expansion from real-data evaluation.
+- Replace stale accuracy headlines with a measurement contract and reviewed roadmap.
+
 ## [0.10.0] - 2026-07-15
 
 ### Added
