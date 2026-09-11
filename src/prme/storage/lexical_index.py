@@ -77,6 +77,11 @@ class LexicalIndex:
 
         # Create or open persistent index
         self._index = tantivy.Index(self._schema, path=index_path)
+        # All searches explicitly reload below. Tantivy's default OnCommit
+        # reader adds a delayed callback that can recreate .tantivy-meta.lock
+        # after close(), racing pack removal/move/encryption (#71). Manual
+        # reload preserves cross-instance visibility without that callback.
+        self._index.config_reader(reload_policy="Manual")
 
         # A writer is held only while a batch has uncommitted documents:
         # created lazily on the first add of a batch and released on commit.
