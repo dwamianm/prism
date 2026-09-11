@@ -345,7 +345,7 @@ async def cmd_node(args: argparse.Namespace) -> None:
             print(f"  Created at:      {d['created_at']}")
             print(f"  Updated at:      {d['updated_at']}")
             print(f"  Metadata:        {json.dumps(d['metadata'])}")
-            print(f"  Content:")
+            print("  Content:")
             for line in node.content.splitlines():
                 print(f"    {line}")
     finally:
@@ -569,31 +569,31 @@ async def cmd_stats(args: argparse.Namespace) -> None:
         else:
             print("Memory Statistics")
             print("=" * 50)
-            print(f"\nTotals:")
+            print("\nTotals:")
             print(f"  Nodes:   {node_count}")
             print(f"  Edges:   {edge_count}")
             print(f"  Events:  {event_count}")
-            print(f"\nAverages:")
+            print("\nAverages:")
             print(f"  Confidence:  {avg_confidence:.4f}")
             print(f"  Salience:    {avg_salience:.4f}")
 
             if by_type:
-                print(f"\nNodes by type:")
+                print("\nNodes by type:")
                 for t, c in by_type:
                     print(f"  {t:<15} {c:>6}")
 
             if by_state:
-                print(f"\nNodes by state:")
+                print("\nNodes by state:")
                 for s, c in by_state:
                     print(f"  {s:<15} {c:>6}")
 
             if by_scope:
-                print(f"\nNodes by scope:")
+                print("\nNodes by scope:")
                 for s, c in by_scope:
                     print(f"  {s:<15} {c:>6}")
 
             if edges_by_type:
-                print(f"\nEdges by type:")
+                print("\nEdges by type:")
                 for t, c in edges_by_type:
                     print(f"  {t:<15} {c:>6}")
     finally:
@@ -859,7 +859,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--user-id",
         help=(
             "Scope every job to one user. Multi-tenant stores should run "
-            "once per tenant; an unscoped run merges across tenants"
+            "once per tenant; an unscoped run maintains the whole store"
         ),
     )
     p_organize.add_argument(

@@ -268,3 +268,25 @@ async def test_every_job_accepts_a_user_scope(engine, org_config):
     for job_name in ALL_JOBS:
         result = await run_job(job_name, engine, org_config, 500.0, "alice")
         assert result.errors == 0, f"{job_name} errored under a user scope"
+
+
+async def test_organizer_raw_sql_holds_shared_connection_lock(engine, monkeypatch):
+    """The write queue serializes writes, but reads share this connection too."""
+    import asyncio
+
+    original = asyncio.to_thread
+    observed = []
+
+    async def checked_to_thread(func, *args, **kwargs):
+        is_log = args and isinstance(args[0], str) and "'TOMBSTONE_SWEEP'" in args[0]
+        is_compaction = getattr(func, "__name__", "") == "_find_stale"
+        if is_log or is_compaction:
+            observed.append(engine._graph_store._conn_lock.locked())
+        return await original(func, *args, **kwargs)
+
+    monkeypatch.setattr(asyncio, "to_thread", checked_to_thread)
+    await engine.store("expired note", user_id="alice", ttl_days=0)
+    await engine.organize(
+        user_id="alice", jobs=["tombstone_sweep", "index_compaction"], budget_ms=5000,
+    )
+    assert observed == [True, True]

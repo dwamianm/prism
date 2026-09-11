@@ -58,8 +58,8 @@ async def run_job(
         user_id: When given, the job only reads and mutates nodes owned by
             this user. Omitting it keeps the single-tenant behaviour of
             operating over every node in the store. Multi-tenant deployments
-            must pass it: several jobs merge node pairs, and an unscoped run
-            can pair nodes belonging to different tenants (issue #66).
+            should pass it to confine maintenance to one tenant. Pairwise
+            jobs also reject cross-owner merges on unscoped runs (issue #66).
 
     Returns:
         JobResult with execution details.
@@ -366,7 +366,10 @@ async def _job_feedback_apply(
     if not signals:
         return JobResult(
             job=job_name,
-            details={"status": "no_signals", "note": "No pending feedback signals"},
+            details={
+                "status": "no_signals", "note": "No pending feedback signals",
+                "scope": "global",
+            },
         )
 
     if user_id is not None:
@@ -686,13 +689,16 @@ async def _job_tombstone_sweep(
                         p=payload,
                         n=now,
                     ) -> None:
-                        await asyncio.to_thread(
-                            c.execute,
-                            "INSERT INTO operations "
-                            "(id, op_type, target_id, actor_id, payload, created_at) "
-                            "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?, ?::JSON, ?)",
-                            [oid, nid, aid, p, n],
-                        )
+                        # The queue serializes writes only; retrieval reads
+                        # also use this connection and share the graph lock.
+                        async with engine._graph_store._conn_lock:
+                            await asyncio.to_thread(
+                                c.execute,
+                                "INSERT INTO operations "
+                                "(id, op_type, target_id, actor_id, payload, created_at) "
+                                "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?, ?::JSON, ?)",
+                                [oid, nid, aid, p, n],
+                            )
 
                     await engine._write_queue.submit(
                         _log,
@@ -855,7 +861,8 @@ async def _job_index_compaction(
         ).fetchall()
         return [row[0] for row in rows]
 
-    stale_ids = await asyncio.to_thread(_find_stale)
+    async with engine._graph_store._conn_lock:
+        stale_ids = await asyncio.to_thread(_find_stale)
 
     processed = 0
     modified = 0

@@ -1867,10 +1867,9 @@ class MemoryEngine:
         Args:
             user_id: When given, every job only reads and mutates nodes owned
                 by this user. Multi-tenant deployments must pass it and drive
-                maintenance as a loop over tenants: an unscoped run merges
-                duplicate and alias pairs across tenant boundaries. Omitting
-                it keeps the single-tenant behaviour of covering the whole
-                store.
+                maintenance as a loop over tenants. Omitting it covers the
+                whole store, but pairwise jobs still reject cross-owner merges.
+                Feedback-derived scoring weights remain engine-global.
             jobs: List of job names to run. Defaults to ALL_JOBS.
             budget_ms: Total time budget in milliseconds.
 
