@@ -28,9 +28,10 @@ from benchmarks.models import BenchmarkResult, QueryResult
 
 from prme.retrieval.context_formatter import format_for_llm
 from prme.storage.engine import MemoryEngine
-from prme.types import EpistemicType, NodeType, Scope
+from prme.types import NodeType, Scope
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from benchmarks.llm_judge import LLMJudgeConfig, VerdictCache
 
 
@@ -800,7 +801,6 @@ class LongMemEvalRealBenchmark:
             generate_answer,
             is_judge_error,
             judge_answer,
-            reformulate_query,
         )
         from benchmarks.scoring import CORRECT_THRESHOLD
         from prme.config import PRMEConfig
@@ -887,33 +887,12 @@ class LongMemEvalRealBenchmark:
                                 event_time=sess_time,
                             )
 
-                    # Multi-query retrieval: original + 2 reformulations
+                    # Retrieval expansion must come from the product, not
+                    # benchmark-only LLM calls and result merging.
                     response = await q_engine.retrieve(
                         question["question"], user_id=user_id
                     )
-                    seen_ids = {str(r.node.id) for r in response.results}
                     all_results = list(response.results)
-
-                    if not is_abstention:
-                        async with llm_semaphore:
-                            alt_queries = await reformulate_query(
-                                question["question"], llm_config
-                            )
-                        for alt_q in alt_queries:
-                            alt_response = await q_engine.retrieve(
-                                alt_q, user_id=user_id
-                            )
-                            for r in alt_response.results:
-                                rid = str(r.node.id)
-                                if rid not in seen_ids:
-                                    seen_ids.add(rid)
-                                    all_results.append(r)
-
-                        all_results.sort(
-                            key=lambda r: r.composite_score, reverse=True
-                        )
-                    # Keep more results for aggregation queries (need all items)
-                    all_results = all_results[:150]
                 finally:
                     await q_engine.close()
                     shutil.rmtree(tmp_dir, ignore_errors=True)

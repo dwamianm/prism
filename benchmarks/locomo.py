@@ -695,30 +695,8 @@ class LoCoMoRealBenchmark:
                 engine, sessions, sample_id, user_id,
             )
 
-            # Ingest observations as distilled facts
-            obs_count = 0
-            observations = conv_data.get("observation", {})
-            for obs_key, speaker_obs in observations.items():
-                if not isinstance(speaker_obs, dict):
-                    continue
-                for speaker, fact_lists in speaker_obs.items():
-                    for fact_entry in fact_lists:
-                        if isinstance(fact_entry, list) and len(fact_entry) >= 1:
-                            fact_text = fact_entry[0]
-                        elif isinstance(fact_entry, str):
-                            fact_text = fact_entry
-                        else:
-                            continue
-                        if len(fact_text) < 10:
-                            continue
-                        await engine.store(
-                            f"[Observation] {fact_text}",
-                            user_id=user_id,
-                            role="user",
-                            node_type=NodeType.FACT,
-                            scope=Scope.PERSONAL,
-                        )
-                        obs_count += 1
+            # Only conversation content enters memory; dataset observations
+            # are evaluation annotations, not facts produced by PRME.
 
             # Consolidate entity knowledge profiles
             speakers = set()
@@ -733,11 +711,10 @@ class LoCoMoRealBenchmark:
             )
 
             logger.info(
-                "Ingested %s: %d sessions, %d turns, %d observations, %d profiles",
+                "Ingested %s: %d sessions, %d turns, %d profiles",
                 sample_id,
                 len(sessions),
                 total_turns,
-                obs_count,
                 profile_count,
             )
 
@@ -827,7 +804,6 @@ class LoCoMoRealBenchmark:
             generate_answer,
             is_judge_error,
             judge_answer,
-            reformulate_query,
         )
         from benchmarks.scoring import CORRECT_THRESHOLD
 
@@ -862,36 +838,10 @@ class LoCoMoRealBenchmark:
                 engine, sessions, sample_id, user_id,
             )
 
-            # Ingest observations as distilled facts (entity knowledge).
-            # These are pre-extracted facts per session per speaker from the
-            # LoCoMo dataset — equivalent to entity knowledge cards.
-            obs_count = 0
-            observations = conv_data.get("observation", {})
-            for obs_key, speaker_obs in observations.items():
-                if not isinstance(speaker_obs, dict):
-                    continue
-                for speaker, fact_lists in speaker_obs.items():
-                    for fact_entry in fact_lists:
-                        if isinstance(fact_entry, list) and len(fact_entry) >= 1:
-                            fact_text = fact_entry[0]
-                        elif isinstance(fact_entry, str):
-                            fact_text = fact_entry
-                        else:
-                            continue
-                        if len(fact_text) < 10:
-                            continue
-                        await engine.store(
-                            f"[Observation] {fact_text}",
-                            user_id=user_id,
-                            role="user",
-                            node_type=NodeType.FACT,
-                            scope=Scope.PERSONAL,
-                        )
-                        obs_count += 1
-
+            # Dataset observations must never be ingested as answer evidence.
             logger.info(
-                "Ingested %s: %d sessions, %d turns, %d observations",
-                sample_id, len(sessions), total_turns, obs_count,
+                "Ingested %s: %d sessions, %d turns",
+                sample_id, len(sessions), total_turns,
             )
 
             # Collect QA items for concurrent evaluation
@@ -912,8 +862,6 @@ class LoCoMoRealBenchmark:
         semaphore = asyncio.Semaphore(concurrency)
         llm_semaphore = asyncio.Semaphore(llm_concurrency)
         completed = 0
-        _names_re = re.compile(r'\b([A-Z][a-z]{2,})\b')
-        _skip = {"What", "When", "Where", "Who", "How", "Would", "Does", "Did", "Has", "Have", "Could", "Can", "The"}
 
         logger.info(
             "Evaluating %d questions, concurrency=%d, llm_concurrency=%d",
@@ -927,54 +875,13 @@ class LoCoMoRealBenchmark:
             cat_name = _LOCOMO_CATEGORIES[qa["category"]]
             answer = str(qa["answer"])
 
-            # Query reformulation (LLM semaphore only — no retrieval lock)
-            async with llm_semaphore:
-                alt_queries = await reformulate_query(
-                    qa["question"], llm_config
-                )
-
-            # Entity-focused: extract proper nouns and search for each
-            entity_names = _names_re.findall(qa["question"])
-            entity_names = [n for n in entity_names if n not in _skip]
-            for name in entity_names[:2]:
-                alt_queries.append(name)
-
-            # Entity + keyword combinations for targeted search
-            # (generic, not hardcoded — extracts content words from query)
-            import re as _re
-            _stop = {"what", "when", "where", "who", "how", "would", "does",
-                     "did", "has", "have", "could", "can", "the", "many",
-                     "much", "been", "are", "was", "were", "from", "with"}
-            content_words = [
-                w for w in _re.findall(r'\b[a-z]{3,}\b', qa["question"].lower())
-                if w not in _stop
-            ]
-            for name in entity_names[:1]:
-                for word in content_words[:2]:
-                    alt_queries.append(f"{name} {word}")
-
-            # Retrieval (semaphore-gated to avoid overwhelming shared engine)
+            # Exercise one public retrieval call. Optional reformulation and
+            # entity expansion belong to the product configuration/pipeline.
             async with semaphore:
                 response = await engine.retrieve(
                     qa["question"], user_id=user_id
                 )
-                seen_ids = {str(r.node.id) for r in response.results}
                 all_results = list(response.results)
-
-                for alt_q in alt_queries:
-                    alt_response = await engine.retrieve(
-                        alt_q, user_id=user_id
-                    )
-                    for r in alt_response.results:
-                        rid = str(r.node.id)
-                        if rid not in seen_ids:
-                            seen_ids.add(rid)
-                            all_results.append(r)
-
-                all_results.sort(
-                    key=lambda r: r.composite_score, reverse=True
-                )
-
 
             top_content = format_for_llm(
                 results=all_results[:80],

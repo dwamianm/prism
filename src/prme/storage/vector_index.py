@@ -30,8 +30,9 @@ class VectorIndex:
 
     User_id filtering uses post-filter strategy: retrieve extra candidates
     from USearch, then validate only those matched keys against the
-    metadata table (WHERE vector_key IN (...)), so the lookup is bounded
-    by the over-fetch size rather than the user's total vector count.
+    metadata table (WHERE vector_key IN (...)). The candidate window grows
+    until enough distinct eligible nodes are found or the index is exhausted,
+    so other tenants and excluded nodes cannot starve a user's results.
 
     Args:
         conn: DuckDB connection for metadata storage.
@@ -39,7 +40,7 @@ class VectorIndex:
         embedding_provider: Provider for generating text embeddings.
     """
 
-    # Over-fetch multiplier for post-filtering by user_id
+    # Initial over-fetch multiplier; expand when filtering leaves fewer than k.
     _OVERFETCH_FACTOR = 3
 
     def __init__(
@@ -118,9 +119,8 @@ class VectorIndex:
     ) -> dict[int, str]:
         """Fetch allowed vector keys from DuckDB (sync, runs in thread pool).
 
-        Only the HNSW-matched ``candidate_keys`` are checked (inverted
-        filter): the query is bounded at O(k) rows instead of scanning
-        every vector_metadata row for the user.
+        Only the HNSW-matched ``candidate_keys`` are checked. Selective
+        filters may require expanding this window up to the whole index.
         """
         if not candidate_keys:
             return {}
@@ -365,6 +365,9 @@ class VectorIndex:
         Returns:
             List of dicts with keys: node_id, score, distance.
         """
+        if k <= 0:
+            return []
+
         query_vector = np.array(vector, dtype=np.float32)
 
         # Run the USearch read under _write_lock and off the event loop.
@@ -372,43 +375,45 @@ class VectorIndex:
         # concurrent full-index save() could otherwise interleave with a
         # search traversal. The lock serializes the USearch index access;
         # to_thread keeps the (CPU-bound) search off the event loop.
-        matched_keys = await self._search_index(query_vector, k)
-        if matched_keys is None:
-            return []
+        fetch_k = k * self._OVERFETCH_FACTOR
+        while True:
+            matched_keys = await self._search_index(query_vector, fetch_k)
+            if not matched_keys:
+                return []
 
-        # Check only the matched keys against DuckDB (inverted filter:
-        # WHERE vector_key IN (...) bounded at fetch_k rows, instead of
-        # loading every vector_metadata row for the user). Scope/temporal
-        # filters JOIN with the nodes table. All DuckDB access is
-        # serialized through conn_lock to prevent concurrent thread
-        # access during asyncio.gather parallelism.
-        candidate_keys = [key for key, _distance in matched_keys]
-        async with self._conn_lock:
-            allowed_keys = await asyncio.to_thread(
-                self._fetch_allowed_keys,
-                user_id,
-                scope,
-                time_from,
-                time_to,
-                candidate_keys,
-            )
+            # Apply the same eligibility filters on every expansion. DuckDB
+            # access remains serialized during candidate-path parallelism.
+            candidate_keys = [key for key, _distance in matched_keys]
+            async with self._conn_lock:
+                allowed_keys = await asyncio.to_thread(
+                    self._fetch_allowed_keys,
+                    user_id,
+                    scope,
+                    time_from,
+                    time_to,
+                    candidate_keys,
+                )
 
-        # Filter and map results
-        results = []
-        for key, distance in matched_keys:
-            if key not in allowed_keys:
-                continue
+            # Rebuild from the latest distance-ordered window: approximate
+            # search can change its neighbor set when the window grows.
+            results = []
+            seen_nodes: set[str] = set()
+            for key, distance in matched_keys:
+                node_id = allowed_keys.get(key)
+                if node_id is None or node_id in seen_nodes:
+                    continue
+                seen_nodes.add(node_id)
+                results.append({
+                    "node_id": node_id,
+                    "score": 1.0 - distance,
+                    "distance": distance,
+                })
+                if len(results) >= k:
+                    return results
 
-            results.append({
-                "node_id": allowed_keys[key],
-                "score": 1.0 - distance,  # cosine similarity
-                "distance": distance,
-            })
-
-            if len(results) >= k:
-                break
-
-        return results
+            if len(matched_keys) < fetch_k:
+                return results
+            fetch_k *= 2
 
     async def _search_index(
         self, query_vector: np.ndarray, k: int
@@ -427,8 +432,8 @@ class VectorIndex:
         self, query_vector: np.ndarray, k: int
     ) -> list[tuple[int, float]] | None:
         """Synchronous USearch read (runs in thread pool under _write_lock)."""
-        # Over-fetch to compensate for post-filtering
-        fetch_k = min(k * self._OVERFETCH_FACTOR, len(self._index))
+        # The caller controls expansion after eligibility filtering.
+        fetch_k = min(k, len(self._index))
         if fetch_k == 0:
             return None
 

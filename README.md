@@ -8,44 +8,17 @@
 
 PRME gives AI agents and chatbots stable long-term memory by combining an append-only event log, a graph-based relational model, hybrid retrieval (graph + vector + lexical), and epistemic state tracking — all in a portable, single-directory bundle.
 
-## Benchmark Results
+## Retrieval quality and evaluation
 
-PRME is evaluated against two established long-term memory benchmarks. Results reflect end-to-end accuracy: ingestion, retrieval, and LLM-generated answers judged against ground truth.
+PRME includes synthetic regression scenarios and LoCoMo/LongMemEval adapters.
+There is **no validated current-release accuracy headline yet**. Historical runs
+in `benchmarks/results/` used different configurations, including dataset-provided
+observations and benchmark-only retrieval expansion. They are research artifacts,
+not a reproducible measurement of the current product.
 
-| Benchmark | Score | Queries | Details |
-|-----------|-------|---------|---------|
-| **[LongMemEval](https://github.com/xiaowu0162/LongMemEval)** | **92.5%** | 470 | 5 ability categories across multi-session conversations |
-| **[LoCoMo](https://github.com/snap-stanford/locomo)** | **79.0%** | 152 | Long-conversation QA with temporal, multi-hop, and inference |
-
-### LongMemEval Breakdown
-
-| Category | Accuracy | Description |
-|----------|----------|-------------|
-| Information Extraction | 97% (117/120) | Retrieving specific facts from past conversations |
-| Temporal Reasoning | 95% (123/127) | Time-based queries ("when did...", "how long ago...") |
-| Multi-Session | 92% (112/121) | Connecting information across separate conversations |
-| Knowledge Update | 91% (66/72) | Tracking how facts change over time |
-| Abstention | 65% (30/30) | Correctly saying "I don't know" when info is absent |
-
-### LoCoMo Breakdown
-
-| Category | Accuracy | Description |
-|----------|----------|-------------|
-| Temporal | 93.5% | Date and time reasoning over conversation history |
-| Inference | 81.5% | Drawing conclusions from stored memories |
-| Multi-Hop | 80.4% | Combining multiple facts to answer a question |
-| Single-Hop | 58.1% | Direct fact retrieval from long conversations |
-
-<details>
-<summary>Methodology and competitive context</summary>
-
-- **Generation model**: gpt-5-mini (OpenAI). The same retrieval pipeline with gpt-4o-mini scores 80.1% on LME and 72.6% on LoCoMo — the gap is generation quality, not retrieval.
-- **Retrieval pipeline**: 6-signal hybrid scoring (semantic, lexical, graph, recency, salience, confidence) with supersedence-aware filtering, query reformulation, and temporal context formatting.
-- **LongMemEval competitive context**: Mastra (95%), **PRME (92.5%)**, Hindsight (91.4%), Emergence (86%), Supermemory (85%). PRME places top-3 among published systems.
-- **Evaluation**: LLM-as-judge scoring with structured output. All benchmarks are deterministic given the same retrieval results and generation model.
-- **Test suite**: 944 tests passing, 19 simulation scenarios, 6 stress tests.
-
-</details>
+See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
+remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:
+reliable evidence retrieval, complete aggregation, and correct temporal state.
 
 ## Why PRME?
 
@@ -57,7 +30,7 @@ PRME models memory the way it actually works:
 - **Graph-based relational model** — 9 typed node kinds (entities, facts, preferences, decisions, tasks, instructions, summaries, events, notes) with edges capturing relationships, supersedence, and temporal validity
 - **Epistemic state tracking** — memories have lifecycle states (tentative -> stable -> superseded -> archived), confidence scores, contradiction detection, and oscillation dampening
 - **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle
-- **Self-organizing memory** — 11 organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival automatically
+- **Self-organizing memory** — organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival
 - **Dual-stream ingestion** — sub-50ms fast path for real-time use, with deferred graph materialization
 - **Local-first** — everything lives in a single directory (DuckDB + usearch + Tantivy). No cloud dependency. Optional PostgreSQL backend for production.
 
@@ -79,7 +52,7 @@ pip install prme[api]        # HTTP API (FastAPI)
 ```bash
 git clone https://github.com/dwamianm/prism.git
 cd prism
-pip install -e ".[dev]"
+uv sync --dev
 ```
 
 ## Quickstart
@@ -175,7 +148,7 @@ See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough an
 - **Ingestion Pipeline** — stores raw events, optionally extracts entities/facts/relationships via LLM (OpenAI, Anthropic, Ollama). Dual-stream mode provides a sub-50ms fast path with deferred graph materialization.
 - **Retrieval Pipeline** — query analysis -> multi-source candidate generation -> deterministic scoring -> context packing. Supports bi-temporal queries with `knowledge_at` for point-in-time snapshots.
 - **Epistemic State Model** — tracks confidence, lifecycle transitions (tentative -> stable -> superseded -> archived), contradiction detection, supersedence chains, oscillation dampening, and surprise-gated storage.
-- **Organizer** — 11 background jobs: `promote`, `decay_sweep`, `archive`, `deduplicate`, `alias_resolve`, `summarize`, `feedback_apply`, `centrality_boost`, `tombstone_sweep`, `snapshot_generation`, `consolidate`. Runs on schedule or opportunistically during retrieve/ingest.
+- **Organizer** — twelve registered jobs, including index compaction; `centrality_boost` is currently a stub. Explicit passes run through `prme organize`. Retrieve/ingest can schedule opportunistic in-process maintenance; there is no built-in cron or daemon scheduler.
 - **Storage** — DuckDB (events + graph), usearch (HNSW vectors), Tantivy (full-text). Optional PostgreSQL backend with asyncpg + pgvector.
 
 ## CLI
@@ -286,9 +259,9 @@ Detailed technical documentation lives in [`docs/`](docs/):
 
 See [ROADMAP.md](ROADMAP.md) for the full development plan.
 
-**Current (v0.5)** — MCP server, SDK ergonomics (`MemoryClient` done), plugin architecture
-**Next (v0.6)** — Pre-aggregation, chunk-level retrieval, neural reranking
-**Future (v0.6+)** — Multi-agent memory, federation, hosted offering
+**Current (v0.10.0)** — hybrid retrieval, synchronous and async clients, MCP/REST, framework adapters, deterministic vector search, and index rebuilds.
+
+**Next** — a trustworthy retrieval baseline, complete aggregation results, temporal state, and measured improvements to context packing. See the roadmap for acceptance criteria and GitHub issue links.
 
 ## Contributing
 
