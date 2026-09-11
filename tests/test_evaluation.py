@@ -7,7 +7,6 @@ no relevant results, and empty inputs.
 
 from __future__ import annotations
 
-import math
 
 import pytest
 

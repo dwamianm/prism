@@ -62,6 +62,7 @@ async def find_duplicates(
     config: OrganizerConfig,
     batch_size: int = 100,
     budget_ms: float = 5000.0,
+    user_id: str | None = None,
 ) -> list[DuplicateCandidate]:
     """Find duplicate nodes via vector similarity and exact content match.
 
@@ -74,15 +75,17 @@ async def find_duplicates(
         config: OrganizerConfig with dedup_similarity_threshold.
         batch_size: Max nodes to scan per call.
         budget_ms: Time budget in milliseconds.
+        user_id: When given, only this user's nodes are scanned.
 
     Returns:
-        List of DuplicateCandidate pairs.
+        List of DuplicateCandidate pairs, never spanning two users.
     """
     start = time.monotonic()
     threshold = config.dedup_similarity_threshold
 
     # Fetch active nodes
     nodes = await engine.query_nodes(
+        user_id=user_id,
         lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
         limit=batch_size,
     )
@@ -91,10 +94,12 @@ async def find_duplicates(
     seen_pairs: set[tuple[str, str]] = set()
     candidates: list[DuplicateCandidate] = []
 
-    # Index by normalized content for exact matching
-    content_groups: dict[str, list[MemoryNode]] = {}
+    # Index by owner plus normalized content for exact matching. The owner is
+    # part of the key so that two tenants storing the same string -- likely
+    # for short or templated content -- are never paired (issue #66).
+    content_groups: dict[tuple[str, str], list[MemoryNode]] = {}
     for node in nodes:
-        key = node.content.strip().lower()
+        key = (node.user_id, node.content.strip().lower())
         content_groups.setdefault(key, []).append(node)
 
     # Phase 1: Exact content matches
@@ -230,6 +235,15 @@ async def merge_duplicates(
 
         if node_a is None or node_b is None:
             # One was already archived/superseded
+            continue
+
+        # Never merge across owners, whatever produced the pair (issue #66).
+        if node_a.user_id != node_b.user_id:
+            logger.warning(
+                "Refusing to merge cross-user duplicate pair (%s, %s)",
+                dup.node_a_id,
+                dup.node_b_id,
+            )
             continue
 
         # Skip if either is not in a mergeable state

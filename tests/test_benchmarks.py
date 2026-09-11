@@ -7,8 +7,6 @@ Uses isolated temp directories per test for DuckDB safety.
 
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
 
 import pytest
 

@@ -15,11 +15,9 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import tempfile
-from io import StringIO
 from pathlib import Path
 from uuid import uuid4
 
@@ -45,7 +43,7 @@ from prme.cli import (
     cmd_search,
     cmd_stats,
 )
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import NodeType
 
 
 # ---------------------------------------------------------------------------

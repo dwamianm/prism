@@ -11,7 +11,7 @@ Uses real DuckDB + DuckPGQGraphStore (no mocks for graph store).
 from __future__ import annotations
 
 import asyncio
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import duckdb
 import pytest
@@ -26,7 +26,6 @@ from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.schema import create_schema
 from prme.storage.write_queue import WriteQueue, WriteTracker
 from prme.types import (
-    ALLOWED_TRANSITIONS,
     EdgeType,
     EpistemicType,
     LifecycleState,

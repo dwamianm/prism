@@ -10,19 +10,15 @@ import math
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-import pytest
 
 from prme.models.nodes import MemoryNode
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
-from prme.retrieval.models import ExcludedCandidate, RetrievalCandidate, ScoreTrace
+from prme.retrieval.models import RetrievalCandidate
 from prme.types import (
-    DEFAULT_EXCLUDED_EPISTEMIC,
     EPISTEMIC_WEIGHTS,
     EpistemicType,
-    LifecycleState,
     NodeType,
     RetrievalMode,
-    Scope,
 )
 
 # --- Imports under test (these modules don't exist yet -> RED) ---

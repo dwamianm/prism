@@ -113,7 +113,7 @@ class PgLexicalIndex:
             n_params.extend(scope)
             n_idx += len(scope)
 
-        n_where = " AND ".join(n_conditions)
+        _n_where = " AND ".join(n_conditions)
 
         # lexical_documents query — same parameter positions offset
         d_conditions = ["d.user_id = $1", "d.content_tsv @@ plainto_tsquery('english', $2)"]
@@ -148,7 +148,7 @@ class PgLexicalIndex:
         ]
         if node_type is not None:
             # node_type param was already added at position 3
-            docs_conds.append(f"d.node_type = $3")
+            docs_conds.append("d.node_type = $3")
         if scope is not None and scope:
             # scope params follow node_type. Compute correct indices.
             scope_start = 3 + (1 if node_type is not None else 0)

@@ -11,13 +11,12 @@ import asyncio
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine
-from prme.storage.materialization_queue import MaterializationQueue, PendingMaterialization
+from prme.storage.materialization_queue import MaterializationQueue
 from prme.types import NodeType, Scope
 
 
@@ -193,7 +192,7 @@ class TestIngestFast:
         """
         engine = await create_engine(base_config)
         try:
-            event_id = await engine.ingest_fast(
+            _event_id = await engine.ingest_fast(
                 "Kubernetes orchestrates container deployments",
                 user_id="test-user",
             )

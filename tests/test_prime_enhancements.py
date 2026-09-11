@@ -22,14 +22,13 @@ from prme.retrieval.context_formatter import (
     _build_profile_preamble,
     format_for_llm,
 )
-from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreTrace
+from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
 from prme.retrieval.scoring import (
     _is_recent_episodic_query,
     compute_composite_score,
     score_and_rank,
 )
 from prme.types import (
-    EpistemicType,
     LifecycleState,
     NodeType,
     QueryIntent,
@@ -296,8 +295,8 @@ class TestEpisodicRecencyBoost:
             last_reinforced_at=old_time,
         )
 
-        recent_cand = _make_candidate(node=recent_node)
-        old_cand = _make_candidate(node=old_node)
+        _recent_cand = _make_candidate(node=recent_node)
+        _old_cand = _make_candidate(node=old_node)
 
         # Score with episodic query
         episodic_qa = _make_query_analysis("What did I recently eat?")

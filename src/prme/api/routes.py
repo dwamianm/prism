@@ -29,7 +29,7 @@ from prme.api.models import (
     StoreRequest,
     StoreResponse,
 )
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import LifecycleState, NodeType
 
 logger = logging.getLogger(__name__)
 

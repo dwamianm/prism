@@ -30,7 +30,6 @@ from prme.storage.engine import MemoryEngine
 from prme.types import (
     EdgeType,
     EpistemicType,
-    LifecycleState,
     NodeType,
     Scope,
 )

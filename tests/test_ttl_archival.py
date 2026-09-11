@@ -16,14 +16,11 @@ import json
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 
-from prme import LifecycleState, MemoryEngine, NodeType, PRMEConfig, Scope
-from prme.config import OrganizerConfig
+from prme import LifecycleState, MemoryEngine, NodeType, PRMEConfig
 from prme.organizer.jobs import run_job
-from prme.organizer.models import JobResult
 
 
 # ---------------------------------------------------------------------------

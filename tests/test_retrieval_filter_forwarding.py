@@ -22,8 +22,7 @@ import pytest_asyncio
 
 from prme.models.nodes import MemoryNode
 from prme.retrieval.candidates import generate_candidates
-from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
-from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
+from prme.retrieval.models import QueryAnalysis
 from prme.retrieval.pipeline import RetrievalPipeline
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.lexical_index import LexicalIndex
@@ -31,7 +30,6 @@ from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.types import (
     EpistemicType,
-    LifecycleState,
     NodeType,
     QueryIntent,
     RetrievalMode,
@@ -125,7 +123,6 @@ async def backends(tmp_path):
     Yields (conn, graph_store, vector_index, lexical_index) tuple.
     Cleans up on teardown.
     """
-    import asyncio
 
     db_path = str(tmp_path / "test.duckdb")
     conn = duckdb.connect(db_path)

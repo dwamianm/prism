@@ -52,7 +52,7 @@ async def test_promote_lifecycle(pg_engine):
     """Store, then promote from tentative to stable."""
     from prme.types import LifecycleState
 
-    event_id = await pg_engine.store(
+    _event_id = await pg_engine.store(
         "Water boils at 100 degrees Celsius",
         user_id="integration-test-user",
         node_type=NodeType.FACT,

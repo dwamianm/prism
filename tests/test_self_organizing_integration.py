@@ -16,7 +16,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
 import math
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -24,7 +23,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
 
 from prme import (
     DECAY_LAMBDAS,
@@ -37,7 +35,6 @@ from prme import (
     Scope,
 )
 from prme.config import OrganizerConfig
-from prme.organizer.decay import apply_virtual_decay
 from prme.organizer.models import JobResult, OrganizeResult
 from prme.types import EpistemicType
 
@@ -296,7 +293,7 @@ class TestVirtualDecayPipeline:
             assert len(response.results) >= 1
             for trace in response.score_traces:
                 assert trace.salience == pytest.approx(base_salience, abs=0.01), (
-                    f"PERMANENT profile should not decay"
+                    "PERMANENT profile should not decay"
                 )
         finally:
             await engine.close()
@@ -951,7 +948,7 @@ class TestDeterministicRebuild:
             assert len(response.results) >= 2
 
             # Map results by node ID
-            results_by_id = {str(r.node.id): r for r in response.results}
+            _results_by_id = {str(r.node.id): r for r in response.results}
             traces_by_id = {}
             for r, t in zip(response.results, response.score_traces):
                 traces_by_id[str(r.node.id)] = t
@@ -1142,7 +1139,7 @@ class TestCombinedScenarios:
             _pin_node(engine, node_id)
 
             # Run both archive and decay_sweep
-            result = await engine.organize(
+            _result = await engine.organize(
                 user_id="test-user",
                 jobs=["archive", "decay_sweep"],
             )
