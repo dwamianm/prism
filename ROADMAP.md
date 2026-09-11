@@ -13,8 +13,8 @@ The foundation already includes local DuckDB/USearch/Tantivy storage, optional P
 - Repair vector candidate starvation under user, scope, lifecycle, and temporal filters; count distinct nodes rather than vector entries.
 - Remove dataset observations, copied answer examples, and harness-only query expansion from benchmark evaluation.
 - Replace stale accuracy claims with explicit measurement limits.
-- Review and complete organizer isolation PR #69, including shared DuckDB connection locking.
-- Restore CI coverage for the actual default branch, main.
+- **Merged in PR #69:** organizer isolation, shared DuckDB connection locking, and restored CI coverage for main.
+- Retrieval and benchmark changes are available in draft PR #70.
 
 Adaptive vector search repairs recall but does not implement RFC-0004 index-level namespace partitioning. Highly selective searches may scan the full index; measure latency before scaling this approach.
 
@@ -25,7 +25,6 @@ Effort: S = 1–2 focused days, M = 3–5 days, L = more than a week. Estimates 
 | Priority | Work | Effort | Acceptance criterion |
 |---|---|---|---|
 | P0 | [#64 Measurement](https://github.com/dwamianm/prism/issues/64), [#63 Documentation](https://github.com/dwamianm/prism/issues/63) | M | Held-out baseline; evidence recall and packing quality separate from answer scores; full run provenance and repeated-run spread |
-| P0 | [#66 Organizer isolation](https://github.com/dwamianm/prism/issues/66), [PR #69](https://github.com/dwamianm/prism/pull/69) | S | Scoped jobs leave other tenants untouched; unscoped pairwise jobs never merge across owners |
 | P0 for shared deployments | [#35 Server-bound identity](https://github.com/dwamianm/prism/issues/35) | M | REST/MCP callers cannot choose another user's identity; all read/write surfaces covered |
 | P1 | [#29 Complete aggregation](https://github.com/dwamianm/prism/issues/29) | L | Scoped enumeration with explicit completeness/truncation; correct counts beyond top-k and context limits |
 | P1 | [#30 Temporal entity state](https://github.com/dwamianm/prism/issues/30) | L | Current and historical answers respect event time, knowledge time, provenance, and unresolved contradictions |
@@ -51,7 +50,9 @@ Reviewed all 16 open issues and added scope/dependency guidance to the 11 retain
 
 A subsequent CI run exposed an intermittent post-close lexical directory cleanup failure, tracked separately in [#71](https://github.com/dwamianm/prism/issues/71).
 
-Issue #35 remains open: engine ownership checks landed, but identity binding did not. Issue #67's original claim of no PostgreSQL CI job is stale: the job exists, but branch triggers were wrong.
+PR #69 subsequently merged and closed #66 after all eight CI checks passed, including live PostgreSQL on Python 3.11–3.13. Its first CI attempt hit the intermittent cleanup race recorded in #71; the affected job passed on retry.
+
+Issue #35 remains open: engine ownership checks landed, but identity binding did not. Issue #67's original claim of no PostgreSQL CI job is stale: the job exists, and its branch triggers and test dependency setup were repaired in #69.
 
 ## Release gates
 
