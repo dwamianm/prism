@@ -934,9 +934,12 @@ class LoCoMoRealBenchmark:
 
         all_details: list[QueryResult] = []
         category_results: list[tuple[str, float]] = []
-        for r in results:
+        for (qa, _user_id), r in zip(qa_items, results, strict=True):
             if isinstance(r, Exception):
                 logger.error("Question failed: %s", r)
+                all_details.append(QueryResult.failed(
+                    qa["question"], _LOCOMO_CATEGORIES[qa["category"]], str(qa["answer"]), r,
+                ))
                 continue
             detail, cat_score = r
             all_details.append(detail)
@@ -951,7 +954,7 @@ class LoCoMoRealBenchmark:
         scored = [d for d in all_details if not d.judge_error]
         errors = sum(1 for d in all_details if d.judge_error)
         if errors:
-            logger.warning("%d question(s) hit a judge/generation error and were excluded", errors)
+            logger.warning("%d question(s) could not be evaluated; run is incomplete", errors)
         correct = sum(1 for d in scored if d.correct)
         incorrect = sum(1 for d in scored if not d.correct)
         overall = (

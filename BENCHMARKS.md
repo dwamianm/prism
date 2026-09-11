@@ -30,6 +30,21 @@ Keyword containment is a diagnostic, not official benchmark accuracy. LLM
 generation and judging can vary at temperature zero. Cached verdicts reduce
 judge variation; they do not make generation deterministic.
 
+JSON and terminal reports distinguish `total_queries`, `scored_queries`,
+`error_count`, and `coverage` for the selected questions. Query failures retain
+their question text and a null score, so retry selection includes them. The
+legacy `judge_error` field now covers ingestion/retrieval exceptions as well as
+generation/judging failures. Accuracy and category scores exclude these errors;
+aggregate scores weight only measured questions. Always report coverage with
+accuracy.
+
+A whole-benchmark failure sets `benchmark_error` and `complete=false`; its
+question count may be unknown. `complete` means that the selected evaluation
+finished without errors, not that the full published dataset was evaluated.
+The CLI exits nonzero if any benchmark in any run is incomplete, even when
+other questions or later runs score well. It also retains the existing failure
+exit for a nonempty benchmark with a zero score.
+
 ## Available commands
 
 ```bash
@@ -64,8 +79,7 @@ Tracked in [#64](https://github.com/dwamianm/prism/issues/64):
 - Standardize context budgets and preparation across adapters. LoCoMo still uses
   supplied image captions, omits short turns, and builds knowledge profiles only
   in its keyword path. Document or ablate these before claiming a raw-conversation baseline.
-- Require an explicit judge for publication; account for every attempted question,
-  including exceptions and abstention-check failures.
+- Require an explicit judge for publication and report category-level coverage.
 - Freeze the evaluation split and run repeated evaluations with recorded configuration.
 
 Scope isolation, temporal eligibility, provenance, and deterministic exact

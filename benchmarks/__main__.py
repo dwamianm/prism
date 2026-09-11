@@ -205,9 +205,12 @@ async def _main(argv: list[str] | None = None) -> int:
     if args.runs > 1 and not args.quiet:
         _print_multi_run_summary(all_runs)
 
-    # Exit code: 0 if every benchmark in the last run scored > 0, 1 otherwise
-    last = all_runs[-1]
-    all_ok = all(r.overall_score > 0.0 or r.total_queries == 0 for r in last)
+    # An incomplete evaluation must fail automation even if its measured
+    # answers scored well or a later run succeeded.
+    all_ok = all(
+        r.complete and (r.overall_score > 0.0 or r.total_queries == 0)
+        for run in all_runs for r in run
+    )
     return 0 if all_ok else 1
 
 
@@ -247,7 +250,7 @@ def _print_multi_run_summary(all_runs: list[list]) -> None:
               + ", ".join(f"{a:.4f}" for a in summary.per_run_accuracy))
         print(f"    Unstable (flipped) questions: {summary.unstable_questions}")
         if summary.error_questions:
-            print(f"    Judge/generation errors (excluded): {summary.error_questions}")
+            print(f"    Evaluation errors (excluded): {summary.error_questions}")
     print("=" * 70)
     print()
 

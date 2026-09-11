@@ -16,9 +16,9 @@ class QueryResult:
 
     ``run_id`` tags which run produced this result so the mixed-run guardrail
     (``benchmarks.scoring``) can detect a report that splices together details
-    from different runs. ``judge_error`` flags an infrastructure failure during
-    judging/generation so it is reported separately from a wrong answer rather
-    than counted against accuracy.
+    from different runs. ``judge_error`` is the legacy name for an evaluation
+    failure (including ingestion, retrieval, generation, or judging). These
+    failures are reported separately from wrong answers and accuracy.
     """
 
     query: str
@@ -30,6 +30,15 @@ class QueryResult:
     generated_answer: str = ""
     run_id: str | None = None
     judge_error: bool = False
+
+    @classmethod
+    def failed(cls, query: str, category: str, expected: str, error: Exception) -> QueryResult:
+        """Keep an unmeasured question in reports and retry selection."""
+        return cls(
+            query=query, category=category, expected=expected,
+            actual=f"Evaluation failed ({type(error).__name__})",
+            correct=False, score=float("nan"), judge_error=True,
+        )
 
 
 @dataclass
@@ -61,6 +70,23 @@ class BenchmarkResult:
     timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+    benchmark_error: str | None = None
+
+    @property
+    def error_count(self) -> int:
+        return sum(d.judge_error for d in self.details)
+
+    @property
+    def scored_queries(self) -> int:
+        return self.total_queries - self.error_count
+
+    @property
+    def coverage(self) -> float:
+        return self.scored_queries / self.total_queries if self.total_queries else 0.0
+
+    @property
+    def complete(self) -> bool:
+        return self.benchmark_error is None and self.error_count == 0
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-compatible dictionary."""
@@ -71,6 +97,11 @@ class BenchmarkResult:
                 k: round(v, 4) for k, v in self.category_scores.items()
             },
             "total_queries": self.total_queries,
+            "scored_queries": self.scored_queries,
+            "error_count": self.error_count,
+            "coverage": round(self.coverage, 4),
+            "complete": self.complete,
+            **({"benchmark_error": self.benchmark_error} if self.benchmark_error else {}),
             "correct": self.correct,
             "incorrect": self.incorrect,
             "abstained": self.abstained,

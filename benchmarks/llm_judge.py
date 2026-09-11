@@ -277,6 +277,10 @@ async def check_abstention(
 
     Returns:
         True if the system should abstain (context doesn't answer the question).
+
+    Raises:
+        Exception: Provider failures propagate so evaluation records an error,
+            rather than scoring the application's fallback as a verdict.
     """
     from prme.retrieval.abstention import should_abstain
 
@@ -286,6 +290,7 @@ async def check_abstention(
         provider=config.provider,
         model=config.model,
         max_retries=config.max_retries,
+        raise_on_error=True,
     )
 
 
