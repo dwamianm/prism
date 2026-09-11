@@ -7,13 +7,11 @@ These are thin DTOs — no business logic belongs here.
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from prme.types import (
     EpistemicType,
-    LifecycleState,
     NodeType,
     Scope,
 )

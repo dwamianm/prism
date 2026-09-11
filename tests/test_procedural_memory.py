@@ -145,7 +145,7 @@ class TestInstructionNodeType:
         """INSTRUCTION nodes can be created with INFERRED epistemic type."""
         engine = await _create_engine(config)
         try:
-            event_id = await engine.store(
+            _event_id = await engine.store(
                 "User seems to prefer short answers",
                 user_id="test-user",
                 node_type=NodeType.INSTRUCTION,

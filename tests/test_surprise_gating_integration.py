@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from prme.config import PRMEConfig
-from prme.ingestion.novelty import NoveltyResult, NoveltyScorer
+from prme.ingestion.novelty import NoveltyScorer
 from prme.storage.engine import MemoryEngine
 from prme.types import NodeType, Scope
 

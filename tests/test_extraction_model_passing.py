@@ -9,7 +9,6 @@ configured model).
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 
 from prme.config import ExtractionConfig
 from prme.ingestion.extraction import (

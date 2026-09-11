@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import math
-import time
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -41,8 +40,6 @@ from prme.types import (
     EpistemicType,
     LifecycleState,
     NodeType,
-    Scope,
-    SourceType,
 )
 
 

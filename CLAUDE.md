@@ -33,7 +33,9 @@ Objects progress through: Tentative → Stable → Superseded → Archived. Each
 
 The organizer (`src/prme/organizer/`, RFC-0015) provides maintenance jobs that handle: salience/confidence recalculation, promotion/demotion of assertions, summarization, deduplication/entity alias resolution, policy-based archival with TTL enforcement, tombstone and index compaction sweeps, and snapshot generation. `ALL_JOBS` currently registers twelve jobs (some are full implementations, some stubs pending future RFCs).
 
-Despite the name "scheduled," there is **no built-in cron or daemon scheduler**. Jobs run in two ways: (1) an opportunistic in-process pass triggered during retrieve/ingest, gated by a cooldown (`opportunistic_cooldown`, default 3600s) and a per-pass time budget (`opportunistic_budget_ms`, default 200ms); and (2) explicit invocation via `prme organize` (optionally `--jobs` and `--budget-ms`). Continuous scheduling, if needed, must be driven by an external cron/timer calling `prme organize`.
+Despite the name "scheduled," there is **no built-in cron or daemon scheduler**. Jobs run in two ways: (1) an opportunistic in-process pass triggered during retrieve/ingest, gated by a cooldown (`opportunistic_cooldown`, default 3600s) and a per-pass time budget (`opportunistic_budget_ms`, default 200ms); and (2) explicit invocation via `prme organize` (optionally `--user-id`, `--jobs`, and `--budget-ms`). Continuous scheduling, if needed, must be driven by an external cron/timer calling `prme organize`.
+
+**Multi-tenant stores must pass a user scope.** `organize(user_id=...)` confines every job to that user's nodes. An unscoped run is correct for a single-tenant store and is still the default, but `deduplicate`, `alias_resolve`, and `consolidate` compare nodes to each other, so a shared store should be maintained as a loop over tenants. `feedback_apply` is the exception: scoring weights are engine-global, so it ignores the scope and reports `"scope": "global"`.
 
 ## RFCs
 

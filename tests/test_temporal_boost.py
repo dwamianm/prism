@@ -18,7 +18,7 @@ import pytest
 
 from prme.models.nodes import MemoryNode
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
-from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreTrace
+from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
 from prme.retrieval.scoring import (
     _DATE_PATTERN,
     _compute_temporal_affinity,

@@ -16,9 +16,8 @@ No LLM or model downloads needed.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import duckdb
 import pytest

@@ -188,7 +188,7 @@ async def initialize_pg_database(
         # Create HNSW index on embedding column (if not exists).
         # Use a DO block to conditionally create since IF NOT EXISTS
         # isn't supported for HNSW indexes on all PG versions.
-        await conn.execute(f"""
+        await conn.execute("""
             DO $$
             BEGIN
                 IF NOT EXISTS (

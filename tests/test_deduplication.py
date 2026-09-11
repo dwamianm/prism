@@ -14,13 +14,12 @@ from __future__ import annotations
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
-from prme import LifecycleState, MemoryEngine, NodeType, PRMEConfig, Scope
+from prme import LifecycleState, MemoryEngine, NodeType, PRMEConfig
 from prme.config import OrganizerConfig
-from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.alias_resolution import (
     AliasCandidate,
@@ -36,7 +35,7 @@ from prme.organizer.deduplication import (
     merge_duplicates,
 )
 from prme.organizer.models import JobResult
-from prme.types import DecayProfile, EdgeType, EpistemicType
+from prme.types import DecayProfile, EdgeType
 
 
 # ---------------------------------------------------------------------------
@@ -268,12 +267,12 @@ class TestMergeDuplicates:
         engine = await create_engine(config)
         try:
             # Store duplicate content
-            eid1 = await engine.store(
+            _eid1 = await engine.store(
                 "JavaScript is used for web development",
                 user_id="test-user",
                 node_type=NodeType.FACT,
             )
-            eid2 = await engine.store(
+            _eid2 = await engine.store(
                 "JavaScript is used for web development",
                 user_id="test-user",
                 node_type=NodeType.FACT,

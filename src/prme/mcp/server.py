@@ -15,7 +15,7 @@ from typing import Any, Optional
 from mcp.server.fastmcp import Context, FastMCP
 
 from prme.config import PRMEConfig
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import NodeType, Scope
 
 logger = logging.getLogger(__name__)
 

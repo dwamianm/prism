@@ -1,6 +1,5 @@
 """Tests for contradiction detection module."""
 
-import pytest
 
 from prme.organizer.contradiction import ContentContradictionDetector
 

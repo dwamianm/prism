@@ -8,6 +8,14 @@ The MaintenanceRunner checks a cooldown timer and, if sufficient time
 has elapsed since the last pass, runs a bounded maintenance cycle:
 auto-promotion of eligible tentative nodes and threshold-based archival
 of decayed nodes.
+
+The pass is deliberately store-wide rather than per-tenant. It has no
+request to take an identity from, and both of its tasks are per-node
+lifecycle transitions driven by that node's own age and decay: neither
+reads one node to decide something about another, so there is nothing to
+leak between tenants. The jobs that do compare nodes to each other
+(deduplicate, alias_resolve, consolidate) are Layer 3 only, and those take
+a user scope from ``organize()`` (issue #66).
 """
 
 from __future__ import annotations
