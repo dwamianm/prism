@@ -11,22 +11,19 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
 import tempfile
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 
 from prme.config import PRMEConfig
 from prme.organizer.oscillation import (
     OscillationDetector,
-    OscillationResult,
     _extract_keywords,
     _jaccard_similarity,
 )
 from prme.storage.engine import MemoryEngine
-from prme.types import NodeType, Scope
+from prme.types import NodeType
 
 
 # ---------------------------------------------------------------------------
@@ -326,21 +323,21 @@ async def test_engine_store_oscillation_reduces_confidence(config):
         user_id = "test-user"
 
         # Store initial preference
-        eid1 = await engine.store(
+        _eid1 = await engine.store(
             "I use VS Code as my primary editor for all development.",
             user_id=user_id,
             node_type=NodeType.PREFERENCE,
         )
 
         # Store contradiction (switch to Neovim)
-        eid2 = await engine.store(
+        _eid2 = await engine.store(
             "I switched from VS Code to Neovim for all development. The modal editing is faster.",
             user_id=user_id,
             node_type=NodeType.PREFERENCE,
         )
 
         # Store flip back (back to VS Code)
-        eid3 = await engine.store(
+        _eid3 = await engine.store(
             "I went back to VS Code from Neovim. The extensions are too valuable.",
             user_id=user_id,
             node_type=NodeType.PREFERENCE,

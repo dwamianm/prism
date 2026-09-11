@@ -253,7 +253,7 @@ async def consolidate_cluster(
     user_id = owner
 
     # Store the summary node via engine.store()
-    event_id = await engine.store(
+    _event_id = await engine.store(
         summary_content,
         user_id=user_id,
         node_type=NodeType.SUMMARY,

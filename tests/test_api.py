@@ -10,12 +10,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from prme.api.app import create_app
 from prme.config import APIConfig, PRMEConfig
-from prme.storage.engine import MemoryEngine
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +340,7 @@ class TestReinforce:
         if node_id:
             # Get initial confidence
             before = client.get(f"/v1/nodes/{node_id}").json()
-            initial_confidence = before["confidence"]
+            _initial_confidence = before["confidence"]
 
             # Reinforce
             resp = client.put(f"/v1/nodes/{node_id}/reinforce")

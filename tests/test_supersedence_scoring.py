@@ -16,12 +16,11 @@ from uuid import uuid4
 import pytest
 
 from prme.models.nodes import MemoryNode
-from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
-from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreTrace
+from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS
+from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
 from prme.retrieval.scoring import (
     _has_update_language,
     _is_current_state_query,
-    compute_composite_score,
     score_and_rank,
 )
 from prme.types import (
@@ -29,7 +28,6 @@ from prme.types import (
     NodeType,
     QueryIntent,
     RetrievalMode,
-    Scope,
 )
 
 
@@ -395,7 +393,7 @@ class TestSupersedenceAwareScoring:
         """Even in current-state queries, candidates without update
         language should not get the 2.0x recency boost."""
         now = datetime.now(timezone.utc)
-        one_day_ago = now - timedelta(days=1)
+        _one_day_ago = now - timedelta(days=1)
         ten_days_ago = now - timedelta(days=10)
 
         # Recent candidate (recency reference point)

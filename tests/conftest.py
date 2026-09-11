@@ -20,7 +20,6 @@ from pathlib import Path
 
 import duckdb
 import pytest
-import pytest_asyncio
 
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.schema import initialize_database

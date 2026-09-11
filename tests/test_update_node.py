@@ -21,7 +21,7 @@ import pytest_asyncio
 from prme.models.nodes import MemoryNode
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.schema import initialize_database
-from prme.types import DecayProfile, LifecycleState, NodeType, Scope
+from prme.types import DecayProfile, LifecycleState, NodeType
 
 
 @pytest_asyncio.fixture

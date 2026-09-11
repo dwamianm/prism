@@ -25,7 +25,6 @@ Usage::
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Any, Sequence
 
 try:
@@ -45,7 +44,7 @@ except ImportError as e:
         "Install with: pip install prme[langchain]"
     ) from e
 
-from pydantic import Field, PrivateAttr
+from pydantic import PrivateAttr
 
 from prme.client import MemoryClient
 from prme.config import PRMEConfig

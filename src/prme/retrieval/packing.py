@@ -133,8 +133,8 @@ def select_representation(
     # Only consider levels from FULL down to min_fidelity.
     eligible_levels = _REPRESENTATION_ORDER[: min_idx + 1]
 
-    best_level = min_fidelity
-    best_cost = 0
+    _best_level = min_fidelity
+    _best_cost = 0
 
     for level in eligible_levels:
         text = _render_representation(candidate, level)
@@ -144,8 +144,8 @@ def select_representation(
             return level, cost
 
         # Track the last level and cost for fallback.
-        best_level = level
-        best_cost = cost
+        _best_level = level
+        _best_cost = cost
 
     # Nothing fit -- return the lowest eligible level with its cost.
     # Caller decides whether to include or skip.

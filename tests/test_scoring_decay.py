@@ -14,8 +14,8 @@ from uuid import UUID, uuid4
 import pytest
 
 from prme.models.nodes import MemoryNode
-from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
-from prme.retrieval.models import RetrievalCandidate, ScoreTrace
+from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS
+from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.scoring import _compute_effective_scores, compute_composite_score, score_and_rank
 from prme.types import (
     DECAY_LAMBDAS,
@@ -23,7 +23,6 @@ from prme.types import (
     EpistemicType,
     LifecycleState,
     NodeType,
-    Scope,
 )
 
 

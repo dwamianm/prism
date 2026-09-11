@@ -19,7 +19,6 @@ from __future__ import annotations
 import structlog
 
 from prme.ingestion.graph_writer import GraphWriter
-from prme.models.nodes import MemoryNode
 from prme.storage.graph_store import GraphStore
 from prme.types import LifecycleState
 

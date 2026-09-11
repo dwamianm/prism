@@ -5,8 +5,7 @@ DuckDB schema migration, and round-trip persistence.
 from __future__ import annotations
 
 import asyncio
-import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import duckdb
 import pytest

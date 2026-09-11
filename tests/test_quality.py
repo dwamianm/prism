@@ -18,7 +18,7 @@ import pytest
 
 from prme.config import PRMEConfig
 from prme.quality.feedback import FeedbackSignal, FeedbackSignalType, FeedbackTracker
-from prme.quality.metrics import QualityMetrics, compute_quality_metrics
+from prme.quality.metrics import compute_quality_metrics
 from prme.quality.tuner import WeightTuner, _ADDITIVE_FIELDS, _MAX_WEIGHT, _MIN_WEIGHT
 from prme.retrieval.config import ScoringWeights
 
@@ -471,7 +471,7 @@ class TestEngineIntegration:
 
         engine = await MemoryEngine.create(engine_config)
         try:
-            old_semantic = engine._config.scoring.w_semantic
+            _old_semantic = engine._config.scoring.w_semantic
 
             for _ in range(10):
                 await engine.feedback(
