@@ -47,3 +47,16 @@ def test_review_reorders_by_identity_and_keeps_full_source_without_mutating_inpu
     assert result.facts[0].fact_type == "fact" and result.facts[0].epistemic_type == "conditional"
     assert result.facts[0].evidence_quote == SOURCE
     assert original.model_dump() == before
+
+
+def test_classification_only_preserves_every_source_grounded_claim():
+    from benchmarks.diagnostics.claim_review import LabelReview
+    original = ExtractionResult.model_validate({"entities": [{"name": "Maya", "entity_type": "person"}]})
+    node = MemoryNode(user_id="probe", content=SOURCE, node_type=NodeType.PREFERENCE,
+                      metadata={"subject": "Maya", "predicate": "uses", "object": "Redis"})
+    data = payload([0])
+    del data["assessments"][0]["supported"]
+    labels = LabelReview.model_validate(data, context={"claim_ids": [0], "source": SOURCE})
+    result = reviewed_result(original, [node], labels, filter_unsupported=False)
+    assert len(result.facts) == 1 and result.facts[0].evidence_quote == SOURCE
+    assert result.facts[0].epistemic_type == "conditional" and result.facts[0].fact_type == "fact"
