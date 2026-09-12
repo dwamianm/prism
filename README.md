@@ -259,7 +259,7 @@ Detailed technical documentation lives in [`docs/`](docs/):
 
 See [ROADMAP.md](ROADMAP.md) for the full development plan.
 
-**Current (v0.10.0)** — hybrid retrieval, synchronous and async clients, MCP/REST, framework adapters, deterministic vector search, and index rebuilds.
+**Current (v0.11.0)** — hybrid retrieval, synchronous and async clients, MCP/REST, framework adapters, deterministic vector search, and index rebuilds.
 
 **Next** — a trustworthy retrieval baseline, complete aggregation results, temporal state, and measured improvements to context packing. See the roadmap for acceptance criteria and GitHub issue links.
 

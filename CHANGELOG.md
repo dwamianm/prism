@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-11
+
+### Added
+
+- Tenant-scoped organizer execution through `organize(user_id=...)` and
+  `prme organize --user-id`, with cross-owner merge guards.
+
 ### Benchmark measurement
 - Preserve per-question evaluation failures in reports and retry selection.
 - Report scored coverage and whole-benchmark failures; weight summary accuracy by
@@ -16,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Enforce node ownership for engine operations that accept node IDs.
+- Reapply scope, bi-temporal, and epistemic filters after late retrieval stages.
+- Serialize organizer SQL through the shared DuckDB connection lock.
+- Restore CI coverage for main, optional API/MCP dependencies, simulations,
+  and live PostgreSQL tests on supported Python versions.
 - Disable redundant Tantivy background reader reloads so a closed lexical
   index cannot recreate metadata lock files during pack cleanup or movement.
 
@@ -24,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Schedule opportunistic organizer passes in the background and drain them on close.
+- Pin dateparser language and gate temporal parsing to reduce retrieval overhead.
 - Remove dataset observations, answer-revealing prompt examples, and benchmark-only
   query expansion from real-data evaluation.
 - Replace stale accuracy headlines with a measurement contract and reviewed roadmap.
@@ -130,7 +144,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/dwamianm/prism/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/dwamianm/prism/compare/v0.9.0...v0.10.0
 [0.4.0]: https://github.com/dwamianm/prism/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dwamianm/prism/compare/v0.2.0...v0.3.0

@@ -1,6 +1,6 @@
 # Measuring retrieval quality
 
-There is no validated v0.10.0 end-to-end accuracy headline. Historical JSON
+There is no validated v0.11.0 end-to-end accuracy headline. Historical JSON
 files in `benchmarks/results/` remain research artifacts; they are not directly
 comparable with the current harness. The old README table was also internally
 inconsistent. See the [August audit](memory_bank/AUDIT-2026-08-04.md).

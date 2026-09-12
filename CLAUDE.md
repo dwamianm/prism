@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.9.0); design specs live in `docs/`.
+PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.11.0); design specs live in `docs/`.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retri
 ## Storage Backends
 
 - **DuckDB (default)** — local-first; no `database_url` set.
-- **PostgreSQL** — used when `database_url` is set; implemented in `src/prme/storage/pg/`. Its test suite (`tests/test_pg_*.py`) is skipped unless `PRME_TEST_DATABASE_URL` points at a live database, so those tests do not run in the default local/CI environment.
+- **PostgreSQL** — used when `database_url` is set; implemented in `src/prme/storage/pg/`. Its test suite (`tests/test_pg_*.py`) is skipped unless `PRME_TEST_DATABASE_URL` points at a live database, so those tests are skipped locally without a database. CI runs them against a live PostgreSQL service on Python 3.11–3.13.
 
 ## MVP Phases (delivered)
 
