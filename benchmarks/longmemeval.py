@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING
 from benchmarks.metrics import exclusion_score, keyword_match_score
 from benchmarks.models import BenchmarkResult, QueryResult
 
-from prme.retrieval.context_formatter import format_for_llm
 from prme.storage.engine import MemoryEngine
 from prme.types import NodeType, Scope
 
@@ -795,7 +794,9 @@ class LongMemEvalRealBenchmark:
 
         Same per-question engine pattern as run(), but generates answers
         via LLM and uses LLM-as-judge for scoring. Abstention questions
-        still use the score-threshold method.
+        use a separate context-sufficiency check. This custom metric is not
+        the official LongMemEval answer-accuracy protocol and still excludes
+        preference questions.
 
         Args:
             only_questions: If set, only run questions whose text matches.
@@ -861,6 +862,10 @@ class LongMemEvalRealBenchmark:
             ability = _LME_TYPE_MAP.get(qtype, qtype)
             is_abstention = qid.endswith("_abs")
             user_id = "bench-lme-real"
+            date_text = question.get("question_date")
+            reference_time = _parse_haystack_date(date_text) if date_text else None
+            if date_text and reference_time is None:
+                raise ValueError("Invalid LongMemEval question_date")
 
             async with semaphore:
                 tmp = tempfile.mkdtemp(prefix="prme_lme_real_")
@@ -897,14 +902,17 @@ class LongMemEvalRealBenchmark:
 
                     # Retrieval expansion must come from the product, not
                     # benchmark-only LLM calls and result merging.
+                    retrieval_args = {"reference_time": reference_time} if reference_time else {}
                     response = await q_engine.retrieve(
-                        question["question"], user_id=user_id
+                        question["question"], user_id=user_id, **retrieval_args
                     )
-                    all_results = list(response.results)
                 finally:
                     await q_engine.close()
                     shutil.rmtree(tmp_dir, ignore_errors=True)
 
+            # Evaluate exactly the product's context, including its budget and
+            # omissions. Reformatting ranked results here bypasses the packer.
+            top_content = response.bundle.render()
             if is_abstention:
                 expected = "ABSTAIN"
                 if not response.results:
@@ -912,10 +920,6 @@ class LongMemEvalRealBenchmark:
                     actual = "no results"
                 else:
                     # Use LLM to check if context actually answers the question
-                    top_content = format_for_llm(
-                        results=list(response.results)[:20],
-                        query=question["question"],
-                    )
                     async with llm_semaphore:
                         should_abstain = await check_abstention(
                             question["question"], top_content, llm_config
@@ -925,25 +929,6 @@ class LongMemEvalRealBenchmark:
                 generated = ""
             else:
                 answer = str(question["answer"])
-                question_date_str = question.get("question_date", "")
-                qdt = _parse_haystack_date(question_date_str) if question_date_str else None
-
-                # Use PRME's context formatter with intent-aware hints
-                # Temporal queries work better with focused context (50);
-                # aggregation needs wider context (100) to catch all items.
-                if ability == "temporal":
-                    hint = "temporal"
-                    n_results = 50
-                else:
-                    hint = None  # let auto-detect handle aggregation etc.
-                    n_results = 100
-                top_content = format_for_llm(
-                    results=all_results[:n_results],
-                    query=question["question"],
-                    question_date=qdt,
-                    context_hint=hint,
-                    max_results=n_results,
-                )
                 async with llm_semaphore:
                     generated = await generate_answer(
                         question["question"], top_content, llm_config

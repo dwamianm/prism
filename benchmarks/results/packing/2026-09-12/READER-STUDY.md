@@ -1,9 +1,10 @@
 # Paired development reader study
 
-Source retention is not answer accuracy. The existing LongMemEval judged path
-reformats ranked results independently of the product bundle, so it cannot be
-used to establish the answer effect of the measured packing change. This study
-instead submits frozen product contexts directly to a fixed local reader.
+Source retention is not answer accuracy. This study submits frozen product
+contexts directly to a fixed local reader. The legacy LongMemEval judged runner
+now also consumes the product bundle and uses the question's reference date;
+its custom metric still excludes preferences and uses a separate context-
+sufficiency check for abstention, so it is not the official answer protocol.
 
 The cohort is all 119 questions in the completed development capture at
 `1f5375ad7fb755c4f75a03f3d4bb9f263b27a7e0`, including abstention questions.
@@ -61,3 +62,17 @@ same requested reader options, completed with native exit zero and a `stop`
 completion reason. It answered the supplied blue-telescope fact correctly.
 This establishes the local API shape and completion checks, not benchmark quality.
 The paired prediction run is being launched after this plan is committed.
+
+
+The legacy judged-context correction has two regressions that fail on its prior
+implementation and passes a 45-check benchmark/reader set after the fix. A
+malformed supplied question date is now an explicit evaluation error before
+engine or model work, rather than a fallback to the current clock.
+
+The configured root `.env` cloud judge returned HTTP 429 on a fresh bounded
+probe. The paired reader continues locally. Gemma 4 26B is being downloaded as
+a separate-family local judge candidate; calibration will precede any judgment
+of the study predictions. Its [official model listing](https://ollama.com/library/gemma4:26b)
+reports a 19 GB artifact. Model availability or size is not evidence of judge
+reliability, and a local judge result will not be presented as an official
+GPT-4o benchmark score.

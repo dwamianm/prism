@@ -1040,5 +1040,7 @@ supervised process exit zero. Both authenticated transports returned context
 identical to Python at one clock; exported receipts retained the adjustment and
 replayed exact scores. Foreign receipt reads and empty HTTP scopes were rejected.
 The report records the installed package path and observed execution features.
-This is one authored developer workflow, not answer-quality evidence. A full
-frozen suite at `6bc2763` is running separately.
+This is one authored developer workflow, not answer-quality evidence. The full
+frozen suite at `6bc2763` completed with actual exit zero: **2,269 passed,
+52 skipped** in 877.28 seconds. This predates only the subsequent benchmark
+reader harness and legacy judged-context correction.
