@@ -1012,3 +1012,20 @@ MCP diagnostics** on baseline and current code. An earlier incremental run also
 surfaced cached engine/client diagnostics, so it is not used for that comparison.
 These are API-contract tests, not new retrieval-quality or model-performance
 measurements. The registered packing confirmation remains separate and frozen.
+
+## Retrieval scope input normalization
+
+A Python scope string was previously ignored by the pipeline, while an empty
+list became an unfiltered index query. Mutating a passed list during the engine's
+first materialization await could similarly broaden the search. The shared
+normalizer now accepts enums, names and nonempty sequences, copies the request,
+and rejects empty/unknown/unsupported input before pending-work processing.
+Direct pipeline calls use the same validation; HTTP declares nonempty scope
+arrays. The normalizer is included in new execution source-hash observations.
+
+The 22 new cases failed on `a802d02` before the fix, including both backends,
+valid string/tuple inputs, malformed inputs, list mutation, HTTP and sync calls.
+The source scope/trial/filter/receipt set passed **101 checks with one skip** in
+37.17 seconds, actual exit zero. The normalizer and pipeline pass targeted
+typing, and changed-source lint passes. These checks establish request-scope
+behavior, not full ACL or index-side-channel isolation.

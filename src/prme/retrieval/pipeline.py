@@ -48,6 +48,7 @@ from prme.retrieval.models import (
 from prme.retrieval.packing import pack_context
 from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
+from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import select_candidates, validate_selection
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope
@@ -172,7 +173,7 @@ class RetrievalPipeline:
         query: str,
         *,
         user_id: str,
-        scope: Scope | list[Scope] | None = None,
+        scope: ScopeInput = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
         reference_time: datetime | None = None,
@@ -203,7 +204,7 @@ class RetrievalPipeline:
         Args:
             query: Raw query text from the user.
             user_id: User ID for scoping all backend queries.
-            scope: Optional scope filter. Accepts a single Scope, a list of
+            scope: Optional scope filter. Accepts a scope name or a nonempty sequence of
                 Scopes, or None (no filter). Single Scope is normalized to
                 a list for backward compatibility.
             time_from: Explicit start of temporal window. If provided,
@@ -243,13 +244,7 @@ class RetrievalPipeline:
             raise ValueError("reference_time must include a timezone")
         scoring_now = (reference_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
 
-        # Normalize scope: single Scope -> list, list -> as-is, None -> None.
-        normalized_scope: list[Scope] | None = None
-        if isinstance(scope, Scope):
-            normalized_scope = [scope]
-        elif isinstance(scope, list):
-            normalized_scope = scope
-        # else: None means "all scopes, no filter"
+        normalized_scope = normalize_scope(scope)
 
         # String form used by the lexical/vector index scope filters.
         scope_values = (

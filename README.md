@@ -480,6 +480,11 @@ covers the observed candidates, not full retrieval or generated answers.
 [Scoped profile activation and rollback](docs/RFC-0017-Scoped-Retrieval-Learning.md)
 remain pending.
 
+Retrieval accepts `scope=Scope.PROJECT`, `scope="project"`, or a nonempty sequence
+of scope enums/names. Only `scope=None` is unfiltered. Empty lists and invalid
+names fail before pending-memory work is processed; caller mutation of a scope
+list during retrieval cannot change that request's filter.
+
 For a full-pipeline trial, pass `ranking_multipliers=report.multipliers` to
 `retrieve()` on the async engine or sync client, or send a
 `ranking_multipliers` object to HTTP `POST /v1/retrieve` or the MCP

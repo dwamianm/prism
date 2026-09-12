@@ -53,6 +53,7 @@ from prme.storage.lexical_index import LexicalIndex
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
+from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import validate_selection
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
@@ -1393,7 +1394,7 @@ class MemoryEngine:
         query: str,
         *,
         user_id: str,
-        scope: Scope | list[Scope] | None = None,
+        scope: ScopeInput = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
         reference_time: datetime | None = None,
@@ -1457,6 +1458,7 @@ class MemoryEngine:
             NotImplementedError: If no retrieval pipeline is configured.
         """
         validate_selection(min_score, limit)
+        scope = normalize_scope(scope)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
         if self._retrieval_pipeline is None:

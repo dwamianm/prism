@@ -48,7 +48,7 @@ def feature_identity(vector_index, lexical_index, reranker) -> dict[str, JsonVal
         except PackageNotFoundError:
             packages[package] = None
     sources: dict[str, JsonValue] = {}
-    for name in ("scoring", "ranking_adjustments", "query_analysis", "candidates", "filtering",
+    for name in ("scoring", "ranking_adjustments", "query_analysis", "scope", "candidates", "filtering",
                  "session_context", "reranker", "packing"):
         try:
             sources[name] = hashlib.sha256(Path(__file__).with_name(name + ".py").read_bytes()).hexdigest()

@@ -163,6 +163,18 @@ Option 3 is acceptable only if the storage engine provides proven row-level secu
 
 ---
 
+### Retrieval scope input validation
+
+Python retrieval accepts a scope enum, its string value, or a nonempty sequence
+of either. Only `None` means no scope filter. Unknown values, empty sequences and
+unsupported input types raise `ValueError`; they must not become unfiltered
+searches. The engine validates and copies the input before materialization or
+other awaited work, and direct pipeline calls use the same normalizer. HTTP
+rejects empty scope arrays during request validation. Each new retrieval receipt
+records the normalized scope and observes the normalizer's source hash alongside
+other execution features. Scope validation does not replace user authentication
+or the explicit `include_cross_scope` hint policy.
+
 ## 7. Retention Policy
 
 Every namespace defines a retention policy that governs how long memory is kept.

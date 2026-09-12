@@ -32,6 +32,7 @@ from prme.config import PRMEConfig
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.retrieval.config import ScoringWeights
+from prme.retrieval.scope import ScopeInput
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -215,7 +216,7 @@ class MemoryClient:
         query: str,
         *,
         user_id: str,
-        scope: Scope | list[Scope] | None = None,
+        scope: ScopeInput = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
         reference_time: datetime | None = None,

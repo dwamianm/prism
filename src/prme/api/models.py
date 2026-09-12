@@ -9,7 +9,7 @@ from __future__ import annotations
 from prme.models.relevance import RelevanceSubmission
 from prme.models.learning import RankingMultipliers
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -133,7 +133,7 @@ class RetrievalFilters(BaseModel):
     """Typed filters; unknown keys fail instead of silently broadening a search."""
 
     model_config = ConfigDict(extra="forbid")
-    scope: Scope | list[Scope] | None = None
+    scope: Scope | Annotated[list[Scope], Field(min_length=1)] | None = None
     time_from: AwareDatetime | None = None
     time_to: AwareDatetime | None = None
     knowledge_at: AwareDatetime | None = None
