@@ -1,0 +1,19 @@
+{
+  "source_commit": "5a77fd5",
+  "native_process_exit_code": 0,
+  "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/pg/lexical_index.py",
+  "wheel_sha256": "638534931209308a7efe603610381cbdd0e6dd6becb9bd6001ff1b208eec85a7",
+  "passed": 39,
+  "skipped": 0,
+  "failed": 0,
+  "seconds": 3.83,
+  "log_sha256": "73442e85c459203dc5157dd281e9cfacc6057f0e31d8955badde18f6b8144d24",
+  "coverage": [
+    "PostgreSQL lexical identity deduplication before limit",
+    "stable score ties before limit",
+    "owner/type/scope filtering",
+    "HTTP write fidelity",
+    "HTTP and MCP ranking trial parity"
+  ],
+  "limits": "Installed Python 3.13 package against live PostgreSQL and DuckDB transport fixtures. Correctness tests, not retrieval-quality or latency benchmarks."
+}

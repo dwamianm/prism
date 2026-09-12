@@ -1282,3 +1282,7 @@ owner/type/scope filters, selects the highest-scoring copy of each identity, the
 orders by score and node ID before the limit. Tied copies prefer the graph row.
 All 55 PostgreSQL backend and related HTTP/MCP checks passed in 5.31s, and Ruff
 passed. This does not claim PostgreSQL and Tantivy have identical query semantics.
+
+Installed `5a77fd5` Python 3.13 verification passed all 39 lexical and transport
+checks in 3.83s with native exit zero. The [installed report](pg-lexical-limit-installed-5a77fd5.json)
+pins the wheel and log hashes; production imports were verified in `site-packages`.

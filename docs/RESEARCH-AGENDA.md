@@ -46,6 +46,11 @@ These records preserve commit identities, raw-output hashes, failures and limits
    temporal or episode associations, arithmetic and task-completion errors.
    Preserve ambiguous annotations and reader/judge disagreements. Improvements
    must work beyond the examples used to discover them.
+   The [completed lexical ablation](../benchmarks/results/research/2026-09-12/LEXICAL-QUERY-STUDY.md)
+   improved preference evidence at 4K but lost other evidence and reduced the
+   overall 2K mean. Keep its stopword policy experimental until a full-hybrid
+   comparison resolves those tradeoffs. PostgreSQL's all-term query semantics
+   also need deliberate evaluation; its duplicate-before-limit defect is fixed.
 
 ## Capability work still required
 
