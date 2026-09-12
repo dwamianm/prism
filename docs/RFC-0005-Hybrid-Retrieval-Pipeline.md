@@ -405,3 +405,27 @@ HTTP retrieval previously accepted and ignored `filters`, `mode`, and `limit`.
 These now forward to the pipeline, with typed scope/time fields and unknown-key
 rejection. Explicit mode relaxes epistemic filtering only inside the generated
 candidate pool; evicted historical indexes are not reconstructed by that flag.
+
+### Local embedding batch invariance (2026-09-12)
+
+FastEmbed inference now uses one text per numerical batch. With the supported
+quantized BGE model, batch padding changed a component by 0.000223577 in an
+authored example. Since the LRU wrapper batches only cache misses, identical
+requests could previously produce slightly different vectors depending on cache
+residency. One-text inference removes this dependence in the tested runtime and
+keeps direct writes, multi-node ingestion, queries and re-embedding consistent.
+This is not a cross-hardware or cross-runtime bitwise guarantee.
+
+Model weights, dimensions and the existing model-version identifier are
+unchanged. Previously committed numerical payloads remain valid and are not
+rewritten on opening a pack. Re-embedding older batched content may produce
+small numerical differences; preserving recorded vectors remains necessary for
+exact historical replay. The rebuild `batch_size` argument controls database
+pagination, not embedding batch size, and already indexes one node per call.
+
+The throughput tradeoff depends on text lengths. A local 64-text authored probe
+measured roughly 153 ms instead of 43 ms for short texts, but 435 ms instead of
+571 ms for mixed lengths. These are illustrative ONNX-only timings, not end-to-end
+performance guarantees. `benchmarks.diagnostics.embedding_invariance` retains
+raw alternating-order timing trials, runtime/model asset hashes and numerical
+cache/batch comparisons; it includes native process shutdown in its result.

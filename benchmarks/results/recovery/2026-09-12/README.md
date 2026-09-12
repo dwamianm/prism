@@ -1160,3 +1160,22 @@ live PostgreSQL. This includes the final profile pagination change and the
 benchmark harness tests omitted from the earlier `tests/` invocation. The
 installed Python 3.13 focused checks and real embedding/guide workflows above
 cover the final packaged implementation as well.
+
+## Embedding cache invariance
+
+The pinned Mem0 compatibility work exposed padding-sensitive local embeddings.
+The real BGE probe reproduced a maximum component difference of 0.000223577 for
+identical input requests with cold versus partially warm caches. Two isolated
+regressions failed before the fix. FastEmbed now uses numerical batch size one;
+the same real probe reports exact equality for cold/warm caches, batched/single
+calls and reversed input order, with native exit zero. Existing numerical
+payloads and model identifiers remain readable; no historical vector rewrite
+occurs on open. The rebuild pagination argument was not the cause.
+
+`embedding-invariance-before.json` preserves the failing real result and
+`embedding-invariance-after.json` the successful result, including model asset
+and provider-source hashes. Seventeen embedding/rebuild tests passed in 8.43s.
+The diagnostic retains three alternating-order timing samples after warmup.
+Short-text throughput falls with individual inference; mixed-length padding
+cost can instead make it faster. These small local timings and four equality
+inputs do not prove hardware-independent reproducibility or end-to-end speed.

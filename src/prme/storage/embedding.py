@@ -139,8 +139,15 @@ class FastEmbedProvider:
         """
         self._ensure_model()
         assert self._model is not None
-        # TextEmbedding.embed() returns a generator of numpy arrays
-        return [embedding.tolist() for embedding in self._model.embed(texts)]
+        # Quantized ONNX output can vary with batch padding. In particular,
+        # caching changes which neighbors remain in a miss batch. Embed each
+        # text with the same inference shape so cache residency and ingestion
+        # grouping cannot change its vector. This trades short-text throughput
+        # for reproducibility; the model weights and vector space are unchanged.
+        return [
+            embedding.tolist()
+            for embedding in self._model.embed(texts, batch_size=1)
+        ]
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Embed texts asynchronously using FastEmbed's ONNX inference.

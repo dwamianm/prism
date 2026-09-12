@@ -1,0 +1,70 @@
+{
+  "passed": false,
+  "maximum_absolute_differences": {
+    "cold_vs_partial_cache": 0.00022357702255249023,
+    "batch_vs_individual": 0.00022357702255249023,
+    "input_order": 0.0
+  },
+  "package_path": "/Users/dwamianm/Sites/prism/src/prme/storage/embedding.py",
+  "provider_source_sha256": "1fb3d1b9eb12b693187dbee4e1b20a6e27c51561af5d4fb2d90b59b950495a0c",
+  "versions": {
+    "fastembed": "0.7.4",
+    "onnxruntime": "1.24.2",
+    "numpy": "2.4.2"
+  },
+  "model": "BAAI/bge-small-en-v1.5",
+  "model_version": "fastembed-0.7.4",
+  "model_assets_sha256": {
+    "config.json": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd",
+    "model_optimized.onnx": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+    "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+    "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+    "tokenizer_config.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+  },
+  "timings": {
+    "short": {
+      "texts": 64,
+      "corpus_sha256": "27501e35b09e26fd0248a372c1cff1fed0785fb3c575614bcf2a6c8d35bf446f",
+      "seconds": {
+        "1": [
+          0.14217874998576008,
+          0.15321629101526923,
+          0.16450895799789578
+        ],
+        "256": [
+          0.04431433300487697,
+          0.042284625000320375,
+          0.042917792015941814
+        ]
+      },
+      "median_seconds": {
+        "1": 0.15321629101526923,
+        "256": 0.042917792015941814
+      }
+    },
+    "mixed_length": {
+      "texts": 64,
+      "corpus_sha256": "e900f65c6de95a6b2899fb17f4ecdef5b0d4692f59e532c8b2cfb53e5a7428e2",
+      "seconds": {
+        "1": [
+          0.4349621660076082,
+          0.45638345801853575,
+          0.4115652499895077
+        ],
+        "256": [
+          0.6083328750100918,
+          0.5521678340155631,
+          0.5709405000088736
+        ]
+      },
+      "median_seconds": {
+        "1": 0.4349621660076082,
+        "256": 0.5709405000088736
+      }
+    }
+  },
+  "limits": "Incomplete end-to-end process; no success or accuracy claim.",
+  "workflow_assertions_passed": false,
+  "process_exit_code": 1,
+  "error_type": "WorkerExitError"
+}
