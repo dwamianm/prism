@@ -1,0 +1,56 @@
+{
+  "commit": "814549b",
+  "source_tests": {
+    "passed": 125,
+    "skipped": 5,
+    "failed": 0,
+    "seconds": 14.67,
+    "native_exit_code": 0
+  },
+  "installed_tests": {
+    "passed": 125,
+    "skipped": 5,
+    "failed": 0,
+    "seconds": 12.81,
+    "native_exit_code": 0
+  },
+  "production_files_verified": 116,
+  "wheel_sha256": "c1ae9496789b3a29a74d57c586e35f7b8d347ac09f00ab8ef835d2d54c4212e0",
+  "workflow": {
+    "complete": true,
+    "python": "3.13.3",
+    "prme_import_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+    "runner_sha256": "d2ee2f409c03a79e7810e18f3aa4623e7b3d5d8a353440971863bf3833d0aa85",
+    "limits": "Authored real-model provider integration, not evidence that the query instruction improves answer quality.",
+    "embedding": {
+      "provider": "prme.storage.embedding.CachedEmbeddingProvider",
+      "model": "BAAI/bge-small-en-v1.5",
+      "version": "fastembed-0.8.0:bge-query-instruction-v1",
+      "dimension": 384,
+      "query_encoding": "embed_query"
+    },
+    "sync_store_and_retrieve": true,
+    "async_reopen_and_retrieve": true,
+    "source_preserved": true,
+    "original_config_unchanged": true,
+    "encoding_identity_preserved": true
+  },
+  "workflow_native_exit_code": 0,
+  "type_check": "No issues in embedding.py and retrieval/execution.py with --follow-imports=silent; not a project-wide type-check claim.",
+  "retained_failures": [
+    {
+      "kind": "incorrect test path",
+      "native_exit_code": 4,
+      "effect": "No tests ran; corrected path selection."
+    },
+    {
+      "kind": "logging fixture interaction",
+      "native_exit_code": 1,
+      "passed": 124,
+      "failed": 1,
+      "skipped": 5,
+      "effect": "An earlier fixture disabled the diagnostic level expected by the CLI test. Test now declares and restores its own logging level."
+    }
+  ],
+  "limits": "Focused DuckDB/PostgreSQL checks and an installed real-BGE sync/async workflow. Full regression runs separately. Query instruction example has no demonstrated answer-quality gain."
+}
