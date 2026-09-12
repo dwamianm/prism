@@ -1,0 +1,37 @@
+{
+  "complete": true,
+  "commit": "bde55237f53bf55aacd048b01e29d7dc23b83a85",
+  "package_version": "0.9.2",
+  "source_files_verified": 323,
+  "source_sha256": "12b3eeb91fca10a567b0de5b108b3543ba8192ed216a5408246c55fec6be3c82",
+  "embedding_maximum_absolute_difference": 0.0,
+  "llm_provider": "none",
+  "extraction_mode": "chunks",
+  "text_search_extension": "native",
+  "reranking": "rrf",
+  "source_retain_reopen_recall": true,
+  "bank_isolation": true,
+  "limits": "Authored raw-chunk API compatibility and seven embedding inputs. No full-feature Hindsight quality, latency, or leaderboard claim.",
+  "runner_sha256": "03a7db80eeb01eb64be58ca617039cafba138b7dcd660d8f6245cd5889307361",
+  "native_process_exit_code": 0,
+  "output_sha256": "c41c3be85d8dc16b2adcf726894ac78f04c1f5571ea98e9f741eea6afdc2e5e9",
+  "embedding_versions": {
+    "fastembed": "0.8.0",
+    "onnxruntime": "1.24.2",
+    "numpy": "2.4.2",
+    "tokenizers": "0.23.2"
+  },
+  "embedding_reference_sha256": "9b113a07e46d8b535bb9b59e788f9cf7332375ac9e4a039941836477310f5639",
+  "retained_failures": [
+    {
+      "kind": "dependency resolution",
+      "native_process_exit_code": 1,
+      "reason": "Pinned Hindsight requires Pillow >=12.3; FastEmbed 0.7.4 requires Pillow <12. A separate FastEmbed 0.8.0 environment resolves both constraints."
+    },
+    {
+      "kind": "invocation",
+      "native_process_exit_code": 1,
+      "reason": "python -m benchmarks imports PRME from the benchmark package initializer. Invoking the standalone file avoids importing PRME into the competitor runtime."
+    }
+  ]
+}

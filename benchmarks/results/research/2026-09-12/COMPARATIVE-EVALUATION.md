@@ -94,6 +94,22 @@ Read-only upstream snapshots are pinned in
 `hindsight-graphiti-protocol-audit.json`; no runtime or reported score was
 reproduced. These are candidates for additional comparisons, not results.
 
+The subsequent [authored Hindsight preflight](hindsight-authored-preflight.json)
+completed with native exit 0 against a fresh local PostgreSQL database. All 323
+installed Python source files match the pinned 0.9.2 checkout. Public retain,
+close, initialize and recall preserve a seasonal qualification and bank isolation
+in the authored example. This uses raw chunks with LLMs disabled, native PostgreSQL
+text search and RRF, not the full extraction/consolidation system. No dataset
+comparison or competitive performance follows from this preflight.
+
+Hindsight's Pillow requirement conflicts with FastEmbed 0.7.4. Its isolated
+environment therefore uses FastEmbed 0.8.0 with the same ONNX Runtime 1.24.2,
+NumPy 2.4.2 and BGE assets. All seven authored input vectors match PRME's 0.7.4
+runtime exactly, including Unicode, whitespace, empty and long text. This is a
+bounded parity check, not proof for every future input. The standalone diagnostic
+is `benchmarks/diagnostics/hindsight_preflight.py`; invoke it by file path in the
+competitor environment to avoid the benchmark package's eager PRME imports.
+
 Hindsight's current [recall contract](https://github.com/vectorize-io/hindsight/blob/bde55237f53bf55aacd048b01e29d7dc23b83a85/hindsight-api-slim/hindsight_api/engine/memory_engine.py#L7226)
 separates the fact-text token limit from entity observations and source chunks.
 The chunk limit defaults to 8,192 tokens independently of the fact limit.
