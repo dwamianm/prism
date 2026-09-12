@@ -29,7 +29,7 @@ from typing import Any, TypeVar
 
 from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import LifecycleState, NodeType, RetrievalMode, Scope
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
 from prme.retrieval.models import RetrievalResponse
@@ -182,6 +182,10 @@ class MemoryClient:
         reference_time: datetime | None = None,
         knowledge_at: datetime | None = None,
         token_budget: int | None = None,
+        min_score: float | None = None,
+        limit: int | None = None,
+        retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
+        include_cross_scope: bool = True,
     ) -> RetrievalResponse:
         """Retrieve memories matching a query. Returns RetrievalResponse."""
         return self._run(
@@ -194,6 +198,8 @@ class MemoryClient:
                 reference_time=reference_time,
                 knowledge_at=knowledge_at,
                 token_budget=token_budget,
+                min_score=min_score, limit=limit,
+                retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope,
             )
         )
 

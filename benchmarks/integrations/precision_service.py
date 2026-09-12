@@ -40,7 +40,9 @@ class SearchRequest(BaseModel):
     limit: int = Field(default=20, ge=0, le=1000)
 
 
-def create_app() -> FastAPI:
+def create_app(*, min_score: float | None = None) -> FastAPI:
+    from prme.retrieval.selection import validate_selection
+    validate_selection(min_score, None)
     engines: dict[tuple[str, str | None], MemoryEngine] = {}
     current_nodes: dict[tuple[str, str | None, str], str] = {}
     lock = asyncio.Lock()
@@ -120,7 +122,7 @@ def create_app() -> FastAPI:
             engine = engines.get((body.user_id, body.scope))
             if engine is None:
                 return {"results": []}
-            response = await engine.retrieve(body.query, user_id=body.user_id)
+            response = await engine.retrieve(body.query, user_id=body.user_id, min_score=min_score, limit=body.limit)
             return {"results": [
                 {"id": candidate.node.metadata["beliefId"], "memory": candidate.node.content,
                  "metadata": candidate.node.metadata, "score": candidate.composite_score}
@@ -146,5 +148,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=53091)
+    parser.add_argument("--min-score", type=float, default=None, help="Experimental acceptance floor; default unset")
     args = parser.parse_args()
-    uvicorn.run(create_app(), host="127.0.0.1", port=args.port)
+    uvicorn.run(create_app(min_score=args.min_score), host="127.0.0.1", port=args.port)

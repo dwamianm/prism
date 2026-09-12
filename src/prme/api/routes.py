@@ -229,6 +229,15 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
     if body.reference_time is not None:
         kwargs["reference_time"] = body.reference_time
 
+    for name in ("limit", "min_score", "token_budget"):
+        value = getattr(body, name)
+        if value is not None:
+            kwargs[name] = value
+    if body.mode is not None:
+        kwargs["retrieval_mode"] = body.mode
+    if body.filters is not None:
+        kwargs.update(body.filters.model_dump(exclude_none=True))
+
     response = await engine.retrieve(**kwargs)
 
     # Convert results to API format

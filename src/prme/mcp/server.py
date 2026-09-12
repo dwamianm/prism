@@ -176,6 +176,9 @@ async def memory_retrieve(
     scope: Optional[str] = None,
     knowledge_at: Optional[str] = None,
     ctx: Context = None,
+    min_score: Optional[float] = None,
+    limit: Optional[int] = None,
+    token_budget: Optional[int] = None,
 ) -> str:
     """Search memories using hybrid retrieval.
 
@@ -186,6 +189,9 @@ async def memory_retrieve(
     Args:
         query: Natural language search query.
         user_id: User whose memories to search.
+        min_score: Inclusive composite score floor, not a probability.
+        limit: Maximum primary results; zero returns none.
+        token_budget: Maximum packed context tokens.
         scope: Optional scope filter (personal, project, organisation).
         knowledge_at: Optional ISO datetime for point-in-time retrieval
             (e.g. "2024-06-15T00:00:00" to see what was known at that time).
@@ -214,7 +220,15 @@ async def memory_retrieve(
             return json.dumps({"error": f"Invalid knowledge_at datetime: {knowledge_at!r}"})
 
     try:
-        response = await engine.retrieve(**kwargs)
+        from prme.retrieval.selection import validate_selection
+        validate_selection(min_score, limit)
+        if token_budget is not None and token_budget < 0:
+            raise ValueError("token_budget must be nonnegative")
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+
+    try:
+        response = await engine.retrieve(**kwargs, min_score=min_score, limit=limit, token_budget=token_budget)
 
         results = []
         for candidate in response.results:

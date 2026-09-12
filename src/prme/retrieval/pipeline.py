@@ -45,6 +45,7 @@ from prme.retrieval.models import (
 from prme.retrieval.packing import pack_context
 from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
+from prme.retrieval.selection import select_candidates, validate_selection
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope
 
@@ -165,6 +166,8 @@ class RetrievalPipeline:
         event_time_from: datetime | None = None,
         event_time_to: datetime | None = None,
         token_budget: int | None = None,
+        min_score: float | None = None,
+        limit: int | None = None,
         weights: ScoringWeights | None = None,
         min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
@@ -199,6 +202,8 @@ class RetrievalPipeline:
             event_time_from: Filter by event_time >= this value (bi-temporal).
             event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
+            min_score: Inclusive ranking score floor; not a probability.
+            limit: Maximum primary results before context packing. Zero returns none.
             weights: Override default scoring weights for this request.
             min_fidelity: Override minimum representation level.
             retrieval_mode: Retrieval mode controlling epistemic filtering.
@@ -212,6 +217,7 @@ class RetrievalPipeline:
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
+        validate_selection(min_score, limit)
         start_time = time.monotonic()
         if reference_time is not None and reference_time.utcoffset() is None:
             raise ValueError("reference_time must include a timezone")
@@ -619,6 +625,13 @@ class RetrievalPipeline:
                     exc_info=True,
                 )
 
+        # Apply selection to results and the bundle together. Explicit count
+        # and score bounds apply to pinned/tasks and adjacent context as well.
+        scored, selection_excluded = select_candidates(scored, min_score=min_score, limit=limit)
+        excluded.extend(selection_excluded)
+        cross_scope_hints, _ = select_candidates(cross_scope_hints, min_score=min_score, limit=None)
+        traces = [c.score_trace for c in scored if c.score_trace is not None]
+
         # --- Stage 6: Context Packing ---
         bundle = await asyncio.to_thread(pack_context, scored, config=effective_packing_config)
 
@@ -642,6 +655,8 @@ class RetrievalPipeline:
                 "token_budget": bundle.token_budget,
                 "tokenizer": bundle.tokenizer,
                 "scoring_config_version": effective_weights.version_id,
+                "min_score": min_score, "result_limit": limit,
+                "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
                 "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
@@ -676,6 +691,7 @@ class RetrievalPipeline:
         metadata = RetrievalMetadata(
             request_id=analysis.request_id,
             reference_time=scoring_now,
+            min_score=min_score, result_limit=limit,
             candidates_generated=candidate_counts,
             candidates_filtered=len(excluded),
             candidates_included=bundle.included_count,
@@ -696,6 +712,7 @@ class RetrievalPipeline:
         return RetrievalResponse(
             bundle=bundle,
             results=scored,
+            excluded=excluded,
             metadata=metadata,
             score_traces=traces,
             filter_metadata=filter_meta,

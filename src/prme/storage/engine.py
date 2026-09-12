@@ -44,6 +44,7 @@ from prme.storage.lexical_index import LexicalIndex
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
+from prme.retrieval.selection import validate_selection
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -51,6 +52,7 @@ from prme.types import (
     LifecycleState,
     NodeType,
     RepresentationLevel,
+    RetrievalMode,
     Scope,
     SourceType,
 )
@@ -1310,9 +1312,12 @@ class MemoryEngine:
         event_time_from: datetime | None = None,
         event_time_to: datetime | None = None,
         token_budget: int | None = None,
+        min_score: float | None = None,
+        limit: int | None = None,
         weights: ScoringWeights | None = None,
         min_fidelity: RepresentationLevel | None = None,
         include_cross_scope: bool = True,
+        retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
     ) -> RetrievalResponse:
         """Retrieve memories via the hybrid retrieval pipeline.
 
@@ -1344,6 +1349,8 @@ class MemoryEngine:
             event_time_from: Filter by event_time >= this value (bi-temporal).
             event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
+            min_score: Inclusive ranking score floor; not a probability.
+            limit: Maximum primary results before context packing. Zero returns none.
             weights: Override default scoring weights.
             min_fidelity: Override minimum representation level.
             include_cross_scope: Whether to include cross-scope hints.
@@ -1357,6 +1364,7 @@ class MemoryEngine:
         Raises:
             NotImplementedError: If no retrieval pipeline is configured.
         """
+        validate_selection(min_score, limit)
         if self._retrieval_pipeline is None:
             raise NotImplementedError(
                 "RetrievalPipeline not configured. Use MemoryEngine.create() "
@@ -1391,9 +1399,11 @@ class MemoryEngine:
             event_time_from=event_time_from,
             event_time_to=event_time_to,
             token_budget=token_budget,
+            min_score=min_score, limit=limit,
             weights=weights,
             min_fidelity=min_fidelity,
             include_cross_scope=include_cross_scope,
+            retrieval_mode=retrieval_mode,
         )
 
         # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather

@@ -369,3 +369,28 @@ pending ingestion first. Semantic aggregation still requires deciding which
 stored assertions describe the same item and what evidence is missing.
 
 *End of RFC-0005*
+
+
+## Implementation amendment — explicit selection (2026-09-12)
+
+Ranking and selection are separate stages. Callers may set a finite nonnegative
+`min_score` and integer nonnegative `limit`; both default to unset. After optional
+reranking/session expansion, the pipeline accepts scores greater than or equal
+to the floor, then retains at most `limit` primary candidates in ranked order.
+Pinned nodes, instructions and active tasks do not override an explicit caller
+bound. Packing sees only selected candidates. An empty selection stays empty.
+Cross-scope hints apply the same floor and retain their independent count cap.
+Responses expose epistemic/selection exclusions with reasons and scores; the
+operation log records the floor, limit and selection exclusions. Token-budget
+exclusions remain in the bundle. Request options do not mutate shared config.
+
+Scores depend on the embedding model, corpus and scoring/reranking configuration;
+they are not relevance probabilities. Defaults require held-out precision/recall
+calibration before a universal acceptance floor is justified. The external
+PrecisionMemBench diagnostic exposed high recall with excessive unrelated
+candidates; offering an explicit floor fixes control, not semantic calibration.
+
+HTTP retrieval previously accepted and ignored `filters`, `mode`, and `limit`.
+These now forward to the pipeline, with typed scope/time fields and unknown-key
+rejection. Explicit mode relaxes epistemic filtering only inside the generated
+candidate pool; evicted historical indexes are not reconstructed by that flag.

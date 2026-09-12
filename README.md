@@ -20,6 +20,22 @@ See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:
 reliable evidence retrieval, complete aggregation, and correct temporal state.
 
+For applications that need fewer memories, `retrieve(..., limit=5, min_score=0.5)`
+applies a count cap and an inclusive score floor **before context packing**.
+`limit=0` returns no primary results; rejected nodes are listed in
+`response.excluded`. A score is a ranking signal, not a calibrated probability:
+choose a floor using labeled queries from your application. No acceptance floor
+is enabled by default, because a threshold that suppresses noise in a small
+fact corpus can discard useful evidence in long conversations. Cross-scope
+hints remain separate; disable them with `include_cross_scope=False` when needed.
+
+The HTTP API accepts `limit`, `min_score`, `token_budget`, and `mode`, plus typed
+`filters` (`scope`, `time_from`, `time_to`, `knowledge_at`, `event_time_from`,
+`event_time_to`, `include_cross_scope`). Unknown keys are rejected. `mode="explicit"`
+relaxes epistemic filtering within the generated candidate pool; it is not an
+exhaustive historical scan. The MCP `memory_retrieve` tool also accepts score,
+count, and token bounds.
+
 ## Why PRME?
 
 Persistent memory helps an assistant carry context between conversations. It

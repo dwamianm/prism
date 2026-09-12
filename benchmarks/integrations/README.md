@@ -52,3 +52,7 @@ Interpretation limits of this unmodified upstream adapter:
 - This is a small synthetic precision diagnostic. Published vendor results are
   not a controlled comparison with this run. Preserve failures and disclose the
   wrapper when reporting scores; do not claim a general leaderboard result.
+
+For acceptance-floor experiments, pass `--min-score NUMBER` to the service.
+Record the value and source revision with every report. Defaults remain unset;
+such development sweeps are calibration diagnostics, not held-out results.

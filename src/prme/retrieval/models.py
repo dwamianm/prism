@@ -243,6 +243,8 @@ class RetrievalMetadata(BaseModel):
     candidates_filtered: int = Field(
         default=0, description="Candidates removed by filtering"
     )
+    min_score: float | None = None
+    result_limit: int | None = None
     candidates_included: int = Field(
         default=0, description="Candidates included in final response"
     )
@@ -278,6 +280,23 @@ class FilterMetadata(BaseModel):
     )
 
 
+class ExcludedCandidate(BaseModel):
+    """Record of a candidate excluded from final results.
+
+    For full candidate audit trail -- captures why each candidate was dropped.
+    """
+
+    node_id: UUID = Field(description="ID of the excluded node")
+    reason: str = Field(
+        description="Exclusion reason (e.g., 'epistemic_filtered', "
+        "'below_threshold', 'budget_exceeded')"
+    )
+    composite_score: float | None = Field(
+        default=None,
+        description="Composite score at time of exclusion (if scored)",
+    )
+
+
 class RetrievalResponse(BaseModel):
     """Top-level response for a retrieval request.
 
@@ -301,24 +320,8 @@ class RetrievalResponse(BaseModel):
         default=None,
         description="Metadata about active filters (scope, temporal, cross-scope)",
     )
+    excluded: list[ExcludedCandidate] = Field(default_factory=list, description="Epistemic and selection exclusions; packing exclusions are in bundle.excluded_ids")
     cross_scope_hints: list[RetrievalCandidate] = Field(
         default_factory=list,
         description="Highly relevant results from outside the requested scope",
-    )
-
-
-class ExcludedCandidate(BaseModel):
-    """Record of a candidate excluded from final results.
-
-    For full candidate audit trail -- captures why each candidate was dropped.
-    """
-
-    node_id: UUID = Field(description="ID of the excluded node")
-    reason: str = Field(
-        description="Exclusion reason (e.g., 'epistemic_filtered', "
-        "'below_threshold', 'budget_exceeded')"
-    )
-    composite_score: float | None = Field(
-        default=None,
-        description="Composite score at time of exclusion (if scored)",
     )

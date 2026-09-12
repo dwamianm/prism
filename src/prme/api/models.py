@@ -8,11 +8,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import AwareDatetime, BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from prme.types import (
     EpistemicType,
     NodeType,
+    RetrievalMode,
     Scope,
 )
 
@@ -82,22 +83,31 @@ class IngestResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class RetrievalFilters(BaseModel):
+    """Typed filters; unknown keys fail instead of silently broadening a search."""
+
+    model_config = ConfigDict(extra="forbid")
+    scope: Scope | list[Scope] | None = None
+    time_from: AwareDatetime | None = None
+    time_to: AwareDatetime | None = None
+    knowledge_at: AwareDatetime | None = None
+    event_time_from: AwareDatetime | None = None
+    event_time_to: AwareDatetime | None = None
+    include_cross_scope: bool = True
+
+
 class RetrieveRequest(BaseModel):
     """Request body for POST /v1/retrieve."""
 
+    model_config = ConfigDict(extra="forbid")
     query: str = Field(description="Natural language query")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
-    reference_time: AwareDatetime | None = Field(
-        default=None, description="Clock for relative query dates and scoring decay",
-    )
-    limit: int | None = Field(default=None, description="Max results")
-    mode: str | None = Field(
-        default=None,
-        description="Retrieval mode (default or explicit)",
-    )
-    filters: dict[str, Any] | None = Field(
-        default=None, description="Optional filters"
-    )
+    reference_time: AwareDatetime | None = Field(default=None, description="Clock for query dates and scoring")
+    token_budget: int | None = Field(default=None, ge=0)
+    limit: int | None = Field(default=None, ge=0, strict=True, description="Max primary results before packing")
+    min_score: float | None = Field(default=None, ge=0, allow_inf_nan=False, description="Inclusive ranking score floor, not a probability")
+    mode: RetrievalMode | None = Field(default=None, description="Epistemic filtering mode within generated candidates")
+    filters: RetrievalFilters | None = None
 
 
 class RetrieveResultItem(BaseModel):
