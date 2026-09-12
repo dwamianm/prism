@@ -711,7 +711,7 @@ class MemoryEngine:
         if self._config.reinforce_similarity_threshold is not None:
             try:
                 await self._check_remention_reinforcement(
-                    content, str(node.id), user_id, event.id,
+                    content, str(node.id), user_id, event.id, scope=node.scope,
                 )
             except Exception:
                 logger.warning(
@@ -721,14 +721,10 @@ class MemoryEngine:
                     exc_info=True,
                 )
 
-        # Step 3.6: Instruction reinforcement (always-on for INSTRUCTION nodes)
-        # When new content matches existing INSTRUCTION nodes, boost their
-        # confidence -- frequently validated behavioral rules get stronger.
-        # Uses a fixed similarity threshold of 0.5.
+        # Step 3.6: Explicit repetitions of a user instruction can reinforce
+        # that same instruction. Similarity alone cannot validate a rule.
         try:
-            await self._check_instruction_reinforcement(
-                content, str(node.id), user_id, event.id,
-            )
+            await self._check_instruction_reinforcement(node, event)
         except Exception:
             logger.warning(
                 "Instruction reinforcement check failed for node %s. "
@@ -884,13 +880,16 @@ class MemoryEngine:
         new_node_id: str,
         user_id: str,
         event_id: str,
+        *,
+        scope: Scope,
     ) -> None:
         """Reinforce existing similar nodes when new content re-mentions a topic.
 
         When reinforce_similarity_threshold is set, searches for existing nodes
         with similarity >= threshold and calls reinforce() on each match. The
         new node itself is always skipped. Superseded/archived nodes are also
-        skipped. The entire block is non-fatal.
+        skipped. Only the same owner and scope can be reinforced; instructions
+        use the stricter explicit-repetition policy. The block is non-fatal.
 
         Args:
             content: The newly stored content text.
@@ -932,12 +931,15 @@ class MemoryEngine:
             existing_node = await self._graph_store.get_node(
                 sid, include_superseded=False
             )
-            if existing_node is None:
+            if (existing_node is None or existing_node.user_id != user_id
+                    or existing_node.scope != scope
+                    or existing_node.node_type == NodeType.INSTRUCTION
+                    or existing_node.lifecycle_state not in ACTIVE_LIFECYCLE_STATES):
                 continue
 
             # Reinforce the matching existing node
             try:
-                await self.reinforce(sid, evidence_id=str(event_id))
+                await self.reinforce(sid, evidence_id=str(event_id), user_id=user_id)
                 logger.info(
                     "Re-mention reinforcement: node %s reinforced "
                     "(similarity=%.3f) by new node %s",
@@ -953,69 +955,45 @@ class MemoryEngine:
                 )
 
     async def _check_instruction_reinforcement(
-        self,
-        content: str,
-        new_node_id: str,
-        user_id: str,
-        event_id: str,
+        self, node: MemoryNode, event: Event,
     ) -> None:
-        """Reinforce existing INSTRUCTION nodes when new content validates them.
+        """Reinforce an exact, explicit user instruction in the same scope.
 
-        Always-on: runs for every store() call regardless of
-        reinforce_similarity_threshold. Searches for similar existing
-        INSTRUCTION nodes and reinforces matches. Uses a fixed threshold
-        of 0.5 similarity.
-
-        Args:
-            content: The newly stored content text.
-            new_node_id: The node ID of the just-created node (to skip).
-            user_id: Owner user ID for scoping vector search.
-            event_id: Event ID from the new store, passed as evidence_id.
+        Vector hits only propose candidates. A related statement, observation,
+        assistant echo, speculation or different scope cannot confirm a rule.
+        This optional reinforcement still tolerates vector unavailability.
         """
-        _INSTRUCTION_REINFORCE_THRESHOLD = 0.5
-
+        supported_types = {EpistemicType.OBSERVED, EpistemicType.ASSERTED}
+        if (node.node_type != NodeType.INSTRUCTION
+                or node.source_type != SourceType.USER_STATED
+                or node.epistemic_type not in supported_types
+                or event.role.casefold() not in {"user", "human"}):
+            return
         try:
-            similar = await self._vector_index.search(content, user_id, k=5)
+            similar = await self._vector_index.search(node.content, node.user_id, k=5)
         except Exception:
-            return  # Vector search failure is non-fatal
-
-        if not similar:
             return
 
         for result in similar:
             sid = result["node_id"]
-            score = result.get("score", 0.0)
-
-            if sid == new_node_id:
+            if sid == str(node.id):
                 continue
-
-            if score < _INSTRUCTION_REINFORCE_THRESHOLD:
+            existing = await self._graph_store.get_node(sid, include_superseded=False)
+            if (existing is None or existing.user_id != node.user_id
+                    or existing.scope != node.scope
+                    or existing.node_type != NodeType.INSTRUCTION
+                    or existing.source_type != SourceType.USER_STATED
+                    or existing.epistemic_type not in supported_types
+                    or existing.lifecycle_state not in ACTIVE_LIFECYCLE_STATES
+                    or existing.content != node.content
+                    or event.id in existing.evidence_refs
+                    or (node.event_time or node.created_at) < (existing.event_time or existing.created_at)):
                 continue
-
-            # Only reinforce INSTRUCTION nodes
-            existing_node = await self._graph_store.get_node(
-                sid, include_superseded=False
-            )
-            if existing_node is None:
-                continue
-            if existing_node.node_type != NodeType.INSTRUCTION:
-                continue
-
             try:
-                await self.reinforce(sid, evidence_id=str(event_id))
-                logger.info(
-                    "Instruction reinforcement: node %s reinforced "
-                    "(similarity=%.3f) by new node %s",
-                    sid,
-                    score,
-                    new_node_id,
-                )
+                await self.reinforce(sid, evidence_id=str(event.id), user_id=node.user_id)
+                logger.info("Repeated instruction %s reinforced by source %s", sid, event.id)
             except Exception:
-                logger.debug(
-                    "Could not reinforce instruction %s",
-                    sid,
-                    exc_info=True,
-                )
+                logger.debug("Could not reinforce instruction %s", sid, exc_info=True)
 
     async def _compute_novelty(self, content: str, user_id: str):
         """Compute novelty score for incoming content.

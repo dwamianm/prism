@@ -205,6 +205,12 @@ values. `processing_status()` and `process_pending()` also track and repair new
 `store()` writes after restart, preserving their type, identity, timestamps and
 TTL without calling an LLM. If graph creation fails after acceptance, catch
 `MaterializationError` and use its `event_id` to inspect/retry the saved request.
+Automatic instruction reinforcement requires an exact repetition of an explicit
+user instruction in the same scope. Similar facts, contradictions, assistant
+echoes and speculative rules do not confirm an instruction. Opt-in semantic
+re-mention reinforcement also stays within scope and excludes instructions.
+This heuristic is not calibrated evidence of truth; prior boosts are retained.
+
 Completion covers the node and indexes; optional reinforcement, supersedence and
 QA pairing run afterward and are not replayed by this job. Retired nodes remain
 retired. Historical direct stores without repair jobs still need `prme rebuild`

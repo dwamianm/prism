@@ -20,6 +20,24 @@ The confidence model is designed to:
 
 ---
 
+### Implemented instruction repetition policy
+
+Automatic direct-store instruction reinforcement is conservative: a new explicit
+user/human `INSTRUCTION` must repeat the exact text of an active instruction in
+the same user and scope. Both records must be user-stated and observed/asserted.
+A source effective earlier than the existing instruction cannot confirm it.
+Vector similarity proposes up to five candidates; it is never itself credited
+as support. Ordinary facts/notes, negated or paraphrased rules, assistant echoes,
+speculation, and cross-scope content cannot automatically boost a rule. Index
+unavailability can leave a valid repetition unreinforced. This is a bounded
+repetition heuristic, not independent corroboration or calibrated confidence.
+Opt-in semantic re-mention reinforcement excludes instructions and stays within
+the source owner/scope, so it cannot bypass this instruction policy.
+Explicit `reinforce()` remains a caller-driven operation with its existing
+capped increments; the general update formula and correlation controls below
+remain design requirements rather than claims about this heuristic. Historical
+incorrect reinforcement is not retroactively undone.
+
 ## 2. Reinforcement Update Rule
 
 When a positive signal is received for a memory object:
