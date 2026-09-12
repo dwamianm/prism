@@ -1,0 +1,438 @@
+{
+  "package_commits": {
+    "default": "4e43d0b",
+    "one_worker": "f1386a7"
+  },
+  "runner_commits": {
+    "default": "b6c0eea",
+    "one_worker": "e451308"
+  },
+  "coordinators_native_exit_codes": [
+    0,
+    0,
+    0
+  ],
+  "records": [
+    {
+      "repeat": 0,
+      "count": 1,
+      "mode": "resident",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-1-r0.json",
+      "sha256": "abcf1cf4a404f59eba9e78468cb7e634501f938aac79c8d9b3c57db036f01599",
+      "log_path": "/tmp/prme-partition-resident-1-r0.log",
+      "log_sha256": "0be7f09db0c84312eff94d01ed85c4fa4853e71987478fb763ebfe5b8bc2a1a7",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 0,
+      "count": 1,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-1-r0.json",
+      "sha256": "2824586728c49b41ece1e0cdc7aacf9e93d4b7b7a2d27e9df7b2b8229e6eb90c",
+      "log_path": "/tmp/prme-partition-leased-1-r0.log",
+      "log_sha256": "ffba41f9fc31e6f97fd7b0d27e2547c833de1eb755ad111626ca3a2f0c765c47",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 0,
+      "count": 10,
+      "mode": "resident",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-10-r0.json",
+      "sha256": "5f59280de952ae71f426d08575311dd354380cd18d6e7a08353d1b89b3649bc4",
+      "log_path": "/tmp/prme-partition-resident-10-r0.log",
+      "log_sha256": "6ca49678aee39857240e9ffd9398ee8e5a1b5abd72e5783754e5a857b499b2d5",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 0,
+      "count": 10,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-10-r0.json",
+      "sha256": "e9f8907e150645bf85e9bffc6a1be3c46f047faaf66f82f345884af3c28e51a6",
+      "log_path": "/tmp/prme-partition-leased-10-r0.log",
+      "log_sha256": "7ec4de25284ec83b109f9cd6e39f41abc74a8d954ff91558033fc4406c741dde",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 0,
+      "count": 100,
+      "mode": "resident",
+      "native_exit_code": 1,
+      "path": "data/benchmarks/partitions/resident-100-r0.json",
+      "sha256": "3e9ee0eae1f9b52de7e8fa4794463309241e25012175431f66964a5d5f18c69c",
+      "log_path": "/tmp/prme-partition-resident-100-r0.log",
+      "log_sha256": "31976cc08b2a96790157dc68c058bdc2599c83193aea607c10f5e4e87c1b3666",
+      "complete": false,
+      "error_type": "ResourceBudgetExceeded"
+    },
+    {
+      "repeat": 0,
+      "count": 100,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-100-r0.json",
+      "sha256": "65185a3c2e4dd7480d0bc8ba7dc528bdab3221e70b13388e5dd0d20881d8e13f",
+      "log_path": "/tmp/prme-partition-leased-100-r0.log",
+      "log_sha256": "910ddbcb4e787e13fc3958a837e88206ac95eca8ab91f4ecda7373be184d07dc",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 1,
+      "count": 1,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-1-r1.json",
+      "sha256": "e7873a4d9a0893063642f02f3146949c064a67f8c73a20a8d5d314f788dd8386",
+      "log_path": "/tmp/prme-partition-leased-1-r1.log",
+      "log_sha256": "c161d5aaea6031a84ca34fa7200e2c9324d29de2c62d9e5e5092cd73636db343",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 1,
+      "count": 1,
+      "mode": "resident",
+      "skipped": "earlier budget stop"
+    },
+    {
+      "repeat": 1,
+      "count": 10,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-10-r1.json",
+      "sha256": "45570e7ad4ea86fa5a81d62cb6e8e57c65a069cf32400a040fe0978fea681352",
+      "log_path": "/tmp/prme-partition-leased-10-r1.log",
+      "log_sha256": "74d1c6284bda0afada62905ee8e6e1acd7983498ee08e55ab27b5ba001c00491",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 1,
+      "count": 10,
+      "mode": "resident",
+      "skipped": "earlier budget stop"
+    },
+    {
+      "repeat": 1,
+      "count": 100,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-100-r1.json",
+      "sha256": "b0629de3714f8bc6db32826f3c47cf84504862a1e3f119a82c0cfae69e6da46a",
+      "log_path": "/tmp/prme-partition-leased-100-r1.log",
+      "log_sha256": "09cf13d1e5beb9411c7a29a292dd9c608dca2b194a5c11f11309af26dcf88dc5",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 1,
+      "count": 100,
+      "mode": "resident",
+      "skipped": "earlier budget stop"
+    },
+    {
+      "repeat": 2,
+      "count": 1,
+      "mode": "resident",
+      "skipped": "earlier budget stop"
+    },
+    {
+      "repeat": 2,
+      "count": 1,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-1-r2.json",
+      "sha256": "3f1767d363915477c7341fe56da5da4a20f3c67b0474aced30f6558150c39196",
+      "log_path": "/tmp/prme-partition-leased-1-r2.log",
+      "log_sha256": "4d3dc64f44e8986271836ae2cc8834954d16ad110aa0379d0bd661564b301dd3",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 2,
+      "count": 10,
+      "mode": "resident",
+      "skipped": "earlier budget stop"
+    },
+    {
+      "repeat": 2,
+      "count": 10,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-10-r2.json",
+      "sha256": "e27d4b0a0c7d88e93dec9326e09d76139cdd6856a1988649da24ad0bd2aef200",
+      "log_path": "/tmp/prme-partition-leased-10-r2.log",
+      "log_sha256": "232e02b10d90719e4281d074b13736c479402031ea277c9399d36b5c241e8856",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 2,
+      "count": 100,
+      "mode": "resident",
+      "skipped": "earlier budget stop"
+    },
+    {
+      "repeat": 2,
+      "count": 100,
+      "mode": "leased",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/leased-100-r2.json",
+      "sha256": "bc78d0f32dae562420dc7a8bb79bdedaeaf2415e2d6872b49baf923cbdc2f170",
+      "log_path": "/tmp/prme-partition-leased-100-r2.log",
+      "log_sha256": "57b137048ce335e19b651060c6097c688bec78b9d8d6863551341bd5702adad5",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 1,
+      "count": 1,
+      "mode": "resident",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-1-r1.json",
+      "sha256": "7b3dad88cd49f9469b043cd54a00dc525182651c3cf62e76cf4021b299da1265",
+      "log_path": "/tmp/prme-partition-resident-1-r1.log",
+      "log_sha256": "24450ba27611adbc75353ce0320d12eaf6a98249ad85252d6864264ebbb2e2de",
+      "complete": true,
+      "order_deviation": "Coordinator initially skipped all resident counts after 100-count thread stop; lower-count repetitions completed afterward."
+    },
+    {
+      "repeat": 1,
+      "count": 10,
+      "mode": "resident",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-10-r1.json",
+      "sha256": "e6703c73392fb867861e9071891f73abd37c752dfc4c92c7520bbed042c74be7",
+      "log_path": "/tmp/prme-partition-resident-10-r1.log",
+      "log_sha256": "ef07ee64fad617ce29a565b57105b62541a6148d32e2cf7f97e1423f9751872d",
+      "complete": true,
+      "order_deviation": "Coordinator initially skipped all resident counts after 100-count thread stop; lower-count repetitions completed afterward."
+    },
+    {
+      "repeat": 2,
+      "count": 1,
+      "mode": "resident",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-1-r2.json",
+      "sha256": "b1ebd45ff98a31bea7f6bc3fa52ea5300172a9ac27443b0a7cc82f79adca83a4",
+      "log_path": "/tmp/prme-partition-resident-1-r2.log",
+      "log_sha256": "a93236f5b32b19fa4cbdbd3f8c7fd1ce16dbf893e6de6a05c393ca33beb581de",
+      "complete": true,
+      "order_deviation": "Coordinator initially skipped all resident counts after 100-count thread stop; lower-count repetitions completed afterward."
+    },
+    {
+      "repeat": 2,
+      "count": 10,
+      "mode": "resident",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-10-r2.json",
+      "sha256": "1760f7107e12f8ac5e0c95527dcc00a894ee7831f1a64fdac1d9a05cb18a1d57",
+      "log_path": "/tmp/prme-partition-resident-10-r2.log",
+      "log_sha256": "531fa5fad3ef269f2eea482a4450f56bc8c26def72f5cc6268020a4e885b3a55",
+      "complete": true,
+      "order_deviation": "Coordinator initially skipped all resident counts after 100-count thread stop; lower-count repetitions completed afterward."
+    },
+    {
+      "repeat": 0,
+      "count": 100,
+      "mode": "resident",
+      "duckdb_threads": 1,
+      "source_commit": "f1386a7",
+      "runner_commit": "e451308",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-100-one-worker-r0.json",
+      "sha256": "544f361ba3840f6c8add9f6c724eece78f66a6494028d62d0b4b7a084eda59af",
+      "log_path": "/tmp/prme-partition-resident-100-one-worker-r0.log",
+      "log_sha256": "8bdfeba3bb5bf935a53527e7667e1cb5dda8cb5abecf46b8911a3ff571bef3b0",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 1,
+      "count": 100,
+      "mode": "resident",
+      "duckdb_threads": 1,
+      "source_commit": "f1386a7",
+      "runner_commit": "e451308",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-100-one-worker-r1.json",
+      "sha256": "dc5d456bd1f9c3f6c6057c2ab2cafaa6c1394b3c8bd395712137cbddca519400",
+      "log_path": "/tmp/prme-partition-resident-100-one-worker-r1.log",
+      "log_sha256": "8ffd303e222fe324c538538961880723536d8c46ed38c78e1970975f7621dadb",
+      "complete": true,
+      "error_type": null
+    },
+    {
+      "repeat": 2,
+      "count": 100,
+      "mode": "resident",
+      "duckdb_threads": 1,
+      "source_commit": "f1386a7",
+      "runner_commit": "e451308",
+      "native_exit_code": 0,
+      "path": "data/benchmarks/partitions/resident-100-one-worker-r2.json",
+      "sha256": "23c7d331b22389abbba691c03ef2be5b1a27006f62a82d421ebeaf6f8efb164c",
+      "log_path": "/tmp/prme-partition-resident-100-one-worker-r2.log",
+      "log_sha256": "3c26ad6fc600f06c466f64ac518cd6b32fdc4d5266a0e08010bc5fa49c483b84",
+      "complete": true,
+      "error_type": null
+    }
+  ],
+  "summary": [
+    {
+      "arm": "resident-1",
+      "completed": 3,
+      "attempted": 3,
+      "planned_repetitions": 3,
+      "median_max_rss_mib": 364.671875,
+      "max_sampled_threads": 65,
+      "max_sampled_fds": 8,
+      "median_cold_open_ms": 45.218167011626065,
+      "median_retrieve_ms": 51.88391701085493,
+      "median_reopen_ms": 18.870957981562242,
+      "elapsed_seconds": [
+        0.5252575409831479,
+        0.5305494169879239,
+        0.5342679999885149
+      ]
+    },
+    {
+      "arm": "resident-10",
+      "completed": 3,
+      "attempted": 3,
+      "planned_repetitions": 3,
+      "median_max_rss_mib": 541.109375,
+      "max_sampled_threads": 227,
+      "max_sampled_fds": 26,
+      "median_cold_open_ms": 43.394812499172986,
+      "median_retrieve_ms": 9.298478995333426,
+      "median_reopen_ms": 18.17345799645409,
+      "elapsed_seconds": [
+        3.571118457999546,
+        3.563459333003266,
+        3.5796555420092773
+      ]
+    },
+    {
+      "arm": "resident-100",
+      "completed": 0,
+      "attempted": 1,
+      "planned_repetitions": 3
+    },
+    {
+      "arm": "leased-1",
+      "completed": 3,
+      "attempted": 3,
+      "planned_repetitions": 3,
+      "median_max_rss_mib": 349.53125,
+      "max_sampled_threads": 66,
+      "max_sampled_fds": 8,
+      "median_cold_open_ms": 50.96708401106298,
+      "median_retrieve_ms": 50.34487499506213,
+      "median_reopen_ms": 20.604124991223216,
+      "elapsed_seconds": [
+        0.5468500839779153,
+        0.5623554170015268,
+        0.6421928750060033
+      ]
+    },
+    {
+      "arm": "leased-10",
+      "completed": 3,
+      "attempted": 3,
+      "planned_repetitions": 3,
+      "median_max_rss_mib": 366.375,
+      "max_sampled_threads": 78,
+      "max_sampled_fds": 8,
+      "median_cold_open_ms": 43.01435399975162,
+      "median_retrieve_ms": 9.928479499649256,
+      "median_reopen_ms": 19.012520497199148,
+      "elapsed_seconds": [
+        3.784932624985231,
+        3.784572458011098,
+        4.291633540997282
+      ]
+    },
+    {
+      "arm": "leased-100",
+      "completed": 3,
+      "attempted": 3,
+      "planned_repetitions": 3,
+      "median_max_rss_mib": 372.171875,
+      "max_sampled_threads": 90,
+      "max_sampled_fds": 8,
+      "median_cold_open_ms": 42.61943799792789,
+      "median_retrieve_ms": 9.45118699746672,
+      "median_reopen_ms": 18.19387450814247,
+      "elapsed_seconds": [
+        36.34183304200997,
+        37.0540594580234,
+        36.647888667008374
+      ]
+    },
+    {
+      "arm": "resident-100-one-worker",
+      "completed": 3,
+      "attempted": 3,
+      "planned_repetitions": 3,
+      "median_max_rss_mib": 2437.609375,
+      "max_sampled_threads": 167,
+      "max_sampled_fds": 206,
+      "median_cold_open_ms": 41.42443749879021,
+      "median_retrieve_ms": 8.645146008348092,
+      "median_reopen_ms": 16.26047948957421,
+      "elapsed_seconds": [
+        33.12824808401638,
+        33.488822582992725,
+        33.384406041994225
+      ]
+    }
+  ],
+  "installed_identity": {
+    "source_commit": "f1386a7",
+    "matching_python_files": 119,
+    "installed_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme",
+    "wheel_sha256": "48471976a1657e3d01f89d12ea401163171550db8a87cb1ea9f967b0be3c0597"
+  },
+  "validation": [
+    {
+      "path": "/tmp/prme-duckdb-resources-source.log",
+      "sha256": "23a7967b0e78f625b0ede644c4500d575e290131f962d80b182d2016db34c621",
+      "native_exit_code": 0,
+      "summary": "11 passed in 1.25s"
+    },
+    {
+      "path": "/tmp/prme-duckdb-resources-regression.log",
+      "sha256": "f1d7355ea4edf5f5ab98301f1f4a2ed23180bbef0335e14859b542bfad7aabaf",
+      "native_exit_code": 0,
+      "summary": "127 passed, 5 skipped in 17.61s"
+    },
+    {
+      "path": "/tmp/prme-duckdb-resources-installed.log",
+      "sha256": "71f5e4e7cd769d2eb34191bad6f650219dbab70188838c265c47a9432a18e751",
+      "native_exit_code": 0,
+      "summary": "127 passed, 5 skipped in 11.05s"
+    }
+  ],
+  "limits": [
+    "Three-event packs, two active nodes, real shared warmed BGE, serial public operations.",
+    "Default mode order deviation retained: four smaller resident repeats ran after other default arms.",
+    "Resident 100 default stopped at the registered thread budget; two repetitions skipped.",
+    "Tests and other host processes ran during portions of default measurements; no speed ratio or deployment-wide limit inferred.",
+    "Physical directories do not provide a public namespace manager, hosted routing/grants, or validation of all recovery and ingestion flows.",
+    "The full 2793-pass suite at 31946c2 predates these changes; final worker-control checks below are focused invocations."
+  ],
+  "health": {
+    "path": "benchmarks/results/recovery/2026-09-12/openai-file-health-recheck-224231.json",
+    "sha256": "556cc51e6b363ba992852496ecfb8449e9e137d3c56bf8c7beff26bcb44a875a"
+  }
+}

@@ -39,7 +39,7 @@ indexes. A bounded cache must also handle leases, concurrent open/close,
 cancellation and resource ownership; PRME does not yet provide a namespace
 manager or cache with those contracts.
 
-The [registered resource probe](../benchmarks/results/recovery/2026-09-12/PARTITION-RESOURCE-PROTOCOL.md)
+The [completed resource probe](../benchmarks/results/recovery/2026-09-12/PARTITION-RESOURCES.md)
 uses tiny authored packs and a shared warmed model. Results do not establish an
 optimal thread count for larger histories or concurrent workloads. Measure your
 application before changing its worker count.

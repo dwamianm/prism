@@ -1,5 +1,10 @@
 # Recovery and developer workflow evidence
 
+The latest [local partition resource probe](PARTITION-RESOURCES.md) completed
+18 repetitions plus a smoke run and retained one thread-budget stop. The new
+`duckdb_threads` control passed 127 focused tests with five skips in both source
+and installed environments. It does not yet provide a namespace manager.
+
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
 product. The latest [atomic organizer merge record](ATOMIC-ORGANIZER-MERGES.md)

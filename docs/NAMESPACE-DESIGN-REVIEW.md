@@ -22,10 +22,20 @@ establish a winning storage implementation.
 | Add a partition ID throughout shared tables and indexes | Supports many partitions with shared pools and storage; a natural basis for cross-partition administrative operations. | Requires migrations and mandatory checks on every read, write, edge, queue, receipt and replay path. Approximate vector search must preserve authorized recall and avoid post-limit filtering. Owner and partition must remain distinct. |
 | Filter a metadata key after retrieval | Small initial API change. | Rejected: ingestion and maintenance can combine projects before retrieval, and omitted filters expose mixed state. |
 
-The next experiment should prototype engine-bound physical partitions and
-measure cold open, steady memory, connection counts and retrieval across 1, 10
-and 100 partitions with one shared caller-owned embedding provider. Compare the
-cost with a shared-table prototype before choosing a scalable hosted default.
+The [local resource experiment](../benchmarks/results/recovery/2026-09-12/PARTITION-RESOURCE-PROTOCOL.md)
+tests cold open, memory, threads and retrieval across 1, 10 and 100 separate
+packs with one shared caller-owned embedding provider. It compares keeping every
+engine open with leasing one at a time. Default DuckDB workers crossed the
+experiment's 1,000-thread budget at 54 open packs, while all three leased
+100-pack runs completed. This rejects an unbounded resident-engine design as an
+unexamined default on this host. It does not reject physical partitions.
+
+`duckdb_threads` now allows an explicit per-instance worker count, with the old
+default retained. The [completed follow-up](../benchmarks/results/recovery/2026-09-12/PARTITION-RESOURCES.md)
+passed all three 100-pack resident runs at 167 sampled threads, but median peak
+sampled RSS was 2,437.6 MiB. Database/index memory and open/close ownership still
+need a bounded lease/cache design. Compare that with
+a shared-table PostgreSQL prototype before choosing a scalable hosted default.
 Do not introduce two incomplete production namespace implementations at once.
 
 The PostgreSQL prototype must exclude fallback to a different schema when a

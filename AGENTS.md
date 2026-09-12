@@ -119,6 +119,10 @@ Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retri
 ## Storage Backends
 
 - **DuckDB (default)** — local-first; no `database_url` set.
+- Optional `duckdb_threads` sets workers when a local database opens; `None`
+  preserves the native default. All concurrent engines for the same file must
+  use matching settings. Do not use a later `SET threads` to silently reconfigure
+  an already-open engine. This does not cap embedding/index threads or memory.
 - **PostgreSQL** — used when `database_url` is set; implemented in `src/prme/storage/pg/`. Its test suite (`tests/test_pg_*.py`) is skipped unless `PRME_TEST_DATABASE_URL` points at a live database, so those tests are skipped locally without a database. CI runs them against a live PostgreSQL service on Python 3.11–3.13.
 
 ## MVP Phases (delivered)
