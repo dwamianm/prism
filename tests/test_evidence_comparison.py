@@ -38,6 +38,19 @@ def test_complete_matched_comparison():
     result = compare(before, after, samples=100)
     assert result["methods"]["prme"]["metrics"]["mrr"]["delta"] == .5
     assert result["categories"]["temporal"]["prme"]["metrics"]["mrr"]["queries"] == 1
+    assert result["protocol_changes"] == {}
+
+
+def test_clock_change_is_explicit_and_not_an_isolated_algorithm_claim():
+    before, after = report(), report()
+    after["query_clock"] = "question"
+    after["concurrency"] = 4
+    result = compare(before, after, samples=100)
+    assert result["protocol_changes"] == {
+        "query_clock": {"before": "wall", "after": "question"},
+        "concurrency": {"before": 1, "after": 4},
+    }
+    assert any("not an isolated algorithm comparison" in item for item in result["limitations"])
 
 
 @pytest.mark.parametrize("failure", ["incomplete", "duplicate", "missing", "dataset", "budget", "labels"])

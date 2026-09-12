@@ -77,6 +77,22 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         raise ValueError("Category labels differ between runs")
     if any(old[q][field] != new[q][field] for q in ids for field in ("source_count", "evidence_source_ids")):
         raise ValueError("Source corpus or evidence labels differ between runs")
+    protocol_changes = {}
+    for field, default in (("query_clock", "wall"), ("concurrency", 1)):
+        before_value, after_value = before.get(field, default), after.get(field, default)
+        if before_value != after_value:
+            protocol_changes[field] = {"before": before_value, "after": after_value}
+    limitations = [
+        "Evidence retrieval only; no generated-answer accuracy or cross-product superiority claim.",
+        "Paired bootstrap resamples questions; shared source histories can make queries dependent.",
+        "Development-set improvements require a frozen held-out confirmation.",
+        "Timing is not compared because concurrent workloads and warm caches affect it.",
+    ]
+    if "query_clock" in protocol_changes:
+        limitations.append(
+            "Query clocks differ: this delta combines software and evaluation-clock changes; "
+            "it is not an isolated algorithm comparison."
+        )
     return {
         "kind": "paired-source-evidence-comparison", "selected_queries": len(ids),
         "before": {"run_id": before["run_id"], "provenance": before["provenance"],
@@ -84,12 +100,8 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         "after": {"run_id": after["run_id"], "provenance": after["provenance"],
                   "query_clock": after.get("query_clock", "wall"), "concurrency": after.get("concurrency", 1)},
         "dataset": before["dataset"], "bootstrap_samples": samples, "bootstrap_seed": 42,
-        "limitations": [
-            "Evidence retrieval only; no generated-answer accuracy or cross-product superiority claim.",
-            "Paired bootstrap resamples questions; shared source histories can make queries dependent.",
-            "Development-set improvements require a frozen held-out confirmation.",
-            "Timing is not compared because concurrent workloads and warm caches affect it.",
-        ],
+        "protocol_changes": protocol_changes,
+        "limitations": limitations,
         "methods": metrics_for(ids),
         "categories": {
             category: metrics_for([q for q in ids if old[q]["category"] == category])
