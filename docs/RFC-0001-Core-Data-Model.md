@@ -237,15 +237,20 @@ structured response. Fact subjects and relationship endpoints must resolve to a
 listed entity. Optional type qualifiers disambiguate equal names with different
 entity types. Name matching preserves the ingestion merger's stripped,
 case-insensitive name and exact type semantics; it does not guess aliases.
-Missing/ambiguous references cause bounded provider schema retries.
+Missing/ambiguous references cause bounded provider schema retries. Objects
+may be literals; when an object matches ambiguous entity names or supplies an
+explicit `object_entity_type`, it must resolve uniquely too.
 
 The materializer also resolves by distinct identity rather than overwriting a
 name dictionary entry. Custom or historical facts with unresolved subjects are
 preserved with `subject_link_status` metadata and receive no guessed HAS_FACT
-edge. Unresolved relationship endpoints are reported and omitted. This does not
-establish semantic entity identity, entailment, or namesake resolution across
-conversations. New prepared plans record `typed_references_v2`; existing saved
-plans retain their original materialization policy and replay unchanged.
+edge. The same rule applies to object `MENTIONS` links and relationship claims:
+an unresolved endpoint omits that link, while preserving the source-cited claim.
+This does not establish semantic identity, entailment, or namesake resolution
+across conversations. Relationship predicates remain model metadata on FACT
+nodes; ingestion does not map them directly to structural edge types. New
+prepared plans record `relationship_claims_v3`; existing saved plans retain their
+original materialization policy and replay unchanged.
 
 
 ---

@@ -82,6 +82,7 @@ async def test_public_ingestion_restart_reuses_journaled_inputs(config, user, mo
                                          lifecycle_states=list(LifecycleState))
         assert {node.metadata["object"]: node.lifecycle_state for node in facts} == {
             "Python": LifecycleState.SUPERSEDED, "Rust": LifecycleState.TENTATIVE,
+            "Bob": LifecycleState.TENTATIVE,
         }
         for node in plan.nodes:
             await engine.archive(str(node.id))

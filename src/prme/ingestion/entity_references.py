@@ -37,6 +37,10 @@ def reference_errors(result: "ExtractionResult") -> list[str]:
     errors = []
     references = [(f"facts[{i}].subject", fact.subject, fact.subject_entity_type)
                   for i, fact in enumerate(result.facts)]
+    for i, fact in enumerate(result.facts):
+        _, status = refs.resolve(fact.object, fact.object_entity_type)
+        if fact.object_entity_type is not None or status == "ambiguous":
+            references.append((f"facts[{i}].object", fact.object, fact.object_entity_type))
     for i, rel in enumerate(result.relationships):
         references.extend([(f"relationships[{i}].source_entity", rel.source_entity, rel.source_entity_type),
                            (f"relationships[{i}].target_entity", rel.target_entity, rel.target_entity_type)])

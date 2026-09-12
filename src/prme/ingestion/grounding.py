@@ -55,8 +55,8 @@ def validate_grounding(
     - Facts: subject and object must occur in a supporting source passage.
       Citations expand to paragraphs to retain omitted qualifiers. Custom
       providers without citations use the complete source as their support.
-    - Relationships: both source_entity and target_entity must be
-      complete mentions in the source text. Relationship entailment is unverified.
+    - Relationships: the same citation expansion and complete-mention rules
+      apply to both endpoints. Relationship entailment remains unverified.
     - Summary: preserved as model output, not treated as verified evidence.
 
     Args:
@@ -104,13 +104,14 @@ def validate_grounding(
                 reason="Missing source support for citation, subject, or object",
             )
 
-    # Filter relationships: both endpoints must appear in source
+    # Filter relationships: both endpoints must appear in the cited passage
     grounded_relationships = []
     for rel in result.relationships:
-        source_grounded = _mentioned(rel.source_entity, source_text)
-        target_grounded = _mentioned(rel.target_entity, source_text)
+        passage = _supporting_passage(rel.evidence_quote, source_text) if rel.evidence_quote is not None else source_text
+        source_grounded = bool(passage) and _mentioned(rel.source_entity, passage)
+        target_grounded = bool(passage) and _mentioned(rel.target_entity, passage)
         if source_grounded and target_grounded:
-            grounded_relationships.append(rel)
+            grounded_relationships.append(rel.model_copy(update={"evidence_quote": passage}))
         else:
             ungrounded_side = (
                 "source_entity"

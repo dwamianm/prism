@@ -129,6 +129,13 @@ verifies both preserved legacy work and recovery after subsequent plan journalin
 Legacy sources are not automatically enrolled in extraction work. Abandoned
 index staging still requires an explicit maintenance policy.
 
+New plans use materialization policy `relationship_claims_v3`: relationship
+outputs become source-cited FACT nodes and normal subject/object association
+edges. Type-qualified object references avoid arbitrary namesake links. Existing
+`source_passage_v1` and `typed_references_v2` plans remain readable and replay
+their saved artifacts unchanged. Recovery never regenerates an existing plan
+under the current policy implicitly; historical committed edges are not migrated.
+
 ## Required behavior
 
 Acknowledged ingestion must retain both the immutable source and the request to

@@ -66,7 +66,7 @@ automatically rewritten.
 
 ### Source support in PRME ingestion
 
-Extraction requests an exact `evidence_quote` for each fact. Validation requires
+Extraction requests an exact `evidence_quote` for each fact and relationship. Validation requires
 a real source passage and complete subject/object mentions, avoiding matches such
 as “Ann” inside “Marianne”. A citation expands to its surrounding paragraphs so
 a genuine substring cannot silently omit a trailing condition. Fact content is
@@ -84,6 +84,22 @@ Callers can inspect `evidence_refs`, `metadata.evidence_quote`, and
 `metadata.grounding_method` (`source_passage_v1`) to audit the source. Retaining
 whole paragraphs may increase context cost; packing must skip oversized passages
 instead of dropping their qualifications.
+
+Relationships are materialized as source-cited FACT nodes with epistemic types,
+not direct semantic edges between entities. The subject links through HAS_FACT;
+a resolved object receives a MENTIONS link from the claim. These are retrieval
+associations, not logical entailment. Built-in providers must cite and classify
+each relationship. Legacy/custom relationships without classification default
+to UNVERIFIED. Unverified relationship proposals use SYSTEM_INFERRED provenance
+and its configured confidence default (0.20), retaining the original source event
+in evidence_refs. Thus an omitted classification does not use the absent
+UNVERIFIED/USER_STATED cell's 0.50 fallback and enter default retrieval.
+
+If a fact already represents the same resolved endpoints and full source passage,
+its classification and predicate take precedence over additional relationship
+labels for that passage. Raw labels remain available in the extraction journal.
+This is passage-level coverage, not a semantic deduplication claim. Existing
+committed relationship edges are not automatically rewritten.
 
 LLM ingestion does not treat differing values as inherently contradictory: a
 person can use Python and Rust or like both tea and coffee. Automatic retirement

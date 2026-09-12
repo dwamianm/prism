@@ -70,10 +70,18 @@ async def run(args):
                         node.epistemic_type.value in {"conditional", "hypothetical"}
                         for node in facts
                     )
+                    association_edges = all(
+                        edge.edge_type in {EdgeType.HAS_FACT, EdgeType.MENTIONS}
+                        for edge in plan.edges
+                    )
+                    sources_preserved = all(node.content == source for node in facts)
                     reports.append(
                         {
                             "case": case,
-                            "passed": bool(facts) and facts_linked and temporal_ok,
+                            "passed": bool(facts) and facts_linked and temporal_ok and association_edges and sources_preserved,
+                            "association_edges_only": association_edges,
+                            "full_source_preserved": sources_preserved,
+                            "edge_types": [edge.edge_type.value for edge in plan.edges],
                             "facts": len(facts),
                             "has_fact_edges": sum(
                                 edge.edge_type == EdgeType.HAS_FACT

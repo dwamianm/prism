@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
 import structlog
 from pydantic import Field, SecretStr, ValidationInfo, model_validator
 
-from prme.ingestion.schema import ExtractedFact, ExtractionResult
+from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
 from prme.ingestion.grounding import _mentioned
 from prme.ingestion.errors import ExtractionError
 from prme.ingestion.entity_references import reference_errors
@@ -30,6 +30,8 @@ logger = structlog.get_logger(__name__)
 
 class _CitedFact(ExtractedFact):
     """Built-in providers must return source support or retry validation."""
+
+    fact_type: Literal["fact", "decision", "preference"] = "fact"
 
     evidence_quote: str = Field(
         min_length=1,
@@ -47,8 +49,24 @@ class _CitedFact(ExtractedFact):
         return self
 
 
+class _CitedRelationship(ExtractedRelationship):
+    evidence_quote: str = Field(min_length=1, description=ExtractedFact.model_fields["evidence_quote"].description)
+    epistemic_type: str = Field(description=ExtractedFact.model_fields["epistemic_type"].description)
+
+    @model_validator(mode="after")
+    def source_support(self, info: ValidationInfo):
+        source = (info.context or {}).get("source_text")
+        if source is not None:
+            if not self.evidence_quote.strip() or self.evidence_quote not in source:
+                raise ValueError("relationship evidence_quote must be copied verbatim from the source")
+            if not _mentioned(self.source_entity, self.evidence_quote) or not _mentioned(self.target_entity, self.evidence_quote):
+                raise ValueError("relationship endpoints must occur in evidence_quote")
+        return self
+
+
 class _CitedExtractionResult(ExtractionResult):
     facts: list[_CitedFact] = Field(default_factory=list)
+    relationships: list[_CitedRelationship] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def closed_entity_references(self):
@@ -79,7 +97,10 @@ made or communicated (e.g., "We decided to use PostgreSQL"), and \
 "preference" for personal preferences expressed (e.g., "I prefer dark mode")
 
 3. **Relationships** between entities: How entities relate to each other. \
-Use relationship types: relates_to, part_of, caused_by, supports, mentions.
+Use a source-supported predicate such as lives_in, works_at, or uses. Do not \
+force residence into part_of, or infer causation from co-occurrence. Include \
+an evidence_quote and epistemic_type for every relationship. Prefer a fact \
+triple for a statement; do not repeat it as a separate relationship.
 
 4. **Summary**: A brief 1-2 sentence summary of the message content.
 
@@ -118,7 +139,9 @@ IMPORTANT RULES:
   Include literal subjects such as "I" or "we" when used; do not invent a speaker name.
   Relationship endpoints are entity names, not phrases combining predicates and objects.
   If the same name identifies different entity types, include subject_entity_type,
-  source_entity_type, or target_entity_type to identify the intended listed entity.
+  object_entity_type, source_entity_type, or target_entity_type to identify the intended listed entity.
+- Relationship claims must preserve negations, uncertainty, and conditions just as facts do.
+  Use conditional or hypothetical for possible relationships; never convert them to current reality.
 - Include an evidence_quote for every fact: copy the complete supporting source \
 sentences verbatim, including negation, conditions, exceptions, and time references.
 - Subject and object must occur in the supporting text. Keep object values as \

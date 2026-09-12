@@ -442,8 +442,31 @@ class IngestionPipeline:
                 label=f"vector.entity:{entity_id}",
             )
 
-        # --- Facts ---
+        # Relationships are source-cited claims, not authoritative graph edge
+        # labels. Reuse a covering fact for the same endpoints and passage.
+        from prme.ingestion.schema import ExtractedFact
+        claims = [(fact, False) for fact in result.facts]
+        covered = set()
         for fact in result.facts:
+            subject, _ = entity_refs.resolve(fact.subject, fact.subject_entity_type)
+            obj, _ = entity_refs.resolve(fact.object, fact.object_entity_type)
+            if subject and obj:
+                covered.add((subject, obj, fact.evidence_quote or event.content))
+        for rel in result.relationships:
+            subject, _ = entity_refs.resolve(rel.source_entity, rel.source_entity_type)
+            obj, _ = entity_refs.resolve(rel.target_entity, rel.target_entity_type)
+            passage = rel.evidence_quote or event.content
+            if subject and obj and (subject, obj, passage) in covered:
+                continue
+            claims.append((ExtractedFact(
+                subject=rel.source_entity, subject_entity_type=rel.source_entity_type,
+                predicate=rel.relationship_type, object=rel.target_entity,
+                object_entity_type=rel.target_entity_type, evidence_quote=passage,
+                epistemic_type=rel.epistemic_type, confidence=rel.confidence,
+            ), True))
+
+        # --- Source-cited claims ---
+        for fact, from_relationship in claims:
             fact_scope = scope
 
             # Resolve temporal reference
@@ -460,10 +483,14 @@ class IngestionPipeline:
             fact_content = fact.evidence_quote or event.content
 
             subject_entity_id, subject_link_status = entity_refs.resolve(fact.subject, fact.subject_entity_type)
+            object_entity_id, object_link_status = entity_refs.resolve(fact.object, fact.object_entity_type)
             # Keep unresolved custom/legacy facts searchable without guessing a
             # namesake identity. The durable metadata makes missing links visible.
             fact_metadata: dict = {
                 "subject_link_status": subject_link_status,
+                "object_link_status": object_link_status,
+                "object_entity_type": fact.object_entity_type,
+                "extraction_kind": "relationship" if from_relationship else "fact",
                 "subject_entity_type": fact.subject_entity_type,
                 "subject": fact.subject,
                 "predicate": fact.predicate,
@@ -493,6 +520,13 @@ class IngestionPipeline:
                 fact_source_type = SourceType.SYSTEM_INFERRED
             else:
                 fact_source_type = SourceType.USER_STATED
+
+            # An unverified relationship is a model proposal, not a user
+            # assertion. Its original message remains in evidence_refs. This
+            # also keeps legacy providers on the UNVERIFIED matrix default
+            # rather than the missing (unverified, user_stated) fallback.
+            if from_relationship and fact_epistemic_type == EpistemicType.UNVERIFIED:
+                fact_source_type = SourceType.SYSTEM_INFERRED
 
             # Look up default confidence from the matrix
             matrix_confidence = self._confidence_matrix.lookup_with_fallback(
@@ -564,6 +598,13 @@ class IngestionPipeline:
                         replaces_object=fact.replaces_object,
                     )
 
+            if object_entity_id:
+                await writer.create_edge(MemoryEdge(
+                    source_id=fact_node.id, target_id=UUID(object_entity_id),
+                    edge_type=EdgeType.MENTIONS, user_id=event.user_id,
+                    provenance_event_id=event.id,
+                ))
+
             # Index fact in vector and lexical stores (not tracked for rollback)
             await write_queue.submit(
                 lambda fid=fact_node_id, fc=fact_content, uid=event.user_id: (
@@ -577,37 +618,6 @@ class IngestionPipeline:
                 ),
                 label=f"lexical.fact:{fact_node_id}",
             )
-
-        # --- Relationships ---
-        for rel in result.relationships:
-            source_entity_id, source_status = entity_refs.resolve(rel.source_entity, rel.source_entity_type)
-            target_entity_id, target_status = entity_refs.resolve(rel.target_entity, rel.target_entity_type)
-
-            if source_entity_id and target_entity_id:
-                # Map relationship_type to EdgeType
-                edge_type = _relationship_type_to_edge_type(
-                    rel.relationship_type
-                )
-                rel_edge = MemoryEdge(
-                    source_id=UUID(source_entity_id),
-                    target_id=UUID(target_entity_id),
-                    edge_type=edge_type,
-                    user_id=event.user_id,
-                    confidence=rel.confidence,
-                    provenance_event_id=event.id,
-                )
-                await writer.create_edge(rel_edge)
-            else:
-                logger.warning(
-                    "ingestion.relationship_skipped",
-                    source_entity=rel.source_entity,
-                    target_entity=rel.target_entity,
-                    reason="Entity reference missing or ambiguous",
-                    source_status=source_status, target_status=target_status,
-                    source_found=source_entity_id is not None,
-                    target_found=target_entity_id is not None,
-                )
-
 
     async def _publish_plan(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> None:
         """Stage saved inputs and publish once; never delete shared retry artifacts."""
@@ -793,24 +803,3 @@ class IngestionPipeline:
 
         self._background_tasks.clear()
         logger.info("ingestion.pipeline_shutdown")
-
-
-def _relationship_type_to_edge_type(relationship_type: str) -> EdgeType:
-    """Map an extracted relationship type string to an EdgeType enum.
-
-    Falls back to RELATES_TO for unrecognized types.
-
-    Args:
-        relationship_type: The extraction-produced relationship type.
-
-    Returns:
-        The matching EdgeType enum member.
-    """
-    mapping: dict[str, EdgeType] = {
-        "relates_to": EdgeType.RELATES_TO,
-        "part_of": EdgeType.PART_OF,
-        "caused_by": EdgeType.CAUSED_BY,
-        "supports": EdgeType.SUPPORTS,
-        "mentions": EdgeType.MENTIONS,
-    }
-    return mapping.get(relationship_type.strip().lower(), EdgeType.RELATES_TO)

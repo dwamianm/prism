@@ -44,6 +44,7 @@ class ExtractedFact(BaseModel):
 
     subject: str = Field(description="Name of a listed entity this fact is about; copy entities[].name exactly")
     subject_entity_type: str | None = Field(default=None, description="Exact entities[].entity_type for the subject; required if its name has multiple types")
+    object_entity_type: str | None = Field(default=None, description="Exact entities[].entity_type when the object names an entity; required for an ambiguous entity name, otherwise null for literal values")
     predicate: str = Field(
         description="Relationship or attribute type (e.g., works_at, lives_in, role)"
     )
@@ -136,8 +137,16 @@ class ExtractedRelationship(BaseModel):
     target_entity: str = Field(description="Target entity name; copy entities[].name exactly")
     target_entity_type: str | None = Field(default=None, description="Exact target entity_type; required for an ambiguous name")
     relationship_type: str = Field(
-        description="Edge type: relates_to, part_of, caused_by, supports, mentions"
+        description="Source-supported relationship predicate, such as lives_in or works_at; do not force it into a graph edge category"
     )
+    evidence_quote: str | None = Field(default=None, description=ExtractedFact.model_fields["evidence_quote"].description)
+    epistemic_type: str = Field(default="unverified", description=ExtractedFact.model_fields["epistemic_type"].description)
+
+    @field_validator("epistemic_type")
+    @classmethod
+    def validate_epistemic_type(cls, value: str) -> str:
+        return ExtractedFact.validate_epistemic_type(value)
+
     confidence: float = Field(
         default=0.5,
         ge=0.0,

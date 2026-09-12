@@ -17,8 +17,8 @@ user = test_durable_ingestion.user
 
 def namesakes(*, qualified=True, reverse=False):
     entities = [{"name": "Jordan", "entity_type": "person"}, {"name": "Jordan", "entity_type": "location"}]
-    fact = {"subject": "Jordan", "predicate": "lives_in", "object": "Jordan", "evidence_quote": "Jordan lives in Jordan."}
-    rel = {"source_entity": "Jordan", "target_entity": "Jordan", "relationship_type": "relates_to"}
+    fact = {"subject": "Jordan", "object_entity_type": "location", "predicate": "lives_in", "object": "Jordan", "evidence_quote": "Jordan lives in Jordan."}
+    rel = {"source_entity": "Jordan", "target_entity": "Jordan", "relationship_type": "relates_to", "evidence_quote": "Jordan lives in Jordan.", "epistemic_type": "asserted"}
     if qualified:
         fact["subject_entity_type"] = rel["source_entity_type"] = "person"
         rel["target_entity_type"] = "location"
@@ -29,7 +29,7 @@ def namesakes(*, qualified=True, reverse=False):
     {"entities": [{"name": "Aster", "entity_type": "product"}], "facts": [
         {"subject": "Aster service", "predicate": "uses", "object": "PostgreSQL", "evidence_quote": "The Aster service uses PostgreSQL."}]},
     {"entities": [{"name": "Aster", "entity_type": "product"}, {"name": "PostgreSQL", "entity_type": "product"}],
-     "relationships": [{"source_entity": "Aster", "target_entity": "uses PostgreSQL", "relationship_type": "relates_to"}]},
+     "relationships": [{"source_entity": "Aster", "target_entity": "uses PostgreSQL", "relationship_type": "relates_to", "evidence_quote": "Jordan lives in Jordan.", "epistemic_type": "asserted"}]},
     namesakes(qualified=False),
 ])
 def test_builtin_schema_rejects_missing_and_ambiguous_references(payload):
@@ -61,10 +61,10 @@ async def test_namesake_types_wire_correct_entities_independent_of_order(config,
         assert fact.metadata["subject_link_status"] == "resolved"
         subject_edges = await engine._graph_store.get_edges(target_id=str(fact.id))
         assert len(subject_edges) == 1 and subject_edges[0].source_id == entities["person"].id
-        relationships = await engine._graph_store.get_edges(source_id=str(entities["person"].id), target_id=str(entities["location"].id))
-        assert len(relationships) == 1 and relationships[0].edge_type == EdgeType.RELATES_TO
+        relationships = await engine._graph_store.get_edges(source_id=str(fact.id), target_id=str(entities["location"].id))
+        assert len(relationships) == 1 and relationships[0].edge_type == EdgeType.MENTIONS
         plan = await engine._event_store.get_derivation_plan(event_id, user_id=user)
-        assert plan.materialization_policy == "typed_references_v2"
+        assert plan.materialization_policy == "relationship_claims_v3"
         assert await engine.get_event_nodes(event_id, user_id=user + "-other") == []
 
 
@@ -80,3 +80,31 @@ async def test_custom_provider_unresolved_facts_are_preserved_without_guessing(c
         assert fact.content == "Jordan lives in Jordan."
         assert fact.metadata["subject_link_status"] == ("missing" if missing else "ambiguous")
         assert await engine._graph_store.get_edges(target_id=str(fact.id)) == []
+
+
+@pytest.mark.parametrize("qualifier", [None, "organization"])
+def test_builtin_rejects_ambiguous_or_wrongly_typed_object(qualifier):
+    payload = namesakes()
+    payload["facts"][0]["object_entity_type"] = qualifier
+    with pytest.raises(ValidationError, match=r"facts\[0\].object is (ambiguous|missing)"):
+        _CitedExtractionResult.model_validate(payload)
+
+
+def test_builtin_accepts_literal_object_without_entity_entry():
+    payload = {"entities": [{"name": "Alice", "entity_type": "person"}], "facts": [
+        {"subject": "Alice", "predicate": "likes", "object": "green", "evidence_quote": "Alice likes green."}
+    ]}
+    assert _CitedExtractionResult.model_validate(payload).facts[0].object == "green"
+
+
+async def test_custom_ambiguous_object_keeps_claim_without_guessing_link(config, user):
+    payload = namesakes()
+    payload["facts"][0]["object_entity_type"] = None
+    payload["relationships"] = []
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = AsyncMock(return_value=ExtractionResult.model_validate(payload))
+        eid = await engine.ingest("Jordan lives in Jordan.", user_id=user, wait_for_extraction=True)
+        fact = next(n for n in await engine.get_event_nodes(eid, user_id=user) if n.node_type == NodeType.FACT)
+        assert fact.metadata["object_link_status"] == "ambiguous"
+        assert not await engine._graph_store.get_edges(source_id=str(fact.id))
+        assert len(await engine._graph_store.get_edges(target_id=str(fact.id))) == 1

@@ -48,11 +48,11 @@ async def test_preparation_has_no_durable_side_effects_and_saved_plan_commits(co
         assert [node.model_dump() for node in await engine.query_nodes(user_id=user)] == before
         assert await engine.get_event_nodes(str(event.id), user_id=user) == []
         assert await engine._event_store.get_derivation_plan(str(event.id), user_id=user) is None
-        assert len(plan.nodes) == 2  # Bob once, Rust fact; existing Alice is reused.
+        assert len(plan.nodes) == 3  # Bob once, Rust fact, relationship claim; Alice is reused.
         assert len(plan.references) == 2  # Alice and the previous Python fact.
         assert len(plan.replacements) == 1
-        assert len(plan.edges) == 2
-        assert embed.await_count == 1 and len(embed.call_args.args[0]) == 2
+        assert len(plan.edges) == 3
+        assert embed.await_count == 1 and len(embed.call_args.args[0]) == 3
         assert all("New description" not in item.content for item in plan.embeddings)
         saved = await engine._event_store.record_derivation_plan(plan)
         monkeypatch.setattr(provider, "embed", AsyncMock(side_effect=AssertionError("Replay cannot infer")))
@@ -62,6 +62,7 @@ async def test_preparation_has_no_durable_side_effects_and_saved_plan_commits(co
                                          lifecycle_states=list(LifecycleState))
         assert {node.metadata["object"]: node.lifecycle_state for node in facts} == {
             "Python": LifecycleState.SUPERSEDED, "Rust": LifecycleState.TENTATIVE,
+            "Bob": LifecycleState.TENTATIVE,
         }
 
 
@@ -78,9 +79,9 @@ async def test_preparation_is_scoped_and_unrelated_scanned_nodes_are_not_depende
         result.entities[0].scope = "system"
         result.facts[0].scope = "personal"
         plan = await engine._pipeline._prepare_plan(result, event)
-        assert len(plan.nodes) == 3 and not plan.references
+        assert len(plan.nodes) == 4 and not plan.references
         assert all((node.user_id, node.scope) == (user, Scope.PROJECT) for node in plan.nodes)
-        assert plan.nodes[-1].metadata["suggested_scope"] == "personal"
+        assert next(n for n in plan.nodes if n.metadata.get("object") == "Rust").metadata["suggested_scope"] == "personal"
 
 
 async def test_empty_extraction_does_not_call_embedding_provider(config, user, monkeypatch):

@@ -193,7 +193,8 @@ HTTP and MCP retrieval responses expose the same diagnostics under `metrics`.
 Built-in extraction providers validate that every fact subject and relationship
 endpoint names a listed entity. Invalid or ambiguous references trigger the
 provider's bounded schema retries. When the same name has different types, use
-`subject_entity_type`, `source_entity_type`, or `target_entity_type` to select the
+`subject_entity_type`, `object_entity_type`, `source_entity_type`, or
+`target_entity_type` to select the
 intended entity. PRME does not guess aliases from substring similarity.
 
 Custom-provider and historical facts with unresolved subjects remain searchable.
@@ -201,6 +202,18 @@ Their node metadata reports `subject_link_status` as `missing` or `ambiguous`,
 and no guessed graph link is created. Resolved subjects report `resolved`.
 These checks establish structural references; they do not prove model claims or
 distinguish different people with the same name and type across conversations.
+
+Extracted relationships are source-cited FACT nodes with the same epistemic
+filtering as other claims. `HAS_FACT` connects the subject to its claim;
+`MENTIONS` connects a claim to its resolved object entity. Model predicates stay
+in metadata: ingestion does not turn a model's `part_of` or `caused_by` label into
+a structural edge. These links aid retrieval; graph paths do not prove entailment.
+Built-in providers must cite and classify relationships. Legacy/custom providers
+that omit classification produce unverified model claims, excluded from default
+retrieval at the standard confidence setting. A fact covering the same endpoints
+and passage takes precedence over an additional relationship label; the saved
+extraction still contains both. Existing committed graphs and saved plans retain
+their original behavior; this change does not migrate historical edges.
 
 Successful grounded extraction output is saved before graph materialization.
 An indexing retry reuses that output without another LLM call. Inspect it with
