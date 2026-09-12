@@ -7,6 +7,14 @@ and scheduled memory reorganization.
 
 __version__ = "0.11.0"
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from prme.client import MemoryClient
+    from prme.ingestion.pipeline import IngestionPipeline
+    from prme.retrieval.models import RetrievalResponse
+    from prme.retrieval.pipeline import RetrievalPipeline
+
 from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.storage.engine import MemoryEngine

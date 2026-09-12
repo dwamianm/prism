@@ -28,6 +28,9 @@ jobs:
       - name: Run tests (DuckDB)
         run: uv run --no-sync python -m pytest tests/ -q
 
+      - name: Check public client types
+        run: uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py
+
   test-postgres:
     runs-on: ubuntu-latest
     strategy:

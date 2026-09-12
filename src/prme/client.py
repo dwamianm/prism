@@ -24,13 +24,17 @@ import os
 import threading
 import warnings
 from datetime import datetime
-from collections.abc import Iterator
-from typing import Any
+from collections.abc import Coroutine, Iterator
+from typing import Any, TypeVar
 
 from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.types import LifecycleState, NodeType, Scope
-from prme.models import MemoryNode
+from prme.models import Event, MemoryNode
+from prme.organizer.models import OrganizeResult
+from prme.retrieval.models import RetrievalResponse
+
+_Result = TypeVar("_Result")
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +111,7 @@ class MemoryClient:
 
     # --- Internal helpers ---
 
-    def _run(self, coro: Any) -> Any:
+    def _run(self, coro: Coroutine[Any, Any, _Result]) -> _Result:
         """Submit a coroutine to the background loop and block for result."""
         if self._closed:
             coro.close()
@@ -178,7 +182,7 @@ class MemoryClient:
         reference_time: datetime | None = None,
         knowledge_at: datetime | None = None,
         token_budget: int | None = None,
-    ) -> Any:
+    ) -> RetrievalResponse:
         """Retrieve memories matching a query. Returns RetrievalResponse."""
         return self._run(
             self._engine.retrieve(
@@ -233,7 +237,7 @@ class MemoryClient:
             )
         )
 
-    def get_node(self, node_id: str) -> Any:
+    def get_node(self, node_id: str) -> MemoryNode | None:
         """Get a single node by ID. Returns MemoryNode or None."""
         return self._run(self._engine.get_node(node_id))
 
@@ -256,7 +260,7 @@ class MemoryClient:
         """Process one bounded batch of deferred raw events; failures stay pending."""
         return self._run(self._engine.process_pending(user_id=user_id, budget_ms=budget_ms))
 
-    def query_nodes(self, **kwargs: Any) -> list[Any]:
+    def query_nodes(self, **kwargs: Any) -> list[MemoryNode]:
         """Query nodes with filters. Returns list of MemoryNode."""
         return self._run(self._engine.query_nodes(**kwargs))
 
@@ -296,7 +300,7 @@ class MemoryClient:
         session_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[Any]:
+    ) -> list[Event]:
         """Retrieve events for a user. Returns list of Event."""
         return self._run(
             self._engine.get_events(
@@ -327,7 +331,7 @@ class MemoryClient:
         user_id: str | None = None,
         jobs: list[str] | None = None,
         budget_ms: int = 5000,
-    ) -> Any:
+    ) -> OrganizeResult:
         """Run organizer jobs. Returns OrganizeResult."""
         return self._run(
             self._engine.organize(
