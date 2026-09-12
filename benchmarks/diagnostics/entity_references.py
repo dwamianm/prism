@@ -6,6 +6,7 @@ Three synthetic cases; structural integrity does not establish semantic accuracy
 import argparse
 import asyncio
 import json
+import hashlib
 import tempfile
 import time
 from pathlib import Path
@@ -31,7 +32,7 @@ def failure_details(exc):
     return {"error_chain": kinds, "validation_errors": validation}
 
 
-def assess_claims(case, source, nodes, edges):
+def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_epistemic=None):
     """Assess every claim; an extra FACT cannot hide a misclassified preference."""
     claims = [n for n in nodes if n.node_type in {NodeType.FACT, NodeType.PREFERENCE, NodeType.DECISION}]
     linked = bool(claims) and all(
@@ -40,14 +41,24 @@ def assess_claims(case, source, nodes, edges):
         for n in claims
     )
     # All three fixtures describe facts, including the hypothetical usage case.
-    kinds_ok = bool(claims) and all(n.node_type == NodeType.FACT for n in claims)
-    temporal_ok = case != "conditional" or all(
-        n.epistemic_type.value in {"conditional", "hypothetical"} for n in claims
-    )
+    if expected_kinds is None:
+        kinds_ok = bool(claims) and all(n.node_type == NodeType.FACT for n in claims)
+        objects_present = bool(claims)
+    else:
+        expected = {obj.casefold(): kind for obj, kind in expected_kinds.items()}
+        actual_objects = {n.metadata.get("object", "").casefold() for n in claims}
+        objects_present = expected.keys() <= actual_objects
+        kinds_ok = bool(claims) and all(
+            n.node_type.value == expected.get(n.metadata.get("object", "").casefold())
+            for n in claims
+        )
+    allowed = allowed_epistemic or ({"conditional", "hypothetical"} if case == "conditional" else None)
+    temporal_ok = allowed is None or all(n.epistemic_type.value in allowed for n in claims)
     associations = all(e.edge_type in {EdgeType.HAS_FACT, EdgeType.MENTIONS} for e in edges)
     preserved = bool(claims) and all(n.content == source for n in claims)
     return {
-        "passed": linked and kinds_ok and temporal_ok and associations and preserved,
+        "passed": linked and objects_present and kinds_ok and temporal_ok and associations and preserved,
+        "expected_objects_present": objects_present,
         "expected_claim_kinds": kinds_ok,
         "epistemic_qualifications_preserved": temporal_ok,
         "subject_links_complete": linked,
@@ -58,14 +69,14 @@ def assess_claims(case, source, nodes, edges):
     }
 
 
-async def run(args):
+async def run(args, *, cases=None):
     started = time.perf_counter()
-    cases = [
-        ("service", "The Aster service uses PostgreSQL."),
-        ("namesake", "Jordan, the engineer, lives in Jordan, the country."),
+    cases = cases or [
+        ("service", "The Aster service uses PostgreSQL.", {}),
+        ("namesake", "Jordan, the engineer, lives in Jordan, the country.", {}),
         (
             "conditional",
-            "Alice might use PostgreSQL for the Atlas project if the evaluation succeeds.",
+            "Alice might use PostgreSQL for the Atlas project if the evaluation succeeds.", {},
         ),
     ]
     reports = []
@@ -96,7 +107,7 @@ async def run(args):
         )
         async with MemoryEngine.open(config) as engine:
             engine._pipeline._retry_delays = ()
-            for case, source in cases:
+            for case, source, expectation in cases:
                 try:
                     eid = await engine.ingest(
                         source, user_id=case, wait_for_extraction=True
@@ -110,7 +121,8 @@ async def run(args):
                     reports.append(
                         {
                             "case": case,
-                            **assess_claims(case, source, nodes, plan.edges),
+                            **assess_claims(case, source, nodes, plan.edges, **expectation),
+                            "expectation": expectation,
                             "edge_types": [edge.edge_type.value for edge in plan.edges],
                             "facts": len(facts),
                             "has_fact_edges": sum(
@@ -139,6 +151,12 @@ async def run(args):
         "limits": "Three synthetic structural-link checks, not semantic accuracy or competitive evidence.",
     }
     out["elapsed_seconds"] = round(time.perf_counter() - started, 3)
+    from prme.ingestion.extraction import EXTRACTION_SYSTEM_PROMPT, _CitedExtractionResult
+    out["prompt_sha256"] = hashlib.sha256(EXTRACTION_SYSTEM_PROMPT.encode()).hexdigest()
+    out["response_schema_sha256"] = hashlib.sha256(json.dumps(_CitedExtractionResult.model_json_schema(), sort_keys=True).encode()).hexdigest()
+    out["cases_sha256"] = hashlib.sha256(json.dumps(cases, sort_keys=True).encode()).hexdigest()
+    out["case_count"] = len(cases)
+    out["cases_passed"] = sum(r["passed"] for r in reports)
     out["provider"] = "ollama"
     out["model"] = args.model
     out["provider_max_retries"] = 3

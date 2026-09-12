@@ -42,3 +42,24 @@ def test_relationship_diagnostic_checks_all_claims_and_actual_subject_edges():
     asserted = fact.model_copy(update={"epistemic_type": EpistemicType.ASSERTED})
     report = assess_claims("conditional", source, [fact, asserted], [edge])
     assert not report["passed"] and not report["epistemic_qualifications_preserved"]
+
+
+def test_classification_probe_requires_each_expected_object_and_its_kind():
+    from types import SimpleNamespace
+    from benchmarks.diagnostics.entity_references import assess_claims
+    from prme.models import MemoryNode
+    from prme.types import EdgeType, EpistemicType, NodeType
+
+    source = "Maya uses Redis but prefers SQLite."
+    use = MemoryNode(content=source, user_id="probe", node_type=NodeType.FACT,
+                     epistemic_type=EpistemicType.ASSERTED,
+                     metadata={"object": "Redis", "subject_link_status": "resolved"})
+    pref = MemoryNode(content=source, user_id="probe", node_type=NodeType.PREFERENCE,
+                      epistemic_type=EpistemicType.ASSERTED,
+                      metadata={"object": "SQLite", "subject_link_status": "resolved"})
+    edges = [SimpleNamespace(edge_type=EdgeType.HAS_FACT, target_id=n.id) for n in [use, pref]]
+    expected = {"expected_kinds": {"Redis": "fact", "SQLite": "preference"}, "allowed_epistemic": ["asserted", "observed"]}
+    assert assess_claims("mixed", source, [use, pref], edges, **expected)["passed"]
+    assert not assess_claims("mixed", source, [use], edges, **expected)["passed"]
+    wrong = pref.model_copy(update={"node_type": NodeType.FACT})
+    assert not assess_claims("mixed", source, [use, wrong], edges, **expected)["passed"]
