@@ -67,6 +67,13 @@ used in offline fitting runs after query-specific redistribution and before
 composite scoring. Downstream neural prefix selection, session neighbors,
 result selection and packing run afresh. Cross-scope hints use the same explicit
 request adjustment, as they already do for a caller-supplied `weights` override.
+HTTP `POST /v1/retrieve` and MCP `memory_retrieve` accept the same bounded
+`ranking_multipliers` model. HTTP accepts `min_fidelity` alongside its existing
+clock/filters. MCP exposes a timezone-aware `reference_time`, validity and
+source-event time bounds, multiple scopes, epistemic mode, fidelity and cross-scope
+controls. Its optional `include_context` returns the actual rendered bundle;
+that bundle's token budget does not bound the surrounding tool-response JSON.
+Authentication continues to determine the owner of retrievals and receipts.
 No default weights or persisted profile are changed. Controlled comparisons
 require a fixed pack, clock and filters with maintenance/writes excluded.
 

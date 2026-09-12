@@ -70,8 +70,8 @@ Version 1 canonical JSON/checksums must remain unchanged; those receipts still
 accept labels but cannot replay scores. Replay excludes unseen/filtered candidates.
 New pipeline receipts use version 3 to add request parameters and reported feature
 identity in extensible execution maps. Version 2 checksums also remain unchanged.
-Python retrieve accepts explicit per-request `ranking_multipliers` for full-pipeline
-trials; they are applied after query adjustment and do not activate a profile.
+Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
+for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a
 bounded feedback snapshot with stable query splits, explicit pairs, coverage and
 validation metrics. It does not activate weights. Complete-retrieval evaluation,

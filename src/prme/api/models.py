@@ -7,6 +7,7 @@ These are thin DTOs — no business logic belongs here.
 from __future__ import annotations
 
 from prme.models.relevance import RelevanceSubmission
+from prme.models.learning import RankingMultipliers
 
 from typing import Any, Literal
 
@@ -16,6 +17,7 @@ from prme.types import (
     EpistemicType,
     NodeType,
     RetrievalMode,
+    RepresentationLevel,
     Scope,
     SourceType,
 )
@@ -152,6 +154,10 @@ class RetrieveRequest(BaseModel):
     min_score: float | None = Field(default=None, ge=0, allow_inf_nan=False, description="Inclusive ranking score floor, not a probability")
     mode: RetrievalMode | None = Field(default=None, description="Epistemic filtering mode within generated candidates")
     filters: RetrievalFilters | None = None
+    ranking_multipliers: RankingMultipliers | None = Field(default=None,
+        description="Explicit per-request ranking trial; does not activate learned weights")
+    min_fidelity: RepresentationLevel | None = Field(default=None,
+        description="Minimum context representation level")
 
 
 class RetrieveResultItem(BaseModel):

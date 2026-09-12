@@ -481,13 +481,36 @@ covers the observed candidates, not full retrieval or generated answers.
 remain pending.
 
 For a full-pipeline trial, pass `ranking_multipliers=report.multipliers` to
-`retrieve()` on the async engine or sync client. The adjustment runs after
+`retrieve()` on the async engine or sync client, or send a
+`ranking_multipliers` object to HTTP `POST /v1/retrieve` or the MCP
+`memory_retrieve` tool. The adjustment runs after
 query-specific weight redistribution and before neural reranking, session
 expansion, selection and packing. Each call keeps its own adjustment; defaults
 and other owners' requests remain unchanged. Compare on a fixed memory pack
 without concurrent writes or maintenance, using the same `reference_time` and
 request filters. A trial may select different session neighbors and context than
 offline replay predicts. An explicit trial is not automatic profile activation.
+
+For example, an HTTP trial can use:
+
+```json
+{
+  "query": "What telescope do I use?",
+  "reference_time": "2026-09-12T18:00:00Z",
+  "ranking_multipliers": {"semantic": 0.5, "lexical": 2},
+  "filters": {"scope": "project", "include_cross_scope": false},
+  "min_fidelity": "full",
+  "token_budget": 2048
+}
+```
+
+Multipliers range from 0.25 to 4; omitted features use 1. MCP takes scope and
+temporal filters as top-level arguments, including `reference_time`,
+`event_time_from`, `event_time_to` and `include_cross_scope`. Set
+`include_context: true` to receive the actual rendered packed `context` alongside
+results and metrics; the token budget applies to that context, not the complete
+JSON response. Use `metrics.request_id` to read the owned receipt and label the
+observed trial. HTTP exposes the packed bundle in its existing `bundle` field.
 
 New version 3 receipts save the requested adjustment, temporal filters and
 reported feature environment in `receipt.execution`. Versions 1 and 2 keep their

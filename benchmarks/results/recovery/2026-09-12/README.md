@@ -985,3 +985,30 @@ actual exit zero, combining profile/organizer regressions with the earlier
 scope-boundary cases on both backends. A strict installed-package consumer of
 async and sync `consolidate_knowledge(scope=Scope.PROJECT)` also passed. These
 installed-consumer checks do not remove the pre-existing internal typing debt.
+
+## HTTP and MCP ranking trials
+
+HTTP retrieval now accepts the bounded `ranking_multipliers` object and minimum
+fidelity. MCP adds the same trial adjustment, a fixed aware scoring clock,
+validity/event-time bounds, multiple scopes, fidelity, epistemic mode and
+cross-scope controls. `include_context=true` returns the rendered packed context
+alongside legacy results/metrics. The context budget is not a size limit for the
+complete JSON tool response. Neither interface activates a learned profile.
+
+The corrected interface regression file fails **six cases with six passing
+validation controls** on `74f891b`. The final source trial/identity/filter set
+passes **78 checks** in 29.78 seconds, and existing HTTP/MCP/write-compatibility
+checks pass **86 checks** in 32.03 seconds; all final runs exited zero. Tests use
+actual DuckDB and PostgreSQL with a deterministic embedding fixture, compare
+transport context and exact receipt scores to the Python pipeline at one clock,
+check baseline weights after a trial, and reject malformed trials before engine
+execution. Two draft assertions used a nonexistent receipt score attribute;
+the corrected comparison uses the persisted `score` field. An initial broader
+command referenced a nonexistent test filename and ran no tests; the corrected
+commands above completed normally.
+
+Lint passes. Fresh, nonincremental typing reproduces the same **19 pre-existing
+MCP diagnostics** on baseline and current code. An earlier incremental run also
+surfaced cached engine/client diagnostics, so it is not used for that comparison.
+These are API-contract tests, not new retrieval-quality or model-performance
+measurements. The registered packing confirmation remains separate and frozen.

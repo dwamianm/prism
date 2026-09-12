@@ -14,12 +14,13 @@ from datetime import datetime
 from typing import Any, Literal, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
-from pydantic import AwareDatetime, StrictBool
+from pydantic import AwareDatetime, StrictBool, TypeAdapter
 
 from prme import __version__
 from prme.config import PRMEConfig
 from prme.models.relevance import RelevanceSubmission
-from prme.types import NodeType, Scope
+from prme.models.learning import RankingMultipliers
+from prme.types import NodeType, Scope, RepresentationLevel, RetrievalMode
 
 logger = logging.getLogger(__name__)
 
@@ -175,12 +176,22 @@ async def memory_store(
 async def memory_retrieve(
     query: str,
     user_id: Optional[str] = None,
-    scope: Optional[str] = None,
+    scope: Optional[str | list[str]] = None,
     knowledge_at: Optional[str] = None,
     ctx: Context = None,
     min_score: Optional[float] = None,
     limit: Optional[int] = None,
     token_budget: Optional[int] = None,
+    ranking_multipliers: Optional[RankingMultipliers] = None,
+    reference_time: Optional[AwareDatetime] = None,
+    time_from: Optional[AwareDatetime] = None,
+    time_to: Optional[AwareDatetime] = None,
+    event_time_from: Optional[AwareDatetime] = None,
+    event_time_to: Optional[AwareDatetime] = None,
+    include_cross_scope: StrictBool = True,
+    min_fidelity: Optional[RepresentationLevel] = None,
+    mode: Optional[RetrievalMode] = None,
+    include_context: StrictBool = False,
 ) -> str:
     """Search memories using hybrid retrieval.
 
@@ -194,7 +205,17 @@ async def memory_retrieve(
         min_score: Inclusive composite score floor, not a probability.
         limit: Maximum primary results; zero returns none.
         token_budget: Maximum packed context tokens.
-        scope: Optional scope filter (personal, project, organisation).
+        scope: One scope or a nonempty list of scopes.
+        ranking_multipliers: Explicit bounded ranking trial; does not activate a profile.
+        reference_time: Timezone-aware scoring clock for reproducible comparisons.
+        time_from: Inclusive validity window start, with timezone.
+        time_to: Validity window end, with timezone.
+        event_time_from: Inclusive source event-time lower bound, with timezone.
+        event_time_to: Source event-time upper bound, with timezone.
+        include_cross_scope: Allow supplementary hints from other scopes.
+        min_fidelity: Minimum packed representation level.
+        mode: Epistemic filtering mode within generated candidates.
+        include_context: Include the rendered, token-budgeted context in the response.
         knowledge_at: Optional ISO datetime for point-in-time retrieval
             (e.g. "2024-06-15T00:00:00" to see what was known at that time).
     """
@@ -209,9 +230,14 @@ async def memory_retrieve(
         "user_id": user_id,
     }
 
-    if scope:
+    if scope is not None:
         try:
-            kwargs["scope"] = Scope(scope)
+            if isinstance(scope, list):
+                if not scope:
+                    raise ValueError("Scope list must not be empty")
+                kwargs["scope"] = [Scope(value) for value in scope]
+            else:
+                kwargs["scope"] = Scope(scope)
         except ValueError:
             return json.dumps({"error": f"Invalid scope: {scope!r}"})
 
@@ -222,6 +248,19 @@ async def memory_retrieve(
             return json.dumps({"error": f"Invalid knowledge_at datetime: {knowledge_at!r}"})
 
     try:
+        for name, value in (("reference_time", reference_time), ("time_from", time_from),
+                            ("time_to", time_to), ("event_time_from", event_time_from),
+                            ("event_time_to", event_time_to)):
+            if value is not None:
+                kwargs[name] = TypeAdapter(AwareDatetime).validate_python(value)
+        if ranking_multipliers is not None:
+            kwargs["ranking_multipliers"] = RankingMultipliers.model_validate(ranking_multipliers)
+        kwargs["include_cross_scope"] = TypeAdapter(StrictBool).validate_python(include_cross_scope)
+        include_context = TypeAdapter(StrictBool).validate_python(include_context)
+        if min_fidelity is not None:
+            kwargs["min_fidelity"] = RepresentationLevel(min_fidelity)
+        if mode is not None:
+            kwargs["retrieval_mode"] = RetrievalMode(mode)
         from prme.retrieval.selection import validate_selection
         validate_selection(min_score, limit)
         if token_budget is not None and token_budget < 0:
@@ -244,11 +283,14 @@ async def memory_retrieve(
                 "confidence": node.confidence,
             })
 
-        return json.dumps({
+        payload = {
             "results": results,
             "count": len(results),
             "metrics": response.metadata.model_dump(mode="json"),
-        })
+        }
+        if include_context:
+            payload["context"] = response.bundle.render()
+        return json.dumps(payload)
     except Exception as e:
         return _internal_error("memory_retrieve", e)
 
