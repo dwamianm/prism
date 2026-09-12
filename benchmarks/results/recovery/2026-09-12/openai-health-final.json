@@ -1,0 +1,20 @@
+{
+  "credentials_source": "Explicit root .env reload in a child process",
+  "probes": [
+    {
+      "checked_at": "2026-09-12T18:48:49.661925+00:00",
+      "model": "gpt-4o-mini",
+      "ok": false,
+      "error_type": "RateLimitError",
+      "http_status": 429
+    },
+    {
+      "checked_at": "2026-09-12T18:48:50.827317+00:00",
+      "model": "gpt-4o-2024-08-06",
+      "ok": false,
+      "error_type": "RateLimitError",
+      "http_status": 429
+    }
+  ],
+  "limits": "Credential health only; response bodies, credentials and endpoint details intentionally omitted."
+}

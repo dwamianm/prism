@@ -1265,3 +1265,8 @@ imports came from `site-packages`; only test fixtures came from the frozen
 checkout. The [installed report](tool-provenance-installed-a2eb87d.json) records
 the wheel/log hashes and native exit zero. These authored-provider checks do not
 substitute for live extraction quality.
+
+A fresh explicit root `.env` reload at 18:48 UTC still returned HTTP 429 for
+`gpt-4o-mini` and `gpt-4o-2024-08-06`, with retries disabled. The sanitized
+[health report](openai-health-final.json) contains no credentials or response
+bodies. The earlier HTTP 401 is gone; the 429 reason remains unclassified.
