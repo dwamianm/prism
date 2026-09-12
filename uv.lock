@@ -2359,6 +2359,9 @@ api = [
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
 ]
+evaluation = [
+    { name = "tiktoken" },
+]
 langchain = [
     { name = "langchain-core" },
 ]
@@ -2406,10 +2409,11 @@ requires-dist = [
     { name = "sentence-transformers", marker = "extra == 'reranker'", specifier = ">=4.0" },
     { name = "structlog" },
     { name = "tantivy", specifier = ">=0.22.0" },
+    { name = "tiktoken", marker = "extra == 'evaluation'", specifier = ">=0.12" },
     { name = "usearch", specifier = ">=2.16.0" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.30" },
 ]
-provides-extras = ["postgres", "api", "mcp", "reranker", "langchain", "llamaindex"]
+provides-extras = ["postgres", "api", "mcp", "reranker", "langchain", "llamaindex", "evaluation"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -68,6 +68,9 @@ langchain = [
 llamaindex = [
     "llama-index-core>=0.12",
 ]
+evaluation = [
+    "tiktoken>=0.12",
+]
 
 [dependency-groups]
 dev = [

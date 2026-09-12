@@ -47,6 +47,46 @@ exit for a nonempty benchmark with a zero score.
 
 ## Available commands
 
+For controlled evidence retrieval without a generation or judge API, use:
+
+```bash
+uv sync --dev --extra evaluation
+uv run python -m benchmarks.retrieval_eval \
+  --dataset data/benchmarks/longmemeval/longmemeval_s_cleaned.json \
+  --variant s --split dev --limit 5 \
+  --budgets 2048 4096 8192 --output /tmp/prme-evidence-dev.json
+```
+
+Download the full-history S file from the
+[official cleaned dataset](https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/tree/main).
+The existing download script fetches **oracle** histories, which contain only
+supporting sessions. Explicitly label those runs `--variant oracle`; they are
+diagnostics and do not test retrieval through full-history distractors.
+
+This evaluator compares public PRME retrieval with BM25, vector search,
+reciprocal rank fusion (constant 60), recency, and empty memory on identical
+raw conversation turns. It records source commit and worktree fingerprint,
+dataset hash, selected IDs, configuration, dependency versions, errors and
+category coverage. Answers, evidence flags, and answer-bearing session IDs
+never enter the memory pack. The raw-turn profile uses `store()` with NOTE
+nodes and disables QA pairing and opportunistic maintenance. It does not
+measure LLM extraction.
+
+The deterministic `dev`/`test` partition is PRME's own 20/80 split by hashed
+question ID, keeping abstention variants together. It is not an official split.
+Keep the seed fixed, tune only on `dev`, and remove `--limit` for complete split
+coverage. Run from a clean source commit with no concurrent source edits for
+publication. Five questions are a smoke test, not a quality claim.
+
+Metrics include evidence recall@k, MRR, nDCG, and evidence retained at actual
+token budgets using a shared whole-turn packer and a named tiktoken encoding.
+The packer includes source headers and separators in the count and never
+truncates a turn. This isolates ranking; it does **not** evaluate the product
+context formatter. Unlabeled/abstention questions have null evidence metrics;
+answering and abstention accuracy need a separate judged evaluation. Timings
+use sequential warm shared indexes and must not be presented as independent
+cold-start performance. Interrupted runs retain a partial JSON report.
+
 ```bash
 uv sync --dev
 uv run pytest tests/ -q
@@ -74,7 +114,7 @@ of retry-only results and a baseline as a single run.
 
 Tracked in [#64](https://github.com/dwamianm/prism/issues/64):
 
-- Persist run provenance and retrieval evidence metrics separately from answer scores.
+- Extend the evidence evaluator's provenance contract to generated-answer runs.
 - Measure `ingest()` extraction independently from `store()` of supplied text.
 - Standardize context budgets and preparation across adapters. LoCoMo still uses
   supplied image captions, omits short turns, and builds knowledge profiles only
