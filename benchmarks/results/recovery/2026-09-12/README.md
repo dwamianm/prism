@@ -1351,3 +1351,13 @@ coverage. The three checked storage modules now have the same 24 pre-existing
 mypy diagnostics as `40c375e`, after line-number normalization. This is not a
 passing project-wide type check. The [updated installed verification](materialization-batch-final-installed-773a2f9.json)
 passed 87 tests with 14 backend-specific skips in 40.99s, with native exit zero.
+
+At 19:36–19:37 UTC, a fresh credential check distinguished two configurations.
+The [inherited process credential](openai-inherited-health-1936.json) returned
+401; its `OPENAI_API_KEY` differs from and overrides the root `.env` value under
+the documented precedence. Explicitly reloading the [file credential](openai-file-health-recheck-1937.json)
+returned 429 for both `gpt-4o-mini` and `gpt-4o-2024-08-06`, consistent with the
+earlier explicit-file check. Requests disabled retries and allowed one response
+token. Future live checks must use the updated file explicitly or unset the stale
+inherited key for that child process. No key values or response bodies were
+recorded, and the 429 cause remains unclassified.
