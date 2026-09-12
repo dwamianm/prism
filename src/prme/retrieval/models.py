@@ -125,7 +125,7 @@ class ScoreAdjustment(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
     kind: Literal["neural_blend", "session_decay"]
-    coefficient: float = Field(allow_inf_nan=False, ge=0, le=1)
+    coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
     source_node_id: UUID
 
@@ -133,6 +133,8 @@ class ScoreAdjustment(BaseModel):
     def validate_operation(self):
         if (self.kind == "neural_blend") != (self.neural_score is not None):
             raise ValueError("Only neural blending requires a neural score")
+        if self.kind == "neural_blend" and not 0 <= self.coefficient <= 1:
+            raise ValueError("Neural prior weight must be between zero and one")
         return self
 
 

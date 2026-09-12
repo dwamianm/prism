@@ -80,6 +80,41 @@ async def test_legacy_receipt_retains_checksum_and_accepts_feedback(config, user
         assert await engine.get_retrieval_receipt(request_id, user_id=user + "-other") is None
 
 
+async def test_pipeline_receipt_replays_neural_session_expansion_after_restart(config, user, monkeypatch):
+    from prme.retrieval import pipeline
+    from prme.retrieval.reranker import CrossEncoderReranker
+
+    original_generate = pipeline.generate_candidates
+
+    async def trigger_only(*args, **kwargs):
+        candidates, counts = await original_generate(*args, **kwargs)
+        return [c for c in candidates if "trigger" in c.node.content], counts
+
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("telescope trigger", user_id=user, scope=Scope.PROJECT, session_id="session")
+        await engine.store("telescope adjacent answer", user_id=user, scope=Scope.PROJECT, session_id="session")
+        await engine.store("telescope foreign scope", user_id=user, scope=Scope.PERSONAL, session_id="session")
+        monkeypatch.setattr(pipeline, "generate_candidates", trigger_only)
+        reranker = CrossEncoderReranker()
+        monkeypatch.setattr(reranker, "_predict_sync", Mock(return_value=[.9]))
+        engine._retrieval_pipeline._reranker = reranker
+        response = await engine.retrieve("What telescope do I currently use?", user_id=user, scope=Scope.PROJECT)
+        assert response.metadata.receipt_persisted
+        saved = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
+        assert saved.ranking_policy == "score_id"
+        assert len(saved.candidates) == 2
+        assert saved.replay_ranking() == tuple(c.node.id for c in response.results)
+        assert all(c.scope == Scope.PROJECT for c in saved.candidates)
+        inherited = next(c for c in response.results if "SESSION_CONTEXT" in c.paths)
+        p = saved.score_provenance[inherited.node.id]
+        assert p.weights.w_recency == .25
+        assert [op.kind for op in p.adjustments] == ["neural_blend", "session_decay"]
+    async with MemoryEngine.open(config) as engine:
+        restored = await engine.get_retrieval_receipt(str(saved.request_id), user_id=user)
+        assert restored.checksum == saved.checksum
+        assert restored.replay_ranking() == saved.replay_ranking()
+
+
 async def test_concurrent_retries_converge_and_conflicting_reuse_is_rejected(config, user):
     async with MemoryEngine.open(config) as engine:
         _, receipt = await capture(engine, user)
