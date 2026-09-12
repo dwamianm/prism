@@ -84,7 +84,7 @@ comparison should include the unchanged scorer, a regularized pairwise linear
 ranker, and a tree-based ranking model when data volume supports it. That is a
 proposed experiment, not a validated model choice or improvement claim.
 
-[MemRL v1](https://arxiv.org/html/2601.03192v1) first recalls semantically related
+[MemRL v2](https://arxiv.org/html/2601.03192v2) first recalls semantically related
 experiences, then selects using learned utility. Its updates use task-success
 rewards, and its stability analysis assumes a fixed inference/evaluation policy
 and stationary task distribution. This is relevant to agent experience memory,
@@ -92,7 +92,7 @@ but a relevance label does not by itself measure task success. Our inference is
 that PRME needs a distinct outcome/exposure contract before applying that kind of
 utility update; the existing `USED` signal cannot be substituted silently.
 
-[MemQ v1](https://arxiv.org/html/2605.08374v1) propagates value through a provenance
+[MemQ v3](https://arxiv.org/html/2605.08374v3) propagates value through a provenance
 DAG linking retrieved experiences to newly created memories, including future
 utility. PRME's typed factual relationships are not that experience-creation
 DAG. Adapting this technique would require explicit trajectory/outcome lineage,

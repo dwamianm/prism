@@ -738,3 +738,46 @@ recovery. Changed-source lint passed. Ordinary notes now make no instruction
 similarity search, verified by a call-count test; no throughput improvement is
 claimed from these concurrent test timings. The ongoing full suite at `f810c31`
 predates this reinforcement fix and must not be represented as covering it.
+
+## Durable relevance collection and client lifecycle
+
+`1461fb0` adds owner-scoped retrieval snapshots and explicit relevance records
+through Python, HTTP and MCP. Receipts preserve returned candidate identities,
+content hashes, score traces, configuration, clock and context membership.
+Relevance labels bind to that saved response; they do not use later graph state
+or treat unlabelled candidates as negative. The existing query operation holds
+the receipt, and retrieval reports a failed receipt log without failing search.
+A caller-selected feedback UUID is an idempotent retry identity within an owner.
+
+Independent DuckDB connections reproduced both commit-time transaction conflicts
+and statement-time unique-constraint conflicts for the same feedback identity.
+Bounded retries of that same autocommit insert converge on the original record;
+conflicting judgment content still fails. The focused suite passed **24 tests
+with one skip** on both backends. A real local child process exits after the
+feedback insert commits and before acknowledgement; reopening finds one record
+and retry preserves it. Owner boundaries, legacy logs, checksum corruption,
+context pointer exclusion, pagination and real HTTP/MCP transports are covered.
+
+The installed Python 3.13 wheel at `1461fb0` passed **97 tests with three skips**
+in 36.12 seconds, including live PostgreSQL, cancellation and interface checks.
+It emitted one upstream Starlette/AnyIO deprecation warning. The initial
+[real-embedding sync workflow](relevance-receipts-1461fb0.json) failed with
+`AttributeError` because `MemoryClient.archive` was absent. That failure is retained.
+
+`c7f62a6` adds public `promote` and `archive` client methods using the engine's
+owner checks. Its installed wheel passed **24 checks with one skip** in 11.93
+seconds, including foreign-owner rejection, retirement from retrieval, source
+preservation and receipt reads after restart. Strict public-consumer typing
+and changed-source lint passed. The [repeated real-embedding workflow](relevance-receipts-c7f62a6.json)
+then passed with an actual zero process exit. Its one-candidate receipt was
+1,699 serialized bytes; this tiny example is not a storage/latency benchmark.
+
+Collection leaves weights and graph beliefs unchanged. The legacy global tuner
+does not consume these records. Evaluated fitting, per-owner/scope profiles,
+activation gates and rollback remain pending under RFC-0017; these results do
+not demonstrate learned retrieval quality.
+
+The earlier frozen full suite at `f810c31` finished with **2,071 tests passed,
+51 skipped**, actual exit zero, in 804.91 seconds under concurrent benchmark
+load. It covers historical ingestion, not the later reinforcement/receipt changes.
+A full run at `1461fb0` is tracked separately and remains in progress.
