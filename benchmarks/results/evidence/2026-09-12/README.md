@@ -58,3 +58,8 @@ python -m benchmarks.compare_evidence baseline.json run.json --output comparison
 The initial baseline predates `--clock` and uses wall time. The initial correction
 used `--clock question` with one concurrent question. Do not relabel these
 historical configurations as the current release or combine partial runs.
+
+
+The [381-question held-out run](heldout/README.md) is now complete with zero
+errors. It does not establish a clear support-recall advantage over vector/RRF
+retrieval; the original-version held-out before/after comparison is still running.

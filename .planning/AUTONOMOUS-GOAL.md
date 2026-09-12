@@ -88,12 +88,12 @@ Delivered and tested:
   unsupported/misspelled filter keys fail validation. Defaults are unchanged
   pending semantic relevance calibration.
 
-Validation: frozen f0ec234 passed 1,519 tests / 12 skips with live PostgreSQL.
-Selection and API controls passed 90 targeted checks; the subsequent frozen full
-suite is running. A built wheel installed cleanly on Python 3.13.3 and passed
-real local embedding, restart recovery, processing status, scoped retrieval and
-close. Installed-wheel static consumer checks passed with mypy 1.19.1; a fresh
-wheel covering subsequent server/source/selection changes remains to be tested.
+Validation: frozen fd3df23 passed 1,558 tests / 12 skips with live PostgreSQL.
+The refreshed fd3df23 wheel on Python 3.13.3 passed real default local embeddings,
+restart recovery, processing status, source provenance, score/count/token bounds,
+and HTTP/MCP tenant identity. Client startup failures now stop and close their
+worker loops; native MiniLM and Qwen reranker probes verified one normalization
+and preserved input scores. Model loading/inference is serialized per reranker.
 
 Measurement: full LongMemEval S histories, fixed 119-question development split,
 neutral source IDs, evidence recall/MRR/nDCG, actual whole-turn token budgets,
@@ -107,9 +107,13 @@ current-state heuristic regression. The frozen duration correction at 6fc6b67
 reached 91.96% support recall at 2,048 tokens versus baseline 90.79%; the paired
 change is +1.17 points, with a 95% interval of 0.00 to +3.22, two wins, no losses,
 and 112 ties among 114 labeled questions. This small development result does not
-establish a general improvement. The untouched 381-question test split is now
-running against that frozen profile; no partial held-out answers are being used
-for tuning. Complete development reports and comparisons are retained in
+establish a general improvement. The 381-question test split completed with zero errors; no partial held-out
+answers/results were used for tuning. On 365 labeled questions, PRME support
+recall at 2,048 tokens is 85.27%, vector 83.15%, and RRF 84.05%. At 4,096 and
+8,192 tokens, vector/RRF have higher point estimates. Paired PRME differences
+against vector/RRF include zero at every listed budget. This is not a clear
+advantage over those baselines. The original 168fa0e held-out run is now underway
+for a direct software comparison; it is not yet evidence of a completed result. Complete development reports and comparisons are retained in
 benchmarks/results/evidence/2026-09-12/.
 These are evidence metrics, not answer accuracy or superiority over competitors.
 
@@ -140,7 +144,20 @@ results: baseline single-turn 11/77 assertions passed (zero active retrieval
 passes), precision 0.0653, recall 0.9884; session 0/12 passed. A development score
 floor sweep shows a strong precision/recall tradeoff, not a justified universal
 threshold. Reports and adapter caveats are retained under benchmarks/results/
-precision/2026-09-12/. Learned relevance models are being investigated separately.
+precision/2026-09-12/. Matched-core-dependency reranker experiments also show precision/recall tradeoffs:
+Qwen3 Reranker 0.6B at a 0.5 floor raises single-turn precision but reduces recall,
+with larger support losses on follow-up turns. Defaults remain unchanged.
+
+Actual packed-context reader probes found the expected answer entities for the
+three failing ranking checkpoints, while exposing an unsupported "tentative"
+decision qualifier from ambiguous lifecycle metadata. Renaming the rendered key
+to memory_lifecycle preserved firm/provisional source wording in a six-probe
+local diagnostic; the public lifecycle field is unchanged. These probes are not
+judged accuracy, and the 71/74 simulation ranking result remains unresolved.
+
+Next reliability work: release partial resources on engine startup failures,
+then durable, idempotent LLM derivation recording/recovery. Raw source indexing
+is durable today; an in-memory extraction retry is not crash-resumable derivation.
 
 ## Limits on claims
 

@@ -16,12 +16,15 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite passed 1,519 tests with 12 skips and live PostgreSQL.
+completed frozen full suite passed 1,558 tests with 12 skips and live PostgreSQL.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall
 at 2,048 tokens, versus 90.79% initially; its paired confidence interval still
-touches zero. That frozen profile is now running on the untouched test split.
+touches zero. That frozen profile completed all 381 held-out questions without errors. It
+reaches 85.27% support recall at 2,048 tokens; vector/RRF do better at larger
+budgets, and the paired differences against them include zero. The original
+version's held-out run is still pending; no direct software delta is claimed.
 Complete reports and comparisons are linked from BENCHMARKS.md. Causal simulation
 repairs removed future-message leakage and event timestamp rewriting; 71 of 74
 checks pass, with three retrieval-quality failures still open. No current-release superiority

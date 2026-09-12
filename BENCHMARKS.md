@@ -16,8 +16,11 @@ of improved answer accuracy.
 Complete full-history development runs from September 12, including the initial
 regression and its intent correction, are preserved with per-question evidence
 and paired comparisons in the [development report](benchmarks/results/evidence/2026-09-12/README.md).
-These measure support retrieval, not end-to-end answer quality; held-out
-confirmation and cross-product comparisons remain open.
+These measure support retrieval, not end-to-end answer quality. The completed
+[held-out report](benchmarks/results/evidence/2026-09-12/heldout/README.md) covers
+381 questions with zero errors. Its paired comparisons do not establish an
+advantage over vector/RRF baselines. The original-version held-out comparison
+and cross-product answer-quality evaluations remain open.
 
 | Layer | Report |
 |---|---|
@@ -173,3 +176,8 @@ Use repeatable `--scenario NAME` to narrow diagnosis. Every selected checkpoint
 must pass for exit status zero; incomplete/empty runs and scenario errors fail.
 The previous 80% success threshold has been removed. These keyword/ranking tests
 are regression diagnostics and do not establish semantic answer accuracy.
+
+
+[Local reader diagnostics](benchmarks/results/reader/2026-09-12/README.md)
+preserve a failed header clarification and a controlled lifecycle-key ablation.
+They explain a source-wording fix; they are not judged accuracy measurements.
