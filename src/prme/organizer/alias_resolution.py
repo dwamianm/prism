@@ -328,42 +328,14 @@ async def resolve_aliases(
                           or _is_case_variation(node_a.content, node_b.content)
                           or node_a.content.strip().casefold() == node_b.content.strip().casefold())
             if alias.confidence >= _MERGE_CONFIDENCE_THRESHOLD and name_match:
-                # High confidence: merge entities
-                canonical, duplicate = _pick_canonical_entity(node_a, node_b)
-                canonical_id = str(canonical.id)
-                duplicate_id = str(duplicate.id)
-
-                # Transfer evidence_refs
-                new_refs = list(canonical.evidence_refs)
-                for ref in duplicate.evidence_refs:
-                    if ref not in new_refs:
-                        new_refs.append(ref)
-                if len(new_refs) > len(canonical.evidence_refs):
-                    await engine._graph_store.update_node(
-                        canonical_id, evidence_refs=new_refs
-                    )
-
-                # Transfer edges
-                from prme.organizer.deduplication import _transfer_edges
-                await _transfer_edges(engine, duplicate_id, canonical_id)
-
-                # Create SUPERSEDES edge
-                supersedes_edge = MemoryEdge(
-                    source_id=UUID(canonical_id),
-                    target_id=UUID(duplicate_id),
-                    edge_type=EdgeType.SUPERSEDES,
-                    user_id=canonical.user_id,
-                    confidence=1.0,
-                    metadata={
-                        "reason": "alias_resolution",
-                        "alias_type": alias.alias_type,
-                        "confidence": alias.confidence,
-                    },
+                result = await engine._graph_store.merge_nodes(
+                    alias.entity_a_id, alias.entity_b_id, user_id=node_a.user_id,
+                    kind="alias", score=alias.confidence,
                 )
-                await engine._graph_store.create_edge(supersedes_edge)
-
-                # Supersede the duplicate
-                await engine.supersede(duplicate_id, canonical_id)
+                if result is None or not result.applied:
+                    continue
+                canonical_id, duplicate_id = result.canonical_id, result.retired_id
+                await engine._evict_from_indexes(duplicate_id)
 
                 merged_ids.add(duplicate_id)
                 resolved_count += 1

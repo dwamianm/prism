@@ -8,12 +8,20 @@ import pytest
 from prme import MemoryEngine
 from prme.models import Event, MemoryEdge, MemoryNode
 from prme.organizer.alias_resolution import AliasCandidate, resolve_aliases
-from prme.organizer.deduplication import DuplicateCandidate, _transfer_edges, merge_duplicates
+from prme.organizer.deduplication import DuplicateCandidate, merge_duplicates
 from prme.types import EdgeType, LifecycleState, NodeType
 from tests import test_durable_ingestion as fixtures
 
 config = fixtures.config
 user = fixtures.user
+
+
+async def transfer(engine, duplicate, keep, user):
+    return await engine._graph_store.merge_nodes(str(duplicate.id), str(keep.id), user_id=user, kind="duplicate", score=1.)
+
+
+async def copies(engine, keep):
+    return [edge for edge in await engine._graph_store.get_edges(node_ids=[str(keep.id)]) if edge.edge_type != EdgeType.SUPERSEDES]
 
 
 async def seed(engine, user, alias=False):
@@ -43,8 +51,8 @@ async def seed(engine, user, alias=False):
 async def test_transferred_edges_retain_fields_and_repeat_identity_after_reopen(config, user):
     async with MemoryEngine.open(config) as engine:
         keep, duplicate, originals = await seed(engine, user)
-        await _transfer_edges(engine, str(duplicate.id), str(keep.id))
-        transferred = await engine._graph_store.get_edges(node_ids=[str(keep.id)])
+        await transfer(engine, duplicate, keep, user)
+        transferred = await copies(engine, keep)
         assert len(transferred) == 2
         for old in originals:
             source = keep.id if old.source_id == duplicate.id else old.source_id
@@ -53,8 +61,8 @@ async def test_transferred_edges_retain_fields_and_repeat_identity_after_reopen(
             assert new.model_dump(exclude={"id", "source_id", "target_id"}) == old.model_dump(exclude={"id", "source_id", "target_id"})
         before = {str(e.id): e.model_dump() for e in transferred}
     async with MemoryEngine.open(config) as engine:
-        await _transfer_edges(engine, str(duplicate.id), str(keep.id))
-        assert {str(e.id): e.model_dump() for e in await engine._graph_store.get_edges(node_ids=[str(keep.id)])} == before
+        await transfer(engine, duplicate, keep, user)
+        assert {str(e.id): e.model_dump() for e in await copies(engine, keep)} == before
 
 
 @pytest.mark.parametrize("alias", [False, True])
@@ -62,21 +70,20 @@ async def test_failed_edge_copy_preserves_active_source_and_retry_does_not_dupli
     async with MemoryEngine.open(config) as engine:
         keep, duplicate, originals = await seed(engine, user, alias)
         graph = engine._graph_store
-        create = graph.create_edge
+        from prme.storage import organizer_merge
         calls = 0
-        async def fail_second_copy(edge):
+        def fail_second_copy(stage):
             nonlocal calls
-            if edge.edge_type != EdgeType.SUPERSEDES:
+            if stage == "edge":
                 calls += 1
                 if calls == 2:
                     raise RuntimeError("Authored edge-copy failure")
-            return await create(edge)
         async def apply():
             if alias:
                 return await resolve_aliases(engine, [AliasCandidate(str(keep.id), str(duplicate.id), "abbreviation", .99)])
             return await merge_duplicates(engine, [DuplicateCandidate(str(keep.id), str(duplicate.id), 1., "exact")])
         with monkeypatch.context() as patch:
-            patch.setattr(graph, "create_edge", fail_second_copy)
+            patch.setattr(organizer_merge, "_checkpoint", fail_second_copy)
             assert await apply() == 0
         assert (await engine.get_node(str(duplicate.id), user_id=user)).lifecycle_state == LifecycleState.TENTATIVE
         assert await apply() == 1
@@ -85,24 +92,29 @@ async def test_failed_edge_copy_preserves_active_source_and_retry_does_not_dupli
         assert all(e.valid_to == originals[0].valid_to and e.provenance_event_id == originals[0].provenance_event_id for e in copied)
 
 
-async def test_concurrent_identical_edge_transfers_converge(config, user):
+async def test_concurrent_identical_merges_converge(config, user):
     async with MemoryEngine.open(config) as engine:
         keep, duplicate, _ = await seed(engine, user)
-        await asyncio.gather(*(_transfer_edges(engine, str(duplicate.id), str(keep.id)) for _ in range(3)))
-        assert len(await engine._graph_store.get_edges(node_ids=[str(keep.id)])) == 2
+        results = await asyncio.gather(*(transfer(engine, duplicate, keep, user) for _ in range(3)))
+        assert sum(result.applied for result in results) == 1
+        assert len({result.operation_id for result in results}) == 1
+        assert len(await copies(engine, keep)) == 2
 
 
-async def test_copy_acknowledgment_failure_verifies_committed_values(config, user, monkeypatch):
+async def test_lost_merge_acknowledgment_retries_committed_values(config, user, monkeypatch):
     async with MemoryEngine.open(config) as engine:
         keep, duplicate, _ = await seed(engine, user)
-        create = engine._graph_store.create_edge
-        async def committed_then_failed(edge):
-            await create(edge)
+        merge = engine._graph_store.merge_nodes
+        async def committed_then_failed(*args, **kwargs):
+            await merge(*args, **kwargs)
             raise RuntimeError("Authored acknowledgment loss")
         with monkeypatch.context() as patch:
-            patch.setattr(engine._graph_store, "create_edge", committed_then_failed)
-            await _transfer_edges(engine, str(duplicate.id), str(keep.id))
-        assert len(await engine._graph_store.get_edges(node_ids=[str(keep.id)])) == 2
+            patch.setattr(engine._graph_store, "merge_nodes", committed_then_failed)
+            with pytest.raises(RuntimeError, match="acknowledgment"):
+                await transfer(engine, duplicate, keep, user)
+        repeated = await transfer(engine, duplicate, keep, user)
+        assert not repeated.applied
+        assert len(await copies(engine, keep)) == 2
 
 
 async def test_explicit_self_relationship_remains_one_self_relationship(config, user):
@@ -110,7 +122,7 @@ async def test_explicit_self_relationship_remains_one_self_relationship(config, 
         keep, duplicate, _ = await seed(engine, user)
         await engine._graph_store.create_edge(MemoryEdge(source_id=duplicate.id, target_id=duplicate.id,
             edge_type=EdgeType.RELATES_TO, user_id=user, metadata={"relation": "self reference"}))
-        await _transfer_edges(engine, str(duplicate.id), str(keep.id))
-        edges = await engine._graph_store.get_edges(node_ids=[str(keep.id)])
+        await transfer(engine, duplicate, keep, user)
+        edges = await copies(engine, keep)
         assert len(edges) == 3
         assert len([e for e in edges if e.source_id == e.target_id == keep.id]) == 1

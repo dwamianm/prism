@@ -11,6 +11,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
+from prme.storage.organizer_merge import MergeResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
@@ -44,6 +45,10 @@ class GraphStore(Protocol):
 
     async def publish_profile(self, plan: ProfilePublication) -> str:
         """Publish a prepared profile and retire its predecessors atomically."""
+        ...
+
+    async def merge_nodes(self, node_a_id: str, node_b_id: str, *, user_id: str, kind: str, score: float) -> MergeResult | None:
+        """Validate and journal an organizer merge in one backend transaction."""
         ...
 
     async def create_node(self, node: MemoryNode) -> str:

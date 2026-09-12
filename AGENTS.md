@@ -63,6 +63,15 @@ does not authorize merging claims; purely semantic aliases remain unverified
 event-local under new `event_local_references_v4` plans; old plans replay unchanged.
 See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.
 
+Duplicate/alias merges publish evidence, relationship copies, source retirement
+and one supersedence edge in a backend transaction. `ORGANIZER_MERGED` retains
+checksummed complete inputs and outputs; repeated pair/kind operations do not
+rewrite later graph state. PostgreSQL locks nodes in UUID order before reading
+evidence. DuckDB conflicts can fail safely and require a fresh retry. External
+index eviction follows commit and remains repairable by compaction. Do not
+restore separate evidence/edge/lifecycle writes or infer rollback from a cancelled
+caller. Historical organizer/manual mutations are not all replayable yet.
+
 ## RFCs
 
 Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0017). See `docs/INDEX.md` for the full listing. Key RFCs include:

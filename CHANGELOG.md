@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without treating names in other schemas as an existing local installation.
 - Preserve relationship validity and provenance during organizer merges; failed
   copies keep the source active, and deterministic copy IDs make retries converge.
+- Publish organizer evidence unions, relationship copies, retirement and a single
+  supersedence edge atomically, with a checksummed operation record and scoped,
+  idempotent retries. Concurrent PostgreSQL merges lock shared nodes before reads.
 
 ## [0.11.0] - 2026-09-11
 

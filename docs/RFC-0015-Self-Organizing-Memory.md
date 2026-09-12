@@ -442,11 +442,27 @@ async def end_session(
 
 This runs a lightweight organize pass with jobs `["promote"]` and a 1-second budget. It is semantically equivalent to calling `organize()` with those parameters.
 
-Relationship transfer during duplicate/alias application preserves temporal
-validity and provenance. Deterministic copied-edge identities permit retries;
-an insertion failure must prevent source retirement unless the exact copy is
-already durably present. Partial copies can remain visible. This is not atomic
-publication of an entire merge or serialization of unrelated concurrent merges.
+Duplicate and alias merge application uses a backend transaction covering the
+canonical evidence union, complete relationship copies, source retirement and
+one supersedence edge. Admission is rechecked on current values inside the
+transaction. PostgreSQL takes ordered node locks before reading evidence;
+DuckDB transactions retain the connection lock until native work finishes.
+Conflicting DuckDB writes can fail safely and be retried.
+
+`ORGANIZER_MERGED` records complete before/after node values, original and
+published relationships, kind, score and a versioned identity for the unordered
+pair. The record is a checksummed JSON string inside the operation payload,
+preserving numeric bytes through PostgreSQL JSONB. A repeat verifies the record
+and returns its original identity without rewriting graph state. Deterministic
+copy IDs also recognize exact partial transfers from older versions; conflicting
+copies abort publication. Unverified alias links do not retire nodes and remain
+separate from this merge operation.
+
+External index eviction follows commit. Compaction repairs failures, while the
+durable retired lifecycle excludes stale index candidates. Cancellation and lost
+acknowledgments do not imply rollback. Full historical graph reconstruction still
+requires records for other organizer/manual mutations; this operation does not
+retroactively invent those inputs.
 
 `ALL_JOBS` lists available jobs. `DEFAULT_JOBS` excludes the legacy global
 `feedback_apply` tuner. Default `organize()` calls use `DEFAULT_JOBS`, with or

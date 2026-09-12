@@ -39,13 +39,27 @@ both candidates and actual merges, plus unapplied pairs and its merge-policy
 version. A candidate count greater than zero with no merged nodes can be correct.
 Compatible exact copies can still merge and combine their evidence references.
 
-Copied relationships retain their original validity, provenance, confidence,
-metadata and assertion timestamp. Their transfer IDs are deterministic, so a
-retry verifies existing copies instead of appending the same relationship again.
-A copy failure prevents retiring the source node. Partial copies can remain
-visible after failure; this is retry convergence, not an atomic transaction for
-the complete node/evidence/edge merge. Concurrent unrelated merges still need
-a separate transactional publication protocol.
+Organizer duplicate and alias merges now publish canonical evidence, copied
+relationships, retirement and one supersedence edge in a single backend
+transaction. They revalidate both nodes after entering that transaction.
+PostgreSQL locks shared nodes in UUID order before reading evidence, so
+overlapping merges cannot overwrite each other's evidence union. A conflicting
+DuckDB transaction can fail safely and be retried against current state.
+
+Copied relationships retain validity, provenance, confidence, metadata and
+assertion time. Their deterministic IDs also recognize exact partial copies left
+by older versions. A conflicting existing copy aborts the new transaction.
+Each committed merge records complete before/after node values, original and
+published relationships, and a checksum-protected `ORGANIZER_MERGED` operation.
+The operation identity is stable for the unordered node pair and merge kind.
+Retries return the committed identity without reactivating later-retired nodes.
+
+External index eviction runs after graph commit and remains repairable by
+compaction. Retired graph state governs candidate admission if eviction fails.
+Cancellation or a lost acknowledgment may follow a committed transaction;
+callers must not interpret cancellation as proof of rollback. This adds complete
+records for new organizer merges, not replay of every historical manual or
+organizer mutation.
 
 Alias application rechecks the actual names. A compatible known abbreviation,
 case variant or exact normalized name can merge at the configured confidence

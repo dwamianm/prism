@@ -28,8 +28,10 @@ pointer, and provenance edge. `supersede_many` applies a batch atomically and
 rejects self-replacement, retired replacements, or pairs across users/scopes.
 New LLM ingestion uses the journaled derivation protocol in RFC-0016: saved
 extraction and prepared inputs, idempotent index staging, and fenced atomic
-graph publication. This is distinct from full replay of historical organizer
-and manual mutations, whose complete operation inputs are not yet journaled.
+graph publication. New duplicate/alias merges atomically append a checksummed
+`ORGANIZER_MERGED` operation containing complete node and relationship inputs and
+outputs. This is distinct from full replay of historical organizer and manual
+mutations, whose complete operation inputs are not all journaled.
 - Efficient range scans by timestamp and stream.
 - Content-addressed deduplication by `content_hash`.
 

@@ -1,9 +1,9 @@
 """Deduplication logic for the organizer (issue #11).
 
 Proposes duplicate memory nodes via vector similarity and exact content
-matching, then merges proven-compatible copies by archiving the duplicate and
-creating a SUPERSEDES edge from the canonical (kept) node to the
-duplicate. Evidence refs and edges are transferred to the canonical node.
+matching, then atomically publishes compatible copies, their evidence and
+relationships, source retirement and one SUPERSEDES edge. A checksummed
+operation records complete merge inputs and outputs.
 
 Similarity is only a proposal signal. Merging requires equivalent text,
 provenance/type metadata and effective validity (except named entity identity).
@@ -15,11 +15,9 @@ from __future__ import annotations
 import logging
 import time
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid5
 
-from prme.models.edges import MemoryEdge
 from prme.organizer.merge_policy import compatible_provenance, duplicate_merge_allowed
-from prme.types import EdgeType, LifecycleState, Scope
+from prme.types import LifecycleState, Scope
 
 if TYPE_CHECKING:
     from prme.config import OrganizerConfig
@@ -214,19 +212,17 @@ async def merge_duplicates(
 ) -> int:
     """Merge duplicate node pairs.
 
-    For each pair:
-    1. Determine canonical (kept) vs duplicate (archived) node.
-    2. Transfer evidence_refs from duplicate to canonical.
-    3. Transfer edges from duplicate to canonical.
-    4. Create SUPERSEDES edge from canonical to duplicate.
-    5. Archive the duplicate node.
+    Each backend revalidates the pair and selects its canonical node inside a
+    transaction covering evidence, relationship copies, source retirement,
+    supersedence and the immutable operation record. Index eviction follows
+    commit. A failed transaction leaves no partial merge visible.
 
     Args:
         engine: The MemoryEngine for storage operations.
         duplicates: List of DuplicateCandidate pairs from find_duplicates().
 
     Returns:
-        Count of nodes merged (archived).
+        Count of newly merged (superseded) nodes.
     """
     merged_count = 0
     # Track nodes already merged to avoid double-processing
@@ -266,38 +262,17 @@ async def merge_duplicates(
         if node_b.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
             continue
 
-        canonical, duplicate = _pick_canonical(node_a, node_b)
-        canonical_id = str(canonical.id)
-        duplicate_id = str(duplicate.id)
-
         try:
-            # Transfer evidence_refs from duplicate to canonical
-            new_refs = list(canonical.evidence_refs)
-            for ref in duplicate.evidence_refs:
-                if ref not in new_refs:
-                    new_refs.append(ref)
-
-            if len(new_refs) > len(canonical.evidence_refs):
-                await engine._graph_store.update_node(
-                    canonical_id, evidence_refs=new_refs
-                )
-
-            # Transfer edges from duplicate to canonical
-            await _transfer_edges(engine, duplicate_id, canonical_id)
-
-            # Create SUPERSEDES edge from canonical to duplicate
-            supersedes_edge = MemoryEdge(
-                source_id=UUID(canonical_id),
-                target_id=UUID(duplicate_id),
-                edge_type=EdgeType.SUPERSEDES,
-                user_id=canonical.user_id,
-                confidence=1.0,
-                metadata={"reason": "deduplication", "similarity": dup.similarity},
+            result = await engine._graph_store.merge_nodes(
+                dup.node_a_id, dup.node_b_id, user_id=node_a.user_id,
+                kind="duplicate", score=dup.similarity,
             )
-            await engine._graph_store.create_edge(supersedes_edge)
-
-            # Supersede the duplicate (sets lifecycle_state and superseded_by)
-            await engine.supersede(duplicate_id, canonical_id)
+            if result is None or not result.applied:
+                continue
+            canonical_id, duplicate_id = result.canonical_id, result.retired_id
+            # Graph publication is already durable. Index eviction is repairable
+            # and candidate admission checks the retired lifecycle independently.
+            await engine._evict_from_indexes(duplicate_id)
 
             merged_ids.add(duplicate_id)
             merged_count += 1
@@ -319,56 +294,3 @@ async def merge_duplicates(
             )
 
     return merged_count
-
-
-async def _transfer_edges(
-    engine: MemoryEngine,
-    from_node_id: str,
-    to_node_id: str,
-) -> None:
-    """Copy semantic edges without changing validity, provenance or retry IDs.
-
-    Originals remain intact. Partial copies can survive a failed pass, but any
-    failure propagates so callers keep the source node active. Retrying verifies
-    existing deterministic copies rather than appending duplicate relationships.
-    This is retry convergence, not an atomic merge transaction.
-    """
-    graph = engine._graph_store
-    source_node = await engine.get_node(from_node_id)
-    target_node = await engine.get_node(to_node_id)
-    if source_node is None or target_node is None or (
-        source_node.user_id, source_node.scope
-    ) != (target_node.user_id, target_node.scope):
-        raise ValueError("Edge transfer requires existing nodes in the same owner and scope")
-    source_id, target_id = UUID(from_node_id), UUID(to_node_id)
-    originals = await graph.get_edges(node_ids=[from_node_id])
-    existing = {edge.id: edge for edge in await graph.get_edges(node_ids=[to_node_id])}
-    for edge in originals:
-        if edge.edge_type == EdgeType.SUPERSEDES:
-            continue
-        if edge.user_id != source_node.user_id:
-            raise ValueError("Edge transfer cannot change another owner's relationship")
-        new_source = target_id if edge.source_id == source_id else edge.source_id
-        new_target = target_id if edge.target_id == source_id else edge.target_id
-        # A relationship between the two merged identities collapses away;
-        # an explicit original self-relationship remains one self-relationship.
-        if new_source == new_target and edge.source_id != edge.target_id:
-            continue
-        copied = edge.model_copy(deep=True, update={
-            "id": uuid5(edge.id, f"prme:edge-transfer:v1:{source_id}:{target_id}"),
-            "source_id": new_source, "target_id": new_target,
-        })
-        previous = existing.get(copied.id)
-        if previous is not None:
-            if previous != copied:
-                raise ValueError("Transferred edge identity conflicts with stored content")
-            continue
-        try:
-            await graph.create_edge(copied)
-        except Exception:
-            # A concurrent identical retry may have committed this same edge.
-            # No other insertion failure is permission to retire the source.
-            saved = {item.id: item for item in await graph.get_edges(node_ids=[to_node_id])}
-            if saved.get(copied.id) != copied:
-                raise
-        existing[copied.id] = copied
