@@ -17,6 +17,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from prme import __version__
 from prme.api.models import (
     ErrorResponse,
+    ExtractionProcessRequest,
     HealthResponse,
     IngestRequest,
     IngestResponse,
@@ -33,6 +34,7 @@ from prme.api.models import (
 )
 from prme.types import LifecycleState, NodeType
 from prme.models.extraction import ExtractionRecord
+from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +221,39 @@ async def get_extraction(request: Request, event_id: UUID):
     if record is None:
         raise HTTPException(status_code=404, detail="Extraction not found")
     return record
+
+
+@router.get("/events/{event_id}/extraction-status", response_model=ExtractionStatus,
+            summary="Inspect durable extraction progress")
+async def extraction_status(request: Request, event_id: UUID):
+    engine = _get_engine(request)
+    event = await engine.get_event(str(event_id), user_id=_user_id(request))
+    if event is None:
+        raise HTTPException(status_code=404, detail="Extraction work not found")
+    status = await engine.extraction_status(str(event_id), user_id=event.user_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Extraction work not found")
+    return status
+
+
+@router.post("/events/{event_id}/retry-extraction", response_model=ExtractionStatus,
+             summary="Queue an extraction retry without calling a model")
+async def retry_extraction(request: Request, event_id: UUID):
+    engine = _get_engine(request)
+    event = await engine.get_event(str(event_id), user_id=_user_id(request))
+    if event is None:
+        raise HTTPException(status_code=404, detail="Extraction work not found")
+    status = await engine.retry_extraction(str(event_id), user_id=event.user_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Extraction work not found")
+    return status
+
+
+@router.post("/extractions/process", response_model=ExtractionProcessingResult,
+             summary="Process due extraction jobs for one owner")
+async def process_extractions(request: Request, body: ExtractionProcessRequest):
+    owner = _user_id(request, body.user_id, required=True)
+    return await _get_engine(request).process_extractions(user_id=owner, limit=body.limit, budget_ms=body.budget_ms)
 
 
 # ---------------------------------------------------------------------------

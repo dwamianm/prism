@@ -71,6 +71,7 @@ class DerivationReceipt(BaseModel):
     event_id: UUID
     plan_id: UUID
     user_id: str
+    generation: int | None = Field(default=None, ge=1)
     plan_checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
     node_ids: tuple[UUID, ...]
     edge_ids: tuple[UUID, ...]

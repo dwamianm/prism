@@ -52,9 +52,13 @@ async def test_public_ingestion_restart_reuses_journaled_inputs(config, user, mo
                 raise OSError("injected failure after write")
         with monkeypatch.context() as fault:
             fault.setattr(target, method, failed)
-            with pytest.raises(ExtractionError) as failure:
-                await engine.ingest(source, user_id=user, wait_for_extraction=True)
-        event_id = failure.value.event_id
+            if boundary == "commit":
+                # Atomic work completion resolves a lost acknowledgement.
+                event_id = await engine.ingest(source, user_id=user, wait_for_extraction=True)
+            else:
+                with pytest.raises(ExtractionError) as failure:
+                    await engine.ingest(source, user_id=user, wait_for_extraction=True)
+                event_id = failure.value.event_id
         plan = await engine._event_store.get_derivation_plan(event_id, user_id=user)
         assert plan is not None
         receipt = await engine._event_store.get_derivation_receipt(event_id, user_id=user)
@@ -180,6 +184,13 @@ asyncio.run(main())
         assert plan is not None
         before = await engine.get_event_nodes(event_id, user_id=user)
         assert len(before) == (2 if boundary == "commit" else 0)
+        if boundary != "commit":
+            from datetime import datetime, timezone
+            from tests.test_extraction_work import set_expiry
+            # Restart cannot assume a live lease is abandoned; recovery claims
+            # it after expiry, with a new fencing generation.
+            assert (await engine.extraction_status(event_id, user_id=user)).status == "running"
+            await set_expiry(engine, event_id, datetime(2000, 1, 1, tzinfo=timezone.utc))
         for provider, method in ((engine._pipeline._extraction_provider, "extract"),
                                  (engine._vector_index._provider, "embed")):
             monkeypatch.setattr(provider, method, AsyncMock(side_effect=AssertionError("Recovery cannot infer")))

@@ -17,6 +17,8 @@ from prme.models import Event, ProcessingStatus
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.types import Scope
+from prme.storage.extraction_work import ExtractionWorkRepository, validate_pg_claim
+from prme.models.extraction_work import ExtractionClaim
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,7 @@ class PgEventStore:
 
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
+        self.extraction_work = ExtractionWorkRepository(pool=pool)
 
     async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
         """Read verified completion through the immutable source owner's scope."""
@@ -70,16 +73,17 @@ class PgEventStore:
             raise ValueError("Prepared derivation identity or checksum does not match")
         return plan
 
-    async def record_derivation_plan(self, plan: DerivationPlan) -> DerivationPlan:
+    async def record_derivation_plan(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationPlan:
         """Concurrent planners converge on the first immutable prepared plan."""
         plan = DerivationPlan.model_validate_json(plan.model_dump_json())
         async with self._pool.acquire() as conn, conn.transaction():
             source = await conn.fetchrow(
-                "SELECT user_id, scope, content_hash FROM events WHERE id = $1", str(plan.event_id),
+                "SELECT user_id, scope, content_hash FROM events WHERE id = $1 FOR UPDATE", str(plan.event_id),
             )
             if source is None:
                 raise ValueError("A derivation requires a persisted source event")
             plan.verify_source(source["user_id"], source["scope"], source["content_hash"])
+            managed = await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim)
             await conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
                 "VALUES ($1, 'DERIVATION_PREPARED', $2, $3::jsonb, 'derivation', $4, $5) "
@@ -93,6 +97,10 @@ class PgEventStore:
             saved = await self._get_derivation_plan(conn, str(plan.event_id), plan.user_id)
             if saved is None or (saved.id == plan.id and saved.checksum != plan.checksum):
                 raise ValueError("Prepared derivation ID conflicts with a different payload")
+            if managed is not None:
+                await conn.execute("UPDATE event_extractions SET plan_id = $1 WHERE event_id = $2",
+                                   str(saved.id), str(plan.event_id))
+            await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim)
             return saved
 
     async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
@@ -117,16 +125,17 @@ class PgEventStore:
             raise ValueError("Extraction record does not match its source event")
         return record
 
-    async def record_extraction(self, record: ExtractionRecord) -> ExtractionRecord:
+    async def record_extraction(self, record: ExtractionRecord, *, claim: ExtractionClaim | None = None) -> ExtractionRecord:
         """Save once in the operation log; first committed output wins."""
         record = ExtractionRecord.model_validate_json(record.model_dump_json())
         async with self._pool.acquire() as conn, conn.transaction():
             source = await conn.fetchrow(
-                "SELECT user_id, scope, content_hash FROM events WHERE id = $1", str(record.event_id),
+                "SELECT user_id, scope, content_hash FROM events WHERE id = $1 FOR UPDATE", str(record.event_id),
             )
             if source is None:
                 raise ValueError("Extraction requires a matching persisted source event")
             record.verify_source(source["user_id"], source["scope"], source["content_hash"])
+            await validate_pg_claim(conn, str(record.event_id), record.user_id, claim)
             await conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, "
                 "namespace_id, created_at) VALUES ($1, 'EXTRACTION_VALIDATED', $2, $3::jsonb, $4, $5, $6) "
@@ -137,9 +146,11 @@ class PgEventStore:
             saved = await self._get_extraction(conn, str(record.event_id), record.user_id)
             if saved is None:
                 raise ValueError("Extraction operation ID conflicts with another operation")
+            await validate_pg_claim(conn, str(record.event_id), record.user_id, claim)
             return saved
 
-    async def append(self, event: Event, *, defer_materialization: bool = False) -> str:
+    async def append(self, event: Event, *, defer_materialization: bool = False,
+                     defer_extraction: bool = False) -> str:
         """Append an event to the immutable event log."""
         metadata_json = (
             json.dumps(event.metadata) if event.metadata is not None else None
@@ -170,6 +181,8 @@ class PgEventStore:
                         "INSERT INTO event_materializations (event_id) VALUES ($1)",
                         str(event.id),
                     )
+                if defer_extraction:
+                    await conn.execute("INSERT INTO event_extractions (event_id) VALUES ($1)", str(event.id))
         return str(event.id)
 
     async def pending_materializations(

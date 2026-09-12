@@ -11,7 +11,9 @@ from typing import TYPE_CHECKING
 
 from prme.models.derivation import DerivationPlan, DerivationReceipt, node_checksum
 from prme.models.nodes import MemoryNode
+from prme.models.extraction_work import ExtractionClaim
 from prme.storage._threading import run_to_completion
+from prme.storage.extraction_work import validate_duck_claim, validate_pg_claim
 from prme.types import EpistemicType, LifecycleState
 
 if TYPE_CHECKING:
@@ -59,21 +61,22 @@ def _validate_dependencies(plan: DerivationPlan, current: dict[str, MemoryNode])
         states[old.id] = LifecycleState.SUPERSEDED
 
 
-def _new_receipt(plan: DerivationPlan) -> DerivationReceipt:
+def _new_receipt(plan: DerivationPlan, claim: ExtractionClaim | None = None) -> DerivationReceipt:
     return DerivationReceipt(
         event_id=plan.event_id, plan_id=plan.id, user_id=plan.user_id,
+        generation=claim.generation if claim else None,
         plan_checksum=plan.checksum, node_ids=tuple(node.id for node in plan.nodes),
         edge_ids=tuple(edge.id for edge in plan.edges + plan.replacements),
     )
 
 
-async def commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> DerivationReceipt:
+async def commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
     snapshot = DerivationPlan.model_validate_json(plan.model_dump_json())
     async with store._conn_lock:
-        return await run_to_completion(_commit_duckdb, store, snapshot)
+        return await run_to_completion(_commit_duckdb, store, snapshot, claim)
 
 
-def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> DerivationReceipt:
+def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, claim: ExtractionClaim | None = None) -> DerivationReceipt:
     import numpy as np
     from prme.storage.event_store import EventStore
 
@@ -89,6 +92,7 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> Derivation
         ).fetchone()
         receipt = _receipt(plan, row[0] if row else None)
         if receipt is None:
+            managed = validate_duck_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
             current = {}
             for reference in plan.references:
                 node = store._get_node_sync(str(reference.id), True)
@@ -118,12 +122,19 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> Derivation
                     [str(edge.source_id), edge.created_at, str(edge.target_id)],
                 )
                 store._create_edge_sync(edge)
-            receipt = _new_receipt(plan)
+            validate_duck_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
+            receipt = _new_receipt(plan, claim)
             conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
                 "VALUES (?, 'DERIVATION_COMMITTED', ?, ?, 'derivation', ?, ?)",
                 [plan.receipt_operation_id, str(plan.event_id), receipt.model_dump_json(), plan.scope.value, receipt.created_at],
             )
+            if managed is not None:
+                conn.execute(
+                    "UPDATE event_extractions SET status = 'complete', lease_expires_at = NULL, "
+                    "last_error = NULL, updated_at = ? WHERE event_id = ?",
+                    [receipt.created_at, str(plan.event_id)],
+                )
         conn.execute("COMMIT")
         return receipt
     except BaseException:
@@ -131,7 +142,7 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> Derivation
         raise
 
 
-async def commit_postgres(store: PgGraphStore, plan: DerivationPlan) -> DerivationReceipt:
+async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
     from prme.storage.pg.event_store import PgEventStore
     from prme.storage.pg.graph_store import _NODE_COLUMNS
 
@@ -150,6 +161,7 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan) -> Derivati
         receipt = _receipt(plan, row["payload"] if row else None)
         if receipt is not None:
             return receipt
+        managed = await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
         ids = sorted(str(node.id) for node in plan.references)
         rows = await conn.fetch(
             f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE", ids,
@@ -174,10 +186,16 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan) -> Derivati
                 str(edge.source_id), edge.created_at, str(edge.target_id),
             )
             await store._create_edge_on_connection(conn, edge)
-        receipt = _new_receipt(plan)
+        await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
+        receipt = _new_receipt(plan, claim)
         await conn.execute(
             "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
             "VALUES ($1, 'DERIVATION_COMMITTED', $2, $3::jsonb, 'derivation', $4, $5)",
             plan.receipt_operation_id, str(plan.event_id), receipt.model_dump_json(), plan.scope.value, receipt.created_at,
         )
+        if managed is not None:
+            await conn.execute(
+                "UPDATE event_extractions SET status = 'complete', lease_expires_at = NULL, "
+                "last_error = NULL, updated_at = clock_timestamp() WHERE event_id = $1", str(plan.event_id),
+            )
         return receipt

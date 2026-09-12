@@ -48,7 +48,7 @@ Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-001
 - **RFC-0005** — Hybrid retrieval pipeline
 - **RFC-0014** — Portability, sync, and federation
 - **RFC-0015** — Self-organizing memory (organizer execution model)
-- **RFC-0016** — Durable derivation commits (normal ingestion uses extraction/plan journaling, idempotent index staging and atomic graph commit; durable extraction scheduling, revision and stale-worker fencing remain pending)
+- **RFC-0016** — Durable derivation commits (normal ingestion uses durable extraction jobs, extraction/plan journaling, idempotent index staging and fenced atomic graph commit; plan revision and abandoned-stage collection remain pending)
 
 Always consult the relevant RFC before implementing or modifying a subsystem.
 

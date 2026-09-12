@@ -15,6 +15,9 @@ committed) and extraction is retried with exponential backoff (5s, 30s, 180s).
 from __future__ import annotations
 
 import asyncio
+import math
+import time
+import weakref
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -32,6 +35,8 @@ from prme.models.edges import MemoryEdge
 from prme.models.events import Event
 from prme.models.extraction import ExtractionRecord
 from prme.models.derivation import DerivationPlan
+from prme.models.extraction_work import ExtractionClaim, ExtractionProcessingResult
+from prme.storage._threading import run_async_to_completion
 from prme.models.nodes import MemoryNode
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
 
@@ -83,6 +88,7 @@ class IngestionPipeline:
         graph_writer: GraphWriter | None = None,
         confidence_matrix: object | None = None,
         max_concurrent_extractions: int = 8,
+        extraction_lease_seconds: float = 300,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -91,6 +97,8 @@ class IngestionPipeline:
         self._extraction_provider = extraction_provider
         self._write_queue = write_queue
         self._graph_writer = graph_writer
+        self._extraction_lease_seconds = extraction_lease_seconds
+        self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
         # ingest_batch of N launches N concurrent LLM calls (issue #39).
@@ -153,7 +161,7 @@ class IngestionPipeline:
             scope=scope,
         )
         event_id = await self._write_queue.submit(
-            lambda ev=event: self._event_store.append(ev, defer_materialization=True),
+            lambda ev=event: self._event_store.append(ev, defer_materialization=True, defer_extraction=True),
             label=f"event.append:{event.id}",
         )
 
@@ -222,7 +230,22 @@ class IngestionPipeline:
 
     async def _extract_and_materialize(
         self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL,
-        *, retry_attempt: int = 0, raise_errors: bool = False,
+        *, retry_attempt: int = 0, raise_errors: bool = False, claim: ExtractionClaim | None = None,
+    ) -> None:
+        # Avoid turning ordinary concurrent in-process ingestion into a busy
+        # error. Database claims remain the cross-worker ownership boundary.
+        key = (event.user_id, scope)
+        lock = self._scope_locks.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._scope_locks[key] = lock
+        async with lock:
+            await self._run_extraction(event, event_id, scope, retry_attempt=retry_attempt,
+                                       raise_errors=raise_errors, claim=claim)
+
+    async def _run_extraction(
+        self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL,
+        *, retry_attempt: int = 0, raise_errors: bool = False, claim: ExtractionClaim | None = None,
     ) -> None:
         """Run LLM extraction, validate grounding, and materialize results.
 
@@ -234,28 +257,107 @@ class IngestionPipeline:
             event_id: String UUID of the event.
             scope: Ingestion-level scope for fallback when LLM does not classify.
         """
+        work = self._event_store.extraction_work
+        status = await work.status(event_id, user_id=event.user_id)
+        if status is not None and status.status == "complete":
+            return
+        if status is not None and claim is None:
+            if status.status == "failed" and raise_errors:
+                await work.retry(event_id, user_id=event.user_id)
+            claim = await work.claim(user_id=event.user_id, event_id=event_id,
+                                     lease_seconds=self._extraction_lease_seconds, ignore_schedule=raise_errors)
+            if claim is None:
+                self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
+                if raise_errors:
+                    raise ExtractionError("Extraction is pending behind earlier work or an active lease", event_id=event_id)
+                return
+
+        async def renew_lease():
+            while True:
+                await asyncio.sleep(min(30.0, self._extraction_lease_seconds / 3))
+                if not await work.renew(claim, lease_seconds=self._extraction_lease_seconds):
+                    return
+
+        heartbeat = asyncio.create_task(renew_lease()) if claim is not None else None
         try:
             plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
             if plan is None:
-                result = await self._extract_or_load(event)
-                await self._materialize(result, event, event_id, scope)
+                result = await self._extract_or_load(event, claim=claim)
+                await self._materialize(result, event, event_id, scope, claim=claim)
             else:
-                await self._publish_plan(plan)
+                await self._publish_plan(plan, claim=claim)
             logger.info("ingestion.phase2_complete", event_id=event_id)
+        except asyncio.CancelledError:
+            if claim is not None:
+                await run_async_to_completion(work.fail(claim, error="Cancelled", retry_after=0))
+            raise
         except Exception as exc:
+            if claim is not None:
+                # A lost acknowledgement after atomic completion is success.
+                current = await work.status(event_id, user_id=event.user_id)
+                if current is not None and current.status == "complete":
+                    return
             logger.error(
                 "ingestion.extraction_failed",
                 event_id=event_id,
                 error_type=type(exc).__name__,
             )
-            self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
+            if claim is not None:
+                attempt = claim.attempts
+                delay = self._retry_delays[attempt - 1] if attempt <= len(self._retry_delays) else None
+                cause = exc
+                while cause.__cause__ is not None:
+                    cause = cause.__cause__
+                retained = await work.fail(claim, error=type(cause).__name__, retry_after=delay)
+                if retained and delay is not None:
+                    self._schedule_retry(event, event_id, attempt=attempt, scope=scope)
+            else:
+                self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
             if raise_errors:
                 raise ExtractionError(
                     "Extraction did not complete; the source event is persisted",
                     event_id=event_id,
                 ) from exc
+        finally:
+            if heartbeat is not None:
+                async def stop_heartbeat():
+                    heartbeat.cancel()
+                    await asyncio.gather(heartbeat, return_exceptions=True)
+                await run_async_to_completion(stop_heartbeat())
 
-    async def _extract_or_load(self, event: Event) -> ExtractionResult:
+    async def process_extractions(self, *, user_id: str, limit: int = 100,
+                                  budget_ms: float = 5000) -> ExtractionProcessingResult:
+        """Process due owned jobs within a cooperative budget, without a daemon.
+
+        The budget is checked between jobs; an active provider call uses its
+        configured timeout. Failed counts report terminal jobs still requiring
+        an explicit retry. Retrieval never calls this method automatically.
+        """
+        if not user_id or limit < 0 or not math.isfinite(budget_ms) or budget_ms < 0:
+            raise ValueError("Extraction processing requires user_id and nonnegative finite bounds")
+        started, processed = time.monotonic(), 0
+        work = self._event_store.extraction_work
+        for _ in range(limit):
+            if (time.monotonic() - started) * 1000 >= budget_ms:
+                break
+            claim = await work.claim(user_id=user_id, lease_seconds=self._extraction_lease_seconds)
+            if claim is None:
+                break
+            event = await self._event_store.get(str(claim.event_id))
+            if event is None or event.user_id != user_id:
+                raise RuntimeError("Claimed extraction source is unavailable")
+            try:
+                await self._extract_and_materialize(event, str(event.id), event.scope,
+                                                    claim=claim, raise_errors=True)
+            except ExtractionError:
+                continue
+            status = await work.status(str(event.id), user_id=user_id)
+            if status is not None and status.status == "complete":
+                processed += 1
+        pending, failed = await work.counts(user_id=user_id)
+        return ExtractionProcessingResult(processed=processed, pending=pending, failed=failed)
+
+    async def _extract_or_load(self, event: Event, *, claim: ExtractionClaim | None = None) -> ExtractionResult:
         """Reuse durable validated output after downstream failure or restart.
 
         This saves inference results, not graph completion. It does not make
@@ -274,7 +376,7 @@ class IngestionPipeline:
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
-                lambda: self._event_store.record_extraction(record),
+                lambda: self._event_store.record_extraction(record, claim=claim),
                 label=f"extraction.record:{event.id}",
             )
         saved.verify_source(event.user_id, event.scope.value, event.content_hash)
@@ -505,7 +607,7 @@ class IngestionPipeline:
                 )
 
 
-    async def _publish_plan(self, plan: DerivationPlan) -> None:
+    async def _publish_plan(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> None:
         """Stage saved inputs and publish once; never delete shared retry artifacts."""
         receipt = await self._event_store.get_derivation_receipt(str(plan.event_id), user_id=plan.user_id)
         if receipt is not None:
@@ -526,12 +628,13 @@ class IngestionPipeline:
         # PostgreSQL writes its prepared vector/lexical columns in this same
         # graph transaction. No provider call is permitted inside the commit.
         await self._write_queue.submit(
-            lambda: self._graph_store.commit_derivation(plan), label=f"derivation.commit:{plan.id}",
+            lambda: self._graph_store.commit_derivation(plan, claim=claim), label=f"derivation.commit:{plan.id}",
         )
 
     async def _materialize(
         self, result: ExtractionResult, event: Event, event_id: str,
         scope: Scope = Scope.PERSONAL,
+        *, claim: ExtractionClaim | None = None,
     ) -> None:
         """Publish a complete saved derivation or leave its source/plan retryable.
 
@@ -556,10 +659,10 @@ class IngestionPipeline:
             if plan is None:
                 prepared = await self._prepare_plan(result, event)
                 plan = await self._write_queue.submit(
-                    lambda: self._event_store.record_derivation_plan(prepared),
+                    lambda: self._event_store.record_derivation_plan(prepared, claim=claim),
                     label=f"derivation.prepare:{event_id}",
                 )
-            await self._publish_plan(plan)
+            await self._publish_plan(plan, claim=claim)
         except asyncio.CancelledError:
             raise
         except Exception as exc:

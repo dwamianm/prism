@@ -50,6 +50,10 @@ class ExtractionConfig(_ProjectSettings):
         default=30.0,
         description="Seconds per extraction call",
     )
+    lease_seconds: float = Field(
+        default=300.0, gt=0, allow_inf_nan=False,
+        description="Durable extraction lease; active workers renew it and commit rechecks ownership",
+    )
     api_key: SecretStr | None = Field(
         default=None, description="Optional extraction credential; overrides provider environment variables",
     )

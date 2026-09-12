@@ -24,7 +24,7 @@ startup reconciles missing inserts and stale deletions without model calls.
 Grounded LLM output is now journaled before graph writes and reused on indexing
 retries. Scoped inspection works through the engine, sync client, HTTP and MCP.
 A real local-model fault-injection workflow and installed Python 3.13 ingestion
-both passed; atomic graph replay and durable extraction scheduling remain open.
+both passed; subsequent work added atomic graph replay and durable extraction jobs.
 Independent indexing preserves a healthy search path during an outage. Scoped
 entity matching now covers older entities beyond the former 100-node window.
 Retrieval distinguishes backend failures from empty results and detected model
@@ -41,9 +41,11 @@ modern nodes with a legacy heuristic. Idempotent index staging now survives
 retries and abrupt process exits without inference; compaction preserves
 unpublished staging claims. Crash testing also repaired vector-key reuse after
 DuckDB recovery. Explicit retry after reopening uses saved plans without new
-inference and skips already committed work. Durable extraction scheduling,
-generation fencing and plan revision remain open; unfinished extraction is not
-automatically discovered on restart.
+inference and skips already committed work. Durable extraction jobs now survive
+restart with scoped status, explicit processing and retry across Python, HTTP,
+MCP and CLI. Lease generations fence stale workers inside graph transactions;
+completion commits with its receipt. Plan revision and abandoned-stage collection
+remain open. Processing is explicit; retrieval does not run an LLM recovery job.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall

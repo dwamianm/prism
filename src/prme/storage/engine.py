@@ -35,6 +35,7 @@ import duckdb
 from prme.config import PRMEConfig
 from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
+from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -325,6 +326,7 @@ class MemoryEngine:
                 graph_writer=graph_writer,
                 confidence_matrix=_active_confidence_matrix,
                 max_concurrent_extractions=config.max_concurrent_extractions,
+                extraction_lease_seconds=config.extraction.lease_seconds,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -448,6 +450,7 @@ class MemoryEngine:
                 graph_writer=graph_writer,
                 confidence_matrix=_active_confidence_matrix,
                 max_concurrent_extractions=config.max_concurrent_extractions,
+                extraction_lease_seconds=config.extraction.lease_seconds,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -1333,6 +1336,28 @@ class MemoryEngine:
             Number of items awaiting graph materialization.
         """
         return self._materialization_queue.debt_sync()
+
+    async def extraction_status(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
+        """Inspect durable LLM extraction separately from raw NOTE indexing."""
+        return await self._event_store.extraction_work.status(event_id, user_id=user_id)
+
+    async def retry_extraction(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
+        """Make owned failed/pending work eligible for explicit processing.
+
+        Does not interrupt a live worker, repeat completed work, or call a
+        provider. Call process_extractions() to execute eligible jobs.
+        """
+        await self._event_store.extraction_work.retry(event_id, user_id=user_id)
+        return await self.extraction_status(event_id, user_id=user_id)
+
+    async def process_extractions(self, *, user_id: str, limit: int = 100,
+                                  budget_ms: float = 5000) -> ExtractionProcessingResult:
+        """Run due owned extraction jobs; never invoked automatically by retrieval.
+
+        Budget is cooperative between jobs. Provider calls retain their
+        configured timeouts. Failed counts are terminal jobs needing retry.
+        """
+        return await self._pipeline.process_extractions(user_id=user_id, limit=limit, budget_ms=budget_ms)
 
     async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
         """Read durable raw-ingestion status within one user's events.

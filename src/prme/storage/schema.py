@@ -80,6 +80,32 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
 
     # --- Nodes table ---
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS extraction_work_sequence (
+            singleton BOOLEAN PRIMARY KEY CHECK (singleton), next_ordinal BIGINT NOT NULL
+        )
+    """)
+    conn.execute("INSERT INTO extraction_work_sequence VALUES (true, 1) ON CONFLICT DO NOTHING")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS event_extractions (
+            event_id UUID PRIMARY KEY,
+            work_order BIGINT NOT NULL UNIQUE,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            generation BIGINT NOT NULL DEFAULT 0,
+            plan_id UUID,
+            lease_expires_at TIMESTAMPTZ,
+            next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
+            last_error VARCHAR,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
+        )
+    """)
+    # DuckDB rewrites indexed-column UPDATEs as DELETE/INSERT. A concurrent
+    # claimant can then bypass the conflict with an in-flight work-row UPDATE.
+    # Keep mutable lease/state fields unindexed; immutable work_order is already
+    # UNIQUE/indexed. PostgreSQL uses explicit row locks and retains its index.
+    conn.execute("DROP INDEX IF EXISTS idx_extractions_status")
+
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS nodes (
             id UUID PRIMARY KEY,
             node_type VARCHAR NOT NULL,

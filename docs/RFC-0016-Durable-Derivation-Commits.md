@@ -1,6 +1,6 @@
 # RFC-0016: Durable Derivation Commits
 
-**Status:** Draft; ingestion uses journaled plans and atomic graph commits; durable extraction work and fencing pending
+**Status:** Partially implemented; durable extraction work, journaled plans, and fenced atomic commits; plan revision and abandonment collection pending
 **Date:** 2026-09-12
 **Depends on:** RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0014
 
@@ -87,11 +87,33 @@ kind, post-commit failure, cancellation and concurrent attempts on both backends
 DuckDB subprocesses exit after plan save, each index stage, a graph insertion,
 and commit. Explicit retry after reopening uses the same plan without inference.
 
-Persistent extraction scheduling remains unimplemented. Background extraction
-and its bounded retries are still in-process; reopening does not automatically
-discover or schedule unfinished extraction. Version 1 saves one plan per
-source; it has no lease generation, revision switch or automatic replanning.
-Those must be implemented before enabling the complete recovery workflow below.
+Source append now atomically queues durable extraction work alongside raw
+indexing. Owner-scoped `extraction_status`, `retry_extraction`, and
+`process_extractions` are available through the engine, sync client, HTTP, MCP
+and CLI. Explicit processing discovers unfinished jobs after restart; retrieval
+never invokes it and no daemon is installed. Budgets apply between jobs.
+
+Claims increment a persistent generation and attempt count. Heartbeats renew
+live leases, while extraction journaling, plan binding and graph publication
+check ownership inside their transactions. Completion and its receipt commit
+together. Pending/running work follows append order within an owner and scope;
+terminal failures allow later work to proceed. Retry retains attempt history,
+and cannot preempt active work or repeat completion.
+
+PostgreSQL uses row locks. DuckDB touches the work row inside each publication
+transaction so a concurrent claim conflicts and rolls back. Mutable work fields
+must remain unindexed: a local two-connection test reproduced an indexed-status
+UPDATE rewriting rows and allowing both transactions to update. Schema startup
+drops the former status index. A fault test blocks graph publication across
+lease expiry, attempts takeover from a separate connection, and verifies rollback
+before the successor can publish on both backends.
+
+Tests also cover abrupt exit immediately after admission, provider outage and
+restart recovery, cancellation, heartbeat renewal, empty extraction, owner
+isolation, and stale workers attempting all three durable write boundaries.
+Version 1 still saves one plan per source, with no revision switch or automatic
+replanning. Legacy sources are not automatically enrolled in extraction work.
+Abandoned index staging still requires an explicit maintenance policy.
 
 ## Required behavior
 

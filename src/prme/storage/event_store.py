@@ -16,6 +16,8 @@ from prme.models import Event, ProcessingStatus
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.storage._threading import run_to_completion
+from prme.storage.extraction_work import ExtractionWorkRepository, insert_duck_work, validate_duck_claim
+from prme.models.extraction_work import ExtractionClaim
 from prme.types import Scope
 
 # Explicit column list used in all SELECT queries to avoid positional
@@ -42,6 +44,7 @@ class EventStore:
     ) -> None:
         self._conn = conn
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
+        self.extraction_work = ExtractionWorkRepository(conn=conn, conn_lock=self._conn_lock)
 
     # --- Public async API ---
 
@@ -84,15 +87,16 @@ class EventStore:
             raise ValueError("Prepared derivation identity or checksum does not match")
         return plan
 
-    async def record_derivation_plan(self, plan: DerivationPlan) -> DerivationPlan:
+    async def record_derivation_plan(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationPlan:
         """Save the first prepared plan; same-ID payload changes are rejected."""
         snapshot = DerivationPlan.model_validate_json(plan.model_dump_json())
         async with self._conn_lock:
-            return await run_to_completion(self._record_derivation_plan_sync, snapshot)
+            return await run_to_completion(self._record_derivation_plan_sync, snapshot, claim)
 
-    def _record_derivation_plan_sync(self, plan: DerivationPlan) -> DerivationPlan:
+    def _record_derivation_plan_sync(self, plan: DerivationPlan, claim: ExtractionClaim | None = None) -> DerivationPlan:
         self._conn.execute("BEGIN TRANSACTION")
         try:
+            managed = validate_duck_claim(self._conn, str(plan.event_id), plan.user_id, claim)
             source = self._conn.execute(
                 "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(plan.event_id)],
             ).fetchone()
@@ -109,6 +113,10 @@ class EventStore:
             saved = self._get_derivation_plan_sync(str(plan.event_id), plan.user_id)
             if saved is None or (saved.id == plan.id and saved.checksum != plan.checksum):
                 raise ValueError("Prepared derivation ID conflicts with a different payload")
+            if managed is not None:
+                self._conn.execute("UPDATE event_extractions SET plan_id = ? WHERE event_id = ?",
+                                   [str(saved.id), str(plan.event_id)])
+            validate_duck_claim(self._conn, str(plan.event_id), plan.user_id, claim)
             self._conn.execute("COMMIT")
             return saved
         except BaseException:
@@ -135,17 +143,18 @@ class EventStore:
             raise ValueError("Extraction record does not match its source event")
         return record
 
-    async def record_extraction(self, record: ExtractionRecord) -> ExtractionRecord:
+    async def record_extraction(self, record: ExtractionRecord, *, claim: ExtractionClaim | None = None) -> ExtractionRecord:
         """Append once; concurrent attempts reuse the first durable extraction."""
         # Serialize before yielding so mutation of a caller's nested dict cannot
         # change the durable payload while a worker thread is waiting to run.
         snapshot = ExtractionRecord.model_validate_json(record.model_dump_json())
         async with self._conn_lock:
-            return await run_to_completion(self._record_extraction_sync, snapshot)
+            return await run_to_completion(self._record_extraction_sync, snapshot, claim)
 
-    def _record_extraction_sync(self, record: ExtractionRecord) -> ExtractionRecord:
+    def _record_extraction_sync(self, record: ExtractionRecord, claim: ExtractionClaim | None = None) -> ExtractionRecord:
         self._conn.execute("BEGIN TRANSACTION")
         try:
+            validate_duck_claim(self._conn, str(record.event_id), record.user_id, claim)
             source = self._conn.execute(
                 "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(record.event_id)],
             ).fetchone()
@@ -162,13 +171,15 @@ class EventStore:
             saved = self._get_extraction_sync(str(record.event_id), record.user_id)
             if saved is None:
                 raise ValueError("Extraction operation ID conflicts with another operation")
+            validate_duck_claim(self._conn, str(record.event_id), record.user_id, claim)
             self._conn.execute("COMMIT")
             return saved
         except BaseException:
             self._conn.execute("ROLLBACK")
             raise
 
-    async def append(self, event: Event, *, defer_materialization: bool = False) -> str:
+    async def append(self, event: Event, *, defer_materialization: bool = False,
+                     defer_extraction: bool = False) -> str:
         """Append an event to the immutable event log.
 
         Args:
@@ -178,20 +189,22 @@ class EventStore:
             The string representation of the event's UUID.
         """
         async with self._conn_lock:
-            await run_to_completion(self._append_with_work_sync, event, defer_materialization)
+            await run_to_completion(self._append_with_work_sync, event, defer_materialization, defer_extraction)
         return str(event.id)
 
-    def _append_with_work_sync(self, event: Event, deferred: bool) -> None:
-        if not deferred:
+    def _append_with_work_sync(self, event: Event, deferred: bool, extraction: bool = False) -> None:
+        if not deferred and not extraction:
             self._append_sync(event)
             return
         self._conn.execute("BEGIN TRANSACTION")
         try:
             self._append_sync(event)
-            self._conn.execute(
-                "INSERT INTO event_materializations (event_id) VALUES (?)",
-                [str(event.id)],
-            )
+            if deferred:
+                self._conn.execute(
+                    "INSERT INTO event_materializations (event_id) VALUES (?)", [str(event.id)],
+                )
+            if extraction:
+                insert_duck_work(self._conn, str(event.id))
             self._conn.execute("COMMIT")
         except BaseException:
             self._conn.execute("ROLLBACK")

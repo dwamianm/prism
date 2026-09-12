@@ -24,6 +24,7 @@ from prme.models.edges import MemoryEdge
 from prme.storage._threading import run_to_completion
 from prme.models.nodes import MemoryNode
 from prme.models.derivation import DerivationPlan, DerivationReceipt
+from prme.models.extraction_work import ExtractionClaim
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -55,10 +56,10 @@ class DuckPGQGraphStore:
 
     # --- Node Operations ---
 
-    async def commit_derivation(self, plan: DerivationPlan) -> DerivationReceipt:
+    async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
         """Publish a journaled graph derivation and its receipt atomically."""
         from prme.storage.derivation import commit_duckdb
-        return await commit_duckdb(self, plan)
+        return await commit_duckdb(self, plan, claim=claim)
 
     async def create_node(self, node: MemoryNode) -> str:
         """Create a new node in the graph store.

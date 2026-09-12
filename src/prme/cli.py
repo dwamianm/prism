@@ -492,6 +492,31 @@ async def cmd_organize(args: argparse.Namespace) -> None:
         await engine.close()
 
 
+async def cmd_extractions(args: argparse.Namespace) -> None:
+    """Inspect, queue or execute explicitly scoped durable extraction work."""
+    engine = await _create_engine(args.db_path)
+    try:
+        if args.action == "process":
+            result = await engine.process_extractions(user_id=args.user_id, limit=args.limit, budget_ms=args.budget_ms)
+        elif args.action == "retry":
+            result = await engine.retry_extraction(args.event_id, user_id=args.user_id)
+        else:
+            result = await engine.extraction_status(args.event_id, user_id=args.user_id)
+        if result is None:
+            raise ValueError("Extraction work not found")
+        values = result.model_dump(mode="json")
+        if args.format == "json":
+            print(json.dumps(values, indent=2))
+        else:
+            for name, value in values.items():
+                if value is not None:
+                    print(f"{name}: {value}")
+        if args.action == "process" and result.failed:
+            raise SystemExit(1)
+    finally:
+        await engine.close()
+
+
 async def cmd_rebuild(args: argparse.Namespace) -> None:
     """Rebuild the vector and lexical indexes from the durable graph.
 
@@ -820,6 +845,21 @@ def build_parser() -> argparse.ArgumentParser:
         )
 
     # info
+    for command, action, help_text in (
+        ("extraction-status", "status", "Inspect owned extraction progress"),
+        ("retry-extraction", "retry", "Queue an owned extraction retry without calling a model"),
+        ("process-extractions", "process", "Run due owned extraction jobs (may call a model)"),
+    ):
+        sub = subparsers.add_parser(command, help=help_text)
+        add_common(sub)
+        sub.add_argument("--user-id", required=True, help="Source owner; required for every extraction operation")
+        if action == "process":
+            sub.add_argument("--limit", type=int, default=100)
+            sub.add_argument("--budget-ms", type=float, default=5000, help="Cooperative budget checked between jobs")
+        else:
+            sub.add_argument("event_id", help="Source event UUID")
+        sub.set_defaults(func=cmd_extractions, action=action)
+
     p_info = subparsers.add_parser("info", help="Show memory pack info")
     add_common(p_info)
     p_info.set_defaults(func=cmd_info)

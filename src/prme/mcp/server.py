@@ -407,6 +407,51 @@ async def memory_get_extraction(event_id: str, ctx: Context = None) -> str:
         return _internal_error("memory_get_extraction", exc)
 
 
+async def memory_extraction_status(event_id: str, ctx: Context = None) -> str:
+    """Inspect owned extraction work without calling a model."""
+    engine = _get_engine(ctx)
+    try:
+        status = await engine.extraction_status(event_id, user_id=_get_user_id(engine))
+        return status.model_dump_json() if status is not None else json.dumps({"error": "Extraction work not found"})
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    except ValueError:
+        return json.dumps({"error": "Invalid event ID"})
+    except Exception as exc:
+        return _internal_error("memory_extraction_status", exc)
+
+
+async def memory_retry_extraction(event_id: str, ctx: Context = None) -> str:
+    """Make owned work eligible for processing; does not call a model or interrupt a live worker."""
+    engine = _get_engine(ctx)
+    try:
+        status = await engine.retry_extraction(event_id, user_id=_get_user_id(engine))
+        return status.model_dump_json() if status is not None else json.dumps({"error": "Extraction work not found"})
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    except ValueError:
+        return json.dumps({"error": "Invalid event ID"})
+    except Exception as exc:
+        return _internal_error("memory_retry_extraction", exc)
+
+
+async def memory_process_extractions(limit: int = 100, budget_ms: float = 5000, ctx: Context = None) -> str:
+    """Run due extraction jobs for this caller; may call the configured model.
+
+    Budget is checked between jobs. Provider calls retain their own timeouts.
+    """
+    engine = _get_engine(ctx)
+    try:
+        result = await engine.process_extractions(user_id=_get_user_id(engine), limit=limit, budget_ms=budget_ms)
+        return result.model_dump_json()
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    except ValueError:
+        return json.dumps({"error": "Invalid extraction processing bounds"})
+    except Exception as exc:
+        return _internal_error("memory_process_extractions", exc)
+
+
 async def memory_promote_node(
     node_id: str,
     ctx: Context = None,
@@ -543,6 +588,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     server.prme_config = config
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
                  memory_get_node, memory_get_event, memory_get_extraction,
+                 memory_extraction_status, memory_retry_extraction, memory_process_extractions,
                  memory_promote_node, memory_archive_node):
         server.tool()(tool)
     server.resource("memory://health")(resource_health)

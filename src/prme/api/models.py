@@ -78,6 +78,14 @@ class IngestResponse(BaseModel):
     event_id: str = Field(description="ID of the persisted event")
 
 
+class ExtractionProcessRequest(BaseModel):
+    """Explicit scoped extraction processing; may call the configured model."""
+
+    user_id: str | None = None
+    limit: int = Field(default=100, ge=0, le=1000)
+    budget_ms: float = Field(default=5000, ge=0, allow_inf_nan=False)
+
+
 # ---------------------------------------------------------------------------
 # Retrieve
 # ---------------------------------------------------------------------------

@@ -30,6 +30,7 @@ from typing import Any, TypeVar
 from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
+from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.types import LifecycleState, NodeType, RetrievalMode, Scope
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
@@ -281,6 +282,19 @@ class MemoryClient:
             content, user_id=user_id, role=role, session_id=session_id,
             metadata=metadata, scope=scope, event_time=event_time,
         ))
+
+    def extraction_status(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
+        """Inspect durable extraction separately from raw-source indexing."""
+        return self._run(self._engine.extraction_status(event_id, user_id=user_id))
+
+    def retry_extraction(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
+        """Queue an owned extraction retry; execute it with process_extractions()."""
+        return self._run(self._engine.retry_extraction(event_id, user_id=user_id))
+
+    def process_extractions(self, *, user_id: str, limit: int = 100,
+                            budget_ms: float = 5000) -> ExtractionProcessingResult:
+        """Run due owned extraction jobs within a cooperative time budget."""
+        return self._run(self._engine.process_extractions(user_id=user_id, limit=limit, budget_ms=budget_ms))
 
     def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
         """Read durable status for an ingest_fast event owned by this user."""

@@ -183,6 +183,22 @@ async def initialize_pg_database(
         await conn.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")
 
         # Nodes (without embedding column initially)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS event_extractions (
+                event_id UUID PRIMARY KEY REFERENCES events(id),
+                work_order BIGSERIAL NOT NULL UNIQUE,
+                status VARCHAR NOT NULL DEFAULT 'pending',
+                attempts INTEGER NOT NULL DEFAULT 0,
+                generation BIGINT NOT NULL DEFAULT 0,
+                plan_id UUID,
+                lease_expires_at TIMESTAMPTZ,
+                next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                last_error VARCHAR,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_extractions_status ON event_extractions(status, work_order)")
+
         await conn.execute(_NODES_TABLE)
         await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")
         await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ttl_days INTEGER")

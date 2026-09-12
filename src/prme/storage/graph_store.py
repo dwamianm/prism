@@ -12,6 +12,7 @@ from typing import Any, Protocol, runtime_checkable
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.models.derivation import DerivationPlan, DerivationReceipt
+from prme.models.extraction_work import ExtractionClaim
 from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 
@@ -32,7 +33,7 @@ class GraphStore(Protocol):
 
     # --- Node Operations ---
 
-    async def commit_derivation(self, plan: DerivationPlan) -> DerivationReceipt:
+    async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
         """Atomically publish the exact journaled plan or return its receipt."""
         ...
 

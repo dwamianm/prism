@@ -169,7 +169,7 @@ status = await engine.processing_status(event_id, user_id="alice")
 Deferred raw events survive restart. LLM `ingest()` also queues original-source
 indexing atomically with its event, so extraction failure cannot make that source
 unsearchable after restart. Processing status acknowledges raw NOTE indexing;
-it does **not** report successful LLM extraction or resume lost extraction jobs.
+LLM extraction has its own durable work record and recovery API below.
 Processing reports remaining work and retry failures per user; the same methods
 are available on `MemoryClient`. Model summaries do not overwrite original-source
 indexes. Relative dates in extracted facts use the source timestamp.
@@ -195,8 +195,46 @@ An indexing retry reuses that output without another LLM call. Inspect it with
 `engine.get_extraction(event_id, user_id="alice")` (also on `MemoryClient`).
 The record includes the provider/model, source hash, grounding policy, and
 structured output. It survives restart, but its presence does not prove graph
-completion or semantic correctness. Interrupted LLM jobs and partial graph writes
-are not automatically replayed yet.
+completion or semantic correctness. Complete prepared plans preserve graph identities
+and embeddings; recovery publishes their graph changes atomically.
+
+LLM `ingest()` persists an extraction job with the source event. After an outage
+or restart, inspect and explicitly process that user's work:
+
+```python
+status = await engine.extraction_status(event_id, user_id="alice")
+# Make a terminal failure eligible again; this does not call a provider
+await engine.retry_extraction(event_id, user_id="alice")
+result = await engine.process_extractions(user_id="alice", limit=100, budget_ms=5000)
+print(result.processed, result.pending, result.failed)
+```
+
+These methods also exist on `MemoryClient`. Status reports `pending`, `running`,
+`failed`, or `complete`, together with the current phase, attempts, lease expiry,
+and a sanitized error code. Completion is recorded with the graph transaction,
+including for an empty extraction. `processed` counts completions in this pass;
+`pending` includes active workers; `failed` counts terminal failures needing retry.
+The time budget is checked between jobs; a provider call may exceed it.
+
+Active workers renew leases (`ExtractionConfig.lease_seconds`, default 300).
+After an abrupt exit, work becomes claimable when its lease expires. Claims
+serialize pending work within an owner and scope in append order. Bounded retry
+attempts survive restart; manual retry preserves their history. Retrieval never
+runs LLM recovery. Use repeated explicit passes or an external timer; there is
+no background daemon. Existing sources predating durable extraction jobs are
+not automatically enrolled.
+
+HTTP exposes `GET /v1/events/{event_id}/extraction-status`,
+`POST /v1/events/{event_id}/retry-extraction`, and `POST /v1/extractions/process`.
+MCP exposes `memory_extraction_status`, `memory_retry_extraction`, and
+`memory_process_extractions`, with the same authenticated owner boundaries.
+CLI equivalents are:
+
+```bash
+prme extraction-status memory.duckdb EVENT_ID --user-id alice --format json
+prme retry-extraction memory.duckdb EVENT_ID --user-id alice
+prme process-extractions memory.duckdb --user-id alice --budget-ms 5000
+```
 
 For a custom Ollama extraction endpoint, use its OpenAI-compatible URL, for
 example `ExtractionConfig(provider="ollama", model="qwen3.5:4b",
