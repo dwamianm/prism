@@ -1,0 +1,60 @@
+{
+  "records": [
+    {
+      "count": 1000,
+      "mode": "intact",
+      "attempt": 0,
+      "seconds": 0.005725291004637256
+    },
+    {
+      "count": 1000,
+      "mode": "intact",
+      "attempt": 1,
+      "seconds": 0.0037352920044213533
+    },
+    {
+      "count": 1000,
+      "mode": "intact",
+      "attempt": 2,
+      "seconds": 0.0040823749877745286
+    },
+    {
+      "count": 1000,
+      "mode": "missing_snapshot",
+      "seconds": 0.17025587499665562
+    },
+    {
+      "count": 10000,
+      "mode": "intact",
+      "attempt": 0,
+      "seconds": 0.011274624994257465
+    },
+    {
+      "count": 10000,
+      "mode": "intact",
+      "attempt": 1,
+      "seconds": 0.009662042008130811
+    },
+    {
+      "count": 10000,
+      "mode": "intact",
+      "attempt": 2,
+      "seconds": 0.009624292011721991
+    },
+    {
+      "count": 10000,
+      "mode": "missing_snapshot",
+      "seconds": 7.650358166996739
+    }
+  ],
+  "dimension": 384,
+  "seed": 42,
+  "python": "3.11.6",
+  "dependencies": {
+    "duckdb": "1.4.4",
+    "usearch": "2.23.0",
+    "numpy": "2.4.2"
+  },
+  "implementation_sha256": "ccd45ac45388dbcae6a38a338478653e4fa4f938f979b7f3e96a03eaee4acab5",
+  "limits": "Warm vector-component construction with an open database; no isolation from other workloads guaranteed. Not total engine startup or an SLO."
+}

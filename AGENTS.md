@@ -39,7 +39,7 @@ Despite the name "scheduled," there is **no built-in cron or daemon scheduler**.
 
 ## RFCs
 
-Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0015). See `docs/INDEX.md` for the full listing. Key RFCs include:
+Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0016). See `docs/INDEX.md` for the full listing. Key RFCs include:
 
 - **RFC-0000** — Suite overview
 - **RFC-0001** — Core data model
@@ -48,6 +48,7 @@ Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-001
 - **RFC-0005** — Hybrid retrieval pipeline
 - **RFC-0014** — Portability, sync, and federation
 - **RFC-0015** — Self-organizing memory (organizer execution model)
+- **RFC-0016** — Durable derivation commits (fresh fault-injection design; extraction journaling and vector recovery are implemented, atomic graph replay and durable extraction scheduling remain pending)
 
 Always consult the relevant RFC before implementing or modifying a subsystem.
 

@@ -1,0 +1,13 @@
+{
+  "passed": false,
+  "source_commit": "c828607",
+  "model": "ollama/qwen3.5:4b",
+  "prototype_retry_delays": [
+    0
+  ],
+  "provider_calls": 2,
+  "index_attempts": 1,
+  "saved_extraction": true,
+  "failure": "A provider/schema error consumed the only retry; the subsequent injected indexing failure could not retry.",
+  "limits": "Reconstructed from the prototype log. This was not a completed recovery workflow. The final harness retains the normal three-retry count and checks for no further inference after the index fault."
+}

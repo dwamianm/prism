@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "pipeline_sha256": "aa70d9370629779af45787a229b291d77c8e678a8417f0b6a0a242ac5b8e6eda",
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "provider_calls": 1,
+  "provider_calls_at_index_fault": 1,
+  "provider_errors": [],
+  "index_attempts": 8,
+  "facts": 3,
+  "elapsed_seconds": 17.1234749169962,
+  "checks": [
+    "real local structured extraction",
+    "journal before injected index failure",
+    "retry without repeated provider invocation",
+    "identical extraction after restart",
+    "scoped inspection"
+  ],
+  "limits": "One synthetic integration workflow. Counts provider.extract invocations, not SDK HTTP retries. Not accuracy or full graph replay."
+}

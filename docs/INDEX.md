@@ -37,6 +37,7 @@ This index covers the complete Revised Relational Memory Substrate (RMS) RFC sui
 | RFC-0002 | Event Store and Append-Only Log | Draft | [RFC-0002-Event-Store.md](RFC-0002-Event-Store.md) |
 | RFC-0003 | Epistemic State Model | Draft | [RFC-0003-Epistemic-State-Model.md](RFC-0003-Epistemic-State-Model.md) |
 | RFC-0004 | Namespace and Scope Isolation | Draft | [RFC-0004-Namespace-and-Scope-Isolation.md](RFC-0004-Namespace-and-Scope-Isolation.md) |
+| RFC-0016 | Durable Derivation Commits | Draft; prerequisites implemented | [RFC-0016-Durable-Derivation-Commits.md](RFC-0016-Durable-Derivation-Commits.md) |
 
 ### Tier 2 — Retrieval
 

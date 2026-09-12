@@ -181,3 +181,9 @@ are regression diagnostics and do not establish semantic answer accuracy.
 [Local reader diagnostics](benchmarks/results/reader/2026-09-12/README.md)
 preserve a failed header clarification and a controlled lifecycle-key ablation.
 They explain a source-wording fix; they are not judged accuracy measurements.
+
+[Recovery and developer workflow checks](benchmarks/results/recovery/2026-09-12/README.md)
+cover abrupt exits, saved extraction reuse, installed-package behavior, and vector
+startup cost. They preserve an incomplete local-model trial and distinguish
+component timings from total startup latency. These reliability checks do not
+establish semantic answer accuracy or competitive leadership.
