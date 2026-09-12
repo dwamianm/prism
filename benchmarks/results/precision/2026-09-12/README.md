@@ -52,3 +52,28 @@ acceptance on independent application queries and validate support recall as
 well as irrelevant-memory exclusion. This sweep does not use or tune against
 the separate held-out LongMemEval split. Run the documented adapter with each
 `--min-score` value to reproduce; omit the flag for the unset profile.
+
+
+## Optional learned relevance — matched core dependencies
+
+The [neural reports](neural/) compare the same source revision, embedding model,
+core storage/embedding dependency versions and 0.5 floor. Reranking uses the
+existing 0.7 neural / 0.3 prior blend; Qwen uses its model-provided web-search
+prompt. All candidates fit within the reranker's default 100-candidate window.
+
+| Model | Single passes | Precision | Recall | Session passes | Session precision | Session recall |
+|---|---:|---:|---:|---:|---:|---:|
+| No reranker | 42/77 | 0.5724 | 0.8439 | 4/12 | 0.5352 | 0.7576 |
+| MS MARCO MiniLM L6 | 46/77 | 0.4514 | 0.5155 | 1/12 | undefined (empty) | 0.0000 |
+| Qwen3 Reranker 0.6B | 52/77 | 0.6565 | 0.7619 | 5/12 | 0.8125 | 0.5152 |
+
+These results do not justify enabling a reranker by default. Qwen improves
+precision here while losing support, especially in conversational follow-ups;
+MiniLM's higher pass count hides a large recall loss. The unchanged control's
+session pass count varied from five to four across fresh runs; new event times,
+UUID tie breaks and model/runtime effects are not fixed-log replay. Preserve
+that variation instead of treating individual assertion gains as definitive.
+An earlier neural smoke run used different dependency versions; it is excluded
+from this table. Sources: the official
+[Sentence Transformers model documentation](https://www.sbert.net/docs/cross_encoder/pretrained_models.html)
+and [Qwen model card](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B).

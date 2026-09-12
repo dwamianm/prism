@@ -1,0 +1,42 @@
+{
+  "source_commit": "7fe66ac",
+  "upstream_commit": "85b48d5fd1b38babc7fe922f3beb0308cf3aa6cb",
+  "python": "3.11.6",
+  "embedding": "BAAI/bge-small-en-v1.5",
+  "dependencies": {
+    "duckdb": "1.4.4",
+    "fastembed": "0.7.4",
+    "numpy": "2.4.2",
+    "onnxruntime": "1.24.2",
+    "tantivy": "0.25.1",
+    "tiktoken": "0.12.0",
+    "usearch": "2.23.0"
+  },
+  "upstream_tracked_changes": [
+    "providers.config.json"
+  ],
+  "fixture_sha256": {
+    "tsconfig.json": "a6b6f670652e5614f91b11977b136710c5a9a3d516821fac7f0a310d197c5fcf",
+    "fixtures/beliefs.seed.json": "35659b3b9a581b644fc6746e1b4e902c3e7b56c0973b546bf7b0816a69e3de98",
+    "fixtures/beliefs.seed.embedded.json": "b1b7a9b39ba12790883af06a0c369757ba2758e23b13376ad3d71eef86f6d76e",
+    "fixtures/session-retrieval.cases.json": "f24a359cdb2bf50237e1ab463af938cd54a81917f64c8d97304de318aed4cc1c",
+    "fixtures/retrieval.cases.json": "09e99f0852280538abe34b03570f65583fdb10df3c554b7150f0f665d5db709c"
+  },
+  "min_score": 0.5,
+  "reranker_prior_weight": 0.3,
+  "neural_dependencies": {
+    "sentence-transformers": "5.7.0",
+    "torch": "2.14.0",
+    "transformers": "5.17.0"
+  },
+  "model_revision": {
+    "cross-encoder/ms-marco-MiniLM-L-6-v2": "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+    "Qwen/Qwen3-Reranker-0.6B": "e61197ed45024b0ed8a2d74b80b4d909f1255473"
+  },
+  "caveats": [
+    "Fresh seeds create new event timestamps and UUIDs; these are not identical-log replays.",
+    "Scoring defaults unchanged; Qwen uses its bundled web-search query prompt.",
+    "No model or threshold is recommended as a universal default.",
+    "The earlier unmatched-dependency exploratory run is excluded from this comparison."
+  ]
+}
