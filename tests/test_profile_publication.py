@@ -342,6 +342,8 @@ async def test_independent_reader_sees_no_partial_replacement(
 @pytest.mark.parametrize("checkpoint", ["prepared", "vector", "staged", "inserted", "committed"])
 async def test_abrupt_exit_keeps_a_complete_profile(config, user, checkpoint):
     import subprocess
+    import inspect
+    from tests.test_durable_ingestion import MockEmbeddingProvider
     import sys
 
     if config.database_url:
@@ -357,7 +359,6 @@ async def test_abrupt_exit_keeps_a_complete_profile(config, user, checkpoint):
 import asyncio, os, sys
 from prme import MemoryEngine, PRMEConfig
 from prme.types import Scope
-from tests.test_durable_ingestion import MockEmbeddingProvider
 import prme.storage.engine
 prme.storage.engine.create_embedding_provider = lambda _: MockEmbeddingProvider()
 async def main():
@@ -395,6 +396,7 @@ async def main():
     raise AssertionError("checkpoint not reached")
 asyncio.run(main())
 """
+    script = "import hashlib\n" + inspect.getsource(MockEmbeddingProvider) + "\n" + script
     result = await asyncio.to_thread(
         subprocess.run,
         [

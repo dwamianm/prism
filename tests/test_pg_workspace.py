@@ -174,13 +174,14 @@ async def test_cancelled_workspace_startup_closes_pool_before_unwinding(pg_works
 async def test_process_exit_preserves_registry_identity_and_pending_source(pg_workspace, tmp_path):
     import json
     import subprocess
+    import inspect
+    from tests.test_durable_ingestion import MockEmbeddingProvider
     import sys
     name, _, open_workspace = pg_workspace
     output = tmp_path / 'committed.json'
     script = '''
 import asyncio, json, os, sys
 from prme import MemoryWorkspace, PRMEConfig
-from tests.test_durable_ingestion import MockEmbeddingProvider
 async def main():
     async with MemoryWorkspace.open_postgres(PRMEConfig(database_url=os.environ['PRME_TEST_DATABASE_URL']),
             name=sys.argv[1], embedding_provider=MockEmbeddingProvider(), max_connections=1) as ws:
@@ -191,6 +192,7 @@ async def main():
             os._exit(37)
 asyncio.run(main())
 '''
+    script = "import hashlib\n" + inspect.getsource(MockEmbeddingProvider) + "\n" + script
     result = subprocess.run([sys.executable, '-c', script, name, str(output)], capture_output=True, timeout=30)
     assert result.returncode == 37, result.stderr.decode()[-1000:]
     record = json.loads(output.read_text())
