@@ -42,7 +42,10 @@ one scope; omission visits every scope separately. It excludes generated profile
 from source evidence and retires obsolete profiles during an explicit rebuild.
 Version 2 profiles preserve complete source excerpts and provenance under an
 exact token limit, keep distinct episodes and mark generated associations as
-inferred. Name matching remains heuristic and publication nontransactional.
+inferred. Name matching remains heuristic. Each replacement uses atomic graph
+publication after index preparation; errors propagate and the prior profile
+remains active until commit. Interrupted local staging is conservatively retained
+for explicit index rebuild, without an automatic profile retry queue.
 This convenience API is separate from the organizer's `consolidate` job.
 
 ## RFCs

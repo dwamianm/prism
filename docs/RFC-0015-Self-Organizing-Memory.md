@@ -289,8 +289,7 @@ names are reconsidered even if source counts fall below automatic discovery's
 threshold. Profiles without two eligible same-scope sources are archived and
 evicted; underlying source nodes and events remain intact. This handles obsolete
 legacy derived profiles in the scopes actually processed, without moving source
-memories between namespaces. It does not repair prior duplicate evidence writes
-or implement transactional profile publication.
+memories between namespaces. It does not repair prior duplicate evidence writes.
 
 Profile format version 2 uses complete literal entity-name boundaries, preserving
 possessives without matching `Ann` inside `Joanna`. Distinct source identities
@@ -310,7 +309,34 @@ remain active. Metadata records included/available source counts, encoding and
 tokens. If no complete source fits, no new profile is published. Names and token
 limits are validated before storage access. Existing profiles take this format
 on explicit rebuild; prior artifacts are not silently rewritten. Name matching
-is still a heuristic association, and publication remains nontransactional.
+is still a heuristic association.
+
+Each replacement now prepares an embedding before publishing graph state. Local
+DuckDB stages the exact numerical vector and commits the lexical document first;
+PostgreSQL writes pgvector and generated text search in its graph transaction.
+`ProfilePublication` is a separate primitive from assertion supersedence. Only
+active inferred entity profiles can be published; only same-owner, same-scope,
+same-entity profiles can be retired. It checks exact source/prior-node snapshots,
+the complete active prior-profile set and a database publication generation.
+New profile creation, predecessor archival, generation advancement and an
+immutable `PROFILE_PUBLISHED` operation commit together. The operation retains
+the complete plan (including numerical embedding) as a JSON string plus checksum.
+Replay returns the committed identity without reactivating subsequently archived
+profiles. Local index eviction of predecessors happens after commit.
+
+Failures now propagate instead of incrementing a success count. Source changes
+and concurrent rebuilds raise public `StaleProfileError`; a fresh explicit call
+rebuilds the plan. Cancellation or lost acknowledgement never compensates by
+deleting a possibly committed view. A call spanning several entities/scopes
+still consists of separate publications, and retiring unsupported old profiles
+uses the existing archive path.
+
+This is an atomic replacement boundary, not a durable organizer job queue.
+Uncommitted profile plans are not journaled or automatically resumed. Failed
+local staging remains protected from ordinary orphan compaction and can occupy
+space until explicit index rebuild. Fenced plan retirement and automatic retry
+remain follow-up work; an interrupted call must not be described as completed.
+
 
 ### 5.4 OrganizeResult
 

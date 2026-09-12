@@ -11,6 +11,7 @@ import time
 
 import tantivy
 from prme.models.derivation import DerivationPlan
+from prme.models.profile import ProfilePublication
 from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
 
@@ -252,6 +253,22 @@ class LexicalIndex:
                     await run_to_completion(guarded)
             else:
                 await run_to_completion(self._do_stage, documents)
+
+    async def stage_profile(self, plan: ProfilePublication) -> None:
+        """Durably stage one prepared profile before graph publication.
+
+        As with unmanaged derivation staging, an interrupted preparation is
+        retained until an explicit rebuild; it is not an active graph memory.
+        """
+        plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        node = plan.node
+        documents = ({
+            "node_id": [str(node.id)], "content": [node.content],
+            "user_id": [node.user_id], "node_type": [node.node_type.value],
+            "scope": [node.scope.value],
+        },)
+        async with self._write_lock:
+            await run_to_completion(self._do_stage, documents)
 
     def _do_stage(self, documents: tuple[dict, ...]) -> None:
         # Preserve unrelated normal writes before starting this isolated batch.

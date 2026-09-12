@@ -1084,3 +1084,30 @@ than a benchmark-quality result. The frozen full regression run at `88cc5e2` com
 PostgreSQL. It covers the profile source-fidelity change and preceding evaluation
 work; the later sync budget forwarding is covered by the 45 installed checks
 and real client workflow above.
+
+## Atomic entity-profile replacement
+
+Profile replacement now prepares indexes before graph publication. Both backends
+atomically insert the replacement, archive its predecessors, advance a profile
+publication generation and retain a checksummed publication operation. Sources,
+previous profiles, owner and scope are revalidated at commit. Preparation errors
+propagate, preserving the old profile; lost acknowledgements do not trigger
+cleanup that could delete an already committed replacement. `StaleProfileError`
+is exported for explicit retries using fresh source snapshots.
+
+Four backend regressions reproduced the previous early-retirement and swallowed
+embedding failures. Fault coverage now includes provider/index errors, source
+changes, failure after insertion and after predecessor archival, independent
+readers, concurrent connections, cancellation, repeated commit after archival,
+and abrupt local process exit after staging, during insertion and after commit.
+A concurrent DuckDB commit also reproduced rollback masking an already-ended
+transaction; the original conflict is preserved and exposed as a stale rebuild.
+The final focused source run passed **138 checks, 5 skipped in 66.86 seconds**,
+native exit zero, with live PostgreSQL. The skips are backend-specific local
+index/WAL cases. Focused mypy and Ruff checks pass for the new model/storage code.
+
+This is per-profile atomic publication, not a durable organizer queue. Failed
+local staging is conservatively retained, uncommitted plans are not automatically
+resumed, and a multi-entity call can publish earlier entities before a later one
+fails. Explicit index rebuild remains the cleanup path. Installed-wheel and full
+regression validation of this change are pending at this checkpoint.

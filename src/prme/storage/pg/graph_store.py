@@ -19,6 +19,7 @@ from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
+from prme.models.profile import ProfilePublication
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -71,6 +72,15 @@ class PgGraphStore:
         """Publish graph state, vectors and a receipt in one transaction."""
         from prme.storage.derivation import commit_postgres
         return await commit_postgres(self, plan, claim=claim)
+
+    async def profile_generation(self, key: str) -> int:
+        from prme.storage.profile_publication import generation_postgres
+        return await generation_postgres(self, key)
+
+    async def publish_profile(self, plan: ProfilePublication) -> str:
+        """Atomically replace a generated profile after index preparation."""
+        from prme.storage.profile_publication import commit_postgres
+        return await commit_postgres(self, plan)
 
     async def create_node(self, node: MemoryNode) -> str:
         """Create a new node in the graph store."""

@@ -41,6 +41,8 @@ from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingRe
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
+from prme.models.profile import ProfilePublication, profile_key
+from prme.models.derivation import PreparedEmbedding
 from prme.storage.relevance import RelevanceRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -2247,7 +2249,15 @@ class MemoryEngine:
                 metadata, using the configured packing tokenizer.
 
         Returns:
-            Number of entity profiles created.
+            Number of entity profiles published. Each replacement is atomic;
+            the complete multi-entity call is not a single transaction.
+
+        Raises:
+            StaleProfileError: A source or concurrent publication changed during
+                preparation. Call again to build from fresh source snapshots.
+            Exception: Embedding, staging or storage failure. A failed
+                preparation preserves the prior profile. A lost commit
+                acknowledgement can still mean the replacement was committed.
         """
         import re
         from prme.organizer.profiles import build_profile, mentions_entity
@@ -2288,7 +2298,7 @@ class MemoryEngine:
         # Index existing entity-profile SUMMARY nodes by entity name so a
         # re-run upserts the profile (archive + evict the stale one) instead
         # of appending a duplicate SUMMARY on every call.
-        existing_profiles: dict[str, list[str]] = {}
+        existing_profiles: dict[str, list[MemoryNode]] = {}
         existing_summaries = await self._graph_store.query_nodes(
             user_id=user_id,
             node_type=NodeType.SUMMARY,
@@ -2301,10 +2311,11 @@ class MemoryEngine:
             if meta.get("entity_profile"):
                 name = meta.get("entity_name")
                 if name:
-                    existing_profiles.setdefault(name, []).append(str(node.id))
+                    existing_profiles.setdefault(name, []).append(node)
 
         async def retire_profile(name: str) -> None:
-            for stale_id in existing_profiles.get(name, []):
+            for stale in existing_profiles.get(name, []):
+                stale_id = str(stale.id)
                 try:
                     await self.archive(stale_id, user_id=user_id)
                 except ValueError:
@@ -2342,6 +2353,7 @@ class MemoryEngine:
 
         profiles_created = 0
         for entity_name in entity_names:
+            generation = await self._graph_store.profile_generation(profile_key(user_id, scope, entity_name))
             # Find all nodes mentioning this entity
             related = []
             for node in all_nodes:
@@ -2365,10 +2377,6 @@ class MemoryEngine:
                 *(node.confidence for node in selected_sources),
             )
 
-            # Upsert: archive and evict any prior profile for this entity so
-            # the SUMMARY is replaced, not duplicated, on each consolidation.
-            await retire_profile(entity_name)
-
             # Store as SUMMARY node
             profile_node = MemoryNode(
                 user_id=user_id,
@@ -2391,30 +2399,33 @@ class MemoryEngine:
                 source_type=SourceType.SYSTEM_INFERRED,
                 decay_profile=DecayProfile.FAST,
             )
-            node_id = await self._write_queue.submit(
-                lambda n=profile_node: self._graph_store.create_node(n),
-                label=f"consolidate.profile:{entity_name}",
+            provider = self._vector_index._provider
+            vectors = await provider.embed([profile_text])
+            if len(vectors) != 1:
+                raise ValueError("Profile embedding provider must return exactly one vector")
+            plan = ProfilePublication(
+                node=profile_node, sources=tuple(selected_sources),
+                previous=tuple(existing_profiles.get(entity_name, [])), generation=generation,
+                embedding=PreparedEmbedding(
+                    node_id=profile_node.id, content=profile_text,
+                    model=provider.model_name, version=provider.model_version,
+                    dimension=provider.dimension, values=tuple(vectors[0]),
+                ),
             )
-            # Index for retrieval
-            try:
-                await self._write_queue.submit(
-                    lambda nid=node_id, c=profile_text, uid=user_id: (
-                        self._vector_index.index(nid, c, uid)
-                    ),
-                    label=f"consolidate.vector:{entity_name}",
-                )
-                await self._write_queue.submit(
-                    lambda nid=node_id, c=profile_text, uid=user_id: (
-                        self._lexical_index.index(nid, c, uid, "summary", scope.value)
-                    ),
-                    label=f"consolidate.lexical:{entity_name}",
-                )
-            except Exception:
-                logger.debug(
-                    "Profile indexing failed for %s; non-fatal",
-                    entity_name,
-                    exc_info=True,
-                )
+            if self._pool is None:
+                # Stage before graph visibility. Durable vector staging protects
+                # interrupted preparation from ordinary orphan compaction.
+                await self._vector_index.stage(plan.embedding, user_id=user_id)
+                await self._lexical_index.stage_profile(plan)
+            # PostgreSQL writes pgvector and generated text search in this same
+            # graph transaction. Cancellation never triggers destructive cleanup
+            # of a commit whose acknowledgement might have been lost.
+            await self._write_queue.submit(
+                lambda p=plan: self._graph_store.publish_profile(p),
+                label=f"consolidate.publish:{entity_name}",
+            )
+            for stale in existing_profiles.get(entity_name, []):
+                await self._evict_from_indexes(str(stale.id))
             profiles_created += 1
 
         return profiles_created

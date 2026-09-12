@@ -191,6 +191,9 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_edges_user ON edges (user_id)"
     )
 
+    from prme.storage.profile_publication import HEADS_DDL
+    conn.execute(HEADS_DDL)
+
     # --- Operations table ---
     # Stores RETRIEVAL_REQUEST records per RFC-0005 S9 and forward-compatible
     # with Phase 5 TRST-08. Separate from event log per research recommendation

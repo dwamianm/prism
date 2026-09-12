@@ -247,6 +247,8 @@ async def initialize_pg_database(
             await conn.execute(idx)
 
         # Operations
+        from prme.storage.profile_publication import HEADS_DDL
+        await conn.execute(HEADS_DDL)
         await conn.execute(_OPERATIONS_TABLE)
         for idx in _OPERATIONS_INDEXES:
             await conn.execute(idx)
