@@ -2,11 +2,14 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The latest [identity and maintenance record](IDENTITY-AND-MAINTENANCE.md)
-at `05e6654` passed **2,745 tests with 81 skips** on Python 3.11 and live
-PostgreSQL (354.97 seconds), including research and examples. Installed Python
-3.13 checks and real-BGE workflows also passed. The historical records below
-retain intermediate commits, failures and their individual validation limits.
+product. The latest [atomic organizer merge record](ATOMIC-ORGANIZER-MERGES.md)
+includes **2,793 passed, 81 skipped** at `31946c2` on Python 3.11 with live
+PostgreSQL, research and examples (367.55 seconds). The later `4e43d0b` JSON
+fidelity fix passed 65 source contract tests and 183 installed Python 3.13
+checks; its real-BGE public workflow also passed. These are separate overlapping
+runs, not a combined full suite of the final commit. The
+[earlier identity and maintenance record](IDENTITY-AND-MAINTENANCE.md) and records
+below retain intermediate commits, failures and their individual limits.
 
 ## Availability and identity fault checks
 
