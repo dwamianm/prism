@@ -24,6 +24,7 @@ import asyncio
 import atexit
 import logging
 import warnings
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -1533,6 +1534,45 @@ class MemoryEngine:
             Number of matching nodes.
         """
         return await self._graph_store.count_nodes(**kwargs)
+
+    async def scan_nodes(
+        self, *, user_id: str, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+        after_id: str | None = None, limit: int = 100,
+    ) -> list[MemoryNode]:
+        """Read a scoped page in ID order; pass the last ID as the next cursor.
+
+        This enumerates stored nodes without semantic ranking. Defaults to
+        active states. Independent pages do not form a transaction snapshot.
+        """
+        return await self._graph_store.scan_nodes(
+            user_id=user_id, scope=scope, node_type=node_type,
+            lifecycle_states=lifecycle_states, after_id=after_id, limit=limit,
+        )
+
+    async def iter_nodes(
+        self, *, user_id: str, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None, batch_size: int = 100,
+    ) -> AsyncIterator[MemoryNode]:
+        """Stream every matching node in bounded pages, without a top-k cap.
+
+        Complete for an unchanged store. Concurrent writes can change which
+        nodes match between pages; use an unchanged pack for audited counts.
+        Does not materialize pending ingestion or call a model.
+        """
+        cursor = None
+        while True:
+            page = await self.scan_nodes(
+                user_id=user_id, scope=scope, node_type=node_type,
+                lifecycle_states=lifecycle_states, after_id=cursor, limit=batch_size,
+            )
+            for node in page:
+                yield node
+            if len(page) < batch_size:
+                break
+            cursor = str(page[-1].id)
 
     # --- Event Operations (delegated to EventStore) ---
 

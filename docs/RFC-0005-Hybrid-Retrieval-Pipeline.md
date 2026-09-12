@@ -352,4 +352,20 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 
 ---
 
+## Stored-record enumeration
+
+Top-k retrieval is not an enumeration or counting API. PRME exposes
+`iter_nodes(user_id=..., scope=..., node_type=..., batch_size=...)` in async and
+sync clients for complete traversal of matching stored records. `scan_nodes`
+provides explicit pages with an `after_id` cursor. Both backends order by immutable
+UUID and apply tenant, scope, type, and lifecycle filters before each page limit.
+The default lifecycle set is active; an empty lifecycle filter returns no nodes.
+
+Enumeration is complete for an unchanged store and uses bounded application
+memory. It is not a cross-page transaction snapshot or a count of distinct
+real-world events. Concurrent inserts, deletions, or lifecycle changes can alter
+the matching set. Audited exports should use an unchanged pack and complete
+pending ingestion first. Semantic aggregation still requires deciding which
+stored assertions describe the same item and what evidence is missing.
+
 *End of RFC-0005*

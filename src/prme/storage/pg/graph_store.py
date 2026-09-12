@@ -314,6 +314,34 @@ class PgGraphStore:
 
     # --- Node Update ---
 
+    async def scan_nodes(
+        self, *, user_id: str, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+        after_id: str | None = None, limit: int = 100,
+    ) -> list[MemoryNode]:
+        """Read one tenant-scoped page in immutable UUID order."""
+        if not user_id or limit < 1:
+            raise ValueError("scan_nodes requires user_id and a positive limit")
+        states = list(ACTIVE_LIFECYCLE_STATES) if lifecycle_states is None else lifecycle_states
+        if not states:
+            return []
+        params: list = [user_id, [state.value for state in states]]
+        conditions = ["user_id = $1", "lifecycle_state = ANY($2::text[])"]
+        for field, value in (("scope", scope), ("node_type", node_type)):
+            if value is not None:
+                params.append(value.value)
+                conditions.append(f"{field} = ${len(params)}")
+        if after_id is not None:
+            params.append(str(UUID(after_id)))
+            conditions.append(f"id > ${len(params)}::uuid")
+        params.append(limit)
+        query = (f"SELECT {_NODE_COLUMNS} FROM nodes WHERE " + " AND ".join(conditions)
+                 + f" ORDER BY id ASC LIMIT ${len(params)}")
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+        return [self._record_to_node(row) for row in rows]
+
     # Fields allowed for update_node. Maps Python field name -> SQL column name.
     _UPDATE_ALLOWED_FIELDS: set[str] = {
         "event_time",

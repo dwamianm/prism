@@ -73,6 +73,29 @@ with MemoryClient("./my_memories") as client:
 
 `MemoryClient` is a synchronous wrapper — no `async`/`await` needed. It works everywhere: scripts, notebooks, FastAPI apps.
 
+For exports and counts, enumerate the stored records instead of counting search
+results. Iteration reads every matching node in bounded pages:
+
+```python
+from prme import MemoryClient
+from prme.types import NodeType, Scope
+
+with MemoryClient("./my_memories") as client:
+    facts = client.iter_nodes(
+        user_id="alice", scope=Scope.PERSONAL,
+        node_type=NodeType.FACT, batch_size=100,
+    )
+    for fact in facts:
+        print(fact.id, fact.content, fact.evidence_refs)
+```
+
+`MemoryEngine.iter_nodes()` supports `async for`. Both clients also expose
+`scan_nodes(..., after_id=last_id, limit=100)` for explicit pagination. Defaults
+include active lifecycle states. This counts stored records, which can contain
+multiple assertions about the same real-world item. Pages are complete for an
+unchanged store; concurrent writes can change matches between pages. Finish
+pending ingestion first when an export needs to include those events.
+
 <details>
 <summary>Async API (advanced)</summary>
 

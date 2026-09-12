@@ -24,11 +24,13 @@ import os
 import threading
 import warnings
 from datetime import datetime
+from collections.abc import Iterator
 from typing import Any
 
 from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
-from prme.types import NodeType, Scope
+from prme.types import LifecycleState, NodeType, Scope
+from prme.models import MemoryNode
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +259,35 @@ class MemoryClient:
     def query_nodes(self, **kwargs: Any) -> list[Any]:
         """Query nodes with filters. Returns list of MemoryNode."""
         return self._run(self._engine.query_nodes(**kwargs))
+
+    def scan_nodes(
+        self, *, user_id: str, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+        after_id: str | None = None, limit: int = 100,
+    ) -> list[MemoryNode]:
+        """Read a scoped page in immutable ID order; no semantic ranking."""
+        return self._run(self._engine.scan_nodes(
+            user_id=user_id, scope=scope, node_type=node_type,
+            lifecycle_states=lifecycle_states, after_id=after_id, limit=limit,
+        ))
+
+    def iter_nodes(
+        self, *, user_id: str, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None, batch_size: int = 100,
+    ) -> Iterator[MemoryNode]:
+        """Stream all matching nodes in bounded pages; not a transaction snapshot."""
+        cursor = None
+        while True:
+            page = self.scan_nodes(
+                user_id=user_id, scope=scope, node_type=node_type,
+                lifecycle_states=lifecycle_states, after_id=cursor, limit=batch_size,
+            )
+            yield from page
+            if len(page) < batch_size:
+                break
+            cursor = str(page[-1].id)
 
     def get_events(
         self,

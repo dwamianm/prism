@@ -296,6 +296,33 @@ class DuckPGQGraphStore:
         """
         await self.supersede_many([(old_node_id, new_node_id, evidence_id)])
 
+    async def scan_nodes(
+        self, *, user_id: str, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+        after_id: str | None = None, limit: int = 100,
+    ) -> list[MemoryNode]:
+        """Read a stable-ID page within the requested tenant and filters."""
+        if not user_id or limit < 1:
+            raise ValueError("scan_nodes requires user_id and a positive limit")
+        states = list(ACTIVE_LIFECYCLE_STATES) if lifecycle_states is None else lifecycle_states
+        if not states:
+            return []
+        conditions = ["user_id = ?", "lifecycle_state IN (" + ",".join("?" for _ in states) + ")"]
+        params: list = [user_id, *[state.value for state in states]]
+        for field, value in (("scope", scope), ("node_type", node_type)):
+            if value is not None:
+                conditions.append(f"{field} = ?")
+                params.append(value.value)
+        if after_id is not None:
+            conditions.append("id > ?::UUID")
+            params.append(str(UUID(after_id)))
+        params.append(limit)
+        sql = "SELECT * FROM nodes WHERE " + " AND ".join(conditions) + " ORDER BY id ASC LIMIT ?"
+        async with self._conn_lock:
+            rows = await asyncio.to_thread(lambda: self._conn.execute(sql, params).fetchall())
+        return [self._row_to_node(row) for row in rows]
+
     async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
         """Commit all replacement states and edges together."""
         if not replacements:
