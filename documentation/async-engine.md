@@ -82,23 +82,47 @@ async def ingest_batch(
 ) -> list[str]
 ```
 
-## ingest_fast()
+## Extraction status and recovery
 
-The LLM `ingest()` path retries extraction failures at 5, 30, and 180 seconds,
-then stops. Those retries are in-process and are cancelled at shutdown; they
-are not yet restart-safe. The original source event remains durable. Use the
-deferred raw path below when you require restart-safe indexing without LLM
-extraction.
+The LLM `ingest()` path atomically saves extraction work alongside its source.
+Retry attempts and scheduling survive restart. In-process retry tasks stop when
+the engine closes; after reopening, explicitly process due work with:
+
+```python
+status = await engine.extraction_status(event_id, user_id="alice")
+# After correcting the cause of a terminal failure, make it eligible again.
+if status is not None and status.status == "failed":
+    await engine.retry_extraction(event_id, user_id="alice")
+result = await engine.process_extractions(user_id="alice", limit=100, budget_ms=5000)
+```
+
+Status distinguishes `pending`, `running`, `failed` and `complete`, and reports
+phase, attempts, lease expiry and a bounded failure code. An abruptly terminated
+worker's live lease must expire before another worker can claim it. Processing
+budgets apply between jobs; provider calls retain their own timeout. Retrieval
+does not run LLM recovery, and there is no background daemon. The same recovery
+methods are available on `MemoryClient`.
+
+Saved extraction is reused after a materialization failure, and a saved complete
+plan preserves graph identities and numerical embeddings. If a referenced memory
+changed (`StaleDerivationPlanError`), call `retry_extraction(..., replan=True)`
+before processing: it creates a new plan revision from the same extraction and
+may compute new embeddings. It does not preempt live or completed work, or repeat
+the model's extraction. Legacy sources without work records are not automatically
+enrolled.
 
 With `wait_for_extraction=True`, failure raises `ExtractionError`; its `event_id`
-identifies the already-persisted source. The configured extraction timeout is
-enforced across the provider call. A successful empty extraction remains distinct
-from a provider error. The synchronous client uses this waiting behavior.
+identifies the persisted source and `reason_code` gives the sanitized failure
+category when available. Import it from `prme`. A successful empty extraction
+remains distinct from a provider error. The synchronous client waits for
+extraction by default.
 
 `ingest(scope=...)` keeps every extracted node in the caller's scope. Model
 scope classifications do not grant write access elsewhere; fact classifications
 are retained as `metadata.suggested_scope`. Entity matching also stays within
 the same user and scope.
+
+## ingest_fast()
 
 The fast path commits the event and its pending work atomically, without embedding or LLM calls. Retrieval or organization materializes a raw NOTE with the original event ID, provenance, and timestamps. Pending work survives restart; the configured queue size bounds each batch rather than dropping events. Use `ingest()` when you need LLM extraction. Latency depends on the database commit.
 

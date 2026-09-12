@@ -477,3 +477,51 @@ pairing; it is not a fenced multi-worker derivation commit. Historical direct
 stores without these records are not retroactively queued, and full organizer
 and manual-operation replay remains unfinished. Index durability adds synchronous
 commit work; this run does not isolate its latency cost.
+
+
+## Plan identity ownership and the remaining staging fence
+
+At `78ecb69`, a regression on each backend showed that a newly queued revision
+could journal the previous revision's node IDs. Both tests failed because the
+expected rejection did not occur. That behavior makes deletion of an older
+revision's staged entries unsafe if another plan has reused them.
+
+`71a7fd7` reserves each new node ID for the saved plan's exact prepared-operation
+identity, atomically with its journal and work binding. Conflicting sources,
+tenants and revisions cannot reserve the same identity. Reusing the old plan UUID
+in a new revision does not bypass this check. Concurrent candidates for the same
+source/revision still converge on the first journaled plan.
+
+The registry is derived from immutable plans, with incremental startup backfill
+in pages of 128 records. Legacy overlapping allocations receive an ambiguous
+owner and remain readable; no journal is rewritten or winner guessed. Invalid
+legacy plans remain unregistered, with raw-source reads still available. A future
+collector must retain ambiguous ownership and refuse reclamation while journal
+registration is incomplete. Index deletion is not enabled by this change.
+
+Validation:
+
+- **122 passed, 17 skipped** in the cross-backend derivation/recovery subset
+  (29.13s), including identity collisions, concurrent distinct-source admission,
+  legacy overlap, corrupt legacy records, transactional rollback and existing
+  abrupt-exit recovery tests.
+- **1,916 passed, 45 skipped** in the full suite from the frozen `71a7fd7` checkout
+  on Python 3.11 and live PostgreSQL (230.34s).
+- **68 passed, 9 skipped** using the installed Python 3.13 wheel (17.69s).
+  Parent tests import the installed package; existing abrupt-exit subprocess
+  tests explicitly load the matching checkout's source.
+
+[A follow-up isolation probe](obsolete-staging-71a7fd7.json) exposed the next
+necessary change: a worker resuming an obsolete revision still wrote four vector
+staging records and lexical entries before its graph commit was rejected.
+No graph nodes were published. The strict expected-failure test in
+`tests/test_obsolete_derivation_staging.py` records that precise gap; unrelated
+exception types are not accepted as the expected failure. Its separate run has
+**1 expected failure and 1 PostgreSQL skip**. It was added after the full-suite
+run above and is not evidence that stage isolation passes.
+
+Collection therefore remains pending: external index staging must respect the
+work revision/lease fence, including workers paused across a revision change,
+and cleanup must retain live, committed, ambiguous or unregistered identities.
+These are integrity and recoverability checks, not comparative memory-accuracy
+or performance evidence.
