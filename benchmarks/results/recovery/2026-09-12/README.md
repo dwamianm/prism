@@ -684,3 +684,30 @@ source, identity, empty-hash and maintenance checks** with live PostgreSQL in
 14.68 seconds. It emitted one upstream Starlette/AnyIO deprecation warning.
 The full-suite result above predates the one-line empty-source fix; these
 installed and focused checks cover it. No historical event rows were rewritten.
+
+## Historical ingestion clock
+
+`f810c31` adds timezone-aware source clocks to LLM ingestion through the engine,
+sync client, HTTP and MCP, plus per-message clocks in Python batches. Relative
+dates use that source clock; ingestion timestamps retain admission time. Failed
+extraction and raw indexing recover the original source clock after restart.
+Older-effective imported updates do not retire later facts. Existing journaled
+plans keep their saved dates on retry. Batch admission remains sequential and
+can partially complete; this does not infer missing timezones or resolve every
+calendar ambiguity.
+
+The initial regression tests failed 14 cases against the previous implementation.
+After the change, **70 historical, replacement, HTTP and MCP integration checks**
+passed on Python 3.11 with live PostgreSQL in 29.55 seconds. The installed
+Python 3.13 wheel passed **89 checks with seven backend-specific skips**, including
+derivation failure/restart tests, in 50.31 seconds. The full frozen suite is
+recorded separately when complete; these are focused results.
+
+The [real-model installed-wheel workflow](historical-ingestion-f810c31.json)
+uses Ollama Qwen3.5:4b and BGE-small on one authored source. “Yesterday” relative
+to 2024-03-10 01:30 -06:00 became 2024-03-09 07:30 UTC. After an injected failure
+following vector staging, the graph had no partial derivation. Reopening and
+explicit processing published the saved three-node plan with identical dates
+and both model providers disabled. The supervised process exited zero; workflow
+time was 18.98 seconds. This demonstrates one temporal/recovery workflow, not
+extraction accuracy or a competitive advantage.

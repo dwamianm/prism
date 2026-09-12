@@ -9,8 +9,11 @@ from prme import MemoryClient, MemoryEngine
 from prme.ingestion.errors import ExtractionError
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.types import NodeType, Scope
-from tests.test_durable_ingestion import config, user  # noqa: F401
+from tests import test_durable_ingestion
 from tests.test_http_write_fidelity import app_for, client_for
+
+config = test_durable_ingestion.config
+user = test_durable_ingestion.user
 
 SOURCE_TIME = datetime(2024, 3, 10, 1, 30, tzinfo=timezone(timedelta(hours=-6)))
 SOURCE = "Alice started using Rust yesterday."

@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "source_time": "2024-03-10T01:30:00-06:00",
+  "expected_fact_time": "2024-03-09T01:30:00-06:00",
+  "fact_times": [
+    "2024-03-09T07:30:00+00:00"
+  ],
+  "prepared_nodes": 3,
+  "elapsed_seconds": 18.981,
+  "pipeline_sha256": "87f6bd04aad675839e72c77338a47110cf1438863729067b7205a97e5524f0f5",
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/ingestion/pipeline.py",
+  "checks": [
+    "real local extraction preserves relative reference",
+    "historical source anchors new plan",
+    "no partial graph after staged failure",
+    "restart preserves exact saved dates without providers",
+    "source admission timestamp and owner boundary survive recovery"
+  ],
+  "limits": "One authored local-model workflow; no extraction accuracy, calendar ambiguity or competitive claim.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0,
+  "source_commit": "f810c31",
+  "environment": {
+    "python": "3.13.3",
+    "dependencies": {
+      "prme": "0.11.0",
+      "duckdb": "1.5.5",
+      "usearch": "2.26.2",
+      "tantivy": "0.26.0",
+      "fastembed": "0.8.0",
+      "onnxruntime": "1.30.0",
+      "instructor": "1.17.0",
+      "pydantic": "2.13.5",
+      "dateparser": "1.4.3"
+    }
+  },
+  "model_digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd"
+}

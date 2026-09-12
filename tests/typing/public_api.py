@@ -1,5 +1,6 @@
 """Static consumer contract; checked by mypy rather than executed."""
 
+from datetime import datetime, timezone
 from typing import assert_type
 
 from prme import ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse
@@ -8,6 +9,9 @@ from prme.organizer.models import OrganizeResult
 
 
 def consume(client: MemoryClient) -> None:
+    assert_type(client.ingest("Alice used Rust yesterday", user_id="alice",
+                              event_time=datetime(2024, 3, 10, tzinfo=timezone.utc),
+                              metadata={"source": "import"}), str)
     assert_type(client.retrieve("preferences", user_id="alice"), RetrievalResponse)
     assert_type(client.get_node("node-id"), MemoryNode | None)
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])

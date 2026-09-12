@@ -169,6 +169,7 @@ For imported conversations, `ingest()` accepts a timezone-aware `event_time`:
 
 ```python
 from datetime import datetime
+from prme import MemoryClient
 
 with MemoryClient("./memories") as memory:
     event_id = memory.ingest(
