@@ -147,6 +147,7 @@ class CheckpointResult:
     lifecycle_counts: dict[str, int] = field(default_factory=dict)
     # Actual counts of each lifecycle state
     eval_metrics: EvalMetrics | None = None
+    rendered_context: str = ""  # Actual token-packed context for reader diagnostics.
     # IR evaluation metrics (populated when ground_truth is present)
 
 
@@ -614,4 +615,5 @@ class SimulationRunner:
             lifecycle_failures=lifecycle_failures,
             lifecycle_counts=lifecycle_counts,
             eval_metrics=eval_metrics,
+            rendered_context=response.bundle.rendered_context,
         )

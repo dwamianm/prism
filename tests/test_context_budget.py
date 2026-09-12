@@ -85,3 +85,15 @@ def test_formatter_supports_the_consumers_tokenizer():
     text = format_for_llm(sources, "test", include_profile=False, token_budget=60, token_counter=len)
     assert len(text) <= 60
     assert "Tiny complete fact." in text
+
+
+@pytest.mark.parametrize("source", ["The team decided to migrate to GraphQL.",
+                                    "The team tentatively agreed to consider GraphQL; no final decision exists."])
+def test_lifecycle_metadata_does_not_rewrite_the_reported_decision(source):
+    import json
+    result = pack_context([candidate(source, node_type=NodeType.DECISION)], PackingConfig(token_budget=1000))
+    entry = json.loads(next(line for line in result.render().splitlines() if line.startswith("{")))
+    assert entry["memory_lifecycle"] == "tentative"
+    assert "state" not in entry  # Avoid ambiguity with the decision's own state.
+    assert entry["text"] == source
+    assert result.tokens_used == tokens(result.render())

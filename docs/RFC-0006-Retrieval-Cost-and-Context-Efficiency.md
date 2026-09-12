@@ -259,3 +259,16 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 ---
 
 *End of RFC-0006*
+
+
+## Rendering clarification (2026-09-12)
+
+Packed JSON records label graph lifecycle as `memory_lifecycle`, not the ambiguous
+`state`. This describes the memory record's verification/maintenance status, not
+whether the reported event or decision was provisional. `epistemic` and the full
+source wording remain present. A local reader diagnostic turned an unqualified
+reported decision into a "tentative" decision when the generic key was used;
+renaming the key preserved both firm and actually provisional source wording in
+that small diagnostic. This is not a broad answer-accuracy claim. Public
+`MemoryNode.lifecycle_state` and bundle candidate metadata are unchanged. The
+complete rendered output, including metadata keys, remains token-counted.

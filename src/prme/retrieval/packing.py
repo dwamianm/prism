@@ -300,7 +300,7 @@ def _render_entry(candidate: RetrievalCandidate) -> str:
     node = candidate.node
     entry = {
         "id": str(node.id), "type": node.node_type.value, "scope": node.scope.value,
-        "epistemic": node.epistemic_type.value, "state": node.lifecycle_state.value,
+        "epistemic": node.epistemic_type.value, "memory_lifecycle": node.lifecycle_state.value,
         "representation": candidate.representation.value,
         "event_time": node.event_time.isoformat() if node.event_time else None,
         "valid_from": node.valid_from.isoformat(),

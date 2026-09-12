@@ -30,6 +30,9 @@ async def test_checkpoints_only_see_arrived_messages_and_preserve_event_timestam
     config = PRMEConfig(db_path=str(caller_path), organizer={"opportunistic_enabled": False})
     report = await ObservedRunner().run(scenario, config=config, organize_at_checkpoints=False)
     assert report.overall_pass_rate == 1.0
+    assert report.checkpoints[0].rendered_context == ""
+    assert "Present source" in report.checkpoints[1].rendered_context
+    assert "Future source" not in report.checkpoints[1].rendered_context
     assert snapshots[0] == {}
     assert set(snapshots[1]) == {"Present source"}
     assert set(snapshots[2]) == {"Present source", "Future source"}
