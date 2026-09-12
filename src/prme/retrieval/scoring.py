@@ -191,8 +191,8 @@ def _is_current_state_query(query_analysis: QueryAnalysis) -> bool:
 
     Returns True if the query text contains words like "current", "currently",
     "now", "latest", "today", "at the moment", "these days", "presently",
-    OR if the intent is TEMPORAL with no specific past time reference
-    (i.e., time_from and time_to are both None).
+    Historical comparisons and aggregation require earlier evidence too.
+    A TEMPORAL intent without a parsed date does not imply current state.
 
     Args:
         query_analysis: The analyzed query.
@@ -200,22 +200,11 @@ def _is_current_state_query(query_analysis: QueryAnalysis) -> bool:
     Returns:
         True if the query is asking about current state.
     """
-    from prme.types import QueryIntent
-
-    # Check for current-state keywords in query text.
-    if _CURRENT_STATE_QUERY_RE.search(query_analysis.query):
-        return True
-
-    # TEMPORAL intent with no specific past time reference implies
-    # "what is the current state?" rather than "what happened at time X?"
-    if (
-        query_analysis.intent == QueryIntent.TEMPORAL
-        and query_analysis.time_from is None
-        and query_analysis.time_to is None
-    ):
-        return True
-
-    return False
+    if query_analysis.is_aggregation:
+        return False
+    if re.search(r"\b(before|after|previously|formerly|originally|used to)\b", query_analysis.query, re.IGNORECASE):
+        return False
+    return bool(_CURRENT_STATE_QUERY_RE.search(query_analysis.query))
 
 
 # Compiled regex for detecting recent-episodic query language.

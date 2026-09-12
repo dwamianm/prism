@@ -172,15 +172,15 @@ class TestCurrentStateQueryDetection:
         analysis = _make_query_analysis(query)
         assert _is_current_state_query(analysis) is True
 
-    def test_temporal_intent_no_time_reference_is_current(self):
-        """TEMPORAL intent with no time_from/time_to implies current state."""
+    def test_temporal_intent_without_a_date_does_not_imply_current_state(self):
+        """A date-free historical query still needs historical evidence."""
         analysis = _make_query_analysis(
             "When did we last update?",
             intent=QueryIntent.TEMPORAL,
             time_from=None,
             time_to=None,
         )
-        assert _is_current_state_query(analysis) is True
+        assert _is_current_state_query(analysis) is False
 
     def test_temporal_intent_with_time_reference_is_not_current(self):
         """TEMPORAL intent with specific time references is historical, not current."""
@@ -530,3 +530,16 @@ def test_current_query_preserves_configured_relevance_floor():
         [candidate], weights, query_analysis=_make_query_analysis("What is the current database?"),
     )
     assert ranked[0].composite_score <= .4
+
+
+@pytest.mark.parametrize("query", [
+    "When did I submit the proposal?",
+    "What did I use before my current laptop?",
+    "How many devices do I use during a typical day?",
+    "How many hours do I normally work across both jobs?",
+])
+async def test_historical_and_aggregate_questions_do_not_suppress_earlier_evidence(query):
+    from prme.retrieval.query_analysis import analyze_query
+
+    analysis = await analyze_query(query)
+    assert not _is_current_state_query(analysis)
