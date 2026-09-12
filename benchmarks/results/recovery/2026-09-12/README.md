@@ -165,9 +165,70 @@ after archival left completed work untouched. This harness now injects failure
 at the plan staging boundary and exercises public recovery after restart.
 
 Retrieval never invokes LLM recovery. Explicit processing discovers queued jobs;
-there is no daemon. Legacy sources are not backfilled, stale-plan revision and
-abandoned-stage collection remain open, and these workflow checks establish no
-extraction accuracy or comparative leadership claim.
+there is no daemon. At that revision, legacy sources were not backfilled and
+stale-plan revision and abandoned-stage collection remained open. These workflow
+checks establish no extraction accuracy or comparative leadership claim.
+
+## Explicit stale-plan recovery
+
+At `d73f326`, `retry_extraction(..., replan=True)` queues a new immutable plan
+revision from saved grounded extraction. Status includes `plan_revision`; HTTP,
+MCP and CLI expose the same option. Replanning records the revision switch and
+advances the generation atomically. It cannot preempt an active worker or redo
+completed work. Existing v1 checksums remain unchanged, and old plans are still
+readable through their owner's boundary.
+
+Tests cover stale dependency rejection followed by public recovery after restart,
+concurrent revision requests, superseded worker rejection, rollback after a
+revision-journal failure, abrupt exit after the switch, and legacy journal/schema
+compatibility. They exposed a DuckDB 1.4.4 WAL replay failure after adding a
+column; fresh schemas now include the column and legacy migration checkpoints
+before accepting work. The migrated-pack crash test verifies old work survives.
+
+The frozen full suite at `d73f326` passed **1,810 tests with 42 skips** in
+162.66 seconds, using Python 3.11 and live PostgreSQL.
+
+The installed Python 3.13 wheel passed **47 checks with 5 skips**, including live
+PostgreSQL, the new revision transitions, migration recovery and public transports.
+Strict consumer typing and source lint passed.
+
+[`derivation-replanning-d73f326.json`](derivation-replanning-d73f326.json) records
+a real Ollama/BGE-small workflow against that wheel. After one successful
+synthetic ingestion, a second ingestion reused existing memory. A dependency was
+changed immediately before publication, producing `StaleDerivationPlanError`
+with no partial graph. After restart, a public revision request and processing
+committed revision 2 while extraction was replaced with a failing sentinel.
+The original extraction and plan remained identical, the receipt matched the new
+plan, and retrieval returned the database fact. New embeddings were permitted.
+However, after emitting that report the process aborted (exit 134). The macOS
+crash report identifies an ONNX Runtime 1.30.0 telemetry HTTP callback on a native
+worker thread, ending in a recursive mutex error. The retained JSON distinguishes
+passed workflow assertions from this failed end-to-end process result.
+
+A subsequent trial exited with an assertion failure because the model emitted
+inconsistent entity/subject names, leaving no dependency for the intended fault.
+[`derivation-replanning-unlinked-trial.json`](derivation-replanning-unlinked-trial.json)
+retains that result. The diagnostic now uses a simpler Alice/Atlas source to
+exercise revision recovery; this does not resolve the observed entity-linking
+quality gap or establish a model accuracy result.
+
+The diagnostic now runs inference in a child process and publishes success only
+after that process exits zero. PRME defaults `ORT_DISABLE_TELEMETRY=1` before
+loading FastEmbed, preserving explicit host settings. ONNX Runtime documents that
+this startup switch prevents the non-Windows uploader from being created;
+calling its API after initialization may leave an initialization event active.
+See the [upstream runtime documentation](https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md).
+
+Reproduce with:
+
+```bash
+python -m benchmarks.diagnostics.derivation_replanning --output replanning.json
+```
+
+This revises materialization, not the original model output or grounding policy.
+Replanning is explicit. Abandoned index staging and complete operation-log replay
+remain separate gaps. These synthetic workflows establish neither semantic
+accuracy nor competitive superiority.
 
 ## Grounded extraction journal
 

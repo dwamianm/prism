@@ -253,6 +253,12 @@ prme retry-extraction memory.duckdb EVENT_ID --user-id alice
 prme process-extractions memory.duckdb --user-id alice --budget-ms 5000
 ```
 
+For local FastEmbed inference, PRME defaults `ORT_DISABLE_TELEMETRY=1` before
+loading ONNX Runtime. This avoids an observed macOS shutdown failure in its
+optional telemetry uploader. The setting is process-wide and an explicit value
+is preserved. If your application imports ONNX Runtime first, set this variable
+before that import to apply the same startup behavior.
+
 For a custom Ollama extraction endpoint, use its OpenAI-compatible URL, for
 example `ExtractionConfig(provider="ollama", model="qwen3.5:4b",
 base_url="http://localhost:11434/v1")`. The `/v1` path is required by the

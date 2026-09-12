@@ -8,6 +8,8 @@ import argparse
 import asyncio
 import hashlib
 import inspect
+import importlib.metadata
+import os
 import json
 from pathlib import Path
 import tempfile
@@ -16,6 +18,7 @@ import time
 from prme import MemoryEngine, PRMEConfig
 from prme.ingestion.errors import ExtractionError
 from prme.ingestion.pipeline import IngestionPipeline
+from prme.storage.embedding import FastEmbedProvider
 
 
 async def run(args):
@@ -94,6 +97,9 @@ async def run(args):
             assert await engine._event_store.get_derivation_receipt(event_id, user_id='alice') == receipt
         report = {
             'passed': True,
+            "embedding_provider_sha256": hashlib.sha256(Path(inspect.getfile(FastEmbedProvider)).read_bytes()).hexdigest(),
+            "onnxruntime_version": importlib.metadata.version("onnxruntime"),
+            "onnx_telemetry_disabled": os.environ.get("ORT_DISABLE_TELEMETRY"),
             'pipeline_sha256': hashlib.sha256(Path(inspect.getfile(IngestionPipeline)).read_bytes()).hexdigest(),
             'package_path': str(Path(inspect.getfile(IngestionPipeline)).resolve()),
             'provider': saved.provider, 'model': saved.model,
@@ -116,17 +122,23 @@ def main():
     parser.add_argument("--base-url", default="http://127.0.0.1:11434/v1")
     parser.add_argument("--timeout", type=float, default=90)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error("Timeout must be positive")
     try:
-        report = asyncio.run(run(args))
+        if args.worker:
+            report = asyncio.run(run(args))
+        else:
+            from benchmarks.diagnostics._process import run_diagnostic
+            report = run_diagnostic("benchmarks.diagnostics.extraction_recovery", args)
     except Exception as exc:
         report = {"passed": False, "error_type": type(exc).__name__,
                   "limits": "Incomplete workflow; no success or accuracy claim."}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")
-    print(json.dumps(report))
+    if not args.worker:
+        print(json.dumps(report))
     if not report["passed"]:
         raise SystemExit(1)
 

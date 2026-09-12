@@ -16,7 +16,7 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite (`339ab60`) passed 1,800 tests with 40 skips and live PostgreSQL.
+completed frozen full suite (`d73f326`) passed 1,810 tests with 42 skips and live PostgreSQL.
 Failed startup now releases acquired resources on both backends and restores
 encryption after a local pack was decrypted; wrong-key failures preserve the pack.
 Vector payloads now survive abrupt exits before the USearch snapshot is saved;

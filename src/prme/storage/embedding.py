@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import importlib.metadata
+import os
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -113,6 +114,10 @@ class FastEmbedProvider:
     def _ensure_model(self) -> None:
         """Lazily initialize the TextEmbedding model on first use."""
         if self._model is None:
+            # Set before FastEmbed imports ONNX Runtime: its optional native
+            # telemetry uploader can outlive its shutdown mutexes on macOS.
+            # Respect a host application's explicit telemetry setting.
+            os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
             from fastembed import TextEmbedding
 
             kwargs: dict = {"model_name": self._model_name}
