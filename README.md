@@ -437,6 +437,10 @@ excludes the engine-global `feedback_apply` job, which remains an operator task.
 Credentials are redacted from configuration output; restart the server to rotate
 them. Use TLS when carrying bearer credentials over a network.
 
+Node and event path IDs are UUIDs. Malformed IDs return HTTP 422 with a path
+validation error before accessing storage. Valid IDs that do not exist or belong
+to another user return 404. The OpenAPI schema documents the UUID format.
+
 The legacy `PRME_API_API_KEY` retains unrestricted operator access and cannot be
 combined with per-user keys. With neither configured, the API is unrestricted
 for local single-user use. This is application-level user isolation; PostgreSQL

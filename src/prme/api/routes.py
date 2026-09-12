@@ -194,20 +194,22 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse:
 
 
 @router.get("/events/{event_id}", summary="Read original source evidence")
-async def get_event(request: Request, event_id: str):
-    event = await _get_engine(request).get_event(event_id, user_id=_user_id(request))
+async def get_event(request: Request, event_id: UUID):
+    event_key = str(event_id)
+    event = await _get_engine(request).get_event(event_key, user_id=_user_id(request))
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     return event.model_dump(mode="json")
 
 
 @router.get("/events/{event_id}/nodes", response_model=NodeListResponse, summary="Resolve source derivations")
-async def get_event_nodes(request: Request, event_id: str):
+async def get_event_nodes(request: Request, event_id: UUID):
+    event_key = str(event_id)
     engine = _get_engine(request)
-    event = await engine.get_event(event_id, user_id=_user_id(request))
+    event = await engine.get_event(event_key, user_id=_user_id(request))
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
-    nodes = await engine.get_event_nodes(event_id, user_id=event.user_id)
+    nodes = await engine.get_event_nodes(event_key, user_id=event.user_id)
     return NodeListResponse(nodes=[_node_to_response(n) for n in nodes], count=len(nodes))
 
 
@@ -386,12 +388,13 @@ async def organize(request: Request, body: OrganizeRequest) -> OrganizeResponse:
     summary="Get a single node",
     responses={404: {"model": ErrorResponse}},
 )
-async def get_node(request: Request, node_id: str) -> NodeResponse:
+async def get_node(request: Request, node_id: UUID) -> NodeResponse:
     """Retrieve a single node by ID."""
+    node_key = str(node_id)
     engine = _get_engine(request)
-    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
+    node = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if node is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
     return _node_to_response(node)
 
 
@@ -441,24 +444,25 @@ async def query_nodes(
     summary="Promote node to stable",
     responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
 )
-async def promote_node(request: Request, node_id: str) -> NodeResponse:
+async def promote_node(request: Request, node_id: UUID) -> NodeResponse:
     """Promote a tentative node to stable."""
+    node_key = str(node_id)
     engine = _get_engine(request)
 
     # Verify node exists
-    node = await engine.get_node(node_id, user_id=_user_id(request))
+    node = await engine.get_node(node_key, user_id=_user_id(request))
     if node is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
     try:
-        await engine.promote(node_id, user_id=_user_id(request))
+        await engine.promote(node_key, user_id=_user_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
     # Re-fetch to get updated state
-    updated = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
+    updated = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if updated is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found after promote")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found after promote")
     return _node_to_response(updated)
 
 
@@ -467,22 +471,23 @@ async def promote_node(request: Request, node_id: str) -> NodeResponse:
     summary="Archive a node",
     responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
 )
-async def archive_node(request: Request, node_id: str) -> NodeResponse:
+async def archive_node(request: Request, node_id: UUID) -> NodeResponse:
     """Archive a node (terminal state)."""
+    node_key = str(node_id)
     engine = _get_engine(request)
 
-    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
+    node = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if node is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
     try:
-        await engine.archive(node_id, user_id=_user_id(request))
+        await engine.archive(node_key, user_id=_user_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    updated = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
+    updated = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if updated is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found after archive")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found after archive")
     return _node_to_response(updated)
 
 
@@ -491,18 +496,19 @@ async def archive_node(request: Request, node_id: str) -> NodeResponse:
     summary="Reinforce a node",
     responses={404: {"model": ErrorResponse}},
 )
-async def reinforce_node(request: Request, node_id: str) -> NodeResponse:
+async def reinforce_node(request: Request, node_id: UUID) -> NodeResponse:
     """Reinforce a memory node, boosting confidence and salience."""
+    node_key = str(node_id)
     engine = _get_engine(request)
 
     try:
-        await engine.reinforce(node_id, user_id=_user_id(request))
+        await engine.reinforce(node_key, user_id=_user_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
-    updated = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
+    updated = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if updated is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found after reinforce")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found after reinforce")
     return _node_to_response(updated)
 
 
@@ -519,19 +525,20 @@ async def reinforce_node(request: Request, node_id: str) -> NodeResponse:
 )
 async def get_neighborhood(
     request: Request,
-    node_id: str,
+    node_id: UUID,
     max_hops: int = 2,
 ) -> NodeListResponse:
     """Get nodes within N hops of a starting node."""
+    node_key = str(node_id)
     engine = _get_engine(request)
 
     # Verify node exists
-    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
+    node = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if node is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
     neighbors = await engine._graph_store.get_neighborhood(
-        node_id, max_hops=max_hops
+        node_key, max_hops=max_hops
     )
     owner = _user_id(request)
     if owner is not None:
@@ -550,19 +557,20 @@ async def get_neighborhood(
 )
 async def get_chain(
     request: Request,
-    node_id: str,
+    node_id: UUID,
     direction: str = "forward",
 ) -> NodeListResponse:
     """Get the supersedence chain from a node."""
+    node_key = str(node_id)
     engine = _get_engine(request)
 
     # Verify node exists
-    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
+    node = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if node is None:
-        raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
     chain = await engine._graph_store.get_supersedence_chain(
-        node_id, direction=direction
+        node_key, direction=direction
     )
     owner = _user_id(request)
     if owner is not None:

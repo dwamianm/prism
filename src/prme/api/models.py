@@ -229,6 +229,6 @@ class StatsResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """Standard error response."""
+    """Application errors and FastAPI's structured validation errors."""
 
-    detail: str
+    detail: str | list[dict[str, Any]]
