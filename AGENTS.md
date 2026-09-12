@@ -79,7 +79,8 @@ Version 3 adds request parameters and reported feature identity in extensible
 execution maps. New pipeline receipts use version 4 to record the explicit
 packing order; versions 1–3 retain their canonical bytes and implicit density
 ordering. `PackingConfig.multipath_ordering="score"` is available as an opt-in;
-the default remains `"density"` pending confirmation.
+the default remains `"density"`: the frozen 381-question confirmation improved
+overall source recall but failed its preference-category non-regression guard.
 Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
 for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a

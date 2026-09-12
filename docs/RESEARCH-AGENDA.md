@@ -12,9 +12,9 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 |---|---|---|
 | Product context packing | Two fixed local readers improved by 20 judged-correct answers each on the same 119 development questions when multi-path candidates used score ordering. | Custom local rubric, shared histories, one judge; second reader shares its model family. Not an independent test set or competitor result. |
 | Profile fidelity and publication | Complete qualified source excerpts, explicit inference/provenance, exact token budgets, atomic publication and complete scoped source scans. | Profiles are source collections; this does not prove semantic synthesis, exhaustive facts or automatic freshness. |
-| Storage and developer workflow | Full repository regression at `107f535`: 2,400 passed, 57 skipped. Installed Python 3.13 profile workflow also passed. | Tests establish their covered contracts, not answer quality or every deployment environment. |
+| Storage and developer workflow | Full repository regression at `a2eb87d`: 2,462 passed, 57 skipped. Installed Python 3.13 profile workflow also passed. | Tests establish their covered contracts, not answer quality or every deployment environment. |
 | Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
-| Competitor preparation | Pinned Mem0 source, matched BGE assets, recommended NLP and BM25 support, raw storage and metadata checks pass. | Compatibility preflight is not comparative accuracy. |
+| Matched raw retrieval | All 119 development questions completed against pinned Mem0 OSS. At 4K shared whole-turn packing, PRME source recall was 96.49% versus 93.27%; Mem0 led preferences. | Raw mode, frozen older PRME reference, shared evaluator packer and no answer generation. The 4K interval touches zero; no end-to-end leadership claim. |
 
 See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
 [recovery evidence](../benchmarks/results/recovery/2026-09-12/README.md),
@@ -24,22 +24,23 @@ These records preserve commit identities, raw-output hashes, failures and limits
 
 ## Immediate decisions and their gates
 
-1. **Complete the frozen packing confirmation.** The
-   [registered 381-question protocol](../benchmarks/results/packing/2026-09-12/confirmation-plan.json)
-   compares the selected ordering at 2K, 4K and 8K tokens. Require complete native
-   process exit, exact control reproduction, positive 4K evidence-recall change
-   with a positive lower confidence bound, and the declared budget/category
-   guards. Do not adjust the hypothesis after reading test results. Keep density
-   as the production default until the gate has been evaluated. A passing source
-   gate supports a configurable packing change; it does not by itself establish
-   answer-accuracy gains on the test partition.
-2. **Measure a matched external baseline.** The
-   [registered Mem0 development comparison](../benchmarks/results/research/2026-09-12/mem0-raw-dev-plan.json)
-   uses identical raw turns, BGE model assets, 100-result output limits and a
-   shared whole-turn token packer. All 119 development questions and failures
-   remain visible. This isolates raw retrieval; neither system extracts facts.
-   Preserve that distinction when adding later extraction and product-context
-   arms. Timing from separately run workloads cannot support a speed ratio.
+1. **Honor the failed packing confirmation gate.** All 381 frozen questions and
+   controls completed. At 4K, labelled-source recall rose 65.04% → 85.77%, but
+   preference recall fell 78.26% → 68.12%, violating the preregistered category
+   guard. Density remains the default; score is opt-in. Diagnose preference
+   coverage and test any new selection policy as a new exploratory hypothesis;
+   do not rewrite the gate or call a tuned rerun independent confirmation. The
+   [complete record](../benchmarks/results/packing/2026-09-12/CONFIRMATION.md)
+   preserves both gains and regressions. This is source retention, not test-set
+   answer accuracy.
+2. **Extend the completed external baseline carefully.** The
+   [registered Mem0 comparison](../benchmarks/results/research/2026-09-12/mem0-raw-dev-completion-b384095.json)
+   completed all 119 questions without errors. Keep its raw-turn, shared-packer
+   result distinct from future extraction and actual product-context arms. The
+   next protocol must match reader, total rendered tokens and ingestion costs,
+   and explicitly support each product's temporal API. Hindsight and Graphiti
+   have been source-audited but not run. Timing from separately run workloads
+   cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect
    temporal or episode associations, arithmetic and task-completion errors.

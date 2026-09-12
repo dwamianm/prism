@@ -713,7 +713,7 @@ ScoringWeights(
 priority tier. The default remains `"density"` (score per token). Pins, instructions,
 active tasks, other tiers and measured whole-output budgets keep their existing
 rules. Two local reader studies support the score option on development data;
-the separate source-retention confirmation is still pending. This is an opt-in
+the completed source-retention confirmation failed its preference-category guard. This is an opt-in
 policy, not a claim of superior results for every workload.
 
 ```python

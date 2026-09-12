@@ -22,7 +22,9 @@ found that score ordering within the multi-path tier retained more labelled
 source evidence than density ordering at 2K, 4K and 8K. At the default 4K budget,
 recall rose from 75.51% to 93.49%, with 31 wins and no losses among 114 labelled
 questions. There were five losses at 2K, including a negative preference-category
-mean. The density default remains pending a frozen test-partition confirmation;
+mean. The subsequent frozen 381-question confirmation improved overall 4K
+recall from 65.04% to 85.77% but regressed preference recall from 78.26% to 68.12%.
+It failed the preregistered category guard, so density remains the default;
 see the [study and limitations](../benchmarks/results/packing/2026-09-12/CONFIRMATION.md).
 This supersedes the earlier rationale treating STR as established superior utility.
 
@@ -31,7 +33,8 @@ This supersedes the earlier rationale treating STR as established superior utili
 still use node ID and all representations obey the same measured budget. The
 public implementation reproduces all 714 frozen development contexts and source
 measurements across both arms and three budgets. This is implementation parity,
-not new evidence or completion of the separate confirmation study. New retrieval
+not additional quality evidence. The completed confirmation failed its
+preference-category guard. New retrieval
 receipts record this policy in schema version 4; legacy receipts preserve their
 original bytes and implicit density semantics.
 

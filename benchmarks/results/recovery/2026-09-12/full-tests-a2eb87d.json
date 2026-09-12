@@ -1,0 +1,12 @@
+{
+  "commit": "a2eb87d",
+  "cwd": "/tmp/prme-tool-provenance-final",
+  "native_process_exit_code": 0,
+  "passed": 2462,
+  "skipped": 57,
+  "failed": 0,
+  "seconds": 349.15,
+  "postgres": "live local service, isolated prme_test database",
+  "log_sha256": "707edb98fa0f5820b031441f5cf0bf0b4541d3eb3ad8b264f4ffd1c66602104c",
+  "limits": "Complete repository suite at the pinned commit, not live OpenAI quality evidence. Later reader-evidence-map tests passed separately (6)."
+}

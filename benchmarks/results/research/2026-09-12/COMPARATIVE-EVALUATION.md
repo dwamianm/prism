@@ -125,3 +125,35 @@ also stores strings but later indexes each as though it were an episode sequence
 (`message` becomes the first character). That observation is from source inspection,
 not a reproduced runtime failure. A fresh public-API adapter and matched answer
 protocol are needed before using Graphiti as another comparative baseline.
+
+## Completed Mem0 raw-turn development comparison
+
+Pinned Mem0 OSS `c7ee362` completed all 119 registered questions with zero errors
+and native exit zero. The [completion report](mem0-raw-dev-completion-b384095.json)
+records the full output hash, plan identity, paired metrics and limitations.
+The frozen PRME reference is `1f5375a`; this is not a fresh latest-release run.
+
+| Shared whole-turn budget | Mem0 evidence recall | PRME evidence recall | PRME change | Paired 95% interval | Wins / losses |
+|---|---:|---:|---:|---:|---:|
+| 2,048 | 87.57% | 91.96% | +4.39 pp | +0.58 to +8.19 pp | 15 / 3 |
+| 4,096 | 93.27% | 96.49% | +3.22 pp | 0.00 to +6.87 pp | 10 / 3 |
+| 8,192 | 95.91% | 97.95% | +2.05 pp | +0.58 to +4.02 pp | 6 / 0 |
+
+There are 114 labelled questions. The 4K interval's stored lower endpoint is
+approximately `2.43e-19`, a floating-point near-zero value; it does not support a
+claim of a meaningfully positive lower bound. Query bootstrap intervals also
+ignore shared histories and do not establish independent-system superiority.
+At 4K, Mem0 retained all preference evidence while PRME retained 92.86% across
+seven questions. PRME improved multi-session recall by 8.33 points, with a
+category interval spanning zero. Knowledge updates and assistant evidence tied
+at 100% in this shared-packer setting.
+
+These comparisons use raw turns, matched dense model assets, Mem0's recommended
+NLP/BM25 support and a common whole-turn evaluator packer. Neither product's
+context renderer or extraction pipeline is evaluated. In particular, the high
+raw-packer results must not be substituted for PRME's lower product-packing
+results. Five unlabelled questions have null evidence scores, not demonstrated
+abstention. No LLM calls, retries or outcome-based exclusions were used. Runtime
+measurements remain in the raw report, but concurrent workloads and separate
+runs preclude a fair speed ratio. Preference coverage is a demonstrated remaining
+gap; this study does not establish the best end-to-end memory system.

@@ -1,0 +1,124 @@
+{
+  "completed_at": "2026-09-12T18:45:54.894327+00:00",
+  "source_native_exit_code": 0,
+  "comparison_native_exit_code": 0,
+  "questions": 381,
+  "labelled_questions": 365,
+  "files": {
+    "source": {
+      "path": "data/benchmarks/packing-confirmation-1f5375a-source.json",
+      "sha256": "0e992047f8647fbac8bb387d91490ca543ae5684cb097ed7911ec050797be5a2"
+    },
+    "comparison": {
+      "path": "benchmarks/results/packing/2026-09-12/product-packing-confirmation-1f5375a.json",
+      "sha256": "409c5d115ef800665cb7f92b97e3da46af0201b6ae246bf3ad0826da6a33e612"
+    },
+    "plan": {
+      "path": "benchmarks/results/packing/2026-09-12/confirmation-plan.json",
+      "sha256": "e690db719451205d4ca6668df6fb3d1d081b5317f0ae608197b979390c67d8ed"
+    }
+  },
+  "quality_gate_passed": false,
+  "criteria": {
+    "positive_primary_gain": true,
+    "positive_primary_interval": true,
+    "nonnegative_secondary_means": true,
+    "nonnegative_primary_category_means": false
+  },
+  "decision": "Keep density default; score remains opt-in. No gate or comparator changes after outcomes.",
+  "summary": {
+    "2048": {
+      "evidence_recall": {
+        "queries": 365,
+        "before": 0.5364383561643835,
+        "after": 0.7726027397260274,
+        "delta": 0.23616438356164385,
+        "interval_95": [
+          0.19223744292237444,
+          0.2791780821917808
+        ],
+        "wins": 147,
+        "losses": 23,
+        "ties": 195
+      },
+      "all_evidence_retained": {
+        "queries": 365,
+        "before": 0.38904109589041097,
+        "after": 0.673972602739726,
+        "delta": 0.28493150684931506,
+        "interval_95": [
+          0.23013698630136986,
+          0.336986301369863
+        ],
+        "wins": 120,
+        "losses": 16,
+        "ties": 229
+      }
+    },
+    "4096": {
+      "evidence_recall": {
+        "queries": 365,
+        "before": 0.650365296803653,
+        "after": 0.857716894977169,
+        "delta": 0.20735159817351598,
+        "interval_95": [
+          0.16515981735159818,
+          0.25004566210045664
+        ],
+        "wins": 122,
+        "losses": 17,
+        "ties": 226
+      },
+      "all_evidence_retained": {
+        "queries": 365,
+        "before": 0.5315068493150685,
+        "after": 0.7808219178082192,
+        "delta": 0.2493150684931507,
+        "interval_95": [
+          0.2,
+          0.29863013698630136
+        ],
+        "wins": 104,
+        "losses": 13,
+        "ties": 248
+      }
+    },
+    "8192": {
+      "evidence_recall": {
+        "queries": 365,
+        "before": 0.729041095890411,
+        "after": 0.9002739726027398,
+        "delta": 0.17123287671232876,
+        "interval_95": [
+          0.12908675799086758,
+          0.21182648401826484
+        ],
+        "wins": 99,
+        "losses": 12,
+        "ties": 254
+      },
+      "all_evidence_retained": {
+        "queries": 365,
+        "before": 0.6191780821917808,
+        "after": 0.8465753424657534,
+        "delta": 0.2273972602739726,
+        "interval_95": [
+          0.17534246575342466,
+          0.27671232876712326
+        ],
+        "wins": 92,
+        "losses": 9,
+        "ties": 264
+      }
+    }
+  },
+  "limits": [
+    "Development source-support retention only; no answer accuracy or competitive quality claim.",
+    "Both variants reuse identical public retrieval candidates, scores, identities and timestamps.",
+    "All response candidates are packed; the shared evaluation ranking limit is not applied here.",
+    "REFERENCE and KEY_VALUE pointers receive no supporting-evidence credit.",
+    "Blank source text is retained in accounting but receives no positive supporting-evidence credit.",
+    "Question bootstrap intervals are descriptive; shared histories can make questions dependent.",
+    "Source snapshots contain benchmark text and are stored separately from this summary."
+  ]
+}

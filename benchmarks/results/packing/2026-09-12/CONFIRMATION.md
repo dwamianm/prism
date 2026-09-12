@@ -54,4 +54,33 @@ The new packing comparison is prospectively frozen, but this is not a pristine
 unseen benchmark. Shared histories can also make query intervals optimistic.
 Subsequent answer-level and independent benchmark validation remain necessary.
 
-The production packing default remains density while confirmation is pending.
+The production packing default remained density throughout the frozen study.
+
+## Completed confirmation: gate failed
+
+All 381 questions completed without errors and with native exit zero. The frozen
+comparator also exited zero and reproduced every original control. The
+[completion manifest](confirmation-completion-1f5375a.json) records native exits
+and hashes; the [complete comparison](product-packing-confirmation-1f5375a.json)
+retains all paired results. There are 365 questions with labelled source evidence.
+
+| Budget | Density recall | Score recall | Change | Paired 95% interval | Wins / losses |
+|---|---:|---:|---:|---:|---:|
+| 2,048 | 53.64% | 77.26% | +23.62 pp | +19.22 to +27.92 pp | 147 / 23 |
+| 4,096 | 65.04% | 85.77% | +20.74 pp | +16.52 to +25.00 pp | 122 / 17 |
+| 8,192 | 72.90% | 90.03% | +17.12 pp | +12.91 to +21.18 pp | 99 / 12 |
+
+The positive primary mean, positive primary interval and secondary-budget mean
+checks passed. The category guard failed: 4K preference recall fell from 78.26%
+to 68.12% across 23 labelled questions (−10.14 pp, interval −33.33 to +13.04 pp;
+four wins, six losses). Preference means also fell at 2K (−18.12 pp) and 8K
+(−13.77 pp). The preregistered guard concerns the mean, so its failure cannot be
+dismissed because the 4K category interval includes zero. Other 4K category means
+improved; assistant-evidence recall rose from 14.89% to 91.49%.
+
+**Decision:** preserve density as the default and score as an explicit option.
+Do not change the comparator, acceptance criteria or excluded cases after this
+result. A future policy must address the preference tradeoff and receive new
+validation; this completed partition is now development evidence for any such
+changes. Neither aggregate source recall nor the earlier development reader
+study establishes answer accuracy on this partition or competitive leadership.

@@ -1235,8 +1235,9 @@ fixed knowledge cutoff that excluded later test writes; both also failed on
 pre-option `e297d08`. The fixtures now capture a shared clock after admission
 and apply it identically across Python/HTTP/MCP. The MCP check additionally
 requires a nonempty result and context, preventing vacuous parity. The corrected
-transport and tool-provenance set passes all 20 checks in 3.67s. A new complete
-repository run is required before reporting a clean full suite.
+transport and tool-provenance set passes all 20 checks in 3.67s. The clean frozen `a2eb87d` full repository run then exited zero:
+2,462 passed, 57 skipped in 349.15s, including live PostgreSQL. The separately
+added reader-evidence diagnostic subsequently passed six integrity checks.
 
 ## Tool provenance
 
