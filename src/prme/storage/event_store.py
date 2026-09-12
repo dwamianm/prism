@@ -14,7 +14,7 @@ import duckdb
 
 from prme.models import Event, ProcessingStatus
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
-from prme.models.derivation import DerivationPlan, derivation_operation_id
+from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.storage._threading import run_to_completion
 from prme.types import Scope
 
@@ -44,6 +44,23 @@ class EventStore:
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
     # --- Public async API ---
+
+    async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
+        """Read verified completion through the immutable source owner's scope."""
+        async with self._conn_lock:
+            return await run_to_completion(self._get_derivation_receipt_sync, event_id, user_id)
+
+    def _get_derivation_receipt_sync(self, event_id: str, user_id: str) -> DerivationReceipt | None:
+        from prme.storage.derivation import _receipt
+
+        plan = self._get_derivation_plan_sync(event_id, user_id)
+        if plan is None:
+            return None
+        row = self._conn.execute(
+            "SELECT payload FROM operations WHERE id = ? AND target_id = ? "
+            "AND op_type = 'DERIVATION_COMMITTED'", [plan.receipt_operation_id, event_id],
+        ).fetchone()
+        return _receipt(plan, row[0] if row else None)
 
     async def get_derivation_plan(self, event_id: str, *, user_id: str) -> DerivationPlan | None:
         """Read the immutable prepared derivation through the source owner."""

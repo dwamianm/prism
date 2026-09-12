@@ -32,17 +32,18 @@ mismatches, with sanitized diagnostics through HTTP/MCP. A newer Python 3.13
 installed wheel passed source, recovery, selection and authenticated API checks.
 Cancelled materialization now finishes tracking committed writes and cleans
 partial artifacts, while preserving a final replacement that already committed.
-This does not yet make intermediate graph writes invisible or survive a process
-exit during materialization; atomic derivation commits remain the next reliability gate.
-The internal prepared-plan journal and atomic graph commit primitive now pass
-concurrency, independent-reader, rollback and abrupt-process-exit checks. Startup
+Normal ingestion now prepares fixed graph and index inputs before publication,
+journals the first complete plan, and commits the graph and receipt atomically.
+The prepared-plan journal and commit path pass concurrency, independent-reader,
+rollback and abrupt-process-exit checks. Startup
 also preserves explicitly assigned epistemic types instead of reclassifying
 modern nodes with a legacy heuristic. Idempotent index staging now survives
 retries and abrupt process exits without inference; compaction preserves
 unpublished staging claims. Crash testing also repaired vector-key reuse after
-DuckDB recovery. The ordinary ingestion path still needs a planner and
-coordination of staging with the commit primitive; durable
-extraction scheduling, generation fencing and plan revision remain open.
+DuckDB recovery. Explicit retry after reopening uses saved plans without new
+inference and skips already committed work. Durable extraction scheduling,
+generation fencing and plan revision remain open; unfinished extraction is not
+automatically discovered on restart.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall

@@ -31,9 +31,8 @@ from prme.ingestion.supersedence import SupersedenceDetector
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
 from prme.models.extraction import ExtractionRecord
+from prme.models.derivation import DerivationPlan
 from prme.models.nodes import MemoryNode
-from prme.storage.write_queue import WriteTracker
-from prme.storage._threading import run_async_to_completion
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
 
 if TYPE_CHECKING:
@@ -236,15 +235,13 @@ class IngestionPipeline:
             scope: Ingestion-level scope for fallback when LLM does not classify.
         """
         try:
-            result = await self._extract_or_load(event)
-            await self._materialize(result, event, event_id, scope)
-            logger.info(
-                "ingestion.phase2_complete",
-                event_id=event_id,
-                entities=len(result.entities),
-                facts=len(result.facts),
-                relationships=len(result.relationships),
-            )
+            plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
+            if plan is None:
+                result = await self._extract_or_load(event)
+                await self._materialize(result, event, event_id, scope)
+            else:
+                await self._publish_plan(plan)
+            logger.info("ingestion.phase2_complete", event_id=event_id)
         except Exception as exc:
             logger.error(
                 "ingestion.extraction_failed",
@@ -283,278 +280,290 @@ class IngestionPipeline:
         saved.verify_source(event.user_id, event.scope.value, event.content_hash)
         return ExtractionResult.model_validate(saved.result)
 
+    async def _prepare_plan(self, result: ExtractionResult, event: Event) -> DerivationPlan:
+        """Prepare fixed graph/index inputs without publishing any artifacts."""
+        from prme.ingestion.planning import PlanningGraph, PlanningIndexes, PlanningQueue
+
+        event = Event.model_validate_json(event.model_dump_json())
+        result = ExtractionResult.model_validate_json(result.model_dump_json())
+        graph = PlanningGraph(self._graph_store, event)
+        indexes = PlanningIndexes(graph)
+        await self._populate(
+            result, event, str(event.id), event.scope, graph_store=graph,
+            writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
+        )
+        return await indexes.prepare(self._vector_index._provider)
+
+    async def _populate(
+        self, result: ExtractionResult, event: Event, event_id: str, scope: Scope,
+        *, graph_store, writer, vector_index, lexical_index, write_queue,
+    ) -> None:
+        """Apply one set of materialization rules to durable or planning adapters."""
+        entity_merger = EntityMerger(graph_store, writer)
+        supersedence_detector = SupersedenceDetector(graph_store, writer)
+        # Map entity name -> entity_id for relationship wiring
+        entity_id_map: dict[str, str] = {}
+
+        # --- Entities ---
+        for entity in result.entities:
+            entity_scope = scope
+
+            entity_id, is_new = await entity_merger.find_or_create_entity(
+                name=entity.name,
+                entity_type=entity.entity_type,
+                user_id=event.user_id,
+                description=entity.description,
+                session_id=event.session_id,
+                evidence_event_id=event_id,
+                scope=entity_scope,
+            )
+            entity_id_map[entity.name.strip().lower()] = entity_id
+
+            # Reuse does not update the durable entity description. Do not
+            # overwrite its vector with this attempt's uncommitted model
+            # output (or accumulate duplicate local vector entries).
+            if not is_new:
+                continue
+
+            # Index entity in vector store (not tracked for rollback)
+            entity_text = entity.name
+            if entity.description:
+                entity_text = f"{entity.name}: {entity.description}"
+            await write_queue.submit(
+                lambda eid=entity_id, txt=entity_text, uid=event.user_id: (
+                    vector_index.index(eid, txt, uid)
+                ),
+                label=f"vector.entity:{entity_id}",
+            )
+
+        # --- Facts ---
+        for fact in result.facts:
+            fact_scope = scope
+
+            # Resolve temporal reference
+            resolved_date = self._resolve_temporal(fact.temporal_ref, reference_time=event.timestamp)
+
+            # Determine node type from fact_type
+            node_type = _FACT_TYPE_TO_NODE_TYPE.get(
+                fact.fact_type, NodeType.FACT
+            )
+
+            # Build fact content
+            # Grounding expands citations to full source paragraphs so
+            # model triples cannot erase negations or trailing conditions.
+            fact_content = fact.evidence_quote or event.content
+
+            # Build metadata
+            fact_metadata: dict = {
+                "subject": fact.subject,
+                "predicate": fact.predicate,
+                "object": fact.object,
+                "evidence_quote": fact_content,
+                "grounding_method": "source_passage_v1",
+                "temporal_intent": fact.temporal_intent,
+                "replaces_object": fact.replaces_object,
+            }
+            if fact.scope:
+                fact_metadata["suggested_scope"] = fact.scope
+            if fact.temporal_ref:
+                fact_metadata["temporal_ref"] = fact.temporal_ref
+            if resolved_date:
+                fact_metadata["resolved_date"] = resolved_date
+
+            # Determine epistemic type from LLM extraction
+            try:
+                fact_epistemic_type = EpistemicType(fact.epistemic_type)
+            except ValueError:
+                fact_epistemic_type = EpistemicType.ASSERTED
+
+            # Determine source type from conversation role
+            if event.role and event.role.lower() in ("user", "human"):
+                fact_source_type = SourceType.USER_STATED
+            elif event.role and event.role.lower() in ("assistant", "system"):
+                fact_source_type = SourceType.SYSTEM_INFERRED
+            else:
+                fact_source_type = SourceType.USER_STATED
+
+            # Look up default confidence from the matrix
+            matrix_confidence = self._confidence_matrix.lookup_with_fallback(
+                fact_epistemic_type, fact_source_type
+            )
+
+            # Create fact node via tracked writer
+            from prme.types import DEFAULT_DECAY_PROFILE_MAPPING, DecayProfile
+
+            fact_decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
+                fact_epistemic_type, DecayProfile.MEDIUM
+            )
+            fact_node = MemoryNode(
+                node_type=node_type,
+                content=fact_content,
+                user_id=event.user_id,
+                session_id=event.session_id,
+                scope=fact_scope,
+                lifecycle_state=LifecycleState.TENTATIVE,
+                confidence=matrix_confidence,
+                confidence_base=matrix_confidence,
+                epistemic_type=fact_epistemic_type,
+                source_type=fact_source_type,
+                decay_profile=fact_decay_profile,
+                metadata=fact_metadata,
+                evidence_refs=[event.id],
+                event_time=datetime.fromisoformat(resolved_date) if resolved_date else (event.event_time or event.timestamp),
+            )
+            fact_node_id = await writer.create_node(fact_node)
+
+            # Log EPISTEMIC_TYPE_ASSIGNED operation
+            logger.info(
+                "epistemic_type_assigned",
+                op_type="EPISTEMIC_TYPE_ASSIGNED",
+                target_id=fact_node_id,
+                epistemic_type=fact_epistemic_type.value,
+                source_type=fact_source_type.value,
+                confidence_from_matrix=matrix_confidence,
+                assignment_method="creation",
+            )
+
+            # Create HAS_FACT edge from subject entity to fact node
+            subject_key = fact.subject.strip().lower()
+            subject_entity_id = entity_id_map.get(subject_key)
+            if subject_entity_id:
+                has_fact_edge = MemoryEdge(
+                    source_id=UUID(subject_entity_id),
+                    target_id=fact_node.id,
+                    edge_type=EdgeType.HAS_FACT,
+                    user_id=event.user_id,
+                    provenance_event_id=event.id,
+                )
+                await writer.create_edge(has_fact_edge)
+
+                # Different values can coexist. Ingestion only retires an
+                # explicitly named previous value for a nonconditional
+                # update; a hypothetical future must not replace reality.
+                if (
+                    fact.temporal_intent == "update"
+                    and fact.replaces_object
+                    and fact_epistemic_type in (EpistemicType.OBSERVED, EpistemicType.ASSERTED)
+                ):
+                    await supersedence_detector.detect_and_supersede(
+                        new_fact_node_id=fact_node_id,
+                        subject_entity_id=subject_entity_id,
+                        predicate=fact.predicate,
+                        object_value=fact.object,
+                        user_id=event.user_id,
+                        evidence_event_id=event_id,
+                        temporal_intent="update",
+                        replaces_object=fact.replaces_object,
+                    )
+
+            # Index fact in vector and lexical stores (not tracked for rollback)
+            await write_queue.submit(
+                lambda fid=fact_node_id, fc=fact_content, uid=event.user_id: (
+                    vector_index.index(fid, fc, uid)
+                ),
+                label=f"vector.fact:{fact_node_id}",
+            )
+            await write_queue.submit(
+                lambda fid=fact_node_id, fc=fact_content, uid=event.user_id, nt=node_type.value, sc=fact_scope.value: (
+                    lexical_index.index(fid, fc, uid, nt, sc)
+                ),
+                label=f"lexical.fact:{fact_node_id}",
+            )
+
+        # --- Relationships ---
+        for rel in result.relationships:
+            source_key = rel.source_entity.strip().lower()
+            target_key = rel.target_entity.strip().lower()
+            source_entity_id = entity_id_map.get(source_key)
+            target_entity_id = entity_id_map.get(target_key)
+
+            if source_entity_id and target_entity_id:
+                # Map relationship_type to EdgeType
+                edge_type = _relationship_type_to_edge_type(
+                    rel.relationship_type
+                )
+                rel_edge = MemoryEdge(
+                    source_id=UUID(source_entity_id),
+                    target_id=UUID(target_entity_id),
+                    edge_type=edge_type,
+                    user_id=event.user_id,
+                    confidence=rel.confidence,
+                    provenance_event_id=event.id,
+                )
+                await writer.create_edge(rel_edge)
+            else:
+                logger.warning(
+                    "ingestion.relationship_skipped",
+                    source_entity=rel.source_entity,
+                    target_entity=rel.target_entity,
+                    reason="One or both entities not found in extraction",
+                    source_found=source_entity_id is not None,
+                    target_found=target_entity_id is not None,
+                )
+
+
+    async def _publish_plan(self, plan: DerivationPlan) -> None:
+        """Stage saved inputs and publish once; never delete shared retry artifacts."""
+        receipt = await self._event_store.get_derivation_receipt(str(plan.event_id), user_id=plan.user_id)
+        if receipt is not None:
+            if receipt.plan_checksum != plan.checksum:
+                raise ValueError("Derivation receipt conflicts with the requested plan")
+            return
+        if getattr(self._graph_store, "_conn", None) is not None:
+            for embedding in plan.embeddings:
+                await self._write_queue.submit(
+                    lambda item=embedding: self._vector_index.stage(item, user_id=plan.user_id),
+                    label=f"derivation.vector:{embedding.node_id}",
+                )
+            # Numerical vector payloads are already durable; keep native file
+            # snapshots debounced. Lexical publication is one committed batch.
+            await self._write_queue.submit(
+                lambda: self._lexical_index.stage(plan), label=f"derivation.lexical:{plan.id}",
+            )
+        # PostgreSQL writes its prepared vector/lexical columns in this same
+        # graph transaction. No provider call is permitted inside the commit.
+        await self._write_queue.submit(
+            lambda: self._graph_store.commit_derivation(plan), label=f"derivation.commit:{plan.id}",
+        )
+
     async def _materialize(
-        self,
-        result: ExtractionResult,
-        event: Event,
-        event_id: str,
+        self, result: ExtractionResult, event: Event, event_id: str,
         scope: Scope = Scope.PERSONAL,
     ) -> None:
-        """Materialize extraction results into graph, vector, and lexical stores.
+        """Publish a complete saved derivation or leave its source/plan retryable.
 
-        Creates a per-event WriteTracker to record all graph artifacts. On
-        failure, rolls back tracked graph nodes/edges and evicts their index
-        entries. Named replacements commit atomically as the final write so
-        failures cannot retire prior knowledge while removing its replacement.
-
-        The caller's ingestion scope is the write boundary. A model's scope
-        classification is descriptive metadata, never permission to move
-        private content into another namespace.
-
-        Args:
-            result: Grounding-validated extraction result.
-            event: The source event.
-            event_id: String UUID of the event.
-            scope: Ingestion-level scope for fallback when LLM does not classify.
+        Fixed identities and embedding outputs are journaled before index
+        staging. The final transaction publishes every node, edge, replacement
+        and receipt together. Failure retains staged inputs for the same plan;
+        compensating deletion could damage another attempt and is never used.
         """
-        tracker = WriteTracker()
-        tracked_writer = WriteQueueGraphWriter(
-            self._graph_store, self._write_queue, tracker=tracker, defer_supersedence=True
-        )
-        entity_merger = EntityMerger(self._graph_store, tracked_writer)
-        supersedence_detector = SupersedenceDetector(self._graph_store, tracked_writer)
-
         try:
-            # Map entity name -> entity_id for relationship wiring
-            entity_id_map: dict[str, str] = {}
-
-            # --- Entities ---
-            for entity in result.entities:
-                entity_scope = scope
-
-                entity_id, is_new = await entity_merger.find_or_create_entity(
-                    name=entity.name,
-                    entity_type=entity.entity_type,
-                    user_id=event.user_id,
-                    description=entity.description,
-                    session_id=event.session_id,
-                    evidence_event_id=event_id,
-                    scope=entity_scope,
+            if event_id != str(event.id) or scope != event.scope:
+                raise ValueError("Materialization must preserve source identity and scope")
+            plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
+            if plan is None:
+                existing = await self._graph_store.get_event_nodes(event_id, user_id=event.user_id)
+                if any(node.id != event.id for node in existing):
+                    # Another attempt may have published between the first
+                    # plan read and this graph read. Its journal distinguishes
+                    # a valid concurrent completion from unjournaled legacy data.
+                    plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
+                    if plan is None:
+                        raise ValueError("Source has legacy derived nodes; explicit migration is required")
+            if plan is None:
+                prepared = await self._prepare_plan(result, event)
+                plan = await self._write_queue.submit(
+                    lambda: self._event_store.record_derivation_plan(prepared),
+                    label=f"derivation.prepare:{event_id}",
                 )
-                entity_id_map[entity.name.strip().lower()] = entity_id
-
-                # Reuse does not update the durable entity description. Do not
-                # overwrite its vector with this attempt's uncommitted model
-                # output (or accumulate duplicate local vector entries).
-                if not is_new:
-                    continue
-
-                # Index entity in vector store (not tracked for rollback)
-                entity_text = entity.name
-                if entity.description:
-                    entity_text = f"{entity.name}: {entity.description}"
-                await self._write_queue.submit(
-                    lambda eid=entity_id, txt=entity_text, uid=event.user_id: (
-                        self._vector_index.index(eid, txt, uid)
-                    ),
-                    label=f"vector.entity:{entity_id}",
-                )
-
-            # --- Facts ---
-            for fact in result.facts:
-                fact_scope = scope
-
-                # Resolve temporal reference
-                resolved_date = self._resolve_temporal(fact.temporal_ref, reference_time=event.timestamp)
-
-                # Determine node type from fact_type
-                node_type = _FACT_TYPE_TO_NODE_TYPE.get(
-                    fact.fact_type, NodeType.FACT
-                )
-
-                # Build fact content
-                # Grounding expands citations to full source paragraphs so
-                # model triples cannot erase negations or trailing conditions.
-                fact_content = fact.evidence_quote or event.content
-
-                # Build metadata
-                fact_metadata: dict = {
-                    "subject": fact.subject,
-                    "predicate": fact.predicate,
-                    "object": fact.object,
-                    "evidence_quote": fact_content,
-                    "grounding_method": "source_passage_v1",
-                    "temporal_intent": fact.temporal_intent,
-                    "replaces_object": fact.replaces_object,
-                }
-                if fact.scope:
-                    fact_metadata["suggested_scope"] = fact.scope
-                if fact.temporal_ref:
-                    fact_metadata["temporal_ref"] = fact.temporal_ref
-                if resolved_date:
-                    fact_metadata["resolved_date"] = resolved_date
-
-                # Determine epistemic type from LLM extraction
-                try:
-                    fact_epistemic_type = EpistemicType(fact.epistemic_type)
-                except ValueError:
-                    fact_epistemic_type = EpistemicType.ASSERTED
-
-                # Determine source type from conversation role
-                if event.role and event.role.lower() in ("user", "human"):
-                    fact_source_type = SourceType.USER_STATED
-                elif event.role and event.role.lower() in ("assistant", "system"):
-                    fact_source_type = SourceType.SYSTEM_INFERRED
-                else:
-                    fact_source_type = SourceType.USER_STATED
-
-                # Look up default confidence from the matrix
-                matrix_confidence = self._confidence_matrix.lookup_with_fallback(
-                    fact_epistemic_type, fact_source_type
-                )
-
-                # Create fact node via tracked writer
-                from prme.types import DEFAULT_DECAY_PROFILE_MAPPING, DecayProfile
-
-                fact_decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
-                    fact_epistemic_type, DecayProfile.MEDIUM
-                )
-                fact_node = MemoryNode(
-                    node_type=node_type,
-                    content=fact_content,
-                    user_id=event.user_id,
-                    session_id=event.session_id,
-                    scope=fact_scope,
-                    lifecycle_state=LifecycleState.TENTATIVE,
-                    confidence=matrix_confidence,
-                    confidence_base=matrix_confidence,
-                    epistemic_type=fact_epistemic_type,
-                    source_type=fact_source_type,
-                    decay_profile=fact_decay_profile,
-                    metadata=fact_metadata,
-                    evidence_refs=[event.id],
-                    event_time=datetime.fromisoformat(resolved_date) if resolved_date else (event.event_time or event.timestamp),
-                )
-                fact_node_id = await tracked_writer.create_node(fact_node)
-
-                # Log EPISTEMIC_TYPE_ASSIGNED operation
-                logger.info(
-                    "epistemic_type_assigned",
-                    op_type="EPISTEMIC_TYPE_ASSIGNED",
-                    target_id=fact_node_id,
-                    epistemic_type=fact_epistemic_type.value,
-                    source_type=fact_source_type.value,
-                    confidence_from_matrix=matrix_confidence,
-                    assignment_method="creation",
-                )
-
-                # Create HAS_FACT edge from subject entity to fact node
-                subject_key = fact.subject.strip().lower()
-                subject_entity_id = entity_id_map.get(subject_key)
-                if subject_entity_id:
-                    has_fact_edge = MemoryEdge(
-                        source_id=UUID(subject_entity_id),
-                        target_id=fact_node.id,
-                        edge_type=EdgeType.HAS_FACT,
-                        user_id=event.user_id,
-                        provenance_event_id=event.id,
-                    )
-                    await tracked_writer.create_edge(has_fact_edge)
-
-                    # Different values can coexist. Ingestion only retires an
-                    # explicitly named previous value for a nonconditional
-                    # update; a hypothetical future must not replace reality.
-                    if (
-                        fact.temporal_intent == "update"
-                        and fact.replaces_object
-                        and fact_epistemic_type in (EpistemicType.OBSERVED, EpistemicType.ASSERTED)
-                    ):
-                        await supersedence_detector.detect_and_supersede(
-                            new_fact_node_id=fact_node_id,
-                            subject_entity_id=subject_entity_id,
-                            predicate=fact.predicate,
-                            object_value=fact.object,
-                            user_id=event.user_id,
-                            evidence_event_id=event_id,
-                            temporal_intent="update",
-                            replaces_object=fact.replaces_object,
-                        )
-
-                # Index fact in vector and lexical stores (not tracked for rollback)
-                await self._write_queue.submit(
-                    lambda fid=fact_node_id, fc=fact_content, uid=event.user_id: (
-                        self._vector_index.index(fid, fc, uid)
-                    ),
-                    label=f"vector.fact:{fact_node_id}",
-                )
-                await self._write_queue.submit(
-                    lambda fid=fact_node_id, fc=fact_content, uid=event.user_id, nt=node_type.value, sc=fact_scope.value: (
-                        self._lexical_index.index(fid, fc, uid, nt, sc)
-                    ),
-                    label=f"lexical.fact:{fact_node_id}",
-                )
-
-            # --- Relationships ---
-            for rel in result.relationships:
-                source_key = rel.source_entity.strip().lower()
-                target_key = rel.target_entity.strip().lower()
-                source_entity_id = entity_id_map.get(source_key)
-                target_entity_id = entity_id_map.get(target_key)
-
-                if source_entity_id and target_entity_id:
-                    # Map relationship_type to EdgeType
-                    edge_type = _relationship_type_to_edge_type(
-                        rel.relationship_type
-                    )
-                    rel_edge = MemoryEdge(
-                        source_id=UUID(source_entity_id),
-                        target_id=UUID(target_entity_id),
-                        edge_type=edge_type,
-                        user_id=event.user_id,
-                        confidence=rel.confidence,
-                        provenance_event_id=event.id,
-                    )
-                    await tracked_writer.create_edge(rel_edge)
-                else:
-                    logger.warning(
-                        "ingestion.relationship_skipped",
-                        source_entity=rel.source_entity,
-                        target_entity=rel.target_entity,
-                        reason="One or both entities not found in extraction",
-                        source_found=source_entity_id is not None,
-                        target_found=target_entity_id is not None,
-                    )
-
-            # The event ID belongs to the original source. A model-generated
-            # summary must never overwrite the vector/text of its raw NOTE.
-            # Raw source indexing is durably queued with the event and can
-            # complete independently of this extraction attempt.
-            # Final state transition: either every named replacement commits
-            # with its edge, or none do. Index/graph failures above leave prior
-            # knowledge untouched while the tracker removes new artifacts.
-            await tracked_writer.commit_supersedences()
-        except (Exception, asyncio.CancelledError) as exc:
-            logger.error(
-                "ingestion.materialization_failed",
-                event_id=event_id,
-                exc_info=True,
-            )
-            # A cancelled producer may still have a queued index write. Wait
-            # for that work before eviction, and finish cleanup despite repeated
-            # cancellation. Final replacements that committed must be kept.
-            async def cleanup() -> None:
-                await self._write_queue.submit(
-                    lambda: asyncio.sleep(0), label=f"rollback.barrier:{event_id}",
-                )
-                if not tracked_writer.committed:
-                    await tracker.rollback(
-                        self._graph_store,
-                        self._write_queue,
-                        vector_index=self._vector_index,
-                        lexical_index=self._lexical_index,
-                    )
-            await run_async_to_completion(cleanup())
-            logger.info(
-                "ingestion.rollback_complete",
-                event_id=event_id,
-                rolled_back_nodes=0 if tracked_writer.committed else len(tracker.node_ids),
-                rolled_back_edges=0 if tracked_writer.committed else len(tracker.edge_ids),
-            )
-            if isinstance(exc, asyncio.CancelledError):
-                raise
+            await self._publish_plan(plan)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("ingestion.materialization_failed", event_id=event_id,
+                         error_type=type(exc).__name__)
             raise MaterializationError(
-                f"Materialization failed for event {event_id}",
-                event_id=event_id,
+                f"Materialization failed for event {event_id}", event_id=event_id,
             ) from exc
 
     @staticmethod

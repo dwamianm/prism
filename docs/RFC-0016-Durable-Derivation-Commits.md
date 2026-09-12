@@ -1,6 +1,6 @@
 # RFC-0016: Durable Derivation Commits
 
-**Status:** Draft; atomic graph commit primitive implemented, ingestion integration and durable work scheduling pending
+**Status:** Draft; ingestion uses journaled plans and atomic graph commits; durable extraction work and fencing pending
 **Date:** 2026-09-12
 **Depends on:** RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0014
 
@@ -30,9 +30,9 @@ Current fault-injection work has established these prerequisites:
   These cleanup guarantees do not make intermediate graph writes invisible or
   recover a process killed before cleanup; the batch commit protocol is still needed.
 
-These are tested behaviors, not evidence of complete derivation replay. The
-current `_materialize()` still interleaves random-ID graph and index writes.
-Its tracker cannot recover a process killed halfway through those writes.
+These prerequisites motivated replacing compensating cleanup with journaled
+plans and atomic graph publication. Normal `_materialize()` now uses that path;
+the older interleaved graph/index writer is no longer used by ingestion.
 
 ## Implemented commit primitive
 
@@ -73,9 +73,23 @@ conservative retention: abandoned staging requires explicit deletion or rebuild
 until the coordinator provides a fenced abandonment policy. Rebuild must not run
 concurrently with a derivation publication.
 
-The normal ingestion pipeline does **not yet call this primitive**. It still
-needs a planner, staging/commit coordination, and persistent extraction work.
-Version 1 saves one plan per
+The normal ingestion pipeline now prepares a scoped in-memory graph overlay,
+batches embedding inference, journals the first complete plan, stages external
+indexes and calls the atomic commit. Reused entities are referenced without
+re-indexing. Unrelated scanned entities are not commit dependencies. Explicit
+older-effective updates remain historical facts without retiring later state.
+Retries load the saved plan before calling either provider. An existing receipt
+skips staging and publication, including after archival. Existing unjournaled
+derived nodes are rejected as requiring explicit migration rather than duplicated.
+
+Public-ingestion fault tests cover post-plan/index writes, every graph write
+kind, post-commit failure, cancellation and concurrent attempts on both backends.
+DuckDB subprocesses exit after plan save, each index stage, a graph insertion,
+and commit. Explicit retry after reopening uses the same plan without inference.
+
+Persistent extraction scheduling remains unimplemented. Background extraction
+and its bounded retries are still in-process; reopening does not automatically
+discover or schedule unfinished extraction. Version 1 saves one plan per
 source; it has no lease generation, revision switch or automatic replanning.
 Those must be implemented before enabling the complete recovery workflow below.
 

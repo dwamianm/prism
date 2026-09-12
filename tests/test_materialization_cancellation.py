@@ -1,6 +1,8 @@
-"""Cancellation must either clean partial derivations or preserve a committed replacement."""
+"""Cancellation preserves atomic publication and saved retry inputs."""
 
 import asyncio
+import threading
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -23,44 +25,63 @@ def extraction(value="Python", replaces=None):
     )
 
 
-@pytest.mark.parametrize("stage", ["node", "edge", "vector"])
-async def test_cancelled_materialization_cleans_late_writes(config, user, monkeypatch, stage):
+@pytest.mark.parametrize("stage", ["node", "edge", "vector", "lexical"])
+async def test_cancelled_materialization_has_no_partial_graph_and_replays_saved_plan(config, user, monkeypatch, stage):
+    if config.backend == "postgres" and stage in ("vector", "lexical"):
+        pytest.skip("PostgreSQL indexes publish inside the tested graph transaction")
     async with MemoryEngine.open(config) as engine:
         event = Event(content="Alice uses Python", user_id=user, role="user")
         await engine._event_store.append(event)
-        entered, release = asyncio.Event(), asyncio.Event()
-        target = engine._vector_index if stage == "vector" else engine._graph_store
-        method = {"node": "create_node", "edge": "create_edge", "vector": "index"}[stage]
+        entered, release = threading.Event(), threading.Event()
+        if stage in ("node", "edge"):
+            target = engine._graph_store
+            method = (f"_create_{stage}_sync" if config.backend == "duckdb"
+                      else f"_create_{stage}_on_connection")
+        else:
+            target = engine._vector_index if stage == "vector" else engine._lexical_index
+            method = "stage"
         original = getattr(target, method)
         first = True
-        async def blocked(*args, **kwargs):
-            nonlocal first
-            if not first:
-                return await original(*args, **kwargs)
-            first = False
-            # The database write has committed, but its caller has not received
-            # the ID yet. Vector faults instead block before native indexing.
-            result = await original(*args, **kwargs) if stage != "vector" else None
-            entered.set()
-            await release.wait()
-            return result if stage != "vector" else await original(*args, **kwargs)
-        monkeypatch.setattr(target, method, blocked)
-        task = asyncio.create_task(engine._pipeline._materialize(extraction(), event, str(event.id)))
-        try:
-            await asyncio.wait_for(entered.wait(), 5)
-            task.cancel()
-            await asyncio.sleep(0)
-            task.cancel()
-        finally:
-            release.set()
-            with pytest.raises(asyncio.CancelledError):
-                await asyncio.wait_for(task, 5)
-            # Flush any late write queued by a cancelled producer before reads.
-            await engine._write_queue.submit(lambda: asyncio.sleep(0))
-        assert await engine.get_event_nodes(str(event.id), user_id=user) == []
-        assert await engine._lexical_index.search("Alice", user) == []
-        if engine._conn is not None:
-            assert engine._conn.execute("SELECT count(*) FROM vector_metadata WHERE user_id = ?", [user]).fetchone()[0] == 0
+        if config.backend == "duckdb" and stage in ("node", "edge"):
+            def blocked(*args, **kwargs):
+                nonlocal first
+                result = original(*args, **kwargs)
+                if first:
+                    first = False
+                    entered.set()
+                    assert release.wait(5)
+                return result
+        else:
+            async def blocked(*args, **kwargs):
+                nonlocal first
+                result = await original(*args, **kwargs)
+                if first:
+                    first = False
+                    entered.set()
+                    assert await asyncio.to_thread(release.wait, 5)
+                return result
+        with monkeypatch.context() as fault:
+            fault.setattr(target, method, blocked)
+            task = asyncio.create_task(engine._pipeline._materialize(extraction(), event, str(event.id)))
+            try:
+                assert await asyncio.to_thread(entered.wait, 5)
+                task.cancel()
+                await asyncio.sleep(0)
+                task.cancel()
+            finally:
+                release.set()
+                with pytest.raises(asyncio.CancelledError):
+                    await asyncio.wait_for(task, 5)
+                await engine._write_queue.submit(lambda: asyncio.sleep(0))
+        nodes = await engine.get_event_nodes(str(event.id), user_id=user)
+        assert len(nodes) in (0, 2)
+        receipt = await engine._event_store.get_derivation_receipt(str(event.id), user_id=user)
+        assert (receipt is not None) == bool(nodes)
+        plan = await engine._event_store.get_derivation_plan(str(event.id), user_id=user)
+        assert plan is not None
+        monkeypatch.setattr(engine._vector_index._provider, "embed", AsyncMock(side_effect=AssertionError("Saved plan must be reused")))
+        await engine._pipeline._materialize(extraction(), event, str(event.id))
+        assert {node.id for node in await engine.get_event_nodes(str(event.id), user_id=user)} == {node.id for node in plan.nodes}
         assert await engine.get_event(str(event.id)) is not None
 
 
@@ -74,12 +95,12 @@ async def test_cancel_after_replacement_commit_keeps_complete_new_fact(config, u
         event = Event(content="Alice switched from Python to Rust", user_id=user, role="user")
         await engine._event_store.append(event)
         entered, release = asyncio.Event(), asyncio.Event()
-        original = engine._graph_store.supersede_many
+        original = engine._graph_store.commit_derivation
         async def committed_then_blocked(*args, **kwargs):
             await original(*args, **kwargs)
             entered.set()
             await release.wait()
-        monkeypatch.setattr(engine._graph_store, "supersede_many", committed_then_blocked)
+        monkeypatch.setattr(engine._graph_store, "commit_derivation", committed_then_blocked)
         task = asyncio.create_task(engine._pipeline._materialize(extraction("Rust", "Python"), event, str(event.id)))
         try:
             await asyncio.wait_for(entered.wait(), 5)

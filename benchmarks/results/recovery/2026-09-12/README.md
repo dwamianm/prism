@@ -60,10 +60,8 @@ signed-zero preservation through PostgreSQL's operation log.
 Real DuckDB child processes exited during node insertion, after a replacement
 write and after commit before acknowledgement. Reopening exposed zero partial
 nodes before commit, or the complete fixed-ID graph after commit. Replaying the
-saved plan reused its inputs and receipt. These are component-level tests:
-ordinary `ingest()` is not yet routed through the primitive, and persistent
-extraction scheduling, ingestion integration and lease/revision fencing remain
-unimplemented.
+saved plan reused its inputs and receipt. These were component-level tests at
+`aaa7ee1`; the subsequent public-ingestion integration is described below.
 
 The crash tests initially failed because startup altered dependency nodes.
 `3be24f3` repaired that separate bug: existing explicit epistemic assignments,
@@ -87,11 +85,33 @@ sequence beyond recovered keys. Sixty staging/vector recovery/retrieval checks
 also pass under USearch 2.16.0 / SimSIMD 5.9.11. Ordinary orphan compaction still
 works; unpublished staging claims are retained, and published archived results
 remain eligible for eviction. Abandoned staging has no automatic collection
-policy yet. These checks exercise components, not the complete ingestion path.
+policy yet. At `ef046f9` these checks exercised components, not the complete ingestion path.
 The Python 3.13 wheel passed 59 staging/graph component checks with 6 skips,
 including live PostgreSQL. Its public sync-client, default embedding, restart,
 source/provenance, selection/budget, authenticated HTTP and MCP HTTP workflow
 also passed. Strict public-consumer typing and changed-file lint checks passed.
+
+## Journaled plans in normal ingestion
+
+Normal ingestion now plans in a scoped memory overlay, computes embeddings in
+one batch, journals the complete plan and publishes it through the tested commit
+path. Entity reuse leaves existing index content unchanged. Only referenced
+existing nodes become dependencies, and older-effective assertions cannot retire
+later state. A saved plan skips inference; a completion receipt skips staging and
+graph writes, including after archival. Unjournaled legacy derived nodes require
+explicit migration instead of being silently duplicated.
+
+The planning, public-ingestion fault and index-staging subset passes 62 checks
+with 7 skips, including live PostgreSQL. Tests inject failures after plan/index
+writes, during graph writes and after commit; concurrent attempts converge on
+one plan. DuckDB child processes exit inside public ingestion after plan save,
+vector staging, lexical staging, node insertion and commit. Explicit retry after
+reopening preserves artifact identities and calls neither provider. Cancellation
+tests now target the atomic transaction boundary instead of the removed
+interleaved graph writer.
+
+This is not automatic extraction recovery: pending extraction discovery,
+persistent attempts, lease generations and plan revisions remain unimplemented.
 
 ## Grounded extraction journal
 

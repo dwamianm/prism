@@ -15,7 +15,7 @@ import asyncpg
 
 from prme.models import Event, ProcessingStatus
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
-from prme.models.derivation import DerivationPlan, derivation_operation_id
+from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.types import Scope
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,20 @@ class PgEventStore:
 
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
+
+    async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
+        """Read verified completion through the immutable source owner's scope."""
+        from prme.storage.derivation import _receipt
+
+        async with self._pool.acquire() as conn:
+            plan = await self._get_derivation_plan(conn, event_id, user_id)
+            if plan is None:
+                return None
+            row = await conn.fetchrow(
+                "SELECT payload FROM operations WHERE id = $1 AND target_id = $2 "
+                "AND op_type = 'DERIVATION_COMMITTED'", plan.receipt_operation_id, event_id,
+            )
+            return _receipt(plan, row["payload"] if row else None)
 
     async def get_derivation_plan(self, event_id: str, *, user_id: str) -> DerivationPlan | None:
         async with self._pool.acquire() as conn:

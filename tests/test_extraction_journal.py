@@ -28,15 +28,15 @@ async def test_indexing_retry_reuses_saved_extraction_and_restart_can_read_it(co
         pipeline._retry_delays = (0,)
         provider = AsyncMock(return_value=extraction())
         pipeline._extraction_provider.extract = provider
-        actual_index = engine._vector_index.index
+        actual_commit = engine._graph_store.commit_derivation
         attempts = 0
         async def fail_once(*args, **kwargs):
             nonlocal attempts
             attempts += 1
             if attempts == 1:
                 raise RuntimeError("injected indexing fault")
-            return await actual_index(*args, **kwargs)
-        monkeypatch.setattr(engine._vector_index, "index", fail_once)
+            return await actual_commit(*args, **kwargs)
+        monkeypatch.setattr(engine._graph_store, "commit_derivation", fail_once)
         with pytest.raises(ExtractionError) as failure:
             await engine.ingest("Alice uses Python.", user_id=user, wait_for_extraction=True)
         event_id = failure.value.event_id

@@ -53,6 +53,8 @@ class PreparedEmbedding(BaseModel):
             raise ValueError("Prepared embedding dimension does not match its values")
         if not any(self.values) or any(abs(value) > 3.4028234663852886e38 for value in self.values):
             raise ValueError("Prepared cosine embeddings must be nonzero finite float32 vectors")
+        if not any(abs(value) > 2 ** -150 for value in self.values):
+            raise ValueError("Prepared embedding underflows to a zero float32 vector")
         return self
 
 
