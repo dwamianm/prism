@@ -135,7 +135,7 @@ class PgGraphStore:
             else:
                 row = await conn.fetchrow(
                     f"SELECT {_NODE_COLUMNS} FROM nodes "
-                    "WHERE id = $1 AND lifecycle_state IN ('tentative', 'stable')",
+                    "WHERE id = $1 AND lifecycle_state IN ('tentative', 'stable', 'contested')",
                     node_id,
                 )
         if row is None:
@@ -164,7 +164,7 @@ class PgGraphStore:
             query = (
                 f"SELECT {_NODE_COLUMNS} FROM nodes "
                 "WHERE id = ANY($1::uuid[]) "
-                "AND lifecycle_state IN ('tentative', 'stable')"
+                "AND lifecycle_state IN ('tentative', 'stable', 'contested')"
             )
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, node_ids)
@@ -942,7 +942,7 @@ class PgGraphStore:
 
         if not include_superseded:
             node_filter_parts.append(
-                "n.lifecycle_state IN ('tentative', 'stable')"
+                "n.lifecycle_state IN ('tentative', 'stable', 'contested')"
             )
 
         if valid_at is not None:

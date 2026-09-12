@@ -40,7 +40,7 @@ class DuckPGQGraphStore:
 
     Uses parameterized queries for all user data to prevent SQL injection.
     All queries enforce user_id scoping. Query defaults filter to active
-    lifecycle states (tentative + stable).
+    lifecycle states (tentative + stable + contested).
     """
 
     def __init__(
@@ -132,7 +132,7 @@ class DuckPGQGraphStore:
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters.
 
-        Defaults to filtering for active states (tentative + stable).
+        Defaults to filtering for active states (tentative + stable + contested).
 
         Args:
             node_type: Filter by node type.
@@ -745,7 +745,7 @@ class DuckPGQGraphStore:
                 """
                 SELECT * FROM nodes
                 WHERE id = ?
-                AND lifecycle_state IN ('tentative', 'stable')
+                AND lifecycle_state IN ('tentative', 'stable', 'contested')
                 """,
                 [node_id],
             ).fetchone()
@@ -765,7 +765,7 @@ class DuckPGQGraphStore:
             query = f"""
                 SELECT * FROM nodes
                 WHERE id IN ({placeholders})
-                AND lifecycle_state IN ('tentative', 'stable')
+                AND lifecycle_state IN ('tentative', 'stable', 'contested')
             """
         rows = self._conn.execute(query, list(node_ids)).fetchall()
         return [self._row_to_node(row) for row in rows]
@@ -1462,7 +1462,7 @@ class DuckPGQGraphStore:
 
         if not include_superseded:
             node_conditions.append(
-                "n.lifecycle_state IN ('tentative', 'stable')"
+                "n.lifecycle_state IN ('tentative', 'stable', 'contested')"
             )
 
         if valid_at is not None:
