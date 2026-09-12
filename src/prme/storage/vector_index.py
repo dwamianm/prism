@@ -131,44 +131,61 @@ class VectorIndex:
         is still present in the snapshot. An already missing legacy vector
         requires ``prme rebuild`` and is reported explicitly.
         """
-        orphan_keys = {int(key) for key in self._index.keys}
-        last_key = -1
+        # Export keys in one native call; scalar Sequence iteration repeatedly
+        # asks USearch to locate an offset in its key collection.
+        orphan_keys = {int(key) for key in np.asarray(self._index.keys)}
         restored = missing_legacy = 0
-        while True:
-            rows = self._conn.execute(
-                "SELECT vm.vector_key, vm.embedding_dim, vp.vector_data "
+        # A single ordered read avoids re-scanning the remaining payload table
+        # for every page. A separate cursor keeps its result alive while legacy
+        # backfill writes use the main connection. Both are startup-only here.
+        with self._conn.cursor() as reader:
+            reader.execute(
+                "SELECT vm.vector_key, vm.embedding_dim, vp.vector_key IS NOT NULL "
                 "FROM vector_metadata vm LEFT JOIN vector_payloads vp "
-                "ON vm.vector_key = vp.vector_key "
-                "WHERE vm.vector_key > ? ORDER BY vm.vector_key LIMIT 256", [last_key],
-            ).fetchall()
-            if not rows:
-                break
-            backfill = []
-            for key, dimension, payload in rows:
-                if key in orphan_keys:
-                    orphan_keys.remove(key)
-                    if payload is None:
-                        vector = np.asarray(self._index.get(key), dtype="<f4")
-                        if vector.shape == (dimension,) and np.isfinite(vector).all():
-                            backfill.append((key, vector.tobytes()))
-                elif payload is None:
-                    missing_legacy += 1
-                else:
-                    vector = np.frombuffer(payload, dtype="<f4")
-                    if (vector.shape != (dimension,) or dimension != self._index.ndim
-                            or not np.isfinite(vector).all()):
-                        raise ValueError(
-                            "Cannot restore vector payload: invalid dimensions or values. "
-                            "Use the pack's embedding configuration and rebuild its indexes."
-                        )
-                    self._index.add(key, vector)
-                    restored += 1
-            if backfill:
-                self._conn.executemany(
-                    "INSERT INTO vector_payloads VALUES (?, ?)",
-                    backfill,
-                )
-            last_key = rows[-1][0]
+                "ON vm.vector_key = vp.vector_key ORDER BY vm.vector_key"
+            )
+            while rows := reader.fetchmany(256):
+                backfill = []
+                missing = {}
+                for key, dimension, has_payload in rows:
+                    if key in orphan_keys:
+                        orphan_keys.remove(key)
+                        if not has_payload:
+                            vector = np.asarray(self._index.get(key), dtype="<f4")
+                            if vector.shape == (dimension,) and np.isfinite(vector).all():
+                                backfill.append((key, vector.tobytes()))
+                    elif not has_payload:
+                        missing_legacy += 1
+                    else:
+                        missing[key] = dimension
+                # Intact packs need only key metadata. Fetch float payloads
+                # solely for missing vectors, avoiding a full embedding read
+                # and Python byte allocation on every normal startup.
+                if missing:
+                    placeholders = ",".join("?" for _ in missing)
+                    payloads = self._conn.execute(
+                        "SELECT vector_key, vector_data FROM vector_payloads "
+                        f"WHERE vector_key IN ({placeholders}) ORDER BY vector_key",
+                        list(missing),
+                    ).fetchall()
+                    if len(payloads) != len(missing):
+                        raise ValueError("Vector payloads changed during startup recovery")
+                    for key, payload in payloads:
+                        dimension = missing[key]
+                        vector = np.frombuffer(payload, dtype="<f4")
+                        if (vector.shape != (dimension,) or dimension != self._index.ndim
+                                or not np.isfinite(vector).all()):
+                            raise ValueError(
+                                "Cannot restore vector payload: invalid dimensions or values. "
+                                "Use the pack's embedding configuration and rebuild its indexes."
+                            )
+                        self._index.add(key, vector)
+                        restored += 1
+                if backfill:
+                    self._conn.executemany(
+                        "INSERT INTO vector_payloads VALUES (?, ?)",
+                        backfill,
+                    )
         for key in orphan_keys:
             self._index.remove(key)
         if restored or orphan_keys:

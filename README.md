@@ -182,6 +182,11 @@ structured output. It survives restart, but its presence does not prove graph
 completion or semantic correctness. Interrupted LLM jobs and partial graph writes
 are not automatically replayed yet.
 
+For a custom Ollama extraction endpoint, use its OpenAI-compatible URL, for
+example `ExtractionConfig(provider="ollama", model="qwen3.5:4b",
+base_url="http://localhost:11434/v1")`. The `/v1` path is required by the
+extraction adapter; omitting `base_url` uses the local default.
+
 See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a terminal chat app with persistent memory.
 
 ## Architecture

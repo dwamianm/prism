@@ -16,11 +16,15 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite passed 1,586 tests with 17 skips and live PostgreSQL.
+completed frozen full suite passed 1,609 tests with 17 skips and live PostgreSQL.
 Failed startup now releases acquired resources on both backends and restores
 encryption after a local pack was decrypted; wrong-key failures preserve the pack.
 Vector payloads now survive abrupt exits before the USearch snapshot is saved;
 startup reconciles missing inserts and stale deletions without model calls.
+Grounded LLM output is now journaled before graph writes and reused on indexing
+retries. Scoped inspection works through the engine, sync client, HTTP and MCP.
+A real local-model fault-injection workflow and installed Python 3.13 ingestion
+both passed; atomic graph replay and durable extraction scheduling remain open.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall

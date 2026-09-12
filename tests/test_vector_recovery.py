@@ -108,9 +108,9 @@ async def test_recovery_repairs_partial_snapshot_and_is_idempotent(database, tmp
     await index.save()
     second = await index.index("two", "second", "alice")
     recovered = open_index(database, tmp_path, OfflineProvider())
-    assert set(recovered._index.keys) == {first, second}
+    assert set(np.asarray(recovered._index.keys)) == {first, second}
     again = open_index(database, tmp_path, OfflineProvider())
-    assert set(again._index.keys) == {first, second}
+    assert set(np.asarray(again._index.keys)) == {first, second}
     assert database.execute("SELECT count(*) FROM vector_metadata").fetchone()[0] == 2
     np.testing.assert_array_equal(again._index.get(second), [0.125, 0.5, 0.75])
 
@@ -119,7 +119,7 @@ async def test_recovery_crosses_payload_batch_boundary(database, tmp_path):
     index = open_index(database, tmp_path, save_interval=1000)
     keys = {await index.index(str(i), "source", "alice") for i in range(260)}
     recovered = open_index(database, tmp_path, OfflineProvider())
-    assert set(recovered._index.keys) == keys
+    assert set(np.asarray(recovered._index.keys)) == keys
 
 
 async def test_failed_native_add_still_has_recoverable_payload(database, tmp_path, monkeypatch):
@@ -148,9 +148,9 @@ async def test_old_snapshot_cannot_resurrect_deleted_vectors(database, tmp_path,
     # Simulate termination after DB commit but before snapshot replacement.
     (tmp_path / "vectors.usearch").write_bytes(snapshot)
     recovered = open_index(database, tmp_path, OfflineProvider())
-    assert set(recovered._index.keys) == expected
-    assert first not in recovered._index.keys
-    assert set(open_index(database, tmp_path, OfflineProvider())._index.keys) == expected
+    assert set(np.asarray(recovered._index.keys)) == expected
+    assert first not in np.asarray(recovered._index.keys)
+    assert set(np.asarray(open_index(database, tmp_path, OfflineProvider())._index.keys)) == expected
 
 
 async def test_failed_snapshot_write_preserves_previous_complete_file(database, tmp_path, monkeypatch):

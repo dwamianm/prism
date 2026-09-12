@@ -283,9 +283,11 @@ I/O failures; it is not a power-loss durability guarantee for the filesystem.
 
 Existing packs are backfilled from their intact USearch vectors without invoking
 an embedding model. Already missing legacy vectors cannot be reconstructed this
-way: startup reports their count and requests `prme rebuild`. Recovery reads
-payloads in batches of 256 and keeps an O(number of vector keys) reconciliation
-set. Large-pack startup cost still requires measurement.
+way: startup reports their count and requests `prme rebuild`. Recovery exports
+native keys in one call, scans metadata once, and reads numerical payloads only
+for missing vectors in batches of 256. It keeps an O(number of vector keys)
+reconciliation set. `benchmarks/diagnostics/vector_startup.py` measures the vector
+component separately from engine initialization and inference.
 
 The separate payload table avoids an `ALTER TABLE` migration on metadata with a
 function-based default. An abrupt-exit test reproduced DuckDB 1.4.4's WAL replay
