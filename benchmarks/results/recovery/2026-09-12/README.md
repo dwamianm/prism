@@ -2,8 +2,8 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The latest frozen full suite at `0443ba8` passed **1,662 tests, 21 skipped**
-with live PostgreSQL (122.71 seconds). A Python 3.13 wheel at `66a0a1b` passed
+product. The latest frozen full suite at `aaa7ee1` passed **1,698 tests, 27 skipped**
+with live PostgreSQL (128.41 seconds). A Python 3.13 wheel at `aaa7ee1` passed
 installed sync-client, default local embedding, restart, source/provenance,
 selection/budget, HTTP identity/filter and MCP HTTP workflow checks. The older
 `7a1e864` wheel additionally ran real local-model extraction, recorded below.
@@ -46,6 +46,31 @@ suite passed 44 checks with 1 skip on Python 3.11; an installed Python 3.13 whee
 passed 31 cancellation/backend-status checks with 2 skips, including live
 PostgreSQL. Intermediate graph visibility and process-crash recovery still require
 the planned atomic derivation protocol.
+
+## Prepared graph commit component
+
+At `aaa7ee1`, the internal plan journal and `commit_derivation()` primitive passed
+63 focused checks with 6 skips, including live PostgreSQL. An installed Python
+3.13 wheel passed 43 graph/journal/startup checks with 6 skips. These tests cover
+atomic rollback after every node/edge position, unchanged views for independent
+readers, concurrent retry returning one receipt, archived results staying retired,
+changed dependencies, invalid source/scope/vector inputs, timezone changes and
+signed-zero preservation through PostgreSQL's operation log.
+
+Real DuckDB child processes exited during node insertion, after a replacement
+write and after commit before acknowledgement. Reopening exposed zero partial
+nodes before commit, or the complete fixed-ID graph after commit. Replaying the
+saved plan reused its inputs and receipt. These are component-level tests:
+ordinary `ingest()` is not yet routed through the primitive, and persistent
+extraction scheduling, staging-aware compaction and lease/revision fencing remain
+unimplemented.
+
+The crash tests initially failed because startup altered dependency nodes.
+`3be24f3` repaired that separate bug: existing explicit epistemic assignments,
+metadata and timestamps survive reopening; heuristic migration applies only to
+legacy NULL epistemic values. An explicitly hypothetical fact no longer becomes
+asserted merely because the pack was opened again. Earlier overwritten values
+are not automatically recoverable from a migration marker.
 
 ## Grounded extraction journal
 

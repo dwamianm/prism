@@ -72,11 +72,12 @@ class PgGraphStore:
         return await commit_postgres(self, plan)
 
     async def create_node(self, node: MemoryNode) -> str:
+        """Create a new node in the graph store."""
         async with self._pool.acquire() as conn:
             return await self._create_node_on_connection(conn, node)
 
     async def _create_node_on_connection(self, conn, node: MemoryNode) -> str:
-        """Create a new node in the graph store."""
+        """Insert a node using the caller's connection and transaction."""
         evidence_json = (
             json.dumps([str(ref) for ref in node.evidence_refs])
             if node.evidence_refs
@@ -458,11 +459,12 @@ class PgGraphStore:
     # --- Edge Operations ---
 
     async def create_edge(self, edge: MemoryEdge) -> str:
+        """Create a new edge between two nodes."""
         async with self._pool.acquire() as conn:
             return await self._create_edge_on_connection(conn, edge)
 
     async def _create_edge_on_connection(self, conn, edge: MemoryEdge) -> str:
-        """Create a new edge between two nodes."""
+        """Insert an edge using the caller's connection and transaction."""
         metadata_json = (
             json.dumps(edge.metadata) if edge.metadata is not None else None
         )

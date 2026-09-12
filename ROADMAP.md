@@ -16,7 +16,7 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite passed 1,662 tests with 21 skips and live PostgreSQL.
+completed frozen full suite passed 1,698 tests with 27 skips and live PostgreSQL.
 Failed startup now releases acquired resources on both backends and restores
 encryption after a local pack was decrypted; wrong-key failures preserve the pack.
 Vector payloads now survive abrupt exits before the USearch snapshot is saved;
@@ -34,6 +34,12 @@ Cancelled materialization now finishes tracking committed writes and cleans
 partial artifacts, while preserving a final replacement that already committed.
 This does not yet make intermediate graph writes invisible or survive a process
 exit during materialization; atomic derivation commits remain the next reliability gate.
+The internal prepared-plan journal and atomic graph commit primitive now pass
+concurrency, independent-reader, rollback and abrupt-process-exit checks. Startup
+also preserves explicitly assigned epistemic types instead of reclassifying
+modern nodes with a legacy heuristic. The ordinary ingestion path still needs
+to use the planner, idempotent index staging and commit primitive; durable
+extraction scheduling, generation fencing and plan revision remain open.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall
