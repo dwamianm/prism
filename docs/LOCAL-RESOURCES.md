@@ -36,8 +36,8 @@ Closing idle engines can reduce active resource use; applications should keep
 the engine context alive until all operations finish. A shared provider avoids
 loading another embedding model per pack. It does not share graph or search
 indexes. A bounded cache must also handle leases, concurrent open/close,
-cancellation and resource ownership; PRME does not yet provide a namespace
-manager or cache with those contracts.
+cancellation and resource ownership. The [local workspace API](WORKSPACES.md)
+now provides that bounded cache with lease ownership and durable project identity.
 
 The [completed resource probe](../benchmarks/results/recovery/2026-09-12/PARTITION-RESOURCES.md)
 uses tiny authored packs and a shared warmed model. Results do not establish an

@@ -1,6 +1,12 @@
 # Recovery and developer workflow evidence
 
-The latest [local partition resource probe](PARTITION-RESOURCES.md) completed
+The latest [named workspace record](WORKSPACES.md) at `217facb` passed **2,843
+tests with 81 skips** in the full source collection, including live PostgreSQL,
+research and examples. Installed checks passed 161 tests with five skips, and
+the real-BGE 100-project eviction/copy workflow completed. These are overlapping
+invocations. Local workspaces do not yet provide PostgreSQL routing or hosted grants.
+
+The preceding [local partition resource probe](PARTITION-RESOURCES.md) completed
 18 repetitions plus a smoke run and retained one thread-budget stop. The new
 `duckdb_threads` control passed 127 focused tests with five skips in both source
 and installed environments. It does not yet provide a namespace manager.

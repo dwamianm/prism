@@ -1,0 +1,92 @@
+{
+  "source_commit": "217facb",
+  "runner_commit": "4a45553",
+  "installed_identity": {
+    "source_commit": "217facb",
+    "matching_python_files": 121,
+    "installed_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme",
+    "wheel_sha256": "d915cf0a5422d70a378eb6a068202a9bf414423affa1323d75bc4e980b0ba7f4"
+  },
+  "runs": {
+    "first_fixture": {
+      "path": "/tmp/prme-workspace-first.log",
+      "sha256": "0dce37c49728dddd4df23baabd413ec832def969b9c220e36f1298d2eb15637a",
+      "native_exit_code": 1,
+      "summary": "1 failed, 21 passed in 2.02s"
+    },
+    "extractor_fixture": {
+      "path": "/tmp/prme-workspace-expanded.log",
+      "sha256": "e6233aa1f12c2afd2efa037ba2879e5d2215cfdc84144aee10700a4737314448",
+      "native_exit_code": 1,
+      "summary": "1 failed, 28 passed in 3.88s"
+    },
+    "source_contracts": {
+      "path": "/tmp/prme-workspace-final-contracts-v2.log",
+      "sha256": "8cb371819fe7b229fc1976c8c599c674f20d940371b3d9fd4849fb80b5a3426b",
+      "native_exit_code": 0,
+      "summary": "34 passed in 15.23s"
+    },
+    "installed_combined": {
+      "path": "/tmp/prme-workspace-installed-tests.log",
+      "sha256": "0e1d6aca50430e803d451f33839d6efee4a1e2a57bb3750c9df45229ef56732c",
+      "native_exit_code": 0,
+      "summary": "161 passed, 5 skipped in 34.61s"
+    },
+    "minimum_filelock": {
+      "path": "/tmp/prme-workspace-filelock316.log",
+      "sha256": "45051b7bb6586f8bb47fe931a6f0d95de9e184a16557a692dd937596c194e61a",
+      "native_exit_code": 0,
+      "summary": "34 passed in 15.16s"
+    },
+    "full_regression": {
+      "path": "/tmp/prme-workspace-full-217facb.log",
+      "sha256": "10d05dff0a7f4aa9f4a711edd2528b67c634749799e759c06dfb1d6c4fdfa830",
+      "native_exit_code": 0,
+      "summary": "2843 passed, 81 skipped in 397.78s (0:06:37)"
+    }
+  },
+  "public_workflow": {
+    "source_commit": "217facb",
+    "runner_commit": "4a45553",
+    "native_exit_code": 0,
+    "artifact_path": "/Users/dwamianm/Sites/prism/data/benchmarks/workspace-100-217facb.json",
+    "artifact_sha256": "6cc58a468a611a5fcefe52abebf289d51044a7a82ff9896e092283b536ae5458",
+    "log_path": "/tmp/prme-workspace-100.log",
+    "log_sha256": "28c7289a551b2fd3e8591a0249e721e58c251d856ec5ba90bf1cb7bca0a54d93"
+  },
+  "static_checks": {
+    "source_mypy": {
+      "native_exit_code": 0,
+      "check_untyped_defs": true,
+      "files": [
+        "src/prme/workspace.py",
+        "src/prme/storage/namespace_identity.py"
+      ]
+    },
+    "installed_consumer": {
+      "path": "/tmp/prme-workspace-installed-consumer.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e",
+      "native_exit_code": 0
+    }
+  },
+  "limits": [
+    "Separate overlapping suites, not a sum of unique tests.",
+    "Authored extraction fixtures and real local embeddings; no live cloud extraction or QA superiority result.",
+    "Local namespaces only; PostgreSQL routing and hosted grants remain unimplemented.",
+    "Process-exit tests do not prove hardware power-loss resilience."
+  ],
+  "smoke": {
+    "path": "data/benchmarks/workspace-smoke-217facb.json",
+    "sha256": "559f1d423b4b7e06b5a985f89cc5696a72a480eeca8da0769b5562de64810d7e",
+    "native_exit_code": 0
+  },
+  "workflow_measurements": {
+    "count": 100,
+    "max_open": 4,
+    "duckdb_threads": 1,
+    "elapsed_seconds": 51.228206750005484,
+    "max_sampled_rss_bytes": 625672192,
+    "max_sampled_threads": 104,
+    "max_sampled_fds": 16
+  }
+}

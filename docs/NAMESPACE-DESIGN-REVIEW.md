@@ -1,12 +1,14 @@
 # Named memory partitions: implementation review
 
-Reviewed 2026-09-12 against the current code and primary documentation. This is
-a design comparison, not an implemented namespace API or a new GSD milestone.
+Reviewed 2026-09-12 against code and primary documentation. The initial comparison
+below led to the [implemented local workspace API](WORKSPACES.md) at `217facb`.
+The PostgreSQL and hosted grant work remains a design requirement.
 
-PRME's owner and scope filters cannot distinguish two named projects with the
-same owner and `Scope.PROJECT`. A `project_id` in metadata is not a mandatory
-boundary for entity resolution, organizer merges, receipts or recovery. Separate
-packs remain the supported solution. The catalog collision fixed at `afc35ad`
+PRME's owner and scope filters within one engine cannot distinguish two named
+projects with the same owner and `Scope.PROJECT`. A `project_id` in metadata is
+not a mandatory boundary for entity resolution, organizer merges, receipts or
+recovery. `MemoryWorkspace` now manages separate local packs by stable project
+identity with bounded, cancellation-safe leases. The catalog collision fixed at `afc35ad`
 also shows why adding a PostgreSQL search-path setting alone is insufficient.
 
 [Hindsight's memory-bank API](https://hindsight.vectorize.io/developer/api/memory-banks)
@@ -54,3 +56,10 @@ journal checksums must keep their existing interpretation. Tenant HTTP/MCP
 credentials must bind allowed partitions explicitly; a request-supplied name is
 not an access grant. The full RFC-0004 hierarchy and grant model remains separate
 from this initial partition contract.
+
+The subsequent [workspace validation](../benchmarks/results/recovery/2026-09-12/WORKSPACES.md)
+exercises those local source/identity/lease contracts, including controlled
+structured ingestion, pending-work recovery, receipts, encrypted copying and
+real process exits. The full suite and installed public 100-project workflow
+passed. These local results do not prove PostgreSQL isolation or the hosted
+grant requirements above, which remain the next platform boundaries to implement.
