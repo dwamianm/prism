@@ -357,6 +357,13 @@ records remain unregistered with identity-only diagnostics and prevent retired
 index collection; legacy ownership collisions remain ambiguous. Reconstructed
 work resets operational attempt diagnostics, which are not immutable history.
 
+Local CLI equivalents require `--user-id`: `profile-jobs`, `process-profiles`,
+`resume-profile`, `discard-profile` and `collect-profile-staging`. Batch operations
+accept a scope, limit and cooperative budget. JSON results remain on stdout;
+diagnostics use stderr. Failures and blocked collection return nonzero status.
+An explicit local file cannot be redirected by an ambient database URL. The
+[profile guide](ENTITY-PROFILES.md) describes exact results and exit behavior.
+
 `discard_profile` explicitly abandons owned unpublished work and appends an
 immutable `PROFILE_PREPARATION_DISCARDED` receipt. It is idempotent, cannot retire
 completed publications, and shares the changing work epoch with native staging.

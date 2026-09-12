@@ -14,6 +14,11 @@ Commands:
     prme chain <db_path> <id> -- Show supersedence chain
     prme search <db_path> <q> -- Run retrieval query
     prme organize <db_path>  -- Run organizer jobs
+    prme profile-jobs <db_path> -- Inspect owned profile preparations
+    prme process-profiles <db_path> -- Resume owned profile preparations
+    prme resume-profile <db_path> <id> -- Resume one owned preparation
+    prme discard-profile <db_path> <id> -- Abandon one owned preparation
+    prme collect-profile-staging <db_path> -- Reclaim abandoned profile indexes
     prme rebuild <db_path>   -- Rebuild indexes from the durable graph
     prme stats <db_path>     -- Show memory statistics
     prme export <db_path>    -- Export memory pack as JSON
@@ -24,14 +29,16 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import os
 import sys
 from datetime import datetime, timezone
 from typing import Any
+from uuid import UUID
 
 from prme.config import PRMEConfig
 from prme.models import MemoryEdge, MemoryNode
-from prme.types import EdgeType, LifecycleState, NodeType
+from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +70,9 @@ async def _create_engine(db_path: str) -> Any:
 
     db_dir = os.path.dirname(abs_path)
     config = PRMEConfig(
+        # A positional local artifact is the command's target. Ambient settings
+        # must not silently redirect inspection or maintenance to PostgreSQL.
+        database_url=None,
         db_path=abs_path,
         vector_path=os.path.join(db_dir, "vectors.usearch"),
         lexical_path=os.path.join(db_dir, "lexical_index"),
@@ -517,6 +527,42 @@ async def cmd_extractions(args: argparse.Namespace) -> None:
         await engine.close()
 
 
+async def cmd_profiles(args: argparse.Namespace) -> None:
+    """Inspect or recover explicitly owned profile work without model calls."""
+    engine = await _create_engine(args.db_path)
+    failed = False
+    try:
+        scope = Scope(args.scope) if getattr(args, "scope", None) else None
+        if args.action == "jobs":
+            result = await engine.profile_jobs(
+                user_id=args.user_id, scope=scope, status=args.status, limit=args.limit,
+            )
+        elif args.action in {"process", "collect"}:
+            method = engine.process_profiles if args.action == "process" else engine.collect_profile_staging
+            result = await method(user_id=args.user_id, scope=scope, limit=args.limit, budget_ms=args.budget_ms)
+            failed = bool(result["failed"] or result.get("blocked_reason"))
+        elif args.action == "resume":
+            profile_id = await engine.resume_profile(args.profile_id, user_id=args.user_id)
+            result = {"profile_id": profile_id, "resumed": profile_id is not None}
+            failed = profile_id is None
+        else:
+            discarded = await engine.discard_profile(args.profile_id, user_id=args.user_id)
+            result = {"profile_id": args.profile_id, "discarded": discarded}
+            failed = not discarded
+        if args.format == "json":
+            print(json.dumps(result, indent=2))
+        elif isinstance(result, list):
+            columns = ["plan_id", "scope", "status", "attempts", "last_error"]
+            print(_format_table(columns, [[str(row[c]) if row.get(c) is not None else "" for c in columns] for row in result]))
+        else:
+            for key, value in result.items():
+                print(f"{key}: {value}")
+        if failed:
+            raise SystemExit(1)
+    finally:
+        await engine.close()
+
+
 async def cmd_rebuild(args: argparse.Namespace) -> None:
     """Rebuild the vector and lexical indexes from the durable graph.
 
@@ -873,6 +919,50 @@ def build_parser() -> argparse.ArgumentParser:
             help="Output format (default: table)",
         )
 
+    def owner(value: str) -> str:
+        if not value.strip():
+            raise argparse.ArgumentTypeError("A nonempty owner is required")
+        return value
+
+    def work_limit(value: str) -> int:
+        number = int(value)
+        if not 1 <= number <= 1000:
+            raise argparse.ArgumentTypeError("Limit must be between 1 and 1000")
+        return number
+
+    def work_budget(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number) or number < 0:
+            raise argparse.ArgumentTypeError("Budget must be finite and nonnegative")
+        return number
+
+    def profile_uuid(value: str) -> str:
+        try:
+            return str(UUID(value))
+        except ValueError:
+            raise argparse.ArgumentTypeError("Profile identity must be a UUID") from None
+
+    for command, action, help_text in (
+        ("profile-jobs", "jobs", "Inspect owned prepared-profile jobs"),
+        ("process-profiles", "process", "Resume owned profiles without new model calls"),
+        ("resume-profile", "resume", "Resume one owned prepared profile"),
+        ("discard-profile", "discard", "Abandon one unpublished profile; preserve sources and journal"),
+        ("collect-profile-staging", "collect", "Reclaim uniquely owned abandoned profile indexes"),
+    ):
+        sub = subparsers.add_parser(command, help=help_text)
+        add_common(sub)
+        sub.add_argument("--user-id", required=True, type=owner, help="Profile owner")
+        if action in {"resume", "discard"}:
+            sub.add_argument("profile_id", type=profile_uuid, help="Prepared profile UUID")
+        else:
+            sub.add_argument("--scope", choices=[s.value for s in Scope], help="Omit to visit every scope for this owner")
+            sub.add_argument("--limit", type=work_limit, default=100, help="Maximum preparations (1–1000)")
+        if action == "jobs":
+            sub.add_argument("--status", choices=["pending", "complete", "abandoned"], default="pending")
+        if action in {"process", "collect"}:
+            sub.add_argument("--budget-ms", type=work_budget, default=5000, help="Cooperative budget checked between preparations")
+        sub.set_defaults(func=cmd_profiles, action=action)
+
     # info
     for command, action, help_text in (
         ("extraction-status", "status", "Inspect owned extraction progress"),
@@ -1015,6 +1105,11 @@ def main() -> None:
     if not hasattr(args, "func"):
         parser.print_help()
         sys.exit(1)
+
+    # Keep command output, including --format json, usable by pipes. Preserve
+    # configured processors/levels while directing library diagnostics to stderr.
+    import structlog
+    structlog.configure(logger_factory=structlog.PrintLoggerFactory(file=sys.stderr))
 
     try:
         asyncio.run(args.func(args))

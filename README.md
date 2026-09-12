@@ -401,6 +401,18 @@ prme stats ./memory.duckdb        # Detailed statistics
 prme export ./memory.duckdb       # Export as JSON
 ```
 
+Local file commands target the named pack even if `PRME_DATABASE_URL` is set.
+With `--format json`, stdout contains the result and diagnostics go to stderr.
+Interrupted entity profiles can be inspected and resumed without new model calls:
+
+```bash
+prme profile-jobs ./memory.duckdb --user-id alice --scope project --format json
+prme process-profiles ./memory.duckdb --user-id alice --scope project --format json
+```
+
+See the [profile recovery guide](docs/ENTITY-PROFILES.md) for single-job retries,
+abandonment, staging collection, bounded processing and exit codes.
+
 ## Following source evidence
 
 `store()` returns its durable event ID. Resolve the associated nodes directly:

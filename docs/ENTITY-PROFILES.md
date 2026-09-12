@@ -121,6 +121,35 @@ journals block collection, and ambiguous identities or mismatched native entries
 are retained. PostgreSQL has no external pre-publication index entries; collection
 validates and acknowledges its abandoned preparation without deleting graph data.
 
-There is no automatic profile scheduler. These explicit Python methods are
-separate from the organizer's `consolidate` job. Journals and identity reservations
-remain durable after index collection.
+The CLI exposes the same recovery operations for a local memory pack:
+
+```bash
+prme profile-jobs ./project_memory/memory.duckdb --user-id alice --scope project --format json
+prme process-profiles ./project_memory/memory.duckdb --user-id alice --scope project --limit 20 --budget-ms 5000 --format json
+prme resume-profile ./project_memory/memory.duckdb PROFILE_UUID --user-id alice --format json
+prme discard-profile ./project_memory/memory.duckdb PROFILE_UUID --user-id alice --format json
+prme collect-profile-staging ./project_memory/memory.duckdb --user-id alice --scope project --format json
+```
+
+Every command requires `--user-id`. Listing and batch commands accept `--scope`;
+omission visits every scope for that owner. `profile-jobs --status abandoned`
+lists abandoned preparations. `--limit` accepts 1–1000; processing and collection
+budgets are finite nonnegative milliseconds, checked between preparations.
+Zero budget performs no per-preparation work and still reports remaining work.
+
+JSON output goes to stdout and diagnostics to stderr. Processing failures or
+blocked collection print the result and exit 1. Unknown or foreign resume IDs
+both return `{"profile_id": null, "resumed": false}` with exit 1. Discard returns
+`discarded: false` and exit 1 for unknown, foreign or completed work; repeating a
+successful abandonment returns true. A pass that stops at its limit or budget
+without failures exits 0; inspect `pending` or `remaining` before declaring the
+queue drained. Invalid command arguments exit 2. Unexpected errors go to stderr.
+
+The positional file is the local target even when `PRME_DATABASE_URL` is set.
+These commands are local operator tools: `--user-id` selects ownership, but is
+not authentication against another local operator with file access. Use the
+Python APIs with a PostgreSQL configuration for that backend.
+
+There is no automatic profile scheduler. These explicit Python and CLI operations
+are separate from the organizer's `consolidate` job. Journals and identity
+reservations remain durable after index collection.
