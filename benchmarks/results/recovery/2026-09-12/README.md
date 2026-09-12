@@ -1229,8 +1229,14 @@ both paths corrected the harness. The successful native-exit report is
 `directory-config-installed-5afcf8b.json`. Its installed consumer passed strict
 mypy checking; the configuration and receipt source modules also passed mypy.
 
-The complete repository suite is running from clean frozen `0ed72a8`; its final
-exit and totals must be recorded separately before calling that run successful.
+The complete repository suite at frozen `0ed72a8` exited 1: 2,452 passed,
+57 skipped and two HTTP ranking-trial failures in 925.68s. Both tests used a
+fixed knowledge cutoff that excluded later test writes; both also failed on
+pre-option `e297d08`. The fixtures now capture a shared clock after admission
+and apply it identically across Python/HTTP/MCP. The MCP check additionally
+requires a nonempty result and context, preventing vacuous parity. The corrected
+transport and tool-provenance set passes all 20 checks in 3.67s. A new complete
+repository run is required before reporting a clean full suite.
 
 ## Tool provenance
 

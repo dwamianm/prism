@@ -17,30 +17,32 @@ from tests.test_http_write_fidelity import app_for, client_for
 
 config = test_durable_ingestion.config
 user = test_durable_ingestion.user
-NOW = datetime(2026, 9, 12, 18, tzinfo=timezone.utc)
 ADJUSTMENT = RankingMultipliers(semantic=.25, lexical=4, graph=.25)
 
 
 async def seed(engine, user):
+    now = datetime.now(timezone.utc)
     for scope, owner, text in (
         (Scope.PROJECT, user, "The telescope is blue."),
         (Scope.PROJECT, user, "The telescope has a red lens."),
         (Scope.PERSONAL, user, "Private telescope note."),
         (Scope.PROJECT, user + "-other", "Foreign telescope note."),
     ):
-        await engine.store(text, user_id=owner, scope=scope, event_time=NOW - timedelta(days=1))
+        await engine.store(text, user_id=owner, scope=scope, event_time=now - timedelta(days=1))
+    # Knowledge cutoff follows admission; share it across Python and transports.
+    return datetime.now(timezone.utc)
 
 
-def arguments(user):
-    return dict(user_id=user, scope=[Scope.PROJECT], reference_time=NOW,
-                time_from=NOW-timedelta(days=2), time_to=NOW+timedelta(days=1),
-                knowledge_at=NOW, event_time_from=NOW-timedelta(days=2), event_time_to=NOW,
+def arguments(user, now):
+    return dict(user_id=user, scope=[Scope.PROJECT], reference_time=now,
+                time_from=now-timedelta(days=2), time_to=now+timedelta(days=1),
+                knowledge_at=now, event_time_from=now-timedelta(days=2), event_time_to=now,
                 include_cross_scope=False, min_fidelity=RepresentationLevel.FULL,
                 retrieval_mode=RetrievalMode.DEFAULT, token_budget=1024, limit=2, min_score=0)
 
 
-def transport_arguments(user):
-    args = arguments(user)
+def transport_arguments(user, now):
+    args = arguments(user, now)
     args.pop("user_id")
     args["scope"] = ["project"]
     args["mode"] = args.pop("retrieval_mode").value
@@ -53,13 +55,13 @@ def transport_arguments(user):
 
 async def test_http_trial_matches_python_scores_context_and_receipt(config, user):
     async with MemoryEngine.open(config) as engine:
-        await seed(engine, user)
+        now = await seed(engine, user)
         original_weights = engine._config.scoring.model_dump_json()
-        baseline = await engine.retrieve("blue telescope", **arguments(user))
-        expected = await engine.retrieve("blue telescope", **arguments(user), ranking_multipliers=ADJUSTMENT)
+        baseline = await engine.retrieve("blue telescope", **arguments(user, now))
+        expected = await engine.retrieve("blue telescope", **arguments(user, now), ranking_multipliers=ADJUSTMENT)
         assert baseline.results and expected.results
         assert [c.composite_score for c in baseline.results] != [c.composite_score for c in expected.results]
-        body = transport_arguments(user)
+        body = transport_arguments(user, now)
         body["query"] = "blue telescope"
         body["filters"] = {key: body.pop(key) for key in (
             "scope", "time_from", "time_to", "knowledge_at", "event_time_from", "event_time_to", "include_cross_scope")}
@@ -83,8 +85,9 @@ async def test_http_trial_matches_python_scores_context_and_receipt(config, user
 async def test_mcp_trial_matches_python_context_and_retains_owned_receipt(config, user):
     config.mcp = MCPConfig(user_id=user)
     async with MemoryEngine.open(config) as engine:
-        await seed(engine, user)
-        expected = await engine.retrieve("blue telescope", **arguments(user), ranking_multipliers=ADJUSTMENT)
+        now = await seed(engine, user)
+        expected = await engine.retrieve("blue telescope", **arguments(user, now), ranking_multipliers=ADJUSTMENT)
+        assert expected.results and expected.bundle.render()
         @asynccontextmanager
         async def lifespan(server):
             yield {"engine": engine}
@@ -93,7 +96,7 @@ async def test_mcp_trial_matches_python_context_and_retains_owned_receipt(config
             await session.initialize()
             tool = next(tool for tool in (await session.list_tools()).tools if tool.name == "memory_retrieve")
             assert {"ranking_multipliers", "reference_time", "include_context"} <= tool.inputSchema["properties"].keys()
-            args = {"query": "blue telescope", **transport_arguments(user),
+            args = {"query": "blue telescope", **transport_arguments(user, now),
                     "ranking_multipliers": ADJUSTMENT.model_dump(), "include_context": True}
             response = await session.call_tool("memory_retrieve", args)
             assert not response.isError, response

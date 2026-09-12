@@ -75,8 +75,11 @@ Version 2 receipts capture applied weights, neural/session score operations and
 sort policy for exact returned-candidate replay with `receipt.replay_ranking()`.
 Version 1 canonical JSON/checksums must remain unchanged; those receipts still
 accept labels but cannot replay scores. Replay excludes unseen/filtered candidates.
-New pipeline receipts use version 3 to add request parameters and reported feature
-identity in extensible execution maps. Version 2 checksums also remain unchanged.
+Version 3 adds request parameters and reported feature identity in extensible
+execution maps. New pipeline receipts use version 4 to record the explicit
+packing order; versions 1–3 retain their canonical bytes and implicit density
+ordering. `PackingConfig.multipath_ordering="score"` is available as an opt-in;
+the default remains `"density"` pending confirmation.
 Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
 for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a
