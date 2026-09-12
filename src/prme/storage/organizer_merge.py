@@ -58,7 +58,15 @@ def _result(record, applied):
 
 
 def _payload(record):
-    text = record.model_dump_json()
+    # Pydantic's JSON serializer converts non-finite metadata to null. A durable
+    # input/output record must reject that lossy conversion, never hide it.
+    def encode(value):
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, UUID):
+            return str(value)
+        raise TypeError("Merge record value cannot be represented as JSON")
+    text = json.dumps(record.model_dump(mode="python"), default=encode, allow_nan=False)
     return json.dumps({"record": text, "sha256": hashlib.sha256(text.encode()).hexdigest()})
 
 

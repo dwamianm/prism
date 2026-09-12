@@ -52,6 +52,9 @@ by older versions. A conflicting existing copy aborts the new transaction.
 Each committed merge records complete before/after node values, original and
 published relationships, and a checksum-protected `ORGANIZER_MERGED` operation.
 The operation identity is stable for the unordered node pair and merge kind.
+Non-finite numeric metadata is rejected before commit rather than silently
+changed to JSON null in the journal. Existing compact JSON records retain their
+original bytes, checksums and retry identities.
 Retries return the committed identity without reactivating later-retired nodes.
 
 External index eviction runs after graph commit and remains repairable by

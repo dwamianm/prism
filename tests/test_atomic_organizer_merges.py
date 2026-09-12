@@ -270,3 +270,36 @@ async def test_direct_transaction_preserves_isolation(config, user, difference):
         assert result is None
         assert [await engine.get_node(str(node.id)) for node in (first, second)] == before
         assert await engine._graph_store.get_edges(node_ids=[str(n.id) for n in (first, second)]) == []
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+def test_journal_must_not_silently_convert_non_finite_metadata_to_null(value):
+    from prme.models import MemoryNode
+    from prme.storage.organizer_merge import MergeRecord, _payload
+    from prme.types import NodeType
+    from uuid import uuid4
+    keep = MemoryNode(content="Aster", node_type=NodeType.ENTITY, user_id="authored")
+    retired = keep.model_copy(update={"id": uuid4()})
+    record = MergeRecord(operation_id=str(uuid4()), kind="duplicate", user_id="authored", score=1.,
+        canonical_before=keep, retired_before=retired, canonical_after=keep, retired_after=retired,
+        original_edges=(), published_edges=())
+    record.canonical_before.metadata = {"diagnostic_score": value}
+    with pytest.raises(ValueError, match="JSON"):
+        _payload(record)
+
+
+async def test_existing_compact_json_journals_keep_their_identity(config, user, monkeypatch):
+    import hashlib
+    import json
+    from prme.storage import organizer_merge
+    def legacy_payload(record):
+        raw = record.model_dump_json()
+        return json.dumps({"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()})
+    async with MemoryEngine.open(config) as engine:
+        keep, duplicate, _ = await seed(engine, user)
+        with monkeypatch.context() as patch:
+            patch.setattr(organizer_merge, "_payload", legacy_payload)
+            original = await engine._graph_store.merge_nodes(str(keep.id), str(duplicate.id), user_id=user, kind="duplicate", score=1.)
+    async with MemoryEngine.open(config) as engine:
+        repeated = await engine._graph_store.merge_nodes(str(keep.id), str(duplicate.id), user_id=user, kind="duplicate", score=1.)
+        assert not repeated.applied and repeated.operation_id == original.operation_id
