@@ -207,3 +207,13 @@ GPT-4o protocol nor a comparative leaderboard result. Shared conversation histor
 also limit query-level confidence intervals. The smaller abstention category lost
 one answer. The 381-question prospective packing confirmation remains running;
 production packing defaults remain unchanged.
+
+A post-study structural overlap audit found 119 distinct exact history sets,
+5,381 distinct haystack session IDs, and 284 background session IDs reused across
+questions. Transitively, that connects all 119 questions into one component,
+so an overlap-component bootstrap cannot provide a useful independent-history
+interval. The 219 answer-session IDs in this cohort are all distinct across
+questions. This measures exact ID overlap, not the strength of statistical
+dependence or semantic duplication. The frozen query-bootstrap results above
+remain unchanged. `benchmarks.diagnostics.session_overlap` reproduces these
+counts; `reader-session-overlap.json` pins input and diagnostic hashes.
