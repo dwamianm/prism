@@ -1258,3 +1258,10 @@ issues (missing dateparser stubs, lambda inference, an object-typed confidence
 matrix and DuckDB-specific attributes on the graph protocol); checking the prior
 pipeline source reproduces the same six diagnostics. These are not a passing
 project-wide type check.
+
+The installed `a2eb87d` wheel passed all 53 tool-provenance, relationship and
+HTTP/MCP fidelity checks on Python 3.13, including live PostgreSQL. Production
+imports came from `site-packages`; only test fixtures came from the frozen
+checkout. The [installed report](tool-provenance-installed-a2eb87d.json) records
+the wheel/log hashes and native exit zero. These authored-provider checks do not
+substitute for live extraction quality.

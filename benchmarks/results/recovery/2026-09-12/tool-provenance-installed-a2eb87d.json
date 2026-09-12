@@ -1,0 +1,23 @@
+{
+  "source_commit": "a2eb87d",
+  "wheel_sha256": "479ef2ecad685eb06138632a862c8de710b19478506bf36f964c943fe795fcdb",
+  "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/engine.py",
+  "native_process_exit_code": 0,
+  "passed": 53,
+  "skipped": 0,
+  "failed": 0,
+  "seconds": 6.06,
+  "log_sha256": "615cfa93d1c1629cb3314b4dc314c7d3c30bcb6d775e089b4af412a6f506c022",
+  "coverage": [
+    "tool role inference",
+    "direct and deferred storage",
+    "grounded fact extraction using authored provider output",
+    "restart",
+    "explicit provenance override",
+    "rendered provenance",
+    "HTTP and MCP ranking trial parity",
+    "relationship provenance",
+    "DuckDB and live PostgreSQL"
+  ],
+  "limits": "Installed Python 3.13 package with deterministic test embeddings and authored extraction output. This is API/storage correctness, not live extraction quality."
+}
