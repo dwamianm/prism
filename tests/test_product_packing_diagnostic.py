@@ -120,3 +120,13 @@ async def test_public_capture_reproduces_after_engine_close_and_excludes_labels(
     result = compare(report, tmp_path, samples=20)
     assert result["baseline_reproduction_passed"]
     assert result["summary"]["1000"]["evidence_recall"]["before"] == 1
+
+
+@pytest.mark.parametrize("content", ["", " \n"])
+def test_blank_sources_are_accounted_without_positive_evidence_credit(content):
+    source = make_candidate("blank", content, .9)
+    cfg = PackingConfig(token_budget=1000, overhead_tokens=0)
+    result = measure(pack_context([source], cfg), {"blank"}, cfg)
+    assert result["blank_source_ids"] == ["blank"]
+    assert result["content_source_ids"] == [] and result["pointer_source_ids"] == []
+    assert result["evidence_recall"] == 0

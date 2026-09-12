@@ -29,7 +29,7 @@ def measure(bundle, gold: set[str], config: PackingConfig) -> dict:
         raise ValueError("Product context does not obey its measured budget")
     entries = {entry["id"]: entry for line in context.splitlines()
                if line.startswith("{") for entry in [json.loads(line)]}
-    content_ids, pointer_ids, representations = [], [], {}
+    content_ids, pointer_ids, blank_ids, representations = [], [], [], {}
     for group in bundle.sections.values():
         for candidate in group:
             entry = entries[str(candidate.node.id)]
@@ -38,15 +38,19 @@ def measure(bundle, gold: set[str], config: PackingConfig) -> dict:
             source_id = candidate.node.metadata["source_turn"]
             if representation in {"full", "prose", "structured"}:
                 content = candidate.node.content
-                if not content or content not in entry["text"]:
+                if content not in entry["text"]:
                     raise ValueError("Content-bearing representation lost source text")
-                content_ids.append(source_id)
+                if content.strip():
+                    content_ids.append(source_id)
+                else:
+                    blank_ids.append(source_id)
             else:
                 pointer_ids.append(source_id)
     retained = set(content_ids)
     return {
         "tokens": tokens, "context_sha256": hashlib.sha256(context.encode()).hexdigest(),
         "content_source_ids": content_ids, "pointer_source_ids": pointer_ids,
+        "blank_source_ids": blank_ids,
         "representations": representations,
         "evidence_recall": len(retained & gold) / len(gold) if gold else None,
         "all_evidence_retained": gold <= retained if gold else None,
@@ -135,6 +139,7 @@ def compare(report: dict, snapshots: Path, *, samples: int = 2000) -> dict:
             "Both variants reuse identical public retrieval candidates, scores, identities and timestamps.",
             "All response candidates are packed; the shared evaluation ranking limit is not applied here.",
             "REFERENCE and KEY_VALUE pointers receive no supporting-evidence credit.",
+            "Blank source text is retained in accounting but receives no positive supporting-evidence credit.",
             "Question bootstrap intervals are descriptive; shared histories can make questions dependent.",
             "Source snapshots contain benchmark text and are stored separately from this summary.",
         ],
