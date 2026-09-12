@@ -1,4 +1,4 @@
-"""Known isolation gap which must close before abandoned-stage collection."""
+"""External staging stays fenced through expiry, takeover and cancellation."""
 import pytest
 
 from prme import MemoryEngine

@@ -1,4 +1,4 @@
-"""Check real local-model ingestion followed by explicit stale-plan recovery.
+"""Check real local-model ingestion, stale-plan recovery and retired-stage cleanup.
 
 Uses only synthetic text in a temporary pack. This is a fault-injection workflow,
 not an extraction accuracy or performance benchmark.
@@ -74,6 +74,18 @@ async def run(args):
             receipt = await engine._event_store.get_derivation_receipt(event_id, user_id="alice")
             assert receipt.plan_checksum == current.checksum
             assert {node.id for node in await engine.get_event_nodes(event_id, user_id="alice")} == {node.id for node in current.nodes}
+            old_ids = {str(node.id) for node in old.nodes}
+            current_ids = {str(node.id) for node in current.nodes}
+            def indexed_ids():
+                return {row[0] for row in engine._conn.execute("SELECT node_id FROM vector_metadata").fetchall()}
+            assert old_ids and old_ids <= indexed_ids()
+            await engine.organize(user_id="bob", jobs=["index_compaction"], budget_ms=5000)
+            assert old_ids <= indexed_ids(), "Foreign maintenance must not collect Alice's staging"
+            maintenance = await engine.organize(user_id="alice", jobs=["index_compaction"], budget_ms=5000)
+            assert old_ids.isdisjoint(indexed_ids()) and current_ids <= indexed_ids()
+            assert maintenance.per_job["index_compaction"].errors == 0
+            assert await engine._event_store.get_derivation_plan(event_id, user_id="alice", revision=1) == old
+            assert await engine.get_extraction(event_id, user_id="alice") == saved
             response = await engine.retrieve("Which database does Alice use?", user_id="alice")
             assert any("PostgreSQL" in candidate.node.content for candidate in response.results)
         return {
@@ -86,10 +98,14 @@ async def run(args):
             "provider": saved.provider, "model": saved.model,
             "old_revision": old.revision, "committed_revision": current.revision,
             "facts": len(saved.result["facts"]), "prepared_nodes": len(current.nodes),
+            "reclaimed_old_nodes": len(old_ids),
+            "compaction": maintenance.per_job["index_compaction"].model_dump(mode="json"),
             "elapsed_seconds": round(time.perf_counter() - started, 3),
             "checks": ["real local extraction with reused entity", "changed dependency rejects publication",
                        "public replan after restart without repeated extraction", "immutable original plan and extraction",
-                       "scoped revision status", "receipt and exact artifact identities", "retrieval finds database fact"],
+                       "scoped revision status", "receipt and exact artifact identities", "retrieval finds database fact",
+                       "foreign maintenance retains staging", "owner maintenance reclaims old indexes",
+                       "new indexes and immutable journals survive cleanup"],
             "limits": "One synthetic workflow. Replanning may recompute embeddings. No extraction accuracy or comparative claim.",
         }
 

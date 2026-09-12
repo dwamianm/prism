@@ -2,8 +2,8 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The frozen full suite at `5ff7234` passed **1,868 tests with 42 skips**
-on Python 3.11 and live PostgreSQL (164.19 seconds), including research and
+product. The frozen full suite at `7c53645` passed **1,932 tests with 51 skips**
+on Python 3.11 and live PostgreSQL (247.26 seconds), including research and
 example integration tests. Installed Python 3.13 and real-model workflows,
 including retained failures, are described below.
 
@@ -14,7 +14,8 @@ skipped when embeddings failed. Independent index attempts now preserve the
 healthy path, including durable flushing for deferred raw sources. A failed
 backend keeps the job pending; restart/retry converges on one source node.
 Both backends, both-failing cases, owner isolation and local flush failures are
-covered. Direct `store()` still logs failures without scheduling a repair job.
+covered. Direct `store()` now also queues repair work; see the direct-store
+recovery evidence below.
 
 `tests/test_entity_resolution.py` reproduced duplication beyond the newest
 100 entities on both backends. Exact scoped entity matching now walks stable-ID
@@ -43,8 +44,8 @@ propagates; cleanup waits for pending index writes and tolerates repeated
 cancellation. A final committed replacement is retained. The combined targeted
 suite passed 44 checks with 1 skip on Python 3.11; an installed Python 3.13 wheel
 passed 31 cancellation/backend-status checks with 2 skips, including live
-PostgreSQL. Intermediate graph visibility and process-crash recovery still require
-the planned atomic derivation protocol.
+PostgreSQL. At that revision, intermediate graph visibility and process-crash
+recovery still required the atomic derivation protocol implemented later below.
 
 ## Prepared graph commit component
 
@@ -83,8 +84,9 @@ survived while the next sequence allocation reused it. Startup now rebases the
 sequence beyond recovered keys. Sixty staging/vector recovery/retrieval checks
 also pass under USearch 2.16.0 / SimSIMD 5.9.11. Ordinary orphan compaction still
 works; unpublished staging claims are retained, and published archived results
-remain eligible for eviction. Abandoned staging has no automatic collection
-policy yet. At `ef046f9` these checks exercised components, not the complete ingestion path.
+remain eligible for eviction. At `ef046f9`, abandoned staging had no automatic
+collection policy; the later retired-revision policy is described below. These
+early checks exercised components, not the complete ingestion path.
 The Python 3.13 wheel passed 59 staging/graph component checks with 6 skips,
 including live PostgreSQL. Its public sync-client, default embedding, restart,
 source/provenance, selection/budget, authenticated HTTP and MCP HTTP workflow
@@ -235,8 +237,9 @@ python -m benchmarks.diagnostics.derivation_replanning --output replanning.json
 ```
 
 This revises materialization, not the original model output or grounding policy.
-Replanning is explicit. Abandoned index staging and complete operation-log replay
-remain separate gaps. These synthetic workflows establish neither semantic
+Replanning is explicit. Retired-stage cleanup was a separate gap at that revision
+and is covered by the later evidence below; complete operation-log replay remains
+unfinished. These synthetic workflows establish neither semantic
 accuracy nor competitive superiority.
 
 ## Extraction reference integrity
@@ -479,7 +482,7 @@ and manual-operation replay remains unfinished. Index durability adds synchronou
 commit work; this run does not isolate its latency cost.
 
 
-## Plan identity ownership and the remaining staging fence
+## Plan identity ownership and the staging-fence regression
 
 At `78ecb69`, a regression on each backend showed that a newly queued revision
 could journal the previous revision's node IDs. Both tests failed because the
@@ -514,14 +517,75 @@ Validation:
 [A follow-up isolation probe](obsolete-staging-71a7fd7.json) exposed the next
 necessary change: a worker resuming an obsolete revision still wrote four vector
 staging records and lexical entries before its graph commit was rejected.
-No graph nodes were published. The strict expected-failure test in
-`tests/test_obsolete_derivation_staging.py` records that precise gap; unrelated
+No graph nodes were published. The strict expected-failure version of
+`tests/test_obsolete_derivation_staging.py` recorded that precise gap; unrelated
 exception types are not accepted as the expected failure. Its separate run has
 **1 expected failure and 1 PostgreSQL skip**. It was added after the full-suite
 run above and is not evidence that stage isolation passes.
 
-Collection therefore remains pending: external index staging must respect the
-work revision/lease fence, including workers paused across a revision change,
+At `71a7fd7`, collection therefore remained pending: external index staging had
+to respect the work revision/lease fence, including workers paused across a revision change,
 and cleanup must retain live, committed, ambiguous or unregistered identities.
 These are integrity and recoverability checks, not comparative memory-accuracy
 or performance evidence.
+
+
+## Fenced native staging and retired-revision cleanup
+
+`7c53645` closes the obsolete-worker staging regression. Managed DuckDB staging
+holds a separate cursor transaction on the work row throughout each native
+write. The exact saved plan, staged inputs and claim are checked before writing;
+the lease is checked again afterward. A concurrent connection cannot advance
+its generation or plan revision while the native operation remains in flight.
+Cancellation keeps the relevant locks held until that operation finishes.
+An operation that expires in flight can leave durable plan-owned inputs, but
+ownership cannot transfer until its native work is finished. PostgreSQL already
+publishes prepared index columns inside its fenced graph transaction.
+
+The local `index_compaction` job now reclaims up to 500 uniquely reserved,
+graph-invisible node identities from explicitly replaced revisions per pass.
+It verifies source/plan journals and respects the original event owner. Current
+failed, pending and running plans remain recoverable; ambiguous legacy ownership
+is retained, and incomplete or invalid registration blocks stage reclamation
+with a reason in job details. Sources, plans and identity reservations survive.
+Unmanaged component staging and general operation-log replay remain outside this
+collection protocol.
+
+Deletion commits lexical changes before removing vector metadata. This preserves
+a durable retry anchor across lexical failures, native vector failures and an
+abrupt process exit between deletions. Lifecycle eviction now uses the same order;
+a failed lexical delete no longer becomes undiscoverable after vector metadata
+has already been removed. Native removal failures propagate, and maintenance
+reports errors rather than counting them as successful reclamation.
+
+Validation:
+
+- **209 passed, 21 skipped** in the targeted cross-backend suites (39.65s).
+- **1,932 passed, 51 skipped** in the frozen full Python 3.11 suite with live
+  PostgreSQL (247.26s). The previous expected failure is now a passing regression.
+- **78 passed, 15 skipped** in the installed Python 3.13 wheel subset (27.06s).
+  Existing subprocess tests load the corresponding frozen checkout's source;
+  their parent tests import the installed wheel.
+
+New tests hold vector and lexical operations across lease expiry, reject
+concurrent takeover/replanning, exercise repeated cancellation, recover with a
+successor claim, reject mismatched staged inputs, preserve tenant boundaries and
+current plans, and retry failed or interrupted reclamation. Existing native-write
+and public-ingestion crash tests continue to pass.
+
+[The supervised real-model workflow](stage-cleanup-7c53645.json) used the installed
+wheel, `qwen3.5:4b` through Ollama and real BAAI/bge-small-en-v1.5 embeddings. It
+recovered a stale dependency through revision 2, verified foreign maintenance left
+Alice's staging alone, reclaimed two old node identities through Alice's public
+`organize()` call, preserved current indexes and immutable journals, and retrieved
+the database fact. Extraction was forbidden during recovery. The process exited
+normally, including native-library shutdown; the report records model digest,
+implementation hashes and dependencies.
+
+```sh
+python -m benchmarks.diagnostics.derivation_replanning --output /tmp/replan-cleanup.json
+```
+
+This is one synthetic recovery/cleanup workflow, not extraction-accuracy,
+competitive superiority, throughput or filesystem power-loss evidence. Native
+stage fencing adds transaction work; these checks do not isolate its latency cost.
