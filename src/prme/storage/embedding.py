@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from prme.config import EmbeddingConfig
+    from fastembed import TextEmbedding
 
 
 class EmbeddingVersionMismatchError(ValueError):
@@ -59,6 +60,50 @@ class EmbeddingProvider(Protocol):
         ...
 
 
+@runtime_checkable
+class QueryEmbeddingProvider(EmbeddingProvider, Protocol):
+    """Optional asymmetric query encoder paired with embed()'s document space.
+
+    model_version must identify both document and query encoding recipes.
+    Existing providers implementing only embed() remain supported unchanged.
+    """
+
+    async def embed_query(self, text: str) -> list[float]:
+        """Encode one search query in the compatible document vector space."""
+        ...
+
+
+def validate_embedding_provider(provider: EmbeddingProvider) -> tuple[str, str, int]:
+    """Validate non-secret metadata without initializing a model or calling it."""
+    name = getattr(provider, "model_name", None)
+    version = getattr(provider, "model_version", None)
+    dimension = getattr(provider, "dimension", None)
+    if not isinstance(name, str) or not name.strip() or not isinstance(version, str) or not version.strip():
+        raise ValueError("Embedding provider needs nonempty model_name and model_version")
+    if type(dimension) is not int or dimension < 1:
+        raise ValueError("Embedding provider dimension must be a positive integer")
+    if not callable(getattr(provider, "embed", None)):
+        raise ValueError("Embedding provider needs an async embed(texts) method")
+    query = getattr(provider, "embed_query", None)
+    if query is not None and not callable(query):
+        raise ValueError("Optional embed_query must be an async callable")
+    return name, version, dimension
+
+
+def has_query_encoder(provider: EmbeddingProvider | None) -> bool:
+    if isinstance(provider, CachedEmbeddingProvider):
+        return has_query_encoder(provider._provider)
+    return callable(getattr(provider, "embed_query", None))
+
+
+async def encode_query(provider: EmbeddingProvider, text: str) -> list[float]:
+    """Use an optional query encoder, preserving legacy provider behavior."""
+    encoder = getattr(provider, "embed_query", None)
+    if callable(encoder):
+        return await encoder(text)
+    return (await provider.embed([text]))[0]
+
+
 class FastEmbedProvider:
     """EmbeddingProvider using FastEmbed (ONNX-based local inference).
 
@@ -92,7 +137,7 @@ class FastEmbedProvider:
         self._model_name = model_name
         self._cache_dir = cache_dir
         self._dimension = dimension or self._KNOWN_DIMENSIONS.get(model_name, 384)
-        self._model = None  # Lazy-initialized
+        self._model: TextEmbedding | None = None  # Lazy-initialized
         self._initialization_lock = threading.Lock()
 
     @property
@@ -341,6 +386,21 @@ class CachedEmbeddingProvider:
         # All slots should be filled
         return results  # type: ignore[return-value]
 
+    async def embed_query(self, text: str) -> list[float]:
+        """Cache query vectors separately only when the provider distinguishes them."""
+        if not has_query_encoder(self._provider):
+            return (await self.embed([text]))[0]
+        key = "query:" + hashlib.sha256(text.encode()).hexdigest()
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return list(self._cache[key])
+        vector = tuple(await encode_query(self._provider, text))
+        self._cache[key] = vector
+        self._cache.move_to_end(key)
+        while len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
+        return list(vector)
+
 
 def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
     """Factory function to create the appropriate embedding provider.
@@ -359,6 +419,7 @@ def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
     Raises:
         ValueError: If the configured provider is not recognized.
     """
+    provider: EmbeddingProvider
     if config.provider == "fastembed":
         provider = FastEmbedProvider(
             model_name=config.model_name,

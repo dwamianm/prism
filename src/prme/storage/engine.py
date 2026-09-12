@@ -48,7 +48,7 @@ from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
 from prme.storage._threading import run_to_completion
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
-from prme.storage.embedding import create_embedding_provider
+from prme.storage.embedding import EmbeddingProvider, create_embedding_provider, validate_embedding_provider
 from prme.storage.encryption import EncryptionError
 from prme.storage.event_store import EventStore
 from prme.storage.lexical_index import LexicalIndex
@@ -172,7 +172,10 @@ class MemoryEngine:
 
     @classmethod
     @asynccontextmanager
-    async def open(cls, config: PRMEConfig | None = None):
+    async def open(
+        cls, config: PRMEConfig | None = None, *,
+        embedding_provider: EmbeddingProvider | None = None,
+    ):
         """Async context manager for MemoryEngine lifecycle.
 
         Usage::
@@ -180,14 +183,20 @@ class MemoryEngine:
             async with MemoryEngine.open(config) as engine:
                 await engine.store(...)
         """
-        engine = await cls.create(config)
+        if embedding_provider is None:
+            engine = await cls.create(config)
+        else:
+            engine = await cls.create(config, embedding_provider=embedding_provider)
         try:
             yield engine
         finally:
             await engine.close()
 
     @classmethod
-    async def create(cls, config: PRMEConfig | None = None) -> "MemoryEngine":
+    async def create(
+        cls, config: PRMEConfig | None = None, *,
+        embedding_provider: EmbeddingProvider | None = None,
+    ) -> "MemoryEngine":
         """Create and initialize a MemoryEngine with all backends.
 
         Dispatches to ``_create_duckdb()`` or ``_create_postgres()``
@@ -197,6 +206,9 @@ class MemoryEngine:
 
         Args:
             config: Optional configuration. Defaults to PRMEConfig().
+            embedding_provider: Caller-owned provider. Its metadata overrides
+                embedding configuration; supply it again when reopening. The
+                engine does not close caller-owned provider resources.
 
         Returns:
             An initialized MemoryEngine ready for use.
@@ -204,12 +216,22 @@ class MemoryEngine:
         if config is None:
             config = PRMEConfig()
 
+        if embedding_provider is not None:
+            name, _, dimension = validate_embedding_provider(embedding_provider)
+            config = config.model_copy(update={"embedding": config.embedding.model_copy(update={
+                "provider": "custom", "model_name": name, "dimension": dimension, "api_key": None,
+            })})
+        elif config.embedding.provider == "custom":
+            raise ValueError("Custom embedding configuration requires embedding_provider when opening the engine")
+
         if config.backend == "postgres":
-            return await cls._create_postgres(config)
-        return await cls._create_duckdb(config)
+            return await cls._create_postgres(config, embedding_provider=embedding_provider)
+        return await cls._create_duckdb(config, embedding_provider=embedding_provider)
 
     @classmethod
-    async def _create_duckdb(cls, config: PRMEConfig) -> "MemoryEngine":
+    async def _create_duckdb(
+        cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
+    ) -> "MemoryEngine":
         """Create a MemoryEngine backed by DuckDB (file-based)."""
         from pathlib import Path
 
@@ -296,7 +318,8 @@ class MemoryEngine:
             graph_store = DuckPGQGraphStore(conn, conn_lock)
 
             # Create embedding provider via factory
-            embedding_provider = create_embedding_provider(config.embedding)
+            if embedding_provider is None:
+                embedding_provider = create_embedding_provider(config.embedding)
 
             # Create vector index
             vector_index = VectorIndex(
@@ -415,7 +438,9 @@ class MemoryEngine:
             return engine
 
     @classmethod
-    async def _create_postgres(cls, config: PRMEConfig) -> "MemoryEngine":
+    async def _create_postgres(
+        cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
+    ) -> "MemoryEngine":
         """Create a MemoryEngine backed by PostgreSQL."""
         from prme.storage.pg import (
             PgEventStore,
@@ -437,7 +462,8 @@ class MemoryEngine:
             # Create Pg backends
             event_store = PgEventStore(pool)
             graph_store = PgGraphStore(pool)
-            embedding_provider = create_embedding_provider(config.embedding)
+            if embedding_provider is None:
+                embedding_provider = create_embedding_provider(config.embedding)
             vector_index = PgVectorIndex(pool, embedding_provider)
             startup.push_async_callback(vector_index.close)
             lexical_index = PgLexicalIndex(pool)

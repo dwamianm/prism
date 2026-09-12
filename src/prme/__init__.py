@@ -24,6 +24,7 @@ from prme.models.learning import LearningConfig, LearningEvaluation, RankingMult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.storage.engine import MemoryEngine
+from prme.storage.embedding import CachedEmbeddingProvider, EmbeddingProvider, QueryEmbeddingProvider
 from prme.types import (
     DECAY_LAMBDAS,
     DEFAULT_DECAY_PROFILE_MAPPING,
@@ -66,6 +67,9 @@ __all__ = [
     "DECAY_LAMBDAS",
     "DEFAULT_DECAY_PROFILE_MAPPING",
     "DecayProfile",
+    "CachedEmbeddingProvider",
+    "EmbeddingProvider",
+    "QueryEmbeddingProvider",
     "EdgeType",
     "EpistemicType",
     "ExtractionError",

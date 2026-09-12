@@ -41,6 +41,8 @@ def reranker_identity(reranker) -> dict[str, JsonValue]:
 def feature_identity(vector_index, lexical_index, reranker) -> dict[str, JsonValue]:
     """Capture non-secret implementation/model observations at pipeline creation."""
     provider = getattr(vector_index, "_provider", None)
+    from prme.storage.embedding import has_query_encoder
+    query_features = {"query_encoding": "embed_query"} if has_query_encoder(provider) else {}
     packages: dict[str, JsonValue] = {}
     for package in ("prme", "duckdb", "usearch", "tantivy", "fastembed", "onnxruntime", "sentence-transformers"):
         try:
@@ -57,6 +59,6 @@ def feature_identity(vector_index, lexical_index, reranker) -> dict[str, JsonVal
     return {"python": platform.python_version(), "packages": packages, "source_files_sha256": sources,
             "embedding": {"provider": _name(provider), "model": _reported(getattr(provider, "model_name", None)),
                 "version": _reported(getattr(provider, "model_version", None)),
-                "dimension": _reported(getattr(provider, "dimension", None))},
+                "dimension": _reported(getattr(provider, "dimension", None)), **query_features},
             "reranker": reranker_identity(reranker),
             "vector_backend": _name(vector_index), "lexical_backend": _name(lexical_index)}

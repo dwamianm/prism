@@ -22,7 +22,7 @@ from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
 from prme.storage.profile_work import ProfileStageFence
 from prme.models.profile import ProfilePublication
-from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
+from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query
 
 logger = logging.getLogger(__name__)
 
@@ -570,8 +570,7 @@ class VectorIndex:
             ordered by descending score (most similar first).
         """
         # Generate query embedding (provider handles async internally)
-        embedding = await self._provider.embed([query])
-        vector = np.array(embedding[0], dtype=np.float32)
+        vector = np.array(await encode_query(self._provider, query), dtype=np.float32)
 
         return await self.search_by_vector(
             vector.tolist(), user_id, k=k,

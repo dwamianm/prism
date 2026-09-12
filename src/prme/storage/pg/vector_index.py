@@ -17,7 +17,7 @@ from datetime import datetime
 
 import asyncpg
 
-from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
+from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +86,7 @@ class PgVectorIndex:
         time_to: datetime | None = None,
     ) -> list[dict]:
         """Search for nearest neighbors by text query."""
-        embedding = await self._provider.embed([query])
-        vector = embedding[0]
+        vector = await encode_query(self._provider, query)
         return await self.search_by_vector(
             vector, user_id, k=k,
             scope=scope, time_from=time_from, time_to=time_to,

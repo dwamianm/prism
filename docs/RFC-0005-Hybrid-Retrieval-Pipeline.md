@@ -451,6 +451,20 @@ calls could construct the native model twice. Authored regressions reproduced
 both defects before these guards. Neither change alters model identity or
 numerical vectors; it does not establish better semantic retrieval.
 
+### Explicit embedding providers and query encoding
+
+Both engine factories and the sync client accept a caller-owned
+`embedding_provider`. Its validated metadata overrides the effective embedding
+configuration without mutating the supplied config. Custom providers must be
+supplied again on reopen; their implementation/resources are not persisted.
+An optional `embed_query(text)` is used by both vector backends. Document writes
+still use `embed(texts)`. Existing providers without query encoding preserve
+their original behavior. Optional caching separates task entries and query
+errors cannot silently fall back to document encoding. Receipts report the
+actual provider identity and optional query method. See
+[the public contract and example](CUSTOM-EMBEDDINGS.md). Built-in encoding
+defaults are unchanged; new recipes require versioning and quality evaluation.
+
 ### PostgreSQL lexical candidate limits
 
 `PgLexicalIndex` deduplicates matching graph and non-node index copies by node

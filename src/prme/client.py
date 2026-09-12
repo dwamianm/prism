@@ -29,6 +29,7 @@ from typing import Any, Literal, TypeVar
 from uuid import UUID
 
 from prme.config import PRMEConfig
+from prme.storage.embedding import EmbeddingProvider
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.retrieval.config import ScoringWeights
@@ -80,6 +81,10 @@ class MemoryClient:
         directory: Path to the memory directory. Created if it doesn't exist.
         config: Optional PRMEConfig override. When provided, *directory* is
             ignored and the config is used as-is.
+        embedding_provider: Optional caller-owned embedding implementation.
+            Its metadata overrides the effective embedding config. Async
+            methods execute on this client's worker loop; resources remain
+            caller-owned and must not be bound to another event loop.
 
     Example::
 
@@ -93,6 +98,7 @@ class MemoryClient:
         directory: str = ".",
         *,
         config: PRMEConfig | None = None,
+        embedding_provider: EmbeddingProvider | None = None,
     ) -> None:
         # A failed constructor must not leave a usable client or emit a
         # destructor error that hides the original configuration failure.
@@ -111,11 +117,15 @@ class MemoryClient:
         # Create the engine on that loop.
         from prme.storage.engine import MemoryEngine
 
-        future = asyncio.run_coroutine_threadsafe(
-            MemoryEngine.create(self._config), self._loop
+        creation = (
+            MemoryEngine.create(self._config, embedding_provider=embedding_provider)
+            if embedding_provider is not None else MemoryEngine.create(self._config)
         )
+        future = asyncio.run_coroutine_threadsafe(creation, self._loop)
         try:
             self._engine: MemoryEngine = future.result(timeout=60)
+            if embedding_provider is not None:
+                self._config = self._engine._config
         except BaseException:
             future.cancel()
             self._loop.call_soon_threadsafe(self._loop.stop)

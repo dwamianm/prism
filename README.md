@@ -413,6 +413,11 @@ prme process-profiles ./memory.duckdb --user-id alice --scope project --format j
 See the [profile recovery guide](docs/ENTITY-PROFILES.md) for single-job retries,
 abandonment, staging collection, bounded processing and exit codes.
 
+For another embedding service or model, pass `embedding_provider=` to either
+Python client. Providers can supply separate document and query encoders; see
+the [custom embedding guide](docs/CUSTOM-EMBEDDINGS.md) for the contract, caching,
+versioning and a runnable local example.
+
 ## Following source evidence
 
 `store()` returns its durable event ID. Resolve the associated nodes directly:
