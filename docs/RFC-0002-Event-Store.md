@@ -37,6 +37,11 @@ mutations, whose complete operation inputs are not all journaled.
 
 The reference implementation uses DuckDB for the event store. Implementations MAY use alternatives (SQLite, PostgreSQL, a custom log format) provided the above requirements are met and the portability artifact format (Section 9) is supported.
 
+Local engines optionally accept `duckdb_threads` at instance creation. The
+default retains DuckDB's worker setting; conflicting settings for concurrent
+opens of the same file fail before schema initialization. This runtime resource
+control does not change event semantics or persist in the portable pack.
+
 ---
 
 ### Raw-source recovery

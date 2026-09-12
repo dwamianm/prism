@@ -418,6 +418,10 @@ Python client. Providers can supply separate document and query encoders; see
 the [custom embedding guide](docs/CUSTOM-EMBEDDINGS.md) for the contract, caching,
 versioning and a runnable local example.
 
+Applications opening several local packs can set `duckdb_threads` explicitly
+and share a caller-owned embedding provider. See [local resource control](docs/LOCAL-RESOURCES.md)
+for configuration, same-file constraints and the current named-project boundary.
+
 ## Following source evidence
 
 `store()` returns its durable event ID. Resolve the associated nodes directly:

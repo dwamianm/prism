@@ -301,7 +301,10 @@ class MemoryEngine:
             needs_encryption = encryption_provider is not None
 
             # Open DuckDB connection
-            conn = duckdb.connect(config.db_path)
+            # Apply at instance creation: SET would silently change another
+            # engine sharing this database. DuckDB rejects conflicting opens.
+            conn = (duckdb.connect(config.db_path) if config.duckdb_threads is None
+                    else duckdb.connect(config.db_path, config={"threads": config.duckdb_threads}))
             startup.callback(conn.close)
             # TIMESTAMPTZ preserves instants but DuckDB presents them in the
             # host timezone by default. A portable pack uses canonical UTC.

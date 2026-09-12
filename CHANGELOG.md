@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Optional `duckdb_threads` / `PRME_DUCKDB_THREADS` control for each open local
+  database. The default preserves DuckDB's setting; conflicting concurrent opens
+  fail without reconfiguring the active pack.
+
 ### Changed
 
 - Default organizer passes exclude the legacy global feedback tuner; session

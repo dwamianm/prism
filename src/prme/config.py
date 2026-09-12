@@ -6,7 +6,7 @@ environment variables (PRME_ prefix), .env files, and direct arguments.
 
 from __future__ import annotations
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
@@ -306,6 +306,20 @@ class PRMEConfig(_ProjectSettings):
     db_path: str = Field(
         default="./memory.duckdb", description="Path to DuckDB database file"
     )
+    duckdb_threads: int | None = Field(
+        default=None, ge=1,
+        description="Optional DuckDB worker-thread count per open database. None preserves "
+                    "DuckDB's default. Concurrent engines for the same file must use the same "
+                    "setting. Does not limit embedding/index threads or apply to PostgreSQL.",
+    )
+
+    @field_validator("duckdb_threads", mode="before")
+    @classmethod
+    def validate_duckdb_threads(cls, value):
+        if isinstance(value, bool):
+            raise ValueError("duckdb_threads must be a positive integer or None")
+        return value
+
     vector_path: str = Field(
         default="./vectors.usearch", description="Path to USearch vector index"
     )
