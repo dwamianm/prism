@@ -21,6 +21,7 @@ from uuid import UUID
 import duckdb
 
 from prme.models.edges import MemoryEdge
+from prme.storage._threading import run_to_completion
 from prme.models.nodes import MemoryNode
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
@@ -63,7 +64,7 @@ class DuckPGQGraphStore:
             String UUID of the created node.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._create_node_sync, node)
+            await run_to_completion(self._create_node_sync, node)
         return str(node.id)
 
     async def get_node(
@@ -83,7 +84,7 @@ class DuckPGQGraphStore:
             The MemoryNode if found and visible, None otherwise.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_node_sync, node_id, include_superseded
             )
 
@@ -109,7 +110,7 @@ class DuckPGQGraphStore:
         if not node_ids:
             return []
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_nodes_sync, node_ids, include_superseded
             )
 
@@ -119,7 +120,7 @@ class DuckPGQGraphStore:
             raise ValueError("get_event_nodes requires user_id")
         evidence = json.dumps(str(UUID(event_id)))
         async with self._conn_lock:
-            rows = await asyncio.to_thread(lambda: self._conn.execute(
+            rows = await run_to_completion(lambda: self._conn.execute(
                 "SELECT * FROM nodes WHERE user_id = ? AND json_contains(evidence_refs, ?::JSON) ORDER BY id",
                 [user_id, evidence],
             ).fetchall())
@@ -166,7 +167,7 @@ class DuckPGQGraphStore:
             List of matching MemoryNodes.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._query_nodes_sync,
                 node_type,
                 user_id,
@@ -202,7 +203,7 @@ class DuckPGQGraphStore:
             Number of matching nodes.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._count_nodes_sync, user_id, lifecycle_states
             )
 
@@ -219,7 +220,7 @@ class DuckPGQGraphStore:
             ValueError: If node_id does not exist or no valid fields provided.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._update_node_sync, node_id, updates)
+            await run_to_completion(self._update_node_sync, node_id, updates)
 
     # --- Edge Operations ---
 
@@ -233,7 +234,7 @@ class DuckPGQGraphStore:
             String UUID of the created edge.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._create_edge_sync, edge)
+            await run_to_completion(self._create_edge_sync, edge)
         return str(edge.id)
 
     async def get_edges(
@@ -261,7 +262,7 @@ class DuckPGQGraphStore:
             List of matching MemoryEdges.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_edges_sync,
                 source_id,
                 target_id,
@@ -283,7 +284,7 @@ class DuckPGQGraphStore:
             ValueError: If the node doesn't exist or the transition is invalid.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._promote_sync, node_id)
+            await run_to_completion(self._promote_sync, node_id)
 
     async def supersede(
         self,
@@ -334,7 +335,7 @@ class DuckPGQGraphStore:
         params.append(limit)
         sql = "SELECT * FROM nodes WHERE " + " AND ".join(conditions) + " ORDER BY id ASC LIMIT ?"
         async with self._conn_lock:
-            rows = await asyncio.to_thread(lambda: self._conn.execute(sql, params).fetchall())
+            rows = await run_to_completion(lambda: self._conn.execute(sql, params).fetchall())
         return [self._row_to_node(row) for row in rows]
 
     async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
@@ -342,7 +343,7 @@ class DuckPGQGraphStore:
         if not replacements:
             return
         async with self._conn_lock:
-            await asyncio.to_thread(self._supersede_many_sync, replacements)
+            await run_to_completion(self._supersede_many_sync, replacements)
 
     def _supersede_many_sync(self, replacements: list[tuple[str, str, str | None]]) -> None:
         self._conn.execute("BEGIN TRANSACTION")
@@ -376,7 +377,7 @@ class DuckPGQGraphStore:
             ValueError: If either node is not found or not in an active state.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(
+            await run_to_completion(
                 self._atomic_sync, self._contradict_sync, node_a_id, node_b_id, evidence_id
             )
 
@@ -405,7 +406,7 @@ class DuckPGQGraphStore:
             ValueError: If nodes are not CONTESTED or no CONTRADICTS edge exists.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(
+            await run_to_completion(
                 self._atomic_sync,
                 self._resolve_contradiction_sync,
                 winner_id,
@@ -427,7 +428,7 @@ class DuckPGQGraphStore:
             ValueError: If the node doesn't exist or is already archived.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._archive_sync, node_id)
+            await run_to_completion(self._archive_sync, node_id)
 
     async def deprecate(self, node_id: str) -> None:
         """Deprecate a node (mark as confirmed incorrect).
@@ -444,7 +445,7 @@ class DuckPGQGraphStore:
                 is invalid.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._deprecate_sync, node_id)
+            await run_to_completion(self._deprecate_sync, node_id)
 
     # --- Graph Traversal ---
 
@@ -476,7 +477,7 @@ class DuckPGQGraphStore:
             List of reachable MemoryNodes (excluding the starting node).
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_neighborhood_sync,
                 node_id,
                 max_hops,
@@ -515,7 +516,7 @@ class DuckPGQGraphStore:
             starting node.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_neighborhood_with_depth_sync,
                 node_id,
                 max_hops,
@@ -547,7 +548,7 @@ class DuckPGQGraphStore:
             source and target), or None if no path exists.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._find_shortest_path_sync, source_id, target_id, edge_types
             )
 
@@ -573,7 +574,7 @@ class DuckPGQGraphStore:
             Ordered list of MemoryNodes in the chain.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_supersedence_chain_sync, node_id, direction
             )
 
@@ -590,7 +591,7 @@ class DuckPGQGraphStore:
         """
         # Defense-in-depth: primary write serialization is via WriteQueue
         async with self._conn_lock:
-            await asyncio.to_thread(self._delete_node_sync, node_id)
+            await run_to_completion(self._delete_node_sync, node_id)
 
     async def delete_edge(self, edge_id: str) -> None:
         """Delete an edge by ID for rollback cleanup.
@@ -603,7 +604,7 @@ class DuckPGQGraphStore:
         """
         # Defense-in-depth: primary write serialization is via WriteQueue
         async with self._conn_lock:
-            await asyncio.to_thread(self._delete_edge_sync, edge_id)
+            await run_to_completion(self._delete_edge_sync, edge_id)
 
     # --- Internal sync methods ---
 

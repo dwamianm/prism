@@ -10,6 +10,7 @@ import asyncio
 import time
 
 import tantivy
+from prme.storage._threading import run_to_completion
 
 
 class LexicalIndex:
@@ -188,14 +189,14 @@ class LexicalIndex:
                 When provided, enables scope-filtered search queries.
         """
         async with self._write_lock:
-            await asyncio.to_thread(
+            await run_to_completion(
                 self._do_index, node_id, content, user_id, node_type, scope
             )
 
     async def flush(self) -> None:
         """Commit any buffered documents so they become searchable."""
         async with self._write_lock:
-            await asyncio.to_thread(self._commit_locked)
+            await run_to_completion(self._commit_locked)
 
     def _do_search(
         self,
@@ -288,7 +289,7 @@ class LexicalIndex:
         # far (batched commits would otherwise hide recent documents).
         if self._uncommitted > 0:
             await self.flush()
-        return await asyncio.to_thread(
+        return await run_to_completion(
             self._do_search, query_text, user_id, node_type, limit, scope
         )
 
@@ -327,7 +328,7 @@ class LexicalIndex:
             node_id: The node_id of the document(s) to delete.
         """
         async with self._write_lock:
-            await asyncio.to_thread(self._do_delete, node_id)
+            await run_to_completion(self._do_delete, node_id)
 
     def _do_clear(self) -> None:
         """Synchronous delete-all + commit (runs in thread pool).
@@ -359,7 +360,7 @@ class LexicalIndex:
         Caller is responsible for re-indexing afterwards.
         """
         async with self._write_lock:
-            await asyncio.to_thread(self._do_clear)
+            await run_to_completion(self._do_clear)
 
     async def close(self) -> None:
         """Flush buffered documents and release the writer.

@@ -292,8 +292,9 @@ function-based default. An abrupt-exit test reproduced DuckDB 1.4.4's WAL replay
 failure on that alternative, consistent with the upstream
 [DDL replay issue](https://github.com/duckdb/duckdb/issues/21490).
 
-Cancellation during a native vector operation propagates after that operation
-finishes, keeping connection/index locks held until the worker actually stops.
+Cancellation during native event, graph, vector or lexical operations propagates
+after that operation finishes, keeping connection/index locks held until the
+worker actually stops.
 A cancelled write may have committed; cancellation does not roll it back.
 These changes recover numerical vectors, not arbitrary graph mutations or LLM
 derivation jobs. Those still require a separate durable operation protocol.

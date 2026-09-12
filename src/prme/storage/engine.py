@@ -37,6 +37,7 @@ from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
+from prme.storage._threading import run_to_completion
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.embedding import create_embedding_provider
 from prme.storage.encryption import EncryptionError
@@ -1838,16 +1839,17 @@ class MemoryEngine:
             # ORDER BY id for reproducibility (query_nodes orders by
             # created_at). The rebuild is already gated to the DuckDB
             # backend above, so direct SQL is safe here.
-            rows = await asyncio.to_thread(
-                lambda ph=placeholders, off=offset: self._conn.execute(
-                    "SELECT id, content, user_id, node_type, scope "
-                    "FROM nodes "
-                    f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({ph}) "
-                    "ORDER BY id "
-                    "LIMIT ? OFFSET ?",
-                    [*active_states, batch_size, off],
-                ).fetchall(),
-            )
+            async with self._event_store._conn_lock:
+                rows = await run_to_completion(
+                    lambda ph=placeholders, off=offset: self._conn.execute(
+                        "SELECT id, content, user_id, node_type, scope "
+                        "FROM nodes "
+                        f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({ph}) "
+                        "ORDER BY id "
+                        "LIMIT ? OFFSET ?",
+                        [*active_states, batch_size, off],
+                    ).fetchall(),
+                )
             if not rows:
                 break
 

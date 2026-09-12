@@ -13,6 +13,7 @@ from uuid import UUID
 import duckdb
 
 from prme.models import Event, ProcessingStatus
+from prme.storage._threading import run_to_completion
 from prme.types import Scope
 
 # Explicit column list used in all SELECT queries to avoid positional
@@ -52,7 +53,7 @@ class EventStore:
             The string representation of the event's UUID.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._append_with_work_sync, event, defer_materialization)
+            await run_to_completion(self._append_with_work_sync, event, defer_materialization)
         return str(event.id)
 
     def _append_with_work_sync(self, event: Event, deferred: bool) -> None:
@@ -87,18 +88,18 @@ class EventStore:
             return [self._row_to_event(row) for row in rows]
 
         async with self._conn_lock:
-            return await asyncio.to_thread(read)
+            return await run_to_completion(read)
 
     async def materialization_count(self) -> int:
         async with self._conn_lock:
-            return await asyncio.to_thread(lambda: self._conn.execute(
+            return await run_to_completion(lambda: self._conn.execute(
                 "SELECT count(*) FROM event_materializations WHERE status = 'pending'"
             ).fetchone()[0])
 
     async def finish_materialization(self, event_id: str, *, error: str | None = None) -> None:
         """Acknowledge durable completion or retain a failed item for retry."""
         async with self._conn_lock:
-            await asyncio.to_thread(
+            await run_to_completion(
                 self._conn.execute,
                 "UPDATE event_materializations SET status = ?, attempts = attempts + 1, "
                 "last_error = ?, updated_at = current_timestamp WHERE event_id = ? "
@@ -108,7 +109,7 @@ class EventStore:
 
     async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
         async with self._conn_lock:
-            row = await asyncio.to_thread(lambda: self._conn.execute(
+            row = await run_to_completion(lambda: self._conn.execute(
                 "SELECT m.event_id, m.status, m.attempts, m.last_error, m.updated_at "
                 "FROM event_materializations m JOIN events e ON e.id = m.event_id "
                 "WHERE m.event_id = ? AND e.user_id = ?", [event_id, user_id],
@@ -121,7 +122,7 @@ class EventStore:
 
     async def processing_counts(self, *, user_id: str) -> tuple[int, int]:
         async with self._conn_lock:
-            row = await asyncio.to_thread(lambda: self._conn.execute(
+            row = await run_to_completion(lambda: self._conn.execute(
                 "SELECT count(*), count(m.last_error) FROM event_materializations m "
                 "JOIN events e ON e.id = m.event_id WHERE m.status = 'pending' AND e.user_id = ?",
                 [user_id],
@@ -138,7 +139,7 @@ class EventStore:
             The Event if found, None otherwise.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(self._get_sync, event_id)
+            return await run_to_completion(self._get_sync, event_id)
 
     async def get_by_user(
         self,
@@ -163,7 +164,7 @@ class EventStore:
             List of Events ordered by timestamp descending.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_by_user_sync, user_id, session_id, scopes, limit, offset
             )
 
@@ -186,7 +187,7 @@ class EventStore:
             List of Events matching the content hash.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_by_hash_sync, content_hash, user_id, scopes
             )
 
