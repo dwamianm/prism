@@ -130,6 +130,7 @@ _ZW = "​"  # zero-width space used to break forged markers
 _BRACKET = r"\[\s*"  # opening bracket plus any padding the forger added
 _MARKER_SPECS: tuple[tuple[str, str], ...] = (
     # Bracketed recency markers — break right after the opening bracket.
+    (_BRACKET + r"SOURCE_TYPE\s*=", "[" + _ZW + "source_type="),
     (_BRACKET + r"MOST\s+RECENT", "[" + _ZW + r"MOST RECENT"),
     (_BRACKET + r"RECENT\s*\]", "[" + _ZW + r"RECENT]"),
     (_BRACKET + r"OLDER\s*\]", "[" + _ZW + r"OLDER]"),
@@ -200,38 +201,23 @@ def _sanitize_content(content: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Cross-section deduplication
+# Cross-section record deduplication
 # ---------------------------------------------------------------------------
-#
-# Stored content reaches the formatter through several paths that overlap: a
-# Q-A merged pair node carries the full text of both turns while the individual
-# turn nodes are independently retrievable, and session expansion can pull the
-# same turn a third time. Profile-eligible nodes (Facts/Preferences/
-# Instructions) are additionally rendered in the ``## User Profile`` preamble.
-# Without dedup the same text appears two or three times in a single bundle,
-# inflating tokens ~20-30% with no added signal.
-#
-# ``_content_key`` is the canonical key used to collapse near-identical
-# entries. It mirrors the original aggregation-only heuristic (strip, lowercase,
-# first 100 chars) so behavior there is unchanged, and is now shared by every
-# format variant and the profile/body de-overlap.
+# Different records may share text while referring to separate episodes or
+# carrying different epistemic/provenance metadata. Only repeated node identity
+# proves a duplicate here; semantic consolidation belongs outside formatting.
 
-
-# Approximate token reserve for each entry's "[N] (YYYY-MM-DD, ~2 weeks ago) "
-# prefix when charging entries against a token budget. A deliberate rough
-# estimate (the exact prefix varies by format), kept as a named constant
-# matching the file's ``_*`` convention rather than an inline literal.
 _PER_ENTRY_PREFIX_TOKENS = 8
 
 
-def _content_key(content: str) -> str:
-    """Canonical dedup key for a node's content.
+def _record_key(candidate: RetrievalCandidate) -> str:
+    return str(candidate.node.id)
 
-    Strips surrounding whitespace, lowercases, and truncates to the first 100
-    characters so trivially different phrasings (case, trailing whitespace,
-    long-tail divergence) collapse to one entry.
-    """
-    return content.strip().lower()[:100]
+
+def _provenance_label(candidate: RetrievalCandidate) -> str:
+    node = candidate.node
+    return (f"[source_type={node.source_type.value}; epistemic={node.epistemic_type.value}; "
+            f"memory_lifecycle={node.lifecycle_state.value}]")
 
 
 def compute_time_offsets(query: str, question_dt: datetime) -> str:
@@ -425,7 +411,7 @@ def _build_profile_preamble(
     Returns:
         A ``(section, consumed_keys)`` tuple. ``section`` is the formatted
         profile string (empty if no semantic nodes are found), and
-        ``consumed_keys`` is the set of ``_content_key`` values rendered into
+        ``consumed_keys`` is the set of record IDs rendered into
         the preamble so the caller can exclude them from the retrieved-memory
         body (the same text appearing in both sections is pure redundancy).
     """
@@ -459,7 +445,7 @@ def _build_profile_preamble(
     type_order = ["preference", "fact", "instruction"]
     type_labels = {
         "preference": "Preferences",
-        "fact": "Known Facts",
+        "fact": "Recorded Facts",
         "instruction": "Learned Rules",
     }
 
@@ -472,11 +458,8 @@ def _build_profile_preamble(
         nodes = sorted(nodes, key=lambda r: r.node.confidence, reverse=True)
         lines.append(f"### {type_labels[ntype]}")
         for r in nodes:
-            confidence_tag = ""
-            if r.node.lifecycle_state == LifecycleState.TENTATIVE:
-                confidence_tag = " (tentative)"
-            lines.append(f"- {_sanitize_content(r.node.content)}{confidence_tag}")
-            consumed_keys.add(_content_key(r.node.content))
+            lines.append(f"- {_provenance_label(r)} {_sanitize_content(r.node.content)}")
+            consumed_keys.add(_record_key(r))
 
     return "\n".join(lines) + "\n", consumed_keys
 
@@ -498,22 +481,22 @@ def _build_reasoning_guidance(ctx_type: str) -> str:
     lines = ["## Reasoning Guidance"]
 
     lines.append(
-        "- Connect information across entries: if entry A says "
-        "\"grandma in Sweden\" and entry B says \"moved from home country\", "
-        "conclude \"moved from Sweden\"."
+        "- Use evidence actually stated in the records. Mark inferences and "
+        "do not invent relationships between people, places or events."
     )
     lines.append(
-        "- Combine evidence: mentions of \"son\", \"daughter\", "
-        "\"youngest child\" across entries may indicate 3 children total."
+        "- Resolve whether overlapping descriptions refer to the same person "
+        "or item before counting; do not assume they identify distinct items."
     )
-
     if ctx_type == "knowledge_update":
         lines.append(
-            "- When values change over time, ONLY the most recent is correct."
+            "- Distinguish supported updates from alternatives, guesses and "
+            "conditional plans. Preserve unresolved contradictions."
         )
     elif ctx_type == "aggregation":
         lines.append(
-            "- Count only items that EXACTLY match the question's criteria."
+            "- Count only items supported by the evidence that match the "
+            "question's criteria. State when the available evidence is incomplete."
         )
 
     return "\n".join(lines) + "\n"
@@ -545,7 +528,7 @@ def _build_conflict_annotations(
     lines: list[str] = ["## Conflicting Information"]
     lines.append(
         "The following items have unresolved contradictions. "
-        "Prefer the more recent or higher-confidence version."
+        "Explain the disagreement; recency or confidence alone does not establish which claim is correct."
     )
 
     seen: set = set()
@@ -565,12 +548,12 @@ def _build_conflict_annotations(
             else:
                 newer, older = counterpart, r
             lines.append(
-                f"- NEWER: \"{_sanitize_content(newer.node.content)}\" vs "
-                f"OLDER: \"{_sanitize_content(older.node.content)}\""
+                f"- NEWER: {_provenance_label(newer)} \"{_sanitize_content(newer.node.content)}\" vs "
+                f"OLDER: {_provenance_label(older)} \"{_sanitize_content(older.node.content)}\""
             )
         else:
             lines.append(
-                f"- CONTESTED: \"{_sanitize_content(r.node.content)}\" "
+                f"- CONTESTED: {_provenance_label(r)} \"{_sanitize_content(r.node.content)}\" "
                 "(contradicting memory not in results)"
             )
 
@@ -626,7 +609,7 @@ def format_for_llm(
     # so we must never mutate the caller's list (callers reuse ``response``).
     if question_date is not None:
         question_date = as_utc(question_date)
-    display = list(results[:max_results])
+    display = _select_entries(list(results[:max_results]), None, None)
     if token_budget is not None:
         if token_budget < 0:
             raise ValueError("token_budget must be nonnegative")
@@ -651,7 +634,7 @@ def format_for_llm(
     ctx_type = context_hint or _detect_context_type(query, query_analysis)
 
     parts: list[str] = []
-    # Content keys already rendered elsewhere (profile preamble) so the body
+    # Record IDs already rendered elsewhere (profile preamble) so the body
     # can skip them — the same text in two sections is pure redundancy.
     exclude_keys: set[str] = set()
 
@@ -729,7 +712,7 @@ def _select_entries(
 
     Args:
         results: Candidates in priority order (most relevant first).
-        exclude_keys: Content keys already rendered elsewhere (e.g. the profile
+        exclude_keys: Record IDs already rendered elsewhere (e.g. the profile
             preamble) to skip in the body. ``None`` means exclude nothing.
         token_budget: Approximate token ceiling for the rendered entries, or
             ``None`` for no ceiling. Estimated from each entry's content so the
@@ -742,7 +725,7 @@ def _select_entries(
     selected: list[RetrievalCandidate] = []
     used_tokens = 0
     for r in results:
-        key = _content_key(r.node.content)
+        key = _record_key(r)
         if key in seen:
             continue
         seen.add(key)
@@ -775,12 +758,12 @@ def _format_temporal(
             ago = format_days_ago(event_dt, question_date)
             lines.append(
                 f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}, {ago}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
         else:
             lines.append(
                 f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
 
     header = ""
@@ -800,7 +783,7 @@ def _format_knowledge_update(
     exclude_keys: set[str] | None = None,
     token_budget: int | None = None,
 ) -> str:
-    """Knowledge-update formatting: chronological sort, strong recency markers."""
+    """Knowledge-update formatting: chronological order without assuming truth."""
     # Select by relevance rank (dedup + budget), then display chronologically
     # so the recency markers ([MOST RECENT]/[OLDER]) line up with event order.
     selected = _select_entries(results, exclude_keys, token_budget)
@@ -811,7 +794,7 @@ def _format_knowledge_update(
     for i, r in enumerate(ordered):
         event_dt = _get_event_dt(r)
         if i == n - 1:
-            marker = " [MOST RECENT — USE THIS VALUE]"
+            marker = " [MOST RECENT]"
         elif i >= n - 3:
             marker = " [RECENT]"
         elif i < n - 5:
@@ -820,14 +803,14 @@ def _format_knowledge_update(
             marker = ""
         lines.append(
             f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}{marker}) "
-            f"{_sanitize_content(r.node.content)}"
+            f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
         )
 
     header = (
         "IMPORTANT: Entries are in chronological order (oldest first, newest last).\n"
-        "When the same attribute appears multiple times with different values, "
-        "the MOST RECENT entry supersedes all earlier ones. "
-        "ALWAYS use the latest value — earlier values are outdated.\n\n"
+        "Recency alone does not resolve contradictions. Use explicit supported "
+        "updates for current-state questions, respect conditions and the requested "
+        "time, and preserve unresolved conflicts.\n\n"
     )
     return header + "\n".join(lines)
 
@@ -855,18 +838,18 @@ def _format_aggregation(
             ago = format_days_ago(event_dt, question_date)
             lines.append(
                 f"[{unique_count}] ({event_dt.strftime('%Y-%m-%d')}, {ago}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
         else:
             lines.append(
                 f"[{unique_count}] ({event_dt.strftime('%Y-%m-%d')}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
 
     header = (
         "AGGREGATION TASK: The question asks for a count, total, or list.\n"
-        f"Below are {unique_count} unique entries (duplicates removed) "
-        "in chronological order.\n"
+        f"Below are {unique_count} distinct memory records in chronological order "
+        "(repeated record IDs removed). Different records may describe the same item.\n"
         "IMPORTANT COUNTING RULES:\n"
         "- Count ONLY items that EXACTLY match the question's criteria.\n"
         "- Two mentions of the same item = 1 count (not 2).\n"
@@ -898,7 +881,7 @@ def _format_default(
         event_dt = _get_event_dt(r)
         lines.append(
             f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}) "
-            f"{_sanitize_content(r.node.content)}"
+            f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
         )
 
     header = ""

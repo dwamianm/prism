@@ -82,8 +82,9 @@ def test_formatter_counts_profiles_headers_and_full_sources(profile, hint):
 
 def test_formatter_supports_the_consumers_tokenizer():
     sources = [candidate("Hello 世界 " * 10), candidate("Tiny complete fact.")]
-    text = format_for_llm(sources, "test", include_profile=False, token_budget=60, token_counter=len)
-    assert len(text) <= 60
+    budget = len(format_for_llm([sources[1]], "test", include_profile=False))
+    text = format_for_llm(sources, "test", include_profile=False, token_budget=budget, token_counter=len)
+    assert len(text) <= budget
     assert "Tiny complete fact." in text
 
 

@@ -39,6 +39,16 @@ its epistemic status. This distinguishes user-stated evidence from inferred,
 external-document and tool-output provenance; it is not verification of speaker
 identity or truth. Metadata costs count against the same context budget.
 
+The alternate `format_for_llm()` renderer retains provenance, epistemic state
+and memory lifecycle in its body, profile and conflict sections. It removes
+repeated node identities, not matching text prefixes: distinct records can
+describe different episodes, or carry different qualifications, despite sharing
+text. A profile-rendered record is excluded from the body by its identity.
+Chronological markers describe recording order; they do not assert supersedence
+or establish truth. Generated guidance must preserve unresolved contradictions
+and must not supply unsupported relationships or counts as examples to follow.
+The additional annotations are included in whole-output budget enforcement.
+
 ---
 
 ## 2. The Signal-to-Token Ratio (STR)
