@@ -34,6 +34,11 @@ UTC explicitly: DuckDB otherwise uses the host timezone for TIMESTAMPTZ output
 This changes presentation, not the stored instant. Legacy naive in-memory dates
 remain nominal; formatting must not silently attach the host timezone to them.
 
+Every packed representation retains the node's stored `source_type` alongside
+its epistemic status. This distinguishes user-stated evidence from inferred,
+external-document and tool-output provenance; it is not verification of speaker
+identity or truth. Metadata costs count against the same context budget.
+
 ---
 
 ## 2. The Signal-to-Token Ratio (STR)

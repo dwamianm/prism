@@ -307,6 +307,7 @@ def _render_entry(candidate: RetrievalCandidate) -> str:
         "valid_from": as_utc(node.valid_from).isoformat(),
         "valid_to": as_utc(node.valid_to).isoformat() if node.valid_to else None,
         "text": candidate.rendered_text,
+        "source_type": node.source_type.value,
     }
     return json.dumps(entry, ensure_ascii=False, separators=(",", ":"))
 

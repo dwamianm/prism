@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 import json
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -55,9 +55,17 @@ async def test_experiment_changes_only_order_and_keeps_labels_out_of_reader():
 async def test_provenance_costs_count_toward_budget_and_patch_does_not_escape():
     from prme.retrieval import packing
     original_renderer = packing._render_entry
-    report = fixture_report()
-    # The budget fits the long source exactly without the additional metadata.
-    result = await compare(report, include_provenance=True)
+
+    def legacy_renderer(candidate):
+        entry = json.loads(original_renderer(candidate))
+        entry.pop("source_type", None)
+        return json.dumps(entry, ensure_ascii=False, separators=(",", ":"))
+
+    # Emulate the original renderer used in the frozen experiment, even after
+    # production adopts provenance. Its budget fits the long source exactly.
+    with patch("prme.retrieval.packing._render_entry", legacy_renderer):
+        report = fixture_report()
+        result = await compare(report, include_provenance=True)
     variants = result["details"][0]["variants"]
     assert len(variants) == 4
     assert variants["score"]["sources"][0]["id"] == "relevant"
