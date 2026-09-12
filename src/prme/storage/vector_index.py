@@ -21,6 +21,7 @@ from prme.models.derivation import PreparedEmbedding
 from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
 from prme.storage.profile_work import ProfileStageFence
+from prme.models.profile import ProfilePublication
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
 
 logger = logging.getLogger(__name__)
@@ -453,6 +454,28 @@ class VectorIndex:
                 self._save_snapshot()
             finally:
                 self._unsaved_inserts = 0
+
+    async def delete_profile_stage(self, plan: ProfilePublication, *, fence) -> int:
+        """Delete only exact, abandoned, uniquely owned prepared profile vectors."""
+        plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        fence.verify_collection_plan(plan)
+        if fence.conn is not self._conn or fence.conn_lock is not self._conn_lock:
+            raise ValueError('Collection fence must share the vector connection and lock')
+        def guarded():
+            with fence.hold():
+                rows = self._conn.execute(
+                    'SELECT vm.user_id,vm.embedding_model,vm.embedding_version,vm.embedding_dim,vs.content,vp.vector_data '
+                    'FROM vector_metadata vm LEFT JOIN vector_staging vs ON vs.vector_key=vm.vector_key AND vs.node_id=vm.node_id '
+                    'LEFT JOIN vector_payloads vp ON vp.vector_key=vm.vector_key WHERE vm.node_id=?',
+                    [str(plan.node.id)]).fetchall()
+                expected = (plan.node.user_id, plan.embedding.model, plan.embedding.version, plan.embedding.dimension,
+                            plan.node.content, np.asarray(plan.embedding.values, dtype='<f4').tobytes())
+                if len(rows) > 1 or any(tuple(row) != expected for row in rows):
+                    raise ValueError('Staged vector differs from the abandoned prepared profile')
+                return self._do_delete(str(plan.node.id))
+        async with self._write_lock:
+            async with self._conn_lock:
+                return await run_to_completion(guarded)
 
     async def delete_by_node_id(self, node_id: str) -> int:
         """Remove all vectors for a node from USearch and DuckDB metadata.

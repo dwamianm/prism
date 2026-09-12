@@ -385,6 +385,8 @@ reservation rows from checksummed preparations and validated publication or
 replacement receipts, including when registration markers already exist.
 Operational attempt diagnostics reset on queue reconstruction. Invalid profile
 journals disable retired derivation collection as well, because global artifact
-ownership can no longer be established. Profiles have no automatic scheduler or
-abandoned-stage collector yet. See [RFC-0015](RFC-0015-Self-Organizing-Memory.md)
+ownership can no longer be established. Profiles expose explicit owner-scoped abandonment and fenced abandoned-stage
+collection. Discard and collection receipts preserve their history; collection
+retains ambiguous or mismatched inputs and never deletes a published graph node.
+They have no automatic scheduler. See [RFC-0015](RFC-0015-Self-Organizing-Memory.md)
 and the [profile guide](ENTITY-PROFILES.md) for the public contract.

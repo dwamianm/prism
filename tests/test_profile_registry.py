@@ -89,15 +89,22 @@ async def test_invalid_preparation_does_not_reconstruct_work_or_authorize_collec
             [user + "-other", plan.prepared_operation_id],
         )
     async with MemoryEngine.open(config) as engine:
-        assert await engine.profile_jobs(user_id=user) == []
-        assert await engine.profile_jobs(user_id=user + "-other") == []
-        assert await engine.get_node(str(plan.sources[0].id)) is not None
-        if engine._pool is None:
-            from prme.storage.derivation_registry import retired_staging
+        try:
+            assert await engine.profile_jobs(user_id=user) == []
+            assert await engine.profile_jobs(user_id=user + "-other") == []
+            assert await engine.get_node(str(plan.sources[0].id)) is not None
+            if engine._pool is None:
+                from prme.storage.derivation_registry import retired_staging
 
-            assert retired_staging(engine._conn, user_id=user) == (
-                [],
-                "unregistered_profile_plans",
+                assert retired_staging(engine._conn, user_id=user) == (
+                    [],
+                    "unregistered_profile_plans",
+                )
+        finally:
+            await execute(
+                engine,
+                "UPDATE operations SET actor_id=? WHERE id=?",
+                [user, plan.prepared_operation_id],
             )
 
 

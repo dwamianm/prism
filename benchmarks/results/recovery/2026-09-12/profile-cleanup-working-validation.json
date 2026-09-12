@@ -1,0 +1,75 @@
+{
+  "base_commit": "83b03ac",
+  "state": "cleanup working tree before commit",
+  "focused": {
+    "native_process_exit_code": 0,
+    "passed": 121,
+    "skipped": 23,
+    "failed": 0,
+    "seconds": 84.94,
+    "log_sha256": "6e3d9afce10fa2de1195bdc6d2988d7d29018dd9a0856b0ac07990051ce355ba"
+  },
+  "migration_and_invalid_receipts": {
+    "native_process_exit_code": 0,
+    "passed": 4,
+    "seconds": 2.89,
+    "log_sha256": "c70d218999806bbec04ddca3bd93ebd393d472d88ca3e9888f0bac10286592a3"
+  },
+  "real_model_workflow": {
+    "complete": true,
+    "python": "3.11.6",
+    "duckdb": "1.4.4",
+    "prme": "0.11.0",
+    "prme_import_path": "/private/tmp/prme-profile-stage-cleanup/src/prme/__init__.py",
+    "runner_sha256": "01e40b1aa344654ccac633d9b83329d984871d9c7430c8fde97f49d2ef55dd9a",
+    "limits": "Authored local failure/restart workflow using real BGE embeddings. No competitive quality claim.",
+    "embedding": {
+      "model": "BAAI/bge-small-en-v1.5",
+      "version": "fastembed-0.7.4",
+      "dimension": 384
+    },
+    "abandoned_stage_collected": true,
+    "cleanup": {
+      "collected": 1,
+      "failed": 0,
+      "remaining": 0,
+      "errors": {},
+      "blocked_reason": null
+    },
+    "recovery": {
+      "processed": 1,
+      "failed": 0,
+      "pending": 0,
+      "errors": {}
+    },
+    "exact_prepared_checksum": "c9a31de8d41ed47784ad3a51e0e2a71c8bc5583c64d0936092af3bb2c85a5692",
+    "model_free_recovery": true,
+    "retrieved_profile": true,
+    "completed_replay_preserves_archival": true,
+    "foreign_owner_isolated": true
+  },
+  "prior_attempts": [
+    {
+      "native_process_exit_code": 1,
+      "passed": 17,
+      "failed": 5,
+      "skipped": 4,
+      "finding": "Shared PostgreSQL test database contained deliberately corrupt unregistered journals; collection correctly refused global reclamation. Fresh database and restored corruption fixtures isolate behavior.",
+      "log_sha256": "0b4d716683507dca576ea43c4b65937576d115e1b58f313f6599809d39bf7379"
+    },
+    {
+      "native_process_exit_code": 1,
+      "passed": 67,
+      "failed": 1,
+      "skipped": 16,
+      "finding": "Invalid collection receipt was rejected after deletion; receipt validation now precedes native deletion.",
+      "log_sha256": "1640d793c0300cbb4d3b2deb79d308c96e47c8379d76e024067c72cfa9bcef26"
+    }
+  ],
+  "typing": {
+    "new_recovery_modules_checked": 4,
+    "errors": 0,
+    "scope": "mypy with follow-imports=silent"
+  },
+  "limits": "Authored fault, cancellation, owner/content validation, process-exit, schema migration and real-embedding workflow checks. No memory-quality or competitive performance claim."
+}

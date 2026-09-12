@@ -147,6 +147,36 @@ def main():
                     client.query_nodes(user_id="authored", node_type=NodeType.SUMMARY)
                     == []
                 )
+                # A second interrupted preparation can be explicitly abandoned
+                # and reclaimed without re-embedding or changing source history.
+                provider.embed = original_embed
+                client._engine._lexical_index.stage_profile = outage
+                try:
+                    client.consolidate_knowledge(
+                        user_id="authored", scope=Scope.PROJECT, entity_names=["Aurora"]
+                    )
+                except OSError:
+                    pass
+                else:
+                    raise AssertionError("Second authored outage did not occur")
+                pending_id = client.profile_jobs(user_id="authored")[0]["plan_id"]
+                provider.embed = forbidden
+                assert client.discard_profile(pending_id, user_id="authored")
+                cleanup = client.collect_profile_staging(
+                    user_id="authored", scope=Scope.PROJECT
+                )
+                assert cleanup == {
+                    "collected": 1,
+                    "failed": 0,
+                    "remaining": 0,
+                    "errors": {},
+                    "blocked_reason": None,
+                }
+                assert (
+                    client.collect_profile_staging(user_id="authored")["collected"] == 0
+                )
+                report["abandoned_stage_collected"] = True
+                report["cleanup"] = cleanup
                 report.update(
                     complete=True,
                     recovery=result,

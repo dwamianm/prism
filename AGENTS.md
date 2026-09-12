@@ -49,9 +49,10 @@ instead of treating the newest 5,000 nodes as complete history. Prepared profile
 and `process_profiles` provide owner-scoped Python inspection and explicit recovery
 without new model calls. Matching retries reuse fixed inputs; changed requests
 replace pending preparations under a native-stage fence. Missing work rows are
-reconstructed from the immutable journal at startup. There is no automatic profile
-scheduler or abandoned-stage collector; unpublished local staging is retained
-for explicit index rebuild.
+reconstructed from the immutable journal at startup. Owner-scoped `discard_profile` abandons unpublished work;
+`collect_profile_staging` reclaims exact, uniquely owned abandoned indexes under a
+work-epoch fence and preserves the journal. Invalid ownership records block
+collection. There is no automatic profile scheduler.
 This convenience API is separate from the organizer's `consolidate` job.
 
 ## RFCs

@@ -41,7 +41,7 @@ from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingRe
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
-from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfileProcessingResult, profile_key
+from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfileProcessingResult, profile_key, ProfileCollectionResult
 from prme.models.derivation import PreparedEmbedding
 from prme.storage.relevance import RelevanceRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
@@ -2515,6 +2515,21 @@ class MemoryEngine:
         if plan is None:
             return None
         return await self._publish_prepared_profile(plan)
+
+    async def collect_profile_staging(self, *, user_id: str, scope: Scope | None = None,
+                                      limit: int = 100, budget_ms: float = 5000) -> ProfileCollectionResult:
+        """Reclaim abandoned preparation indexes, preserving graph and journal."""
+        from prme.storage.profile_collection import collect
+        return await collect(self, user_id=user_id, scope=scope, limit=limit, budget_ms=budget_ms)
+
+    async def discard_profile(self, profile_id: str, *, user_id: str) -> bool:
+        """Abandon owned unpublished work; preserve its journal and source nodes.
+
+        Returns False for unknown, foreign or completed work, True once abandoned.
+        Index cleanup is a separate bounded maintenance operation.
+        """
+        from prme.storage.profile_retirement import discard
+        return await discard(self._profile_work, profile_id, user_id=user_id)
 
     async def process_profiles(self, *, user_id: str, scope: Scope | None = None, limit: int = 100, budget_ms: float = 5000) -> ProfileProcessingResult:
         """Resume a bounded owned profile batch, preserving per-job failures.

@@ -29,6 +29,14 @@ class ProfileProcessingResult(TypedDict):
     errors: dict[str, str]
 
 
+class ProfileCollectionResult(TypedDict):
+    collected: int
+    failed: int
+    remaining: int
+    errors: dict[str, str]
+    blocked_reason: str | None
+
+
 def profile_request_hash(
     node: MemoryNode, sources, previous, generation: int, embedding_identity
 ) -> str:
@@ -85,6 +93,10 @@ class ProfilePublication(BaseModel):
     @property
     def prepared_operation_id(self) -> str:
         return str(uuid5(self.node.id, "prme:profile-prepared:v1"))
+
+    @property
+    def collection_operation_id(self) -> str:
+        return str(uuid5(self.node.id, "prme:profile-stage-collected:v1"))
 
     @property
     def request_hash(self) -> str:

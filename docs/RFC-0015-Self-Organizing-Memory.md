@@ -357,10 +357,22 @@ records remain unregistered with identity-only diagnostics and prevent retired
 index collection; legacy ownership collisions remain ambiguous. Reconstructed
 work resets operational attempt diagnostics, which are not immutable history.
 
-There is no automatic profile scheduler. Failed or replaced local staging remains
-protected from ordinary orphan compaction and can occupy space until explicit
-index rebuild. Explicit abandonment and fenced abandoned-stage collection remain
-follow-up work. Publication completion describes the graph commit; predecessor
+`discard_profile` explicitly abandons owned unpublished work and appends an
+immutable `PROFILE_PREPARATION_DISCARDED` receipt. It is idempotent, cannot retire
+completed publications, and shares the changing work epoch with native staging.
+Startup reconstruction validates discard receipts before restoring abandoned work.
+
+`collect_profile_staging` explicitly reclaims uniquely owned abandoned inputs.
+It validates the journal, graph absence and exact native contents while holding
+a work-epoch transaction around each native deletion. Lexical deletion precedes
+vector removal; an immutable `PROFILE_STAGE_COLLECTED` receipt follows both.
+Cancellation, native failures and process exit retain discoverable work, even if
+both deletions completed before acknowledgement. Failed attempts move behind
+unattempted work. Unknown ownership blocks reclamation; mismatched entries are
+retained. PostgreSQL acknowledges eligible abandoned preparations without graph
+mutation, because it has no external pre-publication indexes. Source nodes,
+immutable receipts and reservations remain intact. There is no automatic profile
+scheduler or implicit collection of unpublished profiles by ordinary compaction. Publication completion describes the graph commit; predecessor
 index eviction occurs afterward. An interrupted call must not be described as
 completed without checking its saved work state.
 

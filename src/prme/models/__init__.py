@@ -10,7 +10,7 @@ from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.models.nodes import MemoryNode
 from prme.models.processing import ProcessingResult, ProcessingStatus
-from prme.models.profile import ProfileJobStatus, ProfileProcessingResult
+from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 
 __all__ = [
     "Event",
@@ -24,4 +24,5 @@ __all__ = [
     "ProcessingStatus",
     "ProfileJobStatus",
     "ProfileProcessingResult",
+    "ProfileCollectionResult",
 ]

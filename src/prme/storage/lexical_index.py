@@ -462,6 +462,31 @@ class LexicalIndex:
         finally:
             writer.wait_merging_threads()
 
+    async def delete_profile_stage(self, plan: ProfilePublication, *, fence) -> None:
+        """Delete one exact abandoned document under its preparation fence."""
+        plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        fence.verify_collection_plan(plan)
+        node = plan.node
+        expected = {'node_id': [str(node.id)], 'content': [node.content], 'user_id': [node.user_id],
+                    'node_type': [node.node_type.value], 'scope': [node.scope.value]}
+        def guarded():
+            with fence.hold():
+                self._commit_locked()
+                self._index.reload()
+                searcher = self._index.searcher()
+                query = tantivy.Query.term_query(self._schema, 'node_id', str(node.id))
+                found = searcher.search(query, limit=1)
+                if found.count > 1:
+                    raise ValueError('Abandoned profile has ambiguous lexical documents')
+                if found.hits:
+                    document = searcher.doc(found.hits[0][1])
+                    if any(document[name] != value for name, value in expected.items()):
+                        raise ValueError('Staged document differs from the abandoned prepared profile')
+                self._do_delete(str(node.id))
+        async with self._write_lock:
+            async with fence.conn_lock:
+                await run_to_completion(guarded)
+
     async def delete_by_node_id(self, node_id: str) -> None:
         """Delete all documents for ``node_id`` from the index.
 

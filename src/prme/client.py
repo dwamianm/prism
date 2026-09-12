@@ -34,7 +34,7 @@ from prme.models.learning import LearningConfig, LearningEvaluation, RankingMult
 from prme.retrieval.config import ScoringWeights
 from prme.retrieval.scope import ScopeInput
 from prme.models.processing import ProcessingResult, ProcessingStatus
-from prme.models.profile import ProfileJobStatus, ProfileProcessingResult
+from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.types import EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
@@ -455,6 +455,16 @@ class MemoryClient:
     def resume_profile(self, profile_id: str, *, user_id: str) -> str | None:
         """Resume saved profile inputs without repeating model inference."""
         return self._run(self._engine.resume_profile(profile_id, user_id=user_id))
+
+    def collect_profile_staging(self, *, user_id: str, scope: Scope | None = None,
+                                limit: int = 100, budget_ms: float = 5000) -> ProfileCollectionResult:
+        """Reclaim owned abandoned profile staging with a budget between jobs."""
+        return self._run(self._engine.collect_profile_staging(
+            user_id=user_id, scope=scope, limit=limit, budget_ms=budget_ms))
+
+    def discard_profile(self, profile_id: str, *, user_id: str) -> bool:
+        """Abandon owned unpublished work while preserving sources and journal."""
+        return self._run(self._engine.discard_profile(profile_id, user_id=user_id))
 
     def process_profiles(self, *, user_id: str, scope: Scope | None = None,
                          limit: int = 100, budget_ms: float = 5000) -> ProfileProcessingResult:

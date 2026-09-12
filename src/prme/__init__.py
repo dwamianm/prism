@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 from prme.config import PRMEConfig
 from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.models.processing import ProcessingResult, ProcessingStatus
-from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult
+from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.models.extraction import ExtractionRecord
@@ -85,6 +85,7 @@ __all__ = [
     "ProcessingStatus",
     "ProfileJobStatus",
     "ProfileProcessingResult",
+    "ProfileCollectionResult",
     "RetrievalPipeline",
     "RetrievalResponse",
     "RetrievalReceipt",

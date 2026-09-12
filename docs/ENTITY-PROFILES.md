@@ -94,7 +94,33 @@ and timestamps are operational diagnostics and reset when those rows are rebuilt
 A multi-entity call contains separate publications; earlier names may succeed
 before a later one fails. Profiles without enough qualifying sources are retired
 on an explicit rebuild. Publication completion records graph visibility; predecessor
-index eviction happens afterward. Unpublished local staging remains protected from
-ordinary orphan collection and can occupy space until explicit index rebuild.
-There is no automatic profile scheduler or abandoned-stage collector. These Python
-methods are separate from the organizer's `consolidate` job.
+index eviction happens afterward. Use `discard_profile(plan_id, user_id=...)` to abandon a preparation that should
+never publish. It returns `False` for unknown, foreign or completed work, and
+`True` once abandoned. This preserves source nodes, published profiles and the
+immutable preparation. A new consolidation can prepare a fresh identity.
+
+```python
+with MemoryClient("./project_memory") as client:
+    for job in client.profile_jobs(user_id="alice", scope=Scope.PROJECT):
+        client.discard_profile(job["plan_id"], user_id="alice")
+    cleanup = client.collect_profile_staging(
+        user_id="alice", scope=Scope.PROJECT, limit=20, budget_ms=5000,
+    )
+    print(cleanup["collected"], cleanup["remaining"], cleanup["errors"])
+```
+
+Collection verifies that each abandoned preparation uniquely owns its staged
+inputs and has no graph node or publication receipt. It removes the exact lexical
+document before its numerical vector, then appends a collection receipt. Failed
+or cancelled deletion remains discoverable across restart; retries require no
+model calls. An old managed worker cannot recreate collected entries. The result
+reports collected preparations, failures, remaining preparations, bounded per-job
+errors and an optional `blocked_reason`. Failed attempts move behind unattempted
+work. The budget applies between preparations. Invalid or incomplete ownership
+journals block collection, and ambiguous identities or mismatched native entries
+are retained. PostgreSQL has no external pre-publication index entries; collection
+validates and acknowledges its abandoned preparation without deleting graph data.
+
+There is no automatic profile scheduler. These explicit Python methods are
+separate from the organizer's `consolidate` job. Journals and identity reservations
+remain durable after index collection.

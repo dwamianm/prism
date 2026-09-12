@@ -19,6 +19,7 @@ PROFILE_WORK_DDL = """CREATE TABLE IF NOT EXISTS profile_work (
     profile_key VARCHAR NOT NULL,
     request_hash VARCHAR NOT NULL,
     prepared_operation_id VARCHAR NOT NULL UNIQUE,
+    collection_operation_id VARCHAR NOT NULL,
     status VARCHAR NOT NULL DEFAULT 'pending',
     attempts BIGINT NOT NULL DEFAULT 0,
     fence_epoch BIGINT NOT NULL DEFAULT 0,
@@ -58,7 +59,7 @@ class ProfileWorkStore:
             raise ValueError("user_id must be nonempty")
         sql = (
             "SELECT o.payload,w.user_id,w.scope,w.profile_key,w.request_hash,w.prepared_operation_id,"
-            "o.op_type,o.actor_id,o.namespace_id,o.target_id FROM profile_work w "
+            "o.op_type,o.actor_id,o.namespace_id,o.target_id,w.collection_operation_id FROM profile_work w "
             "LEFT JOIN operations o ON o.id=w.prepared_operation_id WHERE w.plan_id=? AND w.user_id=?"
         )
         if self.pool is not None:
@@ -84,6 +85,7 @@ class ProfileWorkStore:
             user_id,
             plan.node.scope.value,
             plan_id,
+            plan.collection_operation_id,
         ):
             raise ValueError("Prepared profile work or operation identity mismatch")
         return plan
@@ -202,7 +204,7 @@ class ProfileWorkStore:
                 ],
             )
             conn.execute(
-                "INSERT INTO profile_work (plan_id,user_id,scope,profile_key,request_hash,prepared_operation_id) VALUES (?,?,?,?,?,?)",
+                "INSERT INTO profile_work (plan_id,user_id,scope,profile_key,request_hash,prepared_operation_id,collection_operation_id) VALUES (?,?,?,?,?,?,?)",
                 [
                     str(plan.node.id),
                     plan.node.user_id,
@@ -210,6 +212,7 @@ class ProfileWorkStore:
                     plan.key,
                     plan.request_hash,
                     plan.prepared_operation_id,
+                    plan.collection_operation_id,
                 ],
             )
             conn.execute(
@@ -284,13 +287,14 @@ class ProfileWorkStore:
                 plan.node.scope.value,
             )
             await conn.execute(
-                "INSERT INTO profile_work (plan_id,user_id,scope,profile_key,request_hash,prepared_operation_id) VALUES ($1,$2,$3,$4,$5,$6)",
+                "INSERT INTO profile_work (plan_id,user_id,scope,profile_key,request_hash,prepared_operation_id,collection_operation_id) VALUES ($1,$2,$3,$4,$5,$6,$7)",
                 str(plan.node.id),
                 plan.node.user_id,
                 plan.node.scope.value,
                 plan.key,
                 plan.request_hash,
                 plan.prepared_operation_id,
+                plan.collection_operation_id,
             )
             await conn.execute(
                 "INSERT INTO profile_registered_plans VALUES ($1,$2)",
@@ -381,7 +385,7 @@ def pg_sql(sql):
     )
 
 
-def validate_work_row(plan, row, saved):
+def validate_work_row(plan, row, saved, *, expected_status="pending"):
     if row is None:
         if saved is not None:
             raise ValueError("Journaled profile is missing its work record")
@@ -394,7 +398,7 @@ def validate_work_row(plan, row, saved):
         plan.prepared_operation_id,
     ):
         raise ValueError("Profile work identity differs from its prepared inputs")
-    if row[5] != "pending":
+    if row[5] != expected_status:
         raise StaleProfileError("Profile preparation is no longer pending")
     if (
         saved is None
@@ -407,7 +411,7 @@ def validate_work_row(plan, row, saved):
     return True
 
 
-def validate_duck_work(conn, plan, *, required=False):
+def validate_duck_work(conn, plan, *, required=False, expected_status="pending"):
     row = conn.execute(
         "SELECT user_id,scope,profile_key,request_hash,prepared_operation_id,status FROM profile_work WHERE plan_id=?",
         [str(plan.node.id)],
@@ -416,7 +420,9 @@ def validate_duck_work(conn, plan, *, required=False):
         "SELECT payload FROM operations WHERE id=? AND op_type='PROFILE_PREPARED' AND actor_id=?",
         [plan.prepared_operation_id, plan.node.user_id],
     ).fetchone()
-    managed = validate_work_row(plan, row, saved[0] if saved else None)
+    managed = validate_work_row(
+        plan, row, saved[0] if saved else None, expected_status=expected_status
+    )
     if required and not managed:
         raise ValueError("Managed profile staging requires a prepared journal record")
     if managed:
@@ -436,7 +442,7 @@ def validate_duck_work(conn, plan, *, required=False):
     return managed
 
 
-async def validate_pg_work(conn, plan):
+async def validate_pg_work(conn, plan, *, expected_status="pending"):
     row = await conn.fetchrow(
         "SELECT user_id,scope,profile_key,request_hash,prepared_operation_id,status FROM profile_work WHERE plan_id=$1 FOR UPDATE",
         str(plan.node.id),
@@ -446,7 +452,7 @@ async def validate_pg_work(conn, plan):
         plan.prepared_operation_id,
         plan.node.user_id,
     )
-    managed = validate_work_row(plan, row, saved)
+    managed = validate_work_row(plan, row, saved, expected_status=expected_status)
     if managed:
         owner = await conn.fetchval(
             "SELECT operation_id FROM derivation_artifact_owners WHERE node_id=$1",

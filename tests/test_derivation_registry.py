@@ -64,11 +64,18 @@ async def test_corrupt_legacy_plan_does_not_prevent_reading_source(config, user)
             await session.execute('UPDATE operations SET payload = $1 WHERE id = $2',
                 json.dumps({'plan': plan.model_dump_json(), 'checksum': '0' * 64}), plan.prepared_operation_id)
     async with MemoryEngine.open(config) as engine:
-        assert (await engine.get_event(str(event.id), user_id=user)).content == event.content
-        async with engine._event_store.extraction_work.session() as session:
-            assert plan.prepared_operation_id in {row['id'] for row in await session.fetch(_PENDING)}
-        with pytest.raises(ValueError, match='checksum'):
-            await engine._event_store.get_derivation_plan(str(event.id), user_id=user)
+        try:
+            assert (await engine.get_event(str(event.id), user_id=user)).content == event.content
+            async with engine._event_store.extraction_work.session() as session:
+                assert plan.prepared_operation_id in {row['id'] for row in await session.fetch(_PENDING)}
+            with pytest.raises(ValueError, match='checksum'):
+                await engine._event_store.get_derivation_plan(str(event.id), user_id=user)
+        finally:
+            # Restore authored corruption in the shared PostgreSQL fixture.
+            # Later collectors must be able to establish global ownership.
+            async with engine._event_store.extraction_work.session(transaction=True) as session:
+                await session.execute('UPDATE operations SET payload = $1 WHERE id = $2',
+                    json.dumps({'plan': plan.model_dump_json(), 'checksum': plan.checksum}), plan.prepared_operation_id)
 
 
 async def test_plan_and_artifact_reservations_roll_back_together(config, user, monkeypatch):

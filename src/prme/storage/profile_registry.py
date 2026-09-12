@@ -10,6 +10,7 @@ import json
 import logging
 
 from prme.models.profile import ProfilePublication
+from prme.storage.profile_retirement import discarded_state, discard_operation_id
 from prme.storage.profile_work import (
     pg_sql,
     replacement_operation,
@@ -84,8 +85,8 @@ TRANSITIONS = (
     "WHERE op_type='PROFILE_PREPARATION_REPLACED' AND target_id=?"
 )
 WORK = (
-    "INSERT INTO profile_work (plan_id,user_id,scope,profile_key,request_hash,prepared_operation_id,status,last_error) "
-    "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING"
+    "INSERT INTO profile_work (plan_id,user_id,scope,profile_key,request_hash,prepared_operation_id,status,last_error,collection_operation_id) "
+    "VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING"
 )
 HEAD = (
     "INSERT INTO profile_publication_heads VALUES (?,?) ON CONFLICT (profile_key) DO UPDATE "
@@ -103,6 +104,7 @@ def work_values(plan, status, error):
         plan.prepared_operation_id,
         status,
         error,
+        plan.collection_operation_id,
     ]
 
 
@@ -113,6 +115,12 @@ def successor_id(value):
     return str(uuid5(UUID(body["replaced_by"]), "prme:profile-prepared:v1"))
 
 
+def collection_id(identity):
+    from uuid import UUID, uuid5
+
+    return str(uuid5(UUID(identity), "prme:profile-stage-collected:v1"))
+
+
 def initialize_duck(conn):
     conn.execute(DDL)
     conn.execute(
@@ -121,8 +129,32 @@ def initialize_duck(conn):
     conn.execute(
         "CREATE TABLE IF NOT EXISTS profile_preparation_heads (profile_key VARCHAR PRIMARY KEY, epoch BIGINT NOT NULL)"
     )
+    conn.execute(
+        "ALTER TABLE profile_work ADD COLUMN IF NOT EXISTS collection_operation_id VARCHAR"
+    )
     conn.execute("BEGIN TRANSACTION")
     try:
+        migration_cursor = ""
+        while True:
+            batch = conn.execute(
+                "SELECT plan_id FROM profile_work WHERE collection_operation_id IS NULL AND plan_id>? ORDER BY plan_id LIMIT 128",
+                [migration_cursor],
+            ).fetchall()
+            if not batch:
+                break
+            for (identity,) in batch:
+                migration_cursor = identity
+                try:
+                    operation_id = collection_id(identity)
+                except ValueError:
+                    logger.warning(
+                        "Invalid profile collection identity for %s", identity
+                    )
+                    continue
+                conn.execute(
+                    "UPDATE profile_work SET collection_operation_id=? WHERE plan_id=?",
+                    [operation_id, identity],
+                )
         cursor = ""
         while True:
             rows = conn.execute(
@@ -148,6 +180,15 @@ def initialize_duck(conn):
                             ).fetchone()
                             transitions.append((*transition, replacement))
                         state = work_state(plan, published, transitions)
+                        discarded = conn.execute(
+                            OPERATION, [discard_operation_id(plan)]
+                        ).fetchone()
+                        if discarded is not None:
+                            if state != ("pending", None):
+                                raise ValueError(
+                                    "Conflicting profile retirement receipts"
+                                )
+                            state = discarded_state(plan, discarded)
                 except (ValueError, KeyError, TypeError):
                     logger.warning(
                         "Profile ownership registration incomplete for %s", row[0]
@@ -177,6 +218,29 @@ async def initialize_pg(conn):
         await conn.execute(
             "CREATE TABLE IF NOT EXISTS profile_preparation_heads (profile_key VARCHAR PRIMARY KEY, epoch BIGINT NOT NULL)"
         )
+        await conn.execute(
+            "ALTER TABLE profile_work ADD COLUMN IF NOT EXISTS collection_operation_id VARCHAR"
+        )
+        migration_cursor = ""
+        while True:
+            batch = await conn.fetch(
+                "SELECT plan_id FROM profile_work WHERE collection_operation_id IS NULL AND plan_id>$1 ORDER BY plan_id LIMIT 128",
+                migration_cursor,
+            )
+            if not batch:
+                break
+            for row in batch:
+                migration_cursor = row[0]
+                try:
+                    operation_id = collection_id(row[0])
+                except ValueError:
+                    logger.warning("Profile collection identity migration incomplete")
+                    continue
+                await conn.execute(
+                    "UPDATE profile_work SET collection_operation_id=$1 WHERE plan_id=$2",
+                    operation_id,
+                    row[0],
+                )
         cursor = ""
         while True:
             rows = await conn.fetch(
@@ -202,6 +266,15 @@ async def initialize_pg(conn):
                             )
                             transitions.append((*transition, replacement))
                         state = work_state(plan, published, transitions)
+                        discarded = await conn.fetchrow(
+                            pg_sql(OPERATION), discard_operation_id(plan)
+                        )
+                        if discarded is not None:
+                            if state != ("pending", None):
+                                raise ValueError(
+                                    "Conflicting profile retirement receipts"
+                                )
+                            state = discarded_state(plan, discarded)
                 except (ValueError, KeyError, TypeError):
                     logger.warning(
                         "Profile ownership registration incomplete for %s", row[0]
