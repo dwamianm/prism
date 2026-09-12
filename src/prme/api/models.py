@@ -26,7 +26,7 @@ class StoreRequest(BaseModel):
     """Request body for POST /v1/store."""
 
     content: str = Field(description="Text content to store")
-    user_id: str = Field(description="Owner user ID")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     role: str = Field(default="user", description="Event role")
     node_type: NodeType | None = Field(
         default=None, description="Node type (defaults to note)"
@@ -61,7 +61,7 @@ class IngestRequest(BaseModel):
     """Request body for POST /v1/ingest."""
 
     content: str = Field(description="Message text to ingest")
-    user_id: str = Field(description="Owner user ID")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     role: str = Field(default="user", description="Message role")
     namespace: str | None = Field(
         default=None, description="Optional namespace"
@@ -86,7 +86,7 @@ class RetrieveRequest(BaseModel):
     """Request body for POST /v1/retrieve."""
 
     query: str = Field(description="Natural language query")
-    user_id: str = Field(description="User ID for scoping")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     reference_time: AwareDatetime | None = Field(
         default=None, description="Clock for relative query dates and scoring decay",
     )

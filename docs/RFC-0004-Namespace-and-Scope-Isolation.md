@@ -114,6 +114,22 @@ Permissions are NOT hierarchical. Having `ADMIN` does not imply `READ`. Implemen
 
 ---
 
+### Current HTTP identity binding
+
+`APIConfig.user_keys` maps server-configured user IDs to distinct bearer
+credentials. The authenticated user scopes every HTTP memory route, including
+node-ID reads/mutations, lists, graph results, counts, and organizer runs. A
+request cannot select a different user. Unscoped requests inherit the identity;
+foreign node IDs behave as missing. Global feedback maintenance is unavailable
+to tenant credentials. The legacy global key is a separate operator mode and
+cannot coexist with user keys.
+
+This implements user binding at the application boundary. It does not implement
+the full grant hierarchy above, database RLS, or index-level partitioning below.
+MCP authentication is configured separately; HTTP settings do not protect it.
+
+---
+
 ## 6. Retrieval Isolation
 
 **This section contains the most critical requirement in this RFC.**

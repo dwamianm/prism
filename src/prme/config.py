@@ -96,6 +96,23 @@ class APIConfig(_ProjectSettings):
             "authentication — only safe for single-user localhost use."
         ),
     )
+    user_keys: dict[str, SecretStr] = Field(
+        default_factory=dict,
+        description="User IDs mapped to distinct bearer credentials. Binds every HTTP operation "
+                    "to the authenticated user. Cannot be combined with the legacy global api_key.",
+    )
+
+    @model_validator(mode="after")
+    def validate_user_keys(self):
+        if self.user_keys and self.api_key is not None:
+            raise ValueError("Configure user_keys or the global api_key, not both")
+        values = [key.get_secret_value() for key in self.user_keys.values()]
+        if any(not user.strip() for user in self.user_keys) or any(not key.strip() for key in values):
+            raise ValueError("User IDs and bearer credentials must not be empty")
+        if len(values) != len(set(values)):
+            raise ValueError("Each user must have a distinct bearer credential")
+        return self
+
     cors_origins: list[str] = Field(
         default_factory=list,
         description=(

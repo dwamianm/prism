@@ -204,6 +204,27 @@ Install with `pip install prme[api]` and run:
 uvicorn prme.api:app
 ```
 
+For a shared HTTP server, configure a distinct bearer credential for each user
+in `.env` (replace these example values with generated secrets):
+
+```dotenv
+PRME_API_USER_KEYS={"alice":"replace-alice-secret","bob":"replace-bob-secret"}
+```
+
+Send `Authorization: Bearer <credential>`. The server derives the owner from that
+credential: store/ingest/retrieve can omit `user_id`, lists and statistics are
+scoped automatically, and a different requested user returns 403. Foreign node
+IDs return 404 for reads and mutations. Maintenance is scoped to the caller and
+excludes the engine-global `feedback_apply` job, which remains an operator task.
+Credentials are redacted from configuration output; restart the server to rotate
+them. Use TLS when carrying bearer credentials over a network.
+
+The legacy `PRME_API_API_KEY` retains unrestricted operator access and cannot be
+combined with per-user keys. With neither configured, the API is unrestricted
+for local single-user use. This is application-level user isolation; PostgreSQL
+row-level security, project membership grants, and OAuth federation are separate
+work. These HTTP credentials do not configure the MCP server.
+
 Endpoints under `/v1`:
 
 | Method | Path | Description |

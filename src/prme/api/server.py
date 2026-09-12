@@ -42,7 +42,7 @@ def run_server(
         config = PRMEConfig()
 
     if host not in _LOOPBACK_HOSTS:
-        if config.api.api_key is None:
+        if config.api.api_key is None and not config.api.user_keys:
             logger.warning(
                 "Binding to %s with NO API key configured: anyone on the "
                 "network can read, write, and archive memories. Set "

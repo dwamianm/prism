@@ -48,23 +48,42 @@ async def require_api_key(
 ) -> None:
     """Require a valid bearer token when an API key is configured.
 
-    When ``config.api.api_key`` is None (the default), authentication is
-    disabled and all requests pass — appropriate for single-user
-    localhost deployments. When set, every protected route requires
-    ``Authorization: Bearer <api_key>``.
+    Per-user keys bind requests to their configured owner. The legacy global
+    key retains operator access. With neither configured, access is local and
+    unrestricted. Every configured mode requires a bearer token.
     """
     config = getattr(request.app.state, "config", None)
-    api_key = config.api.api_key if config is not None else None
-    if api_key is None:
+    api = config.api if config is not None else None
+    request.state.user_id = None
+    if api is None or (api.api_key is None and not api.user_keys):
         return
-    if credentials is None or not secrets.compare_digest(
-        credentials.credentials, api_key.get_secret_value()
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or missing API key",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    token = credentials.credentials.encode("utf-8") if credentials else b""
+    if api.user_keys:
+        # Inspect all configured credentials; never derive identity from request data.
+        owner = None
+        for user_id, key in api.user_keys.items():
+            if secrets.compare_digest(token, key.get_secret_value().encode("utf-8")):
+                owner = user_id
+        if owner is not None:
+            request.state.user_id = owner
+            return
+    elif credentials and secrets.compare_digest(token, api.api_key.get_secret_value().encode("utf-8")):
+        return
+    raise HTTPException(
+        status_code=401, detail="Invalid or missing API key",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _user_id(request: Request, requested: str | None = None, *, required: bool = False) -> str | None:
+    """Use the authenticated identity and reject attempts to select another owner."""
+    bound = getattr(request.state, "user_id", None)
+    if bound is not None and requested is not None and requested != bound:
+        raise HTTPException(status_code=403, detail="User does not match authenticated identity")
+    owner = bound if bound is not None else requested
+    if required and not owner:
+        raise HTTPException(status_code=422, detail="user_id is required without a bound identity")
+    return owner
 
 
 # Protected router: all memory operations require authentication when
@@ -127,7 +146,7 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse:
 
     kwargs: dict[str, Any] = {
         "content": body.content,
-        "user_id": body.user_id,
+        "user_id": _user_id(request, body.user_id, required=True),
         "role": body.role,
     }
     if body.node_type is not None:
@@ -144,7 +163,7 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse:
     # Try to find the node created by this store call
     node_id: str | None = None
     try:
-        nodes = await engine.query_nodes(user_id=body.user_id, limit=1)
+        nodes = await engine.query_nodes(user_id=_user_id(request, body.user_id), limit=1)
         if nodes:
             # The most recently created node for this user
             # Sort by created_at descending if possible
@@ -168,7 +187,7 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse:
 
     kwargs: dict[str, Any] = {
         "content": body.content,
-        "user_id": body.user_id,
+        "user_id": _user_id(request, body.user_id, required=True),
         "role": body.role,
     }
     if body.scope is not None:
@@ -195,7 +214,7 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
 
     kwargs: dict[str, Any] = {
         "query": body.query,
-        "user_id": body.user_id,
+        "user_id": _user_id(request, body.user_id, required=True),
     }
     if body.reference_time is not None:
         kwargs["reference_time"] = body.reference_time
@@ -257,13 +276,21 @@ async def organize(request: Request, body: OrganizeRequest) -> OrganizeResponse:
     engine = _get_engine(request)
 
     kwargs: dict[str, Any] = {}
-    if body.user_id is not None:
-        kwargs["user_id"] = body.user_id
+    owner = _user_id(request, body.user_id)
+    if owner is not None:
+        kwargs["user_id"] = owner
     if body.jobs is not None:
         kwargs["jobs"] = body.jobs
     if body.budget_ms is not None:
         kwargs["budget_ms"] = body.budget_ms
 
+    if getattr(request.state, "user_id", None) is not None:
+        from prme.organizer import ALL_JOBS
+
+        if body.jobs is not None and "feedback_apply" in body.jobs:
+            raise HTTPException(status_code=403, detail="Global feedback maintenance requires an operator")
+        if body.jobs is None:
+            kwargs["jobs"] = [name for name in ALL_JOBS if name != "feedback_apply"]
     result = await engine.organize(**kwargs)
 
     per_job_dict: dict[str, Any] = {}
@@ -294,7 +321,7 @@ async def organize(request: Request, body: OrganizeRequest) -> OrganizeResponse:
 async def get_node(request: Request, node_id: str) -> NodeResponse:
     """Retrieve a single node by ID."""
     engine = _get_engine(request)
-    node = await engine.get_node(node_id, include_superseded=True)
+    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
     return _node_to_response(node)
@@ -316,8 +343,9 @@ async def query_nodes(
     engine = _get_engine(request)
 
     kwargs: dict[str, Any] = {"limit": limit}
-    if user_id is not None:
-        kwargs["user_id"] = user_id
+    owner = _user_id(request, user_id)
+    if owner is not None:
+        kwargs["user_id"] = owner
     if type is not None:
         try:
             kwargs["node_type"] = NodeType(type)
@@ -327,7 +355,7 @@ async def query_nodes(
             )
     if state is not None:
         try:
-            kwargs["lifecycle_state"] = LifecycleState(state)
+            kwargs["lifecycle_states"] = [LifecycleState(state)]
         except ValueError:
             raise HTTPException(
                 status_code=422, detail=f"Invalid lifecycle state: {state!r}"
@@ -350,17 +378,17 @@ async def promote_node(request: Request, node_id: str) -> NodeResponse:
     engine = _get_engine(request)
 
     # Verify node exists
-    node = await engine.get_node(node_id)
+    node = await engine.get_node(node_id, user_id=_user_id(request))
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
 
     try:
-        await engine.promote(node_id)
+        await engine.promote(node_id, user_id=_user_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
     # Re-fetch to get updated state
-    updated = await engine.get_node(node_id, include_superseded=True)
+    updated = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
     if updated is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found after promote")
     return _node_to_response(updated)
@@ -375,16 +403,16 @@ async def archive_node(request: Request, node_id: str) -> NodeResponse:
     """Archive a node (terminal state)."""
     engine = _get_engine(request)
 
-    node = await engine.get_node(node_id, include_superseded=True)
+    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
 
     try:
-        await engine.archive(node_id)
+        await engine.archive(node_id, user_id=_user_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    updated = await engine.get_node(node_id, include_superseded=True)
+    updated = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
     if updated is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found after archive")
     return _node_to_response(updated)
@@ -400,11 +428,11 @@ async def reinforce_node(request: Request, node_id: str) -> NodeResponse:
     engine = _get_engine(request)
 
     try:
-        await engine.reinforce(node_id)
+        await engine.reinforce(node_id, user_id=_user_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
-    updated = await engine.get_node(node_id, include_superseded=True)
+    updated = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
     if updated is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found after reinforce")
     return _node_to_response(updated)
@@ -430,13 +458,16 @@ async def get_neighborhood(
     engine = _get_engine(request)
 
     # Verify node exists
-    node = await engine.get_node(node_id, include_superseded=True)
+    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
 
     neighbors = await engine._graph_store.get_neighborhood(
         node_id, max_hops=max_hops
     )
+    owner = _user_id(request)
+    if owner is not None:
+        neighbors = [n for n in neighbors if n.user_id == owner]
     return NodeListResponse(
         nodes=[_node_to_response(n) for n in neighbors],
         count=len(neighbors),
@@ -458,13 +489,16 @@ async def get_chain(
     engine = _get_engine(request)
 
     # Verify node exists
-    node = await engine.get_node(node_id, include_superseded=True)
+    node = await engine.get_node(node_id, include_superseded=True, user_id=_user_id(request))
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
 
     chain = await engine._graph_store.get_supersedence_chain(
         node_id, direction=direction
     )
+    owner = _user_id(request)
+    if owner is not None:
+        chain = [n for n in chain if n.user_id == owner]
     return NodeListResponse(
         nodes=[_node_to_response(n) for n in chain],
         count=len(chain),
@@ -494,6 +528,7 @@ async def health(request: Request) -> HealthResponse:
 async def stats(request: Request, user_id: str | None = None) -> StatsResponse:
     """Get system statistics, optionally scoped to a single user."""
     engine = _get_engine(request)
+    user_id = _user_id(request, user_id)
 
     node_count = 0
     event_count = 0
