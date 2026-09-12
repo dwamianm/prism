@@ -1241,13 +1241,14 @@ class MemoryEngine:
         )
         return event_id
 
-    async def _materialize_event(self, event: Event) -> None:
+    async def _materialize_event(self, event: Event, *, pending_lexical: dict[str, MemoryNode] | None = None) -> None:
         """Materialize a saved direct store or raw source without a new event.
 
         Direct stores retain their complete initial node snapshot; raw NOTE
         identity and timestamps derive from the event. Retries preserve existing
         graph state and never reactivate retired nodes. Active-node completion
-        is acknowledged only after both indexes are durable.
+        is acknowledged only after both indexes are durable. When pending_lexical
+        is supplied, the enclosing batch must commit it before acknowledgement.
         """
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
 
@@ -1296,16 +1297,21 @@ class MemoryEngine:
         # Any failure keeps the durable job pending, even when one search path
         # is already usable. Cancellation still propagates immediately here.
         errors: list[Exception] = []
-        try:
-            await self._write_queue.submit(
-                lambda: self._lexical_index.index(
-                    node_id, node.content, node.user_id, node.node_type.value, node.scope.value, replace=True,
-                ), label=f"materialize.lexical:{node_id}",
-            )
-            if hasattr(self._lexical_index, "flush"):
-                await self._lexical_index.flush()
-        except Exception as exc:
-            errors.append(exc)
+        if pending_lexical is not None:
+            # The owning drain must commit these documents before acknowledging
+            # any source. A cancelled drain leaves all unacknowledged work pending.
+            pending_lexical[str(event.id)] = node
+        else:
+            try:
+                await self._write_queue.submit(
+                    lambda: self._lexical_index.index(
+                        node_id, node.content, node.user_id, node.node_type.value, node.scope.value, replace=True,
+                    ), label=f"materialize.lexical:{node_id}",
+                )
+                if hasattr(self._lexical_index, "flush"):
+                    await self._lexical_index.flush()
+            except Exception as exc:
+                errors.append(exc)
         try:
             await self._write_queue.submit(
                 lambda: self._vector_index.index(node_id, node.content, node.user_id, replace=True),
@@ -1320,6 +1326,53 @@ class MemoryEngine:
             errors.append(exc)
         if errors:
             raise errors[0]
+
+    async def _materialize_batch(self, events: list[Event], *, budget_ms: float) -> list[tuple[Event, str | None]]:
+        """Prepare bounded raw work and commit its lexical replacements together.
+
+        Called under the materialization queue lock only when the lexical backend
+        supports atomic batches. Vector failures remain individual; a failed
+        lexical batch falls back to per-document writes so one bad item cannot
+        starve healthy work. No source is acknowledged by this method.
+        """
+        import time
+        from prme.ingestion.errors import extraction_failure_code
+
+        started = time.monotonic()
+        documents: dict[str, MemoryNode] = {}
+        attempted: list[Event] = []
+        failures: dict[str, str] = {}
+        for event in events:
+            if (time.monotonic() - started) * 1000 >= budget_ms:
+                break
+            attempted.append(event)
+            try:
+                await self._materialize_event(event, pending_lexical=documents)
+            except Exception as exc:
+                failures[str(event.id)] = extraction_failure_code(exc)
+        if documents:
+            replacements = tuple((str(n.id), n.content, n.user_id, n.node_type.value, n.scope.value)
+                                 for n in documents.values())
+            replace_many = getattr(self._lexical_index, "replace_many")
+            try:
+                await self._write_queue.submit(
+                    lambda: replace_many(replacements), label="materialize.lexical_batch",
+                )
+            except Exception:
+                # No acknowledgement preceded the failed batch. Native rollback
+                # retains old documents; a lost commit acknowledgement is safe to
+                # retry through exact replacement. Preserve partial vector errors.
+                for event_id, node in documents.items():
+                    try:
+                        await self._write_queue.submit(
+                            lambda n=node: self._lexical_index.index(
+                                str(n.id), n.content, n.user_id, n.node_type.value, n.scope.value, replace=True,
+                            ), label=f"materialize.lexical:{node.id}",
+                        )
+                        await self._lexical_index.flush()
+                    except Exception as exc:
+                        failures[event_id] = extraction_failure_code(exc)
+        return [(event, failures.get(str(event.id))) for event in attempted]
 
     @property
     def materialization_debt(self) -> int:
@@ -1377,7 +1430,8 @@ class MemoryEngine:
         """Process one bounded batch of this user's pending source/index work.
 
         Failed items remain pending for retry. The time budget is cooperative:
-        an individual operation can exceed it. A zero budget only reads current
+        an individual operation, final lexical batch commit or fallback repair
+        can exceed it. A zero budget only reads current
         counts. Repeat passes while pending remains, inspecting failed/status
         before retrying persistent errors. Never runs organizer jobs or an LLM.
         """

@@ -15,6 +15,13 @@ successor unless the database rejects its final write.
 Current fault-injection work has established these prerequisites:
 
 - Source events and deferred raw NOTE jobs commit together on both backends.
+  Local deferred processing prepares graph nodes and durable vector payloads
+  within the pass budget, then atomically replaces its bounded lexical document
+  batch. Only after that commit are individual source jobs acknowledged. Failed
+  vector writes retain their own failures; failed lexical batches fall back to
+  individual replacements. Cancellation or process exit before acknowledgement
+  leaves replayable work. This batches raw indexing, not graph publication or
+  LLM derivation, and does not make a pass one database transaction.
 - `EXTRACTION_VALIDATED` operations preserve the first grounded model output and
   its source hash, owner, scope, model, schema and grounding versions. Indexing
   retries reuse that output. The record survives restart and abrupt process exit.

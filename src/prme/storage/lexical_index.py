@@ -168,15 +168,28 @@ class LexicalIndex:
 
     def _do_replace(self, node_id: str, content: str, user_id: str, node_type: str, scope: str | None) -> None:
         """Publish replacement in one commit; failure preserves the old document."""
-        fields = {"node_id": [node_id], "content": [content], "user_id": [user_id], "node_type": [node_type]}
-        if scope is not None:
-            fields["scope"] = [scope]
-        document = tantivy.Document(**fields)
+        self._do_replace_many(((node_id, content, user_id, node_type, scope),))
+
+    def _do_replace_many(self, replacements: tuple[tuple[str, str, str, str, str | None], ...]) -> None:
+        # Construct and validate all documents before deleting any old version.
+        documents = []
+        identities = set()
+        for node_id, content, user_id, node_type, scope in replacements:
+            if node_id in identities:
+                raise ValueError("Replacement batch contains duplicate node identities")
+            identities.add(node_id)
+            fields = {"node_id": [node_id], "content": [content], "user_id": [user_id], "node_type": [node_type]}
+            if scope is not None:
+                fields["scope"] = [scope]
+            documents.append((node_id, tantivy.Document(**fields)))
+        if not documents:
+            return
         self._commit_locked()
         writer = self._ensure_writer()
         try:
-            writer.delete_documents("node_id", node_id)
-            writer.add_document(document)
+            for node_id, document in documents:
+                writer.delete_documents("node_id", node_id)
+                writer.add_document(document)
             writer.commit()
             self._index.reload()
         except BaseException:
@@ -187,6 +200,18 @@ class LexicalIndex:
             self._uncommitted = 0
             self._oldest_uncommitted_at = None
             writer.wait_merging_threads()
+
+    async def replace_many(self, replacements: tuple[tuple[str, str, str, str, str | None], ...]) -> None:
+        """Atomically publish a bounded batch of exact replacement documents.
+
+        Fields are node ID, content, owner, node type and optional scope. Duplicate
+        identities are rejected. A failure before commit preserves every prior
+        document; cancellation waits for the native transaction to finish before
+        releasing the index lock. Returns only after the commit is durable.
+        """
+        snapshot = tuple(tuple(fields) for fields in replacements)
+        async with self._write_lock:
+            await run_to_completion(self._do_replace_many, snapshot)
 
     async def index(
         self,

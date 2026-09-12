@@ -193,6 +193,12 @@ Deferred raw events survive restart. LLM `ingest()` also queues original-source
 indexing atomically with its event, so extraction failure cannot make that source
 unsearchable after restart. For these ingestion paths, processing status acknowledges raw NOTE indexing;
 LLM extraction has its own durable work record and recovery API below.
+Local pending-work passes batch Tantivy replacements after preparing their
+sources and durable vectors. They acknowledge each source only after the lexical
+commit succeeds; a failed batch retries documents separately so one bad item
+does not block healthy sources. Time budgets are checked between source items;
+the final commit and fallback repair can extend a pass. Direct `store()` retains
+immediate per-source indexing. PostgreSQL uses individual database writes.
 Processing reports remaining work and retry failures per user; the same methods
 are available on `MemoryClient`. Model summaries do not overwrite original-source
 indexes. Relative dates in extracted facts use the source timestamp.

@@ -123,6 +123,8 @@ async def test_retry_outage_does_not_erase_previously_healthy_index(config, user
         node = (await engine.get_event_nodes(eid, user_id=user))[0]
         with monkeypatch.context() as fault:
             fault.setattr(getattr(engine, f"_{second_failure}_index"), "index", AsyncMock(side_effect=OSError("second outage")))
+            if second_failure == "lexical" and hasattr(engine._lexical_index, "replace_many"):
+                fault.setattr(engine._lexical_index, "replace_many", AsyncMock(side_effect=OSError("second outage")))
             assert (await engine.process_pending(user_id=user)).pending == 1
             hits = (await engine._lexical_index.search("cobalt telescopes", user) if second_failure == "lexical"
                     else await engine._vector_index.search(source, user))

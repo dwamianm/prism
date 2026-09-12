@@ -142,6 +142,8 @@ async def test_retry_after_partial_index_write_preserves_identity(config, user, 
         eid = await engine.ingest_fast("A memorable telescope", user_id=user)
         original_index = engine._lexical_index.index
         monkeypatch.setattr(engine._lexical_index, "index", AsyncMock(side_effect=OSError("disk")))
+        if hasattr(engine._lexical_index, "replace_many"):
+            monkeypatch.setattr(engine._lexical_index, "replace_many", AsyncMock(side_effect=OSError("disk")))
         assert await engine._materialization_queue.drain(engine, 5000, user_id=user) == 0
         assert len(await engine._event_store.pending_materializations(user_id=user)) == 1
         assert await engine.count_nodes(user_id=user) == 1
@@ -182,10 +184,10 @@ async def test_failed_item_does_not_starve_later_items(config, user, monkeypatch
         first = await engine.ingest_fast("Cannot index this yet", user_id=user)
         second = await engine.ingest_fast("Can index this", user_id=user)
         materialize = engine._materialize_event
-        async def sometimes_fail(event):
+        async def sometimes_fail(event, **kwargs):
             if str(event.id) == first:
                 raise RuntimeError("transient error")
-            await materialize(event)
+            await materialize(event, **kwargs)
         monkeypatch.setattr(engine, "_materialize_event", sometimes_fail)
         assert await engine._materialization_queue.drain(engine, 5000, user_id=user) == 1
         assert await engine.get_node(second) is not None

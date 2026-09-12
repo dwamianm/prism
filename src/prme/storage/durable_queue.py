@@ -1,8 +1,9 @@
 """Restart-safe deferred indexing from immutable source events.
 
 Events and work records are committed in one database transaction. The batch
-size bounds memory usage, never the amount of acknowledged work. A failed
-item remains pending and cannot prevent the rest of a batch from progressing.
+size bounds memory usage, never the amount of acknowledged work. Tantivy
+replacements share a durable commit before individual work acknowledgements.
+A failed item remains pending and cannot prevent healthy batch items progressing.
 """
 
 from __future__ import annotations
@@ -65,6 +66,17 @@ class DurableMaterializationQueue:
             events = await self._store.pending_materializations(
                 user_id=user_id, limit=self._batch_size,
             )
+            if callable(getattr(engine._lexical_index, "replace_many", None)):
+                remaining = max(0, budget_ms - (time.monotonic() - start) * 1000)
+                outcomes = await engine._materialize_batch(events, budget_ms=remaining)
+                for event, error in outcomes:
+                    await self._store.finish_materialization(str(event.id), error=error)
+                    if error is None:
+                        completed += 1
+                    else:
+                        logger.warning("Materialization failed for %s (%s)", event.id, error)
+                await self.debt()
+                return completed
             for event in events:
                 if (time.monotonic() - start) * 1000 >= budget_ms:
                     break
