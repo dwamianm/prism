@@ -57,3 +57,24 @@ def test_comparison_rejects_partial_or_different_measurements(failure):
         after["details"][0]["evidence_source_ids"] = []
     with pytest.raises(ValueError):
         compare(before, after, samples=100)
+
+
+def test_within_run_comparison_keeps_paired_direction_and_unlabeled_rows():
+    from benchmarks.compare_methods import compare_methods
+    data = report()
+    data['summary'] = {m: {'metrics': {'mrr': 0}} for m in ('prme', 'vector')}
+    data['details'][0]['methods']['vector'] = {'metrics': {'mrr': .25}, 'packing': {'100': {'evidence_recall': .75}}}
+    unlabeled = copy.deepcopy(data['details'][0])
+    unlabeled['question_id'] = 'unlabeled'
+    for method in unlabeled['methods'].values():
+        method['metrics']['mrr'] = None
+        method['packing']['100']['evidence_recall'] = None
+    data['details'].append(unlabeled)
+    data['dataset']['selected_question_ids'].append('unlabeled')
+    comparison = compare_methods(data, samples=100)['comparisons']['vector']
+    assert comparison['metrics']['mrr']['delta'] == .25
+    assert comparison['packed_evidence_recall']['100']['delta'] == -.25
+    assert comparison['metrics']['mrr']['queries'] == 1
+    data['details'][0]['methods'].pop('vector')
+    with pytest.raises(ValueError, match='all compared methods'):
+        compare_methods(data)
