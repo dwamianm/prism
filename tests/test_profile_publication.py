@@ -534,3 +534,67 @@ async def test_failure_after_predecessor_archival_rolls_back_whole_publication(
             )
             == 1
         )
+
+
+async def test_older_profile_sources_survive_large_history(config, user):
+    async with MemoryEngine.open(config) as engine:
+        await seed(engine, user)
+        await engine.consolidate_knowledge(
+            user_id=user, scope=Scope.PROJECT, entity_names=["Aurora"]
+        )
+        old = (await profiles(engine, user))[0]
+        # The older qualifying sources fall outside the former newest-5000
+        # window. Bulk graph fixtures avoid embedding 5,001 irrelevant texts.
+        if engine._pool is None:
+            async with engine._graph_store._conn_lock:
+                engine._conn.execute(
+                    "INSERT INTO nodes (id, node_type, user_id, scope, content) "
+                    "SELECT uuid()::VARCHAR, 'note', ?, 'project', 'Unrelated background memory' FROM range(5001)",
+                    [user],
+                )
+        else:
+            async with engine._pool.acquire() as conn:
+                await conn.execute(
+                    "INSERT INTO nodes (id, node_type, user_id, scope, content) "
+                    "SELECT gen_random_uuid(), 'note', $1, 'project', 'Unrelated background memory' FROM generate_series(1, 5001)",
+                    user,
+                )
+        assert (
+            await engine.consolidate_knowledge(
+                user_id=user, scope=Scope.PROJECT, entity_names=["Aurora"]
+            )
+            == 1
+        )
+        current = await profiles(engine, user)
+        assert len(current) == 1 and current[0].content == old.content
+        assert set(current[0].metadata["source_node_ids"]) == set(
+            old.metadata["source_node_ids"]
+        )
+
+
+async def test_incomplete_source_scan_preserves_existing_profile(
+    config, user, monkeypatch
+):
+    async with MemoryEngine.open(config) as engine:
+        await seed(engine, user)
+        await engine.consolidate_knowledge(
+            user_id=user, scope=Scope.PROJECT, entity_names=["Aurora"]
+        )
+        old = (await profiles(engine, user))[0]
+        scan = engine._graph_store.scan_nodes
+        calls = 0
+
+        async def fail_second_page(**kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise RuntimeError("source scan interrupted")
+            kwargs["limit"] = 1
+            return await scan(**kwargs)
+
+        monkeypatch.setattr(engine._graph_store, "scan_nodes", fail_second_page)
+        with pytest.raises(RuntimeError, match="source scan interrupted"):
+            await engine.consolidate_knowledge(
+                user_id=user, scope=Scope.PROJECT, entity_names=["Aurora"]
+            )
+        assert [node.id for node in await profiles(engine, user)] == [old.id]

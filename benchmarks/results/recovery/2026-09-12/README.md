@@ -1120,3 +1120,15 @@ also passed with supervised native exit zero and confirmed the installed package
 path; profile content, inference labels, source events and scope isolation
 survive restart, retrieval and a subsequent replacement. The frozen full suite
 at `430e1b3` remains running; these focused passes are not a full-suite result.
+
+## Complete profile source scans
+
+Two further regressions reproduced a silent history-size failure on both
+backends: after adding 5,001 unrelated newer nodes, rebuilding an older supported
+profile returned zero and retired it. Consolidation now scans scoped immutable-ID
+pages instead of treating the newest 5,000 nodes as the complete source history.
+Explicit names retain only matching source nodes; incomplete scans fail before
+publishing or retiring anything. This is pagination, not a snapshot isolation
+claim for the entire read pass; publication still revalidates its dependencies.
+The expanded focused source suite passed **142 checks, 5 skipped in 77.63
+seconds**, native exit zero, including scan interruption and the larger history.

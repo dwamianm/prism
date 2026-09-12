@@ -311,6 +311,13 @@ limits are validated before storage access. Existing profiles take this format
 on explicit rebuild; prior artifacts are not silently rewritten. Name matching
 is still a heuristic association.
 
+Source collection uses scoped pages ordered by immutable node ID, rather than a
+newest-5,000 cutoff. Explicit entity names retain only matching source nodes in
+memory; automatic discovery still examines the full active scope. An interrupted
+scan fails before any profile publication or retirement. Source snapshots are
+rechecked at publication; the paginated scan itself is not a global database
+snapshot of concurrent writes.
+
 Each replacement now prepares an embedding before publishing graph state. Local
 DuckDB stages the exact numerical vector and commits the lexical document first;
 PostgreSQL writes pgvector and generated text search in its graph transaction.

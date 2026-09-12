@@ -2283,35 +2283,33 @@ class MemoryEngine:
             return total
         scope = Scope(scope)
 
-        # Fetch active source nodes only within the requested namespace.
-        all_nodes = await self._graph_store.query_nodes(
-            user_id=user_id,
-            scopes=[scope],
-            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
-            limit=5000,
-        )
-
-        # A prior generated profile is a derived view, never new evidence.
-        # This also prevents legacy mixed-scope profiles from feeding rebuilds.
-        all_nodes = [node for node in all_nodes if not (node.metadata or {}).get("entity_profile")]
-
-        # Index existing entity-profile SUMMARY nodes by entity name so a
-        # re-run upserts the profile (archive + evict the stale one) instead
-        # of appending a duplicate SUMMARY on every call.
+        # Scan by immutable ID instead of interpreting a newest-N window as
+        # complete history. Otherwise older qualifying evidence can disappear
+        # from a rebuild and cause a still-supported profile to be retired.
+        all_nodes: list[MemoryNode] = []
         existing_profiles: dict[str, list[MemoryNode]] = {}
-        existing_summaries = await self._graph_store.query_nodes(
-            user_id=user_id,
-            node_type=NodeType.SUMMARY,
-            scopes=[scope],
-            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
-            limit=5000,
-        )
-        for node in existing_summaries:
-            meta = node.metadata or {}
-            if meta.get("entity_profile"):
-                name = meta.get("entity_name")
-                if name:
-                    existing_profiles.setdefault(name, []).append(node)
+        after_id: str | None = None
+        while True:
+            page = await self._graph_store.scan_nodes(
+                user_id=user_id, scope=scope,
+                lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+                after_id=after_id, limit=500,
+            )
+            if not page:
+                break
+            for node in page:
+                meta = node.metadata or {}
+                if meta.get("entity_profile"):
+                    # Generated profiles cannot qualify as fresh evidence.
+                    name = meta.get("entity_name")
+                    if node.node_type == NodeType.SUMMARY and name:
+                        if entity_names is None or name in entity_names:
+                            existing_profiles.setdefault(name, []).append(node)
+                elif entity_names is None or any(mentions_entity(node.content, name) for name in entity_names):
+                    # Explicit names need retain only relevant source nodes,
+                    # rather than every unrelated node in a large namespace.
+                    all_nodes.append(node)
+            after_id = str(page[-1].id)
 
         async def retire_profile(name: str) -> None:
             for stale in existing_profiles.get(name, []):
