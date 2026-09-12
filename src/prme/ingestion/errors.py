@@ -12,6 +12,14 @@ class IngestionError(Exception):
     """Base exception for all ingestion pipeline errors."""
 
 
+class ExtractionError(IngestionError):
+    """Extraction failed; event_id identifies the durable source when available."""
+
+    def __init__(self, message: str, *, event_id: str | None = None) -> None:
+        self.event_id = event_id
+        super().__init__(message)
+
+
 class WriteQueueError(IngestionError):
     """Error during write queue operation.
 

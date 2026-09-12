@@ -23,7 +23,7 @@ import dateparser
 import structlog
 
 from prme.ingestion.entity_merge import EntityMerger
-from prme.ingestion.errors import MaterializationError
+from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import validate_grounding
 from prme.ingestion.schema import ExtractionResult
@@ -174,7 +174,7 @@ class IngestionPipeline:
 
         # --- Phase 2: Extract and materialize ---
         task = asyncio.create_task(
-            self._extract_and_materialize(event, event_id, scope)
+            self._extract_and_materialize(event, event_id, scope, raise_errors=wait_for_extraction)
         )
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
@@ -225,7 +225,7 @@ class IngestionPipeline:
 
     async def _extract_and_materialize(
         self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL,
-        *, retry_attempt: int = 0,
+        *, retry_attempt: int = 0, raise_errors: bool = False,
     ) -> None:
         """Run LLM extraction, validate grounding, and materialize results.
 
@@ -253,13 +253,18 @@ class IngestionPipeline:
                 facts=len(result.facts),
                 relationships=len(result.relationships),
             )
-        except Exception:
+        except Exception as exc:
             logger.error(
                 "ingestion.extraction_failed",
                 event_id=event_id,
                 exc_info=True,
             )
             self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
+            if raise_errors:
+                raise ExtractionError(
+                    "Extraction did not complete; the source event is persisted",
+                    event_id=event_id,
+                ) from exc
 
     async def _materialize(
         self,

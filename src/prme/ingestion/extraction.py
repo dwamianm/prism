@@ -8,11 +8,13 @@ and Ollama backends through a single unified interface.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import structlog
 
 from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.errors import ExtractionError
 
 if TYPE_CHECKING:
     import instructor
@@ -205,8 +207,8 @@ class InstructorExtractionProvider:
 
         Returns:
             ExtractionResult with extracted entities, facts, relationships,
-            and summary. Returns an empty ExtractionResult on failure
-            (fail open -- pipeline handles retry).
+            and summary. Raises ExtractionError on provider failure or timeout
+            so the pipeline can distinguish an error from valid empty output.
         """
         try:
             client = self._ensure_client()
@@ -221,16 +223,16 @@ class InstructorExtractionProvider:
             model_id = self._resolve_model_id()
             if model_id:
                 create_kwargs["model"] = model_id
-            result = await client.create(**create_kwargs)
+            result = await asyncio.wait_for(client.create(**create_kwargs), timeout=self._timeout)
             return result
-        except Exception:
+        except Exception as exc:
             logger.error(
                 "extraction_failed",
                 provider=self._provider_string,
                 content_length=len(content),
                 exc_info=True,
             )
-            return ExtractionResult()
+            raise ExtractionError(f"Extraction failed ({type(exc).__name__})") from exc
 
 
 def create_extraction_provider(

@@ -8,6 +8,8 @@ configured model).
 """
 
 from unittest.mock import AsyncMock, patch
+import asyncio
+import pytest
 
 
 from prme.config import ExtractionConfig
@@ -16,6 +18,7 @@ from prme.ingestion.extraction import (
     create_extraction_provider,
 )
 from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.errors import ExtractionError
 
 BEDROCK_MODEL = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 
@@ -63,3 +66,31 @@ async def test_openai_model_still_passed():
     with patch.object(provider, "_ensure_client", return_value=client):
         await provider.extract("hello", role="user")
     assert client.create.await_args.kwargs["model"] == "gpt-4o-mini"
+
+
+async def test_provider_error_is_not_a_successful_empty_extraction():
+    provider = InstructorExtractionProvider("openai/gpt-4o-mini")
+    client = _mock_client()
+    client.create.side_effect = RuntimeError("private provider response")
+    with patch.object(provider, "_ensure_client", return_value=client):
+        with pytest.raises(ExtractionError) as failure:
+            await provider.extract("hello")
+    assert "private provider response" not in str(failure.value)
+
+
+async def test_configured_timeout_cancels_a_stalled_provider():
+    provider = InstructorExtractionProvider("openai/gpt-4o-mini", timeout=.01)
+    cancelled = asyncio.Event()
+
+    async def stall(**kwargs):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    client = _mock_client()
+    client.create.side_effect = stall
+    with patch.object(provider, "_ensure_client", return_value=client):
+        with pytest.raises(ExtractionError, match="TimeoutError"):
+            await provider.extract("hello")
+    assert cancelled.is_set()

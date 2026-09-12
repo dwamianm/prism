@@ -2,6 +2,9 @@
 
 import asyncio
 from unittest.mock import AsyncMock
+import pytest
+
+from prme.ingestion.errors import ExtractionError
 
 from tests.test_concurrency import engine  # noqa: F401
 
@@ -11,7 +14,9 @@ async def test_extraction_retries_are_bounded_and_release_task_references(engine
     pipeline._retry_delays = (0, 0, 0)
     provider = pipeline._extraction_provider
     provider.extract = AsyncMock(side_effect=RuntimeError("provider unavailable"))
-    event_id = await engine.ingest("Alice uses Python", user_id="alice", wait_for_extraction=True)
+    with pytest.raises(ExtractionError) as failure:
+        await engine.ingest("Alice uses Python", user_id="alice", wait_for_extraction=True)
+    event_id = failure.value.event_id
 
     async def finish_retries():
         while pipeline._retry_tasks:

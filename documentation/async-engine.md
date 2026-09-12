@@ -90,6 +90,11 @@ are not yet restart-safe. The original source event remains durable. Use the
 deferred raw path below when you require restart-safe indexing without LLM
 extraction.
 
+With `wait_for_extraction=True`, failure raises `ExtractionError`; its `event_id`
+identifies the already-persisted source. The configured extraction timeout is
+enforced across the provider call. A successful empty extraction remains distinct
+from a provider error. The synchronous client uses this waiting behavior.
+
 `ingest(scope=...)` keeps every extracted node in the caller's scope. Model
 scope classifications do not grant write access elsewhere; fact classifications
 are retained as `metadata.suggested_scope`. Entity matching also stays within
