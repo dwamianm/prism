@@ -426,6 +426,10 @@ For named local projects, `MemoryWorkspace` manages separate identity-checked
 packs with a bounded engine cache. See [workspace usage and ownership](docs/WORKSPACES.md)
 for concurrent leases, recovery, copying and the current hosted-access boundary.
 
+Both storage backends default to exact vector search. PostgreSQL applies
+eligibility before top-k ordering; see [search modes and costs](docs/POSTGRES-VECTOR-SEARCH.md)
+before enabling approximate search on a large corpus.
+
 ## Following source evidence
 
 `store()` returns its durable event ID. Resolve the associated nodes directly:

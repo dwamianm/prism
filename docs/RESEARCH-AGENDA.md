@@ -12,7 +12,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 |---|---|---|
 | Product context packing | Two fixed local readers improved by 20 judged-correct answers each on the same 119 development questions when multi-path candidates used score ordering. | Custom local rubric, shared histories, one judge; second reader shares its model family. Not an independent test set or competitor result. |
 | Profile fidelity and publication | Complete qualified source excerpts, explicit inference/provenance, exact token budgets, atomic publication and complete scoped source scans. | Profiles are source collections; this does not prove semantic synthesis, exhaustive facts or automatic freshness. |
-| Storage and developer workflow | [Workspace validation](../benchmarks/results/recovery/2026-09-12/WORKSPACES.md) at `217facb`: full regression passed 2,843 tests with 81 skips, including live PostgreSQL, research and examples. Installed checks passed 161 tests with five skips; a real-BGE 100-project eviction/copy workflow completed. | Separate overlapping invocations. Authored recovery and local-namespace contracts do not establish answer quality, hosted project grants or all deployment environments. |
+| Storage and developer workflow | [Latest PostgreSQL vector validation](../benchmarks/results/recovery/2026-09-12/PG-VECTOR-SEARCH.md) at `55cf453`: full regression passed 2,852 tests with 81 skips, including live PostgreSQL, research and examples. Installed PostgreSQL/receipt checks passed 72 tests with one skip. The earlier `217facb` real-BGE 100-project workspace workflow completed. | Separate overlapping invocations at recorded commits. Authored recovery, eligibility and local-namespace contracts do not establish answer quality, hosted project grants or all deployment environments. |
 | Identity and maintenance | Unresolved personal references stay event-local; merging preserves type/provenance/validity, including copied relationships. Default maintenance no longer consumes anonymous feedback to change global weights. New merges atomically journal evidence, relationships and supersedence. | These are reproduced storage contracts. Coreference, equal-name disambiguation, full historical organizer replay and scoped learning activation remain incomplete. |
 | Deferred raw-source throughput | Local processing now shares a durable lexical commit before acknowledging sources. A frozen 32-source real-model workflow reduced 32 commits to one, with identical candidates and contexts across serial/batch trials. | Small authored histories with warmed embeddings on one host under concurrent load; no competitive speed claim. Direct `store()` still indexes immediately. |
 | Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
@@ -55,7 +55,13 @@ These records preserve commit identities, raw-output hashes, failures and limits
    The [completed lexical ablation](../benchmarks/results/research/2026-09-12/LEXICAL-QUERY-STUDY.md)
    improved preference evidence at 4K but lost other evidence and reduced the
    overall 2K mean. PostgreSQL's all-term query semantics
-   also need deliberate evaluation; its duplicate-before-limit defect is fixed.
+   also need deliberate evaluation; its duplicate-before-limit defect is fixed. The
+   [PostgreSQL vector study](../benchmarks/results/recovery/2026-09-12/PG-VECTOR-SEARCH.md)
+   separately reproduced filtered HNSW starvation. Both backends now honor the
+   exact-search default; PostgreSQL materializes eligible rows before ordering.
+   Broad-query cost is higher in the synthetic probe, and approximate search
+   remains an explicit recall/cost tradeoff. Named PostgreSQL projects and
+   hosted grants remain separate requirements.
    The [completed full-hybrid development study](../benchmarks/results/research/2026-09-12/HYBRID-LEXICAL-STUDY.md)
    ran both lexical policies through actual retrieval, both packing orders and
    three budgets on all 119 development questions, with zero errors. All 1,428

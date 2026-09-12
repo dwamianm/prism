@@ -1,6 +1,12 @@
 # Recovery and developer workflow evidence
 
-The latest [named workspace record](WORKSPACES.md) at `217facb` passed **2,843
+The latest [PostgreSQL vector-search record](PG-VECTOR-SEARCH.md) at `55cf453`
+passed **2,852 tests with 81 skips** in the full source collection and 72 installed
+PostgreSQL/receipt checks with one skip. Exact search now preserves eligible
+neighbors when HNSW would filter them out after its candidate scan. The cost
+probe records the broad-query tradeoff and an index-build resource failure.
+
+The preceding [named workspace record](WORKSPACES.md) at `217facb` passed **2,843
 tests with 81 skips** in the full source collection, including live PostgreSQL,
 research and examples. Installed checks passed 161 tests with five skips, and
 the real-BGE 100-project eviction/copy workflow completed. These are overlapping

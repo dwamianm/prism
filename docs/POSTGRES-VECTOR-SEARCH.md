@@ -32,6 +32,11 @@ and scope distribution before choosing that mode. Exact cost grows with the
 eligible corpus, so the default change may increase cost for large, broad queries.
 PRME does not silently switch back to approximate mode based on corpus size.
 
+The [authored cost probe](../benchmarks/results/recovery/2026-09-12/PG-VECTOR-SEARCH.md)
+records both selective and broad queries, ordinary planner choices and an index-
+construction failure. Its synthetic timings are guidance for measuring tradeoffs,
+not production guarantees or a universal switch threshold.
+
 New retrieval receipts report the configured mode in
 `execution.features.vector_search.exact`. An absent or null observation in an
 older/custom receipt is unknown, not proof of exact search. Existing receipt
