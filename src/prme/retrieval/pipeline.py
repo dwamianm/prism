@@ -620,7 +620,7 @@ class RetrievalPipeline:
                 )
 
         # --- Stage 6: Context Packing ---
-        bundle = pack_context(scored, config=effective_packing_config)
+        bundle = await asyncio.to_thread(pack_context, scored, config=effective_packing_config)
 
         end_time = time.monotonic()
         timing_ms = (end_time - start_time) * 1000.0

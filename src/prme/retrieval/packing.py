@@ -231,10 +231,12 @@ def pack_context(
     # Work on copies: packing a response must not alter the scoring results
     # or affect a subsequent packing pass at a different budget.
     candidates = list({str(c.node.id): c.model_copy() for c in reversed(scored_candidates)}.values())
+    full_costs: dict[str, int] = {}
     for candidate in candidates:
         candidate.rendered_text = _render_representation(candidate, RepresentationLevel.FULL)
         candidate.representation = RepresentationLevel.FULL
         candidate.token_cost = count_tokens(_render_entry(candidate), config.tokenizer)
+        full_costs[str(candidate.node.id)] = candidate.token_cost
 
     def _try_include(candidate: RetrievalCandidate) -> None:
         nonlocal rendered, tokens_used
@@ -246,12 +248,22 @@ def pack_context(
             if candidate.rendered_text in tried_text:
                 continue
             tried_text.add(candidate.rendered_text)
+            entry_cost = (
+                full_costs[str(candidate.node.id)] if level == RepresentationLevel.FULL
+                else count_tokens(_render_entry(candidate), config.tokenizer)
+            )
+            # Conservative preflight avoids re-tokenizing a nearly full
+            # context for hundreds of entries that cannot reasonably fit.
+            # Whole-output counting below remains the authoritative check;
+            # boundary token merges can only leave a few extra tokens unused.
+            if entry_cost > available - tokens_used:
+                continue
             proposed = {key: list(values) for key, values in sections.items()}
             proposed.setdefault(section, []).append(candidate)
             text = _render_sections(proposed)
             total = count_tokens(text, config.tokenizer)
             if total <= available:
-                candidate.token_cost = count_tokens(_render_entry(candidate), config.tokenizer)
+                candidate.token_cost = entry_cost
                 sections.setdefault(section, []).append(candidate)
                 rendered, tokens_used = text, total
                 return
