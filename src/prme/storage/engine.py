@@ -474,7 +474,7 @@ class MemoryEngine:
             graph_store = PgGraphStore(pool)
             if embedding_provider is None:
                 embedding_provider = create_embedding_provider(config.embedding)
-            vector_index = PgVectorIndex(pool, embedding_provider)
+            vector_index = PgVectorIndex(pool, embedding_provider, exact_search=config.vector_exact_search)
             startup.push_async_callback(vector_index.close)
             lexical_index = PgLexicalIndex(pool)
             startup.push_async_callback(lexical_index.close)

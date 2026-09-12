@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- PostgreSQL now honors the default `vector_exact_search=True`, materializing
+  eligible rows before distance ordering to prevent filtered HNSW starvation.
+  `False` explicitly permits approximate search. Broad exact queries may cost
+  more; new receipts report the requested mode.
+
 - Default organizer passes exclude the legacy global feedback tuner; session
   completion runs promotion only. Explicit scoped `feedback_apply` requests now
   raise `ValueError` before any work. Trusted operators can retain the legacy

@@ -114,6 +114,12 @@ Receipt collection and authored fitting tests are not evidence of product learni
 
 ## Configuration Surface
 
+`vector_exact_search=True` applies to both storage backends. PostgreSQL must keep
+eligibility inside a materialized scoring boundary before top-k ordering; merely
+putting WHERE filters on an HNSW query can hide eligible memories. `False` allows
+approximate search and its recall tradeoff. New receipts report the configured
+mode in `execution.features.vector_search.exact`; old receipt bytes remain unchanged.
+
 Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retrieval/config.py` (loaded from `PRME_`-prefixed env vars, `.env`, or direct args). The surface is large (roughly 100 fields across both files). Several parameter defaults are explicitly tagged `[HYPOTHESIS]` in their descriptions — these are reasoned but not yet benchmark-validated and may change. Treat `[HYPOTHESIS]` knobs as provisional and prefer not to depend on their exact values. Notable defaults to be aware of: `enable_store_supersedence=False`, `enable_surprise_gating=False`, and `enable_reranker=False` (the cross-encoder reranker has not improved benchmark scores in practice).
 
 ## Storage Backends

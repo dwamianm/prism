@@ -61,4 +61,6 @@ def feature_identity(vector_index, lexical_index, reranker) -> dict[str, JsonVal
                 "version": _reported(getattr(provider, "model_version", None)),
                 "dimension": _reported(getattr(provider, "dimension", None)), **query_features},
             "reranker": reranker_identity(reranker),
-            "vector_backend": _name(vector_index), "lexical_backend": _name(lexical_index)}
+            "vector_backend": _name(vector_index),
+            "vector_search": {"exact": _reported(getattr(vector_index, "_exact_search", None))},
+            "lexical_backend": _name(lexical_index)}

@@ -28,7 +28,7 @@ Query
   ▼
 [Stage 2] Candidate Generation (parallel)
   ├── Graph traversal (1–N hops from query entities)
-  ├── Vector similarity search (HNSW)
+  ├── Vector similarity search
   ├── Lexical search (FTS)
   └── Pinned / active tasks (direct lookup)
   │
@@ -53,6 +53,13 @@ Memory Bundle → LLM Context
 ```
 
 Each stage is specified in the following sections.
+
+Both backends honor `vector_exact_search=True` by default. PostgreSQL materializes
+eligible scored rows before top-k ordering, with native UUID tie ordering, so
+foreign/filtered HNSW neighbors cannot consume its candidate budget. Approximate
+search is opt-in and may miss eligible neighbors. See the
+[PostgreSQL mode guide](POSTGRES-VECTOR-SEARCH.md) for the cost tradeoff and receipt
+observations. This does not replace named-project isolation or access grants.
 
 ---
 

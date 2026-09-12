@@ -524,11 +524,11 @@ class PRMEConfig(_ProjectSettings):
             "from the same event log can return different neighbor sets, "
             "violating the 'identical log + config -> identical retrieval' "
             "determinism claim. Exact search is order-independent and makes "
-            "retrieval reproducible. At current corpus sizes (<100k vectors) "
-            "brute-force cosine is fast. Set to False to trade determinism "
-            "for sub-linear ANN latency on very large corpora. Applies to "
-            "the DuckDB/USearch backend only; the PostgreSQL backend uses "
-            "pgvector's own index and ignores this flag."
+            "retrieval reproducible. Applies to both backends. PostgreSQL "
+            "materializes eligible rows before ordering, so filtered ANN "
+            "candidates cannot hide matching memories. Exact cost grows with "
+            "eligible corpus size; benchmark your workload. Set False to allow "
+            "approximate search, which may miss eligible neighbors."
         ),
     )
     lexical_commit_interval: int = Field(

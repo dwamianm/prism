@@ -1,9 +1,10 @@
 """PostgreSQL-backed vector index using pgvector.
 
 Embeddings are stored directly on the ``nodes`` table in a ``vector(N)``
-column. pgvector's HNSW index handles approximate nearest-neighbor search
-with native WHERE-clause filtering — no overfetch strategy or USearch
-integer-key mapping needed.
+column. Exact search materializes the eligible rows before ordering, so a
+different owner's closer vectors cannot consume an approximate candidate budget.
+Approximate search remains an explicit opt-in; HNSW filters after its index scan
+and can return fewer eligible neighbors than requested.
 
 Non-node content (events indexed during ingestion) is stored in the
 ``lexical_documents`` table with a separate embedding column if needed,
@@ -33,9 +34,12 @@ class PgVectorIndex:
         self,
         pool: asyncpg.Pool,
         embedding_provider: EmbeddingProvider,
+        *,
+        exact_search: bool = True,
     ) -> None:
         self._pool = pool
         self._provider = embedding_provider
+        self._exact_search = exact_search
 
     async def index(self, node_id: str, content: str, user_id: str, *, replace: bool = False) -> int:
         """Embed content and store the vector on the node row.
@@ -104,8 +108,9 @@ class PgVectorIndex:
     ) -> list[dict]:
         """Search for nearest neighbors by pre-computed vector.
 
-        pgvector applies WHERE clauses natively during the HNSW scan,
-        so no overfetch strategy is needed.
+        Exact mode evaluates all eligible vectors, with stable ID ordering for
+        equal distances. Approximate mode allows the planner's HNSW scan and
+        may under-return after filters. Neither mode returns another owner's rows.
 
         Args:
             vector: Pre-computed embedding vector.
@@ -153,16 +158,23 @@ class PgVectorIndex:
 
         where = " AND ".join(conditions)
 
-        # pgvector cosine distance: embedding <=> query_vector
-        query = (
+        scored = (
             f"SELECT id::text AS node_id, "
             f"  (embedding <=> ${idx}::vector) AS distance, "
             "embedding_model, embedding_version, vector_dims(embedding) AS embedding_dim "
             f"FROM nodes "
             f"WHERE {where} "
-            f"ORDER BY embedding <=> ${idx}::vector "
-            f"LIMIT ${idx + 1}"
         )
+        if self._exact_search:
+            # The materialization boundary prevents LIMIT/ordering from becoming
+            # an ANN scan before eligibility is established. Store only scored
+            # rows in the CTE, not another copy of every embedding. Undefined
+            # cosine distances (zero-norm vectors) do not become scored results.
+            query = (f"WITH eligible AS MATERIALIZED ({scored}) "
+                     "SELECT * FROM eligible WHERE distance < 'Infinity'::float8 "
+                     f"ORDER BY distance, node_id::uuid LIMIT ${idx + 1}")
+        else:
+            query = (scored + f"ORDER BY embedding <=> ${idx}::vector LIMIT ${idx + 1}")
         params.extend([vector_str, k])
 
         async with self._pool.acquire() as conn:
