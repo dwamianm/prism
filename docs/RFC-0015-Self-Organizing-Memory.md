@@ -242,6 +242,15 @@ async def organize(
 | `consolidate` | Cluster similar memories into summary abstractions | RFC-0006 |
 | `index_compaction` | Evict vector/lexical entries for inactive nodes | RFC-0002 |
 
+Consolidation currently produces an extractive excerpt of up to three sources,
+not a lossless abstraction of the entire cluster. Clusters and their summaries
+must retain one user and scope. Excerpts preserve complete text, source identity,
+episode dates, validity windows, and epistemic labels. Automatic retirement
+requires recorded coverage matching the current source and an unchanged active
+summary. Omitted, changed, pinned, recent, high-confidence, or other-namespace
+sources remain active. Legacy summaries without coverage metadata cannot
+authorize retirement. Similarity alone is not evidence that details are redundant.
+
 ### 5.4 OrganizeResult
 
 ```python

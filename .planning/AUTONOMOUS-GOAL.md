@@ -65,7 +65,13 @@ Public deferred-processing status and bounded scoped processing are implemented
 for both async and sync APIs, with durable error/attempt reporting. These track
 only ingest_fast(), not LLM extraction. Processing/client tests: 36 passed,
 3 backend-specific skips. A full-suite run was invalidated by concurrent source
-edits (mixed imports); rerun from a frozen checkout before accepting it.
+edits (mixed imports). The frozen rerun at 04c0b51 passed 1,226 tests with 11
+optional/backend-specific skips against live PostgreSQL, without warnings.
+
+Consolidation now preserves omitted sources, pins, namespace boundaries,
+full qualifiers and dates, and checks coverage before retirement. Targeted
+local/PostgreSQL consolidation and organizer tests: 50 passed. PostgreSQL
+event_time/ttl_days update support now matches the local backend.
 
 Full event/operation replay, persistent LLM extraction jobs, contextual/grounded
 extraction, faithful product context packing, complete scoped enumeration,

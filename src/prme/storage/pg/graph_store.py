@@ -316,6 +316,8 @@ class PgGraphStore:
 
     # Fields allowed for update_node. Maps Python field name -> SQL column name.
     _UPDATE_ALLOWED_FIELDS: set[str] = {
+        "event_time",
+        "ttl_days",
         "reinforcement_boost",
         "last_reinforced_at",
         "confidence_base",

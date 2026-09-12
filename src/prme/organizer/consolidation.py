@@ -1,9 +1,8 @@
 """Predictive forgetting / consolidation pipeline (issue #22).
 
-Identifies clusters of semantically similar episodic memories, abstracts
-them into summary nodes, and archives the individual episodes. This is
-pattern-based consolidation -- not just time-based -- inspired by
-predictive forgetting theory (arXiv 2603.04688).
+Identifies clusters of semantically similar episodic memories and creates
+source-labelled extractive excerpts. Only fully represented, unchanged
+sources are eligible for retirement. Similarity alone never justifies loss.
 
 All clustering uses vector similarity (no LLM required). Consolidation
 is extractive: the summary picks the highest-confidence content from the
@@ -16,6 +15,8 @@ opportunistic maintenance.
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -29,7 +30,6 @@ from prme.types import (
     EpistemicType,
     LifecycleState,
     NodeType,
-    Scope,
     SourceType,
 )
 
@@ -58,6 +58,20 @@ class MemoryCluster:
 # ---------------------------------------------------------------------------
 # Pipeline functions
 # ---------------------------------------------------------------------------
+
+
+def _render_source(node: MemoryNode) -> str:
+    return (
+        f"[source={node.id}; event_time={node.event_time}; "
+        f"valid_from={node.valid_from}; valid_to={node.valid_to}; "
+        f"epistemic={node.epistemic_type.value}; source_type={node.source_type.value}]\n"
+        f"{node.content}"
+    )
+
+
+def _source_fingerprint(node: MemoryNode) -> str:
+    snapshot = {"source": _render_source(node), "user_id": node.user_id, "scope": node.scope.value}
+    return hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
 
 
 async def cluster_similar_memories(
@@ -105,7 +119,7 @@ async def cluster_similar_memories(
     assigned: set[str] = set()
     clusters: list[MemoryCluster] = []
 
-    for node in all_nodes:
+    for node in sorted(all_nodes, key=lambda n: str(n.id)):
         nid = str(node.id)
         if nid in assigned:
             continue
@@ -115,7 +129,7 @@ async def cluster_similar_memories(
             results = await engine._vector_index.search(
                 node.content,
                 node.user_id,
-                k=50,
+                k=50, scope=[node.scope.value],
             )
         except Exception:
             logger.debug("Vector search failed for node %s, skipping", nid)
@@ -137,7 +151,7 @@ async def cluster_similar_memories(
                 continue
             # A cluster becomes one summary node with one owner, so members
             # from another tenant would leak content into it (issue #66).
-            if node_map[rid].user_id != node.user_id:
+            if (node_map[rid].user_id, node_map[rid].scope) != (node.user_id, node.scope):
                 continue
             if score < similarity_threshold:
                 continue
@@ -179,17 +193,17 @@ async def consolidate_cluster(
     engine: MemoryEngine,
     cluster: MemoryCluster,
 ) -> MemoryNode:
-    """Create a SUMMARY node that abstracts a cluster's shared pattern.
+    """Create a source-labelled SUMMARY excerpt within one namespace.
 
     The summary is extractive: it combines the highest-confidence content
     from the cluster members. The summary node gets:
     - node_type = SUMMARY
     - epistemic_type = INFERRED (system-generated abstraction)
-    - confidence = average confidence of cluster members
-    - salience = max salience of cluster members
-    - evidence_refs = all cluster member IDs
+    - confidence = average confidence of selected members
+    - salience = max salience of selected members
+    - evidence_refs = selected member IDs and their original evidence
 
-    Creates DERIVED_FROM edges from summary to each member.
+    Creates DERIVED_FROM edges only for the fully represented sources.
 
     Args:
         engine: The MemoryEngine for storage operations.
@@ -202,53 +216,30 @@ async def consolidate_cluster(
     members: list[MemoryNode] = []
     for mid in cluster.member_ids:
         node = await engine.get_node(mid, include_superseded=False)
-        if node is not None:
+        if node is not None and node.lifecycle_state in {LifecycleState.TENTATIVE, LifecycleState.STABLE}:
             members.append(node)
 
     if not members:
         raise ValueError("No valid member nodes found for consolidation")
 
-    # A summary carries one user_id, so drop any member that does not share
-    # the centroid's owner rather than folding its content in (issue #66).
-    owner = next(
-        (m.user_id for m in members if str(m.id) == cluster.centroid_id),
-        members[0].user_id,
+    # A summary belongs to the centroid's namespace. A stale/malformed
+    # cluster cannot combine private/project contents or different owners.
+    centroid = next((m for m in members if str(m.id) == cluster.centroid_id), None)
+    if centroid is None:
+        raise ValueError("Consolidation centroid no longer exists")
+    owner = centroid.user_id
+    members = [m for m in members if (m.user_id, m.scope) == (owner, centroid.scope)]
+
+    # This is an extractive excerpt, not a lossless abstraction of every
+    # cluster member. Preserve complete source text and its temporal meaning.
+    selected = sorted(members, key=lambda n: (-n.confidence, str(n.id)))[:3]
+    summary_content = f"[Consolidated excerpt: {len(selected)} of {len(members)} memories]\n" + "\n\n".join(
+        _render_source(m) for m in selected
     )
-    foreign = [m for m in members if m.user_id != owner]
-    if foreign:
-        logger.warning(
-            "Dropping %d cross-user member(s) from cluster centroid=%s",
-            len(foreign),
-            cluster.centroid_id,
-        )
-        members = [m for m in members if m.user_id == owner]
-
-    # Extractive summary: pick the highest-confidence content
-    # and combine unique content from top members
-    sorted_members = sorted(members, key=lambda n: n.confidence, reverse=True)
-    best_content = sorted_members[0].content
-
-    # Build summary content from top 3 unique contents
-    seen_content: set[str] = set()
-    summary_parts: list[str] = []
-    for m in sorted_members:
-        if m.content not in seen_content:
-            seen_content.add(m.content)
-            summary_parts.append(m.content)
-            if len(summary_parts) >= 3:
-                break
-
-    summary_content = (
-        f"[Consolidated from {len(members)} memories] {best_content}"
-        if len(summary_parts) == 1
-        else f"[Consolidated from {len(members)} memories] "
-        + " | ".join(summary_parts)
-    )
-
-    # Compute aggregate scores
-    avg_confidence = sum(m.confidence for m in members) / len(members)
-    max_salience = max(m.salience for m in members)
-    evidence_refs = [m.id for m in members]
+    coverage = {str(m.id): _source_fingerprint(m) for m in selected}
+    avg_confidence = sum(m.confidence for m in selected) / len(selected)
+    max_salience = max(m.salience for m in selected)
+    evidence_refs = list(dict.fromkeys(ref for m in selected for ref in [m.id, *m.evidence_refs]))
 
     user_id = owner
 
@@ -257,17 +248,24 @@ async def consolidate_cluster(
         summary_content,
         user_id=user_id,
         node_type=NodeType.SUMMARY,
-        scope=Scope.SYSTEM,
+        scope=centroid.scope,
+        metadata={
+            "consolidation_coverage": coverage, "cluster_size": len(members),
+            "consolidation_content_sha256": hashlib.sha256(summary_content.encode()).hexdigest(),
+        },
         confidence=avg_confidence,
         epistemic_type=EpistemicType.INFERRED,
         source_type=SourceType.SYSTEM_INFERRED,
     )
 
     # Retrieve the created summary node
-    nodes = await engine.query_nodes(user_id=user_id, limit=500)
+    nodes = await engine.query_nodes(
+        user_id=user_id, node_type=NodeType.SUMMARY,
+        content_contains_any=[str(selected[0].id)], limit=500,
+    )
     summary_node: MemoryNode | None = None
     for n in nodes:
-        if n.content == summary_content and n.node_type == NodeType.SUMMARY:
+        if any(str(ref) == _event_id for ref in n.evidence_refs):
             summary_node = n
             break
 
@@ -277,7 +275,7 @@ async def consolidate_cluster(
     # Update the summary node with proper evidence_refs and salience
     await engine._graph_store.update_node(
         str(summary_node.id),
-        evidence_refs=evidence_refs,
+        evidence_refs=list(dict.fromkeys([*summary_node.evidence_refs, *evidence_refs])),
         salience_base=max_salience,
         salience=max_salience,
         confidence_base=avg_confidence,
@@ -285,7 +283,7 @@ async def consolidate_cluster(
     )
 
     # Create DERIVED_FROM edges from summary to each member
-    for member in members:
+    for member in selected:
         edge = MemoryEdge(
             source_id=summary_node.id,
             target_id=member.id,
@@ -314,6 +312,8 @@ async def forget_consolidated(
     Preserves:
     - High-confidence nodes (>= min_confidence_preserve)
     - Recent nodes (created < preserve_recent_days ago)
+    - Pinned, unrepresented, changed, or other-namespace nodes
+    - All nodes when the summary is retired or lacks verified coverage
 
     Marks archived nodes with superseded_by pointing to the summary.
 
@@ -332,12 +332,31 @@ async def forget_consolidated(
     now = datetime.now(timezone.utc)
     recent_cutoff = now - timedelta(days=preserve_recent_days)
     archived_count = 0
+    summary = await engine.get_node(summary_node_id, user_id=user_id, include_superseded=False)
+    if summary is None or summary.node_type != NodeType.SUMMARY:
+        return 0
+    if summary.lifecycle_state not in {LifecycleState.TENTATIVE, LifecycleState.STABLE}:
+        return 0
+    if (summary.metadata or {}).get("consolidation_content_sha256") != hashlib.sha256(summary.content.encode()).hexdigest():
+        return 0
+    coverage = (summary.metadata or {}).get("consolidation_coverage", {})
 
     for mid in cluster.member_ids:
         node = await engine.get_node(
             mid, include_superseded=False, user_id=user_id
         )
         if node is None:
+            continue
+
+        # Only retire a source demonstrably represented in the current
+        # summary. Legacy/partial/edited summaries do not authorize forgetting.
+        if (
+            node.pinned
+            or node.lifecycle_state not in {LifecycleState.TENTATIVE, LifecycleState.STABLE}
+            or (node.user_id, node.scope) != (summary.user_id, summary.scope)
+            or coverage.get(mid) != _source_fingerprint(node)
+            or _render_source(node) not in summary.content
+        ):
             continue
 
         # Preserve high-confidence nodes
@@ -429,7 +448,7 @@ async def run_consolidation_pipeline(
             # Consolidate
             summary_node = await consolidate_cluster(engine, cluster)
             summaries_created += 1
-            total_consolidated += len(cluster.member_ids)
+            total_consolidated += len((summary_node.metadata or {}).get("consolidation_coverage", {}))
 
             # Forget
             archived = await forget_consolidated(
