@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING
 
 from benchmarks.metrics import exclusion_score, keyword_match_score
 from benchmarks.models import BenchmarkResult, QueryResult
-from prme.retrieval.context_formatter import format_for_llm
 
 if TYPE_CHECKING:
     from benchmarks.llm_judge import LLMJudgeConfig, VerdictCache
@@ -787,9 +786,10 @@ class LoCoMoRealBenchmark:
     ) -> BenchmarkResult:
         """Run LoCoMo-real with LLM generation + judge scoring.
 
-        Same ingestion as run(), but after retrieval, generates an answer
-        via LLM and uses LLM-as-judge to score against the ground truth.
-        Keyword-match score is still computed for comparison.
+        After ingestion and retrieval, generate from the exact packed product
+        bundle and judge against the ground truth. This custom judged score
+        excludes adversarial category 5; it is not the official LoCoMo metric.
+        Unlike run(), this path does not build convenience entity profiles.
 
         Uses concurrent evaluation (asyncio.gather + semaphores) to avoid
         sequential bottleneck on LLM API calls.
@@ -881,13 +881,10 @@ class LoCoMoRealBenchmark:
                 response = await engine.retrieve(
                     qa["question"], user_id=user_id
                 )
-                all_results = list(response.results)
 
-            top_content = format_for_llm(
-                results=all_results[:80],
-                query=qa["question"],
-                max_results=80,
-            )
+            # Evaluate the exact product context, including its token budget,
+            # fidelity decisions and provenance, rather than rebuilding it.
+            top_content = response.bundle.render()
 
             # LLM generate + judge (semaphore-gated). generate_answer returns
             # None on an infra failure; judge_answer maps that to JUDGE_ERROR.

@@ -108,3 +108,31 @@ and prepared product contexts. Results report paired question bootstrap interval
 and judge errors limit interpretation; these are development comparisons with
 one local reader/judge pairing, not independent confirmation or the official
 GPT-4o protocol. No production packing default changes on these results alone.
+
+
+The first [local calibration](judge-calibration-2611be7.json) completed normally
+with 42 recorded raw responses but **failed its quality gate**: 38/42 correct,
+one false accept and three false rejects. It incorrectly accepted an obsolete
+current-state answer and rejected two valid partial preference matches and one
+allowed temporal tolerance case. Its pipeline `passed` field records successful
+execution; `metrics.calibration_gate_passed` records the failed acceptance gate.
+No study answers were scored by this judge.
+
+The harness and benchmark boundary suite passed 84 tests in 3.43 seconds with
+native exit zero. A second candidate, the dense Gemma 4 31B model, is being
+obtained under the same unmodified rubric and 42-case gate. This is model
+selection on authored controls, not an independent estimate of judge accuracy.
+The [official model listing](https://ollama.com/library/gemma4:31b) distinguishes
+the dense 31B model from the 26B mixture-of-experts variant; its published
+capabilities are a reason to test it, not proof that it can judge this study.
+
+
+The LoCoMo judged runner now also sends `response.bundle.render()` directly to
+the reader. A regression with a valid raw candidate fails on the old formatter
+path and passes on the product bundle path. The combined benchmark, failure-
+accounting and reader/judge suite passes 97 tests in 123.35 seconds with native
+exit zero. Existing failure fixtures now supply the public bundle contract;
+they still verify that provider errors remain visible and outside accuracy.
+LoCoMo's custom score excludes category 5, and its judged path does not create
+the convenience profiles used by its keyword path. These remaining differences
+are explicit in the runner documentation.

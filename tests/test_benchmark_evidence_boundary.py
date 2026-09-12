@@ -124,3 +124,25 @@ async def test_longmemeval_invalid_question_date_is_an_error_before_engine_or_mo
     assert result.error_count == 1 and not result.complete
     create.assert_not_awaited()
     llm_judge.generate_answer.assert_not_awaited()
+
+
+async def test_locomo_judge_consumes_exact_product_bundle(tmp_path, benchmark_engine):
+    from prme.models import MemoryNode
+    from prme.retrieval.models import RetrievalCandidate
+
+    benchmark_engine.retrieve.return_value = SimpleNamespace(
+        results=[RetrievalCandidate(node=MemoryNode(user_id="u", node_type="note", content="RAW-NOT-PACKED"), composite_score=.9)],
+        bundle=SimpleNamespace(render=lambda: "PRODUCT-PACKED-CONTEXT"),
+    )
+    path = tmp_path / "locomo.json"
+    path.write_text(json.dumps([{
+        "sample_id": "bundle-case",
+        "conversation": {"session_1": [{"speaker": "Alice", "text": "I play the oboe."}]},
+        "qa": [{"question": "Which instrument?", "answer": "oboe", "category": 1}],
+    }]))
+    config = LLMJudgeConfig(enabled=True)
+    result = await LoCoMoRealBenchmark(dataset_path=str(path)).run_with_llm(benchmark_engine, config)
+    assert result.error_count == 0
+    benchmark_engine.retrieve.assert_awaited_once_with("Which instrument?", user_id="bench-locomo-real-bundle-case")
+    llm_judge.generate_answer.assert_awaited_once_with("Which instrument?", "PRODUCT-PACKED-CONTEXT", config)
+    assert result.details[0].actual == "PRODUCT-PACKED-CONTEXT"

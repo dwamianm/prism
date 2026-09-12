@@ -34,7 +34,7 @@ def fake_engine(monkeypatch):
 
     engine = SimpleNamespace(
         store=AsyncMock(), close=AsyncMock(),
-        retrieve=AsyncMock(side_effect=[RuntimeError("private detail"), SimpleNamespace(results=[])]),
+        retrieve=AsyncMock(side_effect=[RuntimeError("private detail"), SimpleNamespace(results=[], bundle=SimpleNamespace(render=lambda: "related evidence"))]),
     )
     monkeypatch.setattr(MemoryEngine, "create", AsyncMock(return_value=engine))
     monkeypatch.setattr(llm_judge, "generate_answer", AsyncMock(return_value="oboe"))
@@ -141,11 +141,10 @@ async def test_abstention_provider_failure_is_not_a_verdict(monkeypatch):
 
 
 async def test_longmemeval_records_failed_abstention_check(tmp_path, fake_engine, monkeypatch):
-    from benchmarks import longmemeval
-
     fake_engine.retrieve.side_effect = None
-    fake_engine.retrieve.return_value = SimpleNamespace(results=[SimpleNamespace(composite_score=0.9)])
-    monkeypatch.setattr(longmemeval, "format_for_llm", lambda **kwargs: "related evidence")
+    fake_engine.retrieve.return_value = SimpleNamespace(
+        results=[SimpleNamespace(composite_score=0.9)], bundle=SimpleNamespace(render=lambda: "related evidence"),
+    )
     monkeypatch.setattr(llm_judge, "check_abstention", AsyncMock(side_effect=RuntimeError("outage")))
     path = tmp_path / "dataset.json"
     path.write_text(json.dumps([{
@@ -159,6 +158,7 @@ async def test_longmemeval_records_failed_abstention_check(tmp_path, fake_engine
     assert result.correct == result.incorrect == result.abstained == 0
     assert result.category_scores == {}
     assert result.details[0].category == "abstention"
+    llm_judge.check_abstention.assert_awaited_once_with("What unknown instrument?", "related evidence", LLMJudgeConfig(enabled=True))
     assert result.details[0].expected == "ABSTAIN"
     assert result.error_count == 1
     assert result.coverage == 0.0
