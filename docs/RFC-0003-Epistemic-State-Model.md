@@ -66,6 +66,9 @@ that source passage; the model's subject/predicate/object stays in metadata.
 Custom providers that omit citations use the complete message as support and
 must still supply source-supported subject and object values. This deliberately
 rejects unsupported paraphrased object values.
+The built-in Instructor provider requires citations in its response schema and
+passes the source to local validation, allowing its configured validation retries
+to repair missing citations or unsupported values before materialization.
 
 These checks establish source membership, not semantic entailment. Model
 predicates, classifications, relationship labels, and summaries remain fallible.

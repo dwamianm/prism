@@ -12,8 +12,10 @@ import asyncio
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import structlog
+from pydantic import Field, ValidationInfo, model_validator
 
-from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.schema import ExtractedFact, ExtractionResult
+from prme.ingestion.grounding import _mentioned
 from prme.ingestion.errors import ExtractionError
 
 if TYPE_CHECKING:
@@ -22,6 +24,29 @@ if TYPE_CHECKING:
     from prme.config import ExtractionConfig
 
 logger = structlog.get_logger(__name__)
+
+
+class _CitedFact(ExtractedFact):
+    """Built-in providers must return source support or retry validation."""
+
+    evidence_quote: str = Field(
+        min_length=1,
+        description=ExtractedFact.model_fields["evidence_quote"].description,
+    )
+
+    @model_validator(mode="after")
+    def source_support(self, info: ValidationInfo) -> _CitedFact:
+        source = (info.context or {}).get("source_text")
+        if source is not None:
+            if not self.evidence_quote.strip() or self.evidence_quote not in source:
+                raise ValueError("evidence_quote must be copied verbatim from the source")
+            if not _mentioned(self.subject, self.evidence_quote) or not _mentioned(self.object, self.evidence_quote):
+                raise ValueError("subject and object must occur in evidence_quote; use source values without paraphrasing")
+        return self
+
+
+class _CitedExtractionResult(ExtractionResult):
+    facts: list[_CitedFact] = Field(default_factory=list)
 
 EXTRACTION_SYSTEM_PROMPT = """\
 You are a knowledge extraction system. Your task is to extract structured \
@@ -224,7 +249,8 @@ class InstructorExtractionProvider:
         try:
             client = self._ensure_client()
             create_kwargs: dict = {
-                "response_model": ExtractionResult,
+                "response_model": _CitedExtractionResult,
+                "context": {"source_text": content},
                 "messages": [
                     {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
                     {"role": role, "content": content},
