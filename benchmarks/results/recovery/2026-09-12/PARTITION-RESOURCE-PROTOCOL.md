@@ -32,3 +32,20 @@ a sensible basis for the first namespace API. If cost grows materially, evaluate
 a bounded lease/cache design and a shared-table PostgreSQL prototype before
 selecting a hosted default. Performance here cannot establish superiority over
 another product or justify weakening isolation.
+
+## Follow-up registered after the default-thread resource probe
+
+The default resident worker stopped at 54 open packs / 1,017 sampled threads;
+all three leased 100-pack runs completed. The coordinator mistakenly skipped
+later small resident repetitions too. Those four runs were completed afterward
+and retained in a separate supplemental record; the planned alternating order
+therefore has a documented deviation. The two later resident 100-pack trials
+remain skipped after the resource stop, as intended.
+
+`f1386a7` adds an optional, positive `duckdb_threads` setting at native database
+creation, with the old default unchanged. After verifying the installed wheel,
+run three fresh-process 100-pack resident trials with one DuckDB worker per
+pack, the same shared provider, corpus, checks and resource budgets. Keep this
+follow-up distinct from the preceding default-thread runs; it is selected after
+observing the thread growth. A successful tiny-pack probe supports an explicit
+resource-control option, not a universal default or a namespace manager.

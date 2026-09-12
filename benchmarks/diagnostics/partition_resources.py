@@ -46,8 +46,10 @@ def sample(report, label, args):
         raise ResourceBudgetExceeded("Diagnostic resource budget reached")
 
 
-def config_for(directory):
+def config_for(directory, threads=None):
     config = config_from_directory(str(directory))
+    if threads is not None:
+        config.duckdb_threads = threads
     return config.model_copy(update={
         "database_url": None,
         "encryption_enabled": False,
@@ -106,7 +108,7 @@ async def run(args, report):
                           "dimension": provider.dimension}
     sample(report, "provider_warmed", args)
     with tempfile.TemporaryDirectory(prefix="prme-partition-resources-") as root:
-        configs = [config_for(Path(root) / str(index)) for index in range(args.count)]
+        configs = [config_for(Path(root) / str(index), args.duckdb_threads) for index in range(args.count)]
         expectations = []
         async with AsyncExitStack() as resident:
             engines = []
@@ -154,12 +156,14 @@ def main():
     parser.add_argument("--mode", choices=["resident", "leased"], required=True)
     parser.add_argument("--max-rss-mib", type=int, default=4096)
     parser.add_argument("--max-threads", type=int, default=1000)
+    parser.add_argument("--duckdb-threads", type=int, choices=[1], default=None)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
         raise ValueError("Refusing to overwrite prior evidence")
     report = {
         "complete": False, "count": args.count, "mode": args.mode,
+        "duckdb_threads": args.duckdb_threads,
         "python": platform.python_version(), "platform": platform.platform(),
         "prme_import_path": str(Path(prme.__file__).resolve()),
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
