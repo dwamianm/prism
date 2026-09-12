@@ -25,6 +25,7 @@ from uuid import UUID
 import dateparser
 import structlog
 
+from prme.epistemic.inference import infer_source_type
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
@@ -519,12 +520,7 @@ class IngestionPipeline:
                 fact_epistemic_type = EpistemicType.ASSERTED
 
             # Determine source type from conversation role
-            if event.role and event.role.lower() in ("user", "human"):
-                fact_source_type = SourceType.USER_STATED
-            elif event.role and event.role.lower() in ("assistant", "system"):
-                fact_source_type = SourceType.SYSTEM_INFERRED
-            else:
-                fact_source_type = SourceType.USER_STATED
+            fact_source_type = infer_source_type(node_type, role=event.role)
 
             # An unverified relationship is a model proposal, not a user
             # assertion. Its original message remains in evidence_refs. This

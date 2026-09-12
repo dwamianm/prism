@@ -33,7 +33,7 @@ class Event(MemoryObject):
             "queries: ingestion_time vs event_time (issue #21)."
         ),
     )
-    role: str = Field(description="Role: 'user', 'assistant', or 'system'")
+    role: str = Field(description="Conversation role, e.g. 'user', 'assistant', 'tool', or 'system'")
     content: str = Field(description="Event content text")
     content_hash: str = Field(
         default="",

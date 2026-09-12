@@ -1231,3 +1231,23 @@ mypy checking; the configuration and receipt source modules also passed mypy.
 
 The complete repository suite is running from clean frozen `0ed72a8`; its final
 exit and totals must be recorded separately before calling that run successful.
+
+## Tool provenance
+
+Direct `store(role="tool")`, deferred raw-source processing and extracted facts
+previously classified the source as `user_stated`. The common inference helper
+now selects `tool_output` case-insensitively and uses its configured confidence
+matrix entry. Explicit direct-write overrides and saved historical plans remain
+unchanged; unverified relationship proposals still use system-inferred provenance.
+Six new regressions failed before this correction, while two explicit-override
+checks passed. The focused storage, extraction, grounding and HTTP set passed
+102 tests with six skips in 40.74s, including live PostgreSQL and DuckDB recovery,
+restart, source citations and rendered provenance. An initial test typo referenced
+an unimplemented `IMPORTED` enum; correcting the override control to the existing
+`EXTERNAL_DOCUMENT` enum exposed the six product failures above.
+
+Ruff passes on the changed modules. Mypy reports six existing ingestion-pipeline
+issues (missing dateparser stubs, lambda inference, an object-typed confidence
+matrix and DuckDB-specific attributes on the graph protocol); checking the prior
+pipeline source reproduces the same six diagnostics. These are not a passing
+project-wide type check.

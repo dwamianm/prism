@@ -567,7 +567,7 @@ class MemoryEngine:
             content: Text content to store.
             user_id: Owner user ID.
             session_id: Optional session identifier.
-            role: Event role ('user', 'assistant', or 'system').
+            role: Event role ('user', 'assistant', 'tool', or 'system').
             node_type: Type of memory node to create.
             scope: Memory scope (personal, project, org).
             metadata: Optional structured metadata.

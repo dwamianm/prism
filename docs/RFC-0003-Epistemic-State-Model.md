@@ -251,6 +251,16 @@ The UNVERIFIED inclusion threshold is configurable per namespace. Default: inclu
 
 ## 9. Provenance Transparency
 
+**Implemented role handling, 2026-09-12:** direct writes, deferred raw-source
+materialization and extracted facts classify `role="tool"` as `TOOL_OUTPUT`
+(case insensitive), using that provenance's configured confidence matrix entry.
+They share the same role inference helper. Explicit direct-write provenance and
+confidence overrides remain authoritative. Unverified relationship proposals
+remain `SYSTEM_INFERRED`, even when proposed from a tool's source text.
+Existing durable node snapshots and prepared derivation plans retain their saved
+values; this correction does not rewrite historical provenance or prove tool
+output is accurate.
+
 Every memory object MUST be able to answer the following questions from the event and operation logs alone:
 
 1. **Why is this believed?** — What `evidence_ids` underpin it?

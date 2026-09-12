@@ -195,7 +195,7 @@ are outside this job's completion boundary.
 | `metadata` | `dict \| None` | `None` | Optional structured metadata |
 | `confidence` | `float \| None` | `None` | Confidence 0.0-1.0. If None, derived from confidence matrix |
 | `epistemic_type` | `EpistemicType \| None` | `None` | If None, inferred from node_type |
-| `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role |
+| `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role; `role="tool"` selects `TOOL_OUTPUT` |
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
 
