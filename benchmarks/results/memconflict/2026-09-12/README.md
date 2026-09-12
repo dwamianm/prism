@@ -133,3 +133,10 @@ five skipped** (3.87 seconds). These include timezone equivalence, context budge
 formatter behavior, fresh packs, encrypted-startup recovery and derivation
 identity. Later packing-diagnostic additions do not alter production behavior
 and passed their separate 17 diagnostic/boundary checks.
+
+## Provenance follow-up
+
+The later [source-provenance experiment](provenance-5b2baa9-summary.json) compares
+both packing orders with and without the stored source classification under the
+same budget. Its interpretation, production changes and separate authored reader
+checks are recorded in the [fidelity report](../../fidelity/2026-09-12/README.md).

@@ -203,3 +203,9 @@ They distinguish claim kind from epistemic status and check every materialized
 claim. A prompt/schema clarification failed to establish a quality gain and was
 reverted. The raw trials and corrected namesake evaluator are retained; these
 are development diagnostics, not held-out answer accuracy or competitive scores.
+
+
+[Evidence formatting fidelity](benchmarks/results/fidelity/2026-09-12/README.md)
+records provenance preservation, removal of unsupported reasoning directives,
+and identity-based context deduplication. Paired local-reader counterexamples
+are authored development diagnostics, not independent accuracy measurements.
