@@ -66,3 +66,14 @@ model assets, reader identity, dataset and cohort hashes before execution. Its
 `run` subcommand rejects changed inputs and records native worker completion.
 Authored preflight coverage checks source fidelity, actual control reproduction,
 label separation, stable option mapping, malformed input and reader accounting.
+
+After native completion, `benchmarks.diagnostics.verify_personamem` requires the
+registered PRME source on `PYTHONPATH` and checks every dataset, capture and reader
+request hash. It repacks all 288 memory contexts and reconstructs the product
+receipts, then reads the 24 DuckDB packs in read-only mode to verify original
+events, graph provenance and journaled receipts. Labels are joined only after
+those checks. Invalid predictions remain in the denominator. The report includes
+all four category dimensions, persona-cluster intervals, reader repeats and raw
+artifact hashes. Its 25 authored checks include a complete synthetic 96-question
+run and detection of modified sources, receipts and contexts; these are verifier
+tests, not benchmark-quality results.
