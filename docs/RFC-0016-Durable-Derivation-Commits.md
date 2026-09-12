@@ -24,6 +24,11 @@ Current fault-injection work has established these prerequisites:
   back tracked artifacts while preserving previous facts.
 - Native storage operations retain their locks until their worker threads finish
   after cancellation. Failed engine startup releases resources.
+- In-process materialization records completed node/edge writes before caller
+  cancellation propagates. Cleanup waits for queued index writes and withstands
+  repeated cancellation. A final replacement that already committed is retained.
+  These cleanup guarantees do not make intermediate graph writes invisible or
+  recover a process killed before cleanup; the batch commit protocol is still needed.
 
 These are tested behaviors, not evidence of complete derivation replay. The
 current `_materialize()` still interleaves random-ID graph and index writes.

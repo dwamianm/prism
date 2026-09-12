@@ -33,6 +33,7 @@ from prme.models.events import Event
 from prme.models.extraction import ExtractionRecord
 from prme.models.nodes import MemoryNode
 from prme.storage.write_queue import WriteTracker
+from prme.storage._threading import run_async_to_completion
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
 
 if TYPE_CHECKING:
@@ -522,26 +523,35 @@ class IngestionPipeline:
             # with its edge, or none do. Index/graph failures above leave prior
             # knowledge untouched while the tracker removes new artifacts.
             await tracked_writer.commit_supersedences()
-        except Exception as exc:
+        except (Exception, asyncio.CancelledError) as exc:
             logger.error(
                 "ingestion.materialization_failed",
                 event_id=event_id,
                 exc_info=True,
             )
-            # Rollback all graph artifacts from this event, including any
-            # vector/lexical index entries written before the failure.
-            await tracker.rollback(
-                self._graph_store,
-                self._write_queue,
-                vector_index=self._vector_index,
-                lexical_index=self._lexical_index,
-            )
+            # A cancelled producer may still have a queued index write. Wait
+            # for that work before eviction, and finish cleanup despite repeated
+            # cancellation. Final replacements that committed must be kept.
+            async def cleanup() -> None:
+                await self._write_queue.submit(
+                    lambda: asyncio.sleep(0), label=f"rollback.barrier:{event_id}",
+                )
+                if not tracked_writer.committed:
+                    await tracker.rollback(
+                        self._graph_store,
+                        self._write_queue,
+                        vector_index=self._vector_index,
+                        lexical_index=self._lexical_index,
+                    )
+            await run_async_to_completion(cleanup())
             logger.info(
                 "ingestion.rollback_complete",
                 event_id=event_id,
-                rolled_back_nodes=len(tracker.node_ids),
-                rolled_back_edges=len(tracker.edge_ids),
+                rolled_back_nodes=0 if tracked_writer.committed else len(tracker.node_ids),
+                rolled_back_edges=0 if tracked_writer.committed else len(tracker.edge_ids),
             )
+            if isinstance(exc, asyncio.CancelledError):
+                raise
             raise MaterializationError(
                 f"Materialization failed for event {event_id}",
                 event_id=event_id,
