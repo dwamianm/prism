@@ -250,3 +250,9 @@ retains the initial capture/replay check and clearly separates it from the broad
 run. The [LongMemEval-V2 assessment](benchmarks/integrations/LONGMEMEVAL_V2.md)
 records the additional agent-trajectory and multimodal evaluation work required;
 V1 source recall is not a substitute for that coverage.
+
+Use repeatable `--question-id ID` to reproduce a specific evidence-evaluation
+failure within its original split. It cannot be combined with `--limit`; unknown
+or out-of-split IDs are rejected. The selected IDs and full dataset hash remain
+in the report. A targeted retry is a separate diagnostic, not a replacement for
+an incomplete full run or evidence of complete-split coverage.

@@ -225,6 +225,14 @@ async def run(args) -> dict:
     if "oracle" in args.dataset.name and args.variant != "oracle":
         raise ValueError("An oracle dataset cannot be labeled as a long-history variant")
     selected = select_questions(questions, split=args.split, seed=args.seed, limit=args.limit)
+    requested = getattr(args, "question_ids", None)
+    if requested:
+        if args.limit:
+            raise ValueError("Use question IDs or a prefix limit, not both")
+        unknown = set(requested) - {q["question_id"] for q in selected}
+        if unknown:
+            raise ValueError("Requested question IDs are absent from the selected split")
+        selected = [q for q in selected if q["question_id"] in set(requested)]
     if not selected:
         raise ValueError("No questions selected")
     encoding = tiktoken.get_encoding(args.tokenizer)
@@ -327,6 +335,8 @@ def main():
     parser.add_argument("--split", choices=["dev", "test", "all"], default="dev")
     parser.add_argument("--seed", default="prme-evidence-v1")
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument("--question-id", dest="question_ids", action="append",
+                        help="Select an exact question within the chosen split; repeat for multiple IDs")
     parser.add_argument("--k", type=int, default=100)
     parser.add_argument("--concurrency", type=int, default=1)
     parser.add_argument("--budgets", nargs="+", type=int, default=[2048, 4096, 8192])

@@ -158,3 +158,30 @@ def test_supervisor_requires_matching_report_and_normal_native_exit(tmp_path, mo
     assert result["process_exit_code"] == worker_exit
     assert result["run_id"] == "current"
     assert json.loads(output.read_text()) == result
+
+
+async def test_exact_question_selection_stays_within_declared_split(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from benchmarks import retrieval_eval
+
+    dataset = tmp_path / "custom.json"
+    dataset.write_text(json.dumps([{**question(), "question_id": f"q-{i}"} for i in range(4)]))
+    selected = AsyncMock(side_effect=RuntimeError("diagnostic source failure"))
+    monkeypatch.setattr(retrieval_eval, "evaluate_question", selected)
+    args = SimpleNamespace(dataset=dataset, variant="custom", split="all", seed="test", limit=0,
+                           tokenizer="cl100k_base", budgets=[100], k=10, clock="wall", concurrency=1,
+                           output=tmp_path / "result.json", question_ids=["q-2"])
+    report = await retrieval_eval.run(args)
+    assert report["dataset"]["selected_question_ids"] == ["q-2"]
+    assert selected.await_args.args[0]["question_id"] == "q-2"
+    selected.reset_mock()
+    args.question_ids = ["missing"]
+    with pytest.raises(ValueError, match="selected split"):
+        await retrieval_eval.run(args)
+    selected.assert_not_awaited()
+    args.question_ids, args.limit = ["q-2"], 3
+    with pytest.raises(ValueError, match="not both"):
+        await retrieval_eval.run(args)
+    selected.assert_not_awaited()
