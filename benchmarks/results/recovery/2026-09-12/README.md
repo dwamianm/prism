@@ -1270,3 +1270,15 @@ A fresh explicit root `.env` reload at 18:48 UTC still returned HTTP 429 for
 `gpt-4o-mini` and `gpt-4o-2024-08-06`, with retries disabled. The sanitized
 [health report](openai-health-final.json) contains no credentials or response
 bodies. The earlier HTTP 401 is gone; the 429 reason remains unclassified.
+
+## PostgreSQL lexical candidate completeness
+
+The lexical backend previously applied its SQL limit before removing duplicate
+node/index copies in Python. Two copies of the strongest memory could consume
+both slots of a two-result query and omit another matching memory. Equal-score
+selection also lacked a stable identity tie-break. Both authored regressions
+failed before the fix (the three existing lexical tests passed). SQL now applies
+owner/type/scope filters, selects the highest-scoring copy of each identity, then
+orders by score and node ID before the limit. Tied copies prefer the graph row.
+All 55 PostgreSQL backend and related HTTP/MCP checks passed in 5.31s, and Ruff
+passed. This does not claim PostgreSQL and Tantivy have identical query semantics.

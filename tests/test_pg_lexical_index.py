@@ -85,3 +85,32 @@ async def test_delete_by_node_id(lexical_index):
     results = await lexical_index.search("deletable", uid, limit=5)
     matching = [r for r in results if r["node_id"] == fake_node_id]
     assert len(matching) == 0
+
+
+async def test_duplicate_documents_do_not_consume_candidate_limit(lexical_index, graph_store):
+    """A previously indexed source may later also have a durable graph row."""
+    uid = f"user-{uuid.uuid4()}"
+    first = MemoryNode(user_id=uid, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                       content="cobalt cobalt cobalt cobalt")
+    second = MemoryNode(user_id=uid, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                        content="cobalt")
+    # This order creates a legitimate source/index copy before graph publication.
+    await lexical_index.index(str(first.id), first.content, uid, "note", "personal")
+    await graph_store.create_node(first)
+    await graph_store.create_node(second)
+    for owner, scope in [(uid + "-other", Scope.PERSONAL), (uid, Scope.PROJECT)]:
+        await graph_store.create_node(MemoryNode(user_id=owner, scope=scope, node_type=NodeType.NOTE,
+                                                 content="cobalt " * 20))
+    rows = await lexical_index.search("cobalt", uid, limit=2, scope=["personal"], node_type="note")
+    assert [row["node_id"] for row in rows] == [str(first.id), str(second.id)]
+    assert len(await lexical_index.search("cobalt", uid, limit=1, scope=["personal"])) == 1
+
+
+async def test_tied_lexical_candidates_use_identity_before_limit(lexical_index, graph_store):
+    uid = f"user-{uuid.uuid4()}"
+    nodes = [MemoryNode(user_id=uid, node_type=NodeType.NOTE, content="identical telescope") for _ in range(3)]
+    # Insert in the opposite order to the required stable identity tie-break.
+    for node in sorted(nodes, key=lambda node: str(node.id), reverse=True):
+        await graph_store.create_node(node)
+    rows = await lexical_index.search("telescope", uid, limit=2)
+    assert [row["node_id"] for row in rows] == sorted(str(node.id) for node in nodes)[:2]

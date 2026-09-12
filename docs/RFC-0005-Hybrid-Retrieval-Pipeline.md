@@ -436,3 +436,13 @@ measured roughly 153 ms instead of 43 ms for short texts, but 435 ms instead of
 performance guarantees. `benchmarks.diagnostics.embedding_invariance` retains
 raw alternating-order timing trials, runtime/model asset hashes and numerical
 cache/batch comparisons; it includes native process shutdown in its result.
+
+### PostgreSQL lexical candidate limits
+
+`PgLexicalIndex` deduplicates matching graph and non-node index copies by node
+identity inside SQL, after owner/type/scope filters and before applying the
+candidate limit. The highest-scoring copy is retained; equal-scoring copies
+prefer the graph row. Final score ties use node ID with C collation before the
+limit. Duplicate source/index copies therefore cannot consume slots intended
+for other matching memories. This corrects candidate completeness and stable
+selection; it does not change PostgreSQL's existing `plainto_tsquery` semantics.
