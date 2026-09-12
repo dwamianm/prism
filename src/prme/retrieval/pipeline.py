@@ -673,8 +673,10 @@ class RetrievalPipeline:
                         op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id,
                     )
             elif self._conn is not None:
+                from prme.storage._threading import run_to_completion
+
                 async with self._conn_lock:
-                    await asyncio.to_thread(
+                    await run_to_completion(
                         self._conn.execute,
                         "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
                         "VALUES (?, ?, ?, ?, ?, now())",
