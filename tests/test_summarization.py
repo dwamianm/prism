@@ -206,7 +206,7 @@ class TestDailySummaryGeneration:
         assert len(summaries) == 1
         summary = summaries[0]
         assert summary.node_type == NodeType.SUMMARY
-        assert summary.epistemic_type == EpistemicType.OBSERVED
+        assert summary.epistemic_type == EpistemicType.INFERRED
         assert summary.lifecycle_state == LifecycleState.STABLE
         assert "2026-03-01" in summary.content
         assert summary.metadata["summarization_level"] == "daily"
@@ -818,11 +818,11 @@ class TestSummaryNodeProperties:
         assert len(summaries) == 1
         s = summaries[0]
         assert s.node_type == NodeType.SUMMARY
-        assert s.epistemic_type == EpistemicType.OBSERVED
+        assert s.epistemic_type == EpistemicType.INFERRED
         assert s.lifecycle_state == LifecycleState.STABLE
         assert s.source_type == SourceType.SYSTEM_INFERRED
         assert s.decay_profile == DecayProfile.SLOW
-        assert s.scope == Scope.SYSTEM
+        assert s.scope == Scope.PERSONAL
 
     @pytest.mark.asyncio
     async def test_summary_salience_is_average_of_sources(self, engine_parts):

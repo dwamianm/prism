@@ -10,20 +10,24 @@ Summary hierarchy:
 - Weekly: Rolls up daily summaries into weekly summaries
 - Monthly: Rolls up weekly summaries into monthly summaries
 
-All summaries are MemoryNode with node_type=SUMMARY, epistemic_type=OBSERVED,
-lifecycle_state=STABLE (system-generated truths).
+Summaries are source excerpts, not newly observed truths. They retain source
+qualifiers, epistemic labels, event times, and user/scope boundaries.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from collections import defaultdict
+from datetime import timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from prme.config import OrganizerConfig
+from prme.ingestion.graph_writer import WriteQueueGraphWriter
+from prme.storage.write_queue import WriteTracker
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.models import JobResult
@@ -55,7 +59,7 @@ def _group_nodes_by_day(nodes: list[MemoryNode]) -> dict[str, list[MemoryNode]]:
     """Group nodes by calendar day (YYYY-MM-DD)."""
     groups: dict[str, list[MemoryNode]] = defaultdict(list)
     for node in nodes:
-        day_key = node.created_at.strftime("%Y-%m-%d")
+        day_key = (node.event_time or node.created_at).astimezone(timezone.utc).strftime("%Y-%m-%d")
         groups[day_key] = groups.get(day_key, [])
         groups[day_key].append(node)
     return dict(groups)
@@ -65,7 +69,7 @@ def _group_nodes_by_week(nodes: list[MemoryNode]) -> dict[str, list[MemoryNode]]
     """Group nodes by ISO week (YYYY-Www)."""
     groups: dict[str, list[MemoryNode]] = defaultdict(list)
     for node in nodes:
-        iso = node.created_at.isocalendar()
+        iso = (node.event_time or node.created_at).astimezone(timezone.utc).isocalendar()
         week_key = f"{iso[0]}-W{iso[1]:02d}"
         groups[week_key] = groups.get(week_key, [])
         groups[week_key].append(node)
@@ -76,10 +80,21 @@ def _group_nodes_by_month(nodes: list[MemoryNode]) -> dict[str, list[MemoryNode]
     """Group nodes by calendar month (YYYY-MM)."""
     groups: dict[str, list[MemoryNode]] = defaultdict(list)
     for node in nodes:
-        month_key = node.created_at.strftime("%Y-%m")
+        month_key = (node.event_time or node.created_at).astimezone(timezone.utc).strftime("%Y-%m")
         groups[month_key] = groups.get(month_key, [])
         groups[month_key].append(node)
     return dict(groups)
+
+
+def _group_scoped(nodes: list[MemoryNode], grouper) -> dict[tuple[str, Scope, str], list[MemoryNode]]:
+    namespaces: dict[tuple[str, Scope], list[MemoryNode]] = defaultdict(list)
+    for node in nodes:
+        namespaces[(node.user_id, node.scope)].append(node)
+    return {
+        (user_id, scope, period): sources
+        for (user_id, scope), group in namespaces.items()
+        for period, sources in grouper(group).items()
+    }
 
 
 def _select_top_salient(
@@ -91,8 +106,7 @@ def _select_top_salient(
     """
     sorted_nodes = sorted(
         nodes,
-        key=lambda n: (n.salience_base, n.confidence_base, n.created_at),
-        reverse=True,
+        key=lambda n: (-n.salience_base, -n.confidence_base, -n.created_at.timestamp(), str(n.id)),
     )
     return sorted_nodes[:max_items]
 
@@ -107,13 +121,16 @@ def _build_summary_content(
     Concatenates the content of the top-N most salient items, prefixed
     with the time period identifier.
     """
-    lines = [f"[{level.value} summary: {period_key}]"]
+    lines = [f"[{level.value} summary: {period_key}; selected source excerpts, not exhaustive]"]
     for node in source_nodes:
-        # Truncate individual items to keep summary manageable
-        content_preview = node.content[:200]
-        if len(node.content) > 200:
-            content_preview += "..."
-        lines.append(f"- {content_preview}")
+        lines.append(json.dumps({
+            "source_id": str(node.id), "epistemic_type": node.epistemic_type.value,
+            "source_type": node.source_type.value,
+            "event_time": (node.event_time or node.created_at).isoformat(),
+            "valid_from": node.valid_from.isoformat(),
+            "valid_to": node.valid_to.isoformat() if node.valid_to else None,
+            "content": node.content,
+        }, ensure_ascii=False))
     return "\n".join(lines)
 
 
@@ -150,6 +167,11 @@ async def _create_summary_node(
 
     Returns the created MemoryNode, or None if creation failed.
     """
+    if not source_nodes:
+        return None
+    scope = source_nodes[0].scope
+    if any(node.user_id != user_id or node.scope != scope for node in source_nodes):
+        raise ValueError("Summary sources must share the requested user and scope")
     content = _build_summary_content(level, period_key, source_nodes)
     evidence_refs = []
     for node in source_nodes:
@@ -172,6 +194,7 @@ async def _create_summary_node(
         content=content,
         metadata={
             "summarization_level": level.value,
+            "summary_format": "source-excerpts-v1",
             "period_key": period_key,
             "source_count": len(source_nodes),
             "source_node_ids": [str(n.id) for n in source_nodes],
@@ -180,48 +203,44 @@ async def _create_summary_node(
         confidence_base=confidence,
         salience=salience,
         salience_base=salience,
-        epistemic_type=EpistemicType.OBSERVED,
+        epistemic_type=EpistemicType.INFERRED,
         source_type=SourceType.SYSTEM_INFERRED,
         lifecycle_state=LifecycleState.STABLE,
         evidence_refs=unique_refs,
         decay_profile=DecayProfile.SLOW,
-        scope=Scope.SYSTEM,
+        scope=scope,
+        event_time=min(n.event_time or n.created_at for n in source_nodes),
         pinned=False,
     )
 
+    tracker = WriteTracker()
+    writer = WriteQueueGraphWriter(engine._graph_store, engine._write_queue, tracker)
     try:
-        await engine._graph_store.create_node(summary_node)
-    except Exception:
-        logger.warning(
-            "Failed to create %s summary node for period %s",
-            level.value,
-            period_key,
-            exc_info=True,
+        await writer.create_node(summary_node)
+        for source_node in source_nodes:
+            await writer.create_edge(MemoryEdge(
+                source_id=summary_node.id, target_id=source_node.id,
+                edge_type=EdgeType.DERIVED_FROM, user_id=user_id, confidence=1.0,
+                metadata={"summarization_level": level.value, "period_key": period_key},
+            ))
+        await engine._write_queue.submit(
+            lambda: engine._vector_index.index(str(summary_node.id), content, user_id),
+            label=f"vector.summary:{summary_node.id}",
         )
+        await engine._write_queue.submit(
+            lambda: engine._lexical_index.index(
+                str(summary_node.id), content, user_id, NodeType.SUMMARY.value, scope.value,
+            ),
+            label=f"lexical.summary:{summary_node.id}",
+        )
+    except Exception as exc:
+        await tracker.rollback(
+            engine._graph_store, engine._write_queue,
+            vector_index=engine._vector_index, lexical_index=engine._lexical_index,
+        )
+        logger.warning("Failed to materialize %s summary for %s (%s)",
+                       level.value, period_key, type(exc).__name__)
         return None
-
-    # Create DERIVED_FROM edges from summary to each source
-    for source_node in source_nodes:
-        edge = MemoryEdge(
-            source_id=summary_node.id,
-            target_id=source_node.id,
-            edge_type=EdgeType.DERIVED_FROM,
-            user_id=user_id,
-            confidence=1.0,
-            metadata={
-                "summarization_level": level.value,
-                "period_key": period_key,
-            },
-        )
-        try:
-            await engine._graph_store.create_edge(edge)
-        except Exception:
-            logger.warning(
-                "Failed to create DERIVED_FROM edge from %s to %s",
-                summary_node.id,
-                source_node.id,
-                exc_info=True,
-            )
 
     return summary_node
 
@@ -230,7 +249,7 @@ async def _get_existing_summary_periods(
     engine: MemoryEngine,
     level: SummarizationLevel,
     user_id: str | None = None,
-) -> set[str]:
+) -> set[tuple[str, Scope, str]]:
     """Get set of period_keys for which summaries already exist.
 
     Queries SUMMARY nodes with matching summarization_level in metadata.
@@ -241,12 +260,12 @@ async def _get_existing_summary_periods(
         lifecycle_states=[LifecycleState.STABLE, LifecycleState.TENTATIVE],
         limit=1000,
     )
-    period_keys: set[str] = set()
+    period_keys: set[tuple[str, Scope, str]] = set()
     for node in existing_summaries:
         if node.metadata and node.metadata.get("summarization_level") == level.value:
             pk = node.metadata.get("period_key")
             if pk:
-                period_keys.add(pk)
+                period_keys.add((node.user_id, node.scope, pk))
     return period_keys
 
 
@@ -297,16 +316,17 @@ async def generate_daily_summaries(
     )
 
     # Group by day
-    day_groups = _group_nodes_by_day(source_nodes)
+    day_groups = _group_scoped(source_nodes, _group_nodes_by_day)
 
-    for day_key, nodes in sorted(day_groups.items()):
+    for namespace_period, nodes in sorted(day_groups.items()):
+        summary_user_id, _scope, day_key = namespace_period
         # Check budget
         elapsed_ms = (time.monotonic() - start) * 1000.0
         if elapsed_ms >= budget_ms:
             break
 
         # Skip if already summarized
-        if day_key in existing_periods:
+        if namespace_period in existing_periods:
             continue
 
         # Skip if not enough events
@@ -317,7 +337,6 @@ async def generate_daily_summaries(
         top_nodes = _select_top_salient(nodes, config.summarization_max_items_per_summary)
 
         # Use first node's user_id for the summary
-        summary_user_id = user_id or (nodes[0].user_id if nodes else "system")
         result = await _create_summary_node(
             engine,
             SummarizationLevel.DAILY,
@@ -385,14 +404,15 @@ async def roll_up_weekly(
     )
 
     # Group daily summaries by week
-    week_groups = _group_nodes_by_week(daily_summaries)
+    week_groups = _group_scoped(daily_summaries, _group_nodes_by_week)
 
-    for week_key, nodes in sorted(week_groups.items()):
+    for namespace_period, nodes in sorted(week_groups.items()):
+        summary_user_id, _scope, week_key = namespace_period
         elapsed_ms = (time.monotonic() - start) * 1000.0
         if elapsed_ms >= budget_ms:
             break
 
-        if week_key in existing_periods:
+        if namespace_period in existing_periods:
             continue
 
         if len(nodes) < config.summarization_weekly_min_summaries:
@@ -401,7 +421,6 @@ async def roll_up_weekly(
         processed += 1
         top_nodes = _select_top_salient(nodes, config.summarization_max_items_per_summary)
 
-        summary_user_id = user_id or (nodes[0].user_id if nodes else "system")
         result = await _create_summary_node(
             engine,
             SummarizationLevel.WEEKLY,
@@ -469,14 +488,15 @@ async def roll_up_monthly(
     )
 
     # Group weekly summaries by month
-    month_groups = _group_nodes_by_month(weekly_summaries)
+    month_groups = _group_scoped(weekly_summaries, _group_nodes_by_month)
 
-    for month_key, nodes in sorted(month_groups.items()):
+    for namespace_period, nodes in sorted(month_groups.items()):
+        summary_user_id, _scope, month_key = namespace_period
         elapsed_ms = (time.monotonic() - start) * 1000.0
         if elapsed_ms >= budget_ms:
             break
 
-        if month_key in existing_periods:
+        if namespace_period in existing_periods:
             continue
 
         if len(nodes) < config.summarization_monthly_min_summaries:
@@ -485,7 +505,6 @@ async def roll_up_monthly(
         processed += 1
         top_nodes = _select_top_salient(nodes, config.summarization_max_items_per_summary)
 
-        summary_user_id = user_id or (nodes[0].user_id if nodes else "system")
         result = await _create_summary_node(
             engine,
             SummarizationLevel.MONTHLY,

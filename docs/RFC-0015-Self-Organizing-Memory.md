@@ -464,4 +464,20 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 
 ---
 
+## Hierarchical source excerpts in PRME
+
+Daily, weekly, and monthly summaries retain full selected source content with
+source IDs, epistemic/source labels, and temporal qualifiers. They are marked
+INFERRED, not promoted to newly observed facts. Groups and duplicate-period
+checks are keyed by user, scope, and period; summaries retain that namespace.
+Calendar windows use UTC event time (falling back to creation time), including
+when rolling historical daily summaries into weeks and months.
+
+These are selected excerpts, not exhaustive or semantically compressed accounts.
+Sources omitted by the per-summary item limit remain intact. Nested excerpts can
+be large; the context packer must skip oversized entries rather than truncate
+their qualifications. Summary nodes and provenance edges are indexed, with
+partial new artifacts removed if indexing fails. Legacy summaries are not
+retroactively reconstructed by this change.
+
 *End of RFC-0015*
