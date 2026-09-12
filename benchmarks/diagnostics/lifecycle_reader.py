@@ -20,7 +20,7 @@ def main():
     for condition in ("reported_decision", "actually_provisional"):
         for variant in ("original", "renamed_key", "omit_active_lifecycle"):
             lines = []
-            for line in base["context"].splitlines():
+            for line in base["context"].split("\n"):
                 if line.startswith("{"):
                     item = json.loads(line)
                     if (

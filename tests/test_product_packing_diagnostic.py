@@ -130,3 +130,12 @@ def test_blank_sources_are_accounted_without_positive_evidence_credit(content):
     assert result["blank_source_ids"] == ["blank"]
     assert result["content_source_ids"] == [] and result["pointer_source_ids"] == []
     assert result["evidence_recall"] == 0
+
+
+@pytest.mark.parametrize("separator", ["\u0085", "\u2028", "\u2029"])
+def test_unicode_separators_inside_source_are_not_json_record_boundaries(separator):
+    source = make_candidate("unicode", "The source before" + separator + "and after.", .9)
+    cfg = PackingConfig(token_budget=1000, overhead_tokens=0, min_fidelity="full")
+    result = measure(pack_context([source], cfg), {"unicode"}, cfg)
+    assert result["content_source_ids"] == ["unicode"]
+    assert result["evidence_recall"] == 1

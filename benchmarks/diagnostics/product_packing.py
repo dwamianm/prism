@@ -27,7 +27,9 @@ def measure(bundle, gold: set[str], config: PackingConfig) -> dict:
     tokens = count_tokens(context, config.tokenizer)
     if tokens != bundle.tokens_used or tokens > max(0, config.token_budget - config.overhead_tokens):
         raise ValueError("Product context does not obey its measured budget")
-    entries = {entry["id"]: entry for line in context.splitlines()
+    # JSONL uses literal LF boundaries. Unicode NEL/line/paragraph separators
+    # are valid inside JSON strings and must not split a source record.
+    entries = {entry["id"]: entry for line in context.split("\n")
                if line.startswith("{") for entry in [json.loads(line)]}
     content_ids, pointer_ids, blank_ids, representations = [], [], [], {}
     for group in bundle.sections.values():
