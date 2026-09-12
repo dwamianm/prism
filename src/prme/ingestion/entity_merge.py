@@ -68,6 +68,7 @@ class EntityMerger:
         existing_nodes = await self._graph_store.query_nodes(
             node_type=NodeType.ENTITY,
             user_id=user_id,
+            scope=scope,
         )
 
         # Conservative match: exact name + entity_type

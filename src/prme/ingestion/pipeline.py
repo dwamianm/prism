@@ -275,9 +275,9 @@ class IngestionPipeline:
         lexical index writes are NOT rolled back (orphaned entries are
         harmless and logged as a warning by WriteTracker).
 
-        Per-object scope from LLM extraction overrides the ingestion-level
-        scope. If the LLM did not classify scope (None), the ingestion-level
-        scope is used as fallback.
+        The caller's ingestion scope is the write boundary. A model's scope
+        classification is descriptive metadata, never permission to move
+        private content into another namespace.
 
         Args:
             result: Grounding-validated extraction result.
@@ -298,8 +298,7 @@ class IngestionPipeline:
 
             # --- Entities ---
             for entity in result.entities:
-                # Resolve scope: LLM-extracted scope overrides ingestion-level default
-                entity_scope = Scope(entity.scope) if entity.scope else scope
+                entity_scope = scope
 
                 entity_id, _is_new = await entity_merger.find_or_create_entity(
                     name=entity.name,
@@ -325,8 +324,7 @@ class IngestionPipeline:
 
             # --- Facts ---
             for fact in result.facts:
-                # Resolve scope: LLM-extracted scope overrides ingestion-level default
-                fact_scope = Scope(fact.scope) if fact.scope else scope
+                fact_scope = scope
 
                 # Resolve temporal reference
                 resolved_date = self._resolve_temporal(fact.temporal_ref)
@@ -345,6 +343,8 @@ class IngestionPipeline:
                     "predicate": fact.predicate,
                     "object": fact.object,
                 }
+                if fact.scope:
+                    fact_metadata["suggested_scope"] = fact.scope
                 if fact.temporal_ref:
                     fact_metadata["temporal_ref"] = fact.temporal_ref
                 if resolved_date:

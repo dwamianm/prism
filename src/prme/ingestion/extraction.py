@@ -58,6 +58,7 @@ temporal text in the temporal_ref field.
    - "agent" — about a specific AI agent's working memory or internal reasoning
    - "system" — system-generated content such as summaries or organizer output
    - "sandbox" — temporary or experimental context intended for isolated testing
+   This is a descriptive suggestion. It never overrides the caller's write scope.
    If the scope is unclear, leave it as null (the system will use a safe default).
 
 7. **Epistemic Type**: For each fact, classify its epistemic_type:

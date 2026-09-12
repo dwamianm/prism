@@ -72,6 +72,11 @@ Namespaces MAY have a single parent namespace. The hierarchy is a tree, not a DA
 
 This design prevents the common failure mode where a project-level namespace accidentally exposes its members' personal memories to all project participants.
 
+Ingestion must treat the caller's scope as its write boundary. An extraction
+model's scope classification is advisory and cannot override that boundary.
+Entity matching and consolidation must remain within the same user and scope;
+matching names or embedding similarity do not grant cross-scope write access.
+
 ---
 
 ## 5. Access Policy

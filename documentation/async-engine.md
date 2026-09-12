@@ -90,6 +90,11 @@ are not yet restart-safe. The original source event remains durable. Use the
 deferred raw path below when you require restart-safe indexing without LLM
 extraction.
 
+`ingest(scope=...)` keeps every extracted node in the caller's scope. Model
+scope classifications do not grant write access elsewhere; fact classifications
+are retained as `metadata.suggested_scope`. Entity matching also stays within
+the same user and scope.
+
 The fast path commits the event and its pending work atomically, without embedding or LLM calls. Retrieval or organization materializes a raw NOTE with the original event ID, provenance, and timestamps. Pending work survives restart; the configured queue size bounds each batch rather than dropping events. Use `ingest()` when you need LLM extraction. Latency depends on the database commit.
 
 ```python
