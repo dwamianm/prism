@@ -71,8 +71,12 @@ async def run(args, report):
                 await conn.execute("INSERT INTO nodes (id,node_type,user_id,scope,content,embedding,embedding_model,embedding_version) "
                                    "VALUES ($1,'fact','owner','personal','authored eligible',$2::vector,'pg-filter-probe','1')",
                                    UUID(int=number), vector)
-            await conn.execute("CREATE INDEX idx_nodes_embedding_hnsw ON nodes USING hnsw (embedding vector_cosine_ops) "
-                               "WITH (m=16,ef_construction=64)")
+            async with conn.transaction():
+                if args.serial_build:
+                    await conn.execute("SET LOCAL max_parallel_maintenance_workers=0")
+                report["index_build_workers"] = await conn.fetchval("SHOW max_parallel_maintenance_workers")
+                await conn.execute("CREATE INDEX idx_nodes_embedding_hnsw ON nodes USING hnsw (embedding vector_cosine_ops) "
+                                   "WITH (m=16,ef_construction=64)")
             await conn.execute("ANALYZE nodes")
             report["populate_and_build_seconds"] = perf_counter() - start
         traced = TracedPool(pool)
@@ -113,6 +117,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rows", type=int, choices=[1000, 10000], required=True)
     parser.add_argument("--queries", type=int, default=20)
+    parser.add_argument("--serial-build", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.queries < 1:
@@ -121,6 +126,7 @@ def main():
         raise ValueError("Refusing to overwrite prior evidence")
     report = {"complete": False, "distractor_rows": args.rows, "selective_eligible_rows": 3, "dimension": 384,
               "measured_queries_per_arm": args.queries, "warmup_queries_per_arm": 2,
+              "serial_build": args.serial_build,
               "python": platform.python_version(), "prme_import_path": str(Path(prme.__file__).resolve()),
               "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "cases": {},
               "limits": "Authored sparse numerical vectors, one host, warm queries, serial access. Component test, not real-model corpus quality or production latency."}

@@ -22,3 +22,13 @@ The corpus is sparse, synthetic and small, with serial warm queries on one host.
 Timings do not establish production latency, general index recall, a real-model
 quality gain, or superiority to another memory product. Use them to make the
 correctness/cost tradeoff explicit; do not promote a universal size threshold.
+
+## Construction-limit follow-up
+
+The 1,000-row run completed. The 10,000-row run exited 1 during index creation,
+before query measurement, because the server could not allocate a roughly 64-MB
+shared-memory segment. Preserve both artifacts. Add `--serial-build`, which
+sets `max_parallel_maintenance_workers=0` inside the index-build transaction only.
+Rerun both sizes with this construction setting and unchanged query planner
+settings. Label these follow-up runs separately; do not substitute a successful
+retry for the original environmental failure or pool timings across builds.
