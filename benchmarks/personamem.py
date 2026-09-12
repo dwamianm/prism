@@ -9,7 +9,6 @@ from __future__ import annotations
 import ast
 import csv
 from dataclasses import dataclass
-import hashlib
 import io
 import json
 from pathlib import Path, PurePosixPath
@@ -117,13 +116,15 @@ def conversation_sources(raw):
     messages = history["chat_history"]
     if not messages or messages[0].get("role") != "system":
         raise ValueError("Expected one leading oracle-persona message")
-    if any(not isinstance(m, dict) or set(m) != {"role", "content"}
+    if any(not isinstance(m, dict) or not {"role", "content"} <= set(m)
            or not isinstance(m["content"], str) for m in messages):
         raise ValueError("Expected plain role/content messages")
     if any(m["role"] not in {"user", "assistant"} for m in messages[1:]):
         raise ValueError("Unexpected dialog role; do not silently omit messages")
     if len(messages) == 1:
         raise ValueError("Empty conversation")
+    # Message metadata is also excluded by the role/content whitelist. One
+    # downloaded text message has extra generation keys; these are not memory.
     # No session or timestamp exists in this format. Empty session/date strings
     # explicitly mean unavailable, not an inferred chronology.
     return [SourceTurn(id=f"t{i:05d}", session_id="", role=m["role"], content=m["content"], date="")

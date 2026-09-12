@@ -24,7 +24,7 @@ def row(persona="1", query="Which route fits my needs?"):
 def test_only_dialog_survives_history_adapter():
     raw = json.dumps({"metadata": {"secret": "hidden metadata"}, "chat_history": [
         {"role": "system", "content": "hidden oracle profile"},
-        {"role": "user", "content": "Keep the exception: only in summer.\n"},
+        {"role": "user", "content": "Keep the exception: only in summer.\n", "answer_label": "hidden annotation"},
         {"role": "assistant", "content": "Recorded, including the condition."}]})
     sources = conversation_sources(raw)
     assert [s.id for s in sources] == ["t00000", "t00001"]
@@ -79,5 +79,5 @@ def test_invalid_inputs_fail_without_fallback(mutation):
             if mutation == "role":
                 dialog[1]["role"] = "system"
             else:
-                dialog[1]["answer_label"] = True
+                dialog[1]["content"] = {"text": "unsupported structured content"}
             conversation_sources(json.dumps({"chat_history": dialog}))
