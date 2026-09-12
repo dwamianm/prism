@@ -31,6 +31,33 @@ def failure_details(exc):
     return {"error_chain": kinds, "validation_errors": validation}
 
 
+def assess_claims(case, source, nodes, edges):
+    """Assess every claim; an extra FACT cannot hide a misclassified preference."""
+    claims = [n for n in nodes if n.node_type in {NodeType.FACT, NodeType.PREFERENCE, NodeType.DECISION}]
+    linked = bool(claims) and all(
+        n.metadata.get("subject_link_status") == "resolved"
+        and any(e.edge_type == EdgeType.HAS_FACT and e.target_id == n.id for e in edges)
+        for n in claims
+    )
+    # All three fixtures describe facts, including the hypothetical usage case.
+    kinds_ok = bool(claims) and all(n.node_type == NodeType.FACT for n in claims)
+    temporal_ok = case != "conditional" or all(
+        n.epistemic_type.value in {"conditional", "hypothetical"} for n in claims
+    )
+    associations = all(e.edge_type in {EdgeType.HAS_FACT, EdgeType.MENTIONS} for e in edges)
+    preserved = bool(claims) and all(n.content == source for n in claims)
+    return {
+        "passed": linked and kinds_ok and temporal_ok and associations and preserved,
+        "expected_claim_kinds": kinds_ok,
+        "epistemic_qualifications_preserved": temporal_ok,
+        "subject_links_complete": linked,
+        "association_edges_only": associations,
+        "full_source_preserved": preserved,
+        "claim_node_types": [n.node_type.value for n in claims],
+        "claim_epistemic_types": [n.epistemic_type.value for n in claims],
+    }
+
+
 async def run(args):
     started = time.perf_counter()
     cases = [
@@ -80,31 +107,12 @@ async def run(args):
                     plan = await engine._event_store.get_derivation_plan(
                         eid, user_id=case
                     )
-                    facts_linked = all(
-                        node.metadata.get("subject_link_status") == "resolved"
-                        for node in facts
-                    )
-                    temporal_ok = case != "conditional" or all(
-                        node.epistemic_type.value in {"conditional", "hypothetical"}
-                        for node in facts
-                    )
-                    association_edges = all(
-                        edge.edge_type in {EdgeType.HAS_FACT, EdgeType.MENTIONS}
-                        for edge in plan.edges
-                    )
-                    sources_preserved = all(node.content == source for node in facts)
                     reports.append(
                         {
                             "case": case,
-                            "passed": bool(facts) and facts_linked and temporal_ok and association_edges and sources_preserved,
-                            "association_edges_only": association_edges,
-                            "full_source_preserved": sources_preserved,
+                            **assess_claims(case, source, nodes, plan.edges),
                             "edge_types": [edge.edge_type.value for edge in plan.edges],
                             "facts": len(facts),
-                            "claim_node_types": [
-                                node.node_type.value for node in nodes
-                                if node.node_type in {NodeType.FACT, NodeType.PREFERENCE, NodeType.DECISION}
-                            ],
                             "has_fact_edges": sum(
                                 edge.edge_type == EdgeType.HAS_FACT
                                 for edge in plan.edges

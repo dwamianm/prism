@@ -2,11 +2,11 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The latest frozen full suite at `4474a7e` passed **1,763 tests, 37 skipped**
-with live PostgreSQL (145.88 seconds). A Python 3.13 wheel at `4474a7e` passed
-installed sync-client, default local embedding, restart, source/provenance,
-selection/budget, HTTP identity/filter and MCP HTTP workflow checks. The older
-`7a1e864` wheel additionally ran real local-model extraction, recorded below.
+product. At `b8bac4b`, the frozen checkout passed **1,733 package tests with
+42 skips** and live PostgreSQL (164.85 seconds), plus **101 research tests**
+(1.06 seconds) and **14 example integration tests** (3.09 seconds), run separately.
+That is **1,848 passing checks** across the repository. Installed Python 3.13 and
+real-model workflows, including retained failures, are described below.
 
 ## Availability and identity fault checks
 
@@ -301,6 +301,18 @@ The first supervised [real-model trial](relationships-b8bac4b-failed.json)
 not the expected FACT. Source passages and association edges were preserved in
 the completed cases. The worker exited 1, so the parent correctly retained a
 failed result. Model classification and namesake reliability remain open.
+
+A repeat used the same installed `b8bac4b` wheel and model settings, with
+additional reporting from harness `7fbfa51`. Its namesake case completed, but the
+conditional source still produced a hypothetical PREFERENCE and an additional
+hypothetical relationship FACT. The old diagnostic reported success because it
+only checked FACT nodes. That [original report](relationships-b8bac4b-repeat-invalid-pass.json)
+is retained as **an invalid pass, not success evidence**. The diagnostic now
+checks every FACT/PREFERENCE/DECISION node, requires FACT for all three fixtures,
+and checks actual subject edges. A regression test verifies that an extra FACT
+cannot mask an incorrectly typed or unqualified claim. The diagnostic process
+subset passed **4 checks**. Neither model behavior nor the prompt changed between
+these two trials; they show remaining nondeterminism and classification errors.
 
 These checks do not establish semantic predicate accuracy. Association paths do
 not imply logical entailment. Existing committed graphs and saved v1/v2 plans
