@@ -1361,3 +1361,6 @@ earlier explicit-file check. Requests disabled retries and allowed one response
 token. Future live checks must use the updated file explicitly or unset the stale
 inherited key for that child process. No key values or response bodies were
 recorded, and the 429 cause remains unclassified.
+A final [allowlisted-code probe](openai-file-error-classification.json) also
+returned 429 without matching `insufficient_quota` or `rate_limit_exceeded`.
+It does not justify a billing diagnosis or a retry schedule.

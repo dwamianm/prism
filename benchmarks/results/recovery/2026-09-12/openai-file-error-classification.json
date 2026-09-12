@@ -1,0 +1,12 @@
+{
+  "credential_source": "Explicit root .env credential",
+  "model": "gpt-4o-mini",
+  "checked_at": "2026-09-12T19:37:53.136319+00:00",
+  "retries": 0,
+  "response_token_limit": 1,
+  "status": 429,
+  "success": false,
+  "error_type": "RateLimitError",
+  "classified_code": "unclassified",
+  "limits": "Only allowlisted machine error codes are retained; no messages, bodies, headers, endpoints, credentials or account details."
+}
