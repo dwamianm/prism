@@ -13,13 +13,13 @@
 This RFC specifies the namespace model: the mechanism by which memory is partitioned into isolated, policy-governed scopes. Namespaces determine what memory is visible to whom, under what conditions, and with what access rights.
 
 **Current implementation boundary:** the engine isolates owners and scope types.
-The Python `MemoryWorkspace` API now manages named local projects as separate
-identity-checked packs under a bounded lease cache; see [workspace contracts](WORKSPACES.md).
-It does not implement hosted project grants, hierarchy or PostgreSQL routing.
-The PostgreSQL schema initializer
-now resolves vector DDL against its selected table, so same-named columns and
-indexes in other schemas cannot suppress its setup. This catalog fix does not
-provide a public named-namespace API, grants, or database row-level security.
+The Python `MemoryWorkspace` API manages named local projects as identity-checked
+packs and PostgreSQL projects as identity-checked schemas over a shared bounded
+pool; see [workspace contracts](WORKSPACES.md). Lease/cache ownership is common
+to both backends. PostgreSQL connections exclude public-table fallback and clear
+temporary tables; extension symbols are explicitly qualified. Registry and schema
+creation publish atomically. These storage boundaries do not implement hosted
+project grants, hierarchy, database RLS or the complete policy model below.
 
 Namespaces are not a convenience feature. They are the boundary between a user's personal memory and a shared project memory, between a trusted agent's view and an untrusted connector's view, between what is retained forever and what expires in 30 days. Without namespaces, every piece of memory is accessible from everywhere, which is both a privacy failure and a retrieval quality failure.
 

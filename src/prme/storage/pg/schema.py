@@ -13,6 +13,8 @@ import logging
 
 import asyncpg
 
+from prme.storage.pg.vector_sql import VectorSQL, resolve_vector_sql
+
 logger = logging.getLogger(__name__)
 
 # DDL split into individual statements for asyncpg (no multi-statement execute).
@@ -147,7 +149,7 @@ async def initialize_pg_database(
     pool: asyncpg.Pool,
     *,
     embedding_dim: int = 384,
-) -> None:
+) -> VectorSQL:
     """Create all PRME tables, indexes and extensions in PostgreSQL.
 
     Safe to call multiple times (idempotent via IF NOT EXISTS).
@@ -157,10 +159,14 @@ async def initialize_pg_database(
         embedding_dim: Dimension for the pgvector embedding column on
             the nodes table. Must match the configured embedding model.
     """
+    if type(embedding_dim) is not int or embedding_dim < 1:
+        raise ValueError("embedding_dim must be a positive integer")
     async with pool.acquire() as conn:
         # Extensions
         for ext_sql in _EXTENSIONS:
             await conn.execute(ext_sql)
+
+        vector_sql = await resolve_vector_sql(conn)
 
         # Events
         await conn.execute(_EVENTS_TABLE)
@@ -214,11 +220,11 @@ async def initialize_pg_database(
         # elsewhere in the database. PostgreSQL places an index in its parent
         # table's schema; native IF NOT EXISTS handles this for HNSW too.
         await conn.execute(
-            f"ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding vector({embedding_dim})"
+            f"ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding {vector_sql.type}({embedding_dim})"
         )
-        await conn.execute("""
+        await conn.execute(f"""
             CREATE INDEX IF NOT EXISTS idx_nodes_embedding_hnsw
-            ON nodes USING hnsw (embedding vector_cosine_ops)
+            ON nodes USING hnsw (embedding {vector_sql.cosine_ops})
             WITH (m = 16, ef_construction = 64)
         """)
 
@@ -247,3 +253,5 @@ async def initialize_pg_database(
         await initialize_profiles(conn)
 
     logger.info("PostgreSQL schema initialized (embedding_dim=%d)", embedding_dim)
+
+    return vector_sql

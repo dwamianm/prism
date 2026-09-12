@@ -124,14 +124,19 @@ Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retri
 
 ## Storage Backends
 
-`MemoryWorkspace` manages named local projects as identity-checked separate packs
-with a bounded cache and lease-scoped `NamespaceMemory` API. Read
+`MemoryWorkspace` manages named projects as identity-checked local packs or
+PostgreSQL schemas, with a bounded cache and lease-scoped `NamespaceMemory` API.
+`open_postgres()` shares one connection pool per workspace instance. Each checkout
+verifies schema identity, clears temporary tables and excludes public-table
+fallback. pgvector symbols must remain qualified to their installed schema.
+Registry and schema initialization commit together; missing initialized relations
+must fail before ordinary migration. Closing an engine drains its namespace facade,
+not the shared root pool. Read
 `docs/WORKSPACES.md` before changing registry, pack identity, or lease ownership.
 Never evict an engine with live leases or lease operations; cancelled opens and
 closes must settle ownership. A missing initialized database or mismatched pack
 identity must fail explicitly. Registry names/IDs are plaintext metadata. This
-does not implement PostgreSQL routing, hosted grants, or malicious-local-code
-isolation. Normal unbound engine/CLI access remains trusted operator access.
+does not implement hosted grants or malicious-local-code isolation. Normal unbound engine/CLI access remains trusted operator access.
 
 - **DuckDB (default)** — local-first; no `database_url` set.
 - Optional `duckdb_threads` sets workers when a local database opens; `None`

@@ -34,6 +34,9 @@ class TracedPool:
         async with self.pool.acquire() as connection:
             parent = self
             class Connection:
+                def __getattr__(self, name):
+                    return getattr(connection, name)
+
                 async def fetch(self, query, *args):
                     parent.query = (query, args)
                     return await connection.fetch(query, *args)

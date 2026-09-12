@@ -1,4 +1,4 @@
-"""Bounded, identity-checked local namespaces for trusted Python applications."""
+"""Bounded, identity-checked namespaces for trusted Python applications."""
 
 from __future__ import annotations
 
@@ -125,12 +125,15 @@ class MemoryWorkspace:
 
     def __init__(self, directory: str | Path, *, config: PRMEConfig | None = None,
                  embedding_provider: EmbeddingProvider | None = None, max_open: int = 4):
-        if type(max_open) is not int or max_open < 1:
-            raise ValueError("max_open must be a positive integer")
         self._config = (config or PRMEConfig()).model_copy(deep=True)
         if self._config.backend != "duckdb" or self._config.namespace_id is not None:
             raise ValueError("Workspace requires local configuration without a preselected namespace_id")
         self._directory = Path(directory).resolve()
+        self._initialize_state(embedding_provider, max_open)
+
+    def _initialize_state(self, embedding_provider, max_open):
+        if type(max_open) is not int or max_open < 1:
+            raise ValueError("max_open must be a positive integer")
         self._provider = (create_embedding_provider(self._config.embedding)
                           if embedding_provider is None else embedding_provider)
         self._max_open = max_open
@@ -149,6 +152,22 @@ class MemoryWorkspace:
                    embedding_provider: EmbeddingProvider | None = None,
                    max_open: int = 4) -> AsyncIterator[MemoryWorkspace]:
         async with cls(directory, config=config, embedding_provider=embedding_provider, max_open=max_open) as workspace:
+            yield workspace
+
+    @classmethod
+    @asynccontextmanager
+    async def open_postgres(cls, config: PRMEConfig, *, name: str = "default",
+                            embedding_provider: EmbeddingProvider | None = None,
+                            max_open: int = 4, min_connections: int = 1,
+                            max_connections: int = 10) -> AsyncIterator[MemoryWorkspace]:
+        """Open named PostgreSQL projects using one bounded connection pool.
+
+        ``name`` identifies a workspace in this database. Project names are
+        scoped by that workspace; both names are application keys, not grants.
+        """
+        async with _PostgresWorkspace(config, name=name, embedding_provider=embedding_provider,
+                                      max_open=max_open, min_connections=min_connections,
+                                      max_connections=max_connections) as workspace:
             yield workspace
 
     def _path(self, relative: str) -> Path:
@@ -204,11 +223,8 @@ class MemoryWorkspace:
         if self._failure is not None:
             raise WorkspaceError("An engine failed to close; close the workspace before reopening") from self._failure
 
-    def _resolve(self, name: str, create: bool) -> NamespaceInfo:
-        if not isinstance(name, str) or not name or name != name.strip() or len(name.encode("utf-8")) > 512:
-            raise ValueError("Namespace name must be 1–512 UTF-8 bytes without surrounding whitespace")
-        if any(ord(char) < 32 or ord(char) == 127 for char in name):
-            raise ValueError("Namespace name must not contain control characters")
+    async def _resolve(self, name: str, create: bool) -> NamespaceInfo:
+        _validate_name(name)
         row = self._registry.execute("SELECT id FROM namespaces WHERE name = ?", [name]).fetchone()
         if row is None:
             if not create:
@@ -269,7 +285,7 @@ class MemoryWorkspace:
         assert owner is not None
         async with self._condition:
             self._check()
-            namespace = self._resolve(name, create)
+            namespace = await self._resolve(name, create)
             while namespace.id not in self._entries:
                 self._check()
                 if len(self._entries) < self._max_open:
@@ -341,8 +357,90 @@ class MemoryWorkspace:
                     errors.append(self._failure)
             finally:
                 self._entries.clear()
-                self._registry.close()
-                self._lock.release()
-                self._closed = True
+                try:
+                    await self._close_storage()
+                finally:
+                    self._closed = True
         if errors:
             raise ExceptionGroup("Workspace engine cleanup failed", errors)
+
+
+    async def _close_storage(self):
+        self._registry.close()
+        self._lock.release()
+
+
+def _validate_name(name: str):
+    if not isinstance(name, str) or not name or name != name.strip() or len(name.encode("utf-8")) > 512:
+        raise ValueError("Namespace name must be 1–512 UTF-8 bytes without surrounding whitespace")
+    if any(ord(char) < 32 or ord(char) == 127 for char in name):
+        raise ValueError("Namespace name must not contain control characters")
+
+
+class _PostgresWorkspace(MemoryWorkspace):
+    """PostgreSQL storage hooks using the same lease/cache lifecycle as local packs."""
+
+    def __init__(self, config, *, name, embedding_provider, max_open, min_connections, max_connections):
+        self._config = config.model_copy(deep=True)
+        if self._config.backend != "postgres" or self._config.namespace_id is not None:
+            raise ValueError("PostgreSQL workspace requires database_url without a preselected namespace_id")
+        if self._config.encryption_enabled:
+            raise ValueError("Pack encryption is local-only; configure PostgreSQL transport and storage encryption separately")
+        for value in (min_connections, max_connections):
+            if type(value) is not int or value < 1:
+                raise ValueError("Connection limits must be positive integers")
+        if min_connections > max_connections:
+            raise ValueError("min_connections must not exceed max_connections")
+        _validate_name(name)
+        self._name = name
+        self._min_connections = min_connections
+        self._max_connections = max_connections
+        self._initialize_state(embedding_provider, max_open)
+        from prme.storage.embedding import validate_embedding_provider
+        model, _, dimension = validate_embedding_provider(self._provider)
+        self._config = self._config.model_copy(update={"embedding": self._config.embedding.model_copy(update={
+            "provider": "custom", "model_name": model, "dimension": dimension, "api_key": None,
+        })}, deep=True)
+
+    async def __aenter__(self) -> MemoryWorkspace:
+        if self._started or self._closed:
+            raise WorkspaceError("Workspace instances cannot be reopened")
+        # Settle acquisition even if the context opener is cancelled. If no
+        # context is delivered, close the acquired root pool before unwinding.
+        try:
+            await run_async_to_completion(self._start())
+        except BaseException:
+            if hasattr(self, "_pool"):
+                await run_async_to_completion(self._pool.close())
+            self._closed = True
+            raise
+        return self
+
+    async def _start(self):
+        from prme.storage.pg.pool import create_pool
+        from prme.storage.pg.workspace_catalog import WorkspaceCatalog
+        assert self._config.database_url is not None
+        self._pool = await create_pool(self._config.database_url.get_secret_value(),
+                                       min_size=self._min_connections, max_size=self._max_connections)
+        self._catalog = WorkspaceCatalog(self._pool, self._name)
+        await self._catalog.initialize()
+        self._loop = asyncio.get_running_loop()
+        self._started = True
+
+    async def _resolve(self, name: str, create: bool) -> NamespaceInfo:
+        _validate_name(name)
+        return NamespaceInfo(name, await self._catalog.resolve(name, create=create))
+
+    async def list_namespaces(self) -> list[NamespaceInfo]:
+        self._check()
+        return [NamespaceInfo(name, identifier) for name, identifier in await self._catalog.list_namespaces()]
+
+    async def _publish_open(self, namespace: NamespaceInfo):
+        pool = await self._catalog.prepare(namespace.name, namespace.id, embedding_dim=self._config.embedding.dimension)
+        config = self._config.model_copy(update={"namespace_id": namespace.id}, deep=True)
+        engine = await MemoryEngine._create_postgres(config, embedding_provider=self._provider, namespace_pool=pool)
+        self._entries[namespace.id] = _Entry(engine)
+        self._condition.notify_all()
+
+    async def _close_storage(self):
+        await self._pool.close()

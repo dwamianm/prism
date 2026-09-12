@@ -199,6 +199,8 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
     plan = ProfilePublication.model_validate_json(plan.model_dump_json())
     node, embedding = plan.node, plan.embedding
     async with store._pool.acquire() as conn, conn.transaction():
+        from prme.storage.pg.vector_sql import resolve_vector_sql
+        vector_sql = await resolve_vector_sql(conn)
         await conn.execute(
             "INSERT INTO profile_publication_heads VALUES ($1, 0) ON CONFLICT DO NOTHING",
             plan.key,
@@ -235,7 +237,7 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
         _validate(plan, current, [str(row["id"]) for row in rows])
         await store._create_node_on_connection(conn, node)
         await conn.execute(
-            "UPDATE nodes SET embedding = $1::vector, embedding_model = $2, embedding_version = $3 WHERE id = $4",
+            f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
             "[" + ",".join(str(v) for v in embedding.values) + "]",
             embedding.model,
             embedding.version,

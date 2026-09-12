@@ -6,9 +6,8 @@ different owner's closer vectors cannot consume an approximate candidate budget.
 Approximate search remains an explicit opt-in; HNSW filters after its index scan
 and can return fewer eligible neighbors than requested.
 
-Non-node content (events indexed during ingestion) is stored in the
-``lexical_documents`` table with a separate embedding column if needed,
-but the primary path is node-level embeddings.
+Only existing node rows receive embeddings; indexing an unknown node logs a
+debug message and does not create a fallback vector record.
 """
 
 from __future__ import annotations
@@ -17,6 +16,8 @@ import logging
 from datetime import datetime
 
 import asyncpg
+
+from prme.storage.pg.vector_sql import VectorSQL, resolve_vector_sql
 
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
 
@@ -36,10 +37,18 @@ class PgVectorIndex:
         embedding_provider: EmbeddingProvider,
         *,
         exact_search: bool = True,
+        vector_sql: VectorSQL | None = None,
     ) -> None:
         self._pool = pool
         self._provider = embedding_provider
         self._exact_search = exact_search
+        self._vector_sql = vector_sql
+
+    async def _sql(self) -> VectorSQL:
+        if self._vector_sql is None:
+            async with self._pool.acquire() as conn:
+                self._vector_sql = await resolve_vector_sql(conn)
+        return self._vector_sql
 
     async def index(self, node_id: str, content: str, user_id: str, *, replace: bool = False) -> int:
         """Embed content and store the vector on the node row.
@@ -52,6 +61,7 @@ class PgVectorIndex:
         Returns:
             0 (no integer key; pgvector uses the node UUID directly).
         """
+        sql = await self._sql()
         embedding = await encode_texts(self._provider, [content])
         vector = embedding[0]
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
@@ -59,7 +69,7 @@ class PgVectorIndex:
         async with self._pool.acquire() as conn:
             # Try to update the node's embedding column first.
             result = await conn.execute(
-                "UPDATE nodes SET embedding = $1::vector, embedding_model = $3, "
+                f"UPDATE nodes SET embedding = $1::{sql.type}, embedding_model = $3, "
                 "embedding_version = $4 WHERE id = $2 AND user_id = $5",
                 vector_str,
                 node_id,
@@ -68,9 +78,8 @@ class PgVectorIndex:
                 user_id,
             )
 
-            # If no row was updated, the node_id might be non-node content
-            # (e.g., event indexed during ingestion). Store in lexical_documents
-            # as a fallback — the vector search will UNION both tables.
+            # Non-node IDs have no vector fallback; raw materialization creates
+            # its durable node before indexing it.
             if result == "UPDATE 0":
                 logger.debug(
                     "Node %s not found for embedding; content may be non-node",
@@ -125,6 +134,7 @@ class PgVectorIndex:
         """
         if k <= 0:
             return []
+        sql = await self._sql()
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
         conditions: list[str] = [
             "user_id = $1",
@@ -160,8 +170,8 @@ class PgVectorIndex:
 
         scored = (
             f"SELECT id::text AS node_id, "
-            f"  (embedding <=> ${idx}::vector) AS distance, "
-            "embedding_model, embedding_version, vector_dims(embedding) AS embedding_dim "
+            f"  (embedding {sql.cosine} ${idx}::{sql.type}) AS distance, "
+            f"embedding_model, embedding_version, {sql.dimensions}(embedding) AS embedding_dim "
             f"FROM nodes "
             f"WHERE {where} "
         )
@@ -174,7 +184,7 @@ class PgVectorIndex:
                      "SELECT * FROM eligible WHERE distance < 'Infinity'::float8 "
                      f"ORDER BY distance, node_id::uuid LIMIT ${idx + 1}")
         else:
-            query = (scored + f"ORDER BY embedding <=> ${idx}::vector LIMIT ${idx + 1}")
+            query = (scored + f"ORDER BY embedding {sql.cosine} ${idx}::{sql.type} LIMIT ${idx + 1}")
         params.extend([vector_str, k])
 
         async with self._pool.acquire() as conn:

@@ -148,6 +148,8 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: E
 
     plan = DerivationPlan.model_validate_json(plan.model_dump_json())
     async with store._pool.acquire() as conn, conn.transaction():
+        from prme.storage.pg.vector_sql import resolve_vector_sql
+        vector_sql = await resolve_vector_sql(conn)
         # Serialize attempts for this immutable source before checking the
         # prepared plan and receipt. Future replanning must use this same fence.
         await conn.fetchrow("SELECT id FROM events WHERE id = $1 FOR UPDATE", str(plan.event_id))
@@ -174,7 +176,7 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: E
         # transaction, using already-computed numerical values.
         for embedding in plan.embeddings:
             await conn.execute(
-                "UPDATE nodes SET embedding = $1::vector, embedding_model = $2, embedding_version = $3 WHERE id = $4",
+                f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
                 "[" + ",".join(str(value) for value in embedding.values) + "]",
                 embedding.model, embedding.version, str(embedding.node_id),
             )

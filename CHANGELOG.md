@@ -11,8 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `MemoryWorkspace` and lease-scoped `NamespaceMemory` for named local projects,
   with stable pack identity, bounded idle-engine eviction, shared embeddings,
-  process ownership and cancellation-safe lease cleanup. PostgreSQL routing and
-  hosted namespace grants are not yet implemented.
+  process ownership and cancellation-safe lease cleanup.
+- `MemoryWorkspace.open_postgres()` for named PostgreSQL projects sharing one
+  bounded connection pool. Identity checks and a private-only search path protect
+  routing; registry and schema creation publish atomically. Hosted grants remain
+  separate. pgvector symbols now resolve explicitly even outside `public`.
 
 - Optional `duckdb_threads` / `PRME_DUCKDB_THREADS` control for each open local
   database. The default preserves DuckDB's setting; conflicting concurrent opens

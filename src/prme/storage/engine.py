@@ -450,6 +450,7 @@ class MemoryEngine:
     @classmethod
     async def _create_postgres(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
+        namespace_pool=None,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by PostgreSQL."""
         from prme.storage.pg import (
@@ -465,16 +466,21 @@ class MemoryEngine:
             assert config.database_url is not None
 
             # Create asyncpg pool and initialize schema
-            pool = await create_pool(config.database_url.get_secret_value())
+            pool = namespace_pool if namespace_pool is not None else await create_pool(config.database_url.get_secret_value())
             startup.push_async_callback(pool.close)
-            await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
+            if namespace_pool is None:
+                vector_sql = await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
+            else:
+                if config.namespace_id != namespace_pool.identifier:
+                    raise ValueError("Prepared PostgreSQL namespace does not match engine configuration")
+                vector_sql = namespace_pool.vector_sql
 
             # Create Pg backends
             event_store = PgEventStore(pool)
             graph_store = PgGraphStore(pool)
             if embedding_provider is None:
                 embedding_provider = create_embedding_provider(config.embedding)
-            vector_index = PgVectorIndex(pool, embedding_provider, exact_search=config.vector_exact_search)
+            vector_index = PgVectorIndex(pool, embedding_provider, exact_search=config.vector_exact_search, vector_sql=vector_sql)
             startup.push_async_callback(vector_index.close)
             lexical_index = PgLexicalIndex(pool)
             startup.push_async_callback(lexical_index.close)

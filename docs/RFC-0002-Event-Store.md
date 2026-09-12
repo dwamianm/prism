@@ -47,6 +47,10 @@ must match on later opens, before normal schema/backfill/index startup. Existing
 unbound packs are not silently adopted. The workspace registry records initialized
 projects so a missing database cannot be replaced silently. This identity metadata
 is part of the physical artifact, not a shared-table filter or access grant.
+PostgreSQL workspaces similarly bind schema identity before engine startup and
+publish initial schema/registry state in one transaction. Missing previously
+initialized relations cannot be silently recreated. PostgreSQL backup/restore
+must preserve both the registry and project schemas; see [workspaces](WORKSPACES.md).
 
 ---
 

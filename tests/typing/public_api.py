@@ -35,3 +35,12 @@ def consume(client: MemoryClient) -> None:
 
 def submit_relevance(client: MemoryClient, submission: RelevanceSubmission) -> None:
     assert_type(client.record_relevance(submission, user_id="alice"), RelevanceRecord)
+
+
+async def postgres_workspace_consumer() -> None:
+    from prme import MemoryWorkspace, NamespaceMemory, NamespaceInfo, PRMEConfig
+    async with MemoryWorkspace.open_postgres(PRMEConfig(), name="app", max_connections=3) as workspace:
+        assert_type(await workspace.list_namespaces(), list[NamespaceInfo])
+        async with workspace.namespace("project") as memory:
+            assert_type(memory, NamespaceMemory)
+            assert_type(await memory.retrieve("query", user_id="alice"), RetrievalResponse)

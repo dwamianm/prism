@@ -308,7 +308,8 @@ class PRMEConfig(_ProjectSettings):
     namespace_id: UUID | None = Field(
         default=None,
         description="Expected physical local-pack identity. New packs bind this ID; existing packs "
-                    "must already match. This does not filter shared tables or grant access.",
+                    "must already match. PostgreSQL workspaces set their bound identity internally. "
+                    "This does not filter shared tables or grant access.",
     )
     db_path: str = Field(
         default="./memory.duckdb", description="Path to DuckDB database file"
