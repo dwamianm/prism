@@ -165,6 +165,29 @@ result = await engine.process_pending(user_id="alice")
 status = await engine.processing_status(event_id, user_id="alice")
 ```
 
+For imported conversations, `ingest()` accepts a timezone-aware `event_time`:
+
+```python
+from datetime import datetime
+
+with MemoryClient("./memories") as memory:
+    event_id = memory.ingest(
+        "Alice started using Rust yesterday.",
+        user_id="alice",
+        event_time=datetime.fromisoformat("2024-03-10T01:30:00-06:00"),
+        session_id="imported-conversation",
+        metadata={"source": "chat-export"},
+    )
+```
+
+Relative dates in extracted facts use the source clock, while the immutable
+receipt retains the actual ingestion timestamp. `MemoryEngine.ingest`, HTTP
+`/v1/ingest` and MCP `memory_ingest` accept the same source time. Python batch
+ingestion accepts an `event_time` datetime on each message; messages without it
+use ingestion time. Batch ingestion admits messages sequentially and is not an
+all-or-nothing transaction. Dates without a timezone are rejected before that
+message is admitted. This does not rewrite already journaled extraction plans.
+
 Deferred raw events survive restart. LLM `ingest()` also queues original-source
 indexing atomically with its event, so extraction failure cannot make that source
 unsearchable after restart. For these ingestion paths, processing status acknowledges raw NOTE indexing;

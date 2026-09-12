@@ -30,6 +30,7 @@ from prme.ingestion.errors import ExtractionError, MaterializationError, extract
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import validate_grounding
 from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.temporal import validate_source_time
 from prme.ingestion.supersedence import SupersedenceDetector
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
@@ -127,6 +128,7 @@ class IngestionPipeline:
         role: str = "user",
         session_id: str | None = None,
         metadata: dict | None = None,
+        event_time: datetime | None = None,
         wait_for_extraction: bool = False,
         scope: Scope = Scope.PERSONAL,
     ) -> str:
@@ -145,12 +147,15 @@ class IngestionPipeline:
             role: Message role ('user', 'assistant', or 'system').
             session_id: Optional session identifier.
             metadata: Optional structured metadata.
+            event_time: Timezone-aware source time; omitted uses ingestion time.
             wait_for_extraction: If True, block until extraction and
                 materialization complete. Defaults to False (async).
 
         Returns:
             String UUID of the persisted event.
         """
+        validate_source_time(event_time)
+
         # --- Phase 1: Persist event immediately ---
         event = Event(
             content=content,
@@ -158,6 +163,7 @@ class IngestionPipeline:
             session_id=session_id,
             role=role,
             metadata=metadata,
+            event_time=event_time,
             scope=scope,
         )
         event_id = await self._write_queue.submit(
@@ -202,7 +208,7 @@ class IngestionPipeline:
 
         Processes messages in order to preserve conversation history
         sequencing. Each message dict must have 'content' and 'role'
-        keys, with optional 'metadata'.
+        keys, with optional 'metadata' and timezone-aware 'event_time'.
 
         Args:
             messages: List of message dicts with 'content' and 'role'.
@@ -222,6 +228,7 @@ class IngestionPipeline:
                 role=msg["role"],
                 session_id=session_id,
                 metadata=msg.get("metadata"),
+                event_time=msg.get("event_time"),
                 wait_for_extraction=wait_for_extraction,
                 scope=scope,
             )
@@ -468,7 +475,7 @@ class IngestionPipeline:
             fact_scope = scope
 
             # Resolve temporal reference
-            resolved_date = self._resolve_temporal(fact.temporal_ref, reference_time=event.timestamp)
+            resolved_date = self._resolve_temporal(fact.temporal_ref, reference_time=event.event_time or event.timestamp)
 
             # Determine node type from fact_type
             node_type = _FACT_TYPE_TO_NODE_TYPE.get(

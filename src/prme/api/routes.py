@@ -220,7 +220,7 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSON
         "role": body.role,
         "wait_for_extraction": body.wait_for_extraction,
     }
-    for name in ("scope", "session_id", "metadata"):
+    for name in ("scope", "session_id", "metadata", "event_time"):
         value = getattr(body, name)
         if value is not None:
             kwargs[name] = value

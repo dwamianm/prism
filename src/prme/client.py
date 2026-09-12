@@ -245,15 +245,19 @@ class MemoryClient:
         user_id: str,
         role: str = "user",
         session_id: str | None = None,
+        metadata: dict | None = None,
+        event_time: datetime | None = None,
         scope: Scope = Scope.PERSONAL,
     ) -> str:
-        """Ingest content with LLM extraction. Returns event UUID."""
+        """Ingest with extraction; event_time is the timezone-aware source clock."""
         return self._run(
             self._engine.ingest(
                 content,
                 user_id=user_id,
                 role=role,
                 session_id=session_id,
+                metadata=metadata,
+                event_time=event_time,
                 wait_for_extraction=True,
                 scope=scope,
             )

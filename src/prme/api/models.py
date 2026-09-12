@@ -80,6 +80,8 @@ class IngestRequest(BaseModel):
     role: str = Field(default="user", description="Message role")
     session_id: str | None = None
     metadata: dict[str, Any] | None = None
+    event_time: AwareDatetime | None = Field(default=None,
+        description="Source time with timezone; anchors relative dates during extraction")
     wait_for_extraction: bool = Field(default=False, strict=True,
         description="Wait for extraction; failures retain the source and return its recovery receipt")
     scope: Scope | None = Field(

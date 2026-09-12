@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import AwareDatetime
 
 from prme import __version__
 from prme.config import PRMEConfig
@@ -257,16 +258,22 @@ async def memory_ingest(
     role: str = "user",
     scope: str = "personal",
     ctx: Context = None,
+    session_id: Optional[str] = None,
+    metadata: Optional[dict[str, Any]] = None,
+    event_time: Optional[AwareDatetime] = None,
 ) -> str:
     """Ingest content with LLM-powered extraction.
 
     Processes content through the full LLM extraction pipeline to
     automatically identify entities, facts, relationships, preferences,
-    and decisions. Requires an LLM API key (OpenAI, Anthropic, or Ollama).
+    and decisions. Requires a configured extraction provider.
 
     Args:
         content: The text content to ingest (e.g. a conversation message).
         user_id: User who owns this memory.
+        session_id: Optional source session identifier.
+        metadata: Optional source metadata.
+        event_time: Original source time with timezone; anchors relative dates.
         role: Role of the speaker (user or assistant). Default: user.
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
     """
@@ -287,6 +294,9 @@ async def memory_ingest(
             user_id=user_id,
             role=role,
             scope=sc,
+            session_id=session_id,
+            metadata=metadata,
+            event_time=event_time,
         )
         return json.dumps({"event_id": event_id})
     except Exception as e:

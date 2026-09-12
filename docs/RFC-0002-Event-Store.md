@@ -47,6 +47,18 @@ not LLM derivation completion. Model summaries cannot overwrite source indexes.
 Events are immutable, so the API's inherited `updated_at` equals `created_at`
 rather than the time a row happened to be read.
 
+### Historical source clocks
+
+LLM ingestion accepts an explicit timezone-aware `event_time` through the engine,
+synchronous client, HTTP and MCP. Batch messages can supply individual clocks.
+`timestamp` continues to record admission time. Relative temporal references in
+new derivation plans use `event_time` when provided and otherwise `timestamp`.
+Raw NOTE recovery retains the saved source clock, and extracted claims without a
+resolved temporal reference inherit it. Explicit older-effective replacements
+remain historical rather than retiring later facts. Existing saved plans retain
+their original timestamps on retry; this is not a retroactive temporal migration.
+Timezone-free new imports are rejected; missing source time is not guessed.
+
 ### Direct typed storage recovery
 
 Content hashing covers the exact source string, including empty text and

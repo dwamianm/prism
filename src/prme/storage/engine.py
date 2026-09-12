@@ -1089,6 +1089,7 @@ class MemoryEngine:
         role: str = "user",
         session_id: str | None = None,
         metadata: dict | None = None,
+        event_time: datetime | None = None,
         wait_for_extraction: bool = False,
         scope: Scope = Scope.PERSONAL,
     ) -> str:
@@ -1107,11 +1108,16 @@ class MemoryEngine:
             role: Message role ('user', 'assistant', or 'system').
             session_id: Optional session identifier.
             metadata: Optional structured metadata.
+            event_time: Timezone-aware source time. Relative dates in extracted
+                facts use this clock; omitted uses ingestion time.
             wait_for_extraction: If True, block until extraction completes.
 
         Returns:
             String UUID of the persisted event.
         """
+        from prme.ingestion.temporal import validate_source_time
+
+        validate_source_time(event_time)
         if self._pipeline is None:
             event_id = await self.store(
                 content,
@@ -1120,6 +1126,7 @@ class MemoryEngine:
                 role=role,
                 scope=scope,
                 metadata=metadata,
+                event_time=event_time,
             )
         else:
             event_id = await self._pipeline.ingest(
@@ -1128,6 +1135,7 @@ class MemoryEngine:
                 role=role,
                 session_id=session_id,
                 metadata=metadata,
+                event_time=event_time,
                 wait_for_extraction=wait_for_extraction,
                 scope=scope,
             )
@@ -1153,7 +1161,7 @@ class MemoryEngine:
 
         Delegates to the IngestionPipeline for sequential batch
         processing. Each message dict must have 'content' and 'role'
-        keys, with optional 'metadata'.
+        keys, with optional 'metadata' and timezone-aware 'event_time'.
 
         If no pipeline is configured, falls back to sequential store().
 
@@ -1170,13 +1178,14 @@ class MemoryEngine:
         if self._pipeline is None:
             event_ids: list[str] = []
             for msg in messages:
-                eid = await self.store(
+                eid = await self.ingest(
                     msg["content"],
                     user_id=user_id,
                     session_id=session_id,
                     role=msg["role"],
                     scope=scope,
                     metadata=msg.get("metadata"),
+                    event_time=msg.get("event_time"),
                 )
                 event_ids.append(eid)
             return event_ids

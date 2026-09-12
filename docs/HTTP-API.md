@@ -47,11 +47,15 @@ the original source, or `/nodes` below that event to inspect its derived nodes.
 ## Extract memory from a message
 
 `POST /v1/ingest` accepts `content`, `role`, `user_id`, `session_id`, `metadata`,
-`scope` and `wait_for_extraction`. Extraction is asynchronous by default. Set
+`scope`, `event_time` and `wait_for_extraction`. Extraction is asynchronous by default. Set
 `wait_for_extraction: true` to wait for the configured extraction pipeline.
 Inspect saved extraction work with `GET /v1/events/{event_id}/extraction-status`.
-This endpoint currently records ingestion time and does not support an
-`event_time` override.
+For historical messages, provide `event_time` with a timezone offset, such as
+`2024-03-10T01:30:00-06:00`. A phrase such as “yesterday” is resolved relative to
+that source time. The immutable ingestion timestamp still records when PRME
+received the message. Omit `event_time` to use ingestion time as the relative-date
+anchor. This does not change previously saved extraction plans or infer an
+unknown source date.
 
 Both write endpoints reject unknown fields with HTTP 422. Earlier HTTP versions
 silently discarded extra fields; clients relying on that behavior must correct
