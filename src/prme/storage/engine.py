@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+from contextlib import AsyncExitStack
 import logging
 import warnings
 from collections.abc import AsyncIterator
@@ -59,6 +60,7 @@ from prme.types import (
 
 if TYPE_CHECKING:
     import asyncpg
+    from prme.storage.encryption import EncryptionProvider
 
     from prme.ingestion.pipeline import IngestionPipeline
     from prme.organizer.models import OrganizeResult
@@ -119,7 +121,6 @@ class MemoryEngine:
         )
 
         # Encryption at rest (issue #14)
-        from prme.storage.encryption import EncryptionProvider
         self._encryption_provider: EncryptionProvider | None = None
         # Best-effort atexit re-encryption guard (issue #37). Registered in
         # the create() classmethods once an encryption provider exists.
@@ -197,162 +198,195 @@ class MemoryEngine:
         """Create a MemoryEngine backed by DuckDB (file-based)."""
         from pathlib import Path
 
-        from prme.storage.encryption import EncryptionProvider
+        from prme.storage.encryption import EncryptionError, EncryptionProvider
 
-        # --- Decrypt memory pack if encryption is enabled (issue #14) ---
-        encryption_provider: EncryptionProvider | None = None
-        if (
-            config.encryption_enabled
-            and config.encryption_key
-            and config.encryption_key.get_secret_value()
-        ):
-            encryption_provider = EncryptionProvider(
-                config.encryption_key.get_secret_value()
+        async with AsyncExitStack() as startup:
+            encryption_provider: EncryptionProvider | None = None
+            needs_encryption = False
+
+            def restore_encryption() -> None:
+                if not needs_encryption or encryption_provider is None:
+                    return
+                try:
+                    cls._encrypt_pack_files(config, encryption_provider)
+                except Exception as exc:
+                    raise EncryptionError(
+                        "Failed to re-encrypt memory pack after startup failure; "
+                        "the pack may remain plaintext."
+                    ) from exc
+
+            # Registered first, so encryption runs after all handles close.
+            # A wrong key before any successful decryption leaves files alone.
+            startup.callback(restore_encryption)
+            # --- Decrypt memory pack if encryption is enabled (issue #14) ---
+            if (
+                config.encryption_enabled
+                and config.encryption_key
+                and config.encryption_key.get_secret_value()
+            ):
+                encryption_provider = EncryptionProvider(
+                    config.encryption_key.get_secret_value()
+                )
+
+                # Decrypt DuckDB file if encrypted version exists
+                db_enc = Path(config.db_path + ".enc")
+                if db_enc.exists():
+                    encryption_provider.decrypt_file(db_enc)
+                    needs_encryption = True
+                    logger.info("Decrypted DuckDB file: %s", db_enc)
+
+                # Decrypt vector index file if encrypted version exists
+                vec_enc = Path(config.vector_path + ".enc")
+                if vec_enc.exists():
+                    encryption_provider.decrypt_file(vec_enc)
+                    needs_encryption = True
+                    logger.info("Decrypted vector index: %s", vec_enc)
+
+                # Decrypt lexical index directory if it has encrypted files
+                lexical_dir = Path(config.lexical_path)
+                if lexical_dir.is_dir():
+                    enc_files = list(lexical_dir.glob("*.enc"))
+                    if enc_files:
+                        for encrypted_path in sorted(enc_files):
+                            encryption_provider.decrypt_file(encrypted_path)
+                            needs_encryption = True
+                        logger.info(
+                            "Decrypted %d lexical index files", len(enc_files)
+                        )
+
+            needs_encryption = encryption_provider is not None
+
+            # Open DuckDB connection
+            conn = duckdb.connect(config.db_path)
+            startup.callback(conn.close)
+
+            # Initialize schema (tables, indexes, DuckPGQ attempt)
+            initialize_database(conn)
+
+            # Create shared connection lock for DuckDB thread-safety.
+            conn_lock = asyncio.Lock()
+
+            # Create backend stores
+            event_store = EventStore(conn, conn_lock)
+            graph_store = DuckPGQGraphStore(conn, conn_lock)
+
+            # Create embedding provider via factory
+            embedding_provider = create_embedding_provider(config.embedding)
+
+            # Create vector index
+            vector_index = VectorIndex(
+                conn,
+                config.vector_path,
+                embedding_provider,
+                conn_lock,
+                save_interval=config.vector_save_interval,
+                exact_search=config.vector_exact_search,
             )
 
-            # Decrypt DuckDB file if encrypted version exists
-            db_enc = Path(config.db_path + ".enc")
-            if db_enc.exists():
-                encryption_provider.decrypt_file(db_enc)
-                logger.info("Decrypted DuckDB file: %s", db_enc)
+            startup.push_async_callback(vector_index.close)
 
-            # Decrypt vector index file if encrypted version exists
-            vec_enc = Path(config.vector_path + ".enc")
-            if vec_enc.exists():
-                encryption_provider.decrypt_file(vec_enc)
-                logger.info("Decrypted vector index: %s", vec_enc)
-
-            # Decrypt lexical index directory if it has encrypted files
-            lexical_dir = Path(config.lexical_path)
-            if lexical_dir.is_dir():
-                enc_files = list(lexical_dir.glob("*.enc"))
-                if enc_files:
-                    encryption_provider.decrypt_directory(lexical_dir)
-                    logger.info(
-                        "Decrypted %d lexical index files", len(enc_files)
-                    )
-
-        # Open DuckDB connection
-        conn = duckdb.connect(config.db_path)
-
-        # Initialize schema (tables, indexes, DuckPGQ attempt)
-        initialize_database(conn)
-
-        # Create shared connection lock for DuckDB thread-safety.
-        conn_lock = asyncio.Lock()
-
-        # Create backend stores
-        event_store = EventStore(conn, conn_lock)
-        graph_store = DuckPGQGraphStore(conn, conn_lock)
-
-        # Create embedding provider via factory
-        embedding_provider = create_embedding_provider(config.embedding)
-
-        # Create vector index
-        vector_index = VectorIndex(
-            conn,
-            config.vector_path,
-            embedding_provider,
-            conn_lock,
-            save_interval=config.vector_save_interval,
-            exact_search=config.vector_exact_search,
-        )
-
-        # Create lexical index
-        lexical_index = LexicalIndex(
-            config.lexical_path,
-            commit_interval=config.lexical_commit_interval,
-            commit_max_delay_s=config.lexical_commit_max_delay_s,
-        )
-
-        # Create and start write queue
-        write_queue = WriteQueue(maxsize=config.write_queue_size)
-        await write_queue.start()
-
-        # Lazy import to avoid circular import
-        from prme.ingestion.extraction import create_extraction_provider
-        from prme.ingestion.graph_writer import WriteQueueGraphWriter
-        from prme.ingestion.pipeline import IngestionPipeline
-
-        extraction_provider = create_extraction_provider(config.extraction)
-        graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
-
-        from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX as _default_matrix
-
-        _active_confidence_matrix = _default_matrix.with_overrides(
-            config.confidence_overrides
-        )
-
-        pipeline = IngestionPipeline(
-            event_store=event_store,
-            graph_store=graph_store,
-            vector_index=vector_index,
-            lexical_index=lexical_index,
-            extraction_provider=extraction_provider,
-            write_queue=write_queue,
-            graph_writer=graph_writer,
-            confidence_matrix=_active_confidence_matrix,
-            max_concurrent_extractions=config.max_concurrent_extractions,
-        )
-
-        from prme.retrieval.pipeline import RetrievalPipeline
-
-        retrieval_pipeline = RetrievalPipeline(
-            graph_store=graph_store,
-            vector_index=vector_index,
-            lexical_index=lexical_index,
-            conn=conn,
-            conn_lock=conn_lock,
-            scoring_weights=config.scoring,
-            packing_config=config.packing,
-            epistemic_weights=config.epistemic_weights,
-            unverified_confidence_threshold=config.unverified_confidence_threshold,
-            enable_reranker=config.enable_reranker,
-            reranker_model=config.reranker_model,
-            reranker_top_k=config.reranker_top_k,
-            enable_query_reformulation=config.enable_query_reformulation,
-            query_reformulation_count=config.query_reformulation_count,
-            query_reformulation_provider=config.extraction.provider,
-            query_reformulation_model=config.extraction.model,
-            temporal_languages=config.temporal_languages,
-        )
-
-        # Run epistemic backfill migration for existing nodes
-        from prme.epistemic.migration import backfill_epistemic_types
-
-        backfill_count = await backfill_epistemic_types(graph_store)
-        if backfill_count > 0:
-            logger.info(
-                "Backfilled epistemic types for %d existing nodes",
-                backfill_count,
+            # Create lexical index
+            lexical_index = LexicalIndex(
+                config.lexical_path,
+                commit_interval=config.lexical_commit_interval,
+                commit_max_delay_s=config.lexical_commit_max_delay_s,
             )
 
-        logger.debug(
-            "PRMEConfig: scoring=%s, packing_budget=%d, confidence_overrides=%d",
-            config.scoring.version_id,
-            config.packing.token_budget,
-            len(config.confidence_overrides),
-        )
+            startup.push_async_callback(lexical_index.close)
 
-        engine = cls(
-            conn=conn,
-            event_store=event_store,
-            graph_store=graph_store,
-            vector_index=vector_index,
-            lexical_index=lexical_index,
-            write_queue=write_queue,
-            pipeline=pipeline,
-            retrieval_pipeline=retrieval_pipeline,
-            confidence_matrix=_active_confidence_matrix,
-            epistemic_weights=config.epistemic_weights,
-            unverified_confidence_threshold=config.unverified_confidence_threshold,
-            config=config,
-        )
-        engine._encryption_provider = encryption_provider
-        engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
-        engine._register_atexit_encrypt()
-        await engine._materialization_queue.debt()
-        return engine
+            # Create and start write queue
+            write_queue = WriteQueue(maxsize=config.write_queue_size)
+            startup.push_async_callback(write_queue.stop)
+            await write_queue.start()
+
+            # Lazy import to avoid circular import
+            from prme.ingestion.extraction import create_extraction_provider
+            from prme.ingestion.graph_writer import WriteQueueGraphWriter
+            from prme.ingestion.pipeline import IngestionPipeline
+
+            extraction_provider = create_extraction_provider(config.extraction)
+            graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
+
+            from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX as _default_matrix
+
+            _active_confidence_matrix = _default_matrix.with_overrides(
+                config.confidence_overrides
+            )
+
+            pipeline = IngestionPipeline(
+                event_store=event_store,
+                graph_store=graph_store,
+                vector_index=vector_index,
+                lexical_index=lexical_index,
+                extraction_provider=extraction_provider,
+                write_queue=write_queue,
+                graph_writer=graph_writer,
+                confidence_matrix=_active_confidence_matrix,
+                max_concurrent_extractions=config.max_concurrent_extractions,
+            )
+
+            startup.push_async_callback(pipeline.shutdown)
+
+            from prme.retrieval.pipeline import RetrievalPipeline
+
+            retrieval_pipeline = RetrievalPipeline(
+                graph_store=graph_store,
+                vector_index=vector_index,
+                lexical_index=lexical_index,
+                conn=conn,
+                conn_lock=conn_lock,
+                scoring_weights=config.scoring,
+                packing_config=config.packing,
+                epistemic_weights=config.epistemic_weights,
+                unverified_confidence_threshold=config.unverified_confidence_threshold,
+                enable_reranker=config.enable_reranker,
+                reranker_model=config.reranker_model,
+                reranker_top_k=config.reranker_top_k,
+                enable_query_reformulation=config.enable_query_reformulation,
+                query_reformulation_count=config.query_reformulation_count,
+                query_reformulation_provider=config.extraction.provider,
+                query_reformulation_model=config.extraction.model,
+                temporal_languages=config.temporal_languages,
+            )
+
+            # Run epistemic backfill migration for existing nodes
+            from prme.epistemic.migration import backfill_epistemic_types
+
+            backfill_count = await backfill_epistemic_types(graph_store)
+            if backfill_count > 0:
+                logger.info(
+                    "Backfilled epistemic types for %d existing nodes",
+                    backfill_count,
+                )
+
+            logger.debug(
+                "PRMEConfig: scoring=%s, packing_budget=%d, confidence_overrides=%d",
+                config.scoring.version_id,
+                config.packing.token_budget,
+                len(config.confidence_overrides),
+            )
+
+            engine = cls(
+                conn=conn,
+                event_store=event_store,
+                graph_store=graph_store,
+                vector_index=vector_index,
+                lexical_index=lexical_index,
+                write_queue=write_queue,
+                pipeline=pipeline,
+                retrieval_pipeline=retrieval_pipeline,
+                confidence_matrix=_active_confidence_matrix,
+                epistemic_weights=config.epistemic_weights,
+                unverified_confidence_threshold=config.unverified_confidence_threshold,
+                config=config,
+            )
+            engine._encryption_provider = encryption_provider
+            engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
+            engine._register_atexit_encrypt()
+            startup.callback(atexit.unregister, engine._atexit_encrypt)
+            await engine._materialization_queue.debt()
+            startup.pop_all()
+            return engine
 
     @classmethod
     async def _create_postgres(cls, config: PRMEConfig) -> "MemoryEngine":
@@ -366,106 +400,114 @@ class MemoryEngine:
             initialize_pg_database,
         )
 
-        assert config.database_url is not None
+        async with AsyncExitStack() as startup:
+            assert config.database_url is not None
 
-        # Create asyncpg pool and initialize schema
-        pool = await create_pool(config.database_url.get_secret_value())
-        await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
+            # Create asyncpg pool and initialize schema
+            pool = await create_pool(config.database_url.get_secret_value())
+            startup.push_async_callback(pool.close)
+            await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
 
-        # Create Pg backends
-        event_store = PgEventStore(pool)
-        graph_store = PgGraphStore(pool)
-        embedding_provider = create_embedding_provider(config.embedding)
-        vector_index = PgVectorIndex(pool, embedding_provider)
-        lexical_index = PgLexicalIndex(pool)
+            # Create Pg backends
+            event_store = PgEventStore(pool)
+            graph_store = PgGraphStore(pool)
+            embedding_provider = create_embedding_provider(config.embedding)
+            vector_index = PgVectorIndex(pool, embedding_provider)
+            startup.push_async_callback(vector_index.close)
+            lexical_index = PgLexicalIndex(pool)
+            startup.push_async_callback(lexical_index.close)
 
-        # NoOpWriteQueue — PostgreSQL handles multi-writer natively
-        write_queue = NoOpWriteQueue()
-        await write_queue.start()
+            # NoOpWriteQueue — PostgreSQL handles multi-writer natively
+            write_queue = NoOpWriteQueue()
+            startup.push_async_callback(write_queue.stop)
+            await write_queue.start()
 
-        # Lazy imports for ingestion pipeline
-        from prme.ingestion.extraction import create_extraction_provider
-        from prme.ingestion.graph_writer import WriteQueueGraphWriter
-        from prme.ingestion.pipeline import IngestionPipeline
+            # Lazy imports for ingestion pipeline
+            from prme.ingestion.extraction import create_extraction_provider
+            from prme.ingestion.graph_writer import WriteQueueGraphWriter
+            from prme.ingestion.pipeline import IngestionPipeline
 
-        extraction_provider = create_extraction_provider(config.extraction)
-        graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
+            extraction_provider = create_extraction_provider(config.extraction)
+            graph_writer = WriteQueueGraphWriter(graph_store, write_queue)
 
-        from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX as _default_matrix
+            from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX as _default_matrix
 
-        _active_confidence_matrix = _default_matrix.with_overrides(
-            config.confidence_overrides
-        )
-
-        pipeline = IngestionPipeline(
-            event_store=event_store,
-            graph_store=graph_store,
-            vector_index=vector_index,
-            lexical_index=lexical_index,
-            extraction_provider=extraction_provider,
-            write_queue=write_queue,
-            graph_writer=graph_writer,
-            confidence_matrix=_active_confidence_matrix,
-            max_concurrent_extractions=config.max_concurrent_extractions,
-        )
-
-        from prme.retrieval.pipeline import RetrievalPipeline
-
-        retrieval_pipeline = RetrievalPipeline(
-            graph_store=graph_store,
-            vector_index=vector_index,
-            lexical_index=lexical_index,
-            conn=None,
-            conn_lock=None,
-            pool=pool,
-            scoring_weights=config.scoring,
-            packing_config=config.packing,
-            epistemic_weights=config.epistemic_weights,
-            unverified_confidence_threshold=config.unverified_confidence_threshold,
-            enable_reranker=config.enable_reranker,
-            reranker_model=config.reranker_model,
-            reranker_top_k=config.reranker_top_k,
-            enable_query_reformulation=config.enable_query_reformulation,
-            query_reformulation_count=config.query_reformulation_count,
-            query_reformulation_provider=config.extraction.provider,
-            query_reformulation_model=config.extraction.model,
-            temporal_languages=config.temporal_languages,
-        )
-
-        # Run epistemic backfill migration
-        from prme.epistemic.migration import backfill_epistemic_types
-
-        backfill_count = await backfill_epistemic_types(graph_store)
-        if backfill_count > 0:
-            logger.info(
-                "Backfilled epistemic types for %d existing nodes",
-                backfill_count,
+            _active_confidence_matrix = _default_matrix.with_overrides(
+                config.confidence_overrides
             )
 
-        logger.debug(
-            "PRMEConfig[postgres]: scoring=%s, packing_budget=%d",
-            config.scoring.version_id,
-            config.packing.token_budget,
-        )
+            pipeline = IngestionPipeline(
+                event_store=event_store,
+                graph_store=graph_store,
+                vector_index=vector_index,
+                lexical_index=lexical_index,
+                extraction_provider=extraction_provider,
+                write_queue=write_queue,
+                graph_writer=graph_writer,
+                confidence_matrix=_active_confidence_matrix,
+                max_concurrent_extractions=config.max_concurrent_extractions,
+            )
 
-        engine = cls(
-            conn=None,
-            pool=pool,
-            event_store=event_store,
-            graph_store=graph_store,
-            vector_index=vector_index,
-            lexical_index=lexical_index,
-            write_queue=write_queue,
-            pipeline=pipeline,
-            retrieval_pipeline=retrieval_pipeline,
-            confidence_matrix=_active_confidence_matrix,
-            epistemic_weights=config.epistemic_weights,
-            unverified_confidence_threshold=config.unverified_confidence_threshold,
-            config=config,
-        )
-        engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
-        await engine._materialization_queue.debt()
-        return engine
+            startup.push_async_callback(pipeline.shutdown)
+
+            from prme.retrieval.pipeline import RetrievalPipeline
+
+            retrieval_pipeline = RetrievalPipeline(
+                graph_store=graph_store,
+                vector_index=vector_index,
+                lexical_index=lexical_index,
+                conn=None,
+                conn_lock=None,
+                pool=pool,
+                scoring_weights=config.scoring,
+                packing_config=config.packing,
+                epistemic_weights=config.epistemic_weights,
+                unverified_confidence_threshold=config.unverified_confidence_threshold,
+                enable_reranker=config.enable_reranker,
+                reranker_model=config.reranker_model,
+                reranker_top_k=config.reranker_top_k,
+                enable_query_reformulation=config.enable_query_reformulation,
+                query_reformulation_count=config.query_reformulation_count,
+                query_reformulation_provider=config.extraction.provider,
+                query_reformulation_model=config.extraction.model,
+                temporal_languages=config.temporal_languages,
+            )
+
+            # Run epistemic backfill migration
+            from prme.epistemic.migration import backfill_epistemic_types
+
+            backfill_count = await backfill_epistemic_types(graph_store)
+            if backfill_count > 0:
+                logger.info(
+                    "Backfilled epistemic types for %d existing nodes",
+                    backfill_count,
+                )
+
+            logger.debug(
+                "PRMEConfig[postgres]: scoring=%s, packing_budget=%d",
+                config.scoring.version_id,
+                config.packing.token_budget,
+            )
+
+            engine = cls(
+                conn=None,
+                pool=pool,
+                event_store=event_store,
+                graph_store=graph_store,
+                vector_index=vector_index,
+                lexical_index=lexical_index,
+                write_queue=write_queue,
+                pipeline=pipeline,
+                retrieval_pipeline=retrieval_pipeline,
+                confidence_matrix=_active_confidence_matrix,
+                epistemic_weights=config.epistemic_weights,
+                unverified_confidence_threshold=config.unverified_confidence_threshold,
+                config=config,
+            )
+            engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
+            await engine._materialization_queue.debt()
+            startup.pop_all()
+            return engine
 
     # --- Core Operations ---
 
@@ -2413,37 +2455,44 @@ class MemoryEngine:
             )
 
     def _encrypt_memory_pack(self) -> None:
-        """Encrypt all memory pack files after backends are closed.
+        """Encrypt pack files after all storage handles are closed."""
+        assert self._encryption_provider is not None
+        assert self._config is not None
+        self._encrypt_pack_files(self._config, self._encryption_provider)
 
-        Encrypts DuckDB, vector index, and lexical index files.
-        Writes a manifest.json listing encrypted files and metadata.
-        """
+    @staticmethod
+    def _encrypt_pack_files(config: PRMEConfig, provider: EncryptionProvider) -> None:
+        """Shared normal-close and failed-startup encryption path."""
         from pathlib import Path
 
         from prme.storage.encryption import write_manifest
 
-        assert self._encryption_provider is not None
-        assert self._config is not None
-
         encrypted_files: list[Path] = []
 
         # Encrypt DuckDB file
-        db_path = Path(self._config.db_path)
+        db_path = Path(config.db_path)
         if db_path.exists():
-            enc = self._encryption_provider.encrypt_file(db_path)
+            enc = provider.encrypt_file(db_path)
             encrypted_files.append(enc)
 
         # Encrypt vector index file
-        vec_path = Path(self._config.vector_path)
+        vec_path = Path(config.vector_path)
         if vec_path.exists():
-            enc = self._encryption_provider.encrypt_file(vec_path)
+            enc = provider.encrypt_file(vec_path)
             encrypted_files.append(enc)
 
         # Encrypt lexical index directory
-        lex_path = Path(self._config.lexical_path)
+        lex_path = Path(config.lexical_path)
         if lex_path.is_dir():
-            enc_list = self._encryption_provider.encrypt_directory(lex_path)
+            enc_list = provider.encrypt_directory(lex_path)
             encrypted_files.extend(enc_list)
+
+        # A failed open may decrypt only part of an existing pack. Retain
+        # untouched encrypted artifacts in the inventory as well.
+        existing = [Path(config.db_path + ".enc"), Path(config.vector_path + ".enc")]
+        if lex_path.is_dir():
+            existing.extend(lex_path.glob("*.enc"))
+        encrypted_files = sorted(set(encrypted_files) | {p for p in existing if p.is_file()})
 
         # Write manifest
         if encrypted_files:

@@ -248,3 +248,19 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 ---
 
 *End of RFC-0014*
+
+
+## Local startup recovery amendment (2026-09-12)
+
+Engine initialization registers cleanup for each acquired database/pool, index,
+write queue and ingestion pipeline. Failure or cancellation releases those
+resources in reverse order; ownership transfers to the engine only after startup
+finishes. This is resource cleanup, not rollback of committed schema migrations.
+
+If a local encrypted pack was successfully decrypted before startup failed,
+cleanup closes storage handles before restoring encryption. Partial decryption
+preserves untouched encrypted artifacts in the manifest. A wrong key before any
+successful decryption does not modify the pack. Failure to restore ciphertext
+raises `EncryptionError` explicitly; callers must not assume the pack is encrypted
+in that case. Abrupt process termination still bypasses this cleanup; this is not
+crash-proof at-rest encryption while an engine has decrypted files open.
