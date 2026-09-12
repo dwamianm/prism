@@ -172,3 +172,38 @@ reader inputs, raw state and predictions are pinned. This passing calibration
 permits the study; it does not prove general judge reliability. The paired
 judgment run is underway, and no partial outcome metrics are being used to tune
 its prompts or the independent source-retention confirmation.
+
+## Completed paired development judging
+
+The frozen Gemma4 31B run completed all 238 judgments (230 unique model calls)
+with native exit 0 and no failed attempts. The completion manifest preserves
+raw report/state hashes and all paired metrics. Under this local rubric, density
+packing scored 49/119 (41.18%) and score packing 69/119 (57.98%): +16.81 percentage
+points, paired bootstrap 95% interval +6.72 to +26.05 points (2,000 samples,
+seed 42). There were 29 wins, 9 losses and 81 ties. `passed` in the raw report
+means successful workflow completion, not a product acceptance gate.
+
+| Category | Density | Score | Questions |
+| --- | ---: | ---: | ---: |
+| Abstention | 100.0% | 87.5% | 8 |
+| Knowledge update | 55.0% | 60.0% | 20 |
+| Multi-session | 20.0% | 40.0% | 30 |
+| Single-session assistant | 0.0% | 100.0% | 9 |
+| Single-session preference | 28.6% | 42.9% | 7 |
+| Single-session user | 82.4% | 100.0% | 17 |
+| Temporal reasoning | 28.6% | 32.1% | 28 |
+
+The judge agreed with all 23 clear verdicts in the previously completed blinded
+review. Five ambiguous responses remain excluded from that agreement calculation.
+The judge accepted two and rejected three of them, including different verdicts
+on two responses that calculated the 12-minute difference but ultimately refused
+to answer. That inconsistency limits fine-grained interpretation of these scores;
+we retain the frozen verdicts and the ambiguity, without retrospective relabeling.
+This review was by the current Codex session, not independent human annotation.
+
+These are development results from one Qwen3.5 4B reader and one control-selected
+local Gemma judge using a custom category rubric. They are neither the official
+GPT-4o protocol nor a comparative leaderboard result. Shared conversation histories
+also limit query-level confidence intervals. The smaller abstention category lost
+one answer. The 381-question prospective packing confirmation remains running;
+production packing defaults remain unchanged.
