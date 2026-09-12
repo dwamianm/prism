@@ -2,8 +2,8 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The latest frozen full suite at `ef046f9` passed **1,724 tests, 28 skipped**
-with live PostgreSQL (132.67 seconds). A Python 3.13 wheel at `ef046f9` passed
+product. The latest frozen full suite at `4474a7e` passed **1,763 tests, 37 skipped**
+with live PostgreSQL (145.88 seconds). A Python 3.13 wheel at `4474a7e` passed
 installed sync-client, default local embedding, restart, source/provenance,
 selection/budget, HTTP identity/filter and MCP HTTP workflow checks. The older
 `7a1e864` wheel additionally ran real local-model extraction, recorded below.
@@ -112,6 +112,23 @@ interleaved graph writer.
 
 This is not automatic extraction recovery: pending extraction discovery,
 persistent attempts, lease generations and plan revisions remain unimplemented.
+
+The installed Python 3.13 wheel at `4474a7e` passed 52 planning, public-ingestion
+and replacement checks with 8 skips and live PostgreSQL. The planner retains a
+bounded entity scan page rather than every scanned entity; a 600-entity lookup
+test covers that bound on both backends. Its installed client/API workflow also
+passed with real default local embeddings.
+
+[`derivation-ingestion-4474a7e.json`](derivation-ingestion-4474a7e.json) records
+real Ollama `qwen3.5:4b` extraction and BGE-small embeddings through the installed
+wheel. One extraction-provider call and one embedding batch prepared six nodes
+from a synthetic source, including two grounded facts. After an injected failure
+following durable vector staging, the graph had no partial derived nodes.
+Reopening and explicitly retrying reused the exact plan without either provider,
+retrieval found the database fact, and archived completion skipped all staging.
+This is a workflow check, not an accuracy score or scheduling claim. The earlier
+[`31798c5` probe](derivation-ingestion-31798c5.json) is retained with its original
+revision and timing; those elapsed times are not comparative latency measurements.
 
 ## Grounded extraction journal
 

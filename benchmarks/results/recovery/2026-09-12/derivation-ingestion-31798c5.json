@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "source_commit": "31798c5",
+  "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "initial_provider_method_calls": {
+    "extract": 1,
+    "embed": 1,
+    "stage": 1
+  },
+  "facts": 2,
+  "prepared_nodes": 6,
+  "elapsed_seconds": 19.096,
+  "checks": [
+    "installed wheel with real local extraction and embeddings",
+    "journaled plan before injected staging failure",
+    "no partial graph publication",
+    "restart replays exact plan without either provider",
+    "scoped receipt",
+    "retrieval finds grounded database fact",
+    "archived completion skips staging"
+  ],
+  "limits": "One synthetic workflow; explicit recovery, not automatic scheduling or extraction accuracy."
+}
