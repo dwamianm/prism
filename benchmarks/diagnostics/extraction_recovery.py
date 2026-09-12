@@ -1,4 +1,4 @@
-"""Exercise real local extraction, an indexing fault, and journal reuse.
+"""Exercise durable extraction recovery through public processing APIs.
 
 Uses a temporary pack and synthetic source. Requires Ollama plus the selected
 model. This is a workflow check, not an extraction accuracy benchmark.
@@ -19,91 +19,95 @@ from prme.ingestion.pipeline import IngestionPipeline
 
 
 async def run(args):
-    with tempfile.TemporaryDirectory(prefix="prme-live-journal-") as directory:
+    calls = {'extract': 0, 'embed': 0, 'stage': 0}
+    started = time.perf_counter()
+    with tempfile.TemporaryDirectory(prefix='prme-live-derivation-') as directory:
         root = Path(directory)
-        (root / "lexical").mkdir()
+        (root / 'lexical').mkdir()
         config = PRMEConfig(
-            database_url=None, encryption_enabled=False,
-            db_path=str(root / "memory.duckdb"), vector_path=str(root / "vectors.usearch"),
-            lexical_path=str(root / "lexical"), organizer={"opportunistic_enabled": False},
-            embedding={"provider": "fastembed", "model_name": "BAAI/bge-small-en-v1.5", "dimension": 384, "api_key": None},
-            extraction={"provider": "ollama", "model": args.model, "base_url": args.base_url,
-                        "api_key": None, "timeout": args.timeout, "max_retries": 1},
+            database_url=None, encryption_enabled=False, db_path=str(root / 'memory.duckdb'),
+            vector_path=str(root / 'vectors.usearch'), lexical_path=str(root / 'lexical'),
+            organizer={'opportunistic_enabled': False},
+            embedding={'provider': 'fastembed', 'model_name': 'BAAI/bge-small-en-v1.5', 'dimension': 384, 'api_key': None},
+            extraction={'provider': 'ollama', 'model': args.model, 'base_url': args.base_url,
+                        'api_key': None, 'timeout': args.timeout, 'max_retries': 1},
         )
-        started = time.perf_counter()
-        calls = writes = 0
-        calls_at_fault = None
-        provider_errors = []
         async with MemoryEngine.open(config) as engine:
             pipeline = engine._pipeline
-            pipeline._retry_delays = (0, 0, 0)
-            extract = pipeline._extraction_provider.extract
-            index = engine._vector_index.index
-
-            async def counted(*a, **kw):
-                nonlocal calls
-                calls += 1
-                try:
-                    return await extract(*a, **kw)
-                except Exception as exc:
-                    provider_errors.append(type(exc).__name__)
-                    raise
-
-            async def failed_once(*a, **kw):
-                nonlocal writes, calls_at_fault
-                writes += 1
-                if writes == 1:
-                    calls_at_fault = calls
-                    raise RuntimeError("injected downstream index failure")
-                return await index(*a, **kw)
-
-            pipeline._extraction_provider.extract = counted
-            engine._vector_index.index = failed_once
+            pipeline._retry_delays = ()
+            extract, embed, stage = pipeline._extraction_provider.extract, engine._vector_index._provider.embed, engine._vector_index.stage
+            async def counted_extract(*args, **kwargs):
+                calls['extract'] += 1
+                return await extract(*args, **kwargs)
+            async def counted_embed(*args, **kwargs):
+                calls['embed'] += 1
+                return await embed(*args, **kwargs)
+            async def failed_stage(*args, **kwargs):
+                calls['stage'] += 1
+                await stage(*args, **kwargs)
+                raise RuntimeError('injected failure after durable vector staging')
+            pipeline._extraction_provider.extract = counted_extract
+            engine._vector_index._provider.embed = counted_embed
+            engine._vector_index.stage = failed_stage
             try:
-                event_id = await engine.ingest(
-                    "The Aster service uses PostgreSQL. Production credentials must never be used in staging.",
-                    user_id="alice", wait_for_extraction=True,
-                )
+                await engine.ingest('The Aster service uses PostgreSQL. Production credentials must never be used in staging.',
+                                    user_id='alice', wait_for_extraction=True)
             except ExtractionError as failure:
                 event_id = failure.event_id
-
-            async def wait_retries():
-                while pipeline._retry_tasks:
-                    await asyncio.gather(*list(pipeline._retry_tasks.values()))
-                    await asyncio.sleep(0)
-
-            await asyncio.wait_for(wait_retries(), args.timeout + 30)
-            saved = await engine.get_extraction(event_id, user_id="alice")
-            assert saved is not None and saved.result["facts"]
-            # Earlier provider/schema failures may legitimately use retries.
-            # The storage recovery contract starts at the journal boundary.
-            assert calls == calls_at_fault and writes > 1
-            assert await engine.get_event_nodes(event_id, user_id="alice")
-            first = saved.model_dump(mode="json")
+            else:
+                raise AssertionError('Expected injected staging failure')
+            plan = await engine._event_store.get_derivation_plan(event_id, user_id='alice')
+            saved = await engine.get_extraction(event_id, user_id='alice')
+            assert plan and saved and saved.result['facts']
+            assert calls == {'extract': 1, 'embed': 1, 'stage': 1}, calls
+            assert await engine.get_event_nodes(event_id, user_id='alice') == []
+            assert await engine._event_store.get_derivation_receipt(event_id, user_id='alice') is None
+            failed = await engine.extraction_status(event_id, user_id='alice')
+            assert failed.status == 'failed' and failed.phase == 'publication' and failed.attempts == 1
         async with MemoryEngine.open(config) as engine:
-            saved = await engine.get_extraction(event_id, user_id="alice")
-            assert saved.model_dump(mode="json") == first
-            source = await engine.get_event(event_id, user_id="alice")
-
-            async def forbidden(*a, **kw):
-                raise AssertionError("restart must reuse saved extraction")
-
+            async def forbidden(*args, **kwargs):
+                raise AssertionError('Recovery must not call either provider')
             engine._pipeline._extraction_provider.extract = forbidden
-            cached = await engine._pipeline._extract_or_load(source)
-            assert cached.model_dump(mode="json") == saved.result
-            assert await engine.get_extraction(event_id, user_id="bob") is None
-        return {
-            "passed": True,
-            "pipeline_sha256": hashlib.sha256(Path(inspect.getfile(IngestionPipeline)).read_bytes()).hexdigest(),
-            "provider": saved.provider, "model": saved.model, "provider_calls": calls,
-            "provider_calls_at_index_fault": calls_at_fault,
-            "provider_errors": provider_errors,
-            "index_attempts": writes, "facts": len(saved.result["facts"]),
-            "elapsed_seconds": time.perf_counter() - started,
-            "checks": ["real local structured extraction", "journal before injected index failure",
-                       "retry without repeated provider invocation", "identical extraction after restart", "scoped inspection"],
-            "limits": "One synthetic integration workflow. Counts provider.extract invocations, not SDK HTTP retries. Not accuracy or full graph replay.",
+            real_embed = engine._vector_index._provider.embed
+            engine._vector_index._provider.embed = forbidden
+            assert (await engine.extraction_status(event_id, user_id='alice')).status == 'failed'
+            assert await engine.extraction_status(event_id, user_id='bob') is None
+            assert (await engine.retry_extraction(event_id, user_id='alice')).status == 'pending'
+            processed = await engine.process_extractions(user_id='alice')
+            assert (processed.processed, processed.pending, processed.failed) == (1, 0, 0)
+            complete = await engine.extraction_status(event_id, user_id='alice')
+            assert complete.status == 'complete' and complete.attempts == 2
+            receipt = await engine._event_store.get_derivation_receipt(event_id, user_id='alice')
+            assert receipt.plan_checksum == plan.checksum
+            assert {node.id for node in await engine.get_event_nodes(event_id, user_id='alice')} == {node.id for node in plan.nodes}
+            assert await engine._event_store.get_derivation_receipt(event_id, user_id='bob') is None
+            engine._vector_index._provider.embed = real_embed
+            response = await engine.retrieve('What database does the Aster service use?', user_id='alice')
+            assert any('PostgreSQL' in candidate.node.content for candidate in response.results)
+            for node in plan.nodes:
+                await engine.archive(str(node.id))
+            engine._vector_index._provider.embed = forbidden
+            engine._vector_index.stage = forbidden
+            engine._lexical_index.stage = forbidden
+            assert (await engine.retry_extraction(event_id, user_id='alice')).status == 'complete'
+            assert (await engine.process_extractions(user_id='alice')).processed == 0
+            assert await engine._event_store.get_derivation_receipt(event_id, user_id='alice') == receipt
+        report = {
+            'passed': True,
+            'pipeline_sha256': hashlib.sha256(Path(inspect.getfile(IngestionPipeline)).read_bytes()).hexdigest(),
+            'package_path': str(Path(inspect.getfile(IngestionPipeline)).resolve()),
+            'provider': saved.provider, 'model': saved.model,
+            'embedding_model': plan.embeddings[0].model, 'initial_provider_method_calls': calls,
+            'facts': len(saved.result['facts']), 'prepared_nodes': len(plan.nodes),
+            'elapsed_seconds': round(time.perf_counter() - started, 3),
+            'checks': ['real local extraction and embeddings',
+                       'journaled plan before injected staging failure', 'no partial graph publication',
+                       'restart replays exact plan without either provider', 'scoped receipt and public work status',
+                       'public retry and processing after restart without providers',
+                       'retrieval finds grounded database fact', 'archived completion skips staging'],
+            'limits': 'One synthetic workflow; explicit durable recovery, not extraction accuracy or comparative evidence.',
         }
+        return report
 
 
 def main():

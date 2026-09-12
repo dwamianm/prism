@@ -110,8 +110,9 @@ reopening preserves artifact identities and calls neither provider. Cancellation
 tests now target the atomic transaction boundary instead of the removed
 interleaved graph writer.
 
-This is not automatic extraction recovery: pending extraction discovery,
-persistent attempts, lease generations and plan revisions remain unimplemented.
+At that revision, pending extraction discovery, persistent attempts, lease
+generations and plan revisions remained unimplemented. The durable-work evidence
+below covers the subsequent scheduling and fencing implementation.
 
 The installed Python 3.13 wheel at `4474a7e` passed 52 planning, public-ingestion
 and replacement checks with 8 skips and live PostgreSQL. The planner retains a
@@ -130,6 +131,44 @@ This is a workflow check, not an accuracy score or scheduling claim. The earlier
 [`31798c5` probe](derivation-ingestion-31798c5.json) is retained with its original
 revision and timing; those elapsed times are not comparative latency measurements.
 
+## Durable extraction work and public recovery
+
+At `339ab60`, source acceptance queues both raw indexing and LLM extraction in
+one transaction. Work status, append ordering within each owner/scope, bounded
+retry attempts, leases and generations survive restart. Generation checks occur
+inside extraction/plan journaling and graph publication transactions; completion
+and its receipt commit together. Separate connections test takeover during an
+expired publication. Failure injection after each admission insert verifies that
+the source and both jobs roll back together.
+
+DuckDB testing reproduced concurrent indexed-status updates bypassing the needed
+write conflict. Mutable work fields are now unindexed, and the cross-connection
+fence passes on DuckDB 1.4.4 and 1.5.5. PostgreSQL locks the row and samples lease
+time after any lock wait, preventing delayed renewal from reviving expired work.
+
+The frozen full suite at `339ab60` passed **1,800 tests with 40 skips** in
+163.69 seconds, using Python 3.11 and live PostgreSQL.
+
+The installed Python 3.13 wheel passed 31 local/interface/recovery checks with
+35 skips, followed by 19 PostgreSQL checks with 3 skips and 18 deselections.
+The separate PostgreSQL run covers the cases skipped for lack of a database in
+the first invocation; remaining skips are backend-specific tests. Strict public
+consumer typing and source lint passed.
+
+[`extraction-work-339ab60.json`](extraction-work-339ab60.json) records the reusable
+local-model diagnostic against that installed wheel. The synthetic source
+produced six prepared nodes and two facts before an injected staging failure.
+Public status reported failed publication. After reopening, `retry_extraction`
+and `process_extractions` completed the exact saved plan with both providers
+replaced by failing sentinels. Retrieval found the database fact, and a retry
+after archival left completed work untouched. This harness now injects failure
+at the plan staging boundary and exercises public recovery after restart.
+
+Retrieval never invokes LLM recovery. Explicit processing discovers queued jobs;
+there is no daemon. Legacy sources are not backfilled, stale-plan revision and
+abandoned-stage collection remain open, and these workflow checks establish no
+extraction accuracy or comparative leadership claim.
+
 ## Grounded extraction journal
 
 `extraction-fault-7a1e864.json` records a real Ollama workflow: grounded output
@@ -138,7 +177,7 @@ same output without another `provider.extract` invocation. Restart read the
 identical saved record. `extraction-installed-7a1e864.json` verifies the public
 sync ingestion/inspection API from a fresh Python 3.13 wheel installation.
 
-The final reusable diagnostic produced `extraction-repro-c828607.json`. Ollama
+The earlier reusable diagnostic produced `extraction-repro-c828607.json`. Ollama
 was version **0.34.0**, using **qwen3.5:4b**, digest
 `2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd`.
 Sources were synthetic Aster/Cedar service statements; no user data was sent.
@@ -148,7 +187,7 @@ trials; these are workflow checks, not a semantic correctness score.
 
 One prototype failed: it allowed only one pipeline retry, which a provider/schema
 failure consumed before the injected storage failure. That incomplete run is
-retained in `extraction-prototype-failed.json`. The final harness uses the normal
+retained in `extraction-prototype-failed.json`. That earlier harness used the normal
 three-retry count with zero delays and checks that provider calls do not increase
 **after the index fault**, allowing legitimate earlier provider failures. A missing
 model also produced a nonzero exit and a failed JSON report, verifying that the
@@ -164,8 +203,8 @@ The HTTP-compatible Ollama endpoint defaults to `http://127.0.0.1:11434/v1`.
 Core fault-injection, ownership, concurrency, abrupt-exit and sync/API checks are
 in `tests/test_extraction_journal.py`; the PostgreSQL cases also run when
 `PRME_TEST_DATABASE_URL` is set. The journal is separate from raw NOTE processing
-status. Atomic graph derivations and persistent extraction work remain pending
-under [RFC-0016](../../../../docs/RFC-0016-Durable-Derivation-Commits.md).
+status. Subsequent atomic publication and durable work implementations are
+covered above and below under [RFC-0016](../../../../docs/RFC-0016-Durable-Derivation-Commits.md).
 
 ## Vector startup measurements
 
