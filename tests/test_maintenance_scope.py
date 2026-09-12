@@ -1,6 +1,7 @@
 """Request-triggered maintenance cannot mutate or process another tenant."""
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -17,6 +18,10 @@ async def test_request_maintenance_stays_scoped_and_cooldowns_are_per_user(confi
     config.organizer.promotion_age_days = 1
     config.organizer.promotion_evidence_count = 1
     config.organizer.opportunistic_cooldown = 3600
+    # This checks tenant boundaries and per-owner cooldowns, not machine speed.
+    # A real 200ms deadline can stop after indexing under concurrent load;
+    # budget exhaustion is covered separately with an advancing fake clock.
+    monkeypatch.setattr("prme.organizer.maintenance.time", SimpleNamespace(monotonic=lambda: 10.0))
     old_time = datetime.now(timezone.utc) - timedelta(days=10)
     other = user + "-other"
     async with MemoryEngine.open(config) as engine:
