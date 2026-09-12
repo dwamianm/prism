@@ -34,3 +34,20 @@ workflow. Exceeding it aborts the run, rather than silently reducing project cou
 Tests separately exercise controlled LLM extraction, profiles, failure rollback,
 process exit, foreign-ID mutation rejection and relocated pgvector symbols.
 This diagnostic uses real embeddings but no LLM extraction or judged answers.
+
+## Post-run verification amendment
+
+After the two initial runs completed, review found that the shared `check()`
+asserts namespace/source identity and rejects a foreign entity ID, but does not
+positively check the canonical merged entity's ID/evidence after restore. This
+is weaker than the stated entity-identity guard above. Retain both original runs;
+do not claim that guard from their public checks alone.
+
+Before inspecting the restored rows, register a separate verifier over the saved
+2- and 100-project dumps. Restore each dump into a new temporary database, without
+starting PRME or running migrations. In a read-only transaction verify registry
+and schema UUIDs, the exact active entity ID, both source evidence references,
+embedding metadata, its single supersedence edge and retired target, and every
+original event's content/hash/owner/scope. Save each parent report/dump hash and
+native verifier exit. This supplements the original artifacts; it does not
+replace a failed run or alter the original resource measurements.
