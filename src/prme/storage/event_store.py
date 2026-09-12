@@ -56,6 +56,7 @@ class EventStore:
     def _get_derivation_receipt_sync(self, event_id: str, user_id: str) -> DerivationReceipt | None:
         from prme.storage.derivation import _receipt
 
+        event_id = str(UUID(event_id))
         plan = self._get_derivation_plan_sync(event_id, user_id)
         if plan is None:
             return None
@@ -65,17 +66,20 @@ class EventStore:
         ).fetchone()
         return _receipt(plan, row[0] if row else None)
 
-    async def get_derivation_plan(self, event_id: str, *, user_id: str) -> DerivationPlan | None:
+    async def get_derivation_plan(self, event_id: str, *, user_id: str, revision: int | None = None) -> DerivationPlan | None:
         """Read the immutable prepared derivation through the source owner."""
         async with self._conn_lock:
-            return await run_to_completion(self._get_derivation_plan_sync, event_id, user_id)
+            return await run_to_completion(self._get_derivation_plan_sync, event_id, user_id, revision)
 
-    def _get_derivation_plan_sync(self, event_id: str, user_id: str) -> DerivationPlan | None:
+    def _get_derivation_plan_sync(self, event_id: str, user_id: str, revision: int | None = None) -> DerivationPlan | None:
+        if revision is None:
+            work = self._conn.execute("SELECT plan_revision FROM event_extractions WHERE event_id = ?", [event_id]).fetchone()
+            revision = work[0] if work else 1
         row = self._conn.execute(
             "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
             "ON o.target_id = e.id::VARCHAR WHERE o.id = ? AND e.id = ? "
             "AND e.user_id = ? AND o.op_type = 'DERIVATION_PREPARED'",
-            [derivation_operation_id(event_id), event_id, user_id],
+            [derivation_operation_id(event_id, revision=revision), event_id, user_id],
         ).fetchone()
         if row is None:
             return None
@@ -83,7 +87,7 @@ class EventStore:
         plan = (DerivationPlan.model_validate_json(payload["plan"]) if isinstance(payload["plan"], str)
                 else DerivationPlan.model_validate(payload["plan"]))
         plan.verify_source(user_id, row[1], row[2])
-        if plan.event_id != UUID(event_id) or plan.checksum != payload["checksum"]:
+        if plan.event_id != UUID(event_id) or plan.revision != revision or plan.checksum != payload["checksum"]:
             raise ValueError("Prepared derivation identity or checksum does not match")
         return plan
 
@@ -103,6 +107,8 @@ class EventStore:
             if source is None:
                 raise ValueError("A derivation requires a persisted source event")
             plan.verify_source(*source)
+            if plan.revision != (managed["plan_revision"] if managed else 1):
+                raise ValueError("Prepared plan does not match the current work revision")
             self._conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
                 "VALUES (?, 'DERIVATION_PREPARED', ?, ?, 'derivation', ?, ?) ON CONFLICT (id) DO NOTHING",

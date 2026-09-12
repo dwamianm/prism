@@ -198,6 +198,7 @@ async def initialize_pg_database(
             )
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_extractions_status ON event_extractions(status, work_order)")
+        await conn.execute("ALTER TABLE event_extractions ADD COLUMN IF NOT EXISTS plan_revision INTEGER DEFAULT 1")
 
         await conn.execute(_NODES_TABLE)
         await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")

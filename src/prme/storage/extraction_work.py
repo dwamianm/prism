@@ -6,7 +6,8 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import math
-from uuid import UUID
+import json
+from uuid import UUID, uuid5
 
 import duckdb
 from prme.models.extraction import extraction_operation_id
@@ -36,10 +37,10 @@ def validate_claim(row, event_id: str, user_id: str, claim: ExtractionClaim | No
 
 def duck_claim_row(conn, event_id: str):
     row = conn.execute(
-        "SELECT status, generation, lease_expires_at, plan_id FROM event_extractions WHERE event_id = ?",
+        "SELECT status, generation, lease_expires_at, plan_id, plan_revision FROM event_extractions WHERE event_id = ?",
         [event_id],
     ).fetchone()
-    return dict(zip(("status", "generation", "lease_expires_at", "plan_id"), row)) if row else None
+    return dict(zip(("status", "generation", "lease_expires_at", "plan_id", "plan_revision"), row)) if row else None
 
 
 def validate_duck_claim(conn, event_id, user_id, claim, *, plan_id=None):
@@ -56,7 +57,7 @@ def validate_duck_claim(conn, event_id, user_id, claim, *, plan_id=None):
 
 async def validate_pg_claim(conn, event_id, user_id, claim, *, plan_id=None):
     row = await conn.fetchrow(
-        "SELECT status, generation, lease_expires_at, plan_id FROM event_extractions "
+        "SELECT status, generation, lease_expires_at, plan_id, plan_revision FROM event_extractions "
         "WHERE event_id = $1 FOR UPDATE", event_id,
     )
     now = await conn.fetchval("SELECT clock_timestamp()")
@@ -135,7 +136,7 @@ class ExtractionWorkRepository:
         async with self.session() as session:
             rows = await session.fetch(
                 "SELECT w.event_id, w.status, w.attempts, w.generation, w.plan_id, "
-                "w.lease_expires_at, w.next_attempt_at, w.last_error, w.updated_at, "
+                "w.lease_expires_at, w.next_attempt_at, w.last_error, w.updated_at, w.plan_revision, "
                 "EXISTS (SELECT 1 FROM operations o WHERE o.id = $3) AS extracted "
                 "FROM event_extractions w JOIN events e ON e.id = w.event_id "
                 "WHERE w.event_id = $1 AND e.user_id = $2",
@@ -175,7 +176,7 @@ class ExtractionWorkRepository:
             due = "" if ignore_schedule else " AND w.next_attempt_at <= $2"
             lock = " FOR UPDATE OF w SKIP LOCKED" if session.postgres else ""
             rows = await session.fetch(
-                "SELECT w.event_id, w.generation, w.attempts FROM event_extractions w "
+                "SELECT w.event_id, w.generation, w.attempts, w.plan_revision FROM event_extractions w "
                 "JOIN events e ON e.id = w.event_id WHERE e.user_id = $1 "
                 "AND (w.status = 'pending' OR (w.status = 'running' AND w.lease_expires_at <= $2))" + due + specific +
                 " AND NOT EXISTS (SELECT 1 FROM event_extractions prior JOIN events pe ON pe.id = prior.event_id "
@@ -193,7 +194,7 @@ class ExtractionWorkRepository:
                 str(row["event_id"]), expires, now,
             )
             return ExtractionClaim(event_id=row["event_id"], user_id=user_id, generation=row["generation"] + 1,
-                                   attempts=row["attempts"] + 1, lease_expires_at=expires)
+                                   attempts=row["attempts"] + 1, lease_expires_at=expires, plan_revision=row["plan_revision"])
 
     async def renew(self, claim: ExtractionClaim, *, lease_seconds: float = 300) -> bool:
         if not math.isfinite(lease_seconds) or lease_seconds <= 0:
@@ -227,6 +228,51 @@ class ExtractionWorkRepository:
                 error, now + timedelta(seconds=retry_after or 0), claim.user_id,
             )
             return bool(rows)
+
+    async def replan(self, event_id: str, *, user_id: str) -> bool:
+        """Queue a new immutable plan revision; never interrupt a live worker."""
+        try:
+            return await self._replan(event_id, user_id=user_id)
+        except duckdb.TransactionException as exc:
+            if "conflict" not in str(exc).lower():
+                raise
+            return False
+
+    async def _replan(self, event_id: str, *, user_id: str) -> bool:
+        if not user_id:
+            raise ValueError("Replanning requires user_id")
+        event_id = str(UUID(event_id))
+        async with self.session(transaction=True) as session:
+            lock = " FOR UPDATE" if session.postgres else ""
+            source = await session.fetch("SELECT scope FROM events WHERE id = $1 AND user_id = $2" + lock,
+                                         event_id, user_id)
+            if not source:
+                return False
+            rows = await session.fetch("SELECT status, generation, plan_id, plan_revision, lease_expires_at "
+                                       "FROM event_extractions WHERE event_id = $1" + lock, event_id)
+            now = await session.now()
+            if not rows:
+                return False
+            row = rows[0]
+            if (row["status"] == "complete" or row["plan_id"] is None
+                    or (row["status"] == "running" and row["lease_expires_at"] > now)):
+                return False
+            revision, generation = row["plan_revision"] + 1, row["generation"] + 1
+            await session.execute(
+                "UPDATE event_extractions SET status = 'pending', plan_id = NULL, plan_revision = $2, "
+                "generation = $3, lease_expires_at = NULL, next_attempt_at = $4, updated_at = $4, "
+                "last_error = NULL WHERE event_id = $1", event_id, revision, generation, now,
+            )
+            payload = json.dumps({"event_id": event_id, "user_id": user_id,
+                                  "previous_plan_id": str(row["plan_id"]), "revision": revision,
+                                  "generation": generation})
+            await session.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                "VALUES ($1, 'DERIVATION_REPLAN_REQUESTED', $2, $3, 'derivation', $4, $5)",
+                str(uuid5(UUID(event_id), f"prme:derivation-replan:v1:{revision}")), event_id,
+                payload, source[0]["scope"], now,
+            )
+            return True
 
     async def retry(self, event_id: str, *, user_id: str) -> bool:
         if not user_id:

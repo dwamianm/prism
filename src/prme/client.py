@@ -287,9 +287,9 @@ class MemoryClient:
         """Inspect durable extraction separately from raw-source indexing."""
         return self._run(self._engine.extraction_status(event_id, user_id=user_id))
 
-    def retry_extraction(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
+    def retry_extraction(self, event_id: str, *, user_id: str, replan: bool = False) -> ExtractionStatus | None:
         """Queue an owned extraction retry; execute it with process_extractions()."""
-        return self._run(self._engine.retry_extraction(event_id, user_id=user_id))
+        return self._run(self._engine.retry_extraction(event_id, user_id=user_id, replan=replan))
 
     def process_extractions(self, *, user_id: str, limit: int = 100,
                             budget_ms: float = 5000) -> ExtractionProcessingResult:

@@ -13,6 +13,7 @@ class ExtractionClaim(BaseModel):
     event_id: UUID
     user_id: str = Field(min_length=1)
     generation: int = Field(ge=1)
+    plan_revision: int = Field(default=1, ge=1)
     attempts: int = Field(ge=1)
     lease_expires_at: AwareDatetime
 
@@ -27,6 +28,7 @@ class ExtractionStatus(BaseModel):
     attempts: int = Field(ge=0)
     generation: int = Field(ge=0)
     plan_id: UUID | None = None
+    plan_revision: int = Field(default=1, ge=1)
     lease_expires_at: AwareDatetime | None = None
     next_attempt_at: AwareDatetime
     last_error: str | None = None

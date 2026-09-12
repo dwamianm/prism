@@ -238,12 +238,12 @@ async def extraction_status(request: Request, event_id: UUID):
 
 @router.post("/events/{event_id}/retry-extraction", response_model=ExtractionStatus,
              summary="Queue an extraction retry without calling a model")
-async def retry_extraction(request: Request, event_id: UUID):
+async def retry_extraction(request: Request, event_id: UUID, replan: bool = False):
     engine = _get_engine(request)
     event = await engine.get_event(str(event_id), user_id=_user_id(request))
     if event is None:
         raise HTTPException(status_code=404, detail="Extraction work not found")
-    status = await engine.retry_extraction(str(event_id), user_id=event.user_id)
+    status = await engine.retry_extraction(str(event_id), user_id=event.user_id, replan=replan)
     if status is None:
         raise HTTPException(status_code=404, detail="Extraction work not found")
     return status

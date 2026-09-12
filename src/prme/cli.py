@@ -499,7 +499,7 @@ async def cmd_extractions(args: argparse.Namespace) -> None:
         if args.action == "process":
             result = await engine.process_extractions(user_id=args.user_id, limit=args.limit, budget_ms=args.budget_ms)
         elif args.action == "retry":
-            result = await engine.retry_extraction(args.event_id, user_id=args.user_id)
+            result = await engine.retry_extraction(args.event_id, user_id=args.user_id, replan=args.replan)
         else:
             result = await engine.extraction_status(args.event_id, user_id=args.user_id)
         if result is None:
@@ -858,6 +858,8 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--budget-ms", type=float, default=5000, help="Cooperative budget checked between jobs")
         else:
             sub.add_argument("event_id", help="Source event UUID")
+        if action == "retry":
+            sub.add_argument("--replan", action="store_true", help="Prepare a new revision from saved extraction")
         sub.set_defaults(func=cmd_extractions, action=action)
 
     p_info = subparsers.add_parser("info", help="Show memory pack info")

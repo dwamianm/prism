@@ -26,6 +26,15 @@ async def seed(engine, user):
     return [str(event.id) for event in events]
 
 
+async def save_failed_plan(engine, event_id, user):
+    event = await engine.get_event(event_id, user_id=user)
+    work = engine._event_store.extraction_work
+    claim = await work.claim(user_id=user, event_id=event_id)
+    plan = await engine._pipeline._prepare_plan(ExtractionResult(), event)
+    await engine._event_store.record_derivation_plan(plan, claim=claim)
+    await work.fail(claim, error="StaleDerivationPlanError")
+
+
 async def test_http_extraction_controls_are_owned_and_validated(config, user):
     config.api = APIConfig(user_keys={user: "first-token", user + "-other": "second-token"})
     async with MemoryEngine.open(config) as engine:
@@ -43,6 +52,8 @@ async def test_http_extraction_controls_are_owned_and_validated(config, user):
             assert (await client.post("/v1/extractions/process", json={"budget_ms": 0})).json()["pending"] == 1
             assert provider.await_count == 0
             assert (await client.post(f"/v1/events/{own}/retry-extraction")).json()["status"] == "pending"
+            await save_failed_plan(engine, own, user)
+            assert (await client.post(f"/v1/events/{own}/retry-extraction?replan=true")).json()["plan_revision"] == 2
             result = await client.post("/v1/extractions/process", json={})
             assert result.status_code == 200 and result.json() == {"processed": 1, "pending": 0, "failed": 0}
             assert provider.await_count == 1
@@ -55,6 +66,7 @@ async def test_http_extraction_controls_are_owned_and_validated(config, user):
 async def test_mcp_http_processing_uses_request_identity(config, user, monkeypatch):
     async with MemoryEngine.open(config) as engine:
         own, other = await seed(engine, user)
+        await save_failed_plan(engine, own, user)
     from tests.test_concurrency import MockExtractionProvider
     provider = MockExtractionProvider()
     provider.extract = AsyncMock(return_value=ExtractionResult())
@@ -70,7 +82,8 @@ async def test_mcp_http_processing_uses_request_identity(config, user, monkeypat
                 })
                 assert response.status_code == 200
                 return json.loads(response.json()["result"]["content"][0]["text"])
-            assert (await call("memory_extraction_status", {"event_id": own}))["status"] == "pending"
+            assert (await call("memory_extraction_status", {"event_id": own}))["status"] == "failed"
+            assert (await call("memory_retry_extraction", {"event_id": own, "replan": True}))["plan_revision"] == 2
             assert "error" in await call("memory_retry_extraction", {"event_id": other})
             assert "error" in await call("memory_extraction_status", {"event_id": other})
             assert (await call("memory_process_extractions", {"budget_ms": 0}))["pending"] == 1
@@ -100,6 +113,7 @@ async def test_cli_extraction_processing_requires_scope_and_reports_completion(c
     from prme import cli
     async with MemoryEngine.open(config) as engine:
         own, other = await seed(engine, user)
+        await save_failed_plan(engine, own, user)
     async def open_engine(path):
         assert path == config.db_path
         engine = await MemoryEngine.create(config)
@@ -110,6 +124,9 @@ async def test_cli_extraction_processing_requires_scope_and_reports_completion(c
     with pytest.raises(SystemExit):
         parser.parse_args(["process-extractions", config.db_path])
     capsys.readouterr()
+    args = parser.parse_args(["retry-extraction", config.db_path, own, "--user-id", user, "--replan", "--format", "json"])
+    await args.func(args)
+    assert '"plan_revision": 2' in capsys.readouterr().out
     args = parser.parse_args(["process-extractions", config.db_path, "--user-id", user, "--format", "json"])
     await args.func(args)
     output = capsys.readouterr().out

@@ -1,6 +1,6 @@
 # RFC-0016: Durable Derivation Commits
 
-**Status:** Partially implemented; durable extraction work, journaled plans, and fenced atomic commits; plan revision and abandonment collection pending
+**Status:** Partially implemented; durable extraction work, journaled plans, and fenced atomic commits; explicit plan revision implemented; abandonment collection pending
 **Date:** 2026-09-12
 **Depends on:** RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0014
 
@@ -111,9 +111,23 @@ before the successor can publish on both backends.
 Tests also cover abrupt exit immediately after admission, provider outage and
 restart recovery, cancellation, heartbeat renewal, empty extraction, owner
 isolation, and stale workers attempting all three durable write boundaries.
-Version 1 still saves one plan per source, with no revision switch or automatic
-replanning. Legacy sources are not automatically enrolled in extraction work.
-Abandoned index staging still requires an explicit maintenance policy.
+Explicit `retry_extraction(..., replan=True)` now queues a new plan revision from
+the same grounded extraction. It advances the work generation and journals
+`DERIVATION_REPLAN_REQUESTED` in one transaction, preserving the previous plan.
+It cannot preempt a live worker or revise completed work. Prepared operation IDs
+include the revision after v1; the event still has one completion receipt.
+Existing v1 checksums remain unchanged when the newly defaulted revision field
+is absent from historical payloads. Processing may recompute embeddings, but
+does not call extraction again once that output is saved. Automatic replanning
+and model-output/grounding-policy revisions are not implemented.
+
+DuckDB fresh schemas include the revision column directly. Older work tables
+checkpoint after adding it: a subprocess test reproduced DuckDB 1.4.4 failing
+to replay the ALTER from WAL after abrupt exit. The migrated-pack test now
+verifies both preserved legacy work and recovery after subsequent plan journaling.
+
+Legacy sources are not automatically enrolled in extraction work. Abandoned
+index staging still requires an explicit maintenance policy.
 
 ## Required behavior
 
@@ -141,7 +155,7 @@ a sanitized last error. Ownership and scope come from the source event. An
 append-time sequence orders eligible work independently of user-supplied event
 timestamps. Raw indexing remains a separate job and status.
 
-Only a claim transaction may advance the generation. The final graph transaction
+Claims and explicit plan-revision transitions advance the generation. The final graph transaction
 must lock/check the work row and reject an expired or superseded generation.
 Heartbeats extend a live lease; they do not substitute for commit fencing.
 Failure during provider I/O must not hold graph/database locks.

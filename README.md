@@ -224,10 +224,27 @@ runs LLM recovery. Use repeated explicit passes or an external timer; there is
 no background daemon. Existing sources predating durable extraction jobs are
 not automatically enrolled.
 
+If publication fails with `last_error="StaleDerivationPlanError"`, a referenced
+memory changed after the plan was saved. Queue a new immutable plan revision:
+
+```python
+await engine.retry_extraction(event_id, user_id="alice", replan=True)
+await engine.process_extractions(user_id="alice")
+```
+
+This preserves the original plan and saved extraction, invalidates its old worker
+generation, and reports `plan_revision` in status. Processing reuses grounded
+extraction but may compute new embeddings. Replanning leaves live or completed
+work untouched; it requires an existing prepared plan. Repeated requests before
+that new plan is prepared leave the same revision queued. This revises graph
+planning, not the original model output or grounding policy.
+
 HTTP exposes `GET /v1/events/{event_id}/extraction-status`,
 `POST /v1/events/{event_id}/retry-extraction`, and `POST /v1/extractions/process`.
 MCP exposes `memory_extraction_status`, `memory_retry_extraction`, and
 `memory_process_extractions`, with the same authenticated owner boundaries.
+Pass `?replan=true` on the HTTP retry endpoint, `replan: true` to the MCP retry
+tool, or `--replan` to the CLI retry command for a new plan revision.
 CLI equivalents are:
 
 ```bash

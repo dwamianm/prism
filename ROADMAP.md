@@ -44,8 +44,9 @@ DuckDB recovery. Explicit retry after reopening uses saved plans without new
 inference and skips already committed work. Durable extraction jobs now survive
 restart with scoped status, explicit processing and retry across Python, HTTP,
 MCP and CLI. Lease generations fence stale workers inside graph transactions;
-completion commits with its receipt. Plan revision and abandoned-stage collection
-remain open. Processing is explicit; retrieval does not run an LLM recovery job.
+completion commits with its receipt. Explicit stale-plan recovery now preserves
+old plans while queuing a new revision from saved extraction. Abandoned-stage
+collection and model-output revisions remain open. Processing is explicit; retrieval does not run an LLM recovery job.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall

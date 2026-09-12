@@ -1341,13 +1341,18 @@ class MemoryEngine:
         """Inspect durable LLM extraction separately from raw NOTE indexing."""
         return await self._event_store.extraction_work.status(event_id, user_id=user_id)
 
-    async def retry_extraction(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
+    async def retry_extraction(self, event_id: str, *, user_id: str, replan: bool = False) -> ExtractionStatus | None:
         """Make owned failed/pending work eligible for explicit processing.
 
         Does not interrupt a live worker, repeat completed work, or call a
-        provider. Call process_extractions() to execute eligible jobs.
+        provider. With replan=True, queue a new plan revision from saved
+        extraction; processing may compute new embeddings. Old plans remain
+        immutable. Call process_extractions() to execute eligible jobs.
         """
-        await self._event_store.extraction_work.retry(event_id, user_id=user_id)
+        if replan:
+            await self._event_store.extraction_work.replan(event_id, user_id=user_id)
+        else:
+            await self._event_store.extraction_work.retry(event_id, user_id=user_id)
         return await self.extraction_status(event_id, user_id=user_id)
 
     async def process_extractions(self, *, user_id: str, limit: int = 100,

@@ -23,9 +23,12 @@ def canonical_hash(value: dict) -> str:
     ).encode()).hexdigest()
 
 
-def derivation_operation_id(event_id: UUID | str, *, committed: bool = False) -> str:
+def derivation_operation_id(event_id: UUID | str, *, committed: bool = False, revision: int = 1) -> str:
+    if revision < 1:
+        raise ValueError("Derivation revision must be positive")
     kind = "committed" if committed else "prepared"
-    return str(uuid5(UUID(str(event_id)), f"prme:{kind}-derivation:v1"))
+    suffix = f":revision:{revision}" if revision > 1 and not committed else ""
+    return str(uuid5(UUID(str(event_id)), f"prme:{kind}-derivation:v1{suffix}"))
 
 
 def node_checksum(node: MemoryNode) -> str:
@@ -35,6 +38,10 @@ def node_checksum(node: MemoryNode) -> str:
         if isinstance(value, datetime) and value.utcoffset() is not None:
             values[name] = value.astimezone(timezone.utc).isoformat()
     return canonical_hash(values)
+
+
+class StaleDerivationPlanError(ValueError):
+    """A referenced memory changed; recovery needs a new immutable plan."""
 
 
 class PreparedEmbedding(BaseModel):
@@ -89,6 +96,7 @@ class DerivationPlan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
     schema_version: Literal[1] = 1
+    revision: int = Field(default=1, ge=1)
     materialization_policy: Literal["source_passage_v1"] = "source_passage_v1"
     id: UUID = Field(default_factory=uuid4)
     event_id: UUID
@@ -105,11 +113,14 @@ class DerivationPlan(BaseModel):
 
     @property
     def checksum(self) -> str:
-        return canonical_hash(self.model_dump(mode="json"))
+        values = self.model_dump(mode="json")
+        if self.revision == 1:
+            values.pop("revision")  # Preserve checksums of existing v1 journals.
+        return canonical_hash(values)
 
     @property
     def prepared_operation_id(self) -> str:
-        return derivation_operation_id(self.event_id)
+        return derivation_operation_id(self.event_id, revision=self.revision)
 
     @property
     def receipt_operation_id(self) -> str:

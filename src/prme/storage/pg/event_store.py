@@ -42,6 +42,7 @@ class PgEventStore:
         """Read verified completion through the immutable source owner's scope."""
         from prme.storage.derivation import _receipt
 
+        event_id = str(UUID(event_id))
         async with self._pool.acquire() as conn:
             plan = await self._get_derivation_plan(conn, event_id, user_id)
             if plan is None:
@@ -52,16 +53,19 @@ class PgEventStore:
             )
             return _receipt(plan, row["payload"] if row else None)
 
-    async def get_derivation_plan(self, event_id: str, *, user_id: str) -> DerivationPlan | None:
+    async def get_derivation_plan(self, event_id: str, *, user_id: str, revision: int | None = None) -> DerivationPlan | None:
         async with self._pool.acquire() as conn:
-            return await self._get_derivation_plan(conn, event_id, user_id)
+            return await self._get_derivation_plan(conn, event_id, user_id, revision)
 
-    async def _get_derivation_plan(self, conn, event_id: str, user_id: str) -> DerivationPlan | None:
+    async def _get_derivation_plan(self, conn, event_id: str, user_id: str, revision: int | None = None) -> DerivationPlan | None:
+        if revision is None:
+            work = await conn.fetchrow("SELECT plan_revision FROM event_extractions WHERE event_id = $1", event_id)
+            revision = work["plan_revision"] if work else 1
         row = await conn.fetchrow(
             "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
             "ON o.target_id = e.id::text WHERE o.id = $1 AND e.id = $2 "
             "AND e.user_id = $3 AND o.op_type = 'DERIVATION_PREPARED'",
-            derivation_operation_id(event_id), event_id, user_id,
+            derivation_operation_id(event_id, revision=revision), event_id, user_id,
         )
         if row is None:
             return None
@@ -69,7 +73,7 @@ class PgEventStore:
         plan = (DerivationPlan.model_validate_json(payload["plan"]) if isinstance(payload["plan"], str)
                 else DerivationPlan.model_validate(payload["plan"]))
         plan.verify_source(user_id, row["scope"], row["content_hash"])
-        if plan.event_id != UUID(event_id) or plan.checksum != payload["checksum"]:
+        if plan.event_id != UUID(event_id) or plan.revision != revision or plan.checksum != payload["checksum"]:
             raise ValueError("Prepared derivation identity or checksum does not match")
         return plan
 
@@ -84,6 +88,8 @@ class PgEventStore:
                 raise ValueError("A derivation requires a persisted source event")
             plan.verify_source(source["user_id"], source["scope"], source["content_hash"])
             managed = await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim)
+            if plan.revision != (managed["plan_revision"] if managed else 1):
+                raise ValueError("Prepared plan does not match the current work revision")
             await conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
                 "VALUES ($1, 'DERIVATION_PREPARED', $2, $3::jsonb, 'derivation', $4, $5) "

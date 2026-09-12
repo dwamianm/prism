@@ -93,6 +93,7 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             attempts INTEGER NOT NULL DEFAULT 0,
             generation BIGINT NOT NULL DEFAULT 0,
             plan_id UUID,
+            plan_revision INTEGER NOT NULL DEFAULT 1,
             lease_expires_at TIMESTAMPTZ,
             next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
             last_error VARCHAR,
@@ -104,6 +105,13 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     # Keep mutable lease/state fields unindexed; immutable work_order is already
     # UNIQUE/indexed. PostgreSQL uses explicit row locks and retains its index.
     conn.execute("DROP INDEX IF EXISTS idx_extractions_status")
+    work_columns = {row[1] for row in conn.execute("PRAGMA table_info('event_extractions')").fetchall()}
+    if "plan_revision" not in work_columns:
+        conn.execute("ALTER TABLE event_extractions ADD COLUMN plan_revision INTEGER DEFAULT 1")
+        # DuckDB 1.4.4 cannot recover this ADD COLUMN from WAL after abrupt
+        # exit (GetDefaultDatabase during replay). Persist the schema migration
+        # before accepting any work so recovery never replays that ALTER.
+        conn.execute("CHECKPOINT")
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS nodes (

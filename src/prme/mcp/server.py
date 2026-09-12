@@ -421,11 +421,15 @@ async def memory_extraction_status(event_id: str, ctx: Context = None) -> str:
         return _internal_error("memory_extraction_status", exc)
 
 
-async def memory_retry_extraction(event_id: str, ctx: Context = None) -> str:
-    """Make owned work eligible for processing; does not call a model or interrupt a live worker."""
+async def memory_retry_extraction(event_id: str, ctx: Context = None, replan: bool = False) -> str:
+    """Queue owned work; replan=True preserves the old plan and queues a new revision.
+
+    Does not call a model or interrupt a live worker. Processing reuses saved
+    extraction; a new plan revision may require new embedding inference.
+    """
     engine = _get_engine(ctx)
     try:
-        status = await engine.retry_extraction(event_id, user_id=_get_user_id(engine))
+        status = await engine.retry_extraction(event_id, user_id=_get_user_id(engine), replan=replan)
         return status.model_dump_json() if status is not None else json.dumps({"error": "Extraction work not found"})
     except PermissionError as exc:
         return json.dumps({"error": str(exc)})

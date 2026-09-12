@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from prme.models.derivation import DerivationPlan, DerivationReceipt, node_checksum
+from prme.models.derivation import DerivationPlan, DerivationReceipt, StaleDerivationPlanError, node_checksum
 from prme.models.nodes import MemoryNode
 from prme.models.extraction_work import ExtractionClaim
 from prme.storage._threading import run_to_completion
@@ -44,7 +44,7 @@ def _validate_dependencies(plan: DerivationPlan, current: dict[str, MemoryNode])
     for expected in plan.references:
         actual = current.get(str(expected.id))
         if actual is None or node_checksum(actual) != node_checksum(expected):
-            raise ValueError("Derivation dependency changed; an explicit replan is required")
+            raise StaleDerivationPlanError("Derivation dependency changed; an explicit replan is required")
     nodes = {node.id: node for node in plan.nodes + plan.references}
     states = {key: node.lifecycle_state for key, node in nodes.items()}
     for edge in plan.replacements:

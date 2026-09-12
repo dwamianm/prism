@@ -658,6 +658,8 @@ class IngestionPipeline:
                         raise ValueError("Source has legacy derived nodes; explicit migration is required")
             if plan is None:
                 prepared = await self._prepare_plan(result, event)
+                if claim is not None and claim.plan_revision != 1:
+                    prepared = prepared.model_copy(update={"revision": claim.plan_revision})
                 plan = await self._write_queue.submit(
                     lambda: self._event_store.record_derivation_plan(prepared, claim=claim),
                     label=f"derivation.prepare:{event_id}",

@@ -17,7 +17,7 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.get_event_nodes("event-id", user_id="alice"), list[MemoryNode])
     assert_type(client.process_pending(user_id="alice"), ProcessingResult)
     assert_type(client.extraction_status("event-id", user_id="alice"), ExtractionStatus | None)
-    assert_type(client.retry_extraction("event-id", user_id="alice"), ExtractionStatus | None)
+    assert_type(client.retry_extraction("event-id", user_id="alice", replan=True), ExtractionStatus | None)
     assert_type(client.process_extractions(user_id="alice"), ExtractionProcessingResult)
     assert_type(client.organize(user_id="alice"), OrganizeResult)
     for node in client.iter_nodes(user_id="alice"):
