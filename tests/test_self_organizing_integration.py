@@ -531,7 +531,7 @@ class TestOpportunisticMaintenance:
             await engine.close()
 
     @pytest.mark.asyncio
-    async def test_auto_promotion_on_ingest(self, tmp_dir):
+    async def test_auto_promotion_on_ingest(self, tmp_dir, monkeypatch):
         """Opportunistic maintenance should also run on ingest()."""
         Path(tmp_dir, "lexical_index").mkdir(exist_ok=True)
         config = PRMEConfig(
@@ -540,11 +540,20 @@ class TestOpportunisticMaintenance:
             lexical_path=str(Path(tmp_dir) / "lexical_index"),
             organizer=OrganizerConfig(
                 opportunistic_cooldown=0,
+                # This verifies triggering/promotion, not a 200 ms latency SLO.
+                # Source indexing may consume a complete short pass under load.
+                opportunistic_budget_ms=5000,
                 promotion_age_days=1.0,
                 promotion_evidence_count=1,
             ),
         )
         engine = await create_engine(config)
+        from unittest.mock import AsyncMock
+        from prme.ingestion.schema import ExtractionResult
+        # Maintenance integration must never call a live provider from a
+        # developer's environment or depend on its authentication/latency.
+        monkeypatch.setattr(engine._pipeline._extraction_provider, "extract",
+                            AsyncMock(return_value=ExtractionResult()))
         try:
             # Store initial node
             await engine.store(
