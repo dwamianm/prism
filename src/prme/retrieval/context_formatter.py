@@ -6,22 +6,18 @@ Applies context-type-specific formatting:
 - **temporal**: Chronological sorting, days-ago annotations on each entry,
   pre-computed date offsets for relative time references in the query.
 - **knowledge_update**: Chronological sorting with recency markers
-  ([MOST RECENT — USE THIS VALUE] / [RECENT] / [OLDER]) so the LLM
-  prioritizes the most recent values.
+  ([MOST RECENT] / [RECENT] / [OLDER]) without equating recency with truth.
 - **default**: Relevance-ranked entries with date annotations.
 
-Additionally, implements two enhancements from the PRIME dual-memory research
-(Zhang et al., EMNLP 2025):
+Optional sections organize additional evidence:
 
 - **Profile preamble**: Extracts stable/tentative Facts, Preferences, and
   Instructions and prepends them as a compact user profile section.
-  "Personalized thinking" (profile-aware reasoning) is the single biggest
-  performance driver for LLM personalization.
-- **Conflict annotations**: When CONTESTED nodes appear in results, explicit
-  conflict mediation annotations are added so the LLM can handle
-  contradictions between episodic and semantic memory.
+  Provenance and epistemic classifications remain visible.
+- **Conflict annotations**: Explicitly linked contradictions are presented as
+  unresolved evidence, with both records' classifications when available.
 
-Both enhancements are enabled by default (``include_profile=True``) and can
+Both sections are enabled by default (``include_profile=True``) and can
 be disabled for callers that need raw formatted results.
 
 Usage::
