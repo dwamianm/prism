@@ -77,3 +77,33 @@ all four category dimensions, persona-cluster intervals, reader repeats and raw
 artifact hashes. Its 25 authored checks include a complete synthetic 96-question
 run and detection of modified sources, receipts and contexts; these are verifier
 tests, not benchmark-quality results.
+
+## Annotation-selected reader diagnostic
+
+After the completed pilot was scored and audited, the separate
+`benchmarks.diagnostics.personamem_annotated_reader` diagnostic was designed to
+test the reader with short, annotation-selected source contexts. It keeps the
+same 96 cases, source corpus, question/options, local model, prompt and runtime
+options, and adds a fresh no-memory control. The annotation selects only exact
+role/content matches in actual dialog history. Text is rendered from those
+source messages in original order; unmatched annotation text and the initial
+persona never enter context. All sources are complete, with role/source IDs.
+Matched contexts use at most 1,102 tokens. The six empty cases remain empty and
+remain in the denominator.
+
+Registration binds the original pilot plan and verification, new prepared inputs,
+reference labels, code and reader identity before new answers run. All 192 primary
+answers must finish with native exit zero before new correctness is examined.
+One response repeats per persona. Invalid JSON is incorrect; transport failure
+invalidates the run with partial evidence retained. The analysis reports all
+categories and a paired persona-cluster bootstrap against the fresh no-memory
+control, using 2,000 samples and seed 42. Comparing the fresh no-memory answers
+with the earlier ones exposes observed drift on identical requests.
+
+This is an intentionally annotation-selected, post-hoc diagnostic, not product
+retrieval, a fresh holdout or a leaderboard submission. Source selection and
+shorter source-only formatting change together, so a gain cannot be attributed
+to either alone. The frozen product packing defaults remain unchanged. Authored
+checks cover source/role fidelity, exclusion of unmatched oracle text, full
+passage budgets, all-case reader completion, label separation and retained
+transport failures.
