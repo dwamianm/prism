@@ -38,6 +38,8 @@ from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
+from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.storage.relevance import RelevanceRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
 from prme.storage._threading import run_to_completion
@@ -131,6 +133,7 @@ class MemoryEngine:
         self._atexit_registered = False
 
         # Quality assessment and auto-tuning (issue #24)
+        self._relevance = RelevanceRepository(conn=conn, pool=pool, conn_lock=getattr(event_store, "_conn_lock", None))
         self._feedback_tracker = FeedbackTracker()
         self._weight_tuner = WeightTuner(
             self._config.scoring, learning_rate=0.01,
@@ -2028,6 +2031,27 @@ class MemoryEngine:
             updates["evidence_refs"] = new_refs
 
         await self._graph_store.update_node(node_id, **updates)
+
+    async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
+        """Read the immutable returned-candidate snapshot through its owner."""
+        return await self._relevance.get_receipt(request_id, user_id=user_id)
+
+    async def record_relevance(self, submission: RelevanceSubmission, *, user_id: str) -> RelevanceRecord:
+        """Durably record explicit labels; retry the same feedback_id safely.
+
+        Labels describe saved response candidates, not current graph state.
+        Recording does not change weights or facts. Legacy feedback_apply does
+        not consume these records; evaluated scoped learning is separate.
+        """
+        return await self._relevance.record(submission, user_id=user_id)
+
+    async def get_relevance(self, feedback_id: str, *, user_id: str) -> RelevanceRecord | None:
+        return await self._relevance.get(feedback_id, user_id=user_id)
+
+    async def list_relevance(self, *, user_id: str, limit: int = 100,
+                             after_id: str | None = None) -> list[RelevanceRecord]:
+        """Page by feedback UUID; concurrent inserts may precede the cursor."""
+        return await self._relevance.list(user_id=user_id, limit=limit, after_id=after_id)
 
     # --- Quality Feedback (Issue #24) ---
 

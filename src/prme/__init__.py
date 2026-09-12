@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from prme.config import PRMEConfig
 from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.models.processing import ProcessingResult, ProcessingStatus
+from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.storage.engine import MemoryEngine
@@ -76,6 +77,9 @@ __all__ = [
     "ProcessingStatus",
     "RetrievalPipeline",
     "RetrievalResponse",
+    "RetrievalReceipt",
+    "RelevanceSubmission",
+    "RelevanceRecord",
     "Scope",
     "SourceType",
 ]

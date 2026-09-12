@@ -99,3 +99,42 @@ resolving persistent failures. Operator-mode callers must specify `user_id`.
 
 Malformed UUIDs and invalid request fields produce HTTP 422 with structured
 validation details. Valid unknown or foreign identities return 404.
+
+## Save relevance judgments for future evaluated learning
+
+Retrieval `metrics` include `request_id` and `receipt_persisted`. If the latter is
+true, `GET /v1/retrievals/{request_id}` reads the saved candidate score traces,
+content hashes, configuration and context membership through the authenticated
+owner. A logging failure does not fail retrieval; it sets the flag to false.
+Legacy requests without a receipt return 404.
+
+`POST /v1/relevance` accepts this body after a user explicitly judges a result:
+
+```json
+{
+  "feedback_id": "11111111-1111-4111-8111-111111111111",
+  "request_id": "22222222-2222-4222-8222-222222222222",
+  "labels": {"33333333-3333-4333-8333-333333333333": true},
+  "surface": "results",
+  "method": "explicit_user"
+}
+```
+
+Use actual IDs from retrieval. Reusing `feedback_id` with the same judgment returns
+the original record and timestamp. Conflicting reuse or an unknown candidate
+returns 400. A missing or foreign receipt returns 404. Owner mismatches return
+403. Non-boolean labels, empty labels and malformed UUIDs return 422. If the
+caller omits `feedback_id`, the server generates one; callers needing safe retries
+after a lost response should choose it before sending.
+
+`surface` is `results` (returned candidates) or `context` (included bundle entries).
+Positive context labels require source content; reference-only entries do not
+qualify. `method` is `explicit_user` or `structured_evaluation`. These are supplied
+classifications, not verified identities. Unlabelled candidates are not negatives.
+
+Read a record with `GET /v1/relevance/{feedback_id}` or list with
+`GET /v1/relevance?limit=100&after_id=...`. Pages sort by feedback UUID, not creation
+time; a concurrent insert can precede the cursor. Records retain the original
+exposure even after graph changes. Collection does not modify facts, change
+weights, or establish learned quality. The legacy global feedback tuner does not
+consume these records; evaluated scoped learning remains pending in RFC-0017.

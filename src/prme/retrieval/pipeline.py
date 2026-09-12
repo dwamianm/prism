@@ -638,10 +638,20 @@ class RetrievalPipeline:
         timing_ms = (end_time - start_time) * 1000.0
 
         # --- Retrieval Logging ---
+        receipt_persisted = False
         try:
+            from prme.models.relevance import make_receipt
+
+            receipt = make_receipt(request_id=analysis.request_id, user_id=user_id, query=query,
+                                   reference_time=scoring_now, scopes=normalized_scope,
+                                   scoring=effective_weights, packing=effective_packing_config,
+                                   candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
+                                   retrieval_mode=retrieval_mode, time_from=effective_time_from,
+                                   time_to=effective_time_to)
             op_id = str(uuid.uuid4())
             payload = json.dumps({
                 "request_id": str(analysis.request_id),
+                "receipt": receipt.model_dump_json(), "receipt_checksum": receipt.checksum,
                 "query": query,
                 "reference_time": scoring_now.isoformat(),
                 "query_time_from": analysis.time_from.isoformat() if analysis.time_from else None,
@@ -682,6 +692,7 @@ class RetrievalPipeline:
                         "VALUES (?, ?, ?, ?, ?, now())",
                         [op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id],
                     )
+            receipt_persisted = self._pool is not None or self._conn is not None
         except Exception:
             logger.warning(
                 "Failed to log RETRIEVAL_REQUEST operation for request %s",
@@ -691,6 +702,7 @@ class RetrievalPipeline:
 
         # --- Assemble RetrievalResponse ---
         metadata = RetrievalMetadata(
+            receipt_persisted=receipt_persisted,
             request_id=analysis.request_id,
             reference_time=scoring_now,
             min_score=min_score, result_limit=limit,

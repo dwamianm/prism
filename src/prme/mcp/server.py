@@ -11,13 +11,14 @@ import os
 import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, StrictBool
 
 from prme import __version__
 from prme.config import PRMEConfig
+from prme.models.relevance import RelevanceSubmission
 from prme.types import NodeType, Scope
 
 logger = logging.getLogger(__name__)
@@ -301,6 +302,70 @@ async def memory_ingest(
         return json.dumps({"event_id": event_id})
     except Exception as e:
         return _internal_error("memory_ingest", e)
+
+
+async def memory_get_retrieval_receipt(request_id: str, user_id: Optional[str] = None, ctx: Context = None) -> str:
+    """Read a saved retrieval snapshot; request_id comes from retrieval metrics."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.get_retrieval_receipt(request_id, user_id=owner)
+        return result.model_dump_json() if result else json.dumps({"error": "Retrieval receipt not found"})
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_retrieval_receipt", exc)
+
+
+async def memory_record_relevance(request_id: str, labels: dict[str, StrictBool],
+                                  feedback_id: Optional[str] = None,
+                                  surface: Literal["results", "context"] = "results",
+                                  method: Literal["explicit_user", "structured_evaluation"] = "explicit_user",
+                                  user_id: Optional[str] = None, ctx: Context = None) -> str:
+    """Save explicit relevance labels for a saved retrieval; reuse feedback_id on retry.
+
+    Labels do not change facts or weights. Unlabelled candidates are not negatives.
+    Context positives require included source content, not reference-only entries.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        data = {"request_id": request_id, "labels": labels, "surface": surface, "method": method}
+        if feedback_id is not None:
+            data["feedback_id"] = feedback_id
+        submission = RelevanceSubmission.model_validate(data)
+        return (await engine.record_relevance(submission, user_id=owner)).model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_record_relevance", exc)
+
+
+async def memory_get_relevance(feedback_id: str, user_id: Optional[str] = None, ctx: Context = None) -> str:
+    """Read an owned immutable relevance record by its retry identity."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.get_relevance(feedback_id, user_id=owner)
+        return result.model_dump_json() if result else json.dumps({"error": "Relevance record not found"})
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_relevance", exc)
+
+
+async def memory_list_relevance(user_id: Optional[str] = None, limit: int = 100,
+                                after_id: Optional[str] = None, ctx: Context = None) -> str:
+    """Page owned relevance records by feedback UUID (not creation time)."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        records = await engine.list_relevance(user_id=owner, limit=limit, after_id=after_id)
+        return json.dumps([record.model_dump(mode="json") for record in records])
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_list_relevance", exc)
 
 
 async def memory_organize(
@@ -602,6 +667,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     server.prme_config = config
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
                  memory_get_node, memory_get_event, memory_get_extraction,
+                 memory_get_retrieval_receipt, memory_record_relevance,
+                 memory_get_relevance, memory_list_relevance,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
                  memory_promote_node, memory_archive_node):
         server.tool()(tool)

@@ -11,11 +11,12 @@ import secrets
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from prme import __version__
+from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.api.models import (
     AcceptedWorkErrorResponse,
     ErrorResponse,
@@ -28,6 +29,7 @@ from prme.api.models import (
     NodeResponse,
     OrganizeRequest,
     OrganizeResponse,
+    RelevanceRequest,
     RetrieveRequest,
     RetrieveResponse,
     RetrieveResultItem,
@@ -693,3 +695,45 @@ async def stats(request: Request, user_id: str | None = None) -> StatsResponse:
         backend=backend,
         details=details,
     )
+
+
+@router.get("/retrievals/{request_id}", response_model=RetrievalReceipt,
+            responses={404: {"model": ErrorResponse}})
+async def get_retrieval_receipt(request: Request, request_id: UUID, user_id: str | None = None):
+    engine = _get_engine(request)
+    result = await engine.get_retrieval_receipt(str(request_id), user_id=_user_id(request, user_id, required=True))
+    if result is None:
+        raise HTTPException(status_code=404, detail="Retrieval receipt not found")
+    return result
+
+
+@router.post("/relevance", response_model=RelevanceRecord,
+             responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+async def record_relevance(request: Request, body: RelevanceRequest):
+    engine = _get_engine(request)
+    owner = _user_id(request, body.user_id, required=True)
+    if await engine.get_retrieval_receipt(str(body.request_id), user_id=owner) is None:
+        raise HTTPException(status_code=404, detail="Retrieval receipt not found")
+    submission = RelevanceSubmission.model_validate(body.model_dump(exclude={"user_id"}))
+    try:
+        return await engine.record_relevance(submission, user_id=owner)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/relevance", response_model=list[RelevanceRecord])
+async def list_relevance(request: Request, user_id: str | None = None,
+                         limit: int = Query(default=100, ge=1, le=1000), after_id: UUID | None = None):
+    return await _get_engine(request).list_relevance(
+        user_id=_user_id(request, user_id, required=True), limit=limit,
+        after_id=str(after_id) if after_id is not None else None)
+
+
+@router.get("/relevance/{feedback_id}", response_model=RelevanceRecord,
+            responses={404: {"model": ErrorResponse}})
+async def get_relevance(request: Request, feedback_id: UUID, user_id: str | None = None):
+    result = await _get_engine(request).get_relevance(
+        str(feedback_id), user_id=_user_id(request, user_id, required=True))
+    if result is None:
+        raise HTTPException(status_code=404, detail="Relevance record not found")
+    return result

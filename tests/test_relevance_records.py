@@ -1,0 +1,215 @@
+"""Scoped learning inputs describe actual saved retrievals across restart."""
+import asyncio
+import hashlib
+from unittest.mock import Mock
+from uuid import uuid4
+
+import pytest
+
+from prme import MemoryEngine
+from prme.models.relevance import RelevanceSubmission
+from prme.types import Scope
+from tests import test_durable_ingestion
+
+config = test_durable_ingestion.config
+user = test_durable_ingestion.user
+
+
+async def capture(engine, user):
+    await engine.store("The telescope is blue.", user_id=user, scope=Scope.PROJECT)
+    await engine.store("Another owner's private source", user_id=user + "-other")
+    response = await engine.retrieve("telescope", user_id=user, scope=Scope.PROJECT, min_score=0)
+    assert response.results and response.metadata.receipt_persisted
+    receipt = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
+    assert receipt is not None
+    return response, receipt
+
+
+async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config, user):
+    async with MemoryEngine.open(config) as engine:
+        response, receipt = await capture(engine, user)
+        assert receipt.context_sha256 == hashlib.sha256(response.bundle.render().encode()).hexdigest()
+        assert receipt.scoring.version_id == response.metadata.scoring_config_version
+        assert receipt.reference_time == response.metadata.reference_time
+        assert receipt.scopes == (Scope.PROJECT,)
+        assert [(c.node_id, c.score, c.trace) for c in receipt.candidates] == [
+            (r.node.id, r.composite_score, r.score_trace) for r in response.results]
+        assert all(c.has_content for c in receipt.candidates if c.in_context)
+        nid = receipt.candidates[0].node_id
+        submission = RelevanceSubmission(request_id=receipt.request_id, labels={nid: True}, surface="context")
+        record = await engine.record_relevance(submission, user_id=user)
+        assert record.receipt_checksum == receipt.checksum
+        assert await engine.get_retrieval_receipt(str(receipt.request_id), user_id=user + "-other") is None
+        assert await engine.get_relevance(str(record.feedback_id), user_id=user + "-other") is None
+        await engine._graph_store.update_node(str(nid), confidence_base=0.2, metadata={"changed_after_retrieval": True})
+        await engine.archive(str(nid), user_id=user)
+        # Judgments and snapshots describe the original exposure, not today's graph.
+        assert await engine.record_relevance(submission, user_id=user) == record
+    async with MemoryEngine.open(config) as engine:
+        assert await engine.get_retrieval_receipt(str(receipt.request_id), user_id=user) == receipt
+        assert await engine.get_relevance(str(record.feedback_id), user_id=user) == record
+        assert await engine.list_relevance(user_id=user) == [record]
+        assert await engine.list_relevance(user_id=user + "-other") == []
+        assert engine._config.scoring.version_id == receipt.scoring.version_id
+        assert len(engine._feedback_tracker) == 0
+
+
+async def test_concurrent_retries_converge_and_conflicting_reuse_is_rejected(config, user):
+    async with MemoryEngine.open(config) as engine:
+        _, receipt = await capture(engine, user)
+        submission = RelevanceSubmission(request_id=receipt.request_id, labels={receipt.candidates[0].node_id: True})
+        first, second = await asyncio.gather(*(engine.record_relevance(submission, user_id=user) for _ in range(2)))
+        assert first == second
+        with pytest.raises(ValueError, match="different relevance"):
+            await engine.record_relevance(submission.model_copy(update={"labels": {receipt.candidates[0].node_id: False}}), user_id=user)
+        assert await engine.list_relevance(user_id=user) == [first]
+
+
+async def test_invalid_or_foreign_relevance_writes_nothing(config, user):
+    async with MemoryEngine.open(config) as engine:
+        _, receipt = await capture(engine, user)
+        own_node = receipt.candidates[0].node_id
+        for request_id, owner, labels in [
+            (receipt.request_id, user + "-other", {own_node: True}),
+            (uuid4(), user, {own_node: True}),
+            (receipt.request_id, user, {uuid4(): False}),
+        ]:
+            with pytest.raises(ValueError):
+                await engine.record_relevance(RelevanceSubmission(request_id=request_id, labels=labels), user_id=owner)
+        assert await engine.list_relevance(user_id=user) == []
+        assert await engine.list_relevance(user_id=user + "-other") == []
+
+
+async def test_receipt_logging_failure_is_visible_without_failing_retrieval(config, user, monkeypatch):
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("The telescope is blue", user_id=user)
+        monkeypatch.setattr("prme.models.relevance.make_receipt", Mock(side_effect=OSError("receipt logging unavailable")))
+        response = await engine.retrieve("telescope", user_id=user, min_score=0)
+        assert response.results and not response.metadata.receipt_persisted
+        assert await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user) is None
+
+
+async def test_context_positive_labels_cannot_credit_reference_only_entries(config, user):
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("telescope " * 1000, user_id=user)
+        response = await engine.retrieve("telescope", user_id=user, token_budget=400, min_score=0)
+        receipt = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
+        candidate = next(c for c in receipt.candidates if c.in_context)
+        assert not candidate.has_content
+        with pytest.raises(ValueError, match="positive labels require source content"):
+            await engine.record_relevance(RelevanceSubmission(request_id=receipt.request_id,
+                labels={candidate.node_id: True}, surface="context"), user_id=user)
+        accepted = await engine.record_relevance(RelevanceSubmission(request_id=receipt.request_id,
+            labels={candidate.node_id: False}, surface="context"), user_id=user)
+        assert accepted.labels == {candidate.node_id: False}
+
+
+async def test_uuid_pagination_is_scoped_and_validated(config, user):
+    async with MemoryEngine.open(config) as engine:
+        _, receipt = await capture(engine, user)
+        records = [await engine.record_relevance(RelevanceSubmission(request_id=receipt.request_id,
+            labels={receipt.candidates[0].node_id: bool(i % 2)}), user_id=user) for i in range(3)]
+        expected = sorted(records, key=lambda r: str(r.feedback_id))
+        first = await engine.list_relevance(user_id=user, limit=2)
+        second = await engine.list_relevance(user_id=user, limit=2, after_id=str(first[-1].feedback_id))
+        assert first + second == expected
+        for limit in (0, -1, True, 1001):
+            with pytest.raises(ValueError, match="limit"):
+                await engine.list_relevance(user_id=user, limit=limit)
+
+
+def test_relevance_labels_are_explicit_booleans():
+    from pydantic import ValidationError
+    for labels in ({}, {uuid4(): "yes"}, {uuid4(): 1}):
+        with pytest.raises(ValidationError):
+            RelevanceSubmission(request_id=uuid4(), labels=labels)
+
+
+async def test_receipt_corruption_is_rejected_and_legacy_logs_remain_unattributed(config, user):
+    import json
+    async with MemoryEngine.open(config) as engine:
+        _, receipt = await capture(engine, user)
+        await engine._relevance._query(
+            "UPDATE operations SET payload = $1 WHERE op_type = 'RETRIEVAL_REQUEST' AND target_id = $2 AND actor_id = $3",
+            json.dumps({"receipt": receipt.model_dump_json(), "receipt_checksum": "0" * 64}), str(receipt.request_id), user)
+        with pytest.raises(ValueError, match="checksum"):
+            await engine.get_retrieval_receipt(str(receipt.request_id), user_id=user)
+        legacy_id = str(uuid4())
+        await engine._relevance._query(
+            "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
+            "VALUES ($1, 'RETRIEVAL_REQUEST', $2, $3, $4, now())",
+            str(uuid4()), legacy_id, json.dumps({"request_id": legacy_id}), user)
+        assert await engine.get_retrieval_receipt(legacy_id, user_id=user) is None
+
+
+async def test_process_exit_after_feedback_commit_preserves_original_receipt(config, user, tmp_path):
+    import os
+    import subprocess
+    import sys
+    if config.backend != "duckdb":
+        pytest.skip("Local process-exit recovery; PostgreSQL uses atomic insert/retry checks")
+    feedback_id = str(uuid4())
+    request_path = tmp_path / "request-id.txt"
+    script = '''
+import asyncio, os, sys
+from pathlib import Path
+from prme import MemoryEngine, PRMEConfig, RelevanceSubmission
+from tests.test_durable_ingestion import MockEmbeddingProvider
+import prme.storage.engine as module
+module.create_embedding_provider = lambda _: MockEmbeddingProvider()
+async def main():
+    db, vector, lexical, user, fid, rid_path = sys.argv[1:]
+    config = PRMEConfig(database_url=None, encryption_enabled=False, db_path=db,
+                        vector_path=vector, lexical_path=lexical,
+                        organizer={"opportunistic_enabled": False},
+                        extraction={"provider": "ollama", "model": "unused"})
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("The telescope is blue", user_id=user)
+        response = await engine.retrieve("telescope", user_id=user, min_score=0)
+        assert response.metadata.receipt_persisted
+        rid = str(response.metadata.request_id)
+        Path(rid_path).write_text(rid)
+        original = engine._relevance._query
+        async def crash(sql, *args):
+            result = await original(sql, *args)
+            if sql.startswith("INSERT INTO operations"):
+                os._exit(43)
+            return result
+        engine._relevance._query = crash
+        await engine.record_relevance(RelevanceSubmission(request_id=rid, feedback_id=fid,
+            labels={response.results[0].node.id: True}), user_id=user)
+asyncio.run(main())
+'''
+    result = await asyncio.to_thread(subprocess.run, [sys.executable, "-c", script, config.db_path,
+        config.vector_path, config.lexical_path, user, feedback_id, str(request_path)],
+        capture_output=True, timeout=60, env=os.environ.copy())
+    assert result.returncode == 43, result.stderr.decode()
+    async with MemoryEngine.open(config) as engine:
+        receipt = await engine.get_retrieval_receipt(request_path.read_text(), user_id=user)
+        record = await engine.get_relevance(feedback_id, user_id=user)
+        assert record is not None and record.receipt_checksum == receipt.checksum
+        assert await engine.record_relevance(RelevanceSubmission(request_id=receipt.request_id,
+            feedback_id=feedback_id, labels=record.labels), user_id=user) == record
+        assert await engine.list_relevance(user_id=user) == [record]
+
+
+async def test_independent_connections_record_one_retry_identity(config, user):
+    from prme.storage.relevance import RelevanceRepository
+    async with MemoryEngine.open(config) as engine:
+        _, receipt = await capture(engine, user)
+        connection = None
+        if config.backend == "duckdb":
+            import duckdb
+            connection = duckdb.connect(config.db_path)
+            other = RelevanceRepository(conn=connection)
+        else:
+            other = RelevanceRepository(pool=engine._pool)
+        try:
+            for _ in range(5):
+                submission = RelevanceSubmission(request_id=receipt.request_id, labels={receipt.candidates[0].node_id: True})
+                first, second = await asyncio.gather(engine.record_relevance(submission, user_id=user), other.record(submission, user_id=user))
+                assert first == second
+        finally:
+            if connection is not None:
+                connection.close()
+        assert len(await engine.list_relevance(user_id=user)) == 5

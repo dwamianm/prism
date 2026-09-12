@@ -39,7 +39,7 @@ Despite the name "scheduled," there is **no built-in cron or daemon scheduler**.
 
 ## RFCs
 
-Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0016). See `docs/INDEX.md` for the full listing. Key RFCs include:
+Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0017). See `docs/INDEX.md` for the full listing. Key RFCs include:
 
 - **RFC-0000** — Suite overview
 - **RFC-0001** — Core data model
@@ -51,6 +51,16 @@ Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-001
 - **RFC-0016** — Durable derivation commits (normal ingestion uses durable extraction jobs, extraction/plan journaling, idempotent index staging and fenced atomic graph commit; explicit plan revision and fenced retired-stage collection are supported; ambiguous or unmanaged legacy staging is retained)
 
 Always consult the relevant RFC before implementing or modifying a subsystem.
+
+## Retrieval feedback and learning
+
+New retrieval logs include owner-scoped `RetrievalReceipt` snapshots and report
+`metadata.receipt_persisted`. `record_relevance(RelevanceSubmission(...), user_id=...)`
+appends explicit candidate labels with an optional caller-selected retry identity.
+These records survive restart and are exposed through Python, HTTP and MCP.
+They do not mutate weights or feed the legacy engine-global `feedback_apply` job.
+Evaluated per-owner/scope learned profiles remain pending; RFC-0017 defines their
+acceptance requirements. Receipt collection is not evidence of learning quality.
 
 ## Configuration Surface
 

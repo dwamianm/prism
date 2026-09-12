@@ -237,6 +237,7 @@ class RetrievalMetadata(BaseModel):
     """
 
     request_id: UUID = Field(description="Request identifier from QueryAnalysis")
+    receipt_persisted: bool = Field(default=False, description="An owner-scoped feedback receipt was durably logged")
     reference_time: datetime | None = Field(
         default=None, description="UTC clock used for relative dates and scoring decay",
     )

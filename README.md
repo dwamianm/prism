@@ -417,6 +417,42 @@ model output or `None` when no owned record exists. HTTP exposes
 `GET /v1/events/{event_id}/extraction`; MCP exposes `memory_get_extraction`.
 Both bind access to the source owner's identity and perform no model calls.
 
+## Record relevance feedback
+
+Every successful receipt log preserves returned candidates, score traces, content
+hashes and context membership. `response.metadata.receipt_persisted` reports
+whether that log succeeded; retrieval still works during a logging outage.
+
+```python
+from prme import MemoryClient, RelevanceSubmission
+
+# Call this handler only after an explicit user judgment.
+def save_user_judgment(memory, response, node_id, relevant):
+    if not response.metadata.receipt_persisted:
+        raise ValueError("This retrieval has no saved feedback receipt")
+    submission = RelevanceSubmission(
+        request_id=response.metadata.request_id,
+        labels={node_id: relevant},
+    )
+    # Keep submission.feedback_id for retries after a lost acknowledgement.
+    return memory.record_relevance(submission, user_id="alice")
+
+with MemoryClient("./memories") as memory:
+    response = memory.retrieve("Which database does Aster use?", user_id="alice")
+    # Present results to your user, then call save_user_judgment with their label.
+```
+
+`get_retrieval_receipt`, `get_relevance` and `list_relevance` expose owned saved
+records after restart. HTTP provides `/v1/retrievals/{request_id}` and
+`/v1/relevance`; MCP provides `memory_get_retrieval_receipt`,
+`memory_record_relevance`, `memory_get_relevance` and `memory_list_relevance`.
+Receipts add per-candidate metadata to the existing retrieval operation log;
+they do not duplicate candidate text or prove an application used the context.
+Labels preserve the original exposure when graph state changes. They do not
+change facts or weights, and the legacy global feedback tuner does not consume
+them. [Evaluated scoped learning](docs/RFC-0017-Scoped-Retrieval-Learning.md) remains
+pending; this is its durable evidence foundation, not a learned-quality claim.
+
 ## MCP server
 
 Install `prme[mcp]`. For a local stdio assistant, set `PRME_MCP_USER_ID=alice`

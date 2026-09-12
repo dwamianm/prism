@@ -28,6 +28,7 @@ from collections.abc import Coroutine, Iterator
 from typing import Any, TypeVar
 
 from prme.config import PRMEConfig
+from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -281,6 +282,20 @@ class MemoryClient:
                 scope=scope,
             )
         )
+
+    def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
+        return self._run(self._engine.get_retrieval_receipt(request_id, user_id=user_id))
+
+    def record_relevance(self, submission: RelevanceSubmission, *, user_id: str) -> RelevanceRecord:
+        """Save explicit relevance labels; reuse feedback_id when retrying."""
+        return self._run(self._engine.record_relevance(submission, user_id=user_id))
+
+    def get_relevance(self, feedback_id: str, *, user_id: str) -> RelevanceRecord | None:
+        return self._run(self._engine.get_relevance(feedback_id, user_id=user_id))
+
+    def list_relevance(self, *, user_id: str, limit: int = 100,
+                       after_id: str | None = None) -> list[RelevanceRecord]:
+        return self._run(self._engine.list_relevance(user_id=user_id, limit=limit, after_id=after_id))
 
     def get_node(self, node_id: str, *, user_id: str | None = None, include_superseded: bool = False) -> MemoryNode | None:
         """Get a single node by ID. Returns MemoryNode or None."""

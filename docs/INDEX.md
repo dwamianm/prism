@@ -53,6 +53,7 @@ This index covers the complete Revised Relational Memory Substrate (RMS) RFC sui
 | RFC-0007 | Decay and Forgetting Model | Draft | [RFC-0007-Decay-and-Forgetting.md](RFC-0007-Decay-and-Forgetting.md) |
 | RFC-0008 | Confidence Evolution and Reinforcement | Draft | [RFC-0008-Confidence-Evolution.md](RFC-0008-Confidence-Evolution.md) |
 | RFC-0009 | Memory Usage Feedback Loop | Draft | [RFC-0009-Memory-Usage-Feedback-Loop.md](RFC-0009-Memory-Usage-Feedback-Loop.md) |
+| RFC-0017 | Scoped Retrieval Feedback and Evaluated Learning | Receipts and relevance records implemented; learned profiles pending | [RFC-0017-Scoped-Retrieval-Learning.md](RFC-0017-Scoped-Retrieval-Learning.md) |
 | RFC-0015 | Self-Organizing Memory Execution Model | Draft | [RFC-0015-Self-Organizing-Memory.md](RFC-0015-Self-Organizing-Memory.md) |
 
 ### Tier 4 — Advanced Capabilities

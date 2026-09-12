@@ -6,6 +6,8 @@ These are thin DTOs — no business logic belongs here.
 
 from __future__ import annotations
 
+from prme.models.relevance import RelevanceSubmission
+
 from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -278,3 +280,10 @@ class ErrorResponse(BaseModel):
     """Application errors and FastAPI's structured validation errors."""
 
     detail: str | list[dict[str, Any]]
+
+
+# Relevance submissions use the same validated contract as the Python API.
+
+
+class RelevanceRequest(RelevanceSubmission):
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")

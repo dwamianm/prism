@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse
+from prme import RelevanceRecord, RelevanceSubmission, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -12,6 +12,9 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.ingest("Alice used Rust yesterday", user_id="alice",
                               event_time=datetime(2024, 3, 10, tzinfo=timezone.utc),
                               metadata={"source": "import"}), str)
+    assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)
+    assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
+    assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
     assert_type(client.retrieve("preferences", user_id="alice"), RetrievalResponse)
     assert_type(client.get_node("node-id"), MemoryNode | None)
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])
@@ -26,3 +29,7 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.organize(user_id="alice"), OrganizeResult)
     for node in client.iter_nodes(user_id="alice"):
         assert_type(node, MemoryNode)
+
+
+def submit_relevance(client: MemoryClient, submission: RelevanceSubmission) -> None:
+    assert_type(client.record_relevance(submission, user_id="alice"), RelevanceRecord)
