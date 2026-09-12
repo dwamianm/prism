@@ -9,8 +9,26 @@ import json
 import tempfile
 import time
 from pathlib import Path
+from pydantic import ValidationError
 from prme import MemoryEngine, PRMEConfig
 from prme.types import NodeType, EdgeType
+
+
+def failure_details(exc):
+    """Keep schema feedback for synthetic probes without SDK messages or inputs."""
+    pending, seen, kinds, validation = [exc], set(), [], []
+    while pending and len(seen) < 24:
+        error = pending.pop(0)
+        if id(error) in seen:
+            continue
+        seen.add(id(error))
+        kinds.append(type(error).__name__)
+        if isinstance(error, ValidationError):
+            validation.extend(error.errors(include_input=False, include_context=False, include_url=False))
+        if error.__cause__ is not None:
+            pending.append(error.__cause__)
+        pending.extend(attempt.exception for attempt in getattr(error, "failed_attempts", [])[:3])
+    return {"error_chain": kinds, "validation_errors": validation}
 
 
 async def run(args):
@@ -83,6 +101,10 @@ async def run(args):
                             "full_source_preserved": sources_preserved,
                             "edge_types": [edge.edge_type.value for edge in plan.edges],
                             "facts": len(facts),
+                            "claim_node_types": [
+                                node.node_type.value for node in nodes
+                                if node.node_type in {NodeType.FACT, NodeType.PREFERENCE, NodeType.DECISION}
+                            ],
                             "has_fact_edges": sum(
                                 edge.edge_type == EdgeType.HAS_FACT
                                 for edge in plan.edges
@@ -100,6 +122,7 @@ async def run(args):
                             "case": case,
                             "passed": False,
                             "error_type": type(exc).__name__,
+                            **failure_details(exc),
                         }
                     )
     out = {

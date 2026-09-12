@@ -277,6 +277,35 @@ Reproduce with:
 python -m benchmarks.diagnostics.entity_references --output entity-references.json
 ```
 
+## Epistemic relationship claims
+
+At `b8bac4b`, new relationship extractions become source-cited FACT nodes with
+normal epistemic filtering. HAS_FACT and MENTIONS associate their subject and
+object; model predicates remain metadata rather than direct semantic edge types.
+Built-in providers must cite and classify relationships. Legacy/custom outputs
+without classification become UNVERIFIED model proposals with the configured
+SYSTEM_INFERRED confidence (default 0.20), avoiding the absent user-stated cell's
+0.50 fallback. A covering fact for the same resolved endpoints and passage takes
+precedence over duplicate relationship labels. The extraction journal preserves
+both outputs. Qualified object references avoid arbitrary namesake links.
+
+The focused source, reference, update, publication and recovery tests passed
+**128 checks with 9 skips**; the expanded legacy-plan subset passed **12 checks
+with 2 skips**. The installed Python 3.13 wheel passed **50 checks with 2 skips**,
+including live PostgreSQL. Tests check default versus explicit retrieval of
+hypothetical/unverified claims, preserved source conditions, no inferred causal
+edges, tenant scoping and old policy checksums. Lint passed for all source/tests.
+
+The first supervised [real-model trial](relationships-b8bac4b-failed.json)
+**failed**: the service case passed; namesake extraction failed with `ExtractionError`; the conditional usage statement became a hypothetical PREFERENCE,
+not the expected FACT. Source passages and association edges were preserved in
+the completed cases. The worker exited 1, so the parent correctly retained a
+failed result. Model classification and namesake reliability remain open.
+
+These checks do not establish semantic predicate accuracy. Association paths do
+not imply logical entailment. Existing committed graphs and saved v1/v2 plans
+retain their original artifacts; this is not a historical-edge migration.
+
 ## Grounded extraction journal
 
 `extraction-fault-7a1e864.json` records a real Ollama workflow: grounded output
