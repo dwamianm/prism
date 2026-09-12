@@ -16,7 +16,7 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite (`d73f326`) passed 1,810 tests with 42 skips and live PostgreSQL.
+completed frozen full suite (`d542266`) passed 1,816 tests with 42 skips and live PostgreSQL.
 Failed startup now releases acquired resources on both backends and restores
 encryption after a local pack was decrypted; wrong-key failures preserve the pack.
 Vector payloads now survive abrupt exits before the USearch snapshot is saved;
@@ -46,7 +46,11 @@ restart with scoped status, explicit processing and retry across Python, HTTP,
 MCP and CLI. Lease generations fence stale workers inside graph transactions;
 completion commits with its receipt. Explicit stale-plan recovery now preserves
 old plans while queuing a new revision from saved extraction. Abandoned-stage
-collection and model-output revisions remain open. Processing is explicit; retrieval does not run an LLM recovery job.
+collection and model-output revisions remain open. A real local-model trial also
+exposed inconsistent entity/subject names that leave facts unlinked; this remains
+an extraction-quality gap. Installed ONNX Runtime telemetry caused a native
+shutdown abort; local embeddings now disable that optional uploader by default
+and diagnostics require a clean child-process exit before reporting success. Processing is explicit; retrieval does not run an LLM recovery job.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall

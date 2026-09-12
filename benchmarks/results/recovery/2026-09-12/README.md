@@ -219,6 +219,16 @@ this startup switch prevents the non-Windows uploader from being created;
 calling its API after initialization may leave an initialization event active.
 See the [upstream runtime documentation](https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md).
 
+The final frozen full suite at `d542266` passed **1,816 tests with 42 skips**
+in 161.01 seconds, using Python 3.11 and live PostgreSQL.
+
+The rebuilt Python 3.13 wheel at `d542266` passed **24 targeted checks with 2
+skips**, including native initialization defaults, process-result handling,
+revision recovery, migration and transports with live PostgreSQL. The supervised
+[installed-wheel diagnostic](derivation-replanning-d542266.json) completed with
+**process exit code 0** on ONNX Runtime 1.30.0. It records the embedding-provider
+source hash and the active telemetry setting, as well as the pipeline hash.
+
 Reproduce with:
 
 ```bash
