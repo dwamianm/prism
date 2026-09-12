@@ -12,6 +12,7 @@ import time
 import tantivy
 from prme.models.derivation import DerivationPlan
 from prme.storage._threading import run_to_completion
+from prme.storage.derivation_staging import DuckDBStageFence
 
 
 class LexicalIndex:
@@ -225,14 +226,17 @@ class LexicalIndex:
         async with self._write_lock:
             await run_to_completion(self._commit_locked)
 
-    async def stage(self, plan: DerivationPlan) -> None:
+    async def stage(self, plan: DerivationPlan, *, fence: DuckDBStageFence | None = None) -> None:
         """Commit missing prepared documents once, rejecting identity conflicts.
 
         The directory writer lock covers comparison and publication, so a
-        retry never deletes another attempt's documents. The coordinator must
-        protect pending plans from compaction before using this for ingestion.
+        retry never deletes another attempt's documents. Managed ingestion
+        supplies a fence covering the work generation and native write; calls
+        without one remain an unmanaged component API.
         """
         plan = DerivationPlan.model_validate_json(plan.model_dump_json())
+        if fence is not None:
+            fence.verify_plan(plan)
         nodes = {node.id: node for node in plan.nodes}
         documents = tuple({
             "node_id": [str(doc.node_id)], "content": [doc.content],
@@ -240,7 +244,14 @@ class LexicalIndex:
             "scope": [nodes[doc.node_id].scope.value],
         } for doc in plan.lexical_documents)
         async with self._write_lock:
-            await run_to_completion(self._do_stage, documents)
+            if fence is not None:
+                async with fence.conn_lock:
+                    def guarded():
+                        with fence.hold():
+                            self._do_stage(documents)
+                    await run_to_completion(guarded)
+            else:
+                await run_to_completion(self._do_stage, documents)
 
     def _do_stage(self, documents: tuple[dict, ...]) -> None:
         # Preserve unrelated normal writes before starting this isolated batch.

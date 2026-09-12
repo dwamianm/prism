@@ -819,10 +819,11 @@ async def _job_index_compaction(
     node has vanished from the graph entirely can no longer be attributed to
     a user, so they are left for an unscoped run to collect.
 
-    Prepared vector identities whose graph node does not exist yet are retained:
-    their absence is expected before atomic derivation publication. Until the
-    derivation coordinator has an abandonment policy, explicit deletion or
-    rebuild is required to collect abandoned staging claims.
+    Current prepared plans remain retryable. Replaced revisions with uniquely
+    reserved identities and no graph nodes can be collected in batches of 500.
+    Their immutable source journals remain intact. Incomplete or invalid
+    ownership registration blocks stage reclamation. Lexical deletion commits
+    before vector metadata removal, preserving a durable retry anchor.
     """
     start = time.monotonic()
 
@@ -869,19 +870,22 @@ async def _job_index_compaction(
 
     from prme.storage._threading import run_to_completion
 
+    from prme.storage.derivation_registry import retired_staging
     async with engine._graph_store._conn_lock:
         stale_ids = await run_to_completion(_find_stale)
+        retired_ids, cleanup_reason = await run_to_completion(retired_staging, conn, user_id=user_id)
+    candidates = list(dict.fromkeys(stale_ids + retired_ids))
 
     processed = 0
     modified = 0
     errors = 0
-    for node_id in stale_ids:
+    for node_id in candidates:
         elapsed_ms = (time.monotonic() - start) * 1000.0
         if elapsed_ms >= budget_ms:
             break
         processed += 1
         try:
-            await engine._evict_from_indexes(node_id)
+            await engine._delete_from_indexes(node_id)
             modified += 1
         except Exception:
             logger.warning(
@@ -898,7 +902,8 @@ async def _job_index_compaction(
         nodes_modified=modified,
         errors=errors,
         duration_ms=round(duration_ms, 2),
-        details={"stale_found": len(stale_ids)},
+        details={"stale_found": len(stale_ids), "retired_staging_found": len(retired_ids),
+                 "stage_cleanup_blocked": cleanup_reason is not None, "stage_cleanup_reason": cleanup_reason},
     )
 
 

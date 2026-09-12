@@ -625,15 +625,17 @@ class IngestionPipeline:
                 raise ValueError("Derivation receipt conflicts with the requested plan")
             return
         if getattr(self._graph_store, "_conn", None) is not None:
+            from prme.storage.derivation_staging import DuckDBStageFence
+            fence = DuckDBStageFence(self._graph_store._conn, self._graph_store._conn_lock, plan, claim)
             for embedding in plan.embeddings:
                 await self._write_queue.submit(
-                    lambda item=embedding: self._vector_index.stage(item, user_id=plan.user_id),
+                    lambda item=embedding: self._vector_index.stage(item, user_id=plan.user_id, fence=fence),
                     label=f"derivation.vector:{embedding.node_id}",
                 )
             # Numerical vector payloads are already durable; keep native file
             # snapshots debounced. Lexical publication is one committed batch.
             await self._write_queue.submit(
-                lambda: self._lexical_index.stage(plan), label=f"derivation.lexical:{plan.id}",
+                lambda: self._lexical_index.stage(plan, fence=fence), label=f"derivation.lexical:{plan.id}",
             )
         # PostgreSQL writes its prepared vector/lexical columns in this same
         # graph transaction. No provider call is permitted inside the commit.

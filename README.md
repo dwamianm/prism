@@ -283,6 +283,21 @@ work untouched; it requires an existing prepared plan. Repeated requests before
 that new plan is prepared leave the same revision queued. This revises graph
 planning, not the original model output or grounding policy.
 
+For local packs, maintenance can reclaim external index entries belonging to
+replaced revisions:
+
+```python
+await engine.organize(user_id="alice", jobs=["index_compaction"], budget_ms=5000)
+```
+
+Cleanup retains the source and plan journals, current retryable work, committed
+graph nodes and ambiguous legacy identities. It considers up to 500 retired
+identities per pass. Failed deletions remain discoverable for retry. Job details
+report `retired_staging_found` and `stage_cleanup_reason` when incomplete or invalid
+registration prevents reclamation. PostgreSQL writes prepared indexes inside
+its graph transaction and has no separate native staging to collect.
+
+
 HTTP exposes `GET /v1/events/{event_id}/extraction-status`,
 `POST /v1/events/{event_id}/retry-extraction`, and `POST /v1/extractions/process`.
 MCP exposes `memory_extraction_status`, `memory_retry_extraction`, and

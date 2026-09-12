@@ -19,6 +19,7 @@ from usearch.index import Index
 
 from prme.models.derivation import PreparedEmbedding
 from prme.storage._threading import run_to_completion
+from prme.storage.derivation_staging import DuckDBStageFence
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
 
 logger = logging.getLogger(__name__)
@@ -335,17 +336,22 @@ class VectorIndex:
 
         return key
 
-    async def stage(self, embedding: PreparedEmbedding, *, user_id: str) -> int:
+    async def stage(self, embedding: PreparedEmbedding, *, user_id: str, fence: DuckDBStageFence | None = None) -> int:
         """Durably stage a saved embedding without inference or replacement.
 
         Repeating identical input reuses its key, including after a native
         index failure. Conflicting identities fail without changing existing
-        data. Graph publication and pending-plan compaction protection belong
-        to the derivation coordinator; this method does not publish a node.
+        data. Managed ingestion supplies a fence that holds its work generation
+        against takeover throughout the native write. Calls without a fence are
+        an unmanaged component API; this method does not publish a graph node.
         """
         embedding = PreparedEmbedding.model_validate_json(embedding.model_dump_json())
         if not user_id:
             raise ValueError("Prepared embedding requires an owner")
+        if fence is not None:
+            if fence.conn is not self._conn or fence.conn_lock is not self._conn_lock:
+                raise ValueError("Stage fence and vector index must share their connection and lock")
+            fence.verify_embedding(embedding, user_id)
         expected = (self._provider.model_name, self._provider.model_version, self._provider.dimension)
         if ((embedding.model, embedding.version, embedding.dimension) != expected
                 or embedding.dimension != self._index.ndim):
@@ -355,6 +361,11 @@ class VectorIndex:
             raise ValueError("Prepared embedding underflows to a zero float32 vector")
         async with self._write_lock:
             async with self._conn_lock:
+                if fence is not None:
+                    def guarded():
+                        with fence.hold():
+                            return self._do_stage(embedding, user_id, vector)
+                    return await run_to_completion(guarded)
                 return await run_to_completion(self._do_stage, embedding, user_id, vector)
 
     def _do_stage(self, embedding: PreparedEmbedding, user_id: str, vector: np.ndarray) -> int:
@@ -476,17 +487,11 @@ class VectorIndex:
 
         keys = [row[0] for row in rows]
         for key in keys:
-            # USearch raises if the key is absent; tolerate that so a
-            # metadata/index drift (key in metadata but missing from the
-            # HNSW index) does not abort the whole eviction. Logged at
-            # debug for observability rather than silently swallowed.
-            try:
+            # Missing native keys are harmless drift. A genuine native removal
+            # error must preserve the durable retry anchor instead of silently
+            # deleting metadata and making the leftover vector undiscoverable.
+            if self._index.contains(key):
                 self._index.remove(key)
-            except (KeyError, ValueError, RuntimeError) as exc:
-                logger.debug(
-                    "vector_index.remove_missing_key",
-                    extra={"vector_key": key, "node_id": node_id, "error": str(exc)},
-                )
 
         self._conn.execute("BEGIN TRANSACTION")
         try:

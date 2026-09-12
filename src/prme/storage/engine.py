@@ -1789,35 +1789,27 @@ class MemoryEngine:
         # Archived content is not retrievable, so drop it from the indexes.
         await self._evict_from_indexes(node_id)
 
-    async def _evict_from_indexes(self, node_id: str) -> None:
-        """Remove a node's entries from the vector and lexical indexes.
+    async def _delete_from_indexes(self, node_id: str) -> None:
+        """Delete lexical first, retaining vector metadata as a retry anchor."""
+        await self._write_queue.submit(
+            lambda: self._lexical_index.delete_by_node_id(node_id),
+            label=f"evict.lexical:{node_id}",
+        )
+        await self._write_queue.submit(
+            lambda: self._vector_index.delete_by_node_id(node_id),
+            label=f"evict.vector:{node_id}",
+        )
 
-        Best-effort: a failure to evict from a search index must not undo a
-        completed graph lifecycle transition (the node is already marked
-        superseded/archived and is filtered out of vector retrieval by
-        lifecycle state). Each delete is serialized through the WriteQueue
-        to match the rest of the write path, and failures are logged and
-        swallowed. Index drift left by a failure is reconciled by the
-        organizer's index_compaction job.
+    async def _evict_from_indexes(self, node_id: str) -> None:
+        """Best-effort lifecycle eviction; compaction retries remaining drift.
+
+        A lexical failure retains vector metadata so maintenance can discover
+        the unfinished deletion. Retired graph state already prevents retrieval.
         """
         try:
-            await self._write_queue.submit(
-                lambda nid=node_id: self._vector_index.delete_by_node_id(nid),
-                label=f"evict.vector:{node_id}",
-            )
+            await self._delete_from_indexes(node_id)
         except Exception:
-            logger.warning(
-                "evict.vector_failed", extra={"node_id": node_id}, exc_info=True
-            )
-        try:
-            await self._write_queue.submit(
-                lambda nid=node_id: self._lexical_index.delete_by_node_id(nid),
-                label=f"evict.lexical:{node_id}",
-            )
-        except Exception:
-            logger.warning(
-                "evict.lexical_failed", extra={"node_id": node_id}, exc_info=True
-            )
+            logger.warning("evict.index_failed", extra={"node_id": node_id}, exc_info=True)
 
     # --- Rebuild (issue #45) ---
 

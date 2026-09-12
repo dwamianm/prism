@@ -103,3 +103,46 @@ async def initialize_pg(conn) -> None:
                     logger.warning('Derivation ownership registration incomplete for %s', row['id'])
                     continue
                 await register_pg(conn, plan, legacy=True)
+
+
+def retired_staging(conn, *, user_id: str | None, limit: int = 500) -> tuple[list[str], str | None]:
+    """Find uniquely owned, graph-invisible artifacts from replaced revisions.
+
+    The stage fence prevents those revisions from writing again. Vector staging
+    remains the retry anchor until lexical deletion has committed. Journals and
+    ownership reservations are retained even after physical index reclamation.
+    """
+    from prme.storage.event_store import EventStore
+    if conn.execute(_PENDING.replace('SELECT o.id, o.payload', 'SELECT 1') + ' LIMIT 1').fetchone():
+        return [], "unregistered_plans"
+    scope = ' AND e.user_id = ?' if user_id is not None else ''
+    args = [user_id, limit] if user_id is not None else [limit]
+    rows = conn.execute(
+        'SELECT DISTINCT a.node_id, r.event_id, e.user_id, r.revision, r.operation_id '
+        'FROM derivation_artifact_owners a '
+        'JOIN derivation_registered_plans r ON r.operation_id = a.operation_id '
+        'JOIN events e ON e.id::VARCHAR = r.event_id '
+        'JOIN event_extractions w ON w.event_id = e.id '
+        'JOIN vector_staging vs ON vs.node_id = a.node_id '
+        'JOIN vector_metadata vm ON vm.vector_key = vs.vector_key AND vm.node_id = a.node_id AND vm.user_id = e.user_id '
+        'WHERE r.revision < w.plan_revision '
+        'AND NOT EXISTS (SELECT 1 FROM nodes n WHERE n.id::VARCHAR = a.node_id)' + scope +
+        ' ORDER BY a.node_id LIMIT ?', args,
+    ).fetchall()
+    plans = {}
+    result = []
+    store = EventStore(conn)
+    for node_id, event_id, owner, revision, operation_id in rows:
+        if operation_id not in plans:
+            try:
+                plan = store._get_derivation_plan_sync(event_id, owner, revision)
+                if plan is None or plan.prepared_operation_id != operation_id:
+                    return [], "invalid_plan"
+                plans[operation_id] = {str(node.id) for node in plan.nodes}
+            except (ValueError, KeyError, TypeError):
+                logger.warning('Retired derivation journal is invalid for %s', operation_id)
+                return [], "invalid_plan"
+        if node_id not in plans[operation_id]:
+            return [], "invalid_registry"
+        result.append(node_id)
+    return result, None

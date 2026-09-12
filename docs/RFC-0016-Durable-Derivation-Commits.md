@@ -1,6 +1,6 @@
 # RFC-0016: Durable Derivation Commits
 
-**Status:** Partially implemented; durable extraction work, journaled plans, and fenced atomic commits; explicit plan revision implemented; abandonment collection pending
+**Status:** Partially implemented; durable extraction work, journaled plans, and fenced atomic commits; explicit plan revision and retired-stage collection implemented
 **Date:** 2026-09-12
 **Depends on:** RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0014
 
@@ -81,15 +81,33 @@ instead of making the pack unreadable or assigning ownership arbitrarily. Those
 identities cannot be newly reserved. Invalid historical plan records are left
 unregistered with a warning containing only their operation ID; source reads
 remain available. Any future collector must disable reclamation when registration
-is incomplete and must retain ambiguous identities. Registration is a prerequisite,
-not authorization to delete: index staging also needs a fence against writes by
-obsolete workers before collection can safely complete.
+is incomplete and must retain ambiguous identities. Registration alone is not authorization to delete: the external-stage fence
+below must also prevent obsolete workers from recreating reclaimed entries.
 
-Compaction retains missing graph identities with a durable vector staging claim.
-Once a graph node exists and is archived, normal compaction can evict it. This is
-conservative retention: abandoned staging requires explicit deletion or rebuild
-until the coordinator provides a fenced abandonment policy. Rebuild must not run
-concurrently with a derivation publication.
+Managed DuckDB index staging now holds a work-row transaction on an independent
+cursor over the same database for the duration of each native write. It verifies
+the exact current saved plan, its input membership and the claim before writing,
+then revalidates the lease afterward. Touching the work row prevents a concurrent
+connection from advancing its generation or plan revision while the native call
+is in flight. The index's primary connection can commit durable vector payloads
+normally. An expired or cancelled in-flight operation may leave plan-owned staged
+inputs; ownership cannot transfer until that operation finishes. Cancellation
+keeps index and connection locks held until the native operation returns.
+Standalone index `stage()` calls without this fence remain an unmanaged component
+API. PostgreSQL stages prepared indexes in its fenced graph transaction.
+
+`index_compaction` collects up to 500 staged node identities per pass from
+explicitly replaced revisions. It verifies their saved plan/source, requires
+unique ownership and absence from the graph, and scopes them through the original
+event owner. Current failed, pending and running plans remain retryable. Ambiguous
+legacy allocations are retained; unregistered or invalid journals block this
+stage cleanup and appear in job details. No age-based abandonment is inferred.
+Lexical deletion commits before vector metadata removal. A failed deletion or
+process exit retains that vector staging row as a retry anchor; native removal
+errors propagate rather than discarding the metadata. Sources, immutable plans
+and permanent identity reservations are retained. Existing archived graph nodes
+remain eligible for ordinary index compaction. Rebuild must not run concurrently
+with a derivation publication.
 
 The normal ingestion pipeline now prepares a scoped in-memory graph overlay,
 batches embedding inference, journals the first complete plan, stages external
@@ -153,8 +171,9 @@ checkpoint after adding it: a subprocess test reproduced DuckDB 1.4.4 failing
 to replay the ALTER from WAL after abrupt exit. The migrated-pack test now
 verifies both preserved legacy work and recovery after subsequent plan journaling.
 
-Legacy sources are not automatically enrolled in extraction work. Abandoned
-index staging still requires an explicit maintenance policy.
+Legacy sources are not automatically enrolled in extraction work. Unmanaged or
+ambiguous staging remains conservatively retained; collection only covers the
+explicitly replaced, uniquely owned revision protocol above.
 
 New plans use materialization policy `relationship_claims_v3`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
