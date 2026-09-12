@@ -67,6 +67,24 @@ lock and commits only missing documents as one batch. It never deletes existing
 documents to retry. Tests cover cancellation, lost commit acknowledgements,
 concurrent in-process retries, restart and abrupt exits at both index boundaries.
 
+Plan journaling now reserves each new node ID for its exact prepared-operation
+identity in the same transaction as the plan and work binding. Reservations are
+global across sources and tenants; concurrent plans cannot allocate a shared ID,
+and even a new revision reusing the old plan UUID cannot reuse its artifacts.
+Losing concurrent planners for the same source/revision still converge on the
+first saved plan before reserving identities.
+
+The derived `derivation_artifact_owners` and `derivation_registered_plans` tables
+are incrementally rebuilt from checksummed journal records at startup, in pages
+of 128 records. Historical overlapping allocations become ambiguous (NULL owner)
+instead of making the pack unreadable or assigning ownership arbitrarily. Those
+identities cannot be newly reserved. Invalid historical plan records are left
+unregistered with a warning containing only their operation ID; source reads
+remain available. Any future collector must disable reclamation when registration
+is incomplete and must retain ambiguous identities. Registration is a prerequisite,
+not authorization to delete: index staging also needs a fence against writes by
+obsolete workers before collection can safely complete.
+
 Compaction retains missing graph identities with a durable vector staging claim.
 Once a graph node exists and is archived, normal compaction can evict it. This is
 conservative retention: abandoned staging requires explicit deletion or rebuild

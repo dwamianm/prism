@@ -256,4 +256,7 @@ async def initialize_pg_database(
         for idx in _LEXICAL_DOCUMENTS_INDEXES:
             await conn.execute(idx)
 
+        from prme.storage.derivation_registry import initialize_pg
+        await initialize_pg(conn)
+
     logger.info("PostgreSQL schema initialized (embedding_dim=%d)", embedding_dim)

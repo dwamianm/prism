@@ -555,4 +555,6 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     _migrate_nodes_ttl_days(conn)
     _migrate_events_event_time(conn)
     _migrate_nodes_event_time(conn)
+    from prme.storage.derivation_registry import initialize_duck
+    initialize_duck(conn)
     return False

@@ -120,6 +120,8 @@ class EventStore:
             saved = self._get_derivation_plan_sync(str(plan.event_id), plan.user_id)
             if saved is None or (saved.id == plan.id and saved.checksum != plan.checksum):
                 raise ValueError("Prepared derivation ID conflicts with a different payload")
+            from prme.storage.derivation_registry import register_duck
+            register_duck(self._conn, saved)
             if managed is not None:
                 self._conn.execute("UPDATE event_extractions SET plan_id = ? WHERE event_id = ?",
                                    [str(saved.id), str(plan.event_id)])
