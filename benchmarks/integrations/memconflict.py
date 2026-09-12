@@ -289,6 +289,7 @@ async def run(args):
     for profile in selected:
         with tempfile.TemporaryDirectory(prefix="prme-memconflict-") as directory:
             root = Path(directory)
+            (root / "lexical").mkdir()
             local = config.model_copy(update={"db_path": str(root / "memory.duckdb"),
                                               "vector_path": str(root / "vectors.usearch"),
                                               "lexical_path": str(root / "lexical")})
