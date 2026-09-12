@@ -296,6 +296,7 @@ def compute_composite_score(
     now: datetime | None = None,
     query_analysis: QueryAnalysis | None = None,
     recency_reference: datetime | None = None,
+    recency_multiplier: float = 1.0,
 ) -> ScoreTrace:
     """Compute the 8-input composite score for a single candidate.
 
@@ -332,6 +333,8 @@ def compute_composite_score(
             newest candidate in the batch), making recency meaningful even
             when all events are old relative to ``now``. When None, falls
             back to ``now``.
+        recency_multiplier: Apply an update-language boost before the shared
+            temporal, node-type, and relevance-floor scoring rules.
 
     Returns:
         ScoreTrace with all 8 component values and the composite score.
@@ -344,14 +347,19 @@ def compute_composite_score(
     effective_salience, effective_confidence = _compute_effective_scores(node, now)
 
     # Recency factor: exponential decay based on days since last update.
-    # Use updated_at if available, fall back to created_at.
+    # Use episode time for relative episode comparisons; otherwise use the
+    # ingestion/update time. Never subtract ingestion time from an episode
+    # anchor: historical imports would all appear equally recent.
     # When recency_reference is provided, compute relative recency (gap
     # between this candidate and the newest candidate) so that recency is
     # meaningful even when all events are old relative to ``now``.
-    reference_time = node.updated_at or node.created_at
+    reference_time = (
+        node.event_time or node.updated_at or node.created_at
+        if recency_reference is not None else node.updated_at or node.created_at
+    )
     recency_anchor = recency_reference or now
     days_since_update = max(0.0, (recency_anchor - reference_time).total_seconds() / 86400.0)
-    recency = math.exp(-weights.recency_lambda * days_since_update)
+    recency = min(1.0, math.exp(-weights.recency_lambda * days_since_update) * recency_multiplier)
 
     # Epistemic weight: config override dict (str keys) or module-level default (Enum keys).
     if epistemic_weights is not None:
@@ -485,6 +493,7 @@ def score_and_rank(
                     recency_lambda=target_lambda,
                     temporal_boost=weights.temporal_boost,
                     node_type_boost=weights.node_type_boost,
+                    relevance_floor=weights.relevance_floor,
                 )
 
     # Episodic recency boost: when query is about recent interactions,
@@ -515,6 +524,7 @@ def score_and_rank(
                     recency_lambda=effective_weights.recency_lambda,
                     temporal_boost=effective_weights.temporal_boost,
                     node_type_boost=effective_weights.node_type_boost,
+                    relevance_floor=effective_weights.relevance_floor,
                 )
 
     # Compute relative recency reference: use the newest event_time (or
@@ -537,37 +547,8 @@ def score_and_rank(
             candidate, effective_weights, epistemic_weights, now=now,
             query_analysis=query_analysis,
             recency_reference=recency_ref,
+            recency_multiplier=2.0 if is_current_query and _has_update_language(candidate.node.content) else 1.0,
         )
-
-        # Supersedence boost: for current-state queries, candidates with
-        # update language get their recency score boosted by 2.0x.
-        if is_current_query and _has_update_language(candidate.node.content):
-            boosted_recency = min(trace.recency_factor * 2.0, 1.0)
-            # Recompute the additive score with the boosted recency.
-            additive = (
-                effective_weights.w_semantic * trace.semantic_similarity
-                + effective_weights.w_lexical * trace.lexical_relevance
-                + effective_weights.w_graph * trace.graph_proximity
-                + effective_weights.w_recency * boosted_recency
-                + effective_weights.w_salience * trace.salience
-                + effective_weights.w_confidence * trace.confidence
-            )
-            composite = round(
-                additive * trace.epistemic_weight * trace.node_type_boost, 10,
-            )
-            # Create updated trace with boosted values.
-            trace = ScoreTrace(
-                semantic_similarity=trace.semantic_similarity,
-                lexical_relevance=trace.lexical_relevance,
-                graph_proximity=trace.graph_proximity,
-                recency_factor=boosted_recency,
-                salience=trace.salience,
-                confidence=trace.confidence,
-                epistemic_weight=trace.epistemic_weight,
-                path_score=trace.path_score,
-                composite_score=composite,
-                node_type_boost=trace.node_type_boost,
-            )
 
         candidate.composite_score = trace.composite_score
         candidate.score_trace = trace

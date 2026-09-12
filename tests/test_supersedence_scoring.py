@@ -493,3 +493,40 @@ class TestSupersedenceAwareScoring:
 
         # All 50 runs should produce identical scores
         assert len(set(scores)) == 1, f"Non-deterministic: {set(scores)}"
+
+
+def test_imported_history_uses_episode_time_for_relative_recency():
+    imported = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    old = _make_candidate(content="The database is SQLite", updated_at=imported,
+                          semantic_score=.7, lexical_score=.7)
+    new = _make_candidate(content="The database is PostgreSQL", updated_at=imported,
+                          semantic_score=.7, lexical_score=.7)
+    old.node.event_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    new.node.event_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    ranked, traces = score_and_rank(
+        [old, new], now=imported, query_analysis=_make_query_analysis("What is the current database?"),
+    )
+    assert new.composite_score > old.composite_score
+    assert ranked[0] is new
+    assert traces[0].recency_factor == 1
+    assert traces[1].recency_factor < .01
+
+
+def test_update_language_cannot_bypass_relevance_floor():
+    candidate = _make_candidate(content="We switched to an unrelated brand", semantic_score=.01, lexical_score=.01)
+    ranked, _ = score_and_rank(
+        [candidate], query_analysis=_make_query_analysis("What is the current database?"),
+    )
+    assert ranked[0].composite_score <= .02
+
+
+def test_current_query_preserves_configured_relevance_floor():
+    from prme.retrieval.config import ScoringWeights
+
+    candidate = _make_candidate(semantic_score=.2, lexical_score=.2, confidence=1, salience=1)
+    weights = ScoringWeights(w_semantic=.1, w_lexical=.1, w_graph=0, w_recency=.1,
+                             w_salience=.3, w_confidence=.4, relevance_floor=.8)
+    ranked, _ = score_and_rank(
+        [candidate], weights, query_analysis=_make_query_analysis("What is the current database?"),
+    )
+    assert ranked[0].composite_score <= .4
