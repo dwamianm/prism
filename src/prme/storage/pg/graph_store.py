@@ -179,6 +179,18 @@ class PgGraphStore:
             .replace("_", "\\_")
         )
 
+    async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Resolve scoped evidence references without a newest-node heuristic."""
+        if not user_id:
+            raise ValueError("get_event_nodes requires user_id")
+        evidence = json.dumps([str(UUID(event_id))])
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                f"SELECT {_NODE_COLUMNS} FROM nodes WHERE user_id = $1 "
+                "AND evidence_refs @> $2::jsonb ORDER BY id", user_id, evidence,
+            )
+        return [self._record_to_node(row) for row in rows]
+
     async def query_nodes(
         self,
         *,

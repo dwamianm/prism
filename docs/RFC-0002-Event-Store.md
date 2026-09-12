@@ -38,6 +38,17 @@ The reference implementation uses DuckDB for the event store. Implementations MA
 
 ---
 
+### Current source-reading API
+
+`MemoryEngine.get_event(event_id, user_id=...)` enforces optional owner scoping;
+`MemoryClient` exposes the same operation. `get_event_nodes(event_id, user_id=...)`
+requires an owner and reads graph evidence references directly, including retired
+nodes. This lookup avoids races from selecting the most recently created node.
+HTTP store and MCP store receipts use it to identify their own created node.
+HTTP event endpoints and MCP `memory_get_event` bind source access to the current
+principal. These APIs expose durable sources and current derivations; they do not
+claim complete graph replay from the event log.
+
 ## 3. Event Log Schema
 
 ```sql

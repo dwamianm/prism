@@ -196,6 +196,23 @@ prme stats ./memory.duckdb        # Detailed statistics
 prme export ./memory.duckdb       # Export as JSON
 ```
 
+## Following source evidence
+
+`store()` returns its durable event ID. Resolve the associated nodes directly:
+
+```python
+event_id = client.store("Use the staging key only for staging.", user_id="alice")
+nodes = client.get_event_nodes(event_id, user_id="alice")
+source = client.get_event(event_id, user_id="alice")
+```
+
+`get_event_nodes` returns all nodes citing the owned event, including retired
+nodes, in stable ID order. An empty result means there are no visible derivations;
+it does not mean pending extraction finished. `get_event` returns the original
+content and timestamps. Both async and sync clients support these methods.
+For a retrieved node, follow its `evidence_refs` with `get_event` to inspect
+qualifications and surrounding actions before drawing conclusions.
+
 ## MCP server
 
 Install `prme[mcp]`. For a local stdio assistant, set `PRME_MCP_USER_ID=alice`
@@ -212,6 +229,7 @@ PRME_MCP_USER_KEYS={"alice":"replace-alice-secret","bob":"replace-bob-secret"}
 
 Run `prme-mcp --transport streamable-http --db-path ./my_memories` and connect
 to `http://127.0.0.1:8000/mcp` with `Authorization: Bearer <credential>`.
+The `memory_get_event` tool reads original evidence by event ID.
 Each stateless request authenticates independently. The server shares one engine
 for its lifetime; tools and resources use the current request's identity.
 HTTP requires per-user credentials. Fixed stdio owners and HTTP keys cannot be
@@ -258,6 +276,8 @@ Endpoints under `/v1`:
 | `POST` | `/v1/store` | Store a memory node |
 | `POST` | `/v1/ingest` | LLM-powered ingestion |
 | `POST` | `/v1/retrieve` | Hybrid retrieval |
+| `GET` | `/v1/events/{id}` | Original source evidence |
+| `GET` | `/v1/events/{id}/nodes` | Nodes citing that source |
 | `POST` | `/v1/organize` | Run organizer jobs |
 | `GET` | `/v1/nodes` | Query nodes with filters |
 | `GET` | `/v1/nodes/{id}` | Get single node |

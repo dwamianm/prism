@@ -237,9 +237,9 @@ class MemoryClient:
             )
         )
 
-    def get_node(self, node_id: str) -> MemoryNode | None:
+    def get_node(self, node_id: str, *, user_id: str | None = None, include_superseded: bool = False) -> MemoryNode | None:
         """Get a single node by ID. Returns MemoryNode or None."""
-        return self._run(self._engine.get_node(node_id))
+        return self._run(self._engine.get_node(node_id, user_id=user_id, include_superseded=include_superseded))
 
     def ingest_fast(
         self, content: str, *, user_id: str, role: str = "user",
@@ -292,6 +292,14 @@ class MemoryClient:
             if len(page) < batch_size:
                 break
             cursor = str(page[-1].id)
+
+    def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
+        """Read original source content, optionally enforcing owner identity."""
+        return self._run(self._engine.get_event(event_id, user_id=user_id))
+
+    def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Read every scoped node citing this event, regardless of lifecycle."""
+        return self._run(self._engine.get_event_nodes(event_id, user_id=user_id))
 
     def get_events(
         self,

@@ -1576,7 +1576,7 @@ class MemoryEngine:
 
     # --- Event Operations (delegated to EventStore) ---
 
-    async def get_event(self, event_id: str) -> Event | None:
+    async def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
         """Retrieve an event by ID.
 
         Args:
@@ -1585,7 +1585,23 @@ class MemoryEngine:
         Returns:
             The Event if found, None otherwise.
         """
-        return await self._event_store.get(event_id)
+        event = await self._event_store.get(event_id)
+        if event is not None and user_id is not None and event.user_id != user_id:
+            return None
+        return event
+
+    async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Get nodes citing an owned event, including retired derived knowledge.
+
+        Empty means no visible derivations (or no owned event), not that pending
+        extraction has completed. Use processing_status for durable raw jobs.
+        """
+        if not user_id:
+            raise ValueError("get_event_nodes requires user_id")
+        event = await self.get_event(event_id, user_id=user_id)
+        if event is None:
+            return []
+        return await self._graph_store.get_event_nodes(event_id, user_id=user_id)
 
     async def get_events(
         self, user_id: str, **kwargs

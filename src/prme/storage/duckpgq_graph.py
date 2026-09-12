@@ -113,6 +113,18 @@ class DuckPGQGraphStore:
                 self._get_nodes_sync, node_ids, include_superseded
             )
 
+    async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Resolve provenance directly, independent of creation order and ranking."""
+        if not user_id:
+            raise ValueError("get_event_nodes requires user_id")
+        evidence = json.dumps(str(UUID(event_id)))
+        async with self._conn_lock:
+            rows = await asyncio.to_thread(lambda: self._conn.execute(
+                "SELECT * FROM nodes WHERE user_id = ? AND json_contains(evidence_refs, ?::JSON) ORDER BY id",
+                [user_id, evidence],
+            ).fetchall())
+        return [self._row_to_node(row) for row in rows]
+
     async def query_nodes(
         self,
         *,

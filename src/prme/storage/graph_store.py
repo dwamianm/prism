@@ -83,6 +83,10 @@ class GraphStore(Protocol):
         """
         ...
 
+    async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Return all scoped graph nodes citing the event, including retired nodes."""
+        ...
+
     async def query_nodes(
         self,
         *,

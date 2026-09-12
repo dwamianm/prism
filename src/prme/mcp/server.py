@@ -162,15 +162,8 @@ async def memory_store(
             metadata=meta,
         )
 
-        # Try to find the created node
-        node_id = None
-        try:
-            nodes = await engine.query_nodes(user_id=user_id, limit=1)
-            if nodes:
-                latest = max(nodes, key=lambda n: n.created_at)
-                node_id = str(latest.id)
-        except Exception:
-            pass
+        nodes = await engine.get_event_nodes(event_id, user_id=user_id)
+        node_id = next((str(n.id) for n in nodes if n.content == content and n.node_type == nt), None)
 
         return json.dumps({"event_id": event_id, "node_id": node_id})
     except Exception as e:
@@ -359,6 +352,25 @@ async def memory_get_node(
         return _internal_error("memory_get_node", e)
 
 
+async def memory_get_event(event_id: str, ctx: Context = None) -> str:
+    """Read the original source event behind a node's evidence_refs.
+
+    Use this when retrieved assertions omit surrounding actions or conditions.
+    Returns original content, source timestamps, role, session, scope, and IDs.
+    """
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+        event = await engine.get_event(event_id, user_id=user_id)
+        if event is None:
+            return json.dumps({"error": "Event not found"})
+        return event.model_dump_json()
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_event", exc)
+
+
 async def memory_promote_node(
     node_id: str,
     ctx: Context = None,
@@ -494,7 +506,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     )
     server.prme_config = config
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
-                 memory_get_node, memory_promote_node, memory_archive_node):
+                 memory_get_node, memory_get_event, memory_promote_node, memory_archive_node):
         server.tool()(tool)
     server.resource("memory://health")(resource_health)
     @server.resource("memory://stats")

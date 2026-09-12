@@ -160,17 +160,9 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse:
 
     event_id = await engine.store(**kwargs)
 
-    # Try to find the node created by this store call
-    node_id: str | None = None
-    try:
-        nodes = await engine.query_nodes(user_id=_user_id(request, body.user_id), limit=1)
-        if nodes:
-            # The most recently created node for this user
-            # Sort by created_at descending if possible
-            latest = max(nodes, key=lambda n: n.created_at)
-            node_id = str(latest.id)
-    except Exception:
-        pass  # Non-fatal: node_id is optional
+    nodes = await engine.get_event_nodes(event_id, user_id=kwargs["user_id"])
+    node_id = next((str(n.id) for n in nodes
+                    if n.content == body.content and n.node_type == (body.node_type or NodeType.NOTE)), None)
 
     return StoreResponse(event_id=event_id, node_id=node_id)
 
@@ -195,6 +187,24 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse:
 
     event_id = await engine.ingest(**kwargs)
     return IngestResponse(event_id=event_id)
+
+
+@router.get("/events/{event_id}", summary="Read original source evidence")
+async def get_event(request: Request, event_id: str):
+    event = await _get_engine(request).get_event(event_id, user_id=_user_id(request))
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return event.model_dump(mode="json")
+
+
+@router.get("/events/{event_id}/nodes", response_model=NodeListResponse, summary="Resolve source derivations")
+async def get_event_nodes(request: Request, event_id: str):
+    engine = _get_engine(request)
+    event = await engine.get_event(event_id, user_id=_user_id(request))
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    nodes = await engine.get_event_nodes(event_id, user_id=event.user_id)
+    return NodeListResponse(nodes=[_node_to_response(n) for n in nodes], count=len(nodes))
 
 
 # ---------------------------------------------------------------------------
