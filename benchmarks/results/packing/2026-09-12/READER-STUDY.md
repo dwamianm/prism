@@ -61,7 +61,11 @@ A separate [authored provider preflight](reader-preflight-a89cfe1.json), using t
 same requested reader options, completed with native exit zero and a `stop`
 completion reason. It answered the supplied blue-telescope fact correctly.
 This establishes the local API shape and completion checks, not benchmark quality.
-The paired prediction run is being launched after this plan is committed.
+The paired prediction run launched after this plan was committed and completed
+with native exit zero: 238 unique generations, no failures. The
+[completion manifest](reader-completion-a89cfe1.json) pins all input, output and
+raw-state hashes. Every answer was verified against its raw response and frozen
+prompt before judging; no answer-quality conclusion follows from completion.
 
 
 The legacy judged-context correction has two regressions that fail on its prior
@@ -70,8 +74,8 @@ malformed supplied question date is now an explicit evaluation error before
 engine or model work, rather than a fallback to the current clock.
 
 The configured root `.env` cloud judge returned HTTP 429 on a fresh bounded
-probe. The paired reader continues locally. Gemma 4 26B is being downloaded as
-a separate-family local judge candidate; calibration will precede any judgment
+probe. The paired reader completed locally. Gemma 4 26B downloaded successfully
+as a separate-family local judge candidate; calibration precedes any judgment
 of the study predictions. Its [official model listing](https://ollama.com/library/gemma4:26b)
 reports a 19 GB artifact. Model availability or size is not evidence of judge
 reliability, and a local judge result will not be presented as an official
@@ -86,3 +90,21 @@ partial preference matches and numeric temporal tolerance. Passing these simple
 controls would not establish judge accuracy on the real study; they are a
 minimum check before using the separate local judge. The fixture is frozen
 before any Gemma inference, and will not be tuned against study predictions.
+
+
+`benchmarks.diagnostics.reader_judge` freezes the judge model digest, Ollama
+version, runner/helper hashes, category rubric, JSON schema, context/generation
+options and the entire control fixture (including its acceptance gate).
+Only the question, reference and response are sent as user data; expected labels,
+arm names and case identities are excluded. It rejects truncation, model changes,
+nonboolean verdicts and corrupted raw responses, and resumes under an exclusive
+state lock. Duplicate full prompts reuse their original judgment.
+
+Study judging requires a complete calibration with native exit zero and a gate
+recomputed from recorded raw responses. It also verifies all paired reader
+answers against their original raw generations, prompt hashes, registered model
+and prepared product contexts. Results report paired question bootstrap intervals
+(2,000 draws, seed 42), both overall and by category. Shared conversation histories
+and judge errors limit interpretation; these are development comparisons with
+one local reader/judge pairing, not independent confirmation or the official
+GPT-4o protocol. No production packing default changes on these results alone.
