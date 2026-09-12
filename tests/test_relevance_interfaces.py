@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 import json
 from uuid import uuid4
 
+import pytest
+
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from prme import MemoryClient, MemoryEngine, RelevanceSubmission
@@ -54,6 +56,21 @@ def test_sync_client_records_and_reads_relevance(config, user):
         record = client.record_relevance(submission, user_id=user)
         assert client.get_relevance(str(record.feedback_id), user_id=user) == record
         assert client.list_relevance(user_id=user) == [record]
+        nid = str(receipt.candidates[0].node_id)
+        original = client.get_node(nid, user_id=user)
+        for action in (client.promote, client.archive):
+            with pytest.raises(ValueError):
+                action(nid, user_id=user + "-other")
+        assert client.get_node(nid, user_id=user) == original
+        client.promote(nid, user_id=user)
+        assert client.get_node(nid, user_id=user).lifecycle_state.value == "stable"
+        client.archive(nid, user_id=user)
+        assert client.retrieve("telescope", user_id=user, min_score=0).results == []
+        assert client.get_retrieval_receipt(str(receipt.request_id), user_id=user) == receipt
+    with MemoryClient(config=config) as client:
+        assert client.get_node(nid, user_id=user, include_superseded=True).lifecycle_state.value == "archived"
+        assert client.get_relevance(str(record.feedback_id), user_id=user) == record
+        assert client.get_event(str(original.evidence_refs[0]), user_id=user) is not None
 
 
 async def test_mcp_relevance_tool_workflow_preserves_binding(config, user):

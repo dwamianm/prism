@@ -443,7 +443,9 @@ with MemoryClient("./memories") as memory:
 ```
 
 `get_retrieval_receipt`, `get_relevance` and `list_relevance` expose owned saved
-records after restart. HTTP provides `/v1/retrievals/{request_id}` and
+records after restart. The synchronous client also exposes `promote(node_id,
+user_id=...)` and `archive(node_id, user_id=...)`; archiving removes a node from
+retrieval while preserving its source and prior receipts. HTTP provides `/v1/retrievals/{request_id}` and
 `/v1/relevance`; MCP provides `memory_get_retrieval_receipt`,
 `memory_record_relevance`, `memory_get_relevance` and `memory_list_relevance`.
 Receipts add per-candidate metadata to the existing retrieval operation log;

@@ -9,6 +9,8 @@ from prme.organizer.models import OrganizeResult
 
 
 def consume(client: MemoryClient) -> None:
+    assert_type(client.promote("node-id", user_id="alice"), None)
+    assert_type(client.archive("node-id", user_id="alice"), None)
     assert_type(client.ingest("Alice used Rust yesterday", user_id="alice",
                               event_time=datetime(2024, 3, 10, tzinfo=timezone.utc),
                               metadata={"source": "import"}), str)

@@ -283,6 +283,14 @@ class MemoryClient:
             )
         )
 
+    def promote(self, node_id: str, *, user_id: str | None = None) -> None:
+        """Promote a tentative node; supply user_id to enforce ownership."""
+        self._run(self._engine.promote(node_id, user_id=user_id))
+
+    def archive(self, node_id: str, *, user_id: str | None = None) -> None:
+        """Retire a node from retrieval while retaining its durable source."""
+        self._run(self._engine.archive(node_id, user_id=user_id))
+
     def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
         return self._run(self._engine.get_retrieval_receipt(request_id, user_id=user_id))
 
