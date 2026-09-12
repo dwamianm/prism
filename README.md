@@ -190,6 +190,18 @@ model metadata also require a rebuild; their model is never guessed from current
 configuration. Dimension changes may additionally require storage migration.
 HTTP and MCP retrieval responses expose the same diagnostics under `metrics`.
 
+Built-in extraction providers validate that every fact subject and relationship
+endpoint names a listed entity. Invalid or ambiguous references trigger the
+provider's bounded schema retries. When the same name has different types, use
+`subject_entity_type`, `source_entity_type`, or `target_entity_type` to select the
+intended entity. PRME does not guess aliases from substring similarity.
+
+Custom-provider and historical facts with unresolved subjects remain searchable.
+Their node metadata reports `subject_link_status` as `missing` or `ambiguous`,
+and no guessed graph link is created. Resolved subjects report `resolved`.
+These checks establish structural references; they do not prove model claims or
+distinguish different people with the same name and type across conversations.
+
 Successful grounded extraction output is saved before graph materialization.
 An indexing retry reuses that output without another LLM call. Inspect it with
 `engine.get_extraction(event_id, user_id="alice")` (also on `MemoryClient`).

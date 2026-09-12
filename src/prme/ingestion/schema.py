@@ -42,7 +42,8 @@ class ExtractedFact(BaseModel):
     NodeType.DECISION, or NodeType.PREFERENCE during materialization.
     """
 
-    subject: str = Field(description="Entity this fact is about")
+    subject: str = Field(description="Name of a listed entity this fact is about; copy entities[].name exactly")
+    subject_entity_type: str | None = Field(default=None, description="Exact entities[].entity_type for the subject; required if its name has multiple types")
     predicate: str = Field(
         description="Relationship or attribute type (e.g., works_at, lives_in, role)"
     )
@@ -130,8 +131,10 @@ class ExtractedFact(BaseModel):
 class ExtractedRelationship(BaseModel):
     """A relationship between two entities extracted from text."""
 
-    source_entity: str = Field(description="Source entity name")
-    target_entity: str = Field(description="Target entity name")
+    source_entity: str = Field(description="Source entity name; copy entities[].name exactly")
+    source_entity_type: str | None = Field(default=None, description="Exact source entity_type; required for an ambiguous name")
+    target_entity: str = Field(description="Target entity name; copy entities[].name exactly")
+    target_entity_type: str | None = Field(default=None, description="Exact target entity_type; required for an ambiguous name")
     relationship_type: str = Field(
         description="Edge type: relates_to, part_of, caused_by, supports, mentions"
     )

@@ -404,7 +404,8 @@ class IngestionPipeline:
         entity_merger = EntityMerger(graph_store, writer)
         supersedence_detector = SupersedenceDetector(graph_store, writer)
         # Map entity name -> entity_id for relationship wiring
-        entity_id_map: dict[str, str] = {}
+        from prme.ingestion.entity_references import EntityReferences
+        entity_refs = EntityReferences[str]()
 
         # --- Entities ---
         for entity in result.entities:
@@ -419,7 +420,7 @@ class IngestionPipeline:
                 evidence_event_id=event_id,
                 scope=entity_scope,
             )
-            entity_id_map[entity.name.strip().lower()] = entity_id
+            entity_refs.add(entity.name, entity.entity_type, entity_id)
 
             # Reuse does not update the durable entity description. Do not
             # overwrite its vector with this attempt's uncommitted model
@@ -458,8 +459,12 @@ class IngestionPipeline:
             # model triples cannot erase negations or trailing conditions.
             fact_content = fact.evidence_quote or event.content
 
-            # Build metadata
+            subject_entity_id, subject_link_status = entity_refs.resolve(fact.subject, fact.subject_entity_type)
+            # Keep unresolved custom/legacy facts searchable without guessing a
+            # namesake identity. The durable metadata makes missing links visible.
             fact_metadata: dict = {
+                "subject_link_status": subject_link_status,
+                "subject_entity_type": fact.subject_entity_type,
                 "subject": fact.subject,
                 "predicate": fact.predicate,
                 "object": fact.object,
@@ -530,8 +535,6 @@ class IngestionPipeline:
             )
 
             # Create HAS_FACT edge from subject entity to fact node
-            subject_key = fact.subject.strip().lower()
-            subject_entity_id = entity_id_map.get(subject_key)
             if subject_entity_id:
                 has_fact_edge = MemoryEdge(
                     source_id=UUID(subject_entity_id),
@@ -577,10 +580,8 @@ class IngestionPipeline:
 
         # --- Relationships ---
         for rel in result.relationships:
-            source_key = rel.source_entity.strip().lower()
-            target_key = rel.target_entity.strip().lower()
-            source_entity_id = entity_id_map.get(source_key)
-            target_entity_id = entity_id_map.get(target_key)
+            source_entity_id, source_status = entity_refs.resolve(rel.source_entity, rel.source_entity_type)
+            target_entity_id, target_status = entity_refs.resolve(rel.target_entity, rel.target_entity_type)
 
             if source_entity_id and target_entity_id:
                 # Map relationship_type to EdgeType
@@ -601,7 +602,8 @@ class IngestionPipeline:
                     "ingestion.relationship_skipped",
                     source_entity=rel.source_entity,
                     target_entity=rel.target_entity,
-                    reason="One or both entities not found in extraction",
+                    reason="Entity reference missing or ambiguous",
+                    source_status=source_status, target_status=target_status,
                     source_found=source_entity_id is not None,
                     target_found=target_entity_id is not None,
                 )

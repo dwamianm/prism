@@ -119,7 +119,7 @@ async def test_provider_schema_accepts_source_supported_fact():
     with patch.object(provider, "_ensure_client", return_value=client):
         await provider.extract("Alice uses email only for nonurgent requests.")
     args = client.create.await_args.kwargs
-    result = args["response_model"].model_validate({"facts": [{
+    result = args["response_model"].model_validate({"entities": [{"name": "Alice", "entity_type": "person"}], "facts": [{
         "subject": "Alice", "predicate": "uses", "object": "email",
         "evidence_quote": "Alice uses email only for nonurgent requests.",
     }]}, context=args["context"])

@@ -108,6 +108,7 @@ async def test_replan_transition_and_journal_are_atomic(config, user, monkeypatc
 async def test_existing_v1_plan_checksums_and_journals_still_load(config, user):
     async with MemoryEngine.open(config) as engine:
         event, _, plan = await prepare(engine, user)
+        plan = plan.model_copy(update={"materialization_policy": "source_passage_v1"})
         original = plan.model_dump(mode="json")
         original.pop("revision")
         checksum = canonical_hash(original)

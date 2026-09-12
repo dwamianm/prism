@@ -97,7 +97,7 @@ class DerivationPlan(BaseModel):
 
     schema_version: Literal[1] = 1
     revision: int = Field(default=1, ge=1)
-    materialization_policy: Literal["source_passage_v1"] = "source_passage_v1"
+    materialization_policy: Literal["source_passage_v1", "typed_references_v2"] = "typed_references_v2"
     id: UUID = Field(default_factory=uuid4)
     event_id: UUID
     user_id: str = Field(min_length=1)

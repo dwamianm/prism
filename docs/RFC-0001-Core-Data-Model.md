@@ -230,6 +230,24 @@ Entity {
 
 Entity resolution (deduplication of aliases to a canonical entity) is performed by the organiser (RFC-0007). The extraction pipeline assigns an initial `canonical_name`; the organiser may merge duplicates.
 
+### Extraction reference integrity (implementation clarification, 2026-09-12)
+
+Built-in providers validate extraction-local references before accepting their
+structured response. Fact subjects and relationship endpoints must resolve to a
+listed entity. Optional type qualifiers disambiguate equal names with different
+entity types. Name matching preserves the ingestion merger's stripped,
+case-insensitive name and exact type semantics; it does not guess aliases.
+Missing/ambiguous references cause bounded provider schema retries.
+
+The materializer also resolves by distinct identity rather than overwriting a
+name dictionary entry. Custom or historical facts with unresolved subjects are
+preserved with `subject_link_status` metadata and receive no guessed HAS_FACT
+edge. Unresolved relationship endpoints are reported and omitted. This does not
+establish semantic entity identity, entailment, or namesake resolution across
+conversations. New prepared plans record `typed_references_v2`; existing saved
+plans retain their original materialization policy and replay unchanged.
+
+
 ---
 
 ## 11. The Memory Bundle

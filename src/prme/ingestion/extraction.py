@@ -18,6 +18,7 @@ from pydantic import Field, SecretStr, ValidationInfo, model_validator
 from prme.ingestion.schema import ExtractedFact, ExtractionResult
 from prme.ingestion.grounding import _mentioned
 from prme.ingestion.errors import ExtractionError
+from prme.ingestion.entity_references import reference_errors
 
 if TYPE_CHECKING:
     import instructor
@@ -48,6 +49,13 @@ class _CitedFact(ExtractedFact):
 
 class _CitedExtractionResult(ExtractionResult):
     facts: list[_CitedFact] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def closed_entity_references(self):
+        errors = reference_errors(self)
+        if errors:
+            raise ValueError("; ".join(errors))
+        return self
 
 EXTRACTION_SYSTEM_PROMPT = """\
 You are a knowledge extraction system. Your task is to extract structured \
@@ -105,6 +113,12 @@ prior knowledge
    If unclear, leave temporal_intent as null (the system will use a safe default).
 
 IMPORTANT RULES:
+- Every fact subject and relationship endpoint must use a name listed in entities.
+  Copy that entity name exactly; do not alternate between shortened and full names.
+  Include literal subjects such as "I" or "we" when used; do not invent a speaker name.
+  Relationship endpoints are entity names, not phrases combining predicates and objects.
+  If the same name identifies different entity types, include subject_entity_type,
+  source_entity_type, or target_entity_type to identify the intended listed entity.
 - Include an evidence_quote for every fact: copy the complete supporting source \
 sentences verbatim, including negation, conditions, exceptions, and time references.
 - Subject and object must occur in the supporting text. Keep object values as \

@@ -47,8 +47,10 @@ MCP and CLI. Lease generations fence stale workers inside graph transactions;
 completion commits with its receipt. Explicit stale-plan recovery now preserves
 old plans while queuing a new revision from saved extraction. Abandoned-stage
 collection and model-output revisions remain open. A real local-model trial also
-exposed inconsistent entity/subject names that leave facts unlinked; this remains
-an extraction-quality gap. Installed ONNX Runtime telemetry caused a native
+exposed inconsistent entity/subject names that leave facts unlinked. Built-in
+provider responses now validate closed, type-qualified references; custom facts
+retain explicit missing/ambiguous link status. Semantic aliases and same-name
+identity resolution remain extraction-quality gaps. Installed ONNX Runtime telemetry caused a native
 shutdown abort; local embeddings now disable that optional uploader by default
 and diagnostics require a clean child-process exit before reporting success. Processing is explicit; retrieval does not run an LLM recovery job.
 
