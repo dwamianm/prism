@@ -480,6 +480,23 @@ covers the observed candidates, not full retrieval or generated answers.
 [Scoped profile activation and rollback](docs/RFC-0017-Scoped-Retrieval-Learning.md)
 remain pending.
 
+For a full-pipeline trial, pass `ranking_multipliers=report.multipliers` to
+`retrieve()` on the async engine or sync client. The adjustment runs after
+query-specific weight redistribution and before neural reranking, session
+expansion, selection and packing. Each call keeps its own adjustment; defaults
+and other owners' requests remain unchanged. Compare on a fixed memory pack
+without concurrent writes or maintenance, using the same `reference_time` and
+request filters. A trial may select different session neighbors and context than
+offline replay predicts. An explicit trial is not automatic profile activation.
+
+New version 3 receipts save the requested adjustment, temporal filters and
+reported feature environment in `receipt.execution`. Versions 1 and 2 keep their
+canonical JSON/checksums and continue to accept labels. Source-file hashes and
+reported model names/versions describe the environment; they do not establish
+that remote model weights are pinned. Response `metadata.timing_ms` includes
+receipt logging, which is also reported as `receipt_logging_ms`; engine startup
+and pre-retrieval queue draining are outside that pipeline timer.
+
 ## MCP server
 
 Install `prme[mcp]`. For a local stdio assistant, set `PRME_MCP_USER_ID=alice`

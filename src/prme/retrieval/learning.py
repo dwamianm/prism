@@ -16,24 +16,9 @@ from uuid import UUID
 
 from prme.models.learning import LearningConfig, LearningEvaluation, QueryLearningResult, RankingMultipliers
 from prme.models.relevance import RelevanceRecord, RetrievalReceipt
-from prme.retrieval.config import ScoringWeights
 from prme.retrieval.models import ScoreProvenance
+from prme.retrieval.ranking_adjustments import FEATURES as _FEATURES, adjusted_weights
 from prme.types import Scope
-
-_FEATURES = ("semantic", "lexical", "graph", "recency", "salience", "confidence")
-
-
-def adjusted_weights(weights: ScoringWeights, multipliers: RankingMultipliers) -> ScoringWeights:
-    """Apply bounded multipliers after query-specific weight redistribution."""
-    if any(not math.isfinite(getattr(weights, "w_" + name)) or getattr(weights, "w_" + name) < 0
-           for name in _FEATURES):
-        raise ValueError("Learning requires finite nonnegative additive weights")
-    if all(getattr(multipliers, name) == 1 for name in _FEATURES):
-        return weights
-    values = {"w_" + name: getattr(weights, "w_" + name) * getattr(multipliers, name) for name in _FEATURES}
-    total = sum(values.values())
-    return ScoringWeights(**{**weights.model_dump(), **{key: value / total for key, value in values.items()}})
-
 
 def proposed_score(provenance: ScoreProvenance, multipliers: RankingMultipliers) -> float:
     """Rescore frozen features, preserving caps, rounding and score operations."""
@@ -197,7 +182,7 @@ def evaluate_learning(receipts: Sequence[RetrievalReceipt], records: Sequence[Re
             excluded["other_surface_records"] += 1
         elif _scope_key(receipt.scopes) != scope:
             excluded["other_scope_records"] += 1
-        elif receipt.schema_version != 2:
+        elif receipt.schema_version < 2:
             excluded["legacy_receipt_records"] += 1
         else:
             for nid, label in record.labels.items():

@@ -11,7 +11,8 @@ import sys
 import tempfile
 import time
 
-from prme import MemoryClient, PRMEConfig, RelevanceSubmission
+from prme import MemoryClient, PRMEConfig, RankingMultipliers, RelevanceSubmission
+from prme.retrieval.learning import proposed_score
 from prme.storage.relevance import RelevanceRepository
 from benchmarks.diagnostics._process import checked_report
 
@@ -32,6 +33,13 @@ def run():
             assert response.metadata.receipt_persisted
             receipt = client.get_retrieval_receipt(str(response.metadata.request_id), user_id="alice")
             assert receipt.replay_ranking() == tuple(c.node.id for c in response.results)
+            adjustment = RankingMultipliers(lexical=2)
+            trial = client.retrieve("What database does Aster use?", user_id="alice", min_score=0,
+                reference_time=response.metadata.reference_time, ranking_multipliers=adjustment)
+            trial_receipt = client.get_retrieval_receipt(str(trial.metadata.request_id), user_id="alice")
+            assert trial_receipt.execution.parameters["ranking_multipliers"] == adjustment.model_dump(mode="json")
+            for candidate in trial.results:
+                assert candidate.composite_score == proposed_score(receipt.score_provenance[candidate.node.id], adjustment)
             node = next(n for n in response.results if "PostgreSQL" in n.node.content)
             submission = RelevanceSubmission(request_id=receipt.request_id, labels={node.node.id: True},
                                              method="structured_evaluation")
@@ -60,7 +68,8 @@ def run():
                 "checks": ["real embeddings through public sync client", "returned candidate snapshot and explicit labels",
                            "owner isolation", "retry identity survives archival and restart", "collection leaves weights unchanged",
                            "exact ranking replay before and after archival and restart",
-                           "public learning evaluation rejects insufficient evidence and reproduces after restart"],
+                           "public learning evaluation rejects insufficient evidence and reproduces after restart",
+                           "explicit full-pipeline trial matches frozen feature rescore at a fixed clock"],
                 "limits": "One authored persistence workflow; no learned profile or retrieval accuracy claim."}
 
 

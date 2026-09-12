@@ -40,7 +40,7 @@ from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
-from prme.models.learning import LearningConfig, LearningEvaluation
+from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.storage.relevance import RelevanceRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -1404,6 +1404,7 @@ class MemoryEngine:
         min_score: float | None = None,
         limit: int | None = None,
         weights: ScoringWeights | None = None,
+        ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
         include_cross_scope: bool = True,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
@@ -1441,6 +1442,8 @@ class MemoryEngine:
             min_score: Inclusive ranking score floor; not a probability.
             limit: Maximum primary results before context packing. Zero returns none.
             weights: Override default scoring weights.
+            ranking_multipliers: Explicit request-only adjustment for full-pipeline
+                trials; does not activate or persist a learned profile.
             min_fidelity: Override minimum representation level.
             include_cross_scope: Whether to include cross-scope hints.
                 Defaults to True. Set to False to disable.
@@ -1454,6 +1457,8 @@ class MemoryEngine:
             NotImplementedError: If no retrieval pipeline is configured.
         """
         validate_selection(min_score, limit)
+        if ranking_multipliers is not None:
+            ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
         if self._retrieval_pipeline is None:
             raise NotImplementedError(
                 "RetrievalPipeline not configured. Use MemoryEngine.create() "
@@ -1490,6 +1495,7 @@ class MemoryEngine:
             token_budget=token_budget,
             min_score=min_score, limit=limit,
             weights=weights,
+            ranking_multipliers=ranking_multipliers,
             min_fidelity=min_fidelity,
             include_cross_scope=include_cross_scope,
             retrieval_mode=retrieval_mode,

@@ -9,6 +9,7 @@ from pydantic import (AwareDatetime, BaseModel, ConfigDict, Field, StrictBool,
                       SerializerFunctionWrapHandler, model_serializer, model_validator)
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
+from prme.retrieval.execution import RetrievalExecution
 from prme.retrieval.models import ScoreProvenance, ScoreTrace
 from prme.types import RepresentationLevel, RetrievalMode, Scope
 
@@ -41,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2] = 1
+    schema_version: Literal[1, 2, 3] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -58,19 +59,24 @@ class RetrievalReceipt(BaseModel):
     candidates: tuple[ReceiptCandidate, ...]
     score_provenance: dict[UUID, ScoreProvenance] | None = None
     ranking_policy: RankingPolicy | None = None
+    execution: RetrievalExecution | None = None
 
     @model_serializer(mode="wrap")
     def serialize_version(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data = handler(self)
-        # V1's canonical JSON is its durable checksum input. Never add default
-        # V2 fields when reading or exporting an existing V1 receipt.
+        # Each version's canonical JSON is its durable checksum input. Never
+        # add later-generation defaults while reading an existing receipt.
         if self.schema_version == 1:
             data.pop("score_provenance", None)
             data.pop("ranking_policy", None)
+        if self.schema_version < 3:
+            data.pop("execution", None)
         return data
 
     @model_validator(mode="after")
     def unique_candidates(self):
+        if (self.schema_version == 3) != (self.execution is not None):
+            raise ValueError("Only version 3 receipts require an execution descriptor")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -79,7 +85,7 @@ class RetrievalReceipt(BaseModel):
                 raise ValueError("Version 1 receipts cannot contain version 2 score provenance")
         else:
             if self.score_provenance is None or self.ranking_policy is None:
-                raise ValueError("Version 2 receipts require score provenance and ranking policy")
+                raise ValueError("Replayable receipts require score provenance and ranking policy")
             if set(self.score_provenance) != set(ids):
                 raise ValueError("Score provenance must cover exactly the returned candidates")
             for candidate in self.candidates:
@@ -95,7 +101,7 @@ class RetrievalReceipt(BaseModel):
         This is a fixed-exposure replay: candidates omitted by generation,
         filtering or result selection are not present in the receipt.
         """
-        if self.schema_version != 2 or self.score_provenance is None:
+        if self.schema_version < 2 or self.score_provenance is None:
             raise ValueError("Version 1 receipts lack replayable score provenance")
         scores = {nid: provenance.replay_score() for nid, provenance in self.score_provenance.items()}
 
@@ -139,7 +145,8 @@ class RelevanceRecord(RelevanceSubmission):
 def make_receipt(*, request_id: UUID, user_id: str, query: str,
                  reference_time: datetime, scopes, scoring, packing, candidates, bundle,
                  min_score=None, result_limit=None, retrieval_mode=RetrievalMode.DEFAULT,
-                 time_from=None, time_to=None, ranking_policy: RankingPolicy = "score_path_id") -> RetrievalReceipt:
+                 time_from=None, time_to=None, ranking_policy: RankingPolicy = "score_path_id",
+                 execution: RetrievalExecution | None = None) -> RetrievalReceipt:
     included = {item.node.id: item for group in bundle.sections.values() for item in group}
     snapshots = []
     for item in candidates:
@@ -160,7 +167,8 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         if candidate.score_provenance is None:
             raise ValueError("Cannot record replayable receipt without candidate score provenance")
         provenance[candidate.node.id] = candidate.score_provenance
-    return RetrievalReceipt(schema_version=2, request_id=request_id, user_id=user_id, query=query,
+    return RetrievalReceipt(schema_version=3 if execution is not None else 2, execution=execution,
+                            request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,
                             scoring=scoring, packing=packing, candidates=tuple(snapshots),
                             min_score=min_score, result_limit=result_limit, retrieval_mode=retrieval_mode,

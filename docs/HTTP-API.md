@@ -108,13 +108,17 @@ content hashes, configuration and context membership through the authenticated
 owner. A logging failure does not fail retrieval; it sets the flag to false.
 Legacy requests without a receipt return 404.
 
-New receipts use `schema_version: 2`. Their `score_provenance` map contains applied
+New pipeline receipts use `schema_version: 3`. Their `score_provenance` map contains applied
 weights, base features and ordered neural/session adjustments for each returned
 candidate; `ranking_policy` records the actual sorting rule. Python's
 `RetrievalReceipt.model_validate_json(...)` and `replay_ranking()` validate and
-replay this saved ranking without the current graph. Version 1 receipt JSON and
-checksums remain unchanged and still support labels, but cannot replay scores.
+replay this saved ranking without the current graph. Version 1 and 2 receipt JSON
+and checksums remain unchanged and still support labels; version 1 cannot replay scores.
 These snapshots cover returned candidates only, not unseen retrieval candidates.
+Version 3 also includes `execution.parameters` and `execution.features`, recording
+request filters/adjustments and reported model/environment identity. These fields
+do not establish that a remote model is pinned. The explicit ranking-adjustment
+trial argument is currently available through Python; HTTP reads its saved receipts.
 
 `POST /v1/relevance` accepts this body after a user explicitly judges a result:
 

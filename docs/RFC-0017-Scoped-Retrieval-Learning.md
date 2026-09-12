@@ -59,6 +59,32 @@ graph state or assuming that configured weights were actually applied. The
 version 2 fields are omitted entirely when serializing a version 1 receipt.
 This migration preserves existing relevance-record checksum references.
 
+### Full-pipeline trials and receipt version 3
+
+The async engine, synchronous client and pipeline accept an explicit
+`ranking_multipliers` request argument. The same bounded weight-adjustment helper
+used in offline fitting runs after query-specific redistribution and before
+composite scoring. Downstream neural prefix selection, session neighbors,
+result selection and packing run afresh. Cross-scope hints use the same explicit
+request adjustment, as they already do for a caller-supplied `weights` override.
+No default weights or persisted profile are changed. Controlled comparisons
+require a fixed pack, clock and filters with maintenance/writes excluded.
+
+Actual pipeline receipts now use version 3 and include `execution.parameters`
+and `execution.features`. Parameters record the adjustment, original temporal
+filters, cross-scope behavior and query-processing settings. Features record
+reported embedding/reranker identities, storage implementations, dependency
+versions and source-file hashes observed at pipeline creation; the current
+reranker identity is read for each request. These observations are not model-weight
+digests or guarantees about a remotely updated service. Complete applicability
+checks remain necessary before automatic profile use.
+
+The execution descriptor uses extensible JSON maps without adding default keys
+when old snapshots are parsed. Version 1 and 2 serializers omit the descriptor
+entirely, preserving old bytes/checksums and relevance references. Versions 2 and
+3 both support score replay and offline evaluation. Full request re-execution
+still requires the original memory artifact and matching feature environment.
+
 ## Explicit relevance records
 
 `record_relevance(request_id, labels, user_id=..., feedback_id=...)` accepts

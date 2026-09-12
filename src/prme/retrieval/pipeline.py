@@ -23,11 +23,14 @@ import logging
 import time
 import uuid
 from collections.abc import Sequence
+from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
 
 import duckdb
 
+from prme.models.learning import RankingMultipliers
+from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
 from prme.retrieval.candidates import CandidateDiagnostics, generate_candidates
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
@@ -56,6 +59,14 @@ if TYPE_CHECKING:
     from prme.storage.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
+
+
+class _OperationConnection(Protocol):
+    async def execute(self, query: str, *args: Any) -> Any: ...
+
+
+class _OperationPool(Protocol):
+    def acquire(self) -> AbstractAsyncContextManager[_OperationConnection]: ...
 
 
 def _apply_bitemporal_filters(
@@ -116,7 +127,7 @@ class RetrievalPipeline:
         lexical_index: LexicalIndex,
         conn: duckdb.DuckDBPyConnection | None = None,
         conn_lock: asyncio.Lock | None = None,
-        pool: object | None = None,
+        pool: _OperationPool | None = None,
         scoring_weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
         packing_config: PackingConfig = DEFAULT_PACKING_CONFIG,
         epistemic_weights: dict[str, float] | None = None,
@@ -154,6 +165,8 @@ class RetrievalPipeline:
 
             self._reranker = CrossEncoderReranker(model_name=reranker_model)
 
+        self._feature_identity = feature_identity(vector_index, lexical_index, self._reranker)
+
     async def retrieve(
         self,
         query: str,
@@ -170,6 +183,7 @@ class RetrievalPipeline:
         min_score: float | None = None,
         limit: int | None = None,
         weights: ScoringWeights | None = None,
+        ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
@@ -206,6 +220,8 @@ class RetrievalPipeline:
             min_score: Inclusive ranking score floor; not a probability.
             limit: Maximum primary results before context packing. Zero returns none.
             weights: Override default scoring weights for this request.
+            ranking_multipliers: Explicit bounded adjustment after query-specific
+                weight redistribution, before reranking and session expansion.
             min_fidelity: Override minimum representation level.
             retrieval_mode: Retrieval mode controlling epistemic filtering.
             include_cross_scope: Whether to include cross-scope hints when
@@ -219,6 +235,9 @@ class RetrievalPipeline:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
         validate_selection(min_score, limit)
+        if ranking_multipliers is not None:
+            ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
+        execution_features = {**self._feature_identity, "reranker": reranker_identity(self._reranker)}
         start_time = time.monotonic()
         if reference_time is not None and reference_time.utcoffset() is None:
             raise ValueError("reference_time must include a timezone")
@@ -474,6 +493,7 @@ class RetrievalPipeline:
             epistemic_weights=self._epistemic_weights,
             now=scoring_now,
             query_analysis=analysis,
+            ranking_multipliers=ranking_multipliers,
         )
 
         # --- Stage 5a: Neural Reranking (optional) ---
@@ -617,6 +637,7 @@ class RetrievalPipeline:
                     scored_hints, _ = score_and_rank(
                         hint_candidates, effective_weights, now=scoring_now,
                         query_analysis=analysis,
+                        ranking_multipliers=ranking_multipliers,
                     )
                     # Only include top-N as cross-scope hints.
                     cross_scope_hints = scored_hints[
@@ -638,20 +659,35 @@ class RetrievalPipeline:
         # --- Stage 6: Context Packing ---
         bundle = await asyncio.to_thread(pack_context, scored, config=effective_packing_config)
 
-        end_time = time.monotonic()
-        timing_ms = (end_time - start_time) * 1000.0
-
         # --- Retrieval Logging ---
+        logging_started = time.monotonic()
         receipt_persisted = False
         try:
             from prme.models.relevance import make_receipt
 
+            execution = RetrievalExecution(features=execution_features, parameters={
+                "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
+                "time_from": time_from.isoformat() if time_from else None,
+                "time_to": time_to.isoformat() if time_to else None,
+                "knowledge_at": knowledge_at.isoformat() if knowledge_at else None,
+                "event_time_from": event_time_from.isoformat() if event_time_from else None,
+                "event_time_to": event_time_to.isoformat() if event_time_to else None,
+                "include_cross_scope": include_cross_scope,
+                "epistemic_weights": {key: value for key, value in self._epistemic_weights.items()}
+                    if self._epistemic_weights is not None else None,
+                "unverified_confidence_threshold": self._unverified_confidence_threshold,
+                "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
+                "reranker_top_k": self._reranker_top_k,
+                "query_reformulation": {"enabled": self._enable_query_reformulation,
+                    "count": self._query_reformulation_count, "provider": self._query_reformulation_provider,
+                    "model": self._query_reformulation_model},
+            })
             receipt = make_receipt(request_id=analysis.request_id, user_id=user_id, query=query,
                                    reference_time=scoring_now, scopes=normalized_scope,
                                    scoring=effective_weights, packing=effective_packing_config,
                                    candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
                                    retrieval_mode=retrieval_mode, time_from=effective_time_from,
-                                   time_to=effective_time_to, ranking_policy=ranking_policy)
+                                   time_to=effective_time_to, ranking_policy=ranking_policy, execution=execution)
             op_id = str(uuid.uuid4())
             payload = json.dumps({
                 "request_id": str(analysis.request_id),
@@ -705,6 +741,7 @@ class RetrievalPipeline:
             )
 
         # --- Assemble RetrievalResponse ---
+        completed_at = time.monotonic()
         metadata = RetrievalMetadata(
             receipt_persisted=receipt_persisted,
             request_id=analysis.request_id,
@@ -714,7 +751,9 @@ class RetrievalPipeline:
             candidates_filtered=len(excluded),
             candidates_included=bundle.included_count,
             scoring_config_version=effective_weights.version_id,
-            timing_ms=round(timing_ms, 2),
+            ranking_multipliers=ranking_multipliers,
+            timing_ms=round((completed_at - start_time) * 1000, 2),
+            receipt_logging_ms=round((completed_at - logging_started) * 1000, 2),
             backends_used=list(candidate_counts.keys()),
             embedding_mismatch=embedding_mismatch,
             backend_failures=candidate_diagnostics.backend_failures,

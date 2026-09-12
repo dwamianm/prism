@@ -30,11 +30,12 @@ from uuid import UUID
 
 from prme.config import PRMEConfig
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
-from prme.models.learning import LearningConfig, LearningEvaluation
+from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
+from prme.retrieval.config import ScoringWeights
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
-from prme.types import EpistemicType, LifecycleState, NodeType, RetrievalMode, Scope, SourceType
+from prme.types import EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
 from prme.retrieval.models import RetrievalResponse
@@ -219,13 +220,22 @@ class MemoryClient:
         time_to: datetime | None = None,
         reference_time: datetime | None = None,
         knowledge_at: datetime | None = None,
+        event_time_from: datetime | None = None,
+        event_time_to: datetime | None = None,
         token_budget: int | None = None,
         min_score: float | None = None,
         limit: int | None = None,
+        weights: ScoringWeights | None = None,
+        ranking_multipliers: RankingMultipliers | None = None,
+        min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
     ) -> RetrievalResponse:
-        """Retrieve memories matching a query. Returns RetrievalResponse."""
+        """Retrieve memories with engine-equivalent temporal and ranking controls.
+
+        ranking_multipliers is an explicit request-only trial. It does not
+        activate a profile or change the next request's scoring configuration.
+        """
         return self._run(
             self._engine.retrieve(
                 query,
@@ -235,8 +245,10 @@ class MemoryClient:
                 time_to=time_to,
                 reference_time=reference_time,
                 knowledge_at=knowledge_at,
+                event_time_from=event_time_from, event_time_to=event_time_to,
                 token_budget=token_budget,
                 min_score=min_score, limit=limit,
+                weights=weights, ranking_multipliers=ranking_multipliers, min_fidelity=min_fidelity,
                 retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope,
             )
         )

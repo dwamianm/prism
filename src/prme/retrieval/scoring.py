@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from prme.models.nodes import MemoryNode
+from prme.models.learning import RankingMultipliers
+from prme.retrieval.ranking_adjustments import adjusted_weights
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
 from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreProvenance, ScoreTrace
 from prme.types import DECAY_LAMBDAS, EPISTEMIC_WEIGHTS, DecayProfile, EpistemicType, LifecycleState, QueryIntent
@@ -424,6 +426,7 @@ def score_and_rank(
     epistemic_weights: dict[str, float] | None = None,
     now: datetime | None = None,
     query_analysis: QueryAnalysis | None = None,
+    ranking_multipliers: RankingMultipliers | None = None,
 ) -> tuple[list[RetrievalCandidate], list[ScoreTrace]]:
     """Score all candidates and return them in deterministic ranked order.
 
@@ -524,6 +527,9 @@ def score_and_rank(
                     node_type_boost=effective_weights.node_type_boost,
                     relevance_floor=effective_weights.relevance_floor,
                 )
+
+    if ranking_multipliers is not None:
+        effective_weights = adjusted_weights(effective_weights, ranking_multipliers)
 
     # Compute relative recency reference: use the newest event_time (or
     # updated_at/created_at) among all candidates. This makes the recency

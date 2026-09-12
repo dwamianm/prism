@@ -16,6 +16,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from prme.models.nodes import MemoryNode
+from prme.models.learning import RankingMultipliers
 from prme.retrieval.config import ScoringWeights
 from prme.types import QueryIntent, RepresentationLevel, RetrievalMode
 
@@ -334,11 +335,13 @@ class RetrievalMetadata(BaseModel):
         default=0, description="Candidates included in final response"
     )
     scoring_config_version: str = Field(
-        description="ScoringWeights version_id used for this retrieval"
+        description="Configured base ScoringWeights version; applied weights are recorded in score provenance"
     )
+    ranking_multipliers: RankingMultipliers | None = None
     timing_ms: float = Field(
-        default=0.0, description="Total retrieval time in milliseconds"
+        default=0.0, description="Pipeline time including receipt logging; excludes engine startup and queue draining"
     )
+    receipt_logging_ms: float = Field(default=0.0, ge=0, description="Receipt construction and operation-log latency")
     backends_used: list[str] = Field(
         default_factory=list, description="List of backends queried"
     )
