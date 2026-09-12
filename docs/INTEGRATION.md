@@ -1,8 +1,8 @@
 # PRME Integration Reference
 
 > **Audience:** AI coding assistants and developers integrating PRME into applications.
-> **Version:** Based on source as of 2026-03-02.
-> **Single-file reference** — copy this into your assistant's context for complete API coverage.
+> **Original reference:** 2026-03-02, with subsequent sections updated incrementally.
+> **API coverage is partial.** See the [README](../README.md) for newer capabilities and focused guides.
 
 ---
 
@@ -314,7 +314,12 @@ Retrieve a node by ID. Returns `None` if not found or not visible (superseded/ar
 async def query_nodes(self, **kwargs) -> list[MemoryNode]
 ```
 
-Query nodes with flexible filters. Defaults to active lifecycle states (tentative + stable). Accepts keyword arguments: `user_id`, `node_type`, `scope`, `lifecycle_state`, `limit`, `offset`.
+Query nodes with flexible filters. Defaults to active lifecycle states
+(tentative, stable and contested). Filters include `user_id`, `node_type`, `scope`
+or `scopes`, `session_ids`, `lifecycle_states`, `valid_at`, `min_confidence`,
+`min_salience`, `content_contains_any`, `created_before`, `oldest_first` and
+`limit`. Use the plural `lifecycle_states`; there is no `offset` argument.
+Pass the owner explicitly in application queries.
 
 ---
 
@@ -333,6 +338,23 @@ hash, provider/model, schema and grounding versions, and structured output; it
 does not acknowledge graph completion or prove its claims. The synchronous
 `MemoryClient` has the same method. HTTP and MCP expose the scoped source record
 through `/v1/events/{event_id}/extraction` and `memory_get_extraction`.
+
+---
+
+#### `engine.consolidate_knowledge()`
+
+```python
+created = await engine.consolidate_knowledge(
+    user_id="alice", scope=Scope.PROJECT,
+    entity_names=["Aurora"], max_profile_tokens=1000,
+)
+```
+
+Build inferred entity profiles from complete same-owner, same-scope source
+excerpts. Each replacement commits atomically after index preparation. Source
+changes or competing rebuilds raise `StaleProfileError`; embedding/storage
+errors also propagate. `MemoryClient` provides the equivalent synchronous API.
+See the [entity profile guide](ENTITY-PROFILES.md) for requirements and recovery.
 
 ---
 

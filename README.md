@@ -417,6 +417,14 @@ model output or `None` when no owned record exists. HTTP exposes
 `GET /v1/events/{event_id}/extraction`; MCP exposes `memory_get_extraction`.
 Both bind access to the source owner's identity and perform no model calls.
 
+## Build entity profiles
+
+Use `consolidate_knowledge(user_id=..., scope=..., entity_names=[...])` to build
+searchable profiles from complete source excerpts under an exact token budget.
+Each replacement preserves the previous profile until its replacement is ready.
+The [entity profile guide](docs/ENTITY-PROFILES.md) covers sync/async use, scope
+isolation, explicit retries and current limits.
+
 ## Record relevance feedback
 
 Every successful receipt log preserves returned candidates, score traces, content
