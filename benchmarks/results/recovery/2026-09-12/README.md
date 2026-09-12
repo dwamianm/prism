@@ -1301,3 +1301,7 @@ The two backend regressions failed before the change. Recovery, failure-category
 and concurrency verification passed 30 tests with three expected backend-specific
 skips in 9.55s, using live PostgreSQL. Ruff passed. This covers these logging
 paths only; it does not establish package-wide log sanitization.
+
+The installed `40c375e` wheel also passed all 30 checks with three expected skips
+in 10.29s on Python 3.13 and live PostgreSQL. The [installed record](pending-logs-installed-40c375e.json)
+pins wheel and log hashes and records the observed native exit zero.
