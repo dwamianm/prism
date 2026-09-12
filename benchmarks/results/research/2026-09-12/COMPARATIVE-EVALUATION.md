@@ -56,8 +56,10 @@ PRME distinguishes users and six scope types, but currently has no named project
 or arbitrary domain namespace field in its memory objects or retrieval API.
 Two projects belonging to the same owner therefore require separate packs for
 isolation; a `project_id` metadata key is not an enforced boundary. RFC-0004's
-full namespace/grant model remains unimplemented. Entity profiles also still
-publish nontransactionally, despite their new source-fidelity guarantees.
+full namespace/grant model remains unimplemented. Entity profiles originally also
+published nontransactionally. That gap is now fixed by atomic publication
+(`430e1b3`) and complete scoped source scans (`107f535`), with backend fault,
+concurrency and abrupt-exit coverage. Durable preparation/retry remains separate.
 
 The next comparative work needs pinned competitor versions, named model and
 embedding conditions, matched questions and token/latency budgets, ingestion

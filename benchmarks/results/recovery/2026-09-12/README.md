@@ -1179,3 +1179,9 @@ The diagnostic retains three alternating-order timing samples after warmup.
 Short-text throughput falls with individual inference; mixed-length padding
 cost can instead make it faster. These small local timings and four equality
 inputs do not prove hardware-independent reproducibility or end-to-end speed.
+
+The installed `e297d08` wheel on Python 3.13 also passed the real-model cache
+invariance and profile workflow, both with native exit zero. Its focused
+embedding, rebuild, derivation and vector suite passed 77 tests with seven skips
+in 43.83s against the configured local PostgreSQL service. The earlier complete
+repository pass remains tied to `107f535`, before this embedding change.
