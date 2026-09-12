@@ -76,3 +76,13 @@ of the study predictions. Its [official model listing](https://ollama.com/librar
 reports a 19 GB artifact. Model availability or size is not evidence of judge
 reliability, and a local judge result will not be presented as an official
 GPT-4o benchmark score.
+
+The [judge calibration controls](../../../fixtures/reader_judge_controls.json)
+are authored separately from the study answers: 42 short cases, balanced between
+21 correct and 21 incorrect responses, spanning seven evaluation categories.
+The declared calibration gate is at least 40 correct with zero false accepts.
+It includes missing facts, incorrect current-state updates, unsupported guesses,
+partial preference matches and numeric temporal tolerance. Passing these simple
+controls would not establish judge accuracy on the real study; they are a
+minimum check before using the separate local judge. The fixture is frozen
+before any Gemma inference, and will not be tuned against study predictions.
