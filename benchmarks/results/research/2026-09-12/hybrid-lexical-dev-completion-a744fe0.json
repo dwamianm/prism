@@ -1,0 +1,613 @@
+{
+  "study_commit": "a744fe0b7715f749614bb141282fc8783c6b8f04",
+  "source_output_sha256": "046a800f5eb5f36be06b160d65e48f17a32ca43ba82ceb8615b410e39348e75b",
+  "plan_sha256": "183f21a7864afda77f34f376d0654277772aa13667c88510f88584cc8697b9c0",
+  "verified_snapshots_sha256": "0811c7053cd7158d285feed5e54147c23636e201fdbb2304dc10d9da698e3842",
+  "questions": 119,
+  "contexts_reproduced": 1428,
+  "labelled_questions": 114,
+  "native_study_exit_code": 0,
+  "errors": 0,
+  "source_model_and_runtime_match_registration": true,
+  "all_contexts_and_metrics_reproduced": true,
+  "comparison": {
+    "categories": {
+      "knowledge-update": {
+        "density": {
+          "2048": {
+            "after": 0.95,
+            "before": 0.775,
+            "delta": 0.175,
+            "interval_95": [
+              0.075,
+              0.3
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 14,
+            "wins": 6
+          },
+          "4096": {
+            "after": 0.95,
+            "before": 0.85,
+            "delta": 0.1,
+            "interval_95": [
+              0.025,
+              0.2
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 16,
+            "wins": 4
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 0.9,
+            "delta": 0.1,
+            "interval_95": [
+              0.025,
+              0.2
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 16,
+            "wins": 4
+          }
+        },
+        "score": {
+          "2048": {
+            "after": 0.95,
+            "before": 0.95,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 20,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.975,
+            "before": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 20,
+            "wins": 0
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 20,
+            "wins": 0
+          }
+        }
+      },
+      "multi-session": {
+        "density": {
+          "2048": {
+            "after": 0.7552083333333334,
+            "before": 0.5494791666666666,
+            "delta": 0.20572916666666666,
+            "interval_95": [
+              0.09895833333333334,
+              0.3177083333333333
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 17,
+            "wins": 14
+          },
+          "4096": {
+            "after": 0.859375,
+            "before": 0.6822916666666666,
+            "delta": 0.17708333333333334,
+            "interval_95": [
+              0.0703125,
+              0.296875
+            ],
+            "losses": 2,
+            "queries": 32,
+            "ties": 18,
+            "wins": 12
+          },
+          "8192": {
+            "after": 0.9583333333333334,
+            "before": 0.796875,
+            "delta": 0.16145833333333334,
+            "interval_95": [
+              0.06510416666666667,
+              0.2682291666666667
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 19,
+            "wins": 12
+          }
+        },
+        "score": {
+          "2048": {
+            "after": 0.703125,
+            "before": 0.75,
+            "delta": -0.046875,
+            "interval_95": [
+              -0.109375,
+              0.015624999999999997
+            ],
+            "losses": 5,
+            "queries": 32,
+            "ties": 26,
+            "wins": 1
+          },
+          "4096": {
+            "after": 0.7864583333333334,
+            "before": 0.8463541666666666,
+            "delta": -0.059895833333333336,
+            "interval_95": [
+              -0.11458333333333333,
+              -0.015625
+            ],
+            "losses": 5,
+            "queries": 32,
+            "ties": 27,
+            "wins": 0
+          },
+          "8192": {
+            "after": 0.9036458333333334,
+            "before": 0.9166666666666666,
+            "delta": -0.013020833333333332,
+            "interval_95": [
+              -0.06770833333333333,
+              0.046875
+            ],
+            "losses": 4,
+            "queries": 32,
+            "ties": 26,
+            "wins": 2
+          }
+        }
+      },
+      "single-session-assistant": {
+        "density": {
+          "2048": {
+            "after": 0.0,
+            "before": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.0,
+            "before": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          },
+          "8192": {
+            "after": 0.2222222222222222,
+            "before": 0.0,
+            "delta": 0.2222222222222222,
+            "interval_95": [
+              0.0,
+              0.5555555555555556
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 7,
+            "wins": 2
+          }
+        },
+        "score": {
+          "2048": {
+            "after": 0.8888888888888888,
+            "before": 1.0,
+            "delta": -0.1111111111111111,
+            "interval_95": [
+              -0.3333333333333333,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 9,
+            "ties": 8,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.8888888888888888,
+            "before": 1.0,
+            "delta": -0.1111111111111111,
+            "interval_95": [
+              -0.3333333333333333,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 9,
+            "ties": 8,
+            "wins": 0
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          }
+        }
+      },
+      "single-session-preference": {
+        "density": {
+          "2048": {
+            "after": 0.9285714285714286,
+            "before": 0.8571428571428571,
+            "delta": 0.07142857142857142,
+            "interval_95": [
+              0.0,
+              0.21428571428571427
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 6,
+            "wins": 1
+          },
+          "4096": {
+            "after": 0.9285714285714286,
+            "before": 0.8571428571428571,
+            "delta": 0.07142857142857142,
+            "interval_95": [
+              0.0,
+              0.21428571428571427
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 6,
+            "wins": 1
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 0.8571428571428571,
+            "delta": 0.14285714285714285,
+            "interval_95": [
+              0.0,
+              0.42857142857142855
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 6,
+            "wins": 1
+          }
+        },
+        "score": {
+          "2048": {
+            "after": 0.9285714285714286,
+            "before": 0.7142857142857143,
+            "delta": 0.21428571428571427,
+            "interval_95": [
+              0.0,
+              0.5
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 5,
+            "wins": 2
+          },
+          "4096": {
+            "after": 1.0,
+            "before": 0.9285714285714286,
+            "delta": 0.07142857142857142,
+            "interval_95": [
+              0.0,
+              0.21428571428571427
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 6,
+            "wins": 1
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 0.9285714285714286,
+            "delta": 0.07142857142857142,
+            "interval_95": [
+              0.0,
+              0.21428571428571427
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 6,
+            "wins": 1
+          }
+        }
+      },
+      "single-session-user": {
+        "density": {
+          "2048": {
+            "after": 1.0,
+            "before": 0.8823529411764706,
+            "delta": 0.11764705882352941,
+            "interval_95": [
+              0.0,
+              0.29411764705882354
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 15,
+            "wins": 2
+          },
+          "4096": {
+            "after": 1.0,
+            "before": 0.9411764705882353,
+            "delta": 0.058823529411764705,
+            "interval_95": [
+              0.0,
+              0.17647058823529413
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 16,
+            "wins": 1
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          }
+        },
+        "score": {
+          "2048": {
+            "after": 0.9411764705882353,
+            "before": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.9411764705882353,
+            "before": 1.0,
+            "delta": -0.058823529411764705,
+            "interval_95": [
+              -0.17647058823529413,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 17,
+            "ties": 16,
+            "wins": 0
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          }
+        }
+      },
+      "temporal-reasoning": {
+        "density": {
+          "2048": {
+            "after": 0.9310344827586207,
+            "before": 0.6954022988505747,
+            "delta": 0.23563218390804597,
+            "interval_95": [
+              0.1206896551724138,
+              0.367816091954023
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 18,
+            "wins": 11
+          },
+          "4096": {
+            "after": 0.9655172413793104,
+            "before": 0.8448275862068966,
+            "delta": 0.1206896551724138,
+            "interval_95": [
+              0.034482758620689655,
+              0.22413793103448276
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 23,
+            "wins": 6
+          },
+          "8192": {
+            "after": 0.9655172413793104,
+            "before": 0.9310344827586207,
+            "delta": 0.034482758620689655,
+            "interval_95": [
+              0.0,
+              0.08620689655172414
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 27,
+            "wins": 2
+          }
+        },
+        "score": {
+          "2048": {
+            "after": 0.9310344827586207,
+            "before": 0.9482758620689655,
+            "delta": -0.017241379310344827,
+            "interval_95": [
+              -0.10344827586206896,
+              0.05172413793103448
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 27,
+            "wins": 1
+          },
+          "4096": {
+            "after": 0.9655172413793104,
+            "before": 0.9482758620689655,
+            "delta": 0.017241379310344827,
+            "interval_95": [
+              0.0,
+              0.05172413793103448
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 28,
+            "wins": 1
+          },
+          "8192": {
+            "after": 0.9655172413793104,
+            "before": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 29,
+            "wins": 0
+          }
+        }
+      }
+    },
+    "overall": {
+      "density": {
+        "2048": {
+          "after": 0.8216374269005848,
+          "before": 0.6513157894736842,
+          "delta": 0.1703216374269006,
+          "interval_95": [
+            0.1162280701754386,
+            0.23026315789473684
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 79,
+          "wins": 34
+        },
+        "4096": {
+          "after": 0.8596491228070176,
+          "before": 0.7485380116959064,
+          "delta": 0.11111111111111112,
+          "interval_95": [
+            0.06578947368421052,
+            0.1600877192982456
+          ],
+          "losses": 2,
+          "queries": 114,
+          "ties": 88,
+          "wins": 24
+        },
+        "8192": {
+          "after": 0.9181286549707602,
+          "before": 0.8201754385964912,
+          "delta": 0.09795321637426901,
+          "interval_95": [
+            0.054824561403508776,
+            0.14619883040935672
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 92,
+          "wins": 21
+        }
+      },
+      "score": {
+        "2048": {
+          "after": 0.868421052631579,
+          "before": 0.881578947368421,
+          "delta": -0.013157894736842106,
+          "interval_95": [
+            -0.049707602339181284,
+            0.023391812865497075
+          ],
+          "losses": 7,
+          "queries": 114,
+          "ties": 103,
+          "wins": 4
+        },
+        "4096": {
+          "after": 0.9093567251461988,
+          "before": 0.9349415204678363,
+          "delta": -0.025584795321637425,
+          "interval_95": [
+            -0.06067251461988304,
+            0.0021929824561403508
+          ],
+          "losses": 7,
+          "queries": 114,
+          "ties": 105,
+          "wins": 2
+        },
+        "8192": {
+          "after": 0.9641812865497076,
+          "before": 0.9634502923976608,
+          "delta": 0.0007309941520467837,
+          "interval_95": [
+            -0.016812865497076022,
+            0.019005847953216377
+          ],
+          "losses": 4,
+          "queries": 114,
+          "ties": 107,
+          "wins": 3
+        }
+      }
+    }
+  },
+  "limits": [
+    "Previously examined development cohort; not independent confirmation and no change to the failed packing confirmation gate.",
+    "Descriptive evidence retention only; no answer generation, LLM judging or competitive leadership claim.",
+    "Question bootstrap intervals do not account for shared histories; category counts are small.",
+    "English stopword prototype only; no PostgreSQL query-semantics change and no production default change.",
+    "One local runtime; ingestion timing is operational accounting and not a competitive speed comparison."
+  ],
+  "verifier_sha256": "98d1285387d0ce4388afcf19b4b65763e85b5bf45c4a5726411d61849583668b"
+}
