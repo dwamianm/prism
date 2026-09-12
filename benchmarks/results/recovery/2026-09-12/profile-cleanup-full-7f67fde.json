@@ -1,0 +1,11 @@
+{
+  "source_commit": "7f67fde",
+  "native_process_exit_code": 0,
+  "passed": 2566,
+  "skipped": 81,
+  "failed": 0,
+  "seconds": 615.21,
+  "log_sha256": "b64e043ac216d10d05354bcee0f184216ee1efb1bc38155b91a1fd60a5c86d3c",
+  "database": "fresh loopback-only PostgreSQL test database with explicit sslmode=disable",
+  "limits": "Complete source regression with both backends. Temporal shared-lock change is subsequently verified in its dedicated source and installed suites; no memory-quality claim."
+}
