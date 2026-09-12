@@ -244,3 +244,9 @@ support-retention changes and complete-evidence retention, not generated-answer
 accuracy. It does not change production packing defaults. Run it separately from
 retrieval: its comparator substitution is intentionally confined to a sequential
 offline process.
+
+The [product packing development report](benchmarks/results/packing/2026-09-12/README.md)
+retains the initial capture/replay check and clearly separates it from the broader
+run. The [LongMemEval-V2 assessment](benchmarks/integrations/LONGMEMEVAL_V2.md)
+records the additional agent-trajectory and multimodal evaluation work required;
+V1 source recall is not a substitute for that coverage.
