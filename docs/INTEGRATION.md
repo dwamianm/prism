@@ -683,7 +683,12 @@ Supported providers: `"openai"`, `"anthropic"`, `"ollama"`.
 
 ### ScoringWeights
 
-Immutable (frozen). The six additive weights must sum to 1.0. Epistemic weight is multiplicative; paths weight is a tiebreaker.
+Scoring fields are frozen. The six additive weights must sum to 1.0. Epistemic weight is multiplicative; paths weight is a tiebreaker.
+
+Scoring and packing configuration reject `NaN` and positive/negative infinity
+at construction or environment loading, including nested node-type boosts and
+scoped scoring overrides. Validation errors identify the offending field before
+retrieval starts. Finite defaults and their version identifiers are unchanged.
 
 ```python
 from prme.retrieval.config import ScoringWeights
@@ -704,13 +709,16 @@ ScoringWeights(
 
 ### PackingConfig
 
+This example chooses smaller candidate limits explicitly; it is not a list of defaults.
+
 ```python
 from prme.retrieval.config import PackingConfig
+from prme.types import RepresentationLevel
 
 PackingConfig(
     token_budget=4096,               # Context budget in tokens
     min_fidelity=RepresentationLevel.REFERENCE,  # Minimum fidelity
-    overhead_tokens=100,             # Reserved for JSON envelope
+    overhead_tokens=100,             # Additional caller reserve beyond measured context
     chars_per_token=4.2,             # Token estimation ratio
     graph_max_candidates=50,         # Max from graph traversal
     vector_k=50,                     # Max from vector search

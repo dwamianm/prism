@@ -248,6 +248,13 @@ w_paths:      0.00 (used as a tiebreaker only, not additive by default)
 
 Weights MUST sum to 1.0 (excluding w_epistemic and w_paths which are multiplicative/tiebreaker). Implementations MUST validate this constraint at configuration load time.
 
+Scoring and packing models reject non-finite numerical values during validation,
+including nested node-type boosts and per-scope weight configurations. `NaN`
+must not bypass the additive-sum check or enter ranking; infinity must not reach
+decay calculations or candidate-budget conversion. This validation does not
+change finite defaults or scoring version hashes. As with other Pydantic models,
+trusted `model_construct`/`model_copy(update=...)` calls bypass normal validation.
+
 **Calibration requirement:** Default weights are design estimates. Implementations MUST expose weight configuration and SHOULD tune weights based on feedback loop data (RFC-0009). `[HYPOTHESIS — optimal weights are use-case dependent and require A/B testing to validate]`
 
 ---

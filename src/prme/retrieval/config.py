@@ -25,7 +25,7 @@ class ScoringWeights(BaseModel):
     paths weight is a tiebreaker -- neither is included in the sum.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     w_semantic: float = Field(
         default=0.25, description="Semantic similarity weight"
@@ -139,6 +139,8 @@ class PackingConfig(BaseModel):
     Controls token budget, representation fidelity, and per-backend
     candidate limits for the retrieval pipeline.
     """
+
+    model_config = ConfigDict(allow_inf_nan=False)
 
     token_budget: int = Field(
         default=4096, ge=0, description="Default context budget in tokens"
