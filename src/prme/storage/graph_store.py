@@ -170,6 +170,14 @@ class GraphStore(Protocol):
 
     # --- Edge Operations ---
 
+    async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
+        """Atomically replace nodes and create edges for (old, new, evidence).
+
+        Every pair must belong to the same user/scope. Failure leaves all
+        states, pointers, and edges unchanged.
+        """
+        ...
+
     async def create_edge(self, edge: MemoryEdge) -> str:
         """Create a new edge between two nodes.
 

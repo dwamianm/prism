@@ -276,9 +276,9 @@ class IngestionPipeline:
         """Materialize extraction results into graph, vector, and lexical stores.
 
         Creates a per-event WriteTracker to record all graph artifacts. On
-        failure, rolls back all tracked graph nodes and edges. Vector and
-        lexical index writes are NOT rolled back (orphaned entries are
-        harmless and logged as a warning by WriteTracker).
+        failure, rolls back tracked graph nodes/edges and evicts their index
+        entries. Named replacements commit atomically as the final write so
+        failures cannot retire prior knowledge while removing its replacement.
 
         The caller's ingestion scope is the write boundary. A model's scope
         classification is descriptive metadata, never permission to move
@@ -292,7 +292,7 @@ class IngestionPipeline:
         """
         tracker = WriteTracker()
         tracked_writer = WriteQueueGraphWriter(
-            self._graph_store, self._write_queue, tracker=tracker
+            self._graph_store, self._write_queue, tracker=tracker, defer_supersedence=True
         )
         entity_merger = EntityMerger(self._graph_store, tracked_writer)
         supersedence_detector = SupersedenceDetector(self._graph_store, tracked_writer)
@@ -505,6 +505,10 @@ class IngestionPipeline:
                     ),
                     label=f"lexical.summary:{event_id}",
                 )
+            # Final state transition: either every named replacement commits
+            # with its edge, or none do. Index/graph failures above leave prior
+            # knowledge untouched while the tracker removes new artifacts.
+            await tracked_writer.commit_supersedences()
         except Exception as exc:
             logger.error(
                 "ingestion.materialization_failed",

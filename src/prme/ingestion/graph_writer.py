@@ -103,10 +103,13 @@ class WriteQueueGraphWriter:
         graph_store: GraphStore,
         write_queue: WriteQueue,
         tracker: WriteTracker | None = None,
+        defer_supersedence: bool = False,
     ) -> None:
         self._graph_store = graph_store
         self._write_queue = write_queue
         self._tracker = tracker
+        self._defer_supersedence = defer_supersedence
+        self._replacements: list[tuple[str, str, str | None]] = []
 
     async def create_node(self, node: MemoryNode) -> str:
         """Create a node via WriteQueue, recording in tracker if set.
@@ -157,20 +160,33 @@ class WriteQueueGraphWriter:
     ) -> None:
         """Mark a node as superseded via WriteQueue.
 
-        No tracker recording needed -- supersede transitions state on
-        existing nodes rather than creating new artifacts.
+        In deferred mode, commit replacements only after materialization has
+        completed. This prevents rollback from deleting a live replacement.
 
         Args:
             old_node_id: Node being replaced.
             new_node_id: Replacement node.
             evidence_id: Optional event ID providing evidence.
         """
+        if self._defer_supersedence:
+            self._replacements.append((old_node_id, new_node_id, evidence_id))
+            return
         await self._write_queue.submit(
             lambda: self._graph_store.supersede(
                 old_node_id, new_node_id, evidence_id=evidence_id
             ),
             label=f"graph.supersede:{old_node_id}->{new_node_id}",
         )
+
+    async def commit_supersedences(self) -> None:
+        """Atomically apply deferred transitions as the final ingestion write."""
+        if self._replacements:
+            replacements = list(self._replacements)
+            await self._write_queue.submit(
+                lambda: self._graph_store.supersede_many(replacements),
+                label="graph.supersede_many",
+            )
+            self._replacements.clear()
 
     async def contradict(
         self,

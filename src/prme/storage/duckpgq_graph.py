@@ -294,10 +294,24 @@ class DuckPGQGraphStore:
             ValueError: If either node doesn't exist or the transition
                 is invalid.
         """
+        await self.supersede_many([(old_node_id, new_node_id, evidence_id)])
+
+    async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
+        """Commit all replacement states and edges together."""
+        if not replacements:
+            return
         async with self._conn_lock:
-            await asyncio.to_thread(
-                self._supersede_sync, old_node_id, new_node_id, evidence_id
-            )
+            await asyncio.to_thread(self._supersede_many_sync, replacements)
+
+    def _supersede_many_sync(self, replacements: list[tuple[str, str, str | None]]) -> None:
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            for old_id, new_id, evidence_id in replacements:
+                self._supersede_sync(old_id, new_id, evidence_id)
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
 
     async def contradict(
         self,
@@ -979,17 +993,23 @@ class DuckPGQGraphStore:
         """Mark a node as superseded by another (sync)."""
         # Validate both nodes exist
         old_row = self._conn.execute(
-            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [old_node_id],
         ).fetchone()
         if old_row is None:
             raise ValueError(f"Old node {old_node_id} not found")
 
         new_row = self._conn.execute(
-            "SELECT id, user_id FROM nodes WHERE id = ?", [new_node_id]
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?", [new_node_id]
         ).fetchone()
         if new_row is None:
             raise ValueError(f"New node {new_node_id} not found")
+        if UUID(old_node_id) == UUID(new_node_id):
+            raise ValueError("A node cannot supersede itself")
+        if old_row[1:] != new_row[1:]:
+            raise ValueError("Replacement nodes must have the same user and scope")
+        if LifecycleState(new_row[0]) not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
+            raise ValueError("Replacement node must be active")
 
         # Validate transition
         current_state = LifecycleState(old_row[0])

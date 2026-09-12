@@ -22,6 +22,15 @@ Implementations MUST use a storage backend that provides:
 
 - Append-only writes (no in-place modification of committed records).
 - ACID transaction semantics for individual write operations.
+
+PRME graph replacements use a transaction covering lifecycle state, replacement
+pointer, and provenance edge. `supersede_many` applies a batch atomically and
+rejects self-replacement, retired replacements, or pairs across users/scopes.
+The ingestion pipeline stages named replacements until its other materialization
+writes finish, then commits the batch as its final write. If indexing or a batch
+member fails, prior facts remain active while newly created artifacts roll back.
+This does not provide full event replay or crash-resumable LLM extraction; those
+require a durable derivation/work protocol beyond the current write tracker.
 - Efficient range scans by timestamp and stream.
 - Content-addressed deduplication by `content_hash`.
 
