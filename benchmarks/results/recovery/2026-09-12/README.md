@@ -784,3 +784,53 @@ The frozen full run at `1461fb0` subsequently completed with **2,133 tests passe
 52 skipped**, actual exit zero, in 809.09 seconds under concurrent benchmark
 load. It includes instruction reinforcement and relevance collection, but
 predates the sync lifecycle additions and version 2 score provenance.
+
+## Replayable score provenance
+
+`aa8684d` adds version 2 receipts with the weights actually used by the scorer,
+ordered neural/session adjustments, and the actual sorting policy. Validation
+recomputes scores and returned order. Replay does not need today's graph, clock,
+classifier or model. It covers the returned candidate set, not omitted candidates
+or a full counterfactual retrieval. It does not fit or activate a learned profile.
+
+The installed Python 3.13 wheel passed **199 checks with three skips** in 28.10
+seconds, including live PostgreSQL. Additional pipeline tests passed on both
+backends in source and against that installed wheel: query-specific weighting,
+neural blending and session expansion replay together after restart. These tests
+use a controlled neural output; they do not benchmark a cross-encoder's quality.
+Version 1 fixture bytes/checksums from the frozen `1461fb0` runtime remain identical,
+including references from relevance records on both backends.
+
+The [real BGE sync workflow](relevance-receipts-aa8684d.json) passed with actual
+process exit zero and replayed the saved ranking before and after archival and
+restart. Its one-candidate receipt grew from 1,699 to 2,519 serialized bytes with
+the additional provenance. This single example is not a storage or latency study.
+
+A valid custom weighting reproduced negative semantic/lexical weights in the
+previous runtime: initial `.01/.02` became `-.04/-.08` for a current-state query,
+or approximately `-.02333/-.04667` for a recent-episodic query. Recency redistribution
+now stops at the available weight, yielding recency `.13` for that configuration.
+The existing default configuration is unchanged; this is a correctness fix, not
+evidence for a better default ranking policy.
+
+`7a796af` fixes a regression found during follow-up review: the new adjustment
+model initially rejected a finite session multiplier above one, although the
+existing packing configuration accepts it. The test failed against the installed
+`aa8684d` wheel, and **45 source checks passed** after preserving those existing
+multiplier semantics. Neural blend coefficients still require the established
+zero-to-one range.
+
+The final installed `7a796af` wheel passed **202 checks with three skips** in
+29.84 seconds, actual exit zero, including live PostgreSQL and the combined
+pipeline tests. Its [repeated real BGE workflow](relevance-receipts-7a796af.json)
+also passed with actual exit zero. No extraction or answer-judging provider is
+used by this persistence/replay diagnostic.
+
+The receipt/provenance models and a strict installed-package consumer passed
+typing checks. The broader six-file typing command reports seven existing errors
+in the optional neural dependency/numpy annotations and connection-lock typing;
+the same seven errors were reproduced at `1461fb0`. Changed-source lint passed.
+A first full-test launch ran before its new worktree finished checking out and
+exited 5 without collecting tests; the simultaneous wheel build also failed for
+the incomplete checkout. After checkout completed, the wheel built successfully
+and a fresh full suite at `aa8684d` was started. Its result remains pending.
