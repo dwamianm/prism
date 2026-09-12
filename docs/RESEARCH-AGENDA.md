@@ -57,9 +57,12 @@ These records preserve commit identities, raw-output hashes, failures and limits
    saved contexts reproduced exactly. Stopword removal improved default-density
    4K recall by 11.11 points, but reduced score-packing recall by 2.56 points,
    including multi-session and assistant regressions. It remains experimental.
-   Density still retained none of the nine assistant evidence sources at 4K;
-   the next offline diagnostic varies the length penalty while preserving
-   source fidelity. Neither study replaces the failed confirmation gate.
+   Density still retained none of the nine assistant evidence sources at 4K.
+   The [completed length-penalty diagnostic](../benchmarks/results/research/2026-09-12/PACKING-LENGTH-STUDY.md)
+   evaluated all 30 registered arms and 3,570 contexts. Native-parser alpha .25
+   improved 4K recall to 95.03%, but retained less assistant evidence than score
+   ordering. Carry that single-comparator hypothesis into broader evaluation;
+   production defaults and the failed confirmation gate remain unchanged.
 
 ## Capability work still required
 

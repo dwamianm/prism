@@ -1,0 +1,94 @@
+{
+  "source_commit": "af3227c",
+  "diagnostic_fix_commit": "e9235ef",
+  "source_tests": {
+    "passed": 78,
+    "failed": 0,
+    "seconds": 14.76,
+    "native_exit_code": 0
+  },
+  "installed_tests": {
+    "passed": 78,
+    "failed": 0,
+    "seconds": 12.9,
+    "native_exit_code": 0
+  },
+  "source_files_verified": 116,
+  "wheel_sha256": "83bde2d0d36d309b54cc20efc7cd2226c0416f2690019a6c7105c8538f6a6ce9",
+  "workflow": {
+    "complete": true,
+    "python": "3.13.3",
+    "prme_import_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+    "runner_sha256": "ec26a4cbe68c8fe7cae656255c9497311dcd974d2f071e3d130f2a0aa4f99b00",
+    "commands": [
+      {
+        "command": "profile-jobs",
+        "exit_code": 0,
+        "stdout_is_json": true
+      },
+      {
+        "command": "resume-profile",
+        "exit_code": 1,
+        "stdout_is_json": true
+      },
+      {
+        "command": "process-profiles",
+        "exit_code": 0,
+        "stdout_is_json": true
+      },
+      {
+        "command": "process-profiles",
+        "exit_code": 0,
+        "stdout_is_json": true
+      },
+      {
+        "command": "resume-profile",
+        "exit_code": 0,
+        "stdout_is_json": true
+      },
+      {
+        "command": "discard-profile",
+        "exit_code": 0,
+        "stdout_is_json": true
+      },
+      {
+        "command": "discard-profile",
+        "exit_code": 0,
+        "stdout_is_json": true
+      },
+      {
+        "command": "collect-profile-staging",
+        "exit_code": 0,
+        "stdout_is_json": true
+      },
+      {
+        "command": "profile-jobs",
+        "exit_code": 0,
+        "stdout_is_json": true
+      }
+    ],
+    "limits": "Authored local CLI workflow; not comparative memory quality.",
+    "local_target_ignores_ambient_database": true,
+    "journals_unchanged": true,
+    "source_count_preserved": 4,
+    "exact_profile_recovered": true,
+    "abandoned_stage_collected": true
+  },
+  "workflow_native_exit_code": 0,
+  "reproduced_before_fix": "Explicit local CLI path inherited a PostgreSQL database URL; regression failed before database_url=None was set.",
+  "retained_failures": [
+    {
+      "kind": "diagnostic enum misuse",
+      "native_exit_code": 1,
+      "artifact": "data/benchmarks/profile-cli-installed-af3227c.json",
+      "sha256": "40cbdaa7749739838dc85ff03b83202b9af87519cc24ffd6c114bac52b535489",
+      "effect": "CLI commands passed; final Python assertion used a string instead of documented NodeType. Corrected diagnostic and reran."
+    },
+    {
+      "kind": "build tool unavailable",
+      "native_exit_code": 1,
+      "effect": "python -m build unavailable; uv build completed successfully."
+    }
+  ],
+  "limits": "Authored local CLI workflow and focused DuckDB/PostgreSQL regression. No full-suite repeat after CLI-only change and no comparative quality claim."
+}
