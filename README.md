@@ -478,6 +478,12 @@ into process globals. `ExtractionConfig(api_key=..., base_url=...)` or
 `PRME_EXTRACTION_API_KEY` / `PRME_EXTRACTION_BASE_URL` explicitly override those
 provider settings. Recreate the client after changing credentials.
 
+If updating `.env` does not change authentication behavior, run `prme doctor .`
+from the project directory. It warns when a process environment variable
+overrides a different file value, without displaying either value or contacting
+the provider. Update or unset the named shell variable, then recreate the client.
+For an IDE or service, update its launch environment and restart the process.
+
 ```bash
 # Extraction provider
 PRME_EXTRACTION_PROVIDER=openai        # openai | anthropic | ollama

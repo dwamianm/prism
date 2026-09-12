@@ -117,3 +117,50 @@ async def test_doctor_reports_selected_provider_without_printing_secrets(project
     output = capsys.readouterr().out
     assert expected in output
     assert "doctor-fixture-secret" not in output
+
+
+@pytest.mark.parametrize("name,provider", [
+    ("OPENAI_API_KEY", "openai"),
+    ("OPENAI_BASE_URL", "openai"),
+    ("ANTHROPIC_API_KEY", "anthropic"),
+    ("PRME_EXTRACTION_API_KEY", "openai"),
+    ("PRME_EXTRACTION_BASE_URL", "ollama"),
+    ("prme_extraction_api_key", "openai"),
+])
+async def test_doctor_identifies_shadowed_settings_without_values_or_requests(
+    project_env, monkeypatch, capsys, name, provider,
+):
+    from argparse import Namespace
+    from prme.cli import cmd_doctor
+
+    project_env.write_text(f"PRME_EXTRACTION_PROVIDER={provider}\n{name}=file-secret-sentinel\n")
+    monkeypatch.setenv(name, "process-secret-sentinel")
+    original_environment = dict(os.environ)
+    original_file = project_env.read_bytes()
+    with patch("instructor.from_provider", side_effect=AssertionError("Doctor must be offline")):
+        await cmd_doctor(Namespace(directory=str(project_env.parent)))
+    output = capsys.readouterr().out
+    assert f"{name.upper()} in the process environment overrides a different value in .env" in output
+    assert "file-secret-sentinel" not in output
+    assert "process-secret-sentinel" not in output
+    assert dict(os.environ) == original_environment
+    assert project_env.read_bytes() == original_file
+
+
+@pytest.mark.parametrize("settings,process_value", [
+    ("OPENAI_API_KEY=same-secret-sentinel\n", "same-secret-sentinel"),
+    ("PRME_EXTRACTION_PROVIDER=anthropic\nOPENAI_API_KEY=file-secret-sentinel\n", "process-secret-sentinel"),
+    ("PRME_EXTRACTION_API_KEY=override-secret-sentinel\nOPENAI_API_KEY=file-secret-sentinel\n", "process-secret-sentinel"),
+])
+async def test_doctor_does_not_warn_about_identical_or_unused_sdk_keys(
+    project_env, monkeypatch, capsys, settings, process_value,
+):
+    from argparse import Namespace
+    from prme.cli import cmd_doctor
+
+    project_env.write_text(settings)
+    monkeypatch.setenv("OPENAI_API_KEY", process_value)
+    await cmd_doctor(Namespace(directory=str(project_env.parent)))
+    output = capsys.readouterr().out
+    assert "overrides a different value" not in output
+    assert "secret-sentinel" not in output

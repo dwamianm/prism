@@ -802,16 +802,45 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
     from prme.config import ExtractionConfig
 
     extraction = ExtractionConfig()
+    local = dotenv_values(".env")
     key_name = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}.get(extraction.provider)
     configured = bool(extraction.api_key)
     if key_name:
-        configured = configured or bool(os.environ.get(key_name, dotenv_values(".env").get(key_name)))
+        configured = configured or bool(os.environ.get(key_name, local.get(key_name)))
     if extraction.provider == "ollama":
         ok("Local Ollama extraction selected (server availability not checked)")
     elif configured:
         ok(f"{extraction.provider} extraction credential configured (not verified)")
     else:
         warn(f"No credential found for {extraction.provider} extraction; store() works without an LLM")
+
+    # Diagnose the settings used by this CLI, without exposing values or making
+    # a provider request. PRME settings are case-insensitive; SDK variables are
+    # case-sensitive. Ignore lower-priority SDK settings when PRME overrides them.
+    process_settings = {name.upper(): value for name, value in os.environ.items()}
+    file_settings = {name.upper(): value for name, value in local.items()}
+    active_settings = ["PRME_EXTRACTION_PROVIDER", "PRME_EXTRACTION_MODEL"]
+    if extraction.api_key:
+        active_settings.append("PRME_EXTRACTION_API_KEY")
+    if extraction.base_url:
+        active_settings.append("PRME_EXTRACTION_BASE_URL")
+    shadowed = [name for name in active_settings if (
+        name in process_settings and file_settings.get(name) is not None
+        and process_settings[name] != file_settings[name]
+    )]
+    if key_name:
+        for name, overridden in (
+            (key_name, bool(extraction.api_key)),
+            (key_name.replace("API_KEY", "BASE_URL"), bool(extraction.base_url)),
+        ):
+            if (not overridden and name in os.environ and local.get(name) is not None
+                    and os.environ[name] != local[name]):
+                shadowed.append(name)
+    for name in shadowed:
+        warn(
+            f"{name} in the process environment overrides a different value in .env; "
+            f"update or unset {name} before recreating the client"
+        )
 
     # Summary
     print()
