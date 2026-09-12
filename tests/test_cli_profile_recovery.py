@@ -128,8 +128,12 @@ async def test_batch_failure_and_blocked_collection_report_json_then_nonzero_exi
 
 def test_main_routes_library_diagnostics_away_from_json(monkeypatch, capsys):
     import argparse
+    import logging
     import structlog
     previous = structlog.get_config()
+    # Other CLI/client fixtures can intentionally suppress all library logs.
+    # This assertion needs a known level, while main must preserve that level.
+    structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG))
     async def handler(_):
         structlog.get_logger("cli-json-test").warning("authored diagnostic")
         print(json.dumps({"success": True}))
