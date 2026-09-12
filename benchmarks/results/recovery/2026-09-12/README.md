@@ -2,8 +2,8 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The latest frozen full suite at `aaa7ee1` passed **1,698 tests, 27 skipped**
-with live PostgreSQL (128.41 seconds). A Python 3.13 wheel at `aaa7ee1` passed
+product. The latest frozen full suite at `ef046f9` passed **1,724 tests, 28 skipped**
+with live PostgreSQL (132.67 seconds). A Python 3.13 wheel at `ef046f9` passed
 installed sync-client, default local embedding, restart, source/provenance,
 selection/budget, HTTP identity/filter and MCP HTTP workflow checks. The older
 `7a1e864` wheel additionally ran real local-model extraction, recorded below.
@@ -74,7 +74,7 @@ are not automatically recoverable from a migration marker.
 
 ## Idempotent index staging
 
-The staging component passes 25 focused checks, including real process exits
+At `ef046f9`, the staging component passes 25 focused checks, including real process exits
 after a durable vector payload, after native vector insertion, and after a
 lexical commit. Retries reuse saved numerical inputs and identities without
 calling a model. Failure after a lexical commit preserves the committed batch;
@@ -88,6 +88,10 @@ also pass under USearch 2.16.0 / SimSIMD 5.9.11. Ordinary orphan compaction stil
 works; unpublished staging claims are retained, and published archived results
 remain eligible for eviction. Abandoned staging has no automatic collection
 policy yet. These checks exercise components, not the complete ingestion path.
+The Python 3.13 wheel passed 59 staging/graph component checks with 6 skips,
+including live PostgreSQL. Its public sync-client, default embedding, restart,
+source/provenance, selection/budget, authenticated HTTP and MCP HTTP workflow
+also passed. Strict public-consumer typing and changed-file lint checks passed.
 
 ## Grounded extraction journal
 
