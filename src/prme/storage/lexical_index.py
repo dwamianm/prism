@@ -209,7 +209,8 @@ class LexicalIndex:
         document; cancellation waits for the native transaction to finish before
         releasing the index lock. Returns only after the commit is durable.
         """
-        snapshot = tuple(tuple(fields) for fields in replacements)
+        snapshot = tuple((node_id, content, owner, node_type, scope)
+                         for node_id, content, owner, node_type, scope in replacements)
         async with self._write_lock:
             await run_to_completion(self._do_replace_many, snapshot)
 

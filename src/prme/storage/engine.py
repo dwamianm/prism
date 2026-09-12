@@ -1364,10 +1364,12 @@ class MemoryEngine:
                 # retry through exact replacement. Preserve partial vector errors.
                 for event_id, node in documents.items():
                     try:
-                        await self._write_queue.submit(
-                            lambda n=node: self._lexical_index.index(
+                        async def replace_one(n: MemoryNode = node) -> None:
+                            await self._lexical_index.index(
                                 str(n.id), n.content, n.user_id, n.node_type.value, n.scope.value, replace=True,
-                            ), label=f"materialize.lexical:{node.id}",
+                            )
+                        await self._write_queue.submit(
+                            replace_one, label=f"materialize.lexical:{node.id}",
                         )
                         await self._lexical_index.flush()
                     except Exception as exc:

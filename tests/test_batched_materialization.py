@@ -243,3 +243,39 @@ asyncio.run(main())
         assert {row['node_id'] for row in await engine._lexical_index.search('telescope', user)} == ids
         assert {row['node_id'] for row in await engine._vector_index.search('telescope', user)} == ids
         assert (await engine.process_pending(user_id=user)).processed == 0
+
+
+@pytest.mark.parametrize('boundary', ['vector', 'lexical_commit'])
+async def test_cancelled_public_drain_leaves_sources_retryable(config, user, monkeypatch, boundary):
+    if config.backend != 'duckdb':
+        pytest.skip('Local batched drain cancellation')
+    async with MemoryEngine.open(config) as engine:
+        ids = [await engine.ingest_fast(f'Telescope source {i}', user_id=user) for i in range(4)]
+        entered, release = asyncio.Event(), asyncio.Event()
+        target, name = ((engine._vector_index, 'index') if boundary == 'vector'
+                        else (engine._lexical_index, 'replace_many'))
+        original = getattr(target, name)
+        async def paused(*args, **kwargs):
+            await original(*args, **kwargs)
+            entered.set()
+            await release.wait()
+        monkeypatch.setattr(target, name, paused)
+        task = asyncio.create_task(engine.process_pending(user_id=user, budget_ms=5000))
+        try:
+            await asyncio.wait_for(entered.wait(), 5)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            for event_id in ids:
+                assert (await engine.processing_status(event_id, user_id=user)).status == 'pending'
+        finally:
+            release.set()
+            if not task.done():
+                await asyncio.gather(task, return_exceptions=True)
+        # Wait for the cancelled caller's already accepted native write to finish.
+        await engine._write_queue.submit(AsyncMock())
+        monkeypatch.setattr(target, name, original)
+        result = await engine.process_pending(user_id=user, budget_ms=5000)
+        assert (result.processed, result.pending, result.failed) == (4, 0, 0)
+        assert {row['node_id'] for row in await engine._lexical_index.search('telescope', user)} == set(ids)
+        assert {row['node_id'] for row in await engine._vector_index.search('telescope', user)} == set(ids)
