@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 _EVENT_COLUMNS = (
     "id, timestamp, role, content, content_hash, "
-    "user_id, session_id, scope, metadata, created_at"
+    "user_id, session_id, scope, metadata, created_at, event_time"
 )
 
 
@@ -33,31 +33,66 @@ class PgEventStore:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def append(self, event: Event) -> str:
+    async def append(self, event: Event, *, defer_materialization: bool = False) -> str:
         """Append an event to the immutable event log."""
         metadata_json = (
             json.dumps(event.metadata) if event.metadata is not None else None
         )
         async with self._pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO events (
-                    id, timestamp, role, content, content_hash,
-                    user_id, session_id, scope, metadata, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
-                """,
-                str(event.id),
-                event.timestamp,
-                event.role,
-                event.content,
-                event.content_hash,
-                event.user_id,
-                event.session_id,
-                event.scope.value,
-                metadata_json,
-                event.created_at,
-            )
+            async with conn.transaction():
+                await conn.execute(
+                    """
+                    INSERT INTO events (
+                        id, timestamp, role, content, content_hash,
+                        user_id, session_id, scope, metadata, created_at, event_time
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11)
+                    """,
+                    str(event.id),
+                    event.timestamp,
+                    event.role,
+                    event.content,
+                    event.content_hash,
+                    event.user_id,
+                    event.session_id,
+                    event.scope.value,
+                    metadata_json,
+                    event.created_at,
+                    event.event_time,
+                )
+                if defer_materialization:
+                    await conn.execute(
+                        "INSERT INTO event_materializations (event_id) VALUES ($1)",
+                        str(event.id),
+                    )
         return str(event.id)
+
+    async def pending_materializations(
+        self, *, user_id: str | None = None, limit: int = 500,
+    ) -> list[Event]:
+        columns = ", ".join(f"e.{c.strip()}" for c in _EVENT_COLUMNS.split(","))
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                f"SELECT {columns} FROM events e JOIN event_materializations m "
+                "ON e.id = m.event_id WHERE m.status = 'pending' "
+                "AND ($1::varchar IS NULL OR e.user_id = $1) "
+                "ORDER BY m.attempts, e.timestamp, e.id LIMIT $2", user_id, limit,
+            )
+        return [self._record_to_event(row) for row in rows]
+
+    async def materialization_count(self) -> int:
+        async with self._pool.acquire() as conn:
+            return await conn.fetchval(
+                "SELECT count(*) FROM event_materializations WHERE status = 'pending'"
+            )
+
+    async def finish_materialization(self, event_id: str, *, error: str | None = None) -> None:
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE event_materializations SET status = $1, attempts = attempts + 1, "
+                "last_error = $2, updated_at = now() WHERE event_id = $3 "
+                "AND status = 'pending'",
+                "complete" if error is None else "pending", error, event_id,
+            )
 
     async def get(self, event_id: str) -> Event | None:
         """Retrieve an event by its ID."""
@@ -178,4 +213,5 @@ class PgEventStore:
             "scope": scope,
             "metadata": metadata,
             "created_at": created_at,
+            "event_time": row.get("event_time"),
         })

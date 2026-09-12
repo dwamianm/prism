@@ -167,8 +167,25 @@ async def initialize_pg_database(
         for idx in _EVENTS_INDEXES:
             await conn.execute(idx)
 
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS event_materializations (
+                event_id UUID PRIMARY KEY REFERENCES events(id),
+                status VARCHAR NOT NULL DEFAULT 'pending',
+                attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """)
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_materializations_pending "
+            "ON event_materializations (status, attempts, event_id)"
+        )
+        await conn.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")
+
         # Nodes (without embedding column initially)
         await conn.execute(_NODES_TABLE)
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ttl_days INTEGER")
         for idx in _NODES_INDEXES:
             await conn.execute(idx)
 

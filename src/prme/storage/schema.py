@@ -61,6 +61,23 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_events_scope ON events (scope)"
     )
 
+    # Durable work is committed atomically with its source event. Completed
+    # records retain the event-to-node identity without mutating the event log.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS event_materializations (
+            event_id UUID PRIMARY KEY,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
+        )
+    """)
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_materializations_pending "
+        "ON event_materializations (status, attempts, event_id)"
+    )
+
     # --- Nodes table ---
     conn.execute("""
         CREATE TABLE IF NOT EXISTS nodes (

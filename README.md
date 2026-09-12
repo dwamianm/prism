@@ -31,7 +31,7 @@ PRME models memory the way it actually works:
 - **Epistemic state tracking** — memories have lifecycle states (tentative -> stable -> superseded -> archived), confidence scores, contradiction detection, and oscillation dampening
 - **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle
 - **Self-organizing memory** — organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival
-- **Dual-stream ingestion** — sub-50ms fast path for real-time use, with deferred graph materialization
+- **Dual-stream ingestion** — durable fast path with deferred graph materialization and indexing
 - **Local-first** — everything lives in a single directory (DuckDB + usearch + Tantivy). No cloud dependency. Optional PostgreSQL backend for production.
 
 ## Installation
@@ -120,7 +120,7 @@ events = await engine.ingest_batch(
 For real-time use, the fast path skips graph extraction:
 
 ```python
-# Guaranteed sub-50ms — event store + vector only
+# Durably accept the event; defer embedding and indexing
 await engine.ingest_fast(content, user_id="alice", scope=Scope.PERSONAL)
 ```
 
@@ -145,7 +145,7 @@ See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough an
 └──────────────────────────────────────────────────────┘
 ```
 
-- **Ingestion Pipeline** — stores raw events, optionally extracts entities/facts/relationships via LLM (OpenAI, Anthropic, Ollama). Dual-stream mode provides a sub-50ms fast path with deferred graph materialization.
+- **Ingestion Pipeline** — stores raw events, optionally extracts entities/facts/relationships via LLM (OpenAI, Anthropic, Ollama). Dual-stream mode atomically records events and deferred work; indexing resumes on retrieve/organize after a restart.
 - **Retrieval Pipeline** — query analysis -> multi-source candidate generation -> deterministic scoring -> context packing. Supports bi-temporal queries with `knowledge_at` for point-in-time snapshots.
 - **Epistemic State Model** — tracks confidence, lifecycle transitions (tentative -> stable -> superseded -> archived), contradiction detection, supersedence chains, oscillation dampening, and surprise-gated storage.
 - **Organizer** — twelve registered jobs, including index compaction; `centrality_boost` is currently a stub. Explicit passes run through `prme organize`. Retrieve/ingest can schedule opportunistic in-process maintenance; there is no built-in cron or daemon scheduler.

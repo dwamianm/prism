@@ -84,7 +84,7 @@ async def ingest_batch(
 
 ## ingest_fast()
 
-Sub-50ms fast path: event store + vector index only. Graph materialization is queued for later.
+The fast path commits the event and its pending work atomically, without embedding or LLM calls. Retrieval or organization materializes a raw NOTE with the original event ID, provenance, and timestamps. Pending work survives restart; the configured queue size bounds each batch rather than dropping events. Use `ingest()` when you need LLM extraction. Latency depends on the database commit.
 
 ```python
 async def ingest_fast(
@@ -95,10 +95,16 @@ async def ingest_fast(
     session_id: str | None = None,
     metadata: dict | None = None,
     scope: Scope = Scope.PERSONAL,
+    event_time: datetime | None = None,
 ) -> str
 ```
 
 Use this for real-time conversational ingestion where latency matters.
+
+Completion is acknowledged only after the vector and lexical indexes are
+persisted. Failed work remains pending for a later pass; one failure does not
+block the other items in that batch. A drain budget is cooperative: an indexing
+operation already in progress finishes before the budget is checked again.
 
 ## retrieve()
 

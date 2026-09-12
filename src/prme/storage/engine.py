@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from prme.retrieval.pipeline import RetrievalPipeline
 
 from prme.organizer.maintenance import MaintenanceRunner
-from prme.storage.materialization_queue import MaterializationQueue
+from prme.storage.durable_queue import DurableMaterializationQueue
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +111,8 @@ class MemoryEngine:
         self._retrieval_pipeline = retrieval_pipeline
         self._config = config if config is not None else PRMEConfig()
         self._maintenance_runner: MaintenanceRunner | None = None
-        self._materialization_queue = MaterializationQueue(
-            max_size=self._config.materialization_queue_size,
+        self._materialization_queue = DurableMaterializationQueue(
+            event_store, batch_size=self._config.materialization_queue_size,
         )
 
         # Encryption at rest (issue #14)
@@ -348,6 +348,7 @@ class MemoryEngine:
         engine._encryption_provider = encryption_provider
         engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
         engine._register_atexit_encrypt()
+        await engine._materialization_queue.debt()
         return engine
 
     @classmethod
@@ -460,6 +461,7 @@ class MemoryEngine:
             config=config,
         )
         engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
+        await engine._materialization_queue.debt()
         return engine
 
     # --- Core Operations ---
@@ -1139,21 +1141,17 @@ class MemoryEngine:
         session_id: str | None = None,
         metadata: dict | None = None,
         scope: Scope = Scope.PERSONAL,
+        event_time: datetime | None = None,
     ) -> str:
-        """Fast-path ingestion: event store + vector index only.
+        """Durably accept a raw event and defer its indexing.
 
-        Guaranteed sub-50ms path for real-time conversational use.
-        Persists the event to the event store and indexes into the
-        vector index for immediate semantic search, then queues
-        graph materialization for later processing during the next
-        retrieve() or organize() call.
+        Persists the event and its deferred work in one transaction. Graph
+        materialization and indexing run during retrieve() or organize(),
+        including after a restart. This path makes no embedding or LLM call.
 
-        This method does NOT perform: graph writes, entity extraction,
-        supersedence detection, lexical indexing, or any LLM calls.
-
-        The queued materialization is in-memory only. If the process
-        restarts before drain, the events are still safe in the event
-        store and can be replayed.
+        Materialization creates a raw NOTE linked to the original event;
+        use ingest() for LLM-powered entity/fact extraction. Latency depends
+        on database commit time; no fixed wall-clock guarantee is made.
 
         Args:
             content: The message text to ingest.
@@ -1162,6 +1160,7 @@ class MemoryEngine:
             session_id: Optional session identifier.
             metadata: Optional structured metadata.
             scope: Memory scope (personal, project, org).
+            event_time: When the event happened, if different from ingestion.
 
         Returns:
             String UUID of the persisted event.
@@ -1174,38 +1173,13 @@ class MemoryEngine:
             role=role,
             scope=scope,
             metadata=metadata,
+            event_time=event_time,
         )
         event_id = await self._write_queue.submit(
-            lambda ev=event: self._event_store.append(ev),
+            lambda ev=event: self._event_store.append(ev, defer_materialization=True),
             label=f"ingest_fast.event:{event.id}",
         )
-
-        # Step 2: Index into vector store for immediate semantic search
-        try:
-            await self._write_queue.submit(
-                lambda eid=str(event.id), c=content, uid=user_id: (
-                    self._vector_index.index(eid, c, uid)
-                ),
-                label=f"ingest_fast.vector:{event.id}",
-            )
-        except Exception:
-            logger.warning(
-                "ingest_fast: vector indexing failed for event %s. "
-                "Event is persisted; vector index can be rebuilt.",
-                event_id,
-                exc_info=True,
-            )
-
-        # Step 3: Queue graph materialization for later
-        await self._materialization_queue.add(
-            event_id=event_id,
-            content=content,
-            user_id=user_id,
-            role=role,
-            session_id=session_id,
-            scope=scope.value if scope else None,
-            metadata=metadata,
-        )
+        self._materialization_queue.note_added()
 
         logger.info(
             "ingest_fast.complete event_id=%s debt=%d",
@@ -1213,6 +1187,71 @@ class MemoryEngine:
             self._materialization_queue.debt_sync(),
         )
         return event_id
+
+    async def _materialize_event(self, event: Event) -> None:
+        """Idempotently index a raw event without appending another event.
+
+        Node identity and timestamps derive from the immutable event, so retry
+        cannot introduce another assertion or reset knowledge time. Completion
+        is acknowledged only after both indexes are durable.
+        """
+        from prme.epistemic.inference import infer_epistemic_type, infer_source_type
+
+        node_id = str(event.id)
+        node = await self._graph_store.get_node(node_id, include_superseded=True)
+        if node is None:
+            epistemic_type = infer_epistemic_type(NodeType.NOTE)
+            source_type = infer_source_type(NodeType.NOTE, role=event.role)
+            confidence = self._confidence_matrix.lookup_with_fallback(epistemic_type, source_type)
+            node = MemoryNode(
+                id=event.id, content=event.content, user_id=event.user_id,
+                session_id=event.session_id, scope=event.scope, metadata=event.metadata,
+                node_type=NodeType.NOTE, evidence_refs=[event.id],
+                epistemic_type=epistemic_type, source_type=source_type,
+                confidence=confidence, confidence_base=confidence,
+                created_at=event.created_at, updated_at=event.created_at,
+                valid_from=event.timestamp, last_reinforced_at=event.timestamp,
+                event_time=event.event_time,
+                ttl_days=self._config.organizer.default_ttl_days.get("note"),
+            )
+            try:
+                await self._write_queue.submit(
+                    lambda: self._graph_store.create_node(node),
+                    label=f"materialize.node:{node_id}",
+                )
+            except Exception:
+                # Another PostgreSQL consumer may have created the same
+                # deterministic node. Never swallow an unrelated write error.
+                existing = await self._graph_store.get_node(node_id, include_superseded=True)
+                if existing is None:
+                    raise
+                node = existing
+        if node.user_id != event.user_id or event.id not in node.evidence_refs:
+            raise ValueError("Materialization identity does not match its source event")
+        if node.lifecycle_state not in ACTIVE_LIFECYCLE_STATES:
+            # An explicit retirement during a retry must not resurrect data.
+            return
+        # Replace any partial index writes left by a failed attempt.
+        await self._write_queue.submit(
+            lambda: self._vector_index.delete_by_node_id(node_id),
+            label=f"materialize.vector_remove:{node_id}",
+        )
+        await self._write_queue.submit(
+            lambda: self._vector_index.index(node_id, node.content, node.user_id),
+            label=f"materialize.vector:{node_id}",
+        )
+        await self._write_queue.submit(
+            lambda: self._lexical_index.delete_by_node_id(node_id),
+            label=f"materialize.lexical_remove:{node_id}",
+        )
+        await self._write_queue.submit(
+            lambda: self._lexical_index.index(
+                node_id, node.content, node.user_id, node.node_type.value, node.scope.value,
+            ), label=f"materialize.lexical:{node_id}",
+        )
+        await self._vector_index.save()
+        if hasattr(self._lexical_index, "flush"):
+            await self._lexical_index.flush()
 
     @property
     def materialization_debt(self) -> int:
@@ -1293,10 +1332,10 @@ class MemoryEngine:
             )
 
         # Drain materialization queue before retrieval (issue #25)
-        if self._materialization_queue.debt_sync() > 0:
+        if await self._materialization_queue.debt() > 0:
             try:
                 drained = await self._materialization_queue.drain(
-                    self, budget_ms=self._config.materialization_budget_ms
+                    self, budget_ms=self._config.materialization_budget_ms, user_id=user_id,
                 )
                 if drained > 0:
                     logger.debug(
@@ -1889,10 +1928,10 @@ class MemoryEngine:
 
         # Drain materialization queue first (issue #25)
         materialized = 0
-        if self._materialization_queue.debt_sync() > 0:
+        if await self._materialization_queue.debt() > 0:
             try:
                 materialized = await self._materialization_queue.drain(
-                    self, budget_ms=self._config.materialization_budget_ms
+                    self, budget_ms=self._config.materialization_budget_ms, user_id=user_id,
                 )
             except Exception:
                 logger.warning(

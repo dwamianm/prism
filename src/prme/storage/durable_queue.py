@@ -1,0 +1,66 @@
+"""Restart-safe deferred indexing from immutable source events.
+
+Events and work records are committed in one database transaction. The batch
+size bounds memory usage, never the amount of acknowledged work. A failed
+item remains pending and cannot prevent the rest of a batch from progressing.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from prme.storage.engine import MemoryEngine
+
+logger = logging.getLogger(__name__)
+
+
+class DurableMaterializationQueue:
+    def __init__(self, event_store: Any, *, batch_size: int = 500) -> None:
+        self._store = event_store
+        self._batch_size = batch_size
+        self._debt = 0
+        self._lock = asyncio.Lock()
+
+    async def debt(self) -> int:
+        self._debt = await self._store.materialization_count()
+        return self._debt
+
+    def debt_sync(self) -> int:
+        """Last observed pending count; call debt() for a database refresh."""
+        return self._debt
+
+    def note_added(self) -> None:
+        self._debt += 1
+
+    async def drain(
+        self, engine: MemoryEngine, budget_ms: int = 100, *, user_id: str | None = None,
+    ) -> int:
+        if budget_ms <= 0:
+            return 0
+        async with self._lock:
+            start = time.monotonic()
+            completed = 0
+            events = await self._store.pending_materializations(
+                user_id=user_id, limit=self._batch_size,
+            )
+            for event in events:
+                if (time.monotonic() - start) * 1000 >= budget_ms:
+                    break
+                try:
+                    await engine._materialize_event(event)
+                except Exception as exc:
+                    # Retain only exception type, not provider responses which
+                    # could contain secrets or source content.
+                    await self._store.finish_materialization(
+                        str(event.id), error=type(exc).__name__,
+                    )
+                    logger.warning("Materialization failed for %s", event.id, exc_info=True)
+                else:
+                    await self._store.finish_materialization(str(event.id))
+                    completed += 1
+            await self.debt()
+            return completed

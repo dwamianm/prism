@@ -42,7 +42,7 @@ class EventStore:
 
     # --- Public async API ---
 
-    async def append(self, event: Event) -> str:
+    async def append(self, event: Event, *, defer_materialization: bool = False) -> str:
         """Append an event to the immutable event log.
 
         Args:
@@ -52,8 +52,59 @@ class EventStore:
             The string representation of the event's UUID.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._append_sync, event)
+            await asyncio.to_thread(self._append_with_work_sync, event, defer_materialization)
         return str(event.id)
+
+    def _append_with_work_sync(self, event: Event, deferred: bool) -> None:
+        if not deferred:
+            self._append_sync(event)
+            return
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._append_sync(event)
+            self._conn.execute(
+                "INSERT INTO event_materializations (event_id) VALUES (?)",
+                [str(event.id)],
+            )
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
+    async def pending_materializations(
+        self, *, user_id: str | None = None, limit: int = 500,
+    ) -> list[Event]:
+        """Read a bounded batch of durable work, oldest/retried-last first."""
+        def read() -> list[Event]:
+            columns = ", ".join(f"e.{c.strip()}" for c in _EVENT_COLUMNS.split(","))
+            scoped = " AND e.user_id = ?" if user_id is not None else ""
+            params = [user_id, limit] if user_id is not None else [limit]
+            rows = self._conn.execute(
+                f"SELECT {columns} FROM events e JOIN event_materializations m "
+                "ON e.id = m.event_id WHERE m.status = 'pending'" + scoped +
+                " ORDER BY m.attempts, e.timestamp, e.id LIMIT ?", params,
+            ).fetchall()
+            return [self._row_to_event(row) for row in rows]
+
+        async with self._conn_lock:
+            return await asyncio.to_thread(read)
+
+    async def materialization_count(self) -> int:
+        async with self._conn_lock:
+            return await asyncio.to_thread(lambda: self._conn.execute(
+                "SELECT count(*) FROM event_materializations WHERE status = 'pending'"
+            ).fetchone()[0])
+
+    async def finish_materialization(self, event_id: str, *, error: str | None = None) -> None:
+        """Acknowledge durable completion or retain a failed item for retry."""
+        async with self._conn_lock:
+            await asyncio.to_thread(
+                self._conn.execute,
+                "UPDATE event_materializations SET status = ?, attempts = attempts + 1, "
+                "last_error = ?, updated_at = current_timestamp WHERE event_id = ? "
+                "AND status = 'pending'",
+                ["complete" if error is None else "pending", error, event_id],
+            )
 
     async def get(self, event_id: str) -> Event | None:
         """Retrieve an event by its ID.

@@ -36,7 +36,7 @@ _NODE_COLUMNS = (
     "valid_from, valid_to, superseded_by, evidence_refs, "
     "created_at, updated_at, epistemic_type, source_type, "
     "decay_profile, last_reinforced_at, reinforcement_boost, "
-    "salience_base, confidence_base, pinned"
+    "salience_base, confidence_base, pinned, event_time, ttl_days"
 )
 
 # Node columns qualified with the "n." alias for queries that join
@@ -85,10 +85,10 @@ class PgGraphStore:
                     valid_from, valid_to, superseded_by, evidence_refs,
                     created_at, updated_at, epistemic_type, source_type,
                     decay_profile, last_reinforced_at, reinforcement_boost,
-                    salience_base, confidence_base, pinned
+                    salience_base, confidence_base, pinned, event_time, ttl_days
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10,
                           $11, $12, $13, $14::jsonb, $15, $16, $17, $18,
-                          $19, $20, $21, $22, $23, $24)
+                          $19, $20, $21, $22, $23, $24, $25, $26)
                 """,
                 str(node.id),
                 node.node_type.value,
@@ -114,6 +114,8 @@ class PgGraphStore:
                 node.salience_base,
                 node.confidence_base,
                 node.pinned,
+                node.event_time,
+                node.ttl_days,
             )
         return str(node.id)
 
@@ -1171,6 +1173,8 @@ class PgGraphStore:
             salience_base=raw_salience_base if raw_salience_base is not None else 0.5,
             confidence_base=raw_confidence_base if raw_confidence_base is not None else 0.5,
             pinned=bool(raw_pinned),
+            event_time=ensure_tz(row.get("event_time")),
+            ttl_days=row.get("ttl_days"),
         )
 
     @staticmethod

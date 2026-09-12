@@ -400,9 +400,10 @@ class PRMEConfig(BaseSettings):
     # Dual-stream ingestion (issue #25)
     materialization_queue_size: int = Field(
         default=500,
+        ge=1,
         description=(
-            "Maximum number of pending items in the materialization queue. "
-            "When full, oldest items are dropped. Used by ingest_fast()."
+            "Maximum number of durable pending events read in one materialization "
+            "batch. Additional work remains on disk; acknowledged events are never dropped."
         ),
     )
     materialization_budget_ms: int = Field(

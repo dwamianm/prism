@@ -1,0 +1,202 @@
+"""Behavioral recovery contract, exercised against both supported backends."""
+
+import asyncio
+import hashlib
+import os
+import subprocess
+import sys
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
+from unittest.mock import AsyncMock
+
+import pytest
+
+from prme import MemoryEngine, PRMEConfig
+from prme.models import Event
+from prme.types import Scope
+
+
+class MockEmbeddingProvider:
+    model_name = "durability-test"
+    model_version = "1"
+    dimension = 384
+
+    async def embed(self, texts):
+        return [
+            [hashlib.sha256(text.encode()).digest()[i % 32] / 255 for i in range(self.dimension)]
+            for text in texts
+        ]
+
+
+@pytest.fixture(params=["duckdb", "postgres"])
+def config(request, tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "prme.storage.engine.create_embedding_provider", lambda _: MockEmbeddingProvider(),
+    )
+    (tmp_path / "lexical").mkdir()
+    args = dict(
+        db_path=str(tmp_path / "memory.duckdb"),
+        lexical_path=str(tmp_path / "lexical"),
+        vector_path=str(tmp_path / "vectors.usearch"),
+        organizer={"opportunistic_enabled": False},
+        materialization_budget_ms=5000,
+    )
+    if request.param == "postgres":
+        if not os.environ.get("PRME_TEST_DATABASE_URL"):
+            pytest.skip("PRME_TEST_DATABASE_URL not set")
+        args["database_url"] = os.environ["PRME_TEST_DATABASE_URL"]
+        # Use the same dimension as the existing PostgreSQL test schema.
+        provider = MockEmbeddingProvider()
+        provider.dimension = 384
+        monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: provider)
+    return PRMEConfig(**args)
+
+
+@pytest.fixture
+def user():
+    return f"durable-{uuid4()}"
+
+
+async def test_restart_recovers_original_event(config, user):
+    old_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    async with MemoryEngine.open(config) as engine:
+        event_id = await engine.ingest_fast(
+            "Alice prefers dark mode", user_id=user, scope=Scope.PROJECT,
+            session_id="session", metadata={"source": "test"}, event_time=old_time,
+        )
+        original = await engine.get_event(event_id)
+        assert await engine.count_nodes(user_id=user) == 0
+    async with MemoryEngine.open(config) as engine:
+        assert engine.materialization_debt >= 1
+        response = await engine.retrieve("dark mode", user_id=user, scope=Scope.PROJECT)
+        assert any(str(r.node.id) == event_id for r in response.results)
+        nodes = await engine.query_nodes(user_id=user)
+        assert len(nodes) == 1
+        node = nodes[0]
+        assert node.evidence_refs == [UUID(event_id)]
+        assert node.created_at == original.created_at
+        assert node.valid_from == original.timestamp
+        assert node.event_time == old_time
+        assert node.session_id == "session"
+        assert node.metadata == {"source": "test"}
+        assert len(await engine.get_events(user)) == 1
+        assert await engine._materialization_queue.drain(engine, user_id=user) == 0
+
+
+async def test_fast_path_never_calls_embedding(config, user, monkeypatch):
+    async with MemoryEngine.open(config) as engine:
+        index = AsyncMock(side_effect=AssertionError("fast path must not embed"))
+        monkeypatch.setattr(engine._vector_index, "index", index)
+        eid = await engine.ingest_fast("Durable before indexing", user_id=user)
+        assert await engine.get_event(eid) is not None
+        index.assert_not_awaited()
+
+
+async def test_retry_after_partial_index_write_preserves_identity(config, user, monkeypatch):
+    async with MemoryEngine.open(config) as engine:
+        eid = await engine.ingest_fast("A memorable telescope", user_id=user)
+        original_index = engine._lexical_index.index
+        monkeypatch.setattr(engine._lexical_index, "index", AsyncMock(side_effect=OSError("disk")))
+        assert await engine._materialization_queue.drain(engine, 5000, user_id=user) == 0
+        assert len(await engine._event_store.pending_materializations(user_id=user)) == 1
+        assert await engine.count_nodes(user_id=user) == 1
+        monkeypatch.setattr(engine._lexical_index, "index", original_index)
+    async with MemoryEngine.open(config) as engine:
+        assert await engine._materialization_queue.drain(engine, 5000, user_id=user) == 1
+        assert len(await engine.get_events(user)) == 1
+        assert await engine.count_nodes(user_id=user) == 1
+        hits = await engine._lexical_index.search("telescope", user, limit=10)
+        assert [hit["node_id"] for hit in hits] == [eid]
+        if engine._conn is not None:
+            count = engine._conn.execute(
+                "SELECT count(*) FROM vector_metadata WHERE node_id = ?", [eid],
+            ).fetchone()[0]
+            assert count == 1
+
+
+async def test_scoped_drain_and_concurrent_consumers(config, user):
+    other = f"other-{uuid4()}"
+    async with MemoryEngine.open(config) as engine:
+        await engine.ingest_fast("Other tenant's memory", user_id=other)
+        ids = await asyncio.gather(*[
+            engine.ingest_fast(f"Alice's memory number {i}", user_id=user)
+            for i in range(5)
+        ])
+        await asyncio.gather(*[
+            engine._materialization_queue.drain(engine, 5000, user_id=user)
+            for _ in range(3)
+        ])
+        assert len(await engine.get_events(user)) == len(ids)
+        assert await engine.count_nodes(user_id=user) == len(ids)
+        assert await engine.count_nodes(user_id=other) == 0
+        assert len(await engine._event_store.pending_materializations(user_id=other)) == 1
+
+
+async def test_failed_item_does_not_starve_later_items(config, user, monkeypatch):
+    async with MemoryEngine.open(config) as engine:
+        first = await engine.ingest_fast("Cannot index this yet", user_id=user)
+        second = await engine.ingest_fast("Can index this", user_id=user)
+        materialize = engine._materialize_event
+        async def sometimes_fail(event):
+            if str(event.id) == first:
+                raise RuntimeError("transient error")
+            await materialize(event)
+        monkeypatch.setattr(engine, "_materialize_event", sometimes_fail)
+        assert await engine._materialization_queue.drain(engine, 5000, user_id=user) == 1
+        assert await engine.get_node(second) is not None
+        assert [str(e.id) for e in await engine._event_store.pending_materializations(user_id=user)] == [first]
+
+
+async def test_event_and_work_commit_atomically(config, user):
+    if config.backend != "duckdb":
+        pytest.skip("DuckDB transaction fault injection")
+    async with MemoryEngine.open(config) as engine:
+        event = Event(content="Must roll back", user_id=user, role="user")
+        # Force the second insert to fail after the event insert succeeded.
+        engine._conn.execute(
+            "INSERT INTO event_materializations (event_id) VALUES (?)", [str(event.id)],
+        )
+        with pytest.raises(Exception):
+            await engine._event_store.append(event, defer_materialization=True)
+        assert await engine.get_event(str(event.id)) is None
+
+
+async def test_process_exit_without_close_recovers(config, user):
+    if config.backend != "duckdb":
+        pytest.skip("Local process crash recovery")
+    script = '''
+import asyncio, os, sys
+from prme import MemoryEngine, PRMEConfig
+async def main():
+    engine = await MemoryEngine.create(PRMEConfig.model_validate_json(sys.argv[1]))
+    await engine.ingest_fast("The emergency contact is Alice", user_id=sys.argv[2])
+    os._exit(0)
+asyncio.run(main())
+'''
+    result = await asyncio.to_thread(
+        subprocess.run, [sys.executable, "-c", script, config.model_dump_json(), user],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    async with MemoryEngine.open(config) as engine:
+        response = await engine.retrieve("emergency contact", user_id=user)
+        assert any("Alice" in r.node.content for r in response.results)
+        assert len(await engine.get_events(user)) == 1
+
+
+async def test_postgres_independent_consumers(config, user):
+    if config.backend != "postgres":
+        pytest.skip("Independent PostgreSQL workers")
+    async with MemoryEngine.open(config) as first, MemoryEngine.open(config) as second:
+        eid = await first.ingest_fast("A shared worker memory", user_id=user)
+        await asyncio.gather(
+            first._materialization_queue.drain(first, 5000, user_id=user),
+            second._materialization_queue.drain(second, 5000, user_id=user),
+        )
+        assert await first.count_nodes(user_id=user) == 1
+        assert len(await first.get_events(user)) == 1
+        assert await first._event_store.pending_materializations(user_id=user) == []
+        assert any(
+            r["node_id"] == eid
+            for r in await second._vector_index.search("shared worker memory", user)
+        )
