@@ -18,7 +18,7 @@ import numpy as np
 from usearch.index import Index
 
 from prme.storage._threading import run_to_completion
-from prme.storage.embedding import EmbeddingProvider
+from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
 
 logger = logging.getLogger(__name__)
 
@@ -234,10 +234,11 @@ class VectorIndex:
 
         key_placeholders = ", ".join("?" for _ in candidate_keys)
         sql = (
-            "SELECT vm.vector_key, vm.node_id FROM vector_metadata vm "
+            "SELECT vm.vector_key, vm.node_id, vm.embedding_model, "
+            "vm.embedding_version, vm.embedding_dim FROM vector_metadata vm "
             "JOIN nodes n ON vm.node_id = n.id "
             f"WHERE vm.vector_key IN ({key_placeholders})"
-            " AND vm.user_id = ?"
+            " AND vm.user_id = ? AND n.user_id = vm.user_id"
             " AND COALESCE(n.lifecycle_state, 'tentative') IN (?, ?, ?)"
         )
         params: list = [*candidate_keys, user_id, *_ACTIVE_STATES]
@@ -250,18 +251,23 @@ class VectorIndex:
         if time_from is not None:
             sql += (
                 " AND (n.valid_to IS NULL OR n.valid_to > ? "
-                "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
+                "OR n.node_type IN ('entity', 'preference'))"
             )
             params.append(time_from)
 
         if time_to is not None:
             sql += (
                 " AND (n.valid_from <= ? "
-                "OR n.node_type IN ('ENTITY', 'PREFERENCE'))"
+                "OR n.node_type IN ('entity', 'preference'))"
             )
             params.append(time_to)
 
         rows = self._conn.execute(sql, params).fetchall()
+        expected = (self._provider.model_name, self._provider.model_version, self._provider.dimension)
+        if any(tuple(row[2:]) != expected for row in rows):
+            raise EmbeddingVersionMismatchError(
+                "Stored embeddings use a different model, version, or dimension; run prme rebuild"
+            )
         return {row[0]: row[1] for row in rows}
 
     async def index(self, node_id: str, content: str, user_id: str) -> int:
@@ -491,6 +497,12 @@ class VectorIndex:
             return []
 
         query_vector = np.array(vector, dtype=np.float32)
+        if self._index.ndim != self._provider.dimension:
+            raise EmbeddingVersionMismatchError(
+                "Stored vector dimension differs from the configured model; run prme rebuild"
+            )
+        if query_vector.shape != (self._provider.dimension,) or not np.isfinite(query_vector).all():
+            raise ValueError("Query embedding has invalid dimensions or non-finite values")
 
         # Run the USearch read under _write_lock and off the event loop.
         # Index writes now happen in a worker thread (issue #39), so a

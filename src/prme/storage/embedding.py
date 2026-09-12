@@ -18,6 +18,10 @@ if TYPE_CHECKING:
     from prme.config import EmbeddingConfig
 
 
+class EmbeddingVersionMismatchError(ValueError):
+    """Stored vectors cannot be compared with the configured embedding model."""
+
+
 @runtime_checkable
 class EmbeddingProvider(Protocol):
     """Protocol for embedding text into dense vectors.

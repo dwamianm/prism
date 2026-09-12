@@ -180,6 +180,16 @@ stays pending until both indexes succeed. Direct `store()` also attempts both
 indexes, but logs indexing failures without creating a retry job; use
 `prme rebuild` to repair its indexes from the durable graph.
 
+Retrieval reports failures of its primary candidate paths in
+`response.metadata.backend_failures`, using `backend_error` or
+`embedding_mismatch` reason codes without provider error details. No vector
+matches alone is not an error. Stored model/version metadata is checked before
+returning vector hits; incompatible embeddings fall back to other search paths.
+Rebuild after changing embedding models. Legacy PostgreSQL embeddings without
+model metadata also require a rebuild; their model is never guessed from current
+configuration. Dimension changes may additionally require storage migration.
+HTTP and MCP retrieval responses expose the same diagnostics under `metrics`.
+
 Successful grounded extraction output is saved before graph materialization.
 An indexing retry reuses that output without another LLM call. Inspect it with
 `engine.get_extraction(event_id, user_id="alice")` (also on `MemoryClient`).

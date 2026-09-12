@@ -136,6 +136,17 @@ namespace_filter:   [NamespaceID]  -- Applied at index level (RFC-0004, Section 
 
 Silently returning results from a mixed-model comparison is NOT permitted.
 
+**Implementation status (2026-09-12):** local vector hits validate their stored
+model, version, and dimension; PostgreSQL writes model/version with each node's
+embedding and validates retrieved rows. Unknown legacy PostgreSQL metadata is
+incompatible until re-embedding. A detected mismatch empties the vector candidate
+path and sets retrieval metadata `embedding_mismatch=true`. Other primary-path
+failures use `backend_failures` reason code `backend_error`; an empty successful
+search is neither a failure nor evidence of model mismatch. This status covers
+primary candidate generation, not every optional expansion or reranker. Changing
+vector dimensions can require index/schema migration and is not an automatic
+model upgrade.
+
 ### 4.3 Lexical Search
 
 Run full-text search over memory object `value` fields and event content using the lexical index (BM25 or FTS5).

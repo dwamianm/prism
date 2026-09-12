@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -24,6 +25,14 @@ if TYPE_CHECKING:
     from prme.storage.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CandidateDiagnostics:
+    """Per-call status, separate from candidate counts and provider messages."""
+
+    embedding_mismatch: bool = False
+    backend_failures: dict[str, str] = field(default_factory=dict)
 
 
 def normalize_bm25_scores(results: list[dict]) -> list[dict]:
@@ -164,8 +173,8 @@ async def _generate_vector_candidates(
 ) -> tuple[list[dict], bool]:
     """Generate candidates from vector similarity search.
 
-    Returns (candidates, embedding_mismatch_flag). On embedding version
-    mismatch or other error, returns empty candidates with mismatch=True.
+    Returns (candidates, embedding_mismatch_flag). A verified model mismatch
+    returns empty candidates. Other errors propagate to the backend collector.
 
     Scope and temporal filters are forwarded to vector_index.search() which
     enforces them via DuckDB JOIN with the nodes table.
@@ -174,6 +183,8 @@ async def _generate_vector_candidates(
     """
     # Convert Scope enums to string values for the vector index.
     scope_values = [s.value for s in scope] if scope else None
+    from prme.storage.embedding import EmbeddingVersionMismatchError
+
     try:
         results = await vector_index.search(
             analysis.query, user_id, k=config.vector_k,
@@ -182,9 +193,9 @@ async def _generate_vector_candidates(
             time_to=time_to,
         )
         return results, False
-    except Exception:
+    except EmbeddingVersionMismatchError:
         logger.warning(
-            "Vector search failed (possible embedding version mismatch); "
+            "Vector search detected incompatible embedding metadata; "
             "falling back to empty vector candidates",
             exc_info=True,
         )
@@ -397,6 +408,7 @@ async def generate_candidates(
     config: PackingConfig = DEFAULT_PACKING_CONFIG,
     include_graph: bool = True,
     include_pinned: bool = True,
+    diagnostics: CandidateDiagnostics | None = None,
 ) -> tuple[list[RetrievalCandidate], dict[str, int]]:
     """Generate and merge candidates from all four backends in parallel.
 
@@ -421,6 +433,7 @@ async def generate_candidates(
             cheap secondary passes (e.g. cross-scope hints).
         include_pinned: Run the pinned/active-task backend. Disabled for
             cheap secondary passes (e.g. cross-scope hints).
+        diagnostics: Optional per-call status output; never stores exception messages.
 
     Returns:
         Tuple of (merged_candidates, candidate_counts_per_backend).
@@ -447,7 +460,14 @@ async def generate_candidates(
         return_exceptions=True,
     )
 
-    # Process results, treating exceptions as empty.
+    # Process results, treating exceptions as empty. Counts alone cannot
+    # distinguish a healthy empty index from an unavailable backend.
+    if diagnostics is not None:
+        diagnostics.backend_failures.clear()
+        diagnostics.embedding_mismatch = False
+        for backend, result in zip(("GRAPH", "VECTOR", "LEXICAL", "PINNED"), results):
+            if isinstance(result, BaseException):
+                diagnostics.backend_failures[backend] = "backend_error"
     graph_cands: list[dict] = []
     vector_cands: list[dict] = []
     lexical_cands: list[dict] = []
@@ -475,6 +495,9 @@ async def generate_candidates(
         pinned_cands = results[3]
 
     if embedding_mismatch:
+        if diagnostics is not None:
+            diagnostics.embedding_mismatch = True
+            diagnostics.backend_failures["VECTOR"] = "embedding_mismatch"
         logger.warning(
             "Embedding version mismatch detected; vector candidates empty. "
             "Falling back to lexical + graph + pinned only."

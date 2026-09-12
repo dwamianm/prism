@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 
 import duckdb
 
-from prme.retrieval.candidates import generate_candidates
+from prme.retrieval.candidates import CandidateDiagnostics, generate_candidates
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
     DEFAULT_SCORING_WEIGHTS,
@@ -349,6 +349,7 @@ class RetrievalPipeline:
                     pass
 
         # --- Stages 2-3: Candidate Generation + Merging ---
+        candidate_diagnostics = CandidateDiagnostics()
         candidates, candidate_counts = await generate_candidates(
             analysis,
             graph_store=self._graph_store,
@@ -359,6 +360,7 @@ class RetrievalPipeline:
             time_from=effective_time_from,
             time_to=effective_time_to,
             config=candidate_config,
+            diagnostics=candidate_diagnostics,
         )
 
         # Merge aggregation extras into candidate pool
@@ -448,10 +450,7 @@ class RetrievalPipeline:
             if reform_added:
                 candidate_counts["REFORMULATION"] = reform_added
 
-        # Track embedding mismatch from candidates module.
-        # If VECTOR count is 0 but no explicit error, we check the flag
-        # via the candidates module's logging. For now, infer from counts.
-        embedding_mismatch = candidate_counts.get("VECTOR", 0) == 0
+        embedding_mismatch = candidate_diagnostics.embedding_mismatch
 
         # --- Stage 3.5: Bi-temporal Post-Filtering (issue #21) ---
         # Applied after candidate generation and before epistemic filtering.
@@ -659,6 +658,7 @@ class RetrievalPipeline:
                 "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
+                "backend_failures": candidate_diagnostics.backend_failures,
                 "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
                 "time_from": effective_time_from.isoformat() if effective_time_from else None,
                 "time_to": effective_time_to.isoformat() if effective_time_to else None,
@@ -699,6 +699,7 @@ class RetrievalPipeline:
             timing_ms=round(timing_ms, 2),
             backends_used=list(candidate_counts.keys()),
             embedding_mismatch=embedding_mismatch,
+            backend_failures=candidate_diagnostics.backend_failures,
         )
 
         # Build filter metadata for debugging/explainability.

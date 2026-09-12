@@ -265,6 +265,10 @@ class RetrievalMetadata(BaseModel):
         default=False,
         description="Flag if embedding model mismatch detected (per research)",
     )
+    backend_failures: dict[str, str] = Field(
+        default_factory=dict,
+        description="Failed primary candidate paths with sanitized reason codes; empty means no detected failure",
+    )
 
 
 class FilterMetadata(BaseModel):

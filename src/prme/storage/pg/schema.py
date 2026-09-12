@@ -186,6 +186,10 @@ async def initialize_pg_database(
         await conn.execute(_NODES_TABLE)
         await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")
         await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ttl_days INTEGER")
+        # Nullable on migration: legacy vectors have unknown provenance until
+        # explicitly re-embedded; never guess their model from today's config.
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding_model VARCHAR")
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding_version VARCHAR")
         for idx in _NODES_INDEXES:
             await conn.execute(idx)
 

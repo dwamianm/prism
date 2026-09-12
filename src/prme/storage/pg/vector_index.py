@@ -17,7 +17,7 @@ from datetime import datetime
 
 import asyncpg
 
-from prme.storage.embedding import EmbeddingProvider
+from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +55,13 @@ class PgVectorIndex:
         async with self._pool.acquire() as conn:
             # Try to update the node's embedding column first.
             result = await conn.execute(
-                "UPDATE nodes SET embedding = $1::vector WHERE id = $2",
+                "UPDATE nodes SET embedding = $1::vector, embedding_model = $3, "
+                "embedding_version = $4 WHERE id = $2 AND user_id = $5",
                 vector_str,
                 node_id,
+                self._provider.model_name,
+                self._provider.model_version,
+                user_id,
             )
 
             # If no row was updated, the node_id might be non-node content
@@ -115,11 +119,13 @@ class PgVectorIndex:
         Returns:
             List of dicts with keys: node_id, score, distance.
         """
+        if k <= 0:
+            return []
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
-
         conditions: list[str] = [
             "user_id = $1",
             "embedding IS NOT NULL",
+            "lifecycle_state IN ('tentative', 'stable', 'contested')",
         ]
         params: list = [user_id]
         idx = 2
@@ -151,7 +157,8 @@ class PgVectorIndex:
         # pgvector cosine distance: embedding <=> query_vector
         query = (
             f"SELECT id::text AS node_id, "
-            f"  (embedding <=> ${idx}::vector) AS distance "
+            f"  (embedding <=> ${idx}::vector) AS distance, "
+            "embedding_model, embedding_version, vector_dims(embedding) AS embedding_dim "
             f"FROM nodes "
             f"WHERE {where} "
             f"ORDER BY embedding <=> ${idx}::vector "
@@ -164,6 +171,12 @@ class PgVectorIndex:
 
         results = []
         for row in rows:
+            if (row["embedding_model"], row["embedding_version"], row["embedding_dim"]) != (
+                self._provider.model_name, self._provider.model_version, self._provider.dimension,
+            ):
+                raise EmbeddingVersionMismatchError(
+                    "Stored embeddings have unknown or incompatible model metadata; run prme rebuild"
+                )
             distance = float(row["distance"])
             results.append({
                 "node_id": row["node_id"],

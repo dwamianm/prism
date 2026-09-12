@@ -245,6 +245,7 @@ async def memory_retrieve(
         return json.dumps({
             "results": results,
             "count": len(results),
+            "metrics": response.metadata.model_dump(mode="json"),
         })
     except Exception as e:
         return _internal_error("memory_retrieve", e)
