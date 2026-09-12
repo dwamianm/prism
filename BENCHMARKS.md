@@ -13,6 +13,12 @@ of improved answer accuracy.
 
 ## Contract for the next baseline
 
+Complete full-history development runs from September 12, including the initial
+regression and its intent correction, are preserved with per-question evidence
+and paired comparisons in the [development report](benchmarks/results/evidence/2026-09-12/README.md).
+These measure support retrieval, not end-to-end answer quality; held-out
+confirmation and cross-product comparisons remain open.
+
 | Layer | Report |
 |---|---|
 | Candidate retrieval | Evidence recall@k, MRR, nDCG@k |

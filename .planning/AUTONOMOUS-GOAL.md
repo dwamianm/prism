@@ -32,51 +32,92 @@ Each delivery needs targeted regression tests, appropriate backend checks,
 updated documentation, and a reviewable commit. Keep historical planning
 artifacts as history; the root ROADMAP.md and this file describe current work.
 
-## Current work
+## Current work (verified 2026-09-12)
 
-Durable fast ingestion implemented: event/work transaction, original-event node
-identity, persistent retries, scoped drains, bounded batches without dropping
-work, index persistence before acknowledgement. Raw ingestion no longer embeds
-before acknowledging the event. Removed the obsolete in-memory queue.
+Historical GSD milestones are not acceptance criteria. This work is driven by
+actual failures, source-preserving invariants, current primary-source research,
+and reproducible measurements. The active branch is feat/memory-reliability-quality.
 
-Verified 2026-09-12: local suite 1,172 passed / 36 skipped (optional dependencies
-and PostgreSQL unavailable in that invocation); 32 targeted tests passed against
-live PostgreSQL and local storage, including two independent PG consumers;
-13 durability cases passed / 3 backend-specific cases skipped after final schema
-index changes. Local process-exit recovery and partial-index retry are covered.
-Ruff and diff whitespace checks pass. Two pre-existing coroutine warnings remain
-in the sync client after-close test; address in developer-experience work.
+Delivered and tested:
 
-Evidence evaluator delivered: explicit LongMemEval variants, neutral source
-identifiers, stable dev/test splits, provenance, category coverage, recall/MRR/
-nDCG, actual whole-turn token budgets, and BM25/vector/RRF/recency/empty baselines.
-The product packer and LLM extraction need separate measurement. Full S runs
-are in progress on 119 development questions from frozen source checkouts.
-No default ranking replacement based on the initial five-question smoke test.
+- Durable raw ingestion work survives restart/process exit, partial indexing,
+  bounded queues and scoped drains. Async/sync processing status and retries
+  expose durable attempts/errors. This currently covers ingest_fast() only.
+- Retrieval has an explicit replayable reference time. Query-date interpretation
+  is separated from caller validity filters; episode recency and relevance floors
+  are consistent. Historical, aggregation, and duration questions preserve older
+  evidence rather than receiving current-state recency weighting.
+- Whole rendered context uses real tokenization, respects reserved overhead, and
+  preserves qualifiers. Packer preflight avoids expensive whole-context recounts
+  for entries that cannot fit; packing runs off the async event loop.
+- Consolidation retains omitted sources, pins and namespace boundaries, verifies
+  unchanged source coverage, and cannot retire sources on an unsupported summary.
+- LLM extraction stays in the caller namespace, requires exact source citations
+  in the built-in provider, validates subject/object mentions, and retains full
+  supporting paragraphs. Different values coexist; automatic retirement requires
+  a named, source-supported replacement in an observed/asserted update.
+- Replacement state/pointers/edges commit atomically after materialization, on
+  DuckDB and PostgreSQL. Index/batch failures preserve prior facts. Cross-user,
+  cross-scope, self, and retired-node replacements are rejected.
+- Extraction retries are bounded, respect configured timeouts and shutdown, and
+  waiting callers receive typed failures. Project .env settings/selected provider
+  credentials now load with documented precedence, without global env mutation.
+- Normal local startup no longer attempts an unused community extension install.
+- Complete scoped node enumeration now uses bounded stable-ID pages in both
+  clients/backends. It counts stored assertions, not distinct real-world events,
+  and does not claim a transaction snapshot across concurrent page reads.
+- The wheel carries py.typed; client responses, events, nodes, and organizer
+  results have concrete return types. CI checks a static consumer contract.
+- Hierarchical summaries preserve full excerpts and source labels, retain user/
+  scope boundaries, group by UTC episode time, and remain INFERRED. New summaries
+  are indexed; failures remove partial artifacts and preserve original sources.
 
-Correctness fixes since the baseline: explicit replayable retrieval clock;
-query dates no longer silently filter assertion validity; explicit validity
-filters apply to all candidate paths; relative recency compares episode times
-consistently; update-language scoring preserves relevance limits and caller
-configuration. Targeted tests passed against local and live PostgreSQL storage.
-The sync client no longer leaks unawaited coroutines after close.
+Validation: frozen 68e443d passed 1,459 tests / 12 skips with live PostgreSQL.
+The subsequent causal simulation timeline regression passed; contradiction
+transaction tests passed 42 checks / 1 backend-specific skip. A built wheel
+installed cleanly on Python 3.13.3 and passed real local embedding, restart
+recovery, processing status, scoped retrieval and close. Installed-wheel positive
+and negative static consumer checks passed with mypy 1.19.1.
 
-Public deferred-processing status and bounded scoped processing are implemented
-for both async and sync APIs, with durable error/attempt reporting. These track
-only ingest_fast(), not LLM extraction. Processing/client tests: 36 passed,
-3 backend-specific skips. A full-suite run was invalidated by concurrent source
-edits (mixed imports). The frozen rerun at 04c0b51 passed 1,226 tests with 11
-optional/backend-specific skips against live PostgreSQL, without warnings.
+Measurement: full LongMemEval S histories, fixed 119-question development split,
+neutral source IDs, evidence recall/MRR/nDCG, actual whole-turn token budgets,
+and BM25/vector/RRF/recency/empty baselines. Runs come from frozen source checkouts
+and retain configuration, dependencies, dataset checksum and coverage. Complete
+matched-run comparisons include paired uncertainty estimates and all failures.
+No default ranking replacement is justified by a five-question smoke test.
 
-Consolidation now preserves omitted sources, pins, namespace boundaries,
-full qualifiers and dates, and checks coverage before retirement. Targeted
-local/PostgreSQL consolidation and organizer tests: 50 passed. PostgreSQL
-event_time/ttl_days update support now matches the local backend.
+Four complete 119-question development runs expose and repair the initial
+current-state heuristic regression. The frozen duration correction at 6fc6b67
+reached 91.96% support recall at 2,048 tokens versus baseline 90.79%; the paired
+change is +1.17 points, with a 95% interval of 0.00 to +3.22, two wins, no losses,
+and 112 ties among 114 labeled questions. This small development result does not
+establish a general improvement. The untouched 381-question test split is now
+running against that frozen profile; no partial held-out answers are being used
+for tuning. Complete development reports and comparisons are retained in
+benchmarks/results/evidence/2026-09-12/.
+These are evidence metrics, not answer accuracy or superiority over competitors.
 
-Full event/operation replay, persistent LLM extraction jobs, contextual/grounded
-extraction, faithful product context packing, complete scoped enumeration,
-persistent feedback, identity-bound APIs, and comparative agent outcomes remain
-open. The revised delivery order must follow the evidence from these runs.
+The simulation harness previously exposed future messages to earlier checkpoints
+and rewrote immutable event timestamps to simulate aging. It now ingests messages
+at their causal arrival time, retrieves with an explicit clock, scopes organizer
+runs, and isolates/cleans temporary packs. The corrected suite passes 71/74 checks;
+remaining failures concern API-decision relevance, current database state, and
+CEO replacement ordering. The script's legacy 80% exit threshold is not a claim
+that these scenarios all pass.
+
+Remote extraction: updated project credentials now authenticate, but the provider
+returns credit_balance_exhausted / insufficient_quota. Local Ollama qwen3.5:4b
+was used for synthetic extraction diagnostics. It exposed false preference
+classification, omitted conditions and unsupported object paraphrases. Citation
+validation recovered source-supported values in the condition example; semantic
+classification and relationship entailment remain fallible. No live-model accuracy
+claim follows from these diagnostics.
+
+Still open: crash-resumable LLM derivation jobs, complete event/operation replay,
+contextual extraction and semantic entailment, complete semantic aggregation,
+bounded faithful semantic compression, persistent outcome feedback, identity-bound
+shared APIs, held-out comparisons and longitudinal agent outcomes. Atomic graph
+replacement is not a complete ingestion transaction or durable derivation log.
 
 ## Limits on claims
 
