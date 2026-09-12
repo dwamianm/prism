@@ -12,9 +12,19 @@
 
 This RFC specifies context packing: the process of selecting which scored memory objects to include in a Memory Bundle given a fixed token budget, and how each object's token cost is estimated and balanced against its retrieval value.
 
-Most retrieval systems optimise for relevance. RMS optimises for *utility per token* — because a context window is not just a relevance ranking problem, it is a resource allocation problem. A verbose, moderately relevant memory object that exhausts the context budget is worse than a concise, highly relevant one.
+Packing must be evaluated for source retention and downstream task quality under
+an actual token budget. Signal-to-Token Ratio (STR) was the initial heuristic;
+the composite score is not a calibrated additive utility, so dividing it by
+token cost does not establish that the resulting context is better.
 
-The core metric is the Signal-to-Token Ratio (STR).
+**Evidence update, 2026-09-12:** a complete 119-question development comparison
+found that score ordering within the multi-path tier retained more labelled
+source evidence than density ordering at 2K, 4K and 8K. At the default 4K budget,
+recall rose from 75.51% to 93.49%, with 31 wins and no losses among 114 labelled
+questions. There were five losses at 2K, including a negative preference-category
+mean. The density default remains pending a frozen test-partition confirmation;
+see the [study and limitations](../benchmarks/results/packing/2026-09-12/CONFIRMATION.md).
+This supersedes the earlier rationale treating STR as established superior utility.
 
 **Implemented contract, 2026-09-12:** the product packer now counts its complete
 rendered context with a named tiktoken encoding. `MemoryBundle.render()` returns
