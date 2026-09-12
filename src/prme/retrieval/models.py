@@ -146,8 +146,12 @@ class RetrievalCandidate(BaseModel):
     composite_score: float = Field(
         default=0.0, description="Final composite score after scoring stage"
     )
+    reranker_score: float | None = Field(
+        default=None, ge=0, le=1,
+        description="Normalized neural score when reranked; not a calibrated relevance probability",
+    )
     score_trace: ScoreTrace | None = Field(
-        default=None, description="Full score breakdown (always-on)"
+        default=None, description="Base score breakdown before optional neural blending"
     )
     representation: RepresentationLevel | None = Field(
         default=None, description="Set in packing stage"
