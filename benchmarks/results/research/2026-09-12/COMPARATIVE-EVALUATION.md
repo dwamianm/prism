@@ -64,3 +64,24 @@ embedding conditions, matched questions and token/latency budgets, ingestion
 costs, explicit failure coverage, and more than one reader family. Static QA
 must be supplemented by task completion, updates, abstention and precision
 workflows. These are remaining requirements, not completed evaluation claims.
+
+## Pinned Mem0 adapter compatibility
+
+A local isolated environment now contains Mem0 2.0.20 from clean upstream commit
+`c7ee362aff94a369af70f13f2b4f853f6793ff4c` and the PRME `107f535` wheel.
+`benchmarks.diagnostics.mem0_compatibility` verifies all 148 installed Mem0 Python
+source files against that checkout, disables telemetry, and forbids LLM calls.
+Its authored `infer=False` probe checks raw writes, owner plus metadata-scope
+filtering, and result identities after reopening. The adapter closes both Mem0's
+SQLite connection and its Qdrant client explicitly. All checks completed with
+native exit zero in `mem0-compatibility-c7ee362.json`.
+
+Both products use BGE small English v1.5, FastEmbed 0.7.4, ONNX Runtime 1.24.2 and
+NumPy 2.4.2, with identical model asset hashes. Four one-text embedding calls
+match exactly. The first probe accidentally compared PRME's four-text batch to
+Mem0's individual calls and failed its 1e-6 tolerance; that failure is preserved
+in `mem0-compatibility-c7ee362-attempt1.json`. A corrected comparison retained the
+observed batch-versus-single maximum difference of 0.000223577 rather than
+loosening the tolerance. This checks compatibility, not extraction quality,
+answer accuracy or product leadership. Real comparative evaluation remains to
+be registered and run with matched inputs, reader, budgets and cost accounting.

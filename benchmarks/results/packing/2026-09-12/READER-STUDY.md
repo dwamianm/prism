@@ -240,3 +240,27 @@ The second reader's review protocol is separately registered in
 It retains the original deterministic question selection but uses a fresh opaque
 ID seed, preventing direct reuse of arm mappings from the completed first study.
 The complete packet and its hashes will be recorded after native reader completion.
+
+The second reader and its subsequent judging both completed with native exit
+zero. All 238 answers and judgments are retained, with 201 unique judge calls and
+no failed attempts. The registered judging plan verifies the frozen inputs and
+completed review before the first judge call. The
+[completion manifest](reader-gemma26-judging-gemma31-completion.json) pins the
+report and raw state. At 4,096 tokens, density produced 71/119 judged-correct
+answers (59.66%) and score ordering produced 91/119 (76.47%): +16.81 percentage
+points, paired query-bootstrap 95% interval [8.40, 25.21], 26 wins, 6 losses and
+87 ties. This matches the original reader's net gain, with different category
+behavior. Temporal reasoning improved from 14/28 to 21/28; abstention stayed 8/8.
+
+The pre-judging arm-blinded review accepted 19 responses, rejected seven and
+marked two ambiguous. The judge agreed on 24/26 clear cases. It rejected a
+partially useful yogurt-preparation answer accepted in review, and accepted a
+marathon response that supplied the two times but refused to calculate their
+difference. It accepted both ambiguous responses: a qualified follower count
+with unclear chronology and a preference recollection with no actual advice.
+These disagreements illustrate rubric sensitivity; neither verdict set was
+retrospectively changed. The reviewer was this Codex session, not an independent
+human. Shared Gemma family errors, development selection and overlapping histories
+still limit this result. It supports further evaluation of the packing change;
+it does not establish competitor superiority or justify bypassing the separately
+registered source-retention confirmation gate.
