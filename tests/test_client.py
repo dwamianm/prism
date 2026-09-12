@@ -99,10 +99,13 @@ class TestClientLifecycle:
     def test_methods_after_close_raise(self, tmp_dir):
         client = MemoryClient(tmp_dir)
         client.close()
-        with pytest.raises(RuntimeError, match="closed"):
-            client.store("hello", user_id="u1")
-        with pytest.raises(RuntimeError, match="closed"):
-            client.retrieve("hello", user_id="u1")
+        with warnings.catch_warnings(record=True) as observed:
+            warnings.simplefilter("always")
+            with pytest.raises(RuntimeError, match="closed"):
+                client.store("hello", user_id="u1")
+            with pytest.raises(RuntimeError, match="closed"):
+                client.retrieve("hello", user_id="u1")
+        assert not [w for w in observed if issubclass(w.category, RuntimeWarning)]
 
     def test_resource_warning_on_gc(self, tmp_dir):
         client = MemoryClient(tmp_dir)

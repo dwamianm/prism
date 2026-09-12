@@ -107,8 +107,15 @@ class MemoryClient:
     def _run(self, coro: Any) -> Any:
         """Submit a coroutine to the background loop and block for result."""
         if self._closed:
+            coro.close()
             raise RuntimeError("MemoryClient is closed")
-        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        try:
+            future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        except RuntimeError:
+            # Submission can fail if shutdown races this call. The loop
+            # never took ownership, so release the unawaited coroutine.
+            coro.close()
+            raise
         return future.result()
 
     def _atexit_close(self) -> None:
