@@ -65,8 +65,9 @@ The PRME/BM25 comparison combines ranking and formatting differences and cannot
 isolate either algorithm. The empty context tests unsupported answering.
 
 Reports retain the dataset checksum, selected IDs, package/dependency/config
-provenance, reader model digest, prompts, sampling settings, contexts, answers
-and question-level prefix counts. The CLI supervises native interpreter shutdown
+provenance, reader model digest, prompts, sampling settings, contexts, answers,
+complete candidate snapshots and question-level prefix counts. Candidate snapshots
+permit packing experiments without changing retrieval or source inputs. The CLI supervises native interpreter shutdown
 and marks completion false on an abnormal child exit. Success here means the
 replay completed, not that its answers are correct. Reports contain upstream
 text and should remain local unless redistribution is appropriate. Commit

@@ -69,3 +69,67 @@ inherited environment key returned HTTP 401 and shadowed the file by normal
 configuration precedence. No credential values were printed or changed. Remote
 OpenAI extraction/judging remains unavailable in this observation; local-model
 results must not be presented as results from the configured remote model.
+
+## Frozen-candidate packing experiment
+
+A second clean replay at `fefa7e1` completed with process exit zero and retained
+504, 840 and 916 candidate snapshots for the same three selected questions.
+This is a fresh replay with new event/node identities and timestamps, not an
+identical-input repetition of the first run. Its snapshots freeze the inputs
+for the subsequent experiment.
+
+The [packing comparison](packing-order-6b7be6f-summary.json) reproduced **all three
+saved contexts and token counts exactly** before making any reader calls. It
+used the original `fefa7e1` packing implementation, with diagnostic harness
+`6b7be6f`. The experimental variant replaced score-per-token with composite score
+inside the multi-path tier only. Instructions, pins, tasks, candidate scores,
+source content, representations, token budgets and formatting stayed fixed.
+Both contexts were answered again using the same model digest and sampling
+settings; all six calls completed and the process exited zero.
+
+In the dynamic case, the density control omitted `s5:t1` and the reader abstained.
+The score variant included that source in full and the reader answered yes.
+However, its explanation attributed an assistant statement to the user and used
+the rendered local date. Restoring evidence did not establish fully faithful
+answering. The raw product context does not expose the stored source-type field,
+which is another candidate cause to investigate, not a proven complete diagnosis.
+
+The static answers still omitted acknowledgment of the labeled contradiction.
+Both conditional answers mentioned commuting but omitted the professional-study
+condition. There is no official score, independent label audit or general
+improvement claim. **The production packing order remains unchanged.** Broader
+development evaluation, source attribution and qualifier retention are needed
+before choosing a default.
+
+Reproduce this diagnostic using the original package implementation on
+`PYTHONPATH` and the newer diagnostic harness. Running against a formatter with
+different timestamp semantics correctly fails baseline reproduction:
+
+```sh
+PYTHONPATH=/path/to/fefa7e1/src:/path/to/current/prism \
+  python -m benchmarks.diagnostics.packing_order \
+  --input /tmp/prme-memconflict-dev-traces.json \
+  --output /tmp/packing-comparison.json --with-reader
+```
+
+Omit `--with-reader` for a packing-only comparison. The diagnostic refuses
+incomplete input, missing snapshots, changed baseline context/token counts and
+mixed reports that fail reproduction, before calling a reader. Its six checks
+and the adapter's 11 boundary checks pass.
+
+## UTC portability correction
+
+Production `e842d6f` fixes the timestamp issue independently of the packing-order
+experiment. Local connections explicitly use UTC, and both context formatters
+normalize aware timestamps before displaying dates or counting tokens. Equivalent
+instants now produce identical context, including across daylight-saving offsets;
+naive in-memory values retain their nominal representation rather than acquiring
+an implicit host timezone. Stored instants and source content are preserved.
+
+All six timezone reproductions failed before the fix and pass afterward.
+Frozen `e842d6f` passed **1,961 tests, 51 skipped** with live PostgreSQL on Python
+3.11 (252.06 seconds). Its installed Python 3.13 wheel passed **105 focused tests,
+five skipped** (3.87 seconds). These include timezone equivalence, context budgets,
+formatter behavior, fresh packs, encrypted-startup recovery and derivation
+identity. Later packing-diagnostic additions do not alter production behavior
+and passed their separate 17 diagnostic/boundary checks.
