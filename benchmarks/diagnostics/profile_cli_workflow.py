@@ -13,7 +13,7 @@ import sys
 import tempfile
 
 import prme
-from prme import MemoryClient, Scope, config_from_directory
+from prme import MemoryClient, NodeType, Scope, config_from_directory
 from prme.config import EmbeddingConfig, OrganizerConfig
 
 
@@ -83,8 +83,8 @@ def main():
                 "collected": 1, "failed": 0, "remaining": 0, "errors": {}, "blocked_reason": None}
             assert command("profile-jobs") == []
             with MemoryClient(config=config) as client:
-                assert len(client.query_nodes(user_id="authored", node_type="note")) == 4
-                assert [str(n.id) for n in client.query_nodes(user_id="authored", node_type="summary")] == [ids["project"]]
+                assert len(client.query_nodes(user_id="authored", node_type=NodeType.NOTE)) == 4
+                assert [str(n.id) for n in client.query_nodes(user_id="authored", node_type=NodeType.SUMMARY)] == [ids["project"]]
                 for key, identity in ids.items():
                     assert client._run(client._engine._profile_work.get(identity, user_id="authored")).checksum == checksums[key]
             report.update(complete=True, local_target_ignores_ambient_database=True,
