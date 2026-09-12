@@ -234,3 +234,9 @@ Gemma4 31B judge has a different digest but shares the Gemma family, an addition
 source of correlated error. A deterministic 28-response arm-blinded review will
 precede judging, retaining ambiguous cases separately. The original results,
 production defaults and ongoing test-partition capture remain unchanged.
+
+The second reader's review protocol is separately registered in
+`reader-blinded-review-gemma26-v1-plan.json` while generation is still running.
+It retains the original deterministic question selection but uses a fresh opaque
+ID seed, preventing direct reuse of arm mappings from the completed first study.
+The complete packet and its hashes will be recorded after native reader completion.
