@@ -116,6 +116,7 @@ async def retrieve(
     scope: Scope | list[Scope] | None = None,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    reference_time: datetime | None = None,
     knowledge_at: datetime | None = None,
     event_time_from: datetime | None = None,
     event_time_to: datetime | None = None,
@@ -132,6 +133,10 @@ Additional parameters vs MemoryClient:
 - `min_fidelity` — minimum representation level for context packing
 - `include_cross_scope` — include hints from other scopes (default: True)
 - `event_time_from`/`event_time_to` — filter by when events actually occurred (vs when they were stored)
+- `reference_time` — timezone-aware clock for relative query dates and scoring decay.
+  Defaults to UTC request time and is returned in `response.metadata.reference_time`.
+  Reuse it to replay a query against unchanged memory/configuration. It does not
+  apply a knowledge cutoff; set `knowledge_at` separately when needed.
 
 ## Node Operations
 

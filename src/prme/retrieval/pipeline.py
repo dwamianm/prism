@@ -147,6 +147,7 @@ class RetrievalPipeline:
         scope: Scope | list[Scope] | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
+        reference_time: datetime | None = None,
         knowledge_at: datetime | None = None,
         event_time_from: datetime | None = None,
         event_time_to: datetime | None = None,
@@ -178,6 +179,8 @@ class RetrievalPipeline:
                 overrides any temporal signal from query analysis.
             time_to: Explicit end of temporal window. If provided,
                 overrides any temporal signal from query analysis.
+            reference_time: Timezone-aware clock for relative dates and
+                scoring decay. Defaults to request time; not a knowledge cutoff.
             knowledge_at: Point-in-time knowledge snapshot (bi-temporal).
                 Only includes nodes ingested on or before this datetime.
             event_time_from: Filter by event_time >= this value (bi-temporal).
@@ -197,6 +200,9 @@ class RetrievalPipeline:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
         start_time = time.monotonic()
+        if reference_time is not None and reference_time.utcoffset() is None:
+            raise ValueError("reference_time must include a timezone")
+        scoring_now = (reference_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
 
         # Normalize scope: single Scope -> list, list -> as-is, None -> None.
         normalized_scope: list[Scope] | None = None
@@ -233,6 +239,7 @@ class RetrievalPipeline:
             time_to=time_to,
             retrieval_mode=retrieval_mode,
             languages=self._temporal_languages,
+            reference_time=scoring_now,
         )
 
         # Determine effective temporal window: explicit params take priority
@@ -416,6 +423,7 @@ class RetrievalPipeline:
                 time_to=effective_time_to,
                 retrieval_mode=analysis.retrieval_mode,
                 config=candidate_config,
+                reference_time=scoring_now,
             )
             if reform_added:
                 candidate_counts["REFORMULATION"] = reform_added
@@ -440,7 +448,6 @@ class RetrievalPipeline:
         # --- Stage 5: Scoring + Ranking ---
         # Capture a single timestamp so all candidates in this retrieval
         # use the same reference point for deterministic decay computation.
-        scoring_now = datetime.now(timezone.utc)
         scored, traces = score_and_rank(
             filtered, effective_weights,
             epistemic_weights=self._epistemic_weights,
@@ -607,6 +614,7 @@ class RetrievalPipeline:
             payload = json.dumps({
                 "request_id": str(analysis.request_id),
                 "query": query,
+                "reference_time": scoring_now.isoformat(),
                 "user_id": user_id,
                 "candidates_generated": candidate_counts,
                 "candidates_filtered": len(excluded),
@@ -646,6 +654,7 @@ class RetrievalPipeline:
         # --- Assemble RetrievalResponse ---
         metadata = RetrievalMetadata(
             request_id=analysis.request_id,
+            reference_time=scoring_now,
             candidates_generated=candidate_counts,
             candidates_filtered=len(excluded),
             candidates_included=bundle.included_count,
@@ -683,6 +692,7 @@ class RetrievalPipeline:
         time_to: datetime | None,
         retrieval_mode: RetrievalMode,
         config: PackingConfig,
+        reference_time: datetime | None = None,
     ) -> int:
         """Run LLM-reformulated alternate queries and merge new candidates.
 
@@ -723,6 +733,7 @@ class RetrievalPipeline:
                 time_to=time_to,
                 retrieval_mode=retrieval_mode,
                 languages=self._temporal_languages,
+                reference_time=reference_time,
             )
             alt_candidates, _ = await generate_candidates(
                 alt_analysis,

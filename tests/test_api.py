@@ -58,6 +58,14 @@ def client(app):
 
 
 class TestHealth:
+    def test_reference_time_is_validated_and_returned(self, client):
+        payload = {"query": "yesterday", "user_id": "clock-user", "reference_time": "2024-05-10T12:00:00Z"}
+        result = client.post("/v1/retrieve", json=payload)
+        assert result.status_code == 200
+        assert result.json()["metrics"]["reference_time"] == "2024-05-10T12:00:00Z"
+        payload["reference_time"] = "2024-05-10T12:00:00"
+        assert client.post("/v1/retrieve", json=payload).status_code == 422
+
     def test_health_returns_ok(self, client):
         resp = client.get("/v1/health")
         assert resp.status_code == 200

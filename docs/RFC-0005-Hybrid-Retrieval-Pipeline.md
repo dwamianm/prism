@@ -296,6 +296,7 @@ Retrieval logs are used by the feedback loop (RFC-0009) to track which objects w
 ## 11. Determinism
 
 Given identical:
+- Reference clock for relative query dates and scoring decay
 - Query embedding
 - Index state at retrieval time
 - Scoring weights
@@ -303,6 +304,12 @@ Given identical:
 - Epistemic types and scores of all candidates
 
 The retrieval pipeline MUST produce identical results. This is achievable because all score inputs are deterministic given the above.
+
+Callers can supply a timezone-aware `reference_time` to `retrieve()`. Omission
+captures UTC time once at request start. Use the same clock for query analysis,
+primary scoring, reformulations, and cross-scope hint scoring; record it in
+response metadata and the retrieval log. `knowledge_at` is a separate cutoff
+for ingestion time and is not implicitly changed by this clock.
 
 Non-determinism that MUST be guarded against:
 - Floating-point ordering instability (use tie-breaking by `object_id` as a stable sort).

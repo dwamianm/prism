@@ -87,6 +87,11 @@ answering and abstention accuracy need a separate judged evaluation. Timings
 use sequential warm shared indexes and must not be presented as independent
 cold-start performance. Interrupted runs retain a partial JSON report.
 
+The evaluator passes the dataset's question date as `reference_time` by default,
+so relative dates use the conversation's clock. `--clock wall` reproduces the
+older behavior for a controlled ablation. Each response records the actual
+clock; neither option applies a historical knowledge cutoff.
+
 ```bash
 uv sync --dev
 uv run pytest tests/ -q

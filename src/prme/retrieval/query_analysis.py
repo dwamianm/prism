@@ -10,14 +10,19 @@ from __future__ import annotations
 import logging
 import asyncio
 import re
+import threading
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from prme.retrieval.models import QueryAnalysis
 from prme.types import QueryIntent, RetrievalMode
 
 logger = logging.getLogger(__name__)
+
+# Supported dateparser versions before 1.4.3 share mutable parser settings.
+# Serialize our calls so concurrent requests cannot exchange RELATIVE_BASE.
+_DATEPARSER_LOCK = threading.Lock()
 
 # --- Intent classification patterns ---
 
@@ -169,6 +174,7 @@ def _extract_entities(query: str) -> list[str]:
 def _extract_temporal_signals(
     query: str,
     languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
+    reference_time: datetime | None = None,
 ) -> list[dict]:
     """Extract temporal expressions from the query via dateparser.
 
@@ -186,14 +192,16 @@ def _extract_temporal_signals(
     try:
         from dateparser.search import search_dates
 
-        results = search_dates(
-            query,
-            languages=list(languages) if languages else None,
-            settings={
-                "RETURN_AS_TIMEZONE_AWARE": True,
-                "TIMEZONE": "UTC",
-            },
-        )
+        with _DATEPARSER_LOCK:
+            results = search_dates(
+                query,
+                languages=list(languages) if languages else None,
+                settings={
+                    "RETURN_AS_TIMEZONE_AWARE": True,
+                    "TIMEZONE": "UTC",
+                    **({"RELATIVE_BASE": reference_time} if reference_time is not None else {}),
+                },
+            )
 
         if not results:
             return []
@@ -242,6 +250,7 @@ async def analyze_query(
     *,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    reference_time: datetime | None = None,
     retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
     languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
 ) -> QueryAnalysis:
@@ -254,6 +263,8 @@ async def analyze_query(
         query: Raw query text from the user.
         time_from: Explicit start of temporal window (overrides extraction).
         time_to: Explicit end of temporal window (overrides extraction).
+        reference_time: Timezone-aware base for relative dates. Defaults to
+            the parser's current UTC time when called independently.
         retrieval_mode: Retrieval mode controlling epistemic filtering.
         languages: Languages for temporal parsing. None restores dateparser's
             own language detection at its original cost.
@@ -265,8 +276,12 @@ async def analyze_query(
     # Extract temporal signals from query text. dateparser is CPU-bound and
     # can take milliseconds on a long query, so it runs off the event loop
     # (issue #61) -- otherwise concurrent retrievals serialize behind it.
+    if reference_time is not None:
+        if reference_time.utcoffset() is None:
+            raise ValueError("reference_time must include a timezone")
+        reference_time = reference_time.astimezone(timezone.utc)
     temporal_signals = await asyncio.to_thread(
-        _extract_temporal_signals, query, languages
+        _extract_temporal_signals, query, languages, reference_time
     )
     has_temporal_signals = len(temporal_signals) > 0
 

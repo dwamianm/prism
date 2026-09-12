@@ -197,6 +197,8 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
         "query": body.query,
         "user_id": body.user_id,
     }
+    if body.reference_time is not None:
+        kwargs["reference_time"] = body.reference_time
 
     response = await engine.retrieve(**kwargs)
 

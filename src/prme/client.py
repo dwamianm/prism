@@ -165,6 +165,7 @@ class MemoryClient:
         scope: Scope | list[Scope] | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
+        reference_time: datetime | None = None,
         knowledge_at: datetime | None = None,
         token_budget: int | None = None,
     ) -> Any:
@@ -176,6 +177,7 @@ class MemoryClient:
                 scope=scope,
                 time_from=time_from,
                 time_to=time_to,
+                reference_time=reference_time,
                 knowledge_at=knowledge_at,
                 token_budget=token_budget,
             )

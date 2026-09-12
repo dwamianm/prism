@@ -63,13 +63,16 @@ def provenance(config: PRMEConfig) -> dict:
         "python": platform.python_version(), "platform": platform.platform(),
         "dependencies": {
             name: importlib.metadata.version(name)
-            for name in ("prme", "duckdb", "usearch", "tantivy", "fastembed", "tiktoken")
+            for name in ("prme", "duckdb", "usearch", "tantivy", "fastembed", "tiktoken", "dateparser")
         },
         "engine_config": redact(config.model_dump(mode="json")),
     }
 
 
-async def evaluate_question(question: dict, config: PRMEConfig, *, budgets, count_tokens, k: int) -> dict:
+async def evaluate_question(
+    question: dict, config: PRMEConfig, *, budgets, count_tokens, k: int,
+    reference_time: datetime | None = None,
+) -> dict:
     turns, gold = longmemeval_sources(question)
     by_id = {turn.id: turn for turn in turns}
     user_id = "evaluation"
@@ -102,7 +105,9 @@ async def evaluate_question(question: dict, config: PRMEConfig, *, budgets, coun
             ranked = {}
             latencies = {}
             start = time.perf_counter()
-            response = await engine.retrieve(question["question"], user_id=user_id)
+            response = await engine.retrieve(
+                question["question"], user_id=user_id, reference_time=reference_time,
+            )
             latencies["prme"] = (time.perf_counter() - start) * 1000
             ranked["prme"] = [
                 node_sources[str(c.node.id)] for c in response.results
@@ -149,6 +154,7 @@ async def evaluate_question(question: dict, config: PRMEConfig, *, budgets, coun
         "abstention": question["question_id"].endswith("_abs"),
         "source_count": len(turns), "evidence_source_ids": sorted(gold),
         "ingestion_ms": ingestion_ms, "methods": methods,
+        "reference_time": response.metadata.reference_time.isoformat(),
     }
 
 
@@ -223,13 +229,14 @@ async def run(args) -> dict:
                     "selected_question_ids": [q["question_id"] for q in selected]},
         "tokenizer": args.tokenizer, "budgets": args.budgets, "candidate_limit": args.k,
         "rrf_constant": 60,
+        "query_clock": args.clock,
         "limitations": [
             "Evidence retrieval, not answer accuracy or abstention accuracy.",
             "Shared whole-turn evaluation packer, not the PRME product packer.",
             "Sequential warm shared-index latency; RRF reports sum of component latencies.",
             "Raw NOTE ingestion with QA pairing and opportunistic maintenance disabled.",
             "Each question uses an isolated temporary local memory pack; configured storage paths are overridden.",
-            "Current product query analysis uses wall-clock time for relative dates.",
+            "Query clock is explicitly selected; question time is not a knowledge-at cutoff.",
         ],
         "details": details,
     }
@@ -239,6 +246,7 @@ async def run(args) -> dict:
             detail = await evaluate_question(
                 question, config, budgets=args.budgets, k=args.k,
                 count_tokens=lambda s: len(encoding.encode(s, disallowed_special=())),
+                reference_time=_parse_haystack_date(question["question_date"]) if args.clock == "question" else None,
             )
         except Exception as exc:
             detail = {"question_id": question["question_id"],
@@ -272,6 +280,7 @@ def main():
     parser.add_argument("--k", type=int, default=100)
     parser.add_argument("--budgets", nargs="+", type=int, default=[2048, 4096, 8192])
     parser.add_argument("--tokenizer", default="cl100k_base")
+    parser.add_argument("--clock", choices=["question", "wall"], default="question")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.k < 1 or args.limit < 0 or any(b < 1 for b in args.budgets):

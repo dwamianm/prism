@@ -223,6 +223,9 @@ class RetrievalMetadata(BaseModel):
     """
 
     request_id: UUID = Field(description="Request identifier from QueryAnalysis")
+    reference_time: datetime | None = Field(
+        default=None, description="UTC clock used for relative dates and scoring decay",
+    )
     candidates_generated: dict[str, int] = Field(
         default_factory=dict,
         description="Per-backend candidate counts",

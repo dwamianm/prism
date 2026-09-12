@@ -140,11 +140,15 @@ class TestStoreRetrieve:
             assert len(event_id) == 36  # UUID format
 
     def test_store_and_retrieve_roundtrip(self, tmp_dir):
+        from datetime import datetime, timezone
+
         with MemoryClient(tmp_dir) as client:
             client.store("Alice likes dark mode", user_id="alice")
             client.store("Bob prefers vim", user_id="alice")
 
-            response = client.retrieve("preferences?", user_id="alice")
+            clock = datetime.now(timezone.utc)
+            response = client.retrieve("preferences?", user_id="alice", reference_time=clock)
+            assert response.metadata.reference_time == clock
             assert len(response.results) > 0
             contents = [r.node.content for r in response.results]
             assert any("dark mode" in c for c in contents)

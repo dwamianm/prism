@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 from prme.types import (
     EpistemicType,
@@ -87,6 +87,9 @@ class RetrieveRequest(BaseModel):
 
     query: str = Field(description="Natural language query")
     user_id: str = Field(description="User ID for scoping")
+    reference_time: AwareDatetime | None = Field(
+        default=None, description="Clock for relative query dates and scoring decay",
+    )
     limit: int | None = Field(default=None, description="Max results")
     mode: str | None = Field(
         default=None,

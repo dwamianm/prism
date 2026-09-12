@@ -92,6 +92,7 @@ def retrieve(
     scope: Scope | list[Scope] | None = None,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    reference_time: datetime | None = None,
     knowledge_at: datetime | None = None,
     token_budget: int | None = None,
 ) -> RetrievalResponse
@@ -107,6 +108,7 @@ def retrieve(
 | `time_from` | `datetime \| None` | `None` | Only memories created after this time |
 | `time_to` | `datetime \| None` | `None` | Only memories created before this time |
 | `knowledge_at` | `datetime \| None` | `None` | Point-in-time snapshot (bi-temporal) |
+| `reference_time` | `datetime \| None` | `None` | Timezone-aware clock for relative query dates and scoring; defaults to request time and is recorded in response metadata |
 | `token_budget` | `int \| None` | `None` | Max tokens for context packing |
 
 **Returns:** `RetrievalResponse` with:

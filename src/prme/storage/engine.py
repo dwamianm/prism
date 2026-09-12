@@ -1276,6 +1276,7 @@ class MemoryEngine:
         scope: Scope | list[Scope] | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
+        reference_time: datetime | None = None,
         knowledge_at: datetime | None = None,
         event_time_from: datetime | None = None,
         event_time_to: datetime | None = None,
@@ -1306,6 +1307,9 @@ class MemoryEngine:
                 Scopes, or None (no filter -- returns results from all scopes).
             time_from: Explicit start of temporal window.
             time_to: Explicit end of temporal window.
+            reference_time: Timezone-aware clock for relative query dates and
+                scoring decay. Defaults to request time. This does not apply
+                a historical knowledge cutoff; use knowledge_at for that.
             knowledge_at: Point-in-time knowledge snapshot (bi-temporal).
                 Only includes nodes ingested on or before this datetime.
             event_time_from: Filter by event_time >= this value (bi-temporal).
@@ -1353,6 +1357,7 @@ class MemoryEngine:
             scope=scope,
             time_from=time_from,
             time_to=time_to,
+            reference_time=reference_time,
             knowledge_at=knowledge_at,
             event_time_from=event_time_from,
             event_time_to=event_time_to,
