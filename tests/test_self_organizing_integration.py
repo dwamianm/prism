@@ -730,15 +730,15 @@ class TestExplicitOrganize:
             await engine.close()
 
     @pytest.mark.asyncio
-    async def test_organize_all_jobs_run(self, config):
-        """organize() with no job filter runs all 9 jobs."""
-        from prme.organizer.jobs import ALL_JOBS
+    async def test_organize_default_jobs_run(self, config):
+        """organize() with no job filter runs default maintenance jobs."""
+        from prme.organizer.jobs import DEFAULT_JOBS
 
         engine = await create_engine(config)
         try:
             result = await engine.organize(user_id="test-user")
 
-            assert set(result.jobs_run) == set(ALL_JOBS)
+            assert set(result.jobs_run) == set(DEFAULT_JOBS)
             assert result.jobs_skipped == []
             assert result.duration_ms >= 0
         finally:
@@ -778,14 +778,14 @@ class TestEndSession:
     """Verify the MemoryEngine.end_session() method."""
 
     @pytest.mark.asyncio
-    async def test_end_session_runs_promote_and_feedback_apply(self, config):
-        """end_session() runs exactly promote and feedback_apply."""
+    async def test_end_session_runs_promote(self, config):
+        """end_session() runs exactly scoped promotion."""
         engine = await create_engine(config)
         try:
             result = await engine.end_session(user_id="test-user")
 
             assert isinstance(result, OrganizeResult)
-            assert set(result.jobs_run) == {"promote", "feedback_apply"}
+            assert set(result.jobs_run) == {"promote"}
         finally:
             await engine.close()
 

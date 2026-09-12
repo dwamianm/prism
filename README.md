@@ -489,7 +489,11 @@ Receipts add per-candidate metadata to the existing retrieval operation log;
 they do not duplicate candidate text or prove an application used the context.
 Labels preserve the original exposure when graph state changes. They do not
 change facts or weights, and the legacy global feedback tuner does not consume
-them.
+them. Default `organize()` and `end_session()` calls preserve ranking weights.
+The legacy anonymous-feedback tuner requires an explicit unscoped operator call,
+`organize(jobs=["feedback_apply"])`; passing `user_id` with that job raises
+`ValueError` before any work. It affects every user of the engine and does not
+activate an evaluated learning profile.
 
 Evaluate a proposed adjustment after collecting explicit positive and negative
 judgments across enough distinct queries:

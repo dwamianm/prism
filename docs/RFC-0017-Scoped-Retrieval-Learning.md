@@ -10,8 +10,12 @@ The existing `FeedbackTracker` is memory-only. Its signals do not identify an
 owner or retrieval request. The legacy `feedback_apply` job clears those signals
 and changes engine-global weights using hardcoded rules that lack attribution to
 candidate features. It also has no out-of-sample improvement gate. These are not
-sufficient evidence of adaptive retrieval quality. Existing operator restrictions
-on that global job remain necessary until it is replaced.
+sufficient evidence of adaptive retrieval quality. That global job is now
+excluded from default `organize()` and `end_session()` passes. It requires
+explicit `organize(jobs=["feedback_apply"])` without a user scope. Scoped
+requests fail before any maintenance or feedback consumption, including direct
+job dispatch. This contains the legacy behavior; it does not implement scoped
+learning or establish that the heuristic improves retrieval.
 
 The intended replacement collects immutable, owner-scoped relevance judgments on
 actual saved retrievals, evaluates proposed ranking changes against separated

@@ -248,7 +248,7 @@ async def organize(
 | `deduplicate` | Detect and merge duplicate entities and facts | RFC-0001 |
 | `alias_resolve` | Resolve entity aliases (e.g., "JS" → "JavaScript") | RFC-0001 |
 | `summarize` | Generate summary nodes from event windows | RFC-0001, RFC-0006 |
-| `feedback_apply` | Apply all pending feedback signals | RFC-0008, RFC-0009 |
+| `feedback_apply` | Legacy global tuner; explicit unscoped operator selection only | RFC-0008, RFC-0009 |
 | `centrality_boost` | Recalculate graph centrality salience boost | RFC-0007 §11 |
 | `tombstone_sweep` | Enforce retention policies and create tombstones | RFC-0007 §9 |
 | `snapshot_generation` | Generate entity snapshots for active entities | RFC-0006 |
@@ -422,7 +422,7 @@ The host application SHOULD call `organize()` at these lifecycle boundaries:
 
 | Trigger | Recommended jobs | Rationale |
 |---|---|---|
-| Session end | `promote`, `feedback_apply` | Finalize session learnings |
+| Session end | `promote` | Promote eligible memories without changing ranking weights |
 | Application startup | `decay_sweep`, `archive`, `promote` | Catch up after idle period |
 | Periodic (if host has a scheduler) | All | Full maintenance pass |
 | After bulk import | `deduplicate`, `alias_resolve`, `summarize` | Clean up imported data |
@@ -440,7 +440,15 @@ async def end_session(
 ) -> OrganizeResult
 ```
 
-This runs a lightweight organize pass with jobs `["promote", "feedback_apply"]` and a 1-second budget. It is semantically equivalent to calling `organize()` with those parameters.
+This runs a lightweight organize pass with jobs `["promote"]` and a 1-second budget. It is semantically equivalent to calling `organize()` with those parameters.
+
+`ALL_JOBS` lists available jobs. `DEFAULT_JOBS` excludes the legacy global
+`feedback_apply` tuner. Default `organize()` calls use `DEFAULT_JOBS`, with or
+without a user scope. Explicit scoped requests containing `feedback_apply`
+raise `ValueError` before any job or pending-work drain runs. Pending anonymous
+signals remain untouched. A trusted operator can explicitly call
+`organize(jobs=["feedback_apply"])` without a scope to retain legacy behavior.
+That operation affects every user of the engine and is not scoped learning.
 
 ---
 
@@ -527,7 +535,13 @@ The saturation controls (RFC-0008 §6) apply to the base values, not to the virt
 
 ### 8.3 RFC-0009 (Feedback Loop)
 
-Feedback signals are recorded as `FEEDBACK_EVENT` operations during retrieval. They are applied to node base values either:
+The originally proposed feedback lifecycle below is not the current implementation.
+Owner-scoped receipts and relevance records are described in RFC-0017; they do
+not automatically change nodes or weights. The separate legacy memory-only
+tuner requires explicit unscoped operator selection. The following remains a
+design proposal:
+
+Feedback signals would be recorded as `FEEDBACK_EVENT` operations during retrieval and applied to node base values either:
 - During opportunistic maintenance (Layer 2, §4.3.3), or
 - During explicit organize (Layer 3, `feedback_apply` job), or
 - Inline during `ingest()` if the ingestion pipeline detects a correction signal.

@@ -15,12 +15,14 @@ Two separate guarantees:
 from __future__ import annotations
 
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 import pytest_asyncio
 
 from prme.config import OrganizerConfig, PRMEConfig
+from prme.models.nodes import MemoryNode
 from prme.organizer.alias_resolution import (
     AliasCandidate,
     find_aliases,
@@ -217,8 +219,10 @@ async def test_tombstone_sweep_logs_the_operation_with_its_actor(engine):
 
 async def test_organize_user_scope_confines_deduplicate(engine):
     for user in ("alice", "bob"):
-        await engine.store("shared note", user_id=user, node_type=NodeType.FACT)
-        await engine.store("shared note", user_id=user, node_type=NodeType.FACT)
+        for _ in range(2):
+            # Copies share validity; separate observations must stay separate.
+            await engine._graph_store.create_node(MemoryNode(content="shared note", user_id=user,
+                node_type=NodeType.FACT, valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc)))
 
     await engine.organize(user_id="alice", jobs=["deduplicate"], budget_ms=5000)
 
@@ -243,29 +247,17 @@ async def test_unscoped_organize_still_covers_every_user(engine):
         assert await _states_for(engine, user) == [LifecycleState.ARCHIVED]
 
 
-async def test_feedback_apply_reports_that_it_cannot_be_scoped(engine, org_config):
-    # Scoring weights are engine-global, so this job is the one exception to
-    # per-tenant organization. It says so rather than implying otherwise.
-    from prme.quality.feedback import FeedbackSignal, FeedbackSignalType
-
-    for _ in range(10):
-        await engine.feedback(FeedbackSignal(
-            query="what did I say",
-            surfaced_node_ids=[],
-            signal_type=FeedbackSignalType.CORRECTED,
-        ))
-
-    result = await run_job("feedback_apply", engine, org_config, 5000.0, "alice")
-
-    assert result.details["scope"] == "global"
+async def test_feedback_apply_rejects_user_scope(engine, org_config):
+    with pytest.raises(ValueError, match="unscoped"):
+        await run_job("feedback_apply", engine, org_config, 5000.0, "alice")
 
 
-async def test_every_job_accepts_a_user_scope(engine, org_config):
-    from prme.organizer.jobs import ALL_JOBS
+async def test_every_default_job_accepts_a_user_scope(engine, org_config):
+    from prme.organizer.jobs import DEFAULT_JOBS
 
     await engine.store("alice note", user_id="alice", node_type=NodeType.FACT)
 
-    for job_name in ALL_JOBS:
+    for job_name in DEFAULT_JOBS:
         result = await run_job(job_name, engine, org_config, 500.0, "alice")
         assert result.errors == 0, f"{job_name} errored under a user scope"
 

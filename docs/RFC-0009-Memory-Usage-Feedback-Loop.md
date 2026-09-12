@@ -27,7 +27,9 @@ receipts and explicit relevance records are implemented separately under
 features and context membership, enforce retry identities, and survive restart.
 They do not assert that an application injected the context into a model and do
 not yet activate learned ranking profiles. The global legacy tuner does not
-consume these records. Its operator-only restrictions remain in force.
+consume these records. It runs only when explicitly selected in an unscoped
+operator call; default maintenance and session completion do not tune weights.
+Passing a user scope with `feedback_apply` raises `ValueError` before any work.
 
 ## 2. The Feedback Lifecycle
 

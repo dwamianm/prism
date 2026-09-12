@@ -40,6 +40,10 @@ ALL_JOBS: list[str] = [
     "index_compaction",
 ]
 
+# Anonymous legacy feedback cannot update one tenant's ranking profile. Require
+# an explicitly selected unscoped operator job; ordinary maintenance never tunes.
+DEFAULT_JOBS: tuple[str, ...] = tuple(name for name in ALL_JOBS if name != "feedback_apply")
+
 
 async def run_job(
     job_name: str,
@@ -352,13 +356,14 @@ async def _job_feedback_apply(
     This implements the feedback loop described in RFC-0009, extended by
     issue #24 with gradient-free weight auto-tuning.
 
-    ``user_id`` is accepted but cannot be honoured: the feedback tracker and
-    the scoring weights are both engine-global and FeedbackSignal carries no
-    user, so there is no per-tenant slice to apply. A scoped run still tunes
-    weights for everyone. Per-tenant tuning needs a user dimension on the
-    signal itself (issue #66).
+    This legacy operator job requires an explicit unscoped invocation. Both
+    signals and weights are engine-global, so a scoped invocation fails before
+    reading or consuming any signals. It is excluded from default maintenance.
     """
     start = time.monotonic()
+
+    if user_id is not None:
+        raise ValueError("feedback_apply requires an explicit unscoped operator call; it changes engine-global weights")
 
     tracker = engine._feedback_tracker
     signals = tracker.get_signals(window_days=30)
@@ -370,13 +375,6 @@ async def _job_feedback_apply(
                 "status": "no_signals", "note": "No pending feedback signals",
                 "scope": "global",
             },
-        )
-
-    if user_id is not None:
-        logger.warning(
-            "feedback_apply ignores its %r scope: scoring weights are "
-            "engine-global and apply to every user",
-            user_id,
         )
 
     # Run weight tuner
@@ -479,7 +477,7 @@ async def _job_alias_resolve(
     """Find and resolve entity alias relationships (issue #11).
 
     Detects abbreviations, case variations, and semantic aliases among
-    ENTITY nodes, then merges high-confidence aliases or links them
+    ENTITY nodes, then merges compatible known name variants or links them
     with RELATES_TO edges.
     """
     from prme.organizer.alias_resolution import find_aliases, resolve_aliases

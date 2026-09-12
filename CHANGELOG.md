@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Default organizer passes exclude the legacy global feedback tuner; session
+  completion runs promotion only. Explicit scoped `feedback_apply` requests now
+  raise `ValueError` before any work. Trusted operators can retain the legacy
+  behavior with explicit `organize(jobs=["feedback_apply"])` and no user scope.
+
+### Fixed
+
+- Keep unresolved personal references local to their source event during new
+  ingestion. Historical prepared derivations retain their original replay policy.
+- Prevent organizer similarity matches from merging different claim text,
+  validity or provenance; semantic entity aliases remain unverified links.
+
 ## [0.11.0] - 2026-09-11
 
 ### Added

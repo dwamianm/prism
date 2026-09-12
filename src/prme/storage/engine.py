@@ -2232,20 +2232,24 @@ class MemoryEngine:
                 by this user. Multi-tenant deployments must pass it and drive
                 maintenance as a loop over tenants. Omitting it covers the
                 whole store, but pairwise jobs still reject cross-owner merges.
-                Feedback-derived scoring weights remain engine-global.
-            jobs: List of job names to run. Defaults to ALL_JOBS.
+                The legacy global feedback job rejects a user scope.
+            jobs: List of job names to run. Defaults to DEFAULT_JOBS, which
+                excludes the explicit-only global feedback tuner.
             budget_ms: Total time budget in milliseconds.
 
         Returns:
             OrganizeResult with per-job results and timing.
         """
-        from prme.organizer.jobs import ALL_JOBS, run_job
+        from prme.organizer.jobs import DEFAULT_JOBS, run_job
         from prme.organizer.models import OrganizeResult
 
         import time
 
         if jobs is None:
-            jobs = list(ALL_JOBS)
+            jobs = list(DEFAULT_JOBS)
+        if user_id is not None and "feedback_apply" in jobs:
+            # Reject before draining work or running any preceding job.
+            raise ValueError("feedback_apply requires an explicit unscoped operator call; it changes engine-global weights")
 
         start = time.monotonic()
         result = OrganizeResult()
@@ -2599,7 +2603,7 @@ class MemoryEngine:
     ) -> OrganizeResult:
         """Convenience: lightweight organize at end of conversation.
 
-        Runs promote and feedback_apply jobs with a 1-second budget.
+        Runs promotion with a 1-second budget. It does not change ranking weights.
 
         Args:
             user_id: User whose session is ending.
@@ -2610,7 +2614,7 @@ class MemoryEngine:
         """
         return await self.organize(
             user_id=user_id,
-            jobs=["promote", "feedback_apply"],
+            jobs=["promote"],
             budget_ms=1000,
         )
 
