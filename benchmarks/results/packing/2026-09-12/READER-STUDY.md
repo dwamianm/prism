@@ -276,3 +276,32 @@ experimental hashes, tokens and source-retention measurements. The run completed
 with native exit zero in `public-packing-option-dev-parity.json`. No providers
 were called and no quality result was recomputed or reclassified. The separate
 confirmation continues on its original frozen runtime and comparator.
+
+## Exploratory remaining-error map
+
+After both studies completed, `benchmarks.diagnostics.reader_evidence_map` joined
+their original verdicts to the frozen 4K score contexts. It validates registered
+reader input hashes, original reader responses, judge prompts/raw verdicts,
+complete paired coverage and exact measured-context hashes. Six integrity tests
+cover changed sources, contexts, duplicate cohorts, invalid labels and the
+distinction between content, pointers and abstention. The
+[complete map](reader-evidence-map.json) preserves every question and input hash;
+it creates no new predictions and changes no verdicts.
+
+| Labelled-source coverage | Both accepted | Both rejected | Readers differ |
+|---|---:|---:|---:|
+| All labelled evidence | 53 | 13 | 33 |
+| Some labelled evidence | 1 | 8 | 2 |
+| No labelled evidence | 1 | 0 | 0 |
+| Abstention question | 7 | 0 | 1 |
+
+Both readers were rejected on 21 common questions. Eight lack part of the
+labelled evidence; 13 retain every labelled turn. Those 13 comprise five
+multi-session, six temporal, one update and one preference question. This rules
+out treating every error as simply missing annotated source text. It does not
+prove that the retained context is sufficient or that the reference is correct:
+annotations can be incomplete, source statements conflict, episode association
+can be unclear, and the shared judge can be wrong. The earlier qualitative
+examples include refusal to apply known preferences, unresolved arithmetic and
+ambiguous source chronology. The map is post-hoc development triage, not a new
+accuracy estimate or a causal diagnosis of all 21 cases.
