@@ -210,6 +210,10 @@ class InstructorExtractionProvider:
             # SDK defaults read process variables but do not load .env. Resolve
             # only the selected provider's settings, without mutating os.environ.
             kwargs: dict = {}
+            if self._api_key:
+                kwargs["api_key"] = self._api_key.get_secret_value()
+            if self._base_url:
+                kwargs["base_url"] = self._base_url
             provider_prefix = {"openai": "OPENAI", "anthropic": "ANTHROPIC"}.get(self.provider_name)
             if provider_prefix:
                 local = dotenv_values(".env")

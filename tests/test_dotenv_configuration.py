@@ -74,3 +74,13 @@ def test_sdk_environment_overrides_provider_file(project_env, monkeypatch):
     with patch("instructor.from_provider") as factory:
         provider._ensure_client()
     assert factory.call_args.kwargs["api_key"] == "env-fixture"
+
+
+def test_ollama_accepts_an_explicit_endpoint_without_cloud_credentials(project_env):
+    project_env.write_text("OPENAI_API_KEY=unrelated-cloud-fixture\n")
+    provider = create_extraction_provider(ExtractionConfig(
+        provider="ollama", model="example", base_url="http://localhost:22434/v1",
+    ))
+    with patch("instructor.from_provider") as factory:
+        provider._ensure_client()
+    assert factory.call_args.kwargs == {"async_client": True, "base_url": "http://localhost:22434/v1"}
