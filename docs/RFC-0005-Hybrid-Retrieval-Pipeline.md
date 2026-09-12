@@ -442,6 +442,15 @@ performance guarantees. `benchmarks.diagnostics.embedding_invariance` retains
 raw alternating-order timing trials, runtime/model asset hashes and numerical
 cache/batch comparisons; it includes native process shutdown in its result.
 
+Concurrent first use now serializes native model construction. The guard stays
+held by the worker during initialization, even if its awaiting task is cancelled;
+a failed initialization can be retried. The embedding cache stores private
+immutable snapshots and returns independently owned lists on misses and hits.
+Previously, caller/provider mutations could change cached vectors, and concurrent
+calls could construct the native model twice. Authored regressions reproduced
+both defects before these guards. Neither change alters model identity or
+numerical vectors; it does not establish better semantic retrieval.
+
 ### PostgreSQL lexical candidate limits
 
 `PgLexicalIndex` deduplicates matching graph and non-node index copies by node

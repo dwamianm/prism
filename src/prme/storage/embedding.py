@@ -12,6 +12,7 @@ import asyncio
 import hashlib
 import importlib.metadata
 import os
+import threading
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -92,6 +93,7 @@ class FastEmbedProvider:
         self._cache_dir = cache_dir
         self._dimension = dimension or self._KNOWN_DIMENSIONS.get(model_name, 384)
         self._model = None  # Lazy-initialized
+        self._initialization_lock = threading.Lock()
 
     @property
     def model_name(self) -> str:
@@ -113,7 +115,14 @@ class FastEmbedProvider:
 
     def _ensure_model(self) -> None:
         """Lazily initialize the TextEmbedding model on first use."""
-        if self._model is None:
+        if self._model is not None:
+            return
+        # embed() runs in native worker threads. Hold this guard through model
+        # construction, including after an awaiting caller is cancelled. A
+        # failed construction leaves None and permits a later explicit retry.
+        with self._initialization_lock:
+            if self._model is not None:
+                return
             # Set before FastEmbed imports ONNX Runtime: its optional native
             # telemetry uploader can outlive its shutdown mutexes on macOS.
             # Respect a host application's explicit telemetry setting.
@@ -266,7 +275,7 @@ class CachedEmbeddingProvider:
     ) -> None:
         self._provider = provider
         self._maxsize = maxsize
-        self._cache: OrderedDict[str, list[float]] = OrderedDict()
+        self._cache: OrderedDict[str, tuple[float, ...]] = OrderedDict()
 
     @property
     def model_name(self) -> str:
@@ -308,7 +317,7 @@ class CachedEmbeddingProvider:
             if key in self._cache:
                 # Move to end for LRU ordering
                 self._cache.move_to_end(key)
-                results[i] = self._cache[key]
+                results[i] = list(self._cache[key])
             else:
                 uncached_indices.append(i)
                 uncached_texts.append(texts[i])
@@ -317,11 +326,13 @@ class CachedEmbeddingProvider:
         if uncached_texts:
             new_embeddings = await self._provider.embed(uncached_texts)
             for j, idx in enumerate(uncached_indices):
-                embedding = new_embeddings[j]
+                # Providers and callers may reuse or modify list buffers. The
+                # cache owns an immutable snapshot; each result owns its list.
+                embedding = list(new_embeddings[j])
                 cache_key = keys[idx]
                 results[idx] = embedding
                 # Store in cache
-                self._cache[cache_key] = embedding
+                self._cache[cache_key] = tuple(embedding)
                 self._cache.move_to_end(cache_key)
                 # Evict oldest if over maxsize
                 while len(self._cache) > self._maxsize:
