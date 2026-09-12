@@ -496,18 +496,17 @@ def create_property_graph(conn: duckdb.DuckDBPyConnection) -> bool:
 def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     """Initialize the full PRME database schema.
 
-    Convenience function that calls install_duckpgq, create_schema,
-    and create_property_graph in order. Tables and indexes are always
-    created; DuckPGQ property graph is best-effort.
+    Creates tables, indexes, and migrations for the supported recursive-SQL
+    graph backend. Opening a local pack never downloads an unused community
+    extension or emits a misleading fallback warning.
 
     Args:
         conn: Active DuckDB connection.
 
     Returns:
-        True if DuckPGQ property graph was created, False if operating
-        in SQL-only fallback mode (tables still created successfully).
+        False, preserving the legacy return contract for SQL graph mode.
+        Installation/schema failures raise exceptions.
     """
-    pgq_available = install_duckpgq(conn)
     create_schema(conn)
     _migrate_events_scope(conn)
     _verify_nodes_scope(conn)
@@ -516,5 +515,4 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     _migrate_nodes_ttl_days(conn)
     _migrate_events_event_time(conn)
     _migrate_nodes_event_time(conn)
-    pgq_graph = create_property_graph(conn)
-    return pgq_available and pgq_graph
+    return False
