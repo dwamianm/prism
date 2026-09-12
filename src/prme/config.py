@@ -15,7 +15,16 @@ from prme.retrieval.config import PackingConfig, ScoringWeights
 class _ProjectSettings(BaseSettings):
     """Read project settings without exporting secrets into process globals."""
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "forbid"}
+
+    @classmethod
+    def settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings):
+        def scoped_dotenv():
+            # Shared .env files contain provider secrets and other applications'
+            # settings. Ignore those here while retaining constructor typo errors.
+            return {key: value for key, value in dotenv_settings().items() if key in settings_cls.model_fields}
+
+        return init_settings, env_settings, scoped_dotenv, file_secret_settings
 
 
 class ExtractionConfig(_ProjectSettings):

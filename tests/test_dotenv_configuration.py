@@ -41,6 +41,16 @@ def test_constructor_then_environment_then_file_precedence(project_env, monkeypa
     assert ExtractionConfig(model="from-constructor").model == "from-constructor"
 
 
+def test_constructor_typos_remain_errors_with_a_shared_dotenv_file(project_env):
+    from pydantic import ValidationError
+
+    project_env.write_text("UNRELATED_SETTING=ignored\nOPENAI_API_KEY=fixture-only\n")
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        ExtractionConfig(modle="typo")
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        PRMEConfig(materializaton_budget_ms=17)
+
+
 def test_only_selected_provider_credentials_are_loaded(project_env):
     project_env.write_text("OPENAI_API_KEY=openai-fixture\nANTHROPIC_API_KEY=anthropic-fixture\n"
                           "ANTHROPIC_BASE_URL=https://example.invalid/anthropic\n")
