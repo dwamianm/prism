@@ -917,9 +917,35 @@ not a storage or latency benchmark. The typed execution/receipt modules and
 pipeline passed typing after resolving JSON-map typing and replacing the older
 untyped operation-pool annotation with a narrow protocol. Changed-source lint
 passed, as did a strict installed-package consumer using the new sync controls.
-A full frozen suite at `669967e` remains in progress.
+The full frozen suite at `669967e` completed with actual exit zero: **2,201
+passed, 52 skipped** in 834.22 seconds, using live PostgreSQL.
 
 These checks establish an experimental full-pipeline path, not learned task
 improvement or deployed adaptive profiles. The separately registered
 [packing confirmation](../../packing/2026-09-12/CONFIRMATION.md) evaluates a
 frozen score-ordering candidate using the original retrieval runtime.
+
+
+## Organizer owner and scope boundaries
+
+The prior revision (`1486638`) already rejected cross-owner duplicate/alias
+pairs. It did not consistently reject pairs spanning PERSONAL and PROJECT
+within the same owner. Supersedence itself rejected those pairs, but the
+organizer had already transferred evidence and could create an edge first;
+lower-confidence alias links were accepted across scopes. Discovery also
+proposed cross-scope matches from both text and vector similarity.
+
+Matching now includes scope in the exact/string partition, requests scope from
+the vector index, and verifies candidate namespaces against graph nodes. Apply
+functions reject mixed namespaces before evidence or edge writes, including
+manually supplied candidate lists. Existing same-scope merging remains enabled.
+No migration changes old data, and this does not implement namespace ACLs.
+
+The corrected 22-case regression file produces **18 failures and four passing
+controls** against `1486638`, actual exit one. The updated organizer integration
+set passes **219 checks**, actual exit zero, in 105.25 seconds. These cover both
+DuckDB and live PostgreSQL for the new regressions, direct apply calls, stale or
+misbehaving vector results, valid same-scope matches, evidence preservation and
+restart. The earlier draft of these tests confused returned event IDs with node
+IDs; the corrected baseline and final runs use graph node identities. Changed
+source lint and typing for both organizer modules pass.

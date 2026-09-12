@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from prme.models.edges import MemoryEdge
-from prme.types import EdgeType, LifecycleState
+from prme.types import EdgeType, LifecycleState, Scope
 
 if TYPE_CHECKING:
     from prme.config import OrganizerConfig
@@ -78,7 +78,7 @@ async def find_duplicates(
         user_id: When given, only this user's nodes are scanned.
 
     Returns:
-        List of DuplicateCandidate pairs, never spanning two users.
+        List of DuplicateCandidate pairs within one user and scope.
     """
     start = time.monotonic()
     threshold = config.dedup_similarity_threshold
@@ -94,12 +94,10 @@ async def find_duplicates(
     seen_pairs: set[tuple[str, str]] = set()
     candidates: list[DuplicateCandidate] = []
 
-    # Index by owner plus normalized content for exact matching. The owner is
-    # part of the key so that two tenants storing the same string -- likely
-    # for short or templated content -- are never paired (issue #66).
-    content_groups: dict[tuple[str, str], list[MemoryNode]] = {}
+    # Matching text does not grant permission to combine namespaces.
+    content_groups: dict[tuple[str, Scope, str], list[MemoryNode]] = {}
     for node in nodes:
-        key = (node.user_id, node.content.strip().lower())
+        key = (node.user_id, node.scope, node.content.strip().lower())
         content_groups.setdefault(key, []).append(node)
 
     # Phase 1: Exact content matches
@@ -137,6 +135,7 @@ async def find_duplicates(
                 node.content,
                 node.user_id,
                 k=10,
+                scope=[node.scope.value],
             )
         except Exception:
             logger.debug("Vector search failed for node %s", node_id, exc_info=True)
@@ -156,6 +155,12 @@ async def find_duplicates(
 
             pair_key = (min(node_id, other_id), max(node_id, other_id))
             if pair_key in seen_pairs:
+                continue
+
+            # Recheck durable graph ownership/scope before proposing a merge;
+            # an index may lag graph updates or be supplied by a custom backend.
+            other_node = await engine.get_node(other_id, user_id=node.user_id)
+            if other_node is None or (other_node.user_id, other_node.scope) != (node.user_id, node.scope):
                 continue
 
             seen_pairs.add(pair_key)
@@ -237,10 +242,10 @@ async def merge_duplicates(
             # One was already archived/superseded
             continue
 
-        # Never merge across owners, whatever produced the pair (issue #66).
-        if node_a.user_id != node_b.user_id:
+        # Revalidate at application time, including caller-constructed pairs.
+        if (node_a.user_id, node_a.scope) != (node_b.user_id, node_b.scope):
             logger.warning(
-                "Refusing to merge cross-user duplicate pair (%s, %s)",
+                "Refusing to merge cross-namespace duplicate pair (%s, %s)",
                 dup.node_a_id,
                 dup.node_b_id,
             )

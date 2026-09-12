@@ -270,6 +270,15 @@ summary. Omitted, changed, pinned, recent, high-confidence, or other-namespace
 sources remain active. Legacy summaries without coverage metadata cannot
 authorize retirement. Similarity alone is not evidence that details are redundant.
 
+Duplicate and alias discovery partitions exact/string matches by owner and scope.
+Semantic searches request the same scope and verify each returned node against
+the durable graph before proposing a pair. Both apply functions recheck owner
+and scope before transferring evidence, redirecting edges, superseding a node,
+or linking aliases. This also applies to unscoped operator runs and manually
+supplied candidate lists. The same owner's PERSONAL and PROJECT memories must
+remain independent even when their text or entity names match. These checks do
+not implement the broader namespace grant hierarchy in RFC-0004.
+
 ### 5.4 OrganizeResult
 
 ```python

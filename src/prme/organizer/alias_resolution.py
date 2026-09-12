@@ -190,9 +190,8 @@ async def find_aliases(
             return candidates
 
         for j in range(i + 1, len(entities)):
-            # An unscoped run sees every tenant's entities; two tenants both
-            # holding "PostgreSQL" and "postgres" must not be paired (#66).
-            if entities[i].user_id != entities[j].user_id:
+            # Names alone do not authorize combining owners or scopes.
+            if (entities[i].user_id, entities[i].scope) != (entities[j].user_id, entities[j].scope):
                 continue
 
             a_id = str(entities[i].id)
@@ -229,6 +228,7 @@ async def find_aliases(
                 entity.content,
                 entity.user_id,
                 k=10,
+                scope=[entity.scope.value],
             )
         except Exception:
             logger.debug(
@@ -250,9 +250,10 @@ async def find_aliases(
             if pair_key in seen_pairs:
                 continue
 
-            # Verify the other node is also an ENTITY owned by the same user
+            # Verify the durable node is an ENTITY in the same namespace
             other_node = await engine.get_node(other_id, user_id=entity.user_id)
-            if other_node is None or other_node.node_type != NodeType.ENTITY:
+            if (other_node is None or other_node.node_type != NodeType.ENTITY
+                or (other_node.user_id, other_node.scope) != (entity.user_id, entity.scope)):
                 continue
 
             seen_pairs.add(pair_key)
@@ -303,10 +304,10 @@ async def resolve_aliases(
         if node_a is None or node_b is None:
             continue
 
-        # Never merge or link across owners (issue #66).
-        if node_a.user_id != node_b.user_id:
+        # Revalidate before merging evidence/edges or creating an alias link.
+        if (node_a.user_id, node_a.scope) != (node_b.user_id, node_b.scope):
             logger.warning(
-                "Refusing to resolve cross-user alias pair (%s, %s)",
+                "Refusing to resolve cross-namespace alias pair (%s, %s)",
                 alias.entity_a_id,
                 alias.entity_b_id,
             )
