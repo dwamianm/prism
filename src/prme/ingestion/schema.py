@@ -35,7 +35,7 @@ class ExtractedEntity(BaseModel):
 
 
 class ExtractedFact(BaseModel):
-    """A source-supported claim (subject-predicate-object triple) extracted from text.
+    """A fact (subject-predicate-object triple) extracted from text.
 
     The fact_type field classifies the triple as a plain fact,
     a decision, or a preference. This maps to NodeType.FACT,
@@ -69,13 +69,7 @@ class ExtractedFact(BaseModel):
     )
     fact_type: str = Field(
         default="fact",
-        description=(
-            "Kind of claim, independent of certainty. Use fact for general propositions, "
-            "including possible or conditional events; preference only for an expressed "
-            "like, dislike, desire, or preference; decision for a recorded choice or "
-            "commitment made, including a decision against an option. Usage alone is "
-            "neither preference nor decision. Put uncertainty in epistemic_type."
-        ),
+        description="One of: fact, decision, preference",
     )
     scope: str | None = Field(
         default=None,

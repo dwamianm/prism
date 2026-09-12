@@ -31,9 +31,7 @@ logger = structlog.get_logger(__name__)
 class _CitedFact(ExtractedFact):
     """Built-in providers must return source support or retry validation."""
 
-    fact_type: Literal["fact", "decision", "preference"] = Field(
-        default="fact", description=ExtractedFact.model_fields["fact_type"].description,
-    )
+    fact_type: Literal["fact", "decision", "preference"] = "fact"
 
     evidence_quote: str = Field(
         min_length=1,
@@ -86,21 +84,17 @@ Extract the following from the provided text:
 1. **Named Entities**: People, organizations, locations, products, concepts, \
 and events mentioned in the text. Use the entity name exactly as it appears.
 
-2. **Claims** (subject-predicate-object triples, returned in facts): Statements \
-about entities, including possible or conditional events. Each claim has:
+2. **Facts** (subject-predicate-object triples): Factual statements about \
+entities. Each fact has:
    - A subject (an entity name from the text)
    - A predicate (the relationship or attribute, e.g., works_at, lives_in, \
 role, likes, uses)
    - An object (the value or target entity)
    - A confidence score (0.0 to 1.0) reflecting how explicitly stated the \
 fact is
-   - A fact_type describing the kind of claim, independently of certainty:
-     * "fact": a general proposition, including possible or conditional events.
-     * "preference": an expressed like, dislike, desire, or preference.
-     * "decision": a recorded choice or commitment made, including rejection of an option.
-     Using or possibly using something does not imply liking or choosing it.
-     Uncertainty belongs in epistemic_type; it does not change the claim's kind.
-     A conditional preference remains a preference with conditional epistemic status.
+   - A fact_type: use "fact" for general facts, "decision" for decisions \
+made or communicated (e.g., "We decided to use PostgreSQL"), and \
+"preference" for personal preferences expressed (e.g., "I prefer dark mode")
 
 3. **Relationships** between entities: How entities relate to each other. \
 Use a source-supported predicate such as lives_in, works_at, or uses. Do not \
@@ -128,8 +122,7 @@ temporal text in the temporal_ref field.
    - "observed" — directly stated or witnessed ("I work at Google")
    - "asserted" — claimed as fact without direct evidence
    - "inferred" — derived from context ("Based on their questions, they know Python")
-   - "hypothetical" — speculative or possible
-   - "conditional" — depends on an explicitly stated condition
+   - "hypothetical" — speculative or conditional
    - "unverified" — from untrusted or unverified source
    Default to "asserted" if unclear.
 
