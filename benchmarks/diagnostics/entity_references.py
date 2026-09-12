@@ -32,7 +32,7 @@ def failure_details(exc):
     return {"error_chain": kinds, "validation_errors": validation}
 
 
-def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_epistemic=None, expected_entity_types=None):
+def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_epistemic=None, expected_entity_types=None, expected_claim_count=None):
     """Assess every claim; an extra FACT cannot hide a misclassified preference."""
     claims = [n for n in nodes if n.node_type in {NodeType.FACT, NodeType.PREFERENCE, NodeType.DECISION}]
     linked = bool(claims) and all(
@@ -54,6 +54,7 @@ def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_ep
         )
     allowed = allowed_epistemic or ({"conditional", "hypothetical"} if case == "conditional" else None)
     temporal_ok = allowed is None or all(n.epistemic_type.value in allowed for n in claims)
+    count_ok = expected_claim_count is None or len(claims) == expected_claim_count
     entity_types_ok = True
     if expected_entity_types is not None:
         by_id = {n.id: n for n in nodes if n.node_type == NodeType.ENTITY}
@@ -71,8 +72,9 @@ def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_ep
     associations = all(e.edge_type in {EdgeType.HAS_FACT, EdgeType.MENTIONS} for e in edges)
     preserved = bool(claims) and all(n.content == source for n in claims)
     return {
-        "passed": linked and objects_present and kinds_ok and temporal_ok and entity_types_ok and associations and preserved,
+        "passed": linked and count_ok and objects_present and kinds_ok and temporal_ok and entity_types_ok and associations and preserved,
         "expected_objects_present": objects_present,
+        "expected_claim_count": count_ok,
         "expected_entity_types_linked": entity_types_ok,
         "expected_claim_kinds": kinds_ok,
         "epistemic_qualifications_preserved": temporal_ok,

@@ -58,9 +58,10 @@ def test_classification_probe_requires_each_expected_object_and_its_kind():
                       epistemic_type=EpistemicType.ASSERTED,
                       metadata={"object": "SQLite", "subject_link_status": "resolved"})
     edges = [SimpleNamespace(edge_type=EdgeType.HAS_FACT, target_id=n.id) for n in [use, pref]]
-    expected = {"expected_kinds": {"Redis": "fact", "SQLite": "preference"}, "allowed_epistemic": ["asserted", "observed"]}
+    expected = {"expected_kinds": {"Redis": "fact", "SQLite": "preference"}, "allowed_epistemic": ["asserted", "observed"], "expected_claim_count": 2}
     assert assess_claims("mixed", source, [use, pref], edges, **expected)["passed"]
     assert not assess_claims("mixed", source, [use], edges, **expected)["passed"]
+    assert not assess_claims("mixed", source, [use, pref, pref], edges, **expected)["passed"]
     wrong = pref.model_copy(update={"node_type": NodeType.FACT})
     assert not assess_claims("mixed", source, [use, wrong], edges, **expected)["passed"]
 

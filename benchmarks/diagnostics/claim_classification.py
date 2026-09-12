@@ -16,6 +16,7 @@ from benchmarks.diagnostics._process import checked_report
 def case(name, source, kinds, *, uncertain=False):
     return name, source, {
         "expected_kinds": kinds,
+        "expected_claim_count": len(kinds),
         "allowed_epistemic": ["hypothetical", "conditional"] if uncertain else ["asserted", "observed"],
     }
 
@@ -34,6 +35,7 @@ CASES = [
     ("namesake", "Jordan, the engineer, lives in Jordan, the country.", {
         "allowed_epistemic": ["asserted", "observed"],
         "expected_entity_types": {"subject": "person", "object": "location"},
+        "expected_claim_count": 1,
     }),
     case("conditional_preference", "If latency is equal, Elena prefers SQLite.", {"SQLite": "preference"}, uncertain=True),
 ]
