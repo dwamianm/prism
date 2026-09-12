@@ -48,20 +48,38 @@ async def prepare(engine, user, *, persist=True):
 async def stage(engine, plan):
     if engine._conn is not None:
         for embedding in plan.embeddings:
-            await engine._vector_index.index(str(embedding.node_id), embedding.content, plan.user_id)
+            await engine._vector_index.stage(embedding, user_id=plan.user_id)
         await engine._vector_index.save()
-        for doc in plan.lexical_documents:
-            node = next(node for node in plan.nodes if node.id == doc.node_id)
-            await engine._lexical_index.index(str(doc.node_id), doc.content, plan.user_id,
-                                               node.node_type.value, node.scope.value)
-        await engine._lexical_index.flush()
+        await engine._lexical_index.stage(plan)
+
+
+async def test_compaction_retains_prepared_indexes_then_evicts_archived_results(config, user):
+    if config.backend != "duckdb":
+        pytest.skip("PostgreSQL commits derived indexes in the graph transaction")
+    async with MemoryEngine.open(config) as engine:
+        plan = await prepare(engine, user)
+        await stage(engine, plan)
+        for owner in (None, user):
+            await engine.organize(user_id=owner, jobs=["index_compaction"], budget_ms=5000)
+        for embedding in plan.embeddings:
+            assert engine._conn.execute("SELECT count(*) FROM vector_staging WHERE node_id = ?",
+                                        [str(embedding.node_id)]).fetchone()[0] == 1
+        receipt = await engine._graph_store.commit_derivation(plan)
+        fact = plan.nodes[-1]
+        await engine._graph_store.archive(str(fact.id))
+        await engine.organize(user_id=user, jobs=["index_compaction"], budget_ms=5000)
+        assert engine._conn.execute("SELECT count(*) FROM vector_staging WHERE node_id = ?",
+                                    [str(fact.id)]).fetchone()[0] == 0
+        assert await engine._graph_store.commit_derivation(plan) == receipt
+        assert await engine.get_node(str(fact.id)) is None
 
 
 async def test_commit_and_concurrent_replay_preserve_one_receipt_and_fixed_artifacts(config, user, monkeypatch):
     async with MemoryEngine.open(config) as engine:
         plan = await prepare(engine, user)
-        await stage(engine, plan)
         monkeypatch.setattr(engine._vector_index._provider, "embed", AsyncMock(side_effect=AssertionError("commit must not call a provider")))
+        await stage(engine, plan)
+        await stage(engine, plan)
         assert await engine.get_event_nodes(str(plan.event_id), user_id=user) == []
         receipts = await asyncio.gather(*[engine._graph_store.commit_derivation(plan) for _ in range(4)])
         assert all(receipt == receipts[0] for receipt in receipts)

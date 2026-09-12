@@ -37,8 +37,11 @@ exit during materialization; atomic derivation commits remain the next reliabili
 The internal prepared-plan journal and atomic graph commit primitive now pass
 concurrency, independent-reader, rollback and abrupt-process-exit checks. Startup
 also preserves explicitly assigned epistemic types instead of reclassifying
-modern nodes with a legacy heuristic. The ordinary ingestion path still needs
-to use the planner, idempotent index staging and commit primitive; durable
+modern nodes with a legacy heuristic. Idempotent index staging now survives
+retries and abrupt process exits without inference; compaction preserves
+unpublished staging claims. Crash testing also repaired vector-key reuse after
+DuckDB recovery. The ordinary ingestion path still needs a planner and
+coordination of staging with the commit primitive; durable
 extraction scheduling, generation fencing and plan revision remain open.
 
 Four full-history development evaluations exposed and repaired a recency

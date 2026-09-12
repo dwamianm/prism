@@ -255,6 +255,12 @@ async def organize(
 | `consolidate` | Cluster similar memories into summary abstractions | RFC-0006 |
 | `index_compaction` | Evict vector/lexical entries for inactive nodes | RFC-0002 |
 
+Index compaction preserves prepared vector identities with no graph node yet
+(RFC-0016). Their durable staging claims distinguish them from ordinary orphaned
+index entries. Published inactive nodes remain eligible for eviction. Automatic
+collection of abandoned prepared identities awaits the derivation coordinator;
+until then, explicit deletion or an offline rebuild collects them.
+
 Consolidation currently produces an extractive excerpt of up to three sources,
 not a lossless abstraction of the entire cluster. Clusters and their summaries
 must retain one user and scope. Excerpts preserve complete text, source identity,

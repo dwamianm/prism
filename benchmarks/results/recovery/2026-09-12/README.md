@@ -62,7 +62,7 @@ write and after commit before acknowledgement. Reopening exposed zero partial
 nodes before commit, or the complete fixed-ID graph after commit. Replaying the
 saved plan reused its inputs and receipt. These are component-level tests:
 ordinary `ingest()` is not yet routed through the primitive, and persistent
-extraction scheduling, staging-aware compaction and lease/revision fencing remain
+extraction scheduling, ingestion integration and lease/revision fencing remain
 unimplemented.
 
 The crash tests initially failed because startup altered dependency nodes.
@@ -71,6 +71,23 @@ metadata and timestamps survive reopening; heuristic migration applies only to
 legacy NULL epistemic values. An explicitly hypothetical fact no longer becomes
 asserted merely because the pack was opened again. Earlier overwritten values
 are not automatically recoverable from a migration marker.
+
+## Idempotent index staging
+
+The staging component passes 25 focused checks, including real process exits
+after a durable vector payload, after native vector insertion, and after a
+lexical commit. Retries reuse saved numerical inputs and identities without
+calling a model. Failure after a lexical commit preserves the committed batch;
+failure before it preserves unrelated documents and rolls back only new adds.
+Repeated cancellation retains storage locks until the native work finishes.
+
+The vector-payload exit test exposed a sequence recovery bug: the persisted key
+survived while the next sequence allocation reused it. Startup now rebases the
+sequence beyond recovered keys. Sixty staging/vector recovery/retrieval checks
+also pass under USearch 2.16.0 / SimSIMD 5.9.11. Ordinary orphan compaction still
+works; unpublished staging claims are retained, and published archived results
+remain eligible for eviction. Abandoned staging has no automatic collection
+policy yet. These checks exercise components, not the complete ingestion path.
 
 ## Grounded extraction journal
 

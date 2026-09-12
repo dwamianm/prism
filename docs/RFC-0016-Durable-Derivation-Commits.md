@@ -57,9 +57,25 @@ replacement rejection, and DuckDB process exits during node insertion, after
 replacement, and after commit before acknowledgement. Restart completes the same
 plan without partial graph state or new model calls. These are component tests.
 
+`VectorIndex.stage()` now durably binds a prepared node identity to its source
+text and numerical payload. Identical retries reuse the key and repair a missing
+native vector without inference; conflicting inputs are rejected. Startup rebases
+the key sequence beyond recovered metadata, fixing a reproduced process-exit case
+where DuckDB recovered a payload but reused its key on the next insertion.
+`LexicalIndex.stage()` compares exact stored fields under the directory writer
+lock and commits only missing documents as one batch. It never deletes existing
+documents to retry. Tests cover cancellation, lost commit acknowledgements,
+concurrent in-process retries, restart and abrupt exits at both index boundaries.
+
+Compaction retains missing graph identities with a durable vector staging claim.
+Once a graph node exists and is archived, normal compaction can evict it. This is
+conservative retention: abandoned staging requires explicit deletion or rebuild
+until the coordinator provides a fenced abandonment policy. Rebuild must not run
+concurrently with a derivation publication.
+
 The normal ingestion pipeline does **not yet call this primitive**. It still
-needs a planner, idempotent external index staging, compaction protection for
-staged artifacts, and persistent extraction work. Version 1 saves one plan per
+needs a planner, staging/commit coordination, and persistent extraction work.
+Version 1 saves one plan per
 source; it has no lease generation, revision switch or automatic replanning.
 Those must be implemented before enabling the complete recovery workflow below.
 

@@ -818,6 +818,11 @@ async def _job_index_compaction(
     Under a user scope only that user's stale entries are evicted. Rows whose
     node has vanished from the graph entirely can no longer be attributed to
     a user, so they are left for an unscoped run to collect.
+
+    Prepared vector identities whose graph node does not exist yet are retained:
+    their absence is expected before atomic derivation publication. Until the
+    derivation coordinator has an abandonment policy, explicit deletion or
+    rebuild is required to collect abandoned staging claims.
     """
     start = time.monotonic()
 
@@ -855,14 +860,17 @@ async def _job_index_compaction(
         rows = conn.execute(
             "SELECT DISTINCT vm.node_id FROM vector_metadata vm "
             "LEFT JOIN nodes n ON vm.node_id = n.id "
-            "WHERE n.id IS NULL "
+            "WHERE (n.id IS NULL AND NOT EXISTS "
+            "(SELECT 1 FROM vector_staging vs WHERE vs.node_id = vm.node_id)) "
             f"OR COALESCE(n.lifecycle_state, 'tentative') NOT IN ({placeholders})",
             active,
         ).fetchall()
         return [row[0] for row in rows]
 
+    from prme.storage._threading import run_to_completion
+
     async with engine._graph_store._conn_lock:
-        stale_ids = await asyncio.to_thread(_find_stale)
+        stale_ids = await run_to_completion(_find_stale)
 
     processed = 0
     modified = 0

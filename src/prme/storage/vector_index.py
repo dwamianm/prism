@@ -17,6 +17,7 @@ import duckdb
 import numpy as np
 from usearch.index import Index
 
+from prme.models.derivation import PreparedEmbedding
 from prme.storage._threading import run_to_completion
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
 
@@ -113,6 +114,16 @@ class VectorIndex:
                 vector_data BLOB NOT NULL
             )
         """)
+        # A prepared write owns a fixed node identity and exact source text.
+        # Keep this claim in the payload transaction so a failed native add
+        # can be retried without allocating another vector key.
+        self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS vector_staging (
+                node_id VARCHAR PRIMARY KEY,
+                vector_key BIGINT NOT NULL UNIQUE,
+                content VARCHAR NOT NULL
+            )
+        """)
         # Indexes for fast lookups
         self._conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_vector_node
@@ -134,7 +145,7 @@ class VectorIndex:
         # Export keys in one native call; scalar Sequence iteration repeatedly
         # asks USearch to locate an offset in its key collection.
         orphan_keys = {int(key) for key in np.asarray(self._index.keys)}
-        restored = missing_legacy = 0
+        restored = missing_legacy = max_key = 0
         # A single ordered read avoids re-scanning the remaining payload table
         # for every page. A separate cursor keeps its result alive while legacy
         # backfill writes use the main connection. Both are startup-only here.
@@ -145,6 +156,7 @@ class VectorIndex:
                 "ON vm.vector_key = vp.vector_key ORDER BY vm.vector_key"
             )
             while rows := reader.fetchmany(256):
+                max_key = max(max_key, rows[-1][0])
                 backfill = []
                 missing = {}
                 for key, dimension, has_payload in rows:
@@ -186,6 +198,17 @@ class VectorIndex:
                         "INSERT INTO vector_payloads VALUES (?, ?)",
                         backfill,
                     )
+        # DuckDB WAL recovery can restore a payload without preserving the
+        # corresponding nextval advance. Rebase once at startup, beyond both
+        # durable keys and the sequence's recorded position. Otherwise the
+        # first new vector after a process exit can collide with a saved key.
+        start, last = self._conn.execute(
+            "SELECT start_value, last_value FROM duckdb_sequences() "
+            "WHERE sequence_name = 'vector_key_seq' AND schema_name = current_schema() "
+            "AND database_name = current_database()"
+        ).fetchone()
+        next_key = max(max_key + 1, start, (last or 0) + 1)
+        self._conn.execute(f"CREATE OR REPLACE SEQUENCE vector_key_seq START {int(next_key)}")
         for key in orphan_keys:
             self._index.remove(key)
         if restored or orphan_keys:
@@ -307,12 +330,57 @@ class VectorIndex:
 
         return key
 
+    async def stage(self, embedding: PreparedEmbedding, *, user_id: str) -> int:
+        """Durably stage a saved embedding without inference or replacement.
+
+        Repeating identical input reuses its key, including after a native
+        index failure. Conflicting identities fail without changing existing
+        data. Graph publication and pending-plan compaction protection belong
+        to the derivation coordinator; this method does not publish a node.
+        """
+        embedding = PreparedEmbedding.model_validate_json(embedding.model_dump_json())
+        if not user_id:
+            raise ValueError("Prepared embedding requires an owner")
+        expected = (self._provider.model_name, self._provider.model_version, self._provider.dimension)
+        if ((embedding.model, embedding.version, embedding.dimension) != expected
+                or embedding.dimension != self._index.ndim):
+            raise EmbeddingVersionMismatchError("Prepared embedding differs from the configured index")
+        vector = np.asarray(embedding.values, dtype=np.float32)
+        if not np.any(vector):
+            raise ValueError("Prepared embedding underflows to a zero float32 vector")
+        async with self._write_lock:
+            async with self._conn_lock:
+                return await run_to_completion(self._do_stage, embedding, user_id, vector)
+
+    def _do_stage(self, embedding: PreparedEmbedding, user_id: str, vector: np.ndarray) -> int:
+        node_id = str(embedding.node_id)
+        rows = self._conn.execute(
+            "SELECT vm.vector_key, vm.user_id, vm.embedding_model, vm.embedding_version, "
+            "vm.embedding_dim, vp.vector_data, vs.content FROM vector_metadata vm "
+            "LEFT JOIN vector_payloads vp USING (vector_key) "
+            "LEFT JOIN vector_staging vs ON vm.vector_key = vs.vector_key AND vm.node_id = vs.node_id "
+            "WHERE vm.node_id = ?", [node_id],
+        ).fetchall()
+        if rows:
+            expected = (user_id, embedding.model, embedding.version, embedding.dimension,
+                        vector.astype("<f4", copy=False).tobytes(), embedding.content)
+            if len(rows) != 1 or tuple(rows[0][1:]) != expected:
+                raise ValueError("Prepared embedding conflicts with existing vector identity")
+            key = rows[0][0]
+            if not self._index.contains(key):
+                self._add_vector(key, vector)
+            return key
+        return self._do_index(node_id, embedding.content, user_id, vector,
+                              prepared=embedding)
+
     def _do_index(
         self,
         node_id: str,
         content: str,
         user_id: str,
         vector: np.ndarray,
+        *,
+        prepared: PreparedEmbedding | None = None,
     ) -> int:
         """Synchronous insert + (debounced) save (runs in thread pool).
 
@@ -333,19 +401,28 @@ class VectorIndex:
                      embedding_version, embedding_dim)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                [key, node_id, user_id, self._provider.model_name,
-                 self._provider.model_version, self._provider.dimension],
+                [key, node_id, user_id,
+                 prepared.model if prepared else self._provider.model_name,
+                 prepared.version if prepared else self._provider.model_version,
+                 prepared.dimension if prepared else self._provider.dimension],
             )
             self._conn.execute(
                 "INSERT INTO vector_payloads VALUES (?, ?)",
                 [key, vector.astype("<f4", copy=False).tobytes()],
             )
+            if prepared is not None:
+                self._conn.execute("INSERT INTO vector_staging VALUES (?, ?, ?)",
+                                   [node_id, key, content])
             self._conn.execute("COMMIT")
         except BaseException:
             self._conn.execute("ROLLBACK")
             raise
 
-        # Add to USearch index
+        self._add_vector(key, vector)
+        return key
+
+    def _add_vector(self, key: int, vector: np.ndarray) -> None:
+        """Add a durable vector to the native index with debounced snapshots."""
         self._index.add(key, vector)
 
         # Persist to disk on the debounce interval only. Remaining
@@ -359,8 +436,6 @@ class VectorIndex:
                 self._save_snapshot()
             finally:
                 self._unsaved_inserts = 0
-
-        return key
 
     async def delete_by_node_id(self, node_id: str) -> int:
         """Remove all vectors for a node from USearch and DuckDB metadata.
@@ -409,6 +484,7 @@ class VectorIndex:
 
         self._conn.execute("BEGIN TRANSACTION")
         try:
+            self._conn.execute("DELETE FROM vector_staging WHERE node_id = ?", [node_id])
             self._conn.execute(
                 "DELETE FROM vector_payloads WHERE vector_key IN "
                 "(SELECT vector_key FROM vector_metadata WHERE node_id = ?)", [node_id],
@@ -616,6 +692,7 @@ class VectorIndex:
         )
         self._conn.execute("BEGIN TRANSACTION")
         try:
+            self._conn.execute("DELETE FROM vector_staging")
             self._conn.execute("DELETE FROM vector_payloads")
             self._conn.execute("DELETE FROM vector_metadata")
             self._conn.execute("COMMIT")

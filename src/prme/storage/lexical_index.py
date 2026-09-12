@@ -10,6 +10,7 @@ import asyncio
 import time
 
 import tantivy
+from prme.models.derivation import DerivationPlan
 from prme.storage._threading import run_to_completion
 
 
@@ -197,6 +198,62 @@ class LexicalIndex:
         """Commit any buffered documents so they become searchable."""
         async with self._write_lock:
             await run_to_completion(self._commit_locked)
+
+    async def stage(self, plan: DerivationPlan) -> None:
+        """Commit missing prepared documents once, rejecting identity conflicts.
+
+        The directory writer lock covers comparison and publication, so a
+        retry never deletes another attempt's documents. The coordinator must
+        protect pending plans from compaction before using this for ingestion.
+        """
+        plan = DerivationPlan.model_validate_json(plan.model_dump_json())
+        nodes = {node.id: node for node in plan.nodes}
+        documents = tuple({
+            "node_id": [str(doc.node_id)], "content": [doc.content],
+            "user_id": [plan.user_id], "node_type": [nodes[doc.node_id].node_type.value],
+            "scope": [nodes[doc.node_id].scope.value],
+        } for doc in plan.lexical_documents)
+        async with self._write_lock:
+            await run_to_completion(self._do_stage, documents)
+
+    def _do_stage(self, documents: tuple[dict, ...]) -> None:
+        # Preserve unrelated normal writes before starting this isolated batch.
+        self._commit_locked()
+        if not documents:
+            return
+        writer = self._ensure_writer()
+        try:
+            self._index.reload()
+            searcher = self._index.searcher()
+            missing = []
+            for fields in documents:
+                query = tantivy.Query.term_query(self._schema, "node_id", fields["node_id"][0])
+                found = searcher.search(query, limit=1)
+                if found.count > 1:
+                    raise ValueError("Prepared document conflicts with duplicate lexical identity")
+                if found.hits:
+                    existing = searcher.doc(found.hits[0][1])
+                    if any(existing[name] != value for name, value in fields.items()):
+                        raise ValueError("Prepared document conflicts with existing lexical identity")
+                else:
+                    missing.append(fields)
+            # Validate the whole batch before any add. One commit avoids the
+            # segment/merge overhead of committing every individual document.
+            for fields in missing:
+                writer.add_document(tantivy.Document(**fields))
+            if missing:
+                writer.commit()
+                self._index.reload()
+        except BaseException:
+            # Rollback only changes since the last commit. A lost commit
+            # acknowledgement must preserve the already committed documents.
+            writer.rollback()
+            raise
+        finally:
+            self._writer = None
+            self._uncommitted = 0
+            self._oldest_uncommitted_at = None
+            writer.wait_merging_threads()
 
     def _do_search(
         self,
