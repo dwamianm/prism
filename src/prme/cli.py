@@ -773,13 +773,20 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
         warn("Lexical index not found (will be created on first use)")
 
     # 5. LLM provider (advisory)
-    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get(
-        "ANTHROPIC_API_KEY"
-    )
-    if api_key:
-        ok("LLM API key found in environment")
+    from dotenv import dotenv_values
+    from prme.config import ExtractionConfig
+
+    extraction = ExtractionConfig()
+    key_name = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}.get(extraction.provider)
+    configured = bool(extraction.api_key)
+    if key_name:
+        configured = configured or bool(os.environ.get(key_name, dotenv_values(".env").get(key_name)))
+    if extraction.provider == "ollama":
+        ok("Local Ollama extraction selected (server availability not checked)")
+    elif configured:
+        ok(f"{extraction.provider} extraction credential configured (not verified)")
     else:
-        warn("No LLM API key found (ingest() requires one; store() works without)")
+        warn(f"No credential found for {extraction.provider} extraction; store() works without an LLM")
 
     # Summary
     print()

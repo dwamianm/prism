@@ -58,7 +58,7 @@ async def require_api_key(
     if api_key is None:
         return
     if credentials is None or not secrets.compare_digest(
-        credentials.credentials, api_key
+        credentials.credentials, api_key.get_secret_value()
     ):
         raise HTTPException(
             status_code=401,

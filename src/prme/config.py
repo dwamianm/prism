@@ -78,7 +78,7 @@ class EmbeddingConfig(_ProjectSettings):
 class APIConfig(_ProjectSettings):
     """Configuration for the HTTP API server (security hardening, issue #34)."""
 
-    api_key: str | None = Field(
+    api_key: SecretStr | None = Field(
         default=None,
         description=(
             "API key for bearer-token authentication. When set, every "

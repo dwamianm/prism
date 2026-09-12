@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import SecretStr
 
-from prme.config import ExtractionConfig, PRMEConfig
+from prme.config import APIConfig, ExtractionConfig, PRMEConfig
 from prme.ingestion.extraction import create_extraction_provider
 
 
@@ -84,3 +84,26 @@ def test_ollama_accepts_an_explicit_endpoint_without_cloud_credentials(project_e
     with patch("instructor.from_provider") as factory:
         provider._ensure_client()
     assert factory.call_args.kwargs == {"async_client": True, "base_url": "http://localhost:22434/v1"}
+
+
+def test_server_credentials_are_redacted_in_config_and_repr(project_env):
+    config = PRMEConfig(api=APIConfig(api_key="server-fixture-secret"))
+    assert config.api.api_key.get_secret_value() == "server-fixture-secret"
+    assert "server-fixture-secret" not in config.model_dump_json()
+    assert "server-fixture-secret" not in repr(config)
+
+
+@pytest.mark.parametrize("settings,expected", [
+    ("PRME_EXTRACTION_PROVIDER=ollama\n", "Local Ollama extraction selected"),
+    ("OPENAI_API_KEY=doctor-fixture-secret\n", "openai extraction credential configured"),
+    ("PRME_EXTRACTION_PROVIDER=anthropic\nOPENAI_API_KEY=doctor-fixture-secret\n", "No credential found for anthropic"),
+])
+async def test_doctor_reports_selected_provider_without_printing_secrets(project_env, capsys, settings, expected):
+    from argparse import Namespace
+    from prme.cli import cmd_doctor
+
+    project_env.write_text(settings)
+    await cmd_doctor(Namespace(directory=str(project_env.parent)))
+    output = capsys.readouterr().out
+    assert expected in output
+    assert "doctor-fixture-secret" not in output
