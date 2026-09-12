@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/engine.py",
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "profile_format": 2,
+  "profile_tokens": 246,
+  "profile_sha256": "4dd6312272cf9bed3bbc25783c5f2d5650d8478000066937ce40debcb1aafd74",
+  "checks": [
+    "complete-name matching",
+    "qualified sources retained",
+    "inferred profile and confidence cap",
+    "source provenance and exact token count",
+    "restart durability",
+    "real retrieval owner/scope isolation",
+    "idempotent profile content on rebuild",
+    "immutable source events"
+  ],
+  "limits": "One authored installed-client workflow; no extraction, answer-accuracy or comparative claim.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0
+}

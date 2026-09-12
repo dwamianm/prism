@@ -1069,3 +1069,15 @@ Two new backend regressions reproduced that missing argument. The sync wrapper
 now forwards the same default and explicit token budget to the async engine.
 Profiles still use heuristic entity associations and nontransactional publication;
 older artifacts take the new format only when explicitly rebuilt.
+
+
+The final installed Python 3.13 wheel at `e011d7d` passed 45 profile/excerpt checks
+in 18.09 seconds, native exit zero. Strict installed consumer typing accepts the
+same token-budget argument on sync and async clients. The corrected
+[real BGE client workflow](profile-fidelity-e011d7d.json) completed with supervised
+native exit zero: both qualified source statements survive creation, restart,
+retrieval and rebuild; source events remain unchanged; owner/scope boundaries,
+inferred labels, confidence cap and exact token counts hold. The preceding
+TypeError attempt remains retained above. This is an authored workflow rather
+than a benchmark-quality result. A full regression run of the production profile
+change at `88cc5e2` is running separately; its result is not yet claimed.
