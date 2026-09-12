@@ -67,6 +67,7 @@ class TestToolDiscovery:
             "memory_ingest",
             "memory_organize",
             "memory_get_node",
+            "memory_get_extraction",
             "memory_promote_node",
             "memory_archive_node",
         }

@@ -34,6 +34,7 @@ import duckdb
 
 from prme.config import PRMEConfig
 from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
+from prme.models.extraction import ExtractionRecord
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -1628,6 +1629,17 @@ class MemoryEngine:
             cursor = str(page[-1].id)
 
     # --- Event Operations (delegated to EventStore) ---
+
+    async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
+        """Read saved grounded model output for an owned source event.
+
+        This does not call a model or complete pending processing. A record
+        confirms saved output, not graph completion or semantic correctness.
+        Returns None when no record exists for an owned event.
+        """
+        if not user_id:
+            raise ValueError("get_extraction requires user_id")
+        return await self._event_store.get_extraction(event_id, user_id=user_id)
 
     async def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
         """Retrieve an event by ID.

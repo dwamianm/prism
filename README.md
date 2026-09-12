@@ -174,6 +174,14 @@ Processing reports remaining work and retry failures per user; the same methods
 are available on `MemoryClient`. Model summaries do not overwrite original-source
 indexes. Relative dates in extracted facts use the source timestamp.
 
+Successful grounded extraction output is saved before graph materialization.
+An indexing retry reuses that output without another LLM call. Inspect it with
+`engine.get_extraction(event_id, user_id="alice")` (also on `MemoryClient`).
+The record includes the provider/model, source hash, grounding policy, and
+structured output. It survives restart, but its presence does not prove graph
+completion or semantic correctness. Interrupted LLM jobs and partial graph writes
+are not automatically replayed yet.
+
 See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a terminal chat app with persistent memory.
 
 ## Architecture
@@ -233,6 +241,11 @@ it does not mean pending extraction finished. `get_event` returns the original
 content and timestamps. Both async and sync clients support these methods.
 For a retrieved node, follow its `evidence_refs` with `get_event` to inspect
 qualifications and surrounding actions before drawing conclusions.
+
+For an event submitted through `ingest()`, `get_extraction` returns its saved
+model output or `None` when no owned record exists. HTTP exposes
+`GET /v1/events/{event_id}/extraction`; MCP exposes `memory_get_extraction`.
+Both bind access to the source owner's identity and perform no model calls.
 
 ## MCP server
 

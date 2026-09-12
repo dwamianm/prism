@@ -14,6 +14,7 @@ from uuid import UUID
 import asyncpg
 
 from prme.models import Event, ProcessingStatus
+from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.types import Scope
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,50 @@ class PgEventStore:
 
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
+
+    async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
+        """Read a saved extraction through its immutable source owner's scope."""
+        async with self._pool.acquire() as conn:
+            return await self._get_extraction(conn, event_id, user_id)
+
+    async def _get_extraction(self, conn, event_id: str, user_id: str) -> ExtractionRecord | None:
+        row = await conn.fetchrow(
+            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            "ON o.target_id = e.id::text WHERE o.id = $1 AND e.id = $2 "
+            "AND e.user_id = $3 AND o.op_type = 'EXTRACTION_VALIDATED'",
+            extraction_operation_id(event_id), event_id, user_id,
+        )
+        if row is None:
+            return None
+        payload = row["payload"]
+        record = (ExtractionRecord.model_validate_json(payload) if isinstance(payload, str)
+                  else ExtractionRecord.model_validate(payload))
+        record.verify_source(user_id, row["scope"], row["content_hash"])
+        if str(record.event_id) != str(UUID(event_id)):
+            raise ValueError("Extraction record does not match its source event")
+        return record
+
+    async def record_extraction(self, record: ExtractionRecord) -> ExtractionRecord:
+        """Save once in the operation log; first committed output wins."""
+        record = ExtractionRecord.model_validate_json(record.model_dump_json())
+        async with self._pool.acquire() as conn, conn.transaction():
+            source = await conn.fetchrow(
+                "SELECT user_id, scope, content_hash FROM events WHERE id = $1", str(record.event_id),
+            )
+            if source is None:
+                raise ValueError("Extraction requires a matching persisted source event")
+            record.verify_source(source["user_id"], source["scope"], source["content_hash"])
+            await conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, "
+                "namespace_id, created_at) VALUES ($1, 'EXTRACTION_VALIDATED', $2, $3::jsonb, $4, $5, $6) "
+                "ON CONFLICT (id) DO NOTHING",
+                record.operation_id, str(record.event_id), record.model_dump_json(),
+                "extraction", record.scope.value, record.created_at,
+            )
+            saved = await self._get_extraction(conn, str(record.event_id), record.user_id)
+            if saved is None:
+                raise ValueError("Extraction operation ID conflicts with another operation")
+            return saved
 
     async def append(self, event: Event, *, defer_materialization: bool = False) -> str:
         """Append an event to the immutable event log."""

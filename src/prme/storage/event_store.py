@@ -13,6 +13,7 @@ from uuid import UUID
 import duckdb
 
 from prme.models import Event, ProcessingStatus
+from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.storage._threading import run_to_completion
 from prme.types import Scope
 
@@ -42,6 +43,59 @@ class EventStore:
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
     # --- Public async API ---
+
+    async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
+        """Read the saved extraction only through its source owner's boundary."""
+        async with self._conn_lock:
+            return await run_to_completion(self._get_extraction_sync, event_id, user_id)
+
+    def _get_extraction_sync(self, event_id: str, user_id: str) -> ExtractionRecord | None:
+        row = self._conn.execute(
+            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            "ON o.target_id = e.id::VARCHAR WHERE o.id = ? AND e.id = ? "
+            "AND e.user_id = ? AND o.op_type = 'EXTRACTION_VALIDATED'",
+            [extraction_operation_id(event_id), event_id, user_id],
+        ).fetchone()
+        if row is None:
+            return None
+        record = ExtractionRecord.model_validate_json(row[0])
+        record.verify_source(user_id, row[1], row[2])
+        if str(record.event_id) != str(UUID(event_id)):
+            raise ValueError("Extraction record does not match its source event")
+        return record
+
+    async def record_extraction(self, record: ExtractionRecord) -> ExtractionRecord:
+        """Append once; concurrent attempts reuse the first durable extraction."""
+        # Serialize before yielding so mutation of a caller's nested dict cannot
+        # change the durable payload while a worker thread is waiting to run.
+        snapshot = ExtractionRecord.model_validate_json(record.model_dump_json())
+        async with self._conn_lock:
+            return await run_to_completion(self._record_extraction_sync, snapshot)
+
+    def _record_extraction_sync(self, record: ExtractionRecord) -> ExtractionRecord:
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            source = self._conn.execute(
+                "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(record.event_id)],
+            ).fetchone()
+            if source is None:
+                raise ValueError("Extraction requires a matching persisted source event")
+            record.verify_source(*source)
+            self._conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, "
+                "namespace_id, created_at) VALUES (?, 'EXTRACTION_VALIDATED', ?, ?, ?, ?, ?) "
+                "ON CONFLICT (id) DO NOTHING",
+                [record.operation_id, str(record.event_id), record.model_dump_json(),
+                 "extraction", record.scope.value, record.created_at],
+            )
+            saved = self._get_extraction_sync(str(record.event_id), record.user_id)
+            if saved is None:
+                raise ValueError("Extraction operation ID conflicts with another operation")
+            self._conn.execute("COMMIT")
+            return saved
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
 
     async def append(self, event: Event, *, defer_materialization: bool = False) -> str:
         """Append an event to the immutable event log.

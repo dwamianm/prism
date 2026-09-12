@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import secrets
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -31,6 +32,7 @@ from prme.api.models import (
     StoreResponse,
 )
 from prme.types import LifecycleState, NodeType
+from prme.models.extraction import ExtractionRecord
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +207,18 @@ async def get_event_nodes(request: Request, event_id: str):
         raise HTTPException(status_code=404, detail="Event not found")
     nodes = await engine.get_event_nodes(event_id, user_id=event.user_id)
     return NodeListResponse(nodes=[_node_to_response(n) for n in nodes], count=len(nodes))
+
+
+@router.get("/events/{event_id}/extraction", response_model=ExtractionRecord, summary="Read saved model extraction")
+async def get_extraction(request: Request, event_id: UUID):
+    engine = _get_engine(request)
+    event = await engine.get_event(str(event_id), user_id=_user_id(request))
+    if event is None:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+    record = await engine.get_extraction(str(event_id), user_id=event.user_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+    return record
 
 
 # ---------------------------------------------------------------------------

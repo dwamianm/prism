@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
+from prme.models.extraction import ExtractionRecord
 from prme.storage.engine import MemoryEngine
 from prme.types import (
     DECAY_LAMBDAS,
@@ -55,6 +56,7 @@ __all__ = [
     "DEFAULT_DECAY_PROFILE_MAPPING",
     "DecayProfile",
     "EdgeType",
+    "ExtractionRecord",
     "IngestionPipeline",
     "LifecycleState",
     "MemoryClient",

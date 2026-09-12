@@ -212,8 +212,8 @@ async def ingest(
 ```
 
 Ingest with LLM-powered extraction. Two-phase pipeline:
-- **Phase 1 (immediate):** Persist event + index in lexical store.
-- **Phase 2 (background):** LLM extracts entities, facts, relationships → materialized into graph/vector/lexical.
+- **Phase 1 (immediate):** Atomically persist the source event and its raw indexing job.
+- **Phase 2 (background):** Extract and ground model output, save it in the operation log, then materialize the graph and indexes. Indexing retries reuse the saved output.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -315,11 +315,18 @@ Query nodes with flexible filters. Defaults to active lifecycle states (tentativ
 #### `engine.get_event()` / `engine.get_events()`
 
 ```python
-async def get_event(self, event_id: str) -> Event | None
+async def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None
 async def get_events(self, user_id: str, **kwargs) -> list[Event]
+async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None
 ```
 
 Retrieve events by ID or by user. `get_events()` accepts `session_id`, `limit`, `offset`.
+`get_extraction()` reads saved grounded model output without inference or pending
+processing. `None` means no owned record exists. A record includes the source
+hash, provider/model, schema and grounding versions, and structured output; it
+does not acknowledge graph completion or prove its claims. The synchronous
+`MemoryClient` has the same method. HTTP and MCP expose the scoped source record
+through `/v1/events/{event_id}/extraction` and `memory_get_extraction`.
 
 ---
 

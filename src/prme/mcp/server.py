@@ -385,6 +385,27 @@ async def memory_get_event(event_id: str, ctx: Context = None) -> str:
         return _internal_error("memory_get_event", exc)
 
 
+async def memory_get_extraction(event_id: str, ctx: Context = None) -> str:
+    """Inspect saved grounded model output for an owned source event.
+
+    Does not run inference. Saved output does not imply graph processing has
+    completed, and source grounding does not prove semantic correctness.
+    """
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+        record = await engine.get_extraction(event_id, user_id=user_id)
+        if record is None:
+            return json.dumps({"error": "Extraction not found"})
+        return record.model_dump_json()
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    except ValueError:
+        return json.dumps({"error": "Invalid event ID or saved extraction"})
+    except Exception as exc:
+        return _internal_error("memory_get_extraction", exc)
+
+
 async def memory_promote_node(
     node_id: str,
     ctx: Context = None,
@@ -520,7 +541,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     )
     server.prme_config = config
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
-                 memory_get_node, memory_get_event, memory_promote_node, memory_archive_node):
+                 memory_get_node, memory_get_event, memory_get_extraction,
+                 memory_promote_node, memory_archive_node):
         server.tool()(tool)
     server.resource("memory://health")(resource_health)
     @server.resource("memory://stats")

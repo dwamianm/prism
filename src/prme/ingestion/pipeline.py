@@ -30,6 +30,7 @@ from prme.ingestion.schema import ExtractionResult
 from prme.ingestion.supersedence import SupersedenceDetector
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
+from prme.models.extraction import ExtractionRecord
 from prme.models.nodes import MemoryNode
 from prme.storage.write_queue import WriteTracker
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
@@ -234,13 +235,7 @@ class IngestionPipeline:
             scope: Ingestion-level scope for fallback when LLM does not classify.
         """
         try:
-            # Bound concurrent LLM extraction across all in-flight tasks
-            # so a large ingest_batch cannot fan out unbounded calls.
-            async with self._extraction_semaphore:
-                result = await self._extraction_provider.extract(
-                    event.content, role=event.role
-                )
-            result = validate_grounding(result, event.content)
+            result = await self._extract_or_load(event)
             await self._materialize(result, event, event_id, scope)
             logger.info(
                 "ingestion.phase2_complete",
@@ -261,6 +256,31 @@ class IngestionPipeline:
                     "Extraction did not complete; the source event is persisted",
                     event_id=event_id,
                 ) from exc
+
+    async def _extract_or_load(self, event: Event) -> ExtractionResult:
+        """Reuse durable validated output after downstream failure or restart.
+
+        This saves inference results, not graph completion. It does not make
+        materialization safe to replay after an interrupted graph write.
+        """
+        saved = await self._event_store.get_extraction(str(event.id), user_id=event.user_id)
+        if saved is None:
+            async with self._extraction_semaphore:
+                result = await self._extraction_provider.extract(event.content, role=event.role)
+            result = validate_grounding(result, event.content)
+            record = ExtractionRecord(
+                event_id=event.id, user_id=event.user_id, scope=event.scope,
+                content_hash=event.content_hash,
+                provider=self._extraction_provider.provider_name,
+                model=self._extraction_provider.model_name,
+                result=result.model_dump(mode="json"),
+            )
+            saved = await self._write_queue.submit(
+                lambda: self._event_store.record_extraction(record),
+                label=f"extraction.record:{event.id}",
+            )
+        saved.verify_source(event.user_id, event.scope.value, event.content_hash)
+        return ExtractionResult.model_validate(saved.result)
 
     async def _materialize(
         self,

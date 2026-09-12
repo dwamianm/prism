@@ -29,6 +29,7 @@ from typing import Any, TypeVar
 
 from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
+from prme.models.extraction import ExtractionRecord
 from prme.types import LifecycleState, NodeType, RetrievalMode, Scope
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
@@ -325,6 +326,10 @@ class MemoryClient:
     def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
         """Read original source content, optionally enforcing owner identity."""
         return self._run(self._engine.get_event(event_id, user_id=user_id))
+
+    def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
+        """Read saved grounded output; this does not imply graph completion."""
+        return self._run(self._engine.get_extraction(event_id, user_id=user_id))
 
     def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
         """Read every scoped node citing this event, regardless of lifecycle."""

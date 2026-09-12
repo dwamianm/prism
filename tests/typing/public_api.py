@@ -2,7 +2,7 @@
 
 from typing import assert_type
 
-from prme import MemoryClient, RetrievalResponse
+from prme import ExtractionRecord, MemoryClient, RetrievalResponse
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -13,6 +13,7 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])
     assert_type(client.get_events("alice"), list[Event])
     assert_type(client.get_event("event-id", user_id="alice"), Event | None)
+    assert_type(client.get_extraction("event-id", user_id="alice"), ExtractionRecord | None)
     assert_type(client.get_event_nodes("event-id", user_id="alice"), list[MemoryNode])
     assert_type(client.process_pending(user_id="alice"), ProcessingResult)
     assert_type(client.organize(user_id="alice"), OrganizeResult)

@@ -48,6 +48,24 @@ not LLM derivation completion. Model summaries cannot overwrite source indexes.
 Events are immutable, so the API's inherited `updated_at` equals `created_at`
 rather than the time a row happened to be read.
 
+### Validated extraction journal
+
+LLM ingestion now appends an `EXTRACTION_VALIDATED` operation before graph
+materialization. Its stable operation ID is derived from the source event ID;
+concurrent attempts retain the first committed result. Both backends verify the
+event's owner, scope, and content hash before accepting a record. The operation
+contains structured grounded output, provider/model names, creation time, and
+explicit schema/grounding versions, excluding credentials and raw SDK responses.
+An indexing retry loads the saved output instead of calling the LLM again.
+
+`get_extraction(event_id, user_id=...)` reads this record through the source owner
+boundary in the engine, sync client, HTTP and MCP. Empty extraction results are
+also recorded. A saved extraction does not mean graph materialization completed
+and lexical grounding does not establish semantic truth. Automatic recovery of
+interrupted extraction jobs and atomic, replayable graph derivation remain
+separate requirements. Re-extraction under a new policy needs an explicit future
+revision protocol; it must not overwrite this operation.
+
 ### Current source-reading API
 
 `MemoryEngine.get_event(event_id, user_id=...)` enforces optional owner scoping;
