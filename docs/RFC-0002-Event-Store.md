@@ -49,6 +49,11 @@ rather than the time a row happened to be read.
 
 ### Direct typed storage recovery
 
+Content hashing covers the exact source string, including empty text and
+whitespace. New empty events carry SHA-256 of the empty byte sequence, not an
+empty hash field, so they can satisfy the same durable source-binding checks.
+This correction does not rewrite historical event rows.
+
 New `store()` calls commit the event, an `event_materializations` job and a
 `DIRECT_STORE_REQUESTED` operation in one database transaction. The operation
 contains a versioned complete initial `MemoryNode` snapshot and source binding,

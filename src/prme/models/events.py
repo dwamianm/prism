@@ -56,7 +56,7 @@ class Event(MemoryObject):
         """Compute SHA-256 hash of content if not already provided."""
         if isinstance(data, dict):
             content = data.get("content", "")
-            if content and not data.get("content_hash"):
+            if isinstance(content, str) and not data.get("content_hash"):
                 data["content_hash"] = hashlib.sha256(
                     content.encode("utf-8")
                 ).hexdigest()
