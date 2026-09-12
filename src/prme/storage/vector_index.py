@@ -293,8 +293,11 @@ class VectorIndex:
             )
         return {row[0]: row[1] for row in rows}
 
-    async def index(self, node_id: str, content: str, user_id: str) -> int:
+    async def index(self, node_id: str, content: str, user_id: str, *, replace: bool = False) -> int:
         """Embed content and add to the vector index.
+
+        With replace=True, publish the new vector before removing previous
+        keys for this node, so inference or insertion failures preserve old hits.
 
         Generates an embedding via the provider, stores the vector in
         USearch, and records metadata (model info, user_id, node_id)
@@ -327,6 +330,8 @@ class VectorIndex:
                 key = await run_to_completion(
                     self._do_index, node_id, content, user_id, vector
                 )
+                if replace:
+                    await run_to_completion(self._do_delete, node_id, keep_key=key)
 
         return key
 
@@ -455,15 +460,16 @@ class VectorIndex:
             async with self._conn_lock:
                 return await run_to_completion(self._do_delete, node_id)
 
-    def _do_delete(self, node_id: str) -> int:
+    def _do_delete(self, node_id: str, *, keep_key: int | None = None) -> int:
         """Synchronous delete from USearch + metadata (runs in thread pool).
 
         Returns the number of keys removed. Caller must hold both
         ``_write_lock`` and ``_conn_lock``.
         """
+        suffix = " AND vector_key <> ?" if keep_key is not None else ""
+        params = [node_id, keep_key] if keep_key is not None else [node_id]
         rows = self._conn.execute(
-            "SELECT vector_key FROM vector_metadata WHERE node_id = ?",
-            [node_id],
+            "SELECT vector_key FROM vector_metadata WHERE node_id = ?" + suffix, params,
         ).fetchall()
         if not rows:
             return 0
@@ -484,13 +490,13 @@ class VectorIndex:
 
         self._conn.execute("BEGIN TRANSACTION")
         try:
-            self._conn.execute("DELETE FROM vector_staging WHERE node_id = ?", [node_id])
+            self._conn.execute("DELETE FROM vector_staging WHERE node_id = ?" + suffix, params)
             self._conn.execute(
                 "DELETE FROM vector_payloads WHERE vector_key IN "
-                "(SELECT vector_key FROM vector_metadata WHERE node_id = ?)", [node_id],
+                "(SELECT vector_key FROM vector_metadata WHERE node_id = ?" + suffix + ")", params,
             )
             self._conn.execute(
-                "DELETE FROM vector_metadata WHERE node_id = ?", [node_id]
+                "DELETE FROM vector_metadata WHERE node_id = ?" + suffix, params
             )
             self._conn.execute("COMMIT")
         except BaseException:

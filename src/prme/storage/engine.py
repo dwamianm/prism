@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 
 from prme.config import PRMEConfig
+from prme.ingestion.errors import MaterializationError, extraction_failure_code
 from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -534,16 +535,14 @@ class MemoryEngine:
     ) -> str:
         """Store content across all four backends in one call.
 
-        Auto-propagation pipeline:
-        1. Create Event, append to EventStore via write queue (MUST succeed).
-        2. Create MemoryNode with evidence_refs=[event.id], store in GraphStore
-           via write queue.
-        3. Index into VectorIndex and LexicalIndex via write queue.
-
-        If vector/lexical indexing fails, the error is logged but the
-        store() call does not fail -- the event is already persisted and
-        each index is attempted independently. Derived indexes can be
-        rebuilt from the durable graph.
+        Atomically save the source, complete initial node values and a repair
+        job, then create the graph node and persist both search indexes.
+        Index failures remain nonfatal after confirming the node is durable;
+        processing_status() reports pending work and process_pending() retries
+        it, including after restart. A graph creation failure raises
+        MaterializationError with the accepted event_id for recovery.
+        Optional reinforcement, supersedence and QA pairing run afterward and
+        are outside this repair job's completion boundary.
 
         Args:
             content: Text content to store.
@@ -592,10 +591,7 @@ class MemoryEngine:
             metadata=metadata,
             event_time=event_time,
         )
-        event_id = await self._write_queue.submit(
-            lambda ev=event: self._event_store.append(ev),
-            label=f"store.event:{event.id}",
-        )
+        event_id = str(event.id)
 
         # Step 1.5: Novelty scoring (surprise-gated storage, issue #20)
         novelty_result = None
@@ -673,41 +669,32 @@ class MemoryEngine:
             event_time=event_time,
             ttl_days=resolved_ttl,
         )
-        node_id = await self._write_queue.submit(
-            lambda n=node: self._graph_store.create_node(n),
-            label=f"store.node:{node.id}",
+        # Acknowledged work retains all explicit node values before graph or
+        # index writes. A restart cannot reinterpret a FACT/INSTRUCTION as NOTE.
+        await self._write_queue.submit(
+            lambda: self._event_store.append(event, store_node=node),
+            label=f"store.event:{event.id}",
         )
-
-        # Step 3: Attempt each index independently. Local full-text indexing
-        # remains useful even when an embedding provider is unavailable.
+        self._materialization_queue.note_added()
         try:
-            await self._write_queue.submit(
-                lambda nid=node_id, c=content, uid=user_id, nt=node_type.value, sc=scope.value: (
-                    self._lexical_index.index(nid, c, uid, nt, sc)
-                ),
-                label=f"store.lexical:{node_id}",
-            )
-        except Exception:
-            logger.warning(
-                "Lexical indexing failed for event %s. "
-                "Event is persisted; indexes can be rebuilt.",
-                event_id,
-                exc_info=True,
-            )
-        try:
-            await self._write_queue.submit(
-                lambda nid=node_id, c=content, uid=user_id: (
-                    self._vector_index.index(nid, c, uid)
-                ),
-                label=f"store.vector:{node_id}",
-            )
-        except Exception:
-            logger.warning(
-                "Vector indexing failed for event %s. "
-                "Event is persisted; indexes can be rebuilt.",
-                event_id,
-                exc_info=True,
-            )
+            await self._materialization_queue.process_one(self, event)
+        except Exception as exc:
+            # Keep the existing non-fatal index-outage contract, but only after
+            # confirming the intended node is durable. Creation failures still
+            # fail the call and leave its accepted work available for recovery.
+            reason = extraction_failure_code(exc)
+            try:
+                existing = await self._graph_store.get_node(str(node.id), include_superseded=True)
+                durable = (existing is not None and existing.user_id == user_id
+                           and existing.scope == scope and event.id in existing.evidence_refs)
+            except Exception:
+                durable = False
+            if not durable:
+                raise MaterializationError(
+                    f"Store materialization did not complete ({reason}); the source and work are persisted",
+                    event_id=event_id, reason_code=reason,
+                ) from exc
+            logger.warning("Indexing pending for stored event %s (%s)", event_id, reason)
 
         # Step 3.5: Re-mention reinforcement (opt-in)
         if self._config.reinforce_similarity_threshold is not None:
@@ -1249,31 +1236,39 @@ class MemoryEngine:
         return event_id
 
     async def _materialize_event(self, event: Event) -> None:
-        """Idempotently index a raw event without appending another event.
+        """Materialize a saved direct store or raw source without a new event.
 
-        Node identity and timestamps derive from the immutable event, so retry
-        cannot introduce another assertion or reset knowledge time. Completion
+        Direct stores retain their complete initial node snapshot; raw NOTE
+        identity and timestamps derive from the event. Retries preserve existing
+        graph state and never reactivate retired nodes. Active-node completion
         is acknowledged only after both indexes are durable.
         """
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
 
-        node_id = str(event.id)
+        status = await self._event_store.processing_status(str(event.id), user_id=event.user_id)
+        if status is not None and status.status == "complete":
+            return
+        direct = await self._event_store.get_direct_store(str(event.id), user_id=event.user_id)
+        node_id = str(direct.node.id) if direct is not None else str(event.id)
         node = await self._graph_store.get_node(node_id, include_superseded=True)
         if node is None:
-            epistemic_type = infer_epistemic_type(NodeType.NOTE)
-            source_type = infer_source_type(NodeType.NOTE, role=event.role)
-            confidence = self._confidence_matrix.lookup_with_fallback(epistemic_type, source_type)
-            node = MemoryNode(
-                id=event.id, content=event.content, user_id=event.user_id,
-                session_id=event.session_id, scope=event.scope, metadata=event.metadata,
-                node_type=NodeType.NOTE, evidence_refs=[event.id],
-                epistemic_type=epistemic_type, source_type=source_type,
-                confidence=confidence, confidence_base=confidence,
-                created_at=event.created_at, updated_at=event.created_at,
-                valid_from=event.timestamp, last_reinforced_at=event.timestamp,
-                event_time=event.event_time,
-                ttl_days=self._config.organizer.default_ttl_days.get("note"),
-            )
+            if direct is not None:
+                node = direct.node
+            else:
+                epistemic_type = infer_epistemic_type(NodeType.NOTE)
+                source_type = infer_source_type(NodeType.NOTE, role=event.role)
+                confidence = self._confidence_matrix.lookup_with_fallback(epistemic_type, source_type)
+                node = MemoryNode(
+                    id=event.id, content=event.content, user_id=event.user_id,
+                    session_id=event.session_id, scope=event.scope, metadata=event.metadata,
+                    node_type=NodeType.NOTE, evidence_refs=[event.id],
+                    epistemic_type=epistemic_type, source_type=source_type,
+                    confidence=confidence, confidence_base=confidence,
+                    created_at=event.created_at, updated_at=event.created_at,
+                    valid_from=event.timestamp, last_reinforced_at=event.timestamp,
+                    event_time=event.event_time,
+                    ttl_days=self._config.organizer.default_ttl_days.get("note"),
+                )
             try:
                 await self._write_queue.submit(
                     lambda: self._graph_store.create_node(node),
@@ -1286,7 +1281,7 @@ class MemoryEngine:
                 if existing is None:
                     raise
                 node = existing
-        if node.user_id != event.user_id or event.id not in node.evidence_refs:
+        if node.user_id != event.user_id or node.scope != event.scope or event.id not in node.evidence_refs:
             raise ValueError("Materialization identity does not match its source event")
         if node.lifecycle_state not in ACTIVE_LIFECYCLE_STATES:
             # An explicit retirement during a retry must not resurrect data.
@@ -1297,12 +1292,8 @@ class MemoryEngine:
         errors: list[Exception] = []
         try:
             await self._write_queue.submit(
-                lambda: self._lexical_index.delete_by_node_id(node_id),
-                label=f"materialize.lexical_remove:{node_id}",
-            )
-            await self._write_queue.submit(
                 lambda: self._lexical_index.index(
-                    node_id, node.content, node.user_id, node.node_type.value, node.scope.value,
+                    node_id, node.content, node.user_id, node.node_type.value, node.scope.value, replace=True,
                 ), label=f"materialize.lexical:{node_id}",
             )
             if hasattr(self._lexical_index, "flush"):
@@ -1311,11 +1302,7 @@ class MemoryEngine:
             errors.append(exc)
         try:
             await self._write_queue.submit(
-                lambda: self._vector_index.delete_by_node_id(node_id),
-                label=f"materialize.vector_remove:{node_id}",
-            )
-            await self._write_queue.submit(
-                lambda: self._vector_index.index(node_id, node.content, node.user_id),
+                lambda: self._vector_index.index(node_id, node.content, node.user_id, replace=True),
                 label=f"materialize.vector:{node_id}",
             )
             await self._vector_index.save()
@@ -1365,19 +1352,19 @@ class MemoryEngine:
         return await self._pipeline.process_extractions(user_id=user_id, limit=limit, budget_ms=budget_ms)
 
     async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
-        """Read durable raw-ingestion status within one user's events.
+        """Read durable source materialization status within one user's events.
 
-        Returns None for an unknown/other-user event or an event not accepted
-        through ingest_fast() or the LLM pipeline. A complete status acknowledges
-        raw source materialization, not LLM extraction; later lifecycle changes
-        may still retire the node. LLM derivation progress is not tracked here.
+        Tracks new store(), ingest_fast() and LLM pipeline source writes. Returns
+        None for unknown, other-user or legacy untracked events. Completion covers
+        the direct node or raw NOTE and its indexes, not LLM extraction or optional
+        post-store maintenance. Later lifecycle changes may retire the node.
         """
         if not user_id:
             raise ValueError("user_id must be nonempty")
         return await self._event_store.processing_status(event_id, user_id=user_id)
 
     async def process_pending(self, *, user_id: str, budget_ms: int = 1000) -> ProcessingResult:
-        """Process one bounded batch of this user's deferred raw events.
+        """Process one bounded batch of this user's pending source/index work.
 
         Failed items remain pending for retry. The time budget is cooperative:
         an individual operation can exceed it. A zero budget only reads current

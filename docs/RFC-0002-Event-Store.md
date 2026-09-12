@@ -26,11 +26,10 @@ Implementations MUST use a storage backend that provides:
 PRME graph replacements use a transaction covering lifecycle state, replacement
 pointer, and provenance edge. `supersede_many` applies a batch atomically and
 rejects self-replacement, retired replacements, or pairs across users/scopes.
-The ingestion pipeline stages named replacements until its other materialization
-writes finish, then commits the batch as its final write. If indexing or a batch
-member fails, prior facts remain active while newly created artifacts roll back.
-This does not provide full event replay or crash-resumable LLM extraction; those
-require a durable derivation/work protocol beyond the current write tracker.
+New LLM ingestion uses the journaled derivation protocol in RFC-0016: saved
+extraction and prepared inputs, idempotent index staging, and fenced atomic
+graph publication. This is distinct from full replay of historical organizer
+and manual mutations, whose complete operation inputs are not yet journaled.
 - Efficient range scans by timestamp and stream.
 - Content-addressed deduplication by `content_hash`.
 
@@ -48,6 +47,28 @@ not LLM derivation completion. Model summaries cannot overwrite source indexes.
 Events are immutable, so the API's inherited `updated_at` equals `created_at`
 rather than the time a row happened to be read.
 
+### Direct typed storage recovery
+
+New `store()` calls commit the event, an `event_materializations` job and a
+`DIRECT_STORE_REQUESTED` operation in one database transaction. The operation
+contains a versioned complete initial `MemoryNode` snapshot and source binding,
+including its generated ID, classification, confidence, timestamps and TTL. Its
+UUID is derived from the event ID. A checksum covers the serialized record; the
+record remains a string within the JSON payload so JSONB numeric normalization
+does not change it. Reads verify the checksum and source owner, scope, session,
+content hash, content and evidence reference before recovery.
+
+Recovery creates a missing graph node from the saved values and repairs its
+indexes without an LLM. Existing graph state is retained, including retirement.
+Lexical replacement commits deletion and insertion together; vector replacement
+publishes a new durable vector before removing old keys. Failure retains pending
+work and the previously healthy search path. `processing_status()` completion
+covers this node and indexing, not optional reinforcement, supersedence or QA
+pairing. A graph creation failure raises `MaterializationError` with the accepted
+event ID; index failures remain nonfatal after confirming the node is durable.
+Legacy direct stores have no repair record and are not retroactively queued.
+This does not add cross-process work fencing or exactly-once execution.
+
 ### Validated extraction journal
 
 LLM ingestion now appends an `EXTRACTION_VALIDATED` operation before graph
@@ -61,10 +82,10 @@ An indexing retry loads the saved output instead of calling the LLM again.
 `get_extraction(event_id, user_id=...)` reads this record through the source owner
 boundary in the engine, sync client, HTTP and MCP. Empty extraction results are
 also recorded. A saved extraction does not mean graph materialization completed
-and lexical grounding does not establish semantic truth. Automatic recovery of
-interrupted extraction jobs and atomic, replayable graph derivation remain
-separate requirements. Re-extraction under a new policy needs an explicit future
-revision protocol; it must not overwrite this operation.
+and lexical grounding does not establish semantic truth. Interrupted extraction
+jobs and saved derivation plans are recovered using RFC-0016. Explicit replanning
+can revise a derivation from the same saved extraction. Re-extraction under a new
+policy needs a future revision protocol; it must not overwrite this operation.
 
 ### Current source-reading API
 

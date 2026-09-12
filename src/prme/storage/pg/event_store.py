@@ -13,7 +13,8 @@ from uuid import UUID
 
 import asyncpg
 
-from prme.models import Event, ProcessingStatus
+from prme.models import Event, MemoryNode, ProcessingStatus
+from prme.models.direct_store import DirectStoreRecord, direct_store_operation_id
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.types import Scope
@@ -156,8 +157,17 @@ class PgEventStore:
             return saved
 
     async def append(self, event: Event, *, defer_materialization: bool = False,
-                     defer_extraction: bool = False) -> str:
-        """Append an event to the immutable event log."""
+                     defer_extraction: bool = False, store_node: MemoryNode | None = None) -> str:
+        """Append an event and optional typed store intent/work atomically."""
+        record = None
+        if store_node is not None:
+            if defer_extraction:
+                raise ValueError("Direct store work cannot also request LLM extraction")
+            record = DirectStoreRecord.model_validate_json(DirectStoreRecord(
+                event_id=event.id, content_hash=event.content_hash, node=store_node,
+            ).model_dump_json())
+            record.verify_source(event)
+            defer_materialization = True
         metadata_json = (
             json.dumps(event.metadata) if event.metadata is not None else None
         )
@@ -189,7 +199,31 @@ class PgEventStore:
                     )
                 if defer_extraction:
                     await conn.execute("INSERT INTO event_extractions (event_id) VALUES ($1)", str(event.id))
+                if record is not None:
+                    await conn.execute(
+                        "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                        "VALUES ($1, 'DIRECT_STORE_REQUESTED', $2, $3::jsonb, 'store', $4, $5)",
+                        record.operation_id, str(event.id), record.operation_payload(), event.scope.value, event.created_at,
+                    )
         return str(event.id)
+
+    async def get_direct_store(self, event_id: str, *, user_id: str) -> DirectStoreRecord | None:
+        """Read initial typed values only through their source owner's scope."""
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT o.payload FROM operations o JOIN events e ON o.target_id = e.id::text "
+                "WHERE o.id = $1 AND o.op_type = 'DIRECT_STORE_REQUESTED' AND e.id = $2 AND e.user_id = $3",
+                direct_store_operation_id(event_id), event_id, user_id,
+            )
+        if row is None:
+            return None
+        payload = row["payload"]
+        record = DirectStoreRecord.from_operation_payload(payload)
+        event = await self.get(event_id)
+        if event is None:
+            raise ValueError("Direct store source is missing")
+        record.verify_source(event)
+        return record
 
     async def pending_materializations(
         self, *, user_id: str | None = None, limit: int = 500,

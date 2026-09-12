@@ -290,7 +290,11 @@ through the source owner's boundary.
 
 ## Limits of the replay claim
 
-This protocol covers newly journaled ingestion derivations. Existing organizer
+This protocol covers newly journaled ingestion derivations. Direct `store()`
+requests use the simpler source/initial-node journal and materialization job in
+RFC-0002; they do not use derivation leases or fenced graph commits. Those jobs
+recover the initial typed node and indexes, without replaying optional post-store
+reinforcement, supersedence or QA pairing. Existing organizer
 and manual graph mutations also need complete operation payloads before PRME can
 claim full-state replay. Legacy packs need an explicit baseline snapshot for
 state that was never recorded; nondeterministic historical model output cannot

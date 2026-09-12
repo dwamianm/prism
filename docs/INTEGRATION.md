@@ -176,7 +176,13 @@ async def store(
 
 Store content across all four backends in one call. No LLM needed.
 
-**Auto-propagation:** Event → GraphNode → VectorIndex → LexicalIndex.
+The event, complete initial node snapshot and repair job are saved atomically,
+then the graph node and both indexes are written. Index failures leave the job
+pending; `processing_status()` and `process_pending()` expose scoped inspection
+and repair after restart. A graph creation failure raises `MaterializationError`
+with the accepted `event_id`. Recovery preserves the original node values without
+an LLM. Optional reinforcement, supersedence and QA pairing run afterward and
+are outside this job's completion boundary.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|

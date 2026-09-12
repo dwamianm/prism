@@ -140,9 +140,16 @@ Status and counts are read from durable storage and restricted to the supplied
 user. Errors contain the exception type, without provider response text.
 
 `processing_status()` returns `None` for an unknown event, another user's event,
-or an event written through `store()`/`ingest()`. This API tracks only deferred
-raw ingestion, not LLM extraction. A `complete` status records successful
-materialization; a later lifecycle operation may still retire that memory.
+or a legacy event without a work record. New `store()` writes retain a complete
+initial node snapshot and repair job alongside the event. The same methods repair
+those writes after an indexing failure or restart, preserving type, ID, timestamps
+and TTL without an LLM. If graph creation fails after acceptance, the exported
+`MaterializationError` carries an `event_id` for inspection and recovery.
+
+For `ingest_fast()` and `ingest()`, this status covers raw NOTE materialization;
+LLM derivations use `extraction_status()`. Completion does not include optional
+post-store reinforcement, supersedence or QA pairing. A later lifecycle operation
+may still retire the memory, and processing does not reactivate retired nodes.
 
 ## retrieve()
 

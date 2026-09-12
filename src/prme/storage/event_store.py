@@ -12,7 +12,8 @@ from uuid import UUID
 
 import duckdb
 
-from prme.models import Event, ProcessingStatus
+from prme.models import Event, MemoryNode, ProcessingStatus
+from prme.models.direct_store import DirectStoreRecord, direct_store_operation_id
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.storage._threading import run_to_completion
@@ -185,7 +186,7 @@ class EventStore:
             raise
 
     async def append(self, event: Event, *, defer_materialization: bool = False,
-                     defer_extraction: bool = False) -> str:
+                     defer_extraction: bool = False, store_node: MemoryNode | None = None) -> str:
         """Append an event to the immutable event log.
 
         Args:
@@ -194,11 +195,20 @@ class EventStore:
         Returns:
             The string representation of the event's UUID.
         """
+        record = None
+        if store_node is not None:
+            if defer_extraction:
+                raise ValueError("Direct store work cannot also request LLM extraction")
+            record = DirectStoreRecord.model_validate_json(DirectStoreRecord(
+                event_id=event.id, content_hash=event.content_hash, node=store_node,
+            ).model_dump_json())
+            record.verify_source(event)
+            defer_materialization = True
         async with self._conn_lock:
-            await run_to_completion(self._append_with_work_sync, event, defer_materialization, defer_extraction)
+            await run_to_completion(self._append_with_work_sync, event, defer_materialization, defer_extraction, record)
         return str(event.id)
 
-    def _append_with_work_sync(self, event: Event, deferred: bool, extraction: bool = False) -> None:
+    def _append_with_work_sync(self, event: Event, deferred: bool, extraction: bool = False, record: DirectStoreRecord | None = None) -> None:
         if not deferred and not extraction:
             self._append_sync(event)
             return
@@ -211,10 +221,33 @@ class EventStore:
                 )
             if extraction:
                 insert_duck_work(self._conn, str(event.id))
+            if record is not None:
+                self._conn.execute(
+                    "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                    "VALUES (?, 'DIRECT_STORE_REQUESTED', ?, ?, 'store', ?, ?)",
+                    [record.operation_id, str(event.id), record.operation_payload(), event.scope.value, event.created_at],
+                )
             self._conn.execute("COMMIT")
         except BaseException:
             self._conn.execute("ROLLBACK")
             raise
+
+    async def get_direct_store(self, event_id: str, *, user_id: str) -> DirectStoreRecord | None:
+        """Read initial typed values only through their source owner's scope."""
+        async with self._conn_lock:
+            row = await run_to_completion(lambda: self._conn.execute(
+                "SELECT o.payload FROM operations o JOIN events e ON o.target_id = e.id::VARCHAR "
+                "WHERE o.id = ? AND o.op_type = 'DIRECT_STORE_REQUESTED' AND e.id = ? AND e.user_id = ?",
+                [direct_store_operation_id(event_id), event_id, user_id],
+            ).fetchone())
+        if row is None:
+            return None
+        record = DirectStoreRecord.from_operation_payload(row[0])
+        event = await self.get(event_id)
+        if event is None:
+            raise ValueError("Direct store source is missing")
+        record.verify_source(event)
+        return record
 
     async def pending_materializations(
         self, *, user_id: str | None = None, limit: int = 500,

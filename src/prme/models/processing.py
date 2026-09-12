@@ -1,4 +1,4 @@
-"""Observable state for restart-safe raw-event processing."""
+"""Observable state for restart-safe source and index processing."""
 
 from datetime import datetime
 from typing import Literal
@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ProcessingStatus(BaseModel):
-    """Durable raw-source indexing status from fast or LLM ingestion."""
+    """Durable materialization status from direct storage or ingestion."""
 
     model_config = ConfigDict(frozen=True)
 

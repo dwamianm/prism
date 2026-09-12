@@ -12,6 +12,8 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
+from prme.ingestion.errors import extraction_failure_code
+
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
 
@@ -36,6 +38,22 @@ class DurableMaterializationQueue:
     def note_added(self) -> None:
         self._debt += 1
 
+    async def process_one(self, engine: MemoryEngine, event) -> None:
+        """Process one accepted source under the same local lock as draining."""
+        async with self._lock:
+            status = await self._store.processing_status(str(event.id), user_id=event.user_id)
+            if status is not None and status.status == "complete":
+                return
+            try:
+                await engine._materialize_event(event)
+            except Exception as exc:
+                await self._store.finish_materialization(str(event.id), error=extraction_failure_code(exc))
+                raise
+            else:
+                await self._store.finish_materialization(str(event.id))
+            finally:
+                await self.debt()
+
     async def drain(
         self, engine: MemoryEngine, budget_ms: int = 100, *, user_id: str | None = None,
     ) -> int:
@@ -56,7 +74,7 @@ class DurableMaterializationQueue:
                     # Retain only exception type, not provider responses which
                     # could contain secrets or source content.
                     await self._store.finish_materialization(
-                        str(event.id), error=type(exc).__name__,
+                        str(event.id), error=extraction_failure_code(exc),
                     )
                     logger.warning("Materialization failed for %s", event.id, exc_info=True)
                 else:

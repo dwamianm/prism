@@ -102,7 +102,7 @@ def extraction_failure_code(error: BaseException) -> str:
         if id(current) in seen:
             continue
         seen.add(id(current))
-        if isinstance(current, ExtractionError) and current.reason_code:
+        if isinstance(current, (ExtractionError, MaterializationError)) and current.reason_code:
             return _bounded_reason(current.reason_code)
         if isinstance(current, TimeoutError):
             return "TimeoutError"

@@ -164,6 +164,28 @@ class LexicalIndex:
             if writer is not None:
                 writer.wait_merging_threads()
 
+    def _do_replace(self, node_id: str, content: str, user_id: str, node_type: str, scope: str | None) -> None:
+        """Publish replacement in one commit; failure preserves the old document."""
+        fields = {"node_id": [node_id], "content": [content], "user_id": [user_id], "node_type": [node_type]}
+        if scope is not None:
+            fields["scope"] = [scope]
+        document = tantivy.Document(**fields)
+        self._commit_locked()
+        writer = self._ensure_writer()
+        try:
+            writer.delete_documents("node_id", node_id)
+            writer.add_document(document)
+            writer.commit()
+            self._index.reload()
+        except BaseException:
+            writer.rollback()
+            raise
+        finally:
+            self._writer = None
+            self._uncommitted = 0
+            self._oldest_uncommitted_at = None
+            writer.wait_merging_threads()
+
     async def index(
         self,
         node_id: str,
@@ -171,8 +193,12 @@ class LexicalIndex:
         user_id: str,
         node_type: str = "note",
         scope: str | None = None,
+        *, replace: bool = False,
     ) -> None:
         """Index a document for full-text search.
+
+        With replace=True, atomically replace this node's documents and commit
+        immediately. Failure before commit retains the previous document.
 
         The document is buffered and becomes searchable once the next
         batch commit runs (on the commit interval, after the max delay is
@@ -191,7 +217,7 @@ class LexicalIndex:
         """
         async with self._write_lock:
             await run_to_completion(
-                self._do_index, node_id, content, user_id, node_type, scope
+                self._do_replace if replace else self._do_index, node_id, content, user_id, node_type, scope
             )
 
     async def flush(self) -> None:

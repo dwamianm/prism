@@ -297,11 +297,11 @@ class MemoryClient:
         return self._run(self._engine.process_extractions(user_id=user_id, limit=limit, budget_ms=budget_ms))
 
     def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
-        """Read durable status for an ingest_fast event owned by this user."""
+        """Read owned source/index status for store(), ingest_fast() or ingest()."""
         return self._run(self._engine.processing_status(event_id, user_id=user_id))
 
     def process_pending(self, *, user_id: str, budget_ms: int = 1000) -> ProcessingResult:
-        """Process one bounded batch of deferred raw events; failures stay pending."""
+        """Process one bounded batch of source/index work; failures stay pending."""
         return self._run(self._engine.process_pending(user_id=user_id, budget_ms=budget_ms))
 
     def query_nodes(self, **kwargs: Any) -> list[MemoryNode]:

@@ -58,10 +58,11 @@ async def test_public_processing_status_survives_retry_and_restart(config, user,
         assert (await engine.process_pending(user_id=user)).processed == 0
 
 
-async def test_processing_status_does_not_claim_to_track_other_ingestion(config, user):
+async def test_processing_status_tracks_direct_store_and_rejects_unknown_sources(config, user):
     async with MemoryEngine.open(config) as engine:
         event_id = await engine.store("An ordinary direct write", user_id=user)
-        assert await engine.processing_status(event_id, user_id=user) is None
+        assert (await engine.processing_status(event_id, user_id=user)).status == "complete"
+        assert await engine.processing_status(event_id, user_id=user + "-other") is None
         assert await engine.processing_status(str(uuid4()), user_id=user) is None
         with pytest.raises(ValueError, match="budget_ms"):
             await engine.process_pending(user_id=user, budget_ms=-1)

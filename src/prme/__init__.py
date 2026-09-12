@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from prme.retrieval.pipeline import RetrievalPipeline
 
 from prme.config import PRMEConfig
-from prme.ingestion.errors import ExtractionError
+from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -64,6 +64,7 @@ __all__ = [
     "ExtractionProcessingResult",
     "IngestionPipeline",
     "LifecycleState",
+    "MaterializationError",
     "MemoryClient",
     "MemoryEngine",
     "NodeType",

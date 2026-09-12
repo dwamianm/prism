@@ -168,7 +168,7 @@ status = await engine.processing_status(event_id, user_id="alice")
 
 Deferred raw events survive restart. LLM `ingest()` also queues original-source
 indexing atomically with its event, so extraction failure cannot make that source
-unsearchable after restart. Processing status acknowledges raw NOTE indexing;
+unsearchable after restart. For these ingestion paths, processing status acknowledges raw NOTE indexing;
 LLM extraction has its own durable work record and recovery API below.
 Processing reports remaining work and retry failures per user; the same methods
 are available on `MemoryClient`. Model summaries do not overwrite original-source
@@ -177,8 +177,15 @@ indexes. Relative dates in extracted facts use the source timestamp.
 Raw-source indexing attempts full-text and vector indexes independently. If one
 backend fails, the healthy search path remains available and deferred processing
 stays pending until both indexes succeed. Direct `store()` also attempts both
-indexes, but logs indexing failures without creating a retry job; use
-`prme rebuild` to repair its indexes from the durable graph.
+indexes and now saves a repair job with the event and complete initial node
+values. `processing_status()` and `process_pending()` also track and repair new
+`store()` writes after restart, preserving their type, identity, timestamps and
+TTL without calling an LLM. If graph creation fails after acceptance, catch
+`MaterializationError` and use its `event_id` to inspect/retry the saved request.
+Completion covers the node and indexes; optional reinforcement, supersedence and
+QA pairing run afterward and are not replayed by this job. Retired nodes remain
+retired. Historical direct stores without repair jobs still need `prme rebuild`
+for index repair.
 
 Retrieval reports failures of its primary candidate paths in
 `response.metadata.backend_failures`, using `backend_error` or

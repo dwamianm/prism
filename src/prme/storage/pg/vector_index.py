@@ -37,7 +37,7 @@ class PgVectorIndex:
         self._pool = pool
         self._provider = embedding_provider
 
-    async def index(self, node_id: str, content: str, user_id: str) -> int:
+    async def index(self, node_id: str, content: str, user_id: str, *, replace: bool = False) -> int:
         """Embed content and store the vector on the node row.
 
         Args:

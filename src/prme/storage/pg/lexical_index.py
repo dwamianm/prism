@@ -35,6 +35,7 @@ class PgLexicalIndex:
         user_id: str,
         node_type: str = "note",
         scope: str | None = None,
+        *, replace: bool = False,
     ) -> None:
         """Index a document for full-text search.
 
@@ -59,12 +60,14 @@ class PgLexicalIndex:
                 "SELECT 1 FROM nodes WHERE id = $1::uuid", node_id
             )
             if exists is None:
+                conflict = (
+                    "ON CONFLICT (node_id) DO UPDATE SET content = EXCLUDED.content, "
+                    "node_type = EXCLUDED.node_type, scope = EXCLUDED.scope "
+                    "WHERE lexical_documents.user_id = EXCLUDED.user_id"
+                ) if replace else "ON CONFLICT DO NOTHING"
                 await conn.execute(
-                    """
-                    INSERT INTO lexical_documents (node_id, content, user_id, node_type, scope)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT DO NOTHING
-                    """,
+                    "INSERT INTO lexical_documents (node_id, content, user_id, node_type, scope) "
+                    "VALUES ($1, $2, $3, $4, $5) " + conflict,
                     node_id,
                     content,
                     user_id,

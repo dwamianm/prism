@@ -144,7 +144,8 @@ status = client.processing_status(event_id, user_id="alice")
 
 These methods have the same status, retry, scope, and cooperative-budget
 semantics as [the async processing API](async-engine.md#processing-deferred-events).
-They track only events accepted by `ingest_fast()`.
+They track new direct `store()` writes and raw-source indexing from both
+`ingest_fast()` and `ingest()`. LLM derivations use `extraction_status()`.
 
 ## ingest()
 
