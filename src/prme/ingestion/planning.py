@@ -166,6 +166,7 @@ class PlanningIndexes:
             raise ValueError("Embedding configuration changed during planning")
         event = self.graph.event
         return DerivationPlan(
+            materialization_policy="event_local_references_v4",
             event_id=event.id, user_id=event.user_id, scope=event.scope, content_hash=event.content_hash,
             nodes=nodes, references=references, edges=tuple(self.graph.edges),
             replacements=tuple(self.graph.replacements),

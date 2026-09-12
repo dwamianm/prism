@@ -1,7 +1,7 @@
 """Alias resolution logic for the organizer (issue #11).
 
 Detects entity aliases (abbreviations, case variations, known synonyms)
-and either merges them (high confidence) or links them with RELATES_TO
+and either merges compatible known name variants or links them with RELATES_TO
 edges annotated with alias metadata. No LLM required -- uses string
 matching and vector similarity only.
 
@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from prme.models.edges import MemoryEdge
+from prme.organizer.merge_policy import alias_pair_allowed
 from prme.types import EdgeType, LifecycleState, NodeType
 
 if TYPE_CHECKING:
@@ -191,7 +192,7 @@ async def find_aliases(
 
         for j in range(i + 1, len(entities)):
             # Names alone do not authorize combining owners or scopes.
-            if (entities[i].user_id, entities[i].scope) != (entities[j].user_id, entities[j].scope):
+            if not alias_pair_allowed(entities[i], entities[j]):
                 continue
 
             a_id = str(entities[i].id)
@@ -252,8 +253,7 @@ async def find_aliases(
 
             # Verify the durable node is an ENTITY in the same namespace
             other_node = await engine.get_node(other_id, user_id=entity.user_id)
-            if (other_node is None or other_node.node_type != NodeType.ENTITY
-                or (other_node.user_id, other_node.scope) != (entity.user_id, entity.scope)):
+            if other_node is None or not alias_pair_allowed(entity, other_node):
                 continue
 
             seen_pairs.add(pair_key)
@@ -278,11 +278,12 @@ async def resolve_aliases(
 ) -> int:
     """Resolve alias relationships between entity nodes.
 
-    For high-confidence aliases (>= 0.90): merge the entities (archive
-    the shorter/less-evidenced one, transfer edges, create SUPERSEDES).
+    For compatible, known name variants with confidence >= 0.90: merge
+    the entities (archive the shorter/less-evidenced one and transfer edges).
 
-    For lower-confidence aliases: create RELATES_TO edge with alias
-    metadata linking the entities (non-destructive).
+    Other compatible candidates, including arbitrarily high semantic scores,
+    create RELATES_TO links marked identity_verified=False. Similarity does
+    not establish identity. Incompatible provenance/type pairs are retained.
 
     Args:
         engine: The MemoryEngine for storage operations.
@@ -313,13 +314,20 @@ async def resolve_aliases(
             )
             continue
 
+        if not alias_pair_allowed(node_a, node_b):
+            logger.debug("Retaining incompatible alias candidates (%s, %s)", alias.entity_a_id, alias.entity_b_id)
+            continue
+
         if node_a.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
             continue
         if node_b.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
             continue
 
         try:
-            if alias.confidence >= _MERGE_CONFIDENCE_THRESHOLD:
+            name_match = (_is_abbreviation_match(node_a.content, node_b.content)
+                          or _is_case_variation(node_a.content, node_b.content)
+                          or node_a.content.strip().casefold() == node_b.content.strip().casefold())
+            if alias.confidence >= _MERGE_CONFIDENCE_THRESHOLD and name_match:
                 # High confidence: merge entities
                 canonical, duplicate = _pick_canonical_entity(node_a, node_b)
                 canonical_id = str(canonical.id)
@@ -378,6 +386,7 @@ async def resolve_aliases(
                     metadata={
                         "relation": "alias",
                         "alias_type": alias.alias_type,
+                        "identity_verified": False,
                     },
                 )
                 await engine._graph_store.create_edge(link_edge)

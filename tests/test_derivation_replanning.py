@@ -105,7 +105,7 @@ async def test_replan_transition_and_journal_are_atomic(config, user, monkeypatc
         assert await work.replan(str(event.id), user_id=user)
 
 
-@pytest.mark.parametrize("policy", ["source_passage_v1", "typed_references_v2"])
+@pytest.mark.parametrize("policy", ["source_passage_v1", "typed_references_v2", "relationship_claims_v3"])
 async def test_existing_plan_checksums_and_journals_still_load(config, user, policy):
     async with MemoryEngine.open(config) as engine:
         event, _, plan = await prepare(engine, user)

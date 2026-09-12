@@ -27,8 +27,9 @@ The [research agenda](RESEARCH-AGENDA.md) tracks verified results, active
 comparison protocols and remaining capability gaps. RFC status and historical
 benchmark targets are not evidence of current product quality.
 
-Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md) and
-[custom embedding providers](CUSTOM-EMBEDDINGS.md). These describe implemented
+Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
+[custom embedding providers](CUSTOM-EMBEDDINGS.md), and
+[entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
 Python and CLI contracts separately from draft RFC requirements.
 
 ## RFC Listing

@@ -463,6 +463,8 @@ async def _job_deduplicate(
         details={
             "duplicates_found": len(duplicates),
             "nodes_merged": merged_count,
+            "pairs_not_applied": len(duplicates) - merged_count,
+            "merge_policy": "exact_content_provenance_validity_v1",
         },
     )
 

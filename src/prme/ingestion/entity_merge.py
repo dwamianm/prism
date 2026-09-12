@@ -5,7 +5,8 @@ entity_type (case-insensitive name, exact type). Per user decision: "Entity merg
 ingestion should be conservative -- better to create a duplicate than
 incorrectly merge two different entities."
 
-Match criteria: name.strip().lower() + entity_type exact match + same user_id.
+Named entities match name.strip().lower(), exact entity_type, owner and scope.
+Unresolved personal references additionally require the same source event.
 This prevents merging "Jordan" (person) with "Jordan" (country).
 """
 
@@ -17,6 +18,7 @@ import structlog
 
 from prme.ingestion.graph_writer import GraphWriter
 from prme.models.nodes import MemoryNode
+from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage.graph_store import GraphStore
 from prme.types import LifecycleState, NodeType, Scope
 
@@ -68,6 +70,7 @@ class EntityMerger:
         # fact history. Walk scoped, stable-ID pages until an exact match or
         # exhaustion; keep Python normalization identical on both backends.
         normalized_name = name.strip().lower()
+        unresolved = unresolved_personal_reference(name, entity_type)
         after_id: str | None = None
         while True:
             existing_nodes = await self._graph_store.scan_nodes(
@@ -78,6 +81,13 @@ class EntityMerger:
                 node_name = node.content.strip().lower()
                 node_entity_type = (node.metadata or {}).get("entity_type")
                 if node_name == normalized_name and node_entity_type == entity_type:
+                    if unresolved and (evidence_event_id is None
+                            or node.metadata.get("identity_status") != "unresolved_reference"
+                            or node.metadata.get("reference_event_id") != evidence_event_id
+                            or node.evidence_refs != [UUID(evidence_event_id)]):
+                        # Literal "I" in two messages can refer to two quoted
+                        # speakers. An owner/scope is not a resolved referent.
+                        continue
                     logger.debug(
                         "Reusing existing entity",
                         entity_id=str(node.id),
@@ -96,6 +106,8 @@ class EntityMerger:
             evidence_refs = [UUID(evidence_event_id)]
 
         metadata: dict = {"entity_type": entity_type}
+        if unresolved:
+            metadata.update(identity_status="unresolved_reference", reference_event_id=evidence_event_id)
         if description is not None:
             metadata["description"] = description
 

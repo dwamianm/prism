@@ -55,6 +55,14 @@ work-epoch fence and preserves the journal. Invalid ownership records block
 collection. There is no automatic profile scheduler.
 This convenience API is separate from the organizer's `consolidate` job.
 
+Organizer merges also enforce semantic/provenance compatibility, including
+memory/entity types, source type, session, event time and metadata. Non-entity
+copies require exact content and the same validity start. Vector similarity alone
+does not authorize merging claims; purely semantic aliases remain unverified
+`RELATES_TO` proposals. Extracted unresolved English personal references are
+event-local under new `event_local_references_v4` plans; old plans replay unchanged.
+See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.
+
 ## RFCs
 
 Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0017). See `docs/INDEX.md` for the full listing. Key RFCs include:

@@ -279,6 +279,20 @@ supplied candidate lists. The same owner's PERSONAL and PROJECT memories must
 remain independent even when their text or entity names match. These checks do
 not implement the broader namespace grant hierarchy in RFC-0004.
 
+Automatic merges additionally preserve memory/entity type, source and epistemic
+classification, session, event time, validity end, retention/pinning and complete
+metadata. Unresolved personal references are excluded from canonical identity
+merges and alias links. Non-entity duplicate copies require exact content and the
+same validity start; two separately admitted observations are not interchangeable.
+Similarity remains a proposal signal, not proof of equivalence. Duplicate jobs
+report `pairs_not_applied` alongside candidates/merges and the policy version.
+Known compatible name variants can merge; purely semantic alias candidates only
+create unverified `RELATES_TO` links, even above the former merge threshold.
+Apply functions recheck actual names and values rather than trusting candidate
+labels. These rules supersede automatic similarity-only deduplication and alias
+merging. See [the operational contract](ENTITY-IDENTITY.md) for limitations and
+historical-data behavior.
+
 The separate `consolidate_knowledge()` convenience API also processes one scope
 at a time. Its optional `scope` argument is available on the async engine and
 sync client; omission visits each scope separately. Profile graph nodes and

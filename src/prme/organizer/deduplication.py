@@ -1,13 +1,13 @@
 """Deduplication logic for the organizer (issue #11).
 
-Detects duplicate memory nodes via vector similarity and exact content
-matching, then merges them by archiving the lower-quality duplicate and
+Proposes duplicate memory nodes via vector similarity and exact content
+matching, then merges proven-compatible copies by archiving the duplicate and
 creating a SUPERSEDES edge from the canonical (kept) node to the
 duplicate. Evidence refs and edges are transferred to the canonical node.
 
-Conservative by design: only merges when vector similarity >= 0.92
-(configurable). The canonical node is the one with higher confidence or
-more evidence_refs; ties broken by creation time (older wins).
+Similarity is only a proposal signal. Merging requires equivalent text,
+provenance/type metadata and effective validity (except named entity identity).
+Canonical selection prefers confidence, evidence count, then age.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from prme.models.edges import MemoryEdge
+from prme.organizer.merge_policy import compatible_provenance, duplicate_merge_allowed
 from prme.types import EdgeType, LifecycleState, Scope
 
 if TYPE_CHECKING:
@@ -104,9 +105,11 @@ async def find_duplicates(
     for _content_key, group in content_groups.items():
         if len(group) < 2:
             continue
-        # All nodes with identical content (case-insensitive) are duplicates
+        # Normalized text proposes candidates; application checks equivalence.
         for i in range(len(group)):
             for j in range(i + 1, len(group)):
+                if not compatible_provenance(group[i], group[j]):
+                    continue
                 # Budget check
                 elapsed_ms = (time.monotonic() - start) * 1000.0
                 if elapsed_ms >= budget_ms:
@@ -160,7 +163,7 @@ async def find_duplicates(
             # Recheck durable graph ownership/scope before proposing a merge;
             # an index may lag graph updates or be supplied by a custom backend.
             other_node = await engine.get_node(other_id, user_id=node.user_id)
-            if other_node is None or (other_node.user_id, other_node.scope) != (node.user_id, node.scope):
+            if other_node is None or not compatible_provenance(node, other_node):
                 continue
 
             seen_pairs.add(pair_key)
@@ -249,6 +252,12 @@ async def merge_duplicates(
                 dup.node_a_id,
                 dup.node_b_id,
             )
+            continue
+
+        # Recompute equivalence from durable values, not candidate labels or a
+        # similarity threshold. A caller-constructed "exact" pair is not proof.
+        if not duplicate_merge_allowed(node_a, node_b):
+            logger.debug("Retaining non-equivalent duplicate candidates (%s, %s)", dup.node_a_id, dup.node_b_id)
             continue
 
         # Skip if either is not in a mergeable state

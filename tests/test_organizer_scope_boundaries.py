@@ -1,9 +1,11 @@
 """Organizer matching must preserve personal/project boundaries within one owner."""
 from unittest.mock import AsyncMock
+from datetime import datetime, timezone
 
 import pytest
 
 from prme import MemoryEngine
+from prme.models.nodes import MemoryNode
 from prme.organizer.alias_resolution import AliasCandidate, find_aliases, resolve_aliases
 from prme.organizer.deduplication import DuplicateCandidate, find_duplicates, merge_duplicates
 from prme.types import LifecycleState, NodeType, Scope
@@ -72,8 +74,11 @@ async def test_same_scope_matches_still_merge(config, user, monkeypatch, aliases
     async with MemoryEngine.open(config) as engine:
         contents = ("PostgreSQL", "postgres") if aliases else ("The telescope is blue",) * 2
         for content in contents:
-            await engine.store(content, user_id=user, scope=Scope.PROJECT,
-                               node_type=NodeType.ENTITY if aliases else NodeType.FACT)
+            if aliases:
+                await engine.store(content, user_id=user, scope=Scope.PROJECT, node_type=NodeType.ENTITY)
+            else:
+                await engine._graph_store.create_node(MemoryNode(content=content, user_id=user, scope=Scope.PROJECT,
+                    node_type=NodeType.FACT, valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc)))
         monkeypatch.setattr(engine._vector_index, "search", AsyncMock(return_value=[]))
         finder, apply = (find_aliases, resolve_aliases) if aliases else (find_duplicates, merge_duplicates)
         pairs = await finder(engine, config.organizer, user_id=user)

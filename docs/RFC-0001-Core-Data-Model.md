@@ -252,6 +252,15 @@ nodes; ingestion does not map them directly to structural edge types. New
 prepared plans record `relationship_claims_v3`; existing saved plans retain their
 original materialization policy and replay unchanged.
 
+New plans now explicitly record `event_local_references_v4`. Unresolved English
+personal references (`I`, `we`, `they`, etc.) reuse an identity only within the
+same source event, with matching unresolved-reference metadata and provenance.
+Absent event provenance or a legacy globally merged reference does not authorize
+reuse. Explicit non-personal types retain named-entity behavior. Historical plans
+retain their serialized policies/checksums; the model's missing-policy default
+has not changed. This does not solve within-message quotation/coreference or
+same-name homonyms. See [entity identity and merge rules](ENTITY-IDENTITY.md).
+
 
 ---
 
