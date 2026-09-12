@@ -10,19 +10,15 @@ from __future__ import annotations
 import logging
 import asyncio
 import re
-import threading
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
 from prme.retrieval.models import QueryAnalysis
 from prme.types import QueryIntent, RetrievalMode
 
 logger = logging.getLogger(__name__)
-
-# Supported dateparser versions before 1.4.3 share mutable parser settings.
-# Serialize our calls so concurrent requests cannot exchange RELATIVE_BASE.
-_DATEPARSER_LOCK = threading.Lock()
 
 # --- Intent classification patterns ---
 

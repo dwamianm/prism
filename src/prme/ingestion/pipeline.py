@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import dateparser
+
+from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
 import structlog
 
 from prme.epistemic.inference import infer_source_type
@@ -704,16 +706,17 @@ class IngestionPipeline:
         """
         if temporal_ref is None:
             return None
-        parsed = dateparser.parse(
-            temporal_ref,
-            settings={
-                "PREFER_DATES_FROM": "past",
-                "RELATIVE_BASE": reference_time or datetime.now(timezone.utc),
-                "RETURN_AS_TIMEZONE_AWARE": True,
-                "TIMEZONE": "UTC",
-                "TO_TIMEZONE": "UTC",
-            },
-        )
+        with _DATEPARSER_LOCK:
+            parsed = dateparser.parse(
+                temporal_ref,
+                settings={
+                    "PREFER_DATES_FROM": "past",
+                    "RELATIVE_BASE": reference_time or datetime.now(timezone.utc),
+                    "RETURN_AS_TIMEZONE_AWARE": True,
+                    "TIMEZONE": "UTC",
+                    "TO_TIMEZONE": "UTC",
+                },
+            )
         if parsed is not None:
             return parsed.isoformat()
         return None

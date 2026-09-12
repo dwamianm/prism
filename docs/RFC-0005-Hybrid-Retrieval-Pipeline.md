@@ -336,6 +336,11 @@ primary scoring, reformulations, and cross-scope hint scoring; record it in
 response metadata and the retrieval log. `knowledge_at` is a separate cutoff
 for ingestion time and is not implicitly changed by this clock.
 
+PRME serializes both query and ingestion dateparser calls under one shared lock.
+Older supported parser versions share mutable settings and locale caches; separate
+locks would allow mixed ingestion/retrieval threads to exchange reference clocks.
+The lock guards PRME calls, not unrelated application calls to dateparser.
+
 Non-determinism that MUST be guarded against:
 - Floating-point ordering instability (use tie-breaking by `object_id` as a stable sort).
 - HNSW approximate search non-determinism (use a fixed `ef_search` parameter and seed where supported).
