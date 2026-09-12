@@ -2,8 +2,8 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The latest frozen full suite at `b702cbb` passed **1,652 tests, 20 skipped**
-with live PostgreSQL (146.51 seconds). A Python 3.13 wheel at `66a0a1b` passed
+product. The latest frozen full suite at `0443ba8` passed **1,662 tests, 21 skipped**
+with live PostgreSQL (122.71 seconds). A Python 3.13 wheel at `66a0a1b` passed
 installed sync-client, default local embedding, restart, source/provenance,
 selection/budget, HTTP identity/filter and MCP HTTP workflow checks. The older
 `7a1e864` wheel additionally ran real local-model extraction, recorded below.
@@ -36,6 +36,16 @@ write before releasing the lock. The focused cancellation suite at `66a0a1b`
 passed 4 checks with 1 PostgreSQL-specific skip. Cancelling does not undo an
 already-started write. After these changes, 47 vector/rebuild checks also passed
 under the minimum USearch 2.16.0 / SimSIMD 5.9.11 environment described below.
+
+`tests/test_materialization_cancellation.py` then reproduced orphaned partial
+derivations when cancellation arrived after a database write or during indexing.
+At `0443ba8`, queued node/edge writes finish and record their IDs before cancellation
+propagates; cleanup waits for pending index writes and tolerates repeated
+cancellation. A final committed replacement is retained. The combined targeted
+suite passed 44 checks with 1 skip on Python 3.11; an installed Python 3.13 wheel
+passed 31 cancellation/backend-status checks with 2 skips, including live
+PostgreSQL. Intermediate graph visibility and process-crash recovery still require
+the planned atomic derivation protocol.
 
 ## Grounded extraction journal
 

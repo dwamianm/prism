@@ -16,7 +16,7 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite passed 1,652 tests with 20 skips and live PostgreSQL.
+completed frozen full suite passed 1,662 tests with 21 skips and live PostgreSQL.
 Failed startup now releases acquired resources on both backends and restores
 encryption after a local pack was decrypted; wrong-key failures preserve the pack.
 Vector payloads now survive abrupt exits before the USearch snapshot is saved;
@@ -30,6 +30,10 @@ entity matching now covers older entities beyond the former 100-node window.
 Retrieval distinguishes backend failures from empty results and detected model
 mismatches, with sanitized diagnostics through HTTP/MCP. A newer Python 3.13
 installed wheel passed source, recovery, selection and authenticated API checks.
+Cancelled materialization now finishes tracking committed writes and cleans
+partial artifacts, while preserving a final replacement that already committed.
+This does not yet make intermediate graph writes invisible or survive a process
+exit during materialization; atomic derivation commits remain the next reliability gate.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall
