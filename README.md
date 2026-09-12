@@ -196,6 +196,32 @@ prme stats ./memory.duckdb        # Detailed statistics
 prme export ./memory.duckdb       # Export as JSON
 ```
 
+## MCP server
+
+Install `prme[mcp]`. For a local stdio assistant, set `PRME_MCP_USER_ID=alice`
+and run `prme-mcp --db-path ./my_memories`. Tools inherit that owner when
+`user_id` is omitted and reject another user; node resources and statistics
+respect the same boundary. Without a fixed owner, stdio retains trusted local
+operator access to the pack.
+
+For multiple users over HTTP, configure separate credentials:
+
+```dotenv
+PRME_MCP_USER_KEYS={"alice":"replace-alice-secret","bob":"replace-bob-secret"}
+```
+
+Run `prme-mcp --transport streamable-http --db-path ./my_memories` and connect
+to `http://127.0.0.1:8000/mcp` with `Authorization: Bearer <credential>`.
+Each stateless request authenticates independently. The server shares one engine
+for its lifetime; tools and resources use the current request's identity.
+HTTP requires per-user credentials. Fixed stdio owners and HTTP keys cannot be
+combined. Keys must be provisioned to clients explicitly; this mode does not
+issue OAuth tokens or offer OAuth discovery. Use TLS for network transport.
+
+Migration: the former unauthenticated `--transport sse` option is rejected.
+Use authenticated Streamable HTTP instead. HTTP API and MCP credentials are
+separate settings. Tenant maintenance excludes the global feedback job.
+
 ## HTTP API
 
 Install with `pip install prme[api]` and run:

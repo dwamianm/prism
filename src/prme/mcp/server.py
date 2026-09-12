@@ -8,6 +8,7 @@ import argparse
 import json
 import logging
 import os
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Optional
@@ -19,9 +20,6 @@ from prme.config import PRMEConfig
 from prme.types import NodeType, Scope
 
 logger = logging.getLogger(__name__)
-
-# Module-level engine reference for resources (which don't get Context).
-_engine_ref: Any = None
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +54,25 @@ def _get_engine(ctx: Context) -> Any:
     return ctx.request_context.lifespan_context["engine"]
 
 
+def _get_user_id(engine, requested: str | None = None, *, required: bool = False) -> str | None:
+    """Resolve the server-bound stdio owner or verified HTTP principal."""
+    from mcp.server.auth.middleware.auth_context import get_access_token
+
+    identity = engine._config.mcp
+    owner = identity.user_id
+    if identity.user_keys:
+        token = get_access_token()
+        if token is None or token.client_id not in identity.user_keys:
+            raise PermissionError("Authenticated MCP identity required")
+        owner = token.client_id
+    if owner is not None and requested is not None and owner != requested:
+        raise PermissionError("User does not match authenticated identity")
+    resolved = owner if owner is not None else requested
+    if required and not resolved:
+        raise PermissionError("user_id is required without a bound identity")
+    return resolved
+
+
 def _internal_error(operation: str, exc: Exception) -> str:
     """Log an unexpected error server-side and return a generic payload.
 
@@ -75,20 +92,17 @@ def _internal_error(operation: str, exc: Exception) -> str:
 @asynccontextmanager
 async def engine_lifespan(server: FastMCP):
     """Manage MemoryEngine lifecycle for the MCP server."""
-    global _engine_ref
     from prme.storage.engine import MemoryEngine
 
-    config = PRMEConfig()
+    config = server.prme_config or PRMEConfig()
     logger.info("Starting PRME MemoryEngine (backend=%s)...", config.backend)
     engine = await MemoryEngine.create(config)
-    _engine_ref = engine
     logger.info("PRME MemoryEngine ready")
 
     try:
         yield {"engine": engine}
     finally:
         logger.info("Shutting down PRME MemoryEngine...")
-        _engine_ref = None
         await engine.close()
         logger.info("PRME MemoryEngine shut down")
 
@@ -97,24 +111,14 @@ async def engine_lifespan(server: FastMCP):
 # Server
 # ---------------------------------------------------------------------------
 
-# Note: mcp>=1.x FastMCP takes "instructions" (formerly "description").
-mcp = FastMCP(
-    "prme",
-    instructions="PRME — Portable Relational Memory Engine. "
-    "Store, retrieve, and organize long-term memory for AI agents.",
-    lifespan=engine_lifespan,
-)
-
-
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 async def memory_store(
     content: str,
-    user_id: str,
+    user_id: Optional[str] = None,
     node_type: str = "note",
     scope: str = "personal",
     ctx: Context = None,
@@ -132,6 +136,10 @@ async def memory_store(
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
     """
     engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine, user_id, required=True)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     try:
         nt = NodeType(node_type)
@@ -169,10 +177,9 @@ async def memory_store(
         return _internal_error("memory_store", e)
 
 
-@mcp.tool()
 async def memory_retrieve(
     query: str,
-    user_id: str,
+    user_id: Optional[str] = None,
     scope: Optional[str] = None,
     knowledge_at: Optional[str] = None,
     ctx: Context = None,
@@ -191,6 +198,10 @@ async def memory_retrieve(
             (e.g. "2024-06-15T00:00:00" to see what was known at that time).
     """
     engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine, user_id, required=True)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     kwargs: dict[str, Any] = {
         "query": query,
@@ -232,10 +243,9 @@ async def memory_retrieve(
         return _internal_error("memory_retrieve", e)
 
 
-@mcp.tool()
 async def memory_ingest(
     content: str,
-    user_id: str,
+    user_id: Optional[str] = None,
     role: str = "user",
     scope: str = "personal",
     ctx: Context = None,
@@ -253,6 +263,10 @@ async def memory_ingest(
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
     """
     engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine, user_id, required=True)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     try:
         sc = Scope(scope)
@@ -271,7 +285,6 @@ async def memory_ingest(
         return _internal_error("memory_ingest", e)
 
 
-@mcp.tool()
 async def memory_organize(
     user_id: Optional[str] = None,
     jobs: Optional[str] = None,
@@ -291,6 +304,10 @@ async def memory_organize(
         budget_ms: Time budget in milliseconds. Default: 5000.
     """
     engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine, user_id)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     kwargs: dict[str, Any] = {"budget_ms": budget_ms}
     if user_id:
@@ -298,6 +315,13 @@ async def memory_organize(
     if jobs:
         kwargs["jobs"] = [j.strip() for j in jobs.split(",")]
 
+    if engine._config.mcp.user_id is not None or engine._config.mcp.user_keys:
+        from prme.organizer import ALL_JOBS
+
+        if "feedback_apply" in kwargs.get("jobs", []):
+            return json.dumps({"error": "Global feedback maintenance requires an operator"})
+        if not jobs:
+            kwargs["jobs"] = [name for name in ALL_JOBS if name != "feedback_apply"]
     try:
         result = await engine.organize(**kwargs)
         return json.dumps({
@@ -308,7 +332,6 @@ async def memory_organize(
         return _internal_error("memory_organize", e)
 
 
-@mcp.tool()
 async def memory_get_node(
     node_id: str,
     ctx: Context = None,
@@ -322,9 +345,13 @@ async def memory_get_node(
         node_id: The UUID of the memory node.
     """
     engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     try:
-        node = await engine.get_node(node_id, include_superseded=True)
+        node = await engine.get_node(node_id, include_superseded=True, user_id=user_id)
         if node is None:
             return json.dumps({"error": f"Node {node_id!r} not found"})
         return json.dumps(_node_to_dict(node))
@@ -332,7 +359,6 @@ async def memory_get_node(
         return _internal_error("memory_get_node", e)
 
 
-@mcp.tool()
 async def memory_promote_node(
     node_id: str,
     ctx: Context = None,
@@ -346,15 +372,19 @@ async def memory_promote_node(
         node_id: The UUID of the node to promote.
     """
     engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     try:
-        node = await engine.get_node(node_id)
+        node = await engine.get_node(node_id, user_id=user_id)
         if node is None:
             return json.dumps({"error": f"Node {node_id!r} not found"})
 
-        await engine.promote(node_id)
+        await engine.promote(node_id, user_id=user_id)
 
-        updated = await engine.get_node(node_id, include_superseded=True)
+        updated = await engine.get_node(node_id, include_superseded=True, user_id=user_id)
         if updated is None:
             return json.dumps({"error": f"Node {node_id!r} not found after promote"})
         return json.dumps(_node_to_dict(updated))
@@ -365,7 +395,6 @@ async def memory_promote_node(
         return _internal_error("memory_promote_node", e)
 
 
-@mcp.tool()
 async def memory_archive_node(
     node_id: str,
     ctx: Context = None,
@@ -379,15 +408,19 @@ async def memory_archive_node(
         node_id: The UUID of the node to archive.
     """
     engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     try:
-        node = await engine.get_node(node_id, include_superseded=True)
+        node = await engine.get_node(node_id, include_superseded=True, user_id=user_id)
         if node is None:
             return json.dumps({"error": f"Node {node_id!r} not found"})
 
-        await engine.archive(node_id)
+        await engine.archive(node_id, user_id=user_id)
 
-        updated = await engine.get_node(node_id, include_superseded=True)
+        updated = await engine.get_node(node_id, include_superseded=True, user_id=user_id)
         if updated is None:
             return json.dumps({"error": f"Node {node_id!r} not found after archive"})
         return json.dumps(_node_to_dict(updated))
@@ -403,23 +436,23 @@ async def memory_archive_node(
 # ---------------------------------------------------------------------------
 
 
-@mcp.resource("memory://health")
 async def resource_health() -> str:
     """PRME engine health status."""
     return json.dumps({"status": "ok", "version": __version__})
 
 
-@mcp.resource("memory://stats")
-async def resource_stats() -> str:
+async def resource_stats(ctx: Context) -> str:
     """Memory database statistics — node count, backend type."""
-    engine = _engine_ref
-    if engine is None:
-        return json.dumps({"error": "Engine not initialized"})
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     node_count = 0
     backend = "duckdb"
     try:
-        node_count = await engine.count_nodes()
+        node_count = await engine.count_nodes(user_id=user_id)
     except Exception:
         logger.warning("Failed to count nodes for stats", exc_info=True)
 
@@ -435,20 +468,107 @@ async def resource_stats() -> str:
     })
 
 
-@mcp.resource("memory://nodes/{node_id}")
-async def resource_node(node_id: str) -> str:
+async def resource_node(node_id: str, ctx: Context) -> str:
     """Get a specific memory node by ID."""
-    engine = _engine_ref
-    if engine is None:
-        return json.dumps({"error": "Engine not initialized"})
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
 
     try:
-        node = await engine.get_node(node_id, include_superseded=True)
+        node = await engine.get_node(node_id, include_superseded=True, user_id=user_id)
         if node is None:
             return json.dumps({"error": f"Node {node_id!r} not found"})
         return json.dumps(_node_to_dict(node))
     except Exception as e:
         return _internal_error("memory://nodes resource", e)
+
+
+def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifespan) -> FastMCP:
+    """Build an isolated MCP server with request-scoped tools and resources."""
+    server = FastMCP(
+        "prme", instructions="PRME — Portable Relational Memory Engine. "
+        "Store, retrieve, and organize long-term memory for AI agents.",
+        lifespan=lifespan, stateless_http=True, json_response=True,
+    )
+    server.prme_config = config
+    for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
+                 memory_get_node, memory_promote_node, memory_archive_node):
+        server.tool()(tool)
+    server.resource("memory://health")(resource_health)
+    @server.resource("memory://stats")
+    async def bound_stats() -> str:
+        """Statistics for the current caller's memory."""
+        return await resource_stats(server.get_context())
+
+    server.resource("memory://nodes/{node_id}")(resource_node)
+    return server
+
+
+class _UserTokenVerifier:
+    def __init__(self, keys):
+        self.keys = keys
+
+    async def verify_token(self, token: str):
+        from mcp.server.auth.provider import AccessToken
+
+        owner = None
+        for user_id, key in self.keys.items():
+            if secrets.compare_digest(token.encode("utf-8"), key.get_secret_value().encode("utf-8")):
+                owner = user_id
+        if owner is not None:
+            return AccessToken(token=token, client_id=owner, scopes=["memory"])
+        return None
+
+
+def create_http_app(config: PRMEConfig | None = None):
+    """Authenticated stateless Streamable HTTP for pre-provisioned bearer keys.
+
+    This uses the MCP SDK's bearer and request-context middleware. It does not
+    provide OAuth token issuance/discovery; clients must supply their configured
+    credential explicitly. Stateless requests cannot reuse another user's session.
+    """
+    from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
+    from mcp.server.auth.middleware.bearer_auth import BearerAuthBackend, RequireAuthMiddleware
+    from starlette.middleware.authentication import AuthenticationMiddleware
+
+    config = config or PRMEConfig()
+    if not config.mcp.user_keys:
+        raise ValueError("MCP HTTP requires PRME_MCP_USER_KEYS with a distinct key per user")
+    from prme.storage.engine import MemoryEngine
+
+    shared_engine = None
+
+    @asynccontextmanager
+    async def request_lifespan(server):
+        if shared_engine is None:
+            raise RuntimeError("MCP HTTP engine is not initialized")
+        yield {"engine": shared_engine}
+
+    server = create_mcp_server(config, lifespan=request_lifespan)
+    app = server.streamable_http_app()
+
+    @asynccontextmanager
+    async def app_lifespan(app):
+        nonlocal shared_engine
+        async with MemoryEngine.open(config) as engine:
+            shared_engine = engine
+            try:
+                async with server.session_manager.run():
+                    yield
+            finally:
+                shared_engine = None
+
+    app.router.lifespan_context = app_lifespan
+    for route in app.routes:
+        route.app = RequireAuthMiddleware(route.app, required_scopes=["memory"])
+    app.add_middleware(AuthContextMiddleware)
+    app.add_middleware(AuthenticationMiddleware, backend=BearerAuthBackend(_UserTokenVerifier(config.mcp.user_keys)))
+    return app
+
+
+mcp = create_mcp_server()
 
 
 # ---------------------------------------------------------------------------
@@ -470,7 +590,7 @@ def main():
     parser.add_argument(
         "--transport",
         default="stdio",
-        choices=["stdio", "sse"],
+        choices=["stdio", "streamable-http", "sse"],
         help="MCP transport (default: stdio)",
     )
     args = parser.parse_args()
@@ -485,4 +605,14 @@ def main():
         os.environ["PRME_VECTOR_PATH"] = os.path.join(db_dir, "vectors.usearch")
         os.environ["PRME_LEXICAL_PATH"] = lexical_dir
 
-    mcp.run(transport=args.transport)
+    config = PRMEConfig()
+    if args.transport == "sse":
+        parser.error("Unauthenticated SSE is no longer supported; use streamable-http with PRME_MCP_USER_KEYS")
+    if args.transport == "streamable-http":
+        import uvicorn
+
+        uvicorn.run(create_http_app(config), host="127.0.0.1", port=8000)
+    else:
+        if config.mcp.user_keys:
+            parser.error("Bearer keys require streamable-http; use PRME_MCP_USER_ID for stdio")
+        create_mcp_server(config).run(transport="stdio")

@@ -58,7 +58,7 @@ api = [
     "uvicorn[standard]>=0.30",
 ]
 mcp = [
-    "mcp>=1.0.0",
+    "mcp>=1.26.0,<2",
 ]
 reranker = [
     "sentence-transformers>=4.0",

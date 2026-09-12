@@ -2400,7 +2400,7 @@ requires-dist = [
     { name = "instructor", specifier = ">=1.14" },
     { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=0.3" },
     { name = "llama-index-core", marker = "extra == 'llamaindex'", specifier = ">=0.12" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.26.0,<2" },
     { name = "ollama", specifier = ">=0.6" },
     { name = "openai", specifier = ">=2.20" },
     { name = "pgvector", marker = "extra == 'postgres'", specifier = ">=0.3.0" },

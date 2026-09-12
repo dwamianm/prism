@@ -127,6 +127,13 @@ cannot coexist with user keys.
 This implements user binding at the application boundary. It does not implement
 the full grant hierarchy above, database RLS, or index-level partitioning below.
 MCP authentication is configured separately; HTTP settings do not protect it.
+`MCPConfig.user_id` binds a trusted stdio process to one owner.
+`MCPConfig.user_keys` enables independently authenticated stateless HTTP requests
+using the MCP SDK bearer/context middleware. Every tool and memory resource
+resolves its user from that verified identity. A shared HTTP engine lives at
+application scope; resources no longer use a module-global engine reference.
+This static credential mode requires client provisioning and does not implement
+OAuth token issuance or discovery. Unauthenticated SSE is no longer offered.
 
 ---
 

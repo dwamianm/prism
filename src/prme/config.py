@@ -84,6 +84,14 @@ class EmbeddingConfig(_ProjectSettings):
     }
 
 
+def _validate_user_keys(keys: dict[str, SecretStr]) -> None:
+    values = [key.get_secret_value() for key in keys.values()]
+    if any(not user.strip() for user in keys) or any(not key.strip() for key in values):
+        raise ValueError("User IDs and bearer credentials must not be empty")
+    if len(values) != len(set(values)):
+        raise ValueError("Each user must have a distinct bearer credential")
+
+
 class APIConfig(_ProjectSettings):
     """Configuration for the HTTP API server (security hardening, issue #34)."""
 
@@ -106,11 +114,7 @@ class APIConfig(_ProjectSettings):
     def validate_user_keys(self):
         if self.user_keys and self.api_key is not None:
             raise ValueError("Configure user_keys or the global api_key, not both")
-        values = [key.get_secret_value() for key in self.user_keys.values()]
-        if any(not user.strip() for user in self.user_keys) or any(not key.strip() for key in values):
-            raise ValueError("User IDs and bearer credentials must not be empty")
-        if len(values) != len(set(values)):
-            raise ValueError("Each user must have a distinct bearer credential")
+        _validate_user_keys(self.user_keys)
         return self
 
     cors_origins: list[str] = Field(
@@ -133,6 +137,25 @@ class APIConfig(_ProjectSettings):
     model_config = {
         "env_prefix": "PRME_API_",
     }
+
+
+class MCPConfig(_ProjectSettings):
+    """MCP identity: a fixed owner for stdio, or distinct credentials for HTTP."""
+
+    user_id: str | None = None
+    user_keys: dict[str, SecretStr] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_identity(self):
+        if self.user_id is not None and not self.user_id.strip():
+            raise ValueError("MCP user_id must not be empty")
+        if self.user_id is not None and self.user_keys:
+            raise ValueError("Use a fixed MCP user_id or per-user HTTP keys, not both")
+        # Same distinct, nonempty credential contract as the HTTP API.
+        _validate_user_keys(self.user_keys)
+        return self
+
+    model_config = {"env_prefix": "PRME_MCP_"}
 
 
 class OrganizerConfig(_ProjectSettings):
@@ -311,6 +334,8 @@ class PRMEConfig(_ProjectSettings):
         default_factory=OrganizerConfig,
         description="Self-organizing memory configuration (RFC-0015)",
     )
+    mcp: MCPConfig = Field(default_factory=MCPConfig)
+
     api: APIConfig = Field(
         default_factory=APIConfig,
         description="HTTP API server configuration (auth, CORS)",
