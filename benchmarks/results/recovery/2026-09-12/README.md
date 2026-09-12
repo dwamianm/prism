@@ -240,6 +240,43 @@ Replanning is explicit. Abandoned index staging and complete operation-log repla
 remain separate gaps. These synthetic workflows establish neither semantic
 accuracy nor competitive superiority.
 
+## Extraction reference integrity
+
+At `b8c4ffc`, built-in provider responses require each fact subject and
+relationship endpoint to resolve to a listed entity. Optional type qualifiers
+disambiguate identical names with different types. Invalid references trigger
+bounded schema retries; the materializer no longer uses a last-write-wins name
+map. Custom/historical facts with missing or ambiguous subjects remain searchable
+and record `subject_link_status`, without receiving a guessed graph edge.
+New plans use `typed_references_v2`; saved v1 plan checksums still load unchanged.
+
+The frozen full suite at `b8c4ffc` passed **1,830 tests with 42 skips** in
+166.32 seconds, using Python 3.11 and live PostgreSQL.
+
+The targeted source suite passed **71 checks with 9 skips**. The installed
+Python 3.13 wheel passed **52 checks with 2 skips**, including live PostgreSQL.
+These cover reordered namesakes, typed relationship endpoints, retained custom
+facts, provider validation, supersedence and historical-plan replay.
+
+The supervised [installed-wheel diagnostic](entity-references-b8c4ffc.json)
+passed all three synthetic structural cases with process exit 0: the original
+Aster service example, Jordan the person versus Jordan the country, and a
+conditional Alice/Atlas statement. Each case materialized one fact with a subject
+edge. The conditional fact retained its hypothetical classification.
+
+The raw outputs also expose limitations: `part_of` was emitted for residence,
+and relationships accompanying the hypothetical fact lack epistemic qualifiers.
+Entity typing varied between trials. These are separate semantic failures, not
+resolved by the reference checks, and no accuracy or competitive claim follows
+from this diagnostic. Aliases and same-name/same-type identity resolution also
+remain outside this change.
+
+Reproduce with:
+
+```bash
+python -m benchmarks.diagnostics.entity_references --output entity-references.json
+```
+
 ## Grounded extraction journal
 
 `extraction-fault-7a1e864.json` records a real Ollama workflow: grounded output

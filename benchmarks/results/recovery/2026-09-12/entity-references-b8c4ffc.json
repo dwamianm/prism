@@ -1,0 +1,202 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "service",
+      "passed": true,
+      "facts": 1,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Aster service",
+            "entity_type": "organization",
+            "description": "A service named Aster mentioned in the context",
+            "scope": null
+          },
+          {
+            "name": "PostgreSQL",
+            "entity_type": "product",
+            "description": "A database product mentioned as being used",
+            "scope": null
+          }
+        ],
+        "facts": [
+          {
+            "subject": "Aster service",
+            "subject_entity_type": null,
+            "predicate": "uses",
+            "object": "PostgreSQL",
+            "evidence_quote": "The Aster service uses PostgreSQL.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "organisation",
+            "epistemic_type": "asserted",
+            "temporal_intent": null,
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "Aster service",
+            "source_entity_type": null,
+            "target_entity": "PostgreSQL",
+            "target_entity_type": null,
+            "relationship_type": "uses",
+            "confidence": 0.9
+          }
+        ],
+        "summary": "The text states that the Aster service uses PostgreSQL.\n"
+      },
+      "fact_epistemic_types": [
+        "asserted"
+      ],
+      "materialization_policy": "typed_references_v2"
+    },
+    {
+      "case": "namesake",
+      "passed": true,
+      "facts": 1,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Jordan",
+            "entity_type": "person",
+            "description": "Engineer mentioned in the text",
+            "scope": null
+          },
+          {
+            "name": "Jordan",
+            "entity_type": "location",
+            "description": "Country mentioned in the text",
+            "scope": null
+          }
+        ],
+        "facts": [
+          {
+            "subject": "Jordan",
+            "subject_entity_type": "person",
+            "predicate": "lives_in",
+            "object": "Jordan",
+            "evidence_quote": "Jordan, the engineer, lives in Jordan, the country.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": null,
+            "epistemic_type": "observed",
+            "temporal_intent": null,
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "Jordan",
+            "source_entity_type": "person",
+            "target_entity": "Jordan",
+            "target_entity_type": "location",
+            "relationship_type": "part_of",
+            "confidence": 0.95
+          }
+        ],
+        "summary": "Statement identifies a person named Jordan (engineer) and establishes that they live in Jordan, the country."
+      },
+      "fact_epistemic_types": [
+        "observed"
+      ],
+      "materialization_policy": "typed_references_v2"
+    },
+    {
+      "case": "conditional",
+      "passed": true,
+      "facts": 1,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Alice",
+            "entity_type": "person",
+            "description": null,
+            "scope": null
+          },
+          {
+            "name": "PostgreSQL",
+            "entity_type": "product",
+            "description": null,
+            "scope": null
+          },
+          {
+            "name": "Atlas project",
+            "entity_type": "concept",
+            "description": null,
+            "scope": null
+          }
+        ],
+        "facts": [
+          {
+            "subject": "Alice",
+            "subject_entity_type": null,
+            "predicate": "uses",
+            "object": "PostgreSQL",
+            "evidence_quote": "Alice might use PostgreSQL for the Atlas project if the evaluation succeeds.",
+            "confidence": 0.5,
+            "temporal_ref": null,
+            "fact_type": "hypothetical",
+            "scope": "project",
+            "epistemic_type": "hypothetical",
+            "temporal_intent": null,
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "Alice",
+            "source_entity_type": "person",
+            "target_entity": "PostgreSQL",
+            "target_entity_type": "product",
+            "relationship_type": "part_of",
+            "confidence": 0.5
+          },
+          {
+            "source_entity": "Alice",
+            "source_entity_type": "person",
+            "target_entity": "Atlas project",
+            "target_entity_type": "concept",
+            "relationship_type": "related_to",
+            "confidence": 0.5
+          }
+        ],
+        "summary": "Alice may use PostgreSQL in the Atlas project under the condition that evaluation succeeds."
+      },
+      "fact_epistemic_types": [
+        "hypothetical"
+      ],
+      "materialization_policy": "typed_references_v2"
+    }
+  ],
+  "limits": "Three synthetic structural-link checks, not semantic accuracy or competitive evidence.",
+  "elapsed_seconds": 42.228,
+  "provider": "ollama",
+  "model": "qwen3.5:4b",
+  "provider_max_retries": 3,
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0,
+  "source_commit": "b8c4ffca3756f02cc3326da6622ccf2b93c24215",
+  "python": "3.13.3",
+  "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme",
+  "extraction_provider_sha256": "beba93b39a782b3409c8576e19870349f48dbf1d5d1dbe7d1fc937019f3db4c1",
+  "packages": {
+    "prme": "0.11.0",
+    "duckdb": "1.5.5",
+    "usearch": "2.26.2",
+    "tantivy": "0.26.0",
+    "fastembed": "0.8.0",
+    "onnxruntime": "1.30.0"
+  },
+  "semantic_observations": [
+    "Namesake fact correctly selects person; its relationship label part_of is not a faithful lives_in predicate.",
+    "The conditional fact remains hypothetical, but extracted relationships have no epistemic qualification.",
+    "Reference integrity does not validate relationship labels, entity typing, or entailment."
+  ]
+}
