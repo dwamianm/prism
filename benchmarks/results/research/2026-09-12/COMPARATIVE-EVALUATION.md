@@ -87,3 +87,41 @@ observed batch-versus-single maximum difference of 0.000223577 rather than
 loosening the tolerance. This checks compatibility, not extraction quality,
 answer accuracy or product leadership. Real comparative evaluation remains to
 be registered and run with matched inputs, reader, budgets and cost accounting.
+
+## Next external protocols: Hindsight and Graphiti
+
+Read-only upstream snapshots are pinned in
+`hindsight-graphiti-protocol-audit.json`; no runtime or reported score was
+reproduced. These are candidates for additional comparisons, not results.
+
+Hindsight's current [recall contract](https://github.com/vectorize-io/hindsight/blob/bde55237f53bf55aacd048b01e29d7dc23b83a85/hindsight-api-slim/hindsight_api/engine/memory_engine.py#L7226)
+separates the fact-text token limit from entity observations and source chunks.
+The chunk limit defaults to 8,192 tokens independently of the fact limit.
+Its traversal budget is also distinct: a configurable fixed or adaptive mapping
+turns low/mid/high settings into work budgets. Consequently, matching an argument
+named `max_tokens` does not establish an equal complete context allowance.
+
+The pinned [shared benchmark runner](https://github.com/vectorize-io/hindsight/blob/bde55237f53bf55aacd048b01e29d7dc23b83a85/hindsight-dev/benchmarks/common/benchmark_runner.py#L645)
+requests entities with a separate 2,048-token allowance and includes chunks,
+then passes the entire recall result to its answer generator. The
+[LongMemEval runner](https://github.com/vectorize-io/hindsight/blob/bde55237f53bf55aacd048b01e29d7dc23b83a85/hindsight-dev/benchmarks/longmemeval/longmemeval_benchmark.py#L332)
+defaults to JSON context and an 8,192-token fact request. Its reader also has
+specific temporal, counting and preference-answer instructions. Its optional
+structured renderer clips source chunks at 1,000 characters. A matched PRME run
+must freeze one common reader and measure the actual serialized context, preserving
+complete source qualifiers. Existing outcome-based retry/merge options in this
+harness must not be used to selectively replace failed predictions in a comparison.
+These differences do not invalidate the vendor's results; they define a different
+protocol from PRME's current whole-output budget study.
+
+Graphiti's [README](https://github.com/getzep/graphiti/blob/c035afb7990b6077331a81e98b04efcfd9bf8184/README.md#L79)
+distinguishes the OSS graph framework from Zep's managed infrastructure. Managed
+Zep scores must not be assigned to the OSS package automatically. The inspected
+[graph-building evaluation helper](https://github.com/getzep/graphiti/blob/c035afb7990b6077331a81e98b04efcfd9bf8184/tests/evals/eval_e2e_graph_building.py)
+defaults to oracle histories, caps ingested messages, and judges candidate graph
+extractions against baseline extractions. That measures graph-building regression,
+not generated-answer accuracy on the full long-history corpus. Its context flow
+also stores strings but later indexes each as though it were an episode sequence
+(`message` becomes the first character). That observation is from source inspection,
+not a reproduced runtime failure. A fresh public-API adapter and matched answer
+protocol are needed before using Graphiti as another comparative baseline.
