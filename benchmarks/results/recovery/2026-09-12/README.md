@@ -1044,3 +1044,28 @@ This is one authored developer workflow, not answer-quality evidence. The full
 frozen suite at `6bc2763` completed with actual exit zero: **2,269 passed,
 52 skipped** in 877.28 seconds. This predates only the subsequent benchmark
 reader harness and legacy judged-context correction.
+
+
+## Qualified source evidence in entity profiles
+
+At `88cc5e2`, entity profiles preserve whole source records, source/event IDs,
+original epistemic labels, provenance and temporal metadata. Complete-name
+matching prevents `Ann` from matching `Joanna`; records with identical prefixes
+or identical text remain distinct episodes. Generated associations are INFERRED,
+with confidence capped by their included sources and configured inferred value.
+Full profile text obeys its named tokenizer budget; an oversized source does not
+prevent a later complete source from fitting. Omitted sources remain active.
+
+Eight regression cases reproduced the old behavior across DuckDB and PostgreSQL.
+The corrected source profile/excerpt set passed 43 checks in 18.25 seconds and
+the existing organizer upsert check passed. The installed Python 3.13 wheel
+passed 101 profile/organizer checks in 29.50 seconds, native exit zero, including
+live PostgreSQL. The helper's focused mypy check passed. These checks establish
+behavioral contracts, not downstream answer accuracy or calibrated confidence.
+
+The first [installed BGE workflow attempt](profile-fidelity-88cc5e2-attempt1.json)
+failed with a TypeError: the sync client did not expose `max_profile_tokens`.
+Two new backend regressions reproduced that missing argument. The sync wrapper
+now forwards the same default and explicit token budget to the async engine.
+Profiles still use heuristic entity associations and nontransactional publication;
+older artifacts take the new format only when explicitly rebuilt.

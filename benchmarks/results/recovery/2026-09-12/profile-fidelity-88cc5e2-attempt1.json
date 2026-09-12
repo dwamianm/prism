@@ -1,0 +1,7 @@
+{
+  "passed": false,
+  "error_type": "TypeError",
+  "workflow_assertions_passed": false,
+  "process_exit_code": 1,
+  "limits": "Incomplete end-to-end process; no success or accuracy claim."
+}

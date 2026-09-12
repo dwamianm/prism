@@ -433,13 +433,15 @@ class MemoryClient:
         user_id: str,
         scope: Scope | None = None,
         entity_names: list[str] | None = None,
+        max_profile_tokens: int = 500,
     ) -> int:
-        """Build profiles within each scope, or only the explicitly requested scope."""
+        """Build scoped profiles under an exact token limit, matching the async API."""
         return self._run(
             self._engine.consolidate_knowledge(
                 user_id=user_id,
                 scope=scope,
                 entity_names=entity_names,
+                max_profile_tokens=max_profile_tokens,
             )
         )
 

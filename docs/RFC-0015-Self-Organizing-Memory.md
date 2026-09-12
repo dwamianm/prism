@@ -302,7 +302,8 @@ and the least-confident included source. It uses the inferred FAST decay profile
 it does not upgrade quoted conditional or hypothetical statements into observed
 facts. Event evidence references and included source-node identities are retained.
 
-`max_profile_tokens` is now an exact limit under the configured packing tokenizer,
+`max_profile_tokens`, exposed by both the async engine and sync client, is now
+an exact limit under the configured packing tokenizer,
 including the complete profile header, separators and source metadata. Oversized
 sources are skipped intact so smaller later sources can fit; omitted sources
 remain active. Metadata records included/available source counts, encoding and

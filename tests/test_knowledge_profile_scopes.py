@@ -169,3 +169,20 @@ async def test_invalid_profile_options_fail_before_storage(config, user, kwargs,
         with pytest.raises(ValueError):
             await engine.consolidate_knowledge(user_id=user, **kwargs)
         query.assert_not_awaited()
+
+
+def test_sync_profile_token_budget_matches_async_api(config, user):
+    from prme.retrieval.tokenization import count_tokens
+
+    with MemoryClient(config=config) as client:
+        for i in range(2):
+            client.store(f"Aurora team note {i}", user_id=user, scope=Scope.PROJECT)
+        assert client.consolidate_knowledge(user_id=user, scope=Scope.PROJECT,
+            entity_names=['Aurora'], max_profile_tokens=0) == 0
+        assert not client.query_nodes(user_id=user, node_type=NodeType.SUMMARY)
+        assert client.consolidate_knowledge(user_id=user, scope=Scope.PROJECT,
+            entity_names=['Aurora'], max_profile_tokens=250) == 1
+        node = client.query_nodes(user_id=user, node_type=NodeType.SUMMARY)[0]
+        assert count_tokens(node.content, config.packing.tokenizer) <= 250
+        with pytest.raises(ValueError):
+            client.consolidate_knowledge(user_id=user, max_profile_tokens=-1)
