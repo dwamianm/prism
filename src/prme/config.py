@@ -6,6 +6,8 @@ environment variables (PRME_ prefix), .env files, and direct arguments.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
@@ -302,6 +304,11 @@ class PRMEConfig(_ProjectSettings):
     database_url: SecretStr | None = Field(
         default=None,
         description="PostgreSQL connection string. When set, all storage uses PostgreSQL.",
+    )
+    namespace_id: UUID | None = Field(
+        default=None,
+        description="Expected physical local-pack identity. New packs bind this ID; existing packs "
+                    "must already match. This does not filter shared tables or grant access.",
     )
     db_path: str = Field(
         default="./memory.duckdb", description="Path to DuckDB database file"

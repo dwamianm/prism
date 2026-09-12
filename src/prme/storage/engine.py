@@ -225,6 +225,8 @@ class MemoryEngine:
             raise ValueError("Custom embedding configuration requires embedding_provider when opening the engine")
 
         if config.backend == "postgres":
+            if config.namespace_id is not None:
+                raise ValueError("namespace_id currently requires an isolated local pack")
             return await cls._create_postgres(config, embedding_provider=embedding_provider)
         return await cls._create_duckdb(config, embedding_provider=embedding_provider)
 
@@ -236,6 +238,8 @@ class MemoryEngine:
         from pathlib import Path
 
         from prme.storage.encryption import EncryptionError, EncryptionProvider
+
+        fresh_namespace_pack = not (Path(config.db_path).exists() or Path(config.db_path + ".enc").exists())
 
         # A fresh configured pack must work through either public client.
         # Prepare all directories before opening/decrypting storage so a path
@@ -306,6 +310,9 @@ class MemoryEngine:
             conn = (duckdb.connect(config.db_path) if config.duckdb_threads is None
                     else duckdb.connect(config.db_path, config={"threads": config.duckdb_threads}))
             startup.callback(conn.close)
+            if config.namespace_id is not None:
+                from prme.storage.namespace_identity import bind_namespace
+                bind_namespace(conn, config.namespace_id, fresh=fresh_namespace_pack)
             # TIMESTAMPTZ preserves instants but DuckDB presents them in the
             # host timezone by default. A portable pack uses canonical UTC.
             conn.execute("SET TimeZone = 'UTC'")

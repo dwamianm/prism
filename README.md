@@ -422,6 +422,10 @@ Applications opening several local packs can set `duckdb_threads` explicitly
 and share a caller-owned embedding provider. See [local resource control](docs/LOCAL-RESOURCES.md)
 for configuration, same-file constraints and the current named-project boundary.
 
+For named local projects, `MemoryWorkspace` manages separate identity-checked
+packs with a bounded engine cache. See [workspace usage and ownership](docs/WORKSPACES.md)
+for concurrent leases, recovery, copying and the current hosted-access boundary.
+
 ## Following source evidence
 
 `store()` returns its durable event ID. Resolve the associated nodes directly:

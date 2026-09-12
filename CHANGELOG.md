@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `MemoryWorkspace` and lease-scoped `NamespaceMemory` for named local projects,
+  with stable pack identity, bounded idle-engine eviction, shared embeddings,
+  process ownership and cancellation-safe lease cleanup. PostgreSQL routing and
+  hosted namespace grants are not yet implemented.
+
 - Optional `duckdb_threads` / `PRME_DUCKDB_THREADS` control for each open local
   database. The default preserves DuckDB's setting; conflicting concurrent opens
   fail without reconfiguring the active pack.

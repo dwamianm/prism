@@ -42,6 +42,12 @@ default retains DuckDB's worker setting; conflicting settings for concurrent
 opens of the same file fail before schema initialization. This runtime resource
 control does not change event semantics or persist in the portable pack.
 
+An optional expected `namespace_id` binds a fresh local pack inside DuckDB and
+must match on later opens, before normal schema/backfill/index startup. Existing
+unbound packs are not silently adopted. The workspace registry records initialized
+projects so a missing database cannot be replaced silently. This identity metadata
+is part of the physical artifact, not a shared-table filter or access grant.
+
 ---
 
 ### Raw-source recovery

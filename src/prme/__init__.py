@@ -10,6 +10,7 @@ __version__ = "0.11.0"
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from prme.workspace import MemoryWorkspace, NamespaceInfo, NamespaceMemory, WorkspaceError
     from prme.client import MemoryClient, config_from_directory
     from prme.ingestion.pipeline import IngestionPipeline
     from prme.retrieval.models import RetrievalResponse
@@ -24,6 +25,7 @@ from prme.models.learning import LearningConfig, LearningEvaluation, RankingMult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.storage.engine import MemoryEngine
+from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.embedding import CachedEmbeddingProvider, EmbeddingProvider, QueryEmbeddingProvider
 from prme.types import (
     DECAY_LAMBDAS,
@@ -40,6 +42,9 @@ from prme.types import (
 
 def __getattr__(name: str):
     """Lazy imports for heavy modules to avoid circular import chains."""
+    if name in {"MemoryWorkspace", "NamespaceInfo", "NamespaceMemory", "WorkspaceError"}:
+        from prme import workspace
+        return getattr(workspace, name)
     if name == "MemoryClient":
         from prme.client import MemoryClient
 
@@ -83,6 +88,11 @@ __all__ = [
     "MaterializationError",
     "MemoryClient",
     "MemoryEngine",
+    "MemoryWorkspace",
+    "NamespaceInfo",
+    "NamespaceMemory",
+    "NamespaceIdentityError",
+    "WorkspaceError",
     "NodeType",
     "PRMEConfig",
     "ProcessingResult",
