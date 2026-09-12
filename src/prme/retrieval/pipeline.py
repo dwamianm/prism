@@ -46,7 +46,7 @@ from prme.retrieval.packing import pack_context
 from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
-from prme.types import EdgeType, LifecycleState, RepresentationLevel, RetrievalMode, Scope
+from prme.types import EdgeType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope
 
 if TYPE_CHECKING:
     from prme.storage.graph_store import GraphStore
@@ -61,6 +61,8 @@ def _apply_bitemporal_filters(
     knowledge_at: datetime | None,
     event_time_from: datetime | None,
     event_time_to: datetime | None,
+    time_from: datetime | None = None,
+    time_to: datetime | None = None,
 ) -> list[RetrievalCandidate]:
     """Drop candidates outside the bi-temporal window (issue #21).
 
@@ -68,6 +70,17 @@ def _apply_bitemporal_filters(
     regardless of which stage produced the candidate. Nodes without an
     ``event_time`` fall back to ``created_at`` (ingestion time).
     """
+    # Match graph/vector validity semantics for every source, including
+    # lexical scans, pinned nodes, session expansion, and cross-scope hints.
+    exempt = {NodeType.ENTITY, NodeType.PREFERENCE}
+    if time_from is not None:
+        candidates = [c for c in candidates if (
+            c.node.node_type in exempt or c.node.valid_to is None or c.node.valid_to > time_from
+        )]
+    if time_to is not None:
+        candidates = [c for c in candidates if (
+            c.node.node_type in exempt or c.node.valid_from is None or c.node.valid_from <= time_to
+        )]
     if knowledge_at is not None:
         candidates = [c for c in candidates if c.node.created_at <= knowledge_at]
     if event_time_from is not None:
@@ -242,10 +255,11 @@ class RetrievalPipeline:
             reference_time=scoring_now,
         )
 
-        # Determine effective temporal window: explicit params take priority
-        # over analysis-derived values from query text.
-        effective_time_from = time_from if time_from is not None else analysis.time_from
-        effective_time_to = time_to if time_to is not None else analysis.time_to
+        # Query dates guide temporal affinity; they are not assertion-validity
+        # cutoffs. An episode from 2024 may legitimately be imported in 2026.
+        # Only caller-supplied bounds impose a hard validity filter.
+        effective_time_from = time_from
+        effective_time_to = time_to
 
         # --- Aggregation boost: widen candidate pool for count/total queries ---
         candidate_config = effective_packing_config
@@ -436,7 +450,8 @@ class RetrievalPipeline:
         # --- Stage 3.5: Bi-temporal Post-Filtering (issue #21) ---
         # Applied after candidate generation and before epistemic filtering.
         candidates = _apply_bitemporal_filters(
-            candidates, knowledge_at, event_time_from, event_time_to
+            candidates, knowledge_at, event_time_from, event_time_to,
+            effective_time_from, effective_time_to,
         )
 
         # --- Stage 4: Epistemic Filtering ---
@@ -522,7 +537,8 @@ class RetrievalPipeline:
                 # unaffected; only the newly appended ones can be dropped.
                 if len(expanded) != len(scored):
                     expanded = _apply_bitemporal_filters(
-                        expanded, knowledge_at, event_time_from, event_time_to
+                        expanded, knowledge_at, event_time_from, event_time_to,
+                        effective_time_from, effective_time_to,
                     )
                     expanded, late_excluded = filter_epistemic(
                         expanded,
@@ -579,7 +595,8 @@ class RetrievalPipeline:
                 # bi-temporal window and the epistemic filter still apply
                 # (issue #60).
                 hint_candidates = _apply_bitemporal_filters(
-                    hint_candidates, knowledge_at, event_time_from, event_time_to
+                    hint_candidates, knowledge_at, event_time_from, event_time_to,
+                    effective_time_from, effective_time_to,
                 )
                 hint_candidates, _ = filter_epistemic(
                     hint_candidates,
@@ -615,6 +632,8 @@ class RetrievalPipeline:
                 "request_id": str(analysis.request_id),
                 "query": query,
                 "reference_time": scoring_now.isoformat(),
+                "query_time_from": analysis.time_from.isoformat() if analysis.time_from else None,
+                "query_time_to": analysis.time_to.isoformat() if analysis.time_to else None,
                 "user_id": user_id,
                 "candidates_generated": candidate_counts,
                 "candidates_filtered": len(excluded),

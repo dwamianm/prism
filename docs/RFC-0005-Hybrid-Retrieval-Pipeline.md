@@ -89,6 +89,13 @@ Intent classification is `[BEST-EFFORT]`. Implementations SHOULD treat unknown o
 
 Query analysis is NOT a blocking LLM call by default. Implementations SHOULD use a lightweight classification model or rule-based extraction for this stage. A full LLM call is permitted only if the retrieval budget allows it.
 
+Dates inferred from query text guide temporal relevance scoring. They MUST NOT
+implicitly filter assertion validity: a past episode can be imported after the
+episode occurred. Explicit `time_from`/`time_to` filter validity windows across
+all retrieval paths, retaining the existing ENTITY/PREFERENCE exemption.
+Explicit `event_time_from`/`event_time_to` filter episode dates without that
+exemption; missing event times fall back to ingestion time.
+
 ---
 
 ## 4. Stage 2: Candidate Generation

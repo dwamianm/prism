@@ -32,3 +32,33 @@ async def test_engine_rejects_naive_reference_time(config, user):  # noqa: F811
     async with MemoryEngine.open(config) as engine:
         with pytest.raises(ValueError, match="reference_time must include a timezone"):
             await engine.retrieve("hello", user_id=user, reference_time=datetime(2024, 1, 1))
+
+
+async def test_query_dates_do_not_exclude_later_ingested_evidence(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        await engine.store(
+            "We chose Python for the release", user_id=user,
+            event_time=datetime(2024, 5, 10, tzinfo=timezone.utc),
+        )
+        result = await engine.retrieve(
+            "What did we decide on May 10 2024?", user_id=user,
+            reference_time=datetime(2024, 5, 12, tzinfo=timezone.utc),
+        )
+        assert result.metadata.candidates_generated["VECTOR"] > 0
+        assert result.results
+        assert result.filter_metadata.time_to is None
+
+
+@pytest.mark.parametrize("query", ["decision notes", "How many decision notes are there?"])
+async def test_explicit_validity_filter_covers_all_paths(config, user, query):  # noqa: F811
+    from prme.types import Scope
+
+    async with MemoryEngine.open(config) as engine:
+        for scope in (Scope.PROJECT, Scope.PERSONAL):
+            await engine.store("decision notes about Python", user_id=user, scope=scope, session_id="notes")
+        result = await engine.retrieve(
+            query, user_id=user, scope=Scope.PROJECT,
+            time_to=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        )
+        assert result.results == []
+        assert result.cross_scope_hints == []

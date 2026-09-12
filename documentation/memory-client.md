@@ -105,8 +105,8 @@ def retrieve(
 | `query` | `str` | required | Natural language search query |
 | `user_id` | `str` | required | User whose memories to search |
 | `scope` | `Scope \| list \| None` | `None` | Filter by scope(s) |
-| `time_from` | `datetime \| None` | `None` | Only memories created after this time |
-| `time_to` | `datetime \| None` | `None` | Only memories created before this time |
+| `time_from` | `datetime \| None` | `None` | Validity window start; excludes assertions expired at or before this time (ENTITY/PREFERENCE exempt) |
+| `time_to` | `datetime \| None` | `None` | Validity window end; excludes assertions that become valid after this time (ENTITY/PREFERENCE exempt) |
 | `knowledge_at` | `datetime \| None` | `None` | Point-in-time snapshot (bi-temporal) |
 | `reference_time` | `datetime \| None` | `None` | Timezone-aware clock for relative query dates and scoring; defaults to request time and is recorded in response metadata |
 | `token_budget` | `int \| None` | `None` | Max tokens for context packing |

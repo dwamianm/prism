@@ -133,6 +133,9 @@ Additional parameters vs MemoryClient:
 - `min_fidelity` — minimum representation level for context packing
 - `include_cross_scope` — include hints from other scopes (default: True)
 - `event_time_from`/`event_time_to` — filter by when events actually occurred (vs when they were stored)
+- `time_from`/`time_to` — filter assertion validity windows across all retrieval
+  paths (ENTITY and PREFERENCE nodes retain their existing exemption). Dates
+  inferred from query text guide ranking, without imposing a validity cutoff.
 - `reference_time` — timezone-aware clock for relative query dates and scoring decay.
   Defaults to UTC request time and is returned in `response.metadata.reference_time`.
   Reuse it to replay a query against unchanged memory/configuration. It does not
