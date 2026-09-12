@@ -48,3 +48,16 @@ The preparation/generation safeguards pass 39 tests, including gold exclusion,
 context reproduction, corruption and changed-model rejection, interruption/
 resume, shared identical prompts, exclusive state writes and native-exit export
 gating. Actual study preparation and generation status will be recorded below.
+
+Preparation completed with native exit zero using the frozen original runtime:
+all 119 controls reproduced and all 238 paired contexts obeyed their product
+budget. The [registered plan](reader-plan-a89cfe1.json) records prepared-input and
+reference-file hashes, the exact cohort and reader identity before generation.
+All 238 full prompts are distinct; the largest contains 19,136 UTF-8 bytes,
+comfortably below the runner's conservative 65,536-context headroom check.
+
+A separate [authored provider preflight](reader-preflight-a89cfe1.json), using the
+same requested reader options, completed with native exit zero and a `stop`
+completion reason. It answered the supplied blue-telescope fact correctly.
+This establishes the local API shape and completion checks, not benchmark quality.
+The paired prediction run is being launched after this plan is committed.
