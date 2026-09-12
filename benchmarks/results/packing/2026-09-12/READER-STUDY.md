@@ -136,3 +136,28 @@ they still verify that provider errors remain visible and outside accuracy.
 LoCoMo's custom score excludes category 5, and its judged path does not create
 the convenience profiles used by its keyword path. These remaining differences
 are explicit in the runner documentation.
+
+
+A [blinded spot-check plan](reader-blinded-review-v1-plan.json) selected two
+question pairs per category using a fixed hash before inspection. The
+[recorded review](reader-blinded-review-v1.json) assessed all 28 opaque answers
+before reading local judge verdicts: 14 clear accepts, nine clear rejects and
+five ambiguous responses. These are qualitative labels from the current Codex
+session, not a pinned independent model, human review or accuracy estimate.
+
+Several ambiguous responses state the right fact, count components or arithmetic
+and then refuse to answer. The upstream intermediate-step rubric can reward
+such responses even when task completion is poor. Two personalization responses
+reject the user's newly stated music-store visit because it was not already
+recorded, despite knowing the current guitar and desired upgrade. This separates
+reader instruction-following failures from missing retrieval evidence.
+
+Subsequent unblinded source inspection found another interpretation limit:
+question `a2f3aa27` has reference answer `1300`, but its source turns say `1250`
+and later report being *close to* 1300 with uncertainty. Both packed arms retain
+those user turns. A trustworthy answer should preserve that uncertainty rather
+than manufacture an exact updated count. The benchmark reference and frozen
+judging protocol remain unchanged; reference correctness and source faithfulness
+are separate observations. For `09ba9854_abs`, the wrong bus-savings answer uses
+transport estimates from another session, illustrating the need to resolve which
+trip a generic follow-up refers to before asserting personalized costs.
