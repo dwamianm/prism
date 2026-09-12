@@ -217,3 +217,20 @@ questions. This measures exact ID overlap, not the strength of statistical
 dependence or semantic duplication. The frozen query-bootstrap results above
 remain unchanged. `benchmarks.diagnostics.session_overlap` reproduces these
 counts; `reader-session-overlap.json` pins input and diagnostic hashes.
+
+## Second reader family
+
+A prospective development sensitivity run is registered in
+`reader-plan-gemma26-a89cfe1.json` before its first generation. It uses installed
+`gemma4:26b` with the same frozen `a89cfe1` reader harness, `1f5375a` packing
+runtime, prompt, 4,096-token product contexts, 119 question pairs and generation
+options. Preparation exited zero and every context/input field matches the
+original prepared study except reader identity and preparation time. Reference
+file bytes are identical. No generation is replaced or excluded based on quality.
+
+This run was selected after inspecting the original Qwen results, so it is an
+exploratory reader-family check, not independent confirmation. The planned
+Gemma4 31B judge has a different digest but shares the Gemma family, an additional
+source of correlated error. A deterministic 28-response arm-blinded review will
+precede judging, retaining ambiguous cases separately. The original results,
+production defaults and ongoing test-partition capture remain unchanged.
