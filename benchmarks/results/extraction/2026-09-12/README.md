@@ -67,3 +67,52 @@ After reverting the candidate and correcting the evaluator, **75 focused source
 checks passed** with live PostgreSQL (6.52 seconds); source/test/diagnostic lint
 also passed. The candidate's earlier full-suite result is evidence of code
 compatibility, not evidence of improved extraction quality.
+
+## Focused review of fixed saved outputs
+
+The next experiment reused the saved control extraction, avoiding changes in
+fresh extraction as a confounder. Each original was materialized and assessed,
+then proposed claims were reviewed by the same local model, materialized in a
+separate scope, and assessed again. Original and reviewed nodes, edges, labels,
+source passages and citations are retained. Review responses must cover every
+claim identity exactly once; unknown IDs and fabricated citations fail validation.
+The probe contract now also requires the expected number of claims, so a duplicate
+correctly typed claim cannot mask an unsupported extra. Both runs use that same
+corrected contract and input hash.
+
+| Review approach | Original cases passing | Reviewed cases passing | Observed median review time |
+|---|---:|---:|---:|
+| [Support check and classification](review-support-9f3ee7f.json) | 9/12 | 7/12 | 7.323 seconds |
+| [Classification only](review-labels-0a6366d.json) | 9/12 | 11/12 | 7.675 seconds |
+
+The rejection pass dropped valid possible/conditional memories, a dislike, and
+a conditional preference as “unsupported”; it also mislabeled a past choice.
+Classification alone preserved every source-grounded claim and repaired two
+previous errors without introducing another failing case in this run. It still
+mislabeled conditional usage as a preference. The [comparison](review-comparison.json)
+records each before/after outcome and the evaluator/input hashes.
+
+Both runs completed all twelve cases; exit 1 reflects failed quality assertions.
+The package runtime was the installed Python 3.13 `b8bac4b` wheel, with the same
+Ollama model and dependencies recorded above. Harnesses were `9f3ee7f` and
+`0a6366d`. Each case made an additional logical review call, which may use bounded
+schema retries. Timings are observations on this local model, not isolated
+service latency or billing measurements.
+
+**Neither reviewer is enabled in production.** Classification-only review is
+promising on these authored probes but adds cost, retains a classification error,
+and has not been validated on independent conversations or other models. The
+experimental rewrite retains the full source, reuses original entities and
+normalizes reviewed graph claims into extraction facts. It does not implement
+production review provenance, model-output revisions, or review-aware recovery.
+Those requirements remain necessary before integrating a second model pass.
+
+```bash
+python -m benchmarks.diagnostics.claim_review \
+  --input-report benchmarks/results/extraction/2026-09-12/classification-control-b8bac4b.json \
+  --classification-only --output reviewed.json
+```
+
+Omit `--classification-only` to reproduce the rejected support-filtering approach.
+The experiment and diagnostic guards passed **14 tests**, including identity
+coverage, retained qualifiers, full source names and duplicate-claim detection.

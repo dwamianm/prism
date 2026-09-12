@@ -16,8 +16,8 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen checkout (`b8bac4b`) passed 1,848 checks across package,
-research and example suites, with 42 skips and live PostgreSQL.
+completed frozen full suite (`5ff7234`) passed 1,868 tests, with 42 skips
+and live PostgreSQL, including research and example checks.
 Failed startup now releases acquired resources on both backends and restores
 encryption after a local pack was decrypted; wrong-key failures preserve the pack.
 Vector payloads now survive abrupt exits before the USearch snapshot is saved;
@@ -64,7 +64,12 @@ claim kinds and preserves the invalid pass as failure evidence. A subsequent
 prompt/schema candidate did not establish a gain and was reverted after testing;
 [raw control/candidate results](benchmarks/results/extraction/2026-09-12/README.md)
 remain available. Namesake evaluation now checks actual graph roles instead of
-requiring one exact spelling of an otherwise valid entity mention. Installed ONNX Runtime telemetry caused a native
+requiring one exact spelling of an otherwise valid entity mention. A fixed-input
+review experiment reduced passing cases from 9/12 to 7/12 when it rejected claims;
+classification alone reached 11/12 while preserving all source-grounded claims.
+It remains experimental: one error persists and each message needs another model
+call. Recovery diagnostics also now preserve timeout/provider/schema categories
+instead of reporting a provider deadline as caller cancellation. Installed ONNX Runtime telemetry caused a native
 shutdown abort; local embeddings now disable that optional uploader by default
 and diagnostics require a clean child-process exit before reporting success. Processing is explicit; retrieval does not run an LLM recovery job.
 

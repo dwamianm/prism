@@ -2,11 +2,10 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. At `b8bac4b`, the frozen checkout passed **1,733 package tests with
-42 skips** and live PostgreSQL (164.85 seconds), plus **101 research tests**
-(1.06 seconds) and **14 example integration tests** (3.09 seconds), run separately.
-That is **1,848 passing checks** across the repository. Installed Python 3.13 and
-real-model workflows, including retained failures, are described below.
+product. The frozen full suite at `5ff7234` passed **1,868 tests with 42 skips**
+on Python 3.11 and live PostgreSQL (164.19 seconds), including research and
+example integration tests. Installed Python 3.13 and real-model workflows,
+including retained failures, are described below.
 
 ## Availability and identity fault checks
 
@@ -393,3 +392,30 @@ iteration and slicing behavior differs, so the implementation uses NumPy's bulk
 array protocol. Startup/encryption fault checks also passed after the recovery
 change. Numerical recovery does not reconstruct graph mutations that were never
 journaled, and it does not guarantee power-loss durability of the filesystem.
+
+
+## Extraction failure categories
+
+At `5ff7234`, blocking ingestion exposes `ExtractionError.reason_code` alongside
+the persisted source `event_id`; the exception is also importable from `prme`.
+Durable status retains the same failure category across restart. A reproduced
+provider timeout previously became `CancelledError` because the failure handler
+followed asyncio's exception chain to the cancelled inner call. Both backend
+regressions now retain `TimeoutError`; actual caller cancellation retains its
+separate `Cancelled` work code.
+
+Provider authentication/rate-limit and structured-validation categories take
+precedence over lower transport causes. Unknown categories retain bounded class
+names. Traversal handles cyclic or very long exception chains, and invalid class
+names cannot break the work store's bounded-code validation. No provider message,
+response body or credential is persisted in the failure code.
+
+The frozen full suite passed **1,868 tests with 42 skips** on Python 3.11
+and live PostgreSQL (164.19 seconds). The source recovery/interface/provider
+subset passed **38 checks with 1 skip**
+using live PostgreSQL. An installed Python 3.13 wheel passed **52 checks with
+1 skip**, including the review experiment's guards (6.12 seconds). Tests inject
+real OpenAI SDK exception types and a stalled async provider through public
+ingestion; they do not contact the remote provider. Retry limits and scheduling
+remain unchanged. Previously saved failure codes are not reclassified. These are
+recovery/DX checks, not memory-accuracy evidence.

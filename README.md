@@ -241,7 +241,7 @@ including for an empty extraction. `processed` counts completions in this pass;
 `pending` includes active workers; `failed` counts terminal failures needing retry.
 The time budget is checked between jobs; a provider call may exceed it.
 
-`status.last_error` preserves meaningful failure categories: `TimeoutError` for
+New failures in `status.last_error` preserve meaningful categories: `TimeoutError` for
 a provider deadline, `AuthenticationError` or `RateLimitError` for provider
 access/limits, and `ValidationError` for rejected structured output. Caller
 cancellation remains `Cancelled`. Exception messages and provider response bodies
@@ -250,7 +250,7 @@ explicitly retrying a terminal failure. These categories do not change retry lim
 
 For blocking ingestion, catch `ExtractionError` (available from `prme`):
 `error.event_id` identifies the persisted source and `error.reason_code` provides
-the same sanitized category. Inspect that event's scoped extraction status to
+the sanitized failure category when available (it may be `None` for pending work). Inspect that event's scoped extraction status to
 see whether recovery is pending or requires an explicit retry.
 
 Active workers renew leases (`ExtractionConfig.lease_seconds`, default 300).
