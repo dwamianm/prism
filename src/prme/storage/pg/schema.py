@@ -210,35 +210,16 @@ async def initialize_pg_database(
         for idx in _NODES_INDEXES:
             await conn.execute(idx)
 
-        # Add embedding vector column if it doesn't exist.
-        has_embedding = await conn.fetchval(
-            "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name = 'nodes' AND column_name = 'embedding'"
+        # Resolve the same table as the other DDL, never a same-named relation
+        # elsewhere in the database. PostgreSQL places an index in its parent
+        # table's schema; native IF NOT EXISTS handles this for HNSW too.
+        await conn.execute(
+            f"ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding vector({embedding_dim})"
         )
-        if has_embedding is None:
-            await conn.execute(
-                f"ALTER TABLE nodes ADD COLUMN embedding vector({embedding_dim})"
-            )
-            logger.info(
-                "Added embedding column to nodes (dim=%d)", embedding_dim
-            )
-
-        # Create HNSW index on embedding column (if not exists).
-        # Use a DO block to conditionally create since IF NOT EXISTS
-        # isn't supported for HNSW indexes on all PG versions.
         await conn.execute("""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_indexes
-                    WHERE indexname = 'idx_nodes_embedding_hnsw'
-                ) THEN
-                    CREATE INDEX idx_nodes_embedding_hnsw
-                    ON nodes USING hnsw (embedding vector_cosine_ops)
-                    WITH (m = 16, ef_construction = 64);
-                END IF;
-            END
-            $$
+            CREATE INDEX IF NOT EXISTS idx_nodes_embedding_hnsw
+            ON nodes USING hnsw (embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 64)
         """)
 
         # Edges

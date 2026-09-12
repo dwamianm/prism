@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ingestion. Historical prepared derivations retain their original replay policy.
 - Prevent organizer similarity matches from merging different claim text,
   validity or provenance; semantic entity aliases remain unverified links.
+- Initialize PostgreSQL vector columns and indexes against the selected table,
+  without treating names in other schemas as an existing local installation.
 
 ## [0.11.0] - 2026-09-11
 
