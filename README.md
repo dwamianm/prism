@@ -241,6 +241,18 @@ including for an empty extraction. `processed` counts completions in this pass;
 `pending` includes active workers; `failed` counts terminal failures needing retry.
 The time budget is checked between jobs; a provider call may exceed it.
 
+`status.last_error` preserves meaningful failure categories: `TimeoutError` for
+a provider deadline, `AuthenticationError` or `RateLimitError` for provider
+access/limits, and `ValidationError` for rejected structured output. Caller
+cancellation remains `Cancelled`. Exception messages and provider response bodies
+are not persisted. Correct the provider configuration or model issue before
+explicitly retrying a terminal failure. These categories do not change retry limits.
+
+For blocking ingestion, catch `ExtractionError` (available from `prme`):
+`error.event_id` identifies the persisted source and `error.reason_code` provides
+the same sanitized category. Inspect that event's scoped extraction status to
+see whether recovery is pending or requires an explicit retry.
+
 Active workers renew leases (`ExtractionConfig.lease_seconds`, default 300).
 After an abrupt exit, work becomes claimable when its lease expires. Claims
 serialize pending work within an owner and scope in append order. Bounded retry

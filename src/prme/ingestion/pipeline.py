@@ -26,7 +26,7 @@ import dateparser
 import structlog
 
 from prme.ingestion.entity_merge import EntityMerger
-from prme.ingestion.errors import ExtractionError, MaterializationError
+from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import validate_grounding
 from prme.ingestion.schema import ExtractionResult
@@ -302,21 +302,19 @@ class IngestionPipeline:
                 event_id=event_id,
                 error_type=type(exc).__name__,
             )
+            reason = extraction_failure_code(exc)
             if claim is not None:
                 attempt = claim.attempts
                 delay = self._retry_delays[attempt - 1] if attempt <= len(self._retry_delays) else None
-                cause = exc
-                while cause.__cause__ is not None:
-                    cause = cause.__cause__
-                retained = await work.fail(claim, error=type(cause).__name__, retry_after=delay)
+                retained = await work.fail(claim, error=reason, retry_after=delay)
                 if retained and delay is not None:
                     self._schedule_retry(event, event_id, attempt=attempt, scope=scope)
             else:
                 self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
             if raise_errors:
                 raise ExtractionError(
-                    "Extraction did not complete; the source event is persisted",
-                    event_id=event_id,
+                    f"Extraction did not complete ({reason}); the source event is persisted",
+                    event_id=event_id, reason_code=reason,
                 ) from exc
         finally:
             if heartbeat is not None:

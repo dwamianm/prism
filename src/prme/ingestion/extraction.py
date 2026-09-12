@@ -17,7 +17,7 @@ from pydantic import Field, SecretStr, ValidationInfo, model_validator
 
 from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
 from prme.ingestion.grounding import _mentioned
-from prme.ingestion.errors import ExtractionError
+from prme.ingestion.errors import ExtractionError, extraction_failure_code
 from prme.ingestion.entity_references import reference_errors
 
 if TYPE_CHECKING:
@@ -330,7 +330,8 @@ class InstructorExtractionProvider:
                 content_length=len(content),
                 error_type=type(exc).__name__,
             )
-            raise ExtractionError(f"Extraction failed ({type(exc).__name__})") from exc
+            reason = extraction_failure_code(exc)
+            raise ExtractionError(f"Extraction failed ({reason})", reason_code=reason) from exc
 
 
 def create_extraction_provider(

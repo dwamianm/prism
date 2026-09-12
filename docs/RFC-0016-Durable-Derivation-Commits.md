@@ -93,6 +93,15 @@ indexing. Owner-scoped `extraction_status`, `retry_extraction`, and
 and CLI. Explicit processing discovers unfinished jobs after restart; retrieval
 never invokes it and no daemon is installed. Budgets apply between jobs.
 
+Failure reporting preserves provider/schema categories before traversing lower
+implementation causes. In particular, a provider TimeoutError must not become
+CancelledError merely because asyncio enforced the timeout by cancelling its
+inner call. Caller cancellation retains the separate Cancelled work code.
+Unknown failures retain bounded class names; exception chains are cycle-safe and
+bounded. Provider messages and response bodies are not recorded. Public blocking
+ingestion exposes the sanitized reason_code alongside its persisted event_id.
+The same code survives restart in extraction status on either backend.
+
 Claims increment a persistent generation and attempt count. Heartbeats renew
 live leases, while extraction journaling, plan binding and graph publication
 check ownership inside their transactions. Completion and its receipt commit

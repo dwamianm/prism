@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from prme.retrieval.pipeline import RetrievalPipeline
 
 from prme.config import PRMEConfig
+from prme.ingestion.errors import ExtractionError
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -57,6 +58,7 @@ __all__ = [
     "DEFAULT_DECAY_PROFILE_MAPPING",
     "DecayProfile",
     "EdgeType",
+    "ExtractionError",
     "ExtractionRecord",
     "ExtractionStatus",
     "ExtractionProcessingResult",
