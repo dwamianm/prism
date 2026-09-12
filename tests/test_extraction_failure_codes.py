@@ -13,8 +13,8 @@ config = test_durable_ingestion.config
 user = test_durable_ingestion.user
 
 
-async def test_write_queue_logs_category_without_formatting_provider_exception():
-    from structlog.testing import capture_logs
+async def test_write_queue_logs_category_without_formatting_provider_exception(monkeypatch):
+    from unittest.mock import Mock
     from prme.storage.write_queue import WriteQueue
 
     class UnprintableProviderError(RuntimeError):
@@ -22,16 +22,17 @@ async def test_write_queue_logs_category_without_formatting_provider_exception()
             raise AssertionError("Provider response must not be formatted")
 
     error = UnprintableProviderError()
+    logger = Mock()
+    monkeypatch.setattr('prme.storage.write_queue.logger', logger)
     queue = WriteQueue()
     await queue.start()
     try:
-        with capture_logs() as logs:
-            with pytest.raises(UnprintableProviderError) as failure:
-                await asyncio.wait_for(queue.submit(AsyncMock(side_effect=error), label="authored-job"), 2)
-            assert failure.value is error
-            assert await queue.submit(AsyncMock(return_value="healthy")) == "healthy"
-        assert logs == [{"event": "write_queue.job_failed", "label": "authored-job",
-                         "error_type": "UnprintableProviderError", "log_level": "error"}]
+        with pytest.raises(UnprintableProviderError) as failure:
+            await asyncio.wait_for(queue.submit(AsyncMock(side_effect=error), label="authored-job"), 2)
+        assert failure.value is error
+        assert await queue.submit(AsyncMock(return_value="healthy")) == "healthy"
+        logger.error.assert_called_once_with('write_queue.job_failed', label='authored-job',
+                                             error_type='UnprintableProviderError')
     finally:
         await queue.stop()
 

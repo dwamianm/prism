@@ -28,6 +28,8 @@ async def test_store_indexes_healthy_backend_during_outage(config, user, monkeyp
                 outage.setattr(engine._vector_index._provider, "embed", AsyncMock(side_effect=RuntimeError("offline")))
             else:
                 outage.setattr(engine._lexical_index, "index", AsyncMock(side_effect=OSError("offline")))
+                if hasattr(engine._lexical_index, "replace_many"):
+                    outage.setattr(engine._lexical_index, "replace_many", AsyncMock(side_effect=OSError("offline")))
             event_id = await engine.store(CONTENT, user_id=user)
             nodes = await engine.get_event_nodes(event_id, user_id=user)
             assert len(nodes) == 1
@@ -49,6 +51,8 @@ async def test_pending_source_retains_healthy_index_and_retries_after_restart(co
         with monkeypatch.context() as outage:
             index = getattr(engine, f"_{failed}_index")
             outage.setattr(index, "index", AsyncMock(side_effect=RuntimeError("offline")))
+            if failed == 'lexical' and hasattr(index, 'replace_many'):
+                outage.setattr(index, 'replace_many', AsyncMock(side_effect=RuntimeError('offline')))
             result = await engine.process_pending(user_id=user)
             assert (result.processed, result.pending, result.failed) == (0, 1, 1)
             assert [hit["node_id"] for hit in await healthy_hits(engine, failed, user)] == [event_id]
@@ -75,7 +79,7 @@ async def test_flush_failure_does_not_skip_other_backend(config, user, monkeypat
     async with MemoryEngine.open(local) as engine:
         event_id = await engine.ingest_fast(CONTENT, user_id=user)
         healthy = engine._lexical_index if failed == "vector" else engine._vector_index
-        persist = "flush" if failed == "vector" else "index"
+        persist = "replace_many" if failed == "vector" else "index"
         committed = AsyncMock(wraps=getattr(healthy, persist))
         with monkeypatch.context() as outage:
             outage.setattr(healthy, persist, committed)
@@ -83,7 +87,17 @@ async def test_flush_failure_does_not_skip_other_backend(config, user, monkeypat
             if failed == "vector":
                 outage.setattr(broken, "_save_snapshot", Mock(side_effect=OSError("disk")))
             else:
-                outage.setattr(broken, "flush", AsyncMock(side_effect=OSError("disk")))
+                # Fail the native durable boundary for both the batch attempt
+                # and its per-document fallback, not an unused flush wrapper.
+                original_writer = broken._ensure_writer
+                class FailedCommit:
+                    def __init__(self, writer):
+                        self.writer = writer
+                    def __getattr__(self, name):
+                        return getattr(self.writer, name)
+                    def commit(self):
+                        raise OSError('disk')
+                outage.setattr(broken, '_ensure_writer', lambda: FailedCommit(original_writer()))
             result = await engine.process_pending(user_id=user)
             assert (result.processed, result.pending, result.failed) == (0, 1, 1)
             committed.assert_awaited()
@@ -103,6 +117,8 @@ async def test_both_indexes_failing_preserves_source_and_pending_work(config, us
         with monkeypatch.context() as outage:
             outage.setattr(engine._vector_index, "index", vector)
             outage.setattr(engine._lexical_index, "index", lexical)
+            if hasattr(engine._lexical_index, 'replace_many'):
+                outage.setattr(engine._lexical_index, 'replace_many', AsyncMock(side_effect=OSError('offline')))
             result = await engine.process_pending(user_id=user)
         assert (result.processed, result.pending, result.failed) == (0, 1, 1)
         vector.assert_awaited_once()
