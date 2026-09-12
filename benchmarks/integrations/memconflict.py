@@ -207,6 +207,9 @@ async def replay(profile, engine, reader, *, question_limit, token_budget, count
             )
             methods = {
                 "prme_product": {"context": response.bundle.render(), "ranked_source_ids": ranked,
+                                 "packed_source_ids": [c.node.metadata["source_turn"]
+                                                       for group in response.bundle.sections.values() for c in group],
+                                 "candidate_snapshots": [c.model_dump(mode="json") for c in response.results],
                                  "tokens": response.bundle.tokens_used},
                 "bm25": {"context": bm25_context, "ranked_source_ids": bm25_ids,
                          "packed_source_ids": packed_ids, "tokens": tokens},

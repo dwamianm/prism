@@ -11,6 +11,8 @@ from benchmarks.integrations.memconflict import (
     EXPOSED_DEVELOPMENT_IDS, audit, load_profiles, parse_profile, profile_split,
     replay, select_questions,
 )
+from prme.models import MemoryNode
+from prme.retrieval.models import RetrievalCandidate
 
 
 def dataset():
@@ -93,7 +95,7 @@ async def test_replay_never_sends_labels_or_future_sources_to_services():
     nodes, stored_at_query = [], []
 
     async def store(content, **kwargs):
-        nodes.append(SimpleNamespace(id=str(len(nodes)), metadata=kwargs["metadata"]))
+        nodes.append(MemoryNode(user_id="memconflict", node_type="note", content=content, metadata=kwargs["metadata"]))
         assert content.startswith(("source-", "reply-"))
         assert "sentinel" not in repr(kwargs)
         assert kwargs["ttl_days"] is None
@@ -105,12 +107,13 @@ async def test_replay_never_sends_labels_or_future_sources_to_services():
         assert len(nodes) == 2 * (index + 1)
         assert kwargs["reference_time"].day == index + 1
         return SimpleNamespace(
-            results=[SimpleNamespace(node=n) for n in nodes],
-            bundle=SimpleNamespace(render=lambda: "safe product context", tokens_used=3),
+            results=[RetrievalCandidate(node=n) for n in nodes],
+            bundle=SimpleNamespace(render=lambda: "safe product context", tokens_used=3,
+                                   sections={"stable_facts": [RetrievalCandidate(node=n) for n in nodes]}),
         )
 
     async def lexical(*args, **kwargs):
-        return [{"node_id": n.id} for n in nodes]
+        return [{"node_id": str(n.id)} for n in nodes]
 
     async def query_nodes(**kwargs):
         return list(nodes)
@@ -126,6 +129,10 @@ async def test_replay_never_sends_labels_or_future_sources_to_services():
     assert reader.await_count == 9
     assert "sentinel" not in repr(reader.await_args_list)
     assert all(row["gold_answer"] == "gold-sentinel" for row in result["details"])
+    trace = result["details"][0]["methods"]["prme_product"]
+    assert trace["packed_source_ids"] == ["s0:t0", "s0:t1"]
+    assert len(trace["candidate_snapshots"]) == 2
+    assert "sentinel" not in repr(trace["candidate_snapshots"])
     for call in reader.await_args_list:
         question, stamp, context = call.args
         assert "source-3" not in context
