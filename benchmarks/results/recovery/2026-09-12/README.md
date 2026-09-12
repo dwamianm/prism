@@ -1111,3 +1111,12 @@ local staging is conservatively retained, uncommitted plans are not automaticall
 resumed, and a multi-entity call can publish earlier entities before a later one
 fails. Explicit index rebuild remains the cleanup path. Installed-wheel and full
 regression validation of this change are pending at this checkpoint.
+
+The installed Python 3.13 wheel at `430e1b3` passed the same **138 checks, 5 skipped
+in 78.42 seconds**, native exit zero, including live PostgreSQL and the local
+process-exit cases. Strict installed consumer typing accepts `StaleProfileError`
+and both sync/async profile APIs. The [real BGE client workflow](profile-fidelity-430e1b3.json)
+also passed with supervised native exit zero and confirmed the installed package
+path; profile content, inference labels, source events and scope isolation
+survive restart, retrieval and a subsequent replacement. The frozen full suite
+at `430e1b3` remains running; these focused passes are not a full-suite result.
