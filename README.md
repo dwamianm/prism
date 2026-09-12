@@ -437,6 +437,10 @@ excludes the engine-global `feedback_apply` job, which remains an operator task.
 Credentials are redacted from configuration output; restart the server to rotate
 them. Use TLS when carrying bearer credentials over a network.
 
+See the [HTTP source and recovery reference](docs/HTTP-API.md) for explicit
+provenance, historical event times, TTL semantics, blocking extraction and
+accepted-work recovery. Write requests reject unsupported fields.
+
 Node and event path IDs are UUIDs. Malformed IDs return HTTP 422 with a path
 validation error before accessing storage. Valid IDs that do not exist or belong
 to another user return 404. The OpenAPI schema documents the UUID format.
@@ -456,6 +460,8 @@ Endpoints under `/v1`:
 | `POST` | `/v1/retrieve` | Hybrid retrieval |
 | `GET` | `/v1/events/{id}` | Original source evidence |
 | `GET` | `/v1/events/{id}/nodes` | Nodes citing that source |
+| `GET` | `/v1/events/{id}/processing-status` | Saved source/index work status |
+| `POST` | `/v1/materializations/process` | Repair the owner's pending source/index work |
 | `POST` | `/v1/organize` | Run organizer jobs |
 | `GET` | `/v1/nodes` | Query nodes with filters |
 | `GET` | `/v1/nodes/{id}` | Get single node |

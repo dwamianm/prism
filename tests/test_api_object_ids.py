@@ -13,6 +13,7 @@ from prme.config import APIConfig, PRMEConfig
 
 ROUTES = [
     ("GET", "/events/{event_id}"), ("GET", "/events/{event_id}/nodes"),
+    ("GET", "/events/{event_id}/processing-status"),
     ("GET", "/events/{event_id}/extraction"), ("GET", "/events/{event_id}/extraction-status"),
     ("POST", "/events/{event_id}/retry-extraction"),
     ("GET", "/nodes/{node_id}"), ("PUT", "/nodes/{node_id}/promote"),

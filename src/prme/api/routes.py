@@ -12,15 +12,18 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from prme import __version__
 from prme.api.models import (
+    AcceptedWorkErrorResponse,
     ErrorResponse,
     ExtractionProcessRequest,
     HealthResponse,
     IngestRequest,
     IngestResponse,
+    MaterializationProcessRequest,
     NodeListResponse,
     NodeResponse,
     OrganizeRequest,
@@ -35,6 +38,8 @@ from prme.api.models import (
 from prme.types import LifecycleState, NodeType
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.processing import ProcessingStatus, ProcessingResult
+from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +121,7 @@ def _node_to_response(node) -> NodeResponse:
     return NodeResponse(
         id=str(node.id),
         user_id=node.user_id,
+        session_id=node.session_id,
         node_type=node.node_type.value if hasattr(node.node_type, "value") else str(node.node_type),
         content=node.content,
         lifecycle_state=node.lifecycle_state.value if hasattr(node.lifecycle_state, "value") else str(node.lifecycle_state),
@@ -127,6 +133,10 @@ def _node_to_response(node) -> NodeResponse:
         metadata=node.metadata,
         created_at=node.created_at.isoformat(),
         updated_at=node.updated_at.isoformat(),
+        event_time=node.event_time.isoformat() if node.event_time else None,
+        valid_from=node.valid_from.isoformat(),
+        valid_to=node.valid_to.isoformat() if node.valid_to else None,
+        ttl_days=node.ttl_days,
         superseded_by=str(node.superseded_by) if node.superseded_by else None,
         evidence_refs=[str(r) for r in node.evidence_refs],
         pinned=node.pinned,
@@ -138,13 +148,26 @@ def _node_to_response(node) -> NodeResponse:
 # ---------------------------------------------------------------------------
 
 
+def _accepted_work_failure(exc: ExtractionError | MaterializationError) -> JSONResponse:
+    """Expose a saved source receipt without echoing provider messages."""
+    try:
+        event_id = str(UUID(exc.event_id))
+    except (TypeError, ValueError, AttributeError):
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    body = AcceptedWorkErrorResponse(
+        detail="Source saved; processing did not complete. Inspect its status and retry the saved work.",
+        event_id=event_id, reason_code=extraction_failure_code(exc),
+    )
+    return JSONResponse(status_code=503, content=body.model_dump(mode="json"))
+
+
 @router.post(
     "/store",
     response_model=StoreResponse,
     summary="Store a memory node",
-    responses={422: {"model": ErrorResponse}},
+    responses={422: {"model": ErrorResponse}, 503: {"model": AcceptedWorkErrorResponse | ErrorResponse}},
 )
-async def store(request: Request, body: StoreRequest) -> StoreResponse:
+async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONResponse:
     """Store content across all four backends."""
     engine = _get_engine(request)
 
@@ -153,31 +176,41 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse:
         "user_id": _user_id(request, body.user_id, required=True),
         "role": body.role,
     }
-    if body.node_type is not None:
-        kwargs["node_type"] = body.node_type
-    if body.scope is not None:
-        kwargs["scope"] = body.scope
-    if body.epistemic_type is not None:
-        kwargs["epistemic_type"] = body.epistemic_type
-    if body.metadata is not None:
-        kwargs["metadata"] = body.metadata
+    for name in ("node_type", "scope", "epistemic_type", "metadata", "session_id",
+                 "source_type", "confidence", "event_time"):
+        value = getattr(body, name)
+        if value is not None:
+            kwargs[name] = value
+    # Omitted TTL means use the engine's configured default; JSON null is an
+    # explicit request to disable it. exclude_none would erase that distinction.
+    if "ttl_days" in body.model_fields_set:
+        kwargs["ttl_days"] = body.ttl_days
 
-    event_id = await engine.store(**kwargs)
+    try:
+        event_id = await engine.store(**kwargs)
+    except MaterializationError as exc:
+        return _accepted_work_failure(exc)
 
-    nodes = await engine.get_event_nodes(event_id, user_id=kwargs["user_id"])
-    node_id = next((str(n.id) for n in nodes
-                    if n.content == body.content and n.node_type == (body.node_type or NodeType.NOTE)), None)
-
-    return StoreResponse(event_id=event_id, node_id=node_id)
+    try:
+        nodes = await engine.get_event_nodes(event_id, user_id=kwargs["user_id"])
+        node_id = next((str(n.id) for n in nodes
+                        if n.content == body.content and n.node_type == (body.node_type or NodeType.NOTE)), None)
+        status = await engine.processing_status(event_id, user_id=kwargs["user_id"])
+    except Exception as exc:
+        return _accepted_work_failure(MaterializationError(
+            "Could not read the accepted store receipt", event_id=event_id,
+            reason_code=extraction_failure_code(exc),
+        ))
+    return StoreResponse(event_id=event_id, node_id=node_id, processing_status=status)
 
 
 @router.post(
     "/ingest",
     response_model=IngestResponse,
     summary="Full LLM ingestion pipeline",
-    responses={422: {"model": ErrorResponse}},
+    responses={422: {"model": ErrorResponse}, 503: {"model": AcceptedWorkErrorResponse | ErrorResponse}},
 )
-async def ingest(request: Request, body: IngestRequest) -> IngestResponse:
+async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSONResponse:
     """Ingest content through the full LLM extraction pipeline."""
     engine = _get_engine(request)
 
@@ -185,11 +218,17 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse:
         "content": body.content,
         "user_id": _user_id(request, body.user_id, required=True),
         "role": body.role,
+        "wait_for_extraction": body.wait_for_extraction,
     }
-    if body.scope is not None:
-        kwargs["scope"] = body.scope
+    for name in ("scope", "session_id", "metadata"):
+        value = getattr(body, name)
+        if value is not None:
+            kwargs[name] = value
 
-    event_id = await engine.ingest(**kwargs)
+    try:
+        event_id = await engine.ingest(**kwargs)
+    except (ExtractionError, MaterializationError) as exc:
+        return _accepted_work_failure(exc)
     return IngestResponse(event_id=event_id)
 
 
@@ -211,6 +250,26 @@ async def get_event_nodes(request: Request, event_id: UUID):
         raise HTTPException(status_code=404, detail="Event not found")
     nodes = await engine.get_event_nodes(event_key, user_id=event.user_id)
     return NodeListResponse(nodes=[_node_to_response(n) for n in nodes], count=len(nodes))
+
+
+@router.get("/events/{event_id}/processing-status", response_model=ProcessingStatus,
+            summary="Inspect saved source/index processing")
+async def processing_status(request: Request, event_id: UUID):
+    engine = _get_engine(request)
+    event = await engine.get_event(str(event_id), user_id=_user_id(request))
+    if event is None:
+        raise HTTPException(status_code=404, detail="Processing work not found")
+    status = await engine.processing_status(str(event_id), user_id=event.user_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Processing work not found")
+    return status
+
+
+@router.post("/materializations/process", response_model=ProcessingResult,
+             summary="Repair one owner's saved source/index work without LLM extraction")
+async def process_materializations(request: Request, body: MaterializationProcessRequest):
+    owner = _user_id(request, body.user_id, required=True)
+    return await _get_engine(request).process_pending(user_id=owner, budget_ms=body.budget_ms)
 
 
 @router.get("/events/{event_id}/extraction", response_model=ExtractionRecord, summary="Read saved model extraction")
@@ -305,6 +364,13 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
                 confidence=node.confidence,
                 salience=node.salience,
                 epistemic_type=node.epistemic_type.value if node.epistemic_type and hasattr(node.epistemic_type, "value") else None,
+                source_type=node.source_type.value,
+                scope=node.scope.value,
+                session_id=node.session_id,
+                event_time=node.event_time.isoformat() if node.event_time else None,
+                valid_from=node.valid_from.isoformat(),
+                valid_to=node.valid_to.isoformat() if node.valid_to else None,
+                evidence_refs=[str(ref) for ref in node.evidence_refs],
                 metadata=node.metadata,
             )
         )

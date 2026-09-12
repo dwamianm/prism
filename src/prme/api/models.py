@@ -6,7 +6,7 @@ These are thin DTOs — no business logic belongs here.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -15,7 +15,9 @@ from prme.types import (
     NodeType,
     RetrievalMode,
     Scope,
+    SourceType,
 )
+from prme.models.processing import ProcessingStatus
 
 
 # ---------------------------------------------------------------------------
@@ -26,8 +28,11 @@ from prme.types import (
 class StoreRequest(BaseModel):
     """Request body for POST /v1/store."""
 
+    model_config = ConfigDict(extra="forbid")
+
     content: str = Field(description="Text content to store")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    session_id: str | None = None
     role: str = Field(default="user", description="Event role")
     node_type: NodeType | None = Field(
         default=None, description="Node type (defaults to note)"
@@ -38,6 +43,11 @@ class StoreRequest(BaseModel):
     epistemic_type: EpistemicType | None = Field(
         default=None, description="Epistemic classification"
     )
+    source_type: SourceType | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    event_time: AwareDatetime | None = None
+    ttl_days: int | None = Field(default=None, ge=0, strict=True,
+                                description="Omit for configured TTL; null disables TTL; integer overrides it")
     metadata: dict[str, Any] | None = Field(
         default=None, description="Optional structured metadata"
     )
@@ -51,6 +61,8 @@ class StoreResponse(BaseModel):
         default=None,
         description="ID of the created node (when available)",
     )
+    processing_status: ProcessingStatus | None = Field(default=None,
+        description="Direct node/index work; pending work can be retried without resubmitting the source")
 
 
 # ---------------------------------------------------------------------------
@@ -61,12 +73,15 @@ class StoreResponse(BaseModel):
 class IngestRequest(BaseModel):
     """Request body for POST /v1/ingest."""
 
+    model_config = ConfigDict(extra="forbid")
+
     content: str = Field(description="Message text to ingest")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     role: str = Field(default="user", description="Message role")
-    namespace: str | None = Field(
-        default=None, description="Optional namespace"
-    )
+    session_id: str | None = None
+    metadata: dict[str, Any] | None = None
+    wait_for_extraction: bool = Field(default=False, strict=True,
+        description="Wait for extraction; failures retain the source and return its recovery receipt")
     scope: Scope | None = Field(
         default=None, description="Memory scope"
     )
@@ -84,6 +99,23 @@ class ExtractionProcessRequest(BaseModel):
     user_id: str | None = None
     limit: int = Field(default=100, ge=0, le=1000)
     budget_ms: float = Field(default=5000, ge=0, allow_inf_nan=False)
+
+
+class MaterializationProcessRequest(BaseModel):
+    """Process saved source/index work without invoking extraction."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = None
+    budget_ms: int = Field(default=1000, ge=0, strict=True)
+
+
+class AcceptedWorkErrorResponse(BaseModel):
+    """A source was saved, but its requested processing did not complete."""
+
+    detail: str
+    event_id: str
+    reason_code: str
+    accepted: Literal[True] = True
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +161,13 @@ class RetrieveResultItem(BaseModel):
     confidence: float
     salience: float
     epistemic_type: str | None = None
+    source_type: str | None = None
+    scope: str | None = None
+    session_id: str | None = None
+    event_time: str | None = None
+    valid_from: str | None = None
+    valid_to: str | None = None
+    evidence_refs: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] | None = None
 
 
@@ -179,6 +218,7 @@ class NodeResponse(BaseModel):
 
     id: str
     user_id: str
+    session_id: str | None = None
     node_type: str
     content: str
     lifecycle_state: str
@@ -190,6 +230,10 @@ class NodeResponse(BaseModel):
     metadata: dict[str, Any] | None = None
     created_at: str
     updated_at: str
+    event_time: str | None = None
+    valid_from: str | None = None
+    valid_to: str | None = None
+    ttl_days: int | None = None
     superseded_by: str | None = None
     evidence_refs: list[str] = Field(default_factory=list)
     pinned: bool = False
