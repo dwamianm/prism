@@ -1067,8 +1067,9 @@ The first [installed BGE workflow attempt](profile-fidelity-88cc5e2-attempt1.jso
 failed with a TypeError: the sync client did not expose `max_profile_tokens`.
 Two new backend regressions reproduced that missing argument. The sync wrapper
 now forwards the same default and explicit token budget to the async engine.
-Profiles still use heuristic entity associations and nontransactional publication;
-older artifacts take the new format only when explicitly rebuilt.
+At that checkpoint, profile publication was still nontransactional; the atomic
+replacement work below supersedes that limitation. Entity association remains
+heuristic, and older artifacts take the new format only when explicitly rebuilt.
 
 
 The final installed Python 3.13 wheel at `e011d7d` passed 45 profile/excerpt checks
@@ -1118,8 +1119,9 @@ process-exit cases. Strict installed consumer typing accepts `StaleProfileError`
 and both sync/async profile APIs. The [real BGE client workflow](profile-fidelity-430e1b3.json)
 also passed with supervised native exit zero and confirmed the installed package
 path; profile content, inference labels, source events and scope isolation
-survive restart, retrieval and a subsequent replacement. The frozen full suite
-at `430e1b3` remains running; these focused passes are not a full-suite result.
+survive restart, retrieval and a subsequent replacement. The separate frozen `tests/` run at `430e1b3` subsequently passed **2,281 tests,
+57 skipped in 860.82 seconds**, native exit zero. That invocation did not include
+benchmark harness tests outside `tests/`, so it is not the full repository collection.
 
 ## Complete profile source scans
 
@@ -1132,3 +1134,16 @@ publishing or retiring anything. This is pagination, not a snapshot isolation
 claim for the entire read pass; publication still revalidates its dependencies.
 The expanded focused source suite passed **142 checks, 5 skipped in 77.63
 seconds**, native exit zero, including scan interruption and the larger history.
+
+
+The installed Python 3.13 wheel at `107f535` passed **142 checks, 5 skipped in
+77.79 seconds**, native exit zero, including both storage backends. The
+[real BGE workflow](profile-fidelity-107f535.json) also passed with supervised
+native exit zero. The first Python example in `docs/ENTITY-PROFILES.md` executed
+unchanged against this installed package in a temporary directory with default
+configuration, published one profile and retrieved its context. Earlier tests
+also checked the exported retry exception through strict installed consumer typing.
+
+A new frozen run at `107f535` invokes `pytest -q` at the repository root to cover
+both product and benchmark harness tests. It is still running at this checkpoint;
+the preceding `tests/` result and focused passes must not be reported as its outcome.
