@@ -1147,3 +1147,9 @@ also checked the exported retry exception through strict installed consumer typi
 A new frozen run at `107f535` invokes `pytest -q` at the repository root to cover
 both product and benchmark harness tests. It is still running at this checkpoint;
 the preceding `tests/` result and focused passes must not be reported as its outcome.
+
+The project `.env` credentials were explicitly rechecked at 17:26 UTC on
+September 12. Both `gpt-4o-2024-08-06` and `gpt-4o-mini` returned HTTP 429 /
+`RateLimitError`, with no recognized provider error code. The
+[sanitized health record](openai-health-172655.json) contains no credentials,
+endpoint, response body or billing inference. Local validation continues.
