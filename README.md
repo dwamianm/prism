@@ -422,9 +422,10 @@ Applications opening several local packs can set `duckdb_threads` explicitly
 and share a caller-owned embedding provider. See [local resource control](docs/LOCAL-RESOURCES.md)
 for configuration, same-file constraints and the current named-project boundary.
 
-For named local projects, `MemoryWorkspace` manages separate identity-checked
-packs with a bounded engine cache. See [workspace usage and ownership](docs/WORKSPACES.md)
-for concurrent leases, recovery, copying and the current hosted-access boundary.
+For named projects, `MemoryWorkspace` manages identity-checked local packs or
+PostgreSQL schemas with a bounded engine cache. `open_postgres()` shares one
+connection pool across project engines. See [workspace usage and ownership](docs/WORKSPACES.md)
+for concurrent leases, recovery, backup/restore and the hosted-access boundary.
 
 Both storage backends default to exact vector search. PostgreSQL applies
 eligibility before top-k ordering; see [search modes and costs](docs/POSTGRES-VECTOR-SEARCH.md)

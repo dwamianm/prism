@@ -1,6 +1,14 @@
 # Recovery and developer workflow evidence
 
-The latest [PostgreSQL vector-search record](PG-VECTOR-SEARCH.md) at `55cf453`
+The latest [PostgreSQL workspace record](PG-WORKSPACES.md) at `b7521bc` passed
+**2,877 source tests with 81 skips**, including live PostgreSQL. The installed
+selection passed **143 tests with 13 skips** after a test-fixture portability fix.
+The real-BGE 100-project concurrent retrieval and native backup/restore workflow
+completed; direct verification of both retained dumps checked all 102 project
+identities and merged-evidence records. Failures and a transient teardown timeout
+remain in the report. This does not implement hosted project grants.
+
+The preceding [PostgreSQL vector-search record](PG-VECTOR-SEARCH.md) at `55cf453`
 passed **2,852 tests with 81 skips** in the full source collection and 72 installed
 PostgreSQL/receipt checks with one skip. Exact search now preserves eligible
 neighbors when HNSW would filter them out after its candidate scan. The cost
@@ -10,7 +18,8 @@ The preceding [named workspace record](WORKSPACES.md) at `217facb` passed **2,84
 tests with 81 skips** in the full source collection, including live PostgreSQL,
 research and examples. Installed checks passed 161 tests with five skips, and
 the real-BGE 100-project eviction/copy workflow completed. These are overlapping
-invocations. Local workspaces do not yet provide PostgreSQL routing or hosted grants.
+invocations. That earlier local-only implementation did not provide PostgreSQL
+routing or hosted grants. PostgreSQL routing is now available; hosted grants remain pending.
 
 The preceding [local partition resource probe](PARTITION-RESOURCES.md) completed
 18 repetitions plus a smoke run and retained one thread-budget stop. The new

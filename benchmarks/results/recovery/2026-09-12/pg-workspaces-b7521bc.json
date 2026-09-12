@@ -1,0 +1,411 @@
+{
+  "runtime_source_commit": "b7521bc",
+  "test_fixture_commit": "c7d8a1a",
+  "workflow_runner_commit": "75f441f",
+  "dump_verifier_commit": "97cac3b",
+  "recorded_at": "2026-09-12T23:43:32.085456+00:00",
+  "complete": true,
+  "native_exits_observed": true,
+  "package_files_unchanged_since_runtime_commit": true,
+  "test_runs": [
+    {
+      "name": "foundation",
+      "path": "/tmp/prme-pg-namespace-foundation-first.log",
+      "native_exit_code": 0,
+      "passed": 19,
+      "skipped": 0,
+      "failed": 0,
+      "errors": 0,
+      "sha256": "4e7904de06af54494da9cd7680ddfe5831bfa67fb0b344e70aa14701de86ef63"
+    },
+    {
+      "name": "initial_workspace",
+      "path": "/tmp/prme-pg-workspace-first.log",
+      "native_exit_code": 1,
+      "passed": 46,
+      "skipped": 0,
+      "failed": 1,
+      "errors": 0,
+      "sha256": "3d8a83b8d5ee8ef9ede1ba3f4f2a8e7818d9548b30b9f72c740f23819fa27283"
+    },
+    {
+      "name": "expanded_intermediate",
+      "path": "/tmp/prme-pg-workspace-expanded.log",
+      "native_exit_code": 0,
+      "passed": 142,
+      "skipped": 13,
+      "failed": 0,
+      "errors": 0,
+      "sha256": "e8a9f1cbc41dc07cebbeaf15011050c93ac5da64364b0c887893da08650eece7"
+    },
+    {
+      "name": "final_contracts",
+      "path": "/tmp/prme-pg-workspace-final-contracts.log",
+      "native_exit_code": 0,
+      "passed": 34,
+      "skipped": 0,
+      "failed": 0,
+      "errors": 0,
+      "sha256": "72b7d4f64ffa0f8f68494f8ebe3c72de77e459db61a44b229f6c38f9e68cde21"
+    },
+    {
+      "name": "full_frozen_source",
+      "path": "/tmp/prme-pg-workspace-full-b7521bc.log",
+      "native_exit_code": 0,
+      "passed": 2877,
+      "skipped": 81,
+      "failed": 0,
+      "errors": 0,
+      "sha256": "3bab3ce84bc89285ac07adcc7d2ec8b2e452dde98b144acbc562cecd29872ee9"
+    },
+    {
+      "name": "installed_before_fixture_fix",
+      "path": "/tmp/prme-pg-workspace-installed-tests.log",
+      "native_exit_code": 1,
+      "passed": 137,
+      "skipped": 13,
+      "failed": 6,
+      "errors": 0,
+      "sha256": "39c7cffa090fc039b6cd86b59153c84b047f139a0fa83fbb6011f8706a643876"
+    },
+    {
+      "name": "installed_process_import_reproduction",
+      "path": "/tmp/prme-pg-workspace-installed-process-repro.log",
+      "native_exit_code": 1,
+      "passed": 0,
+      "skipped": 0,
+      "failed": 1,
+      "errors": 0,
+      "sha256": "8ec39975d471bbd5186ce53587649e46498d741f3f87b39985f4a178b60d0b9e"
+    },
+    {
+      "name": "installed_after_fixture_fix_with_teardown_timeout",
+      "path": "/tmp/prme-pg-workspace-installed-tests-fixed.log",
+      "native_exit_code": 1,
+      "passed": 143,
+      "skipped": 13,
+      "failed": 0,
+      "errors": 1,
+      "sha256": "a6c2d7ec05c4dc88d533e482706bd1d1ca18fda86399858e495e4512ce8303a3"
+    },
+    {
+      "name": "isolated_catalog_recheck",
+      "path": "/tmp/prme-pg-workspace-catalog-repro.log",
+      "native_exit_code": 0,
+      "passed": 1,
+      "skipped": 0,
+      "failed": 0,
+      "errors": 0,
+      "sha256": "3be62f393f5921607a873beb897436b1f6af7bf8e959115d728ee0ecc5bd3a34"
+    },
+    {
+      "name": "installed_final",
+      "path": "/tmp/prme-pg-workspace-installed-tests-final.log",
+      "native_exit_code": 0,
+      "passed": 143,
+      "skipped": 13,
+      "failed": 0,
+      "errors": 0,
+      "sha256": "0f8b82d36f02b68e80ecb5b9d73770311a54823bbc654f036b7808b35d8a18df"
+    }
+  ],
+  "checks": [
+    {
+      "name": "mypy_initial_optional_narrowing",
+      "path": "/tmp/prme-pg-workspace-mypy.log",
+      "native_exit_code": 1,
+      "sha256": "e99e0d3c0153060bf8215ed945e5cae0c9898bae1d4a4e810b7312b7cf59c687"
+    },
+    {
+      "name": "mypy_changed_modules",
+      "path": "/tmp/prme-pg-workspace-mypy-final.log",
+      "native_exit_code": 0,
+      "sha256": "71144743c83babea384888a735db0c4daba3d4d7b7942b6839984bd5c21b52bb"
+    },
+    {
+      "name": "public_consumer",
+      "path": "/tmp/prme-pg-workspace-public-typing.log",
+      "native_exit_code": 0,
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "name": "public_consumer_confirmed",
+      "path": "/tmp/prme-pg-workspace-public-typing-confirmed.log",
+      "native_exit_code": 0,
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "name": "two_project_workflow",
+      "path": "/tmp/prme-pg-workspace-2.log",
+      "native_exit_code": 0,
+      "sha256": "617ef768d3d12610cdcd512e84acc0c2dbe7bab994ba6de21504cbf79032c103"
+    },
+    {
+      "name": "hundred_project_workflow",
+      "path": "/tmp/prme-pg-workspace-100.log",
+      "native_exit_code": 0,
+      "sha256": "7aaa5003ec90d8a9f78cf50f67692fb3e4c58b57549181a63db58c69926a4041"
+    },
+    {
+      "name": "two_project_dump_verification",
+      "path": "/tmp/prme-pg-workspace-2-verified.log",
+      "native_exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "hundred_project_dump_verification",
+      "path": "/tmp/prme-pg-workspace-100-verified.log",
+      "native_exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "data/benchmarks/pg-workspace-2-b7521bc.json",
+      "sha256": "80460af2c11c7483586f07fd2b47bbc4a7240b81338f50c634c249d6f29956ee",
+      "verification_path": "data/benchmarks/pg-workspace-2-b7521bc-verified.json",
+      "verification_sha256": "d302cf49d3895555b89d5ff8593fcc61fbf876d21eb92285ecd9c60da7f273ee",
+      "dump": {
+        "path": "/Users/dwamianm/Sites/prism/data/benchmarks/pg-workspace-2-b7521bc.dump",
+        "sha256": "6fdb372eed71e59dd0368106ad42284995f626c86225099564d131340a23947a",
+        "bytes": 92726
+      },
+      "count": 2,
+      "elapsed_seconds": 1.8948985419992823,
+      "complete": true,
+      "peak_sampled_client_rss_bytes": 327434240,
+      "peak_sampled_client_threads": 47,
+      "peak_sampled_client_fds": 12,
+      "max_observed_connections": 3,
+      "versions": {
+        "prme": "0.11.0",
+        "asyncpg": "0.31.0",
+        "fastembed": "0.8.0",
+        "psutil": "7.2.2"
+      },
+      "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+      "runner_sha256": "531a0f8f8ae57cce72081106ebdc9b99524ff5807caca2e77b4dcf3a2b283803",
+      "helper_sha256": "cd38ac84a7f2c59fd40657dace6e5fd801da4f47cab08d47f2a49fbb5f0ee1bd",
+      "verifier_sha256": "a71e7a4210cd3090929d3ad7898c845d7f12e0ba1bfa0aa067a832bb92205d65"
+    },
+    {
+      "path": "data/benchmarks/pg-workspace-100-b7521bc.json",
+      "sha256": "d264df17e49dc92f5c6972d3a098859d5c4c98d452066f7fcc7c0779f2f130a7",
+      "verification_path": "data/benchmarks/pg-workspace-100-b7521bc-verified.json",
+      "verification_sha256": "52ca196bdc48d0e34050d8b0fc1f774b02013627dc37f387b8d7f32e9a829f1e",
+      "dump": {
+        "path": "/Users/dwamianm/Sites/prism/data/benchmarks/pg-workspace-100-b7521bc.dump",
+        "sha256": "f2f8639b57b4d04ee60225ac37b558c20a71c55da42d7e095ee35675001a0600",
+        "bytes": 4439430
+      },
+      "count": 100,
+      "elapsed_seconds": 41.04977191702346,
+      "complete": true,
+      "peak_sampled_client_rss_bytes": 330465280,
+      "peak_sampled_client_threads": 47,
+      "peak_sampled_client_fds": 12,
+      "max_observed_connections": 3,
+      "versions": {
+        "prme": "0.11.0",
+        "asyncpg": "0.31.0",
+        "fastembed": "0.8.0",
+        "psutil": "7.2.2"
+      },
+      "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+      "runner_sha256": "531a0f8f8ae57cce72081106ebdc9b99524ff5807caca2e77b4dcf3a2b283803",
+      "helper_sha256": "cd38ac84a7f2c59fd40657dace6e5fd801da4f47cab08d47f2a49fbb5f0ee1bd",
+      "verifier_sha256": "a71e7a4210cd3090929d3ad7898c845d7f12e0ba1bfa0aa067a832bb92205d65"
+    }
+  ],
+  "installed_identity": {
+    "source_commit": "b7521bc",
+    "matched_python_files": 124,
+    "files": [
+      "__init__.py",
+      "_temporal.py",
+      "api/__init__.py",
+      "api/__main__.py",
+      "api/app.py",
+      "api/models.py",
+      "api/routes.py",
+      "api/server.py",
+      "cli.py",
+      "client.py",
+      "config.py",
+      "epistemic/__init__.py",
+      "epistemic/inference.py",
+      "epistemic/matrix.py",
+      "epistemic/migration.py",
+      "ingestion/__init__.py",
+      "ingestion/entity_merge.py",
+      "ingestion/entity_references.py",
+      "ingestion/errors.py",
+      "ingestion/extraction.py",
+      "ingestion/graph_writer.py",
+      "ingestion/grounding.py",
+      "ingestion/novelty.py",
+      "ingestion/pipeline.py",
+      "ingestion/planning.py",
+      "ingestion/schema.py",
+      "ingestion/supersedence.py",
+      "ingestion/temporal.py",
+      "integrations/__init__.py",
+      "integrations/langchain.py",
+      "integrations/llamaindex.py",
+      "mcp/__init__.py",
+      "mcp/__main__.py",
+      "mcp/server.py",
+      "models/__init__.py",
+      "models/base.py",
+      "models/derivation.py",
+      "models/direct_store.py",
+      "models/edges.py",
+      "models/entity_identity.py",
+      "models/events.py",
+      "models/extraction.py",
+      "models/extraction_work.py",
+      "models/learning.py",
+      "models/nodes.py",
+      "models/processing.py",
+      "models/profile.py",
+      "models/relevance.py",
+      "organizer/__init__.py",
+      "organizer/alias_resolution.py",
+      "organizer/consolidation.py",
+      "organizer/contradiction.py",
+      "organizer/decay.py",
+      "organizer/deduplication.py",
+      "organizer/jobs.py",
+      "organizer/maintenance.py",
+      "organizer/merge_policy.py",
+      "organizer/models.py",
+      "organizer/oscillation.py",
+      "organizer/profiles.py",
+      "organizer/summarization.py",
+      "quality/__init__.py",
+      "quality/feedback.py",
+      "quality/metrics.py",
+      "quality/tuner.py",
+      "retrieval/__init__.py",
+      "retrieval/abstention.py",
+      "retrieval/candidates.py",
+      "retrieval/config.py",
+      "retrieval/context_formatter.py",
+      "retrieval/execution.py",
+      "retrieval/filtering.py",
+      "retrieval/learning.py",
+      "retrieval/models.py",
+      "retrieval/packing.py",
+      "retrieval/pipeline.py",
+      "retrieval/query_analysis.py",
+      "retrieval/ranking_adjustments.py",
+      "retrieval/reformulation.py",
+      "retrieval/reranker.py",
+      "retrieval/scope.py",
+      "retrieval/scoring.py",
+      "retrieval/selection.py",
+      "retrieval/session_context.py",
+      "retrieval/snapshots.py",
+      "retrieval/time.py",
+      "retrieval/tokenization.py",
+      "storage/__init__.py",
+      "storage/_threading.py",
+      "storage/derivation.py",
+      "storage/derivation_registry.py",
+      "storage/derivation_staging.py",
+      "storage/duckpgq_graph.py",
+      "storage/durable_queue.py",
+      "storage/embedding.py",
+      "storage/encryption.py",
+      "storage/engine.py",
+      "storage/event_store.py",
+      "storage/extraction_work.py",
+      "storage/graph_store.py",
+      "storage/lexical_index.py",
+      "storage/namespace_identity.py",
+      "storage/organizer_merge.py",
+      "storage/pg/__init__.py",
+      "storage/pg/event_store.py",
+      "storage/pg/graph_store.py",
+      "storage/pg/lexical_index.py",
+      "storage/pg/namespace.py",
+      "storage/pg/pool.py",
+      "storage/pg/schema.py",
+      "storage/pg/vector_index.py",
+      "storage/pg/vector_sql.py",
+      "storage/pg/workspace_catalog.py",
+      "storage/profile_collection.py",
+      "storage/profile_publication.py",
+      "storage/profile_registry.py",
+      "storage/profile_retirement.py",
+      "storage/profile_work.py",
+      "storage/relevance.py",
+      "storage/schema.py",
+      "storage/vector_index.py",
+      "storage/write_queue.py",
+      "types.py",
+      "workspace.py"
+    ],
+    "installed_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme",
+    "wheel_sha256": "e79c3a8a83ce01f6f04ec9ca84511f6a577f1b25f451658249e2e80d4b1d22d0"
+  },
+  "fixture_cleanup": {
+    "reason": "Clean up the exact authored fixture left by a native connection timeout during teardown",
+    "workspace": "authored-f85296b72b4540a7a937366f5b386feb",
+    "cleaned_namespace_id": "d9231585-6479-4f71-baf2-e24547fdb127",
+    "complete": true
+  },
+  "transient_timeout": {
+    "location": "Native connection establishment in test fixture teardown, before cleanup SQL",
+    "timeout_seconds": 60,
+    "cause": "Unproven",
+    "server_observation": {
+      "container": "prme-quality-postgres",
+      "started_at": "2026-09-12T04:59:17.810933294Z",
+      "oom_killed": false,
+      "restart_count": 0
+    },
+    "isolated_recheck": "Passed 1 test, native exit 0",
+    "final_selection": "143 passed, 13 skipped, native exit 0"
+  },
+  "limitations": [
+    "Authored storage workflows, not competitive memory-answer evaluation",
+    "Resource samples exclude PostgreSQL server and native utility memory and can miss transient peaks",
+    "Independent dump verification supplements a missing positive own-entity assertion in the initial helper",
+    "Hosted project grants, namespace lifecycle/import and full RFC-0004 conformance remain unimplemented"
+  ],
+  "invocations": {
+    "full_source": {
+      "checkout": "/tmp/prme-pg-workspace-final",
+      "source_commit": "b7521bc",
+      "python": "3.11.6",
+      "pytest_args": [
+        "-q"
+      ],
+      "live_postgresql": true
+    },
+    "installed_final": {
+      "test_checkout": "/tmp/prme-pg-workspace-testfix",
+      "test_commit": "c7d8a1a",
+      "package_source_commit": "b7521bc",
+      "python": "3.13.3",
+      "cwd": "/tmp",
+      "PYTHONPATH": "",
+      "test_modules": [
+        "test_pg_workspace.py",
+        "test_pg_namespace_pool.py",
+        "test_workspace.py",
+        "test_pg_vector_filtered_recall.py",
+        "test_derivation_commits.py",
+        "test_profile_publication.py"
+      ],
+      "live_postgresql": true
+    },
+    "typing_flags": [
+      "--follow-imports=silent",
+      "--ignore-missing-imports"
+    ],
+    "strict_public_consumer": true,
+    "changed_modules_check_untyped_defs": true
+  }
+}

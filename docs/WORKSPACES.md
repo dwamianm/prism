@@ -1,8 +1,8 @@
-# Named local memory with bounded open engines
+# Named memory with bounded open engines
 
 `MemoryWorkspace` keeps named projects in separate local packs or PostgreSQL
-schemas and limits how many engines stay open. The same owner and entity name can appear in multiple
-projects without combining their sources, relationships, maintenance or receipts.
+schemas and limits how many engines stay open. The same owner and entity name
+can appear in multiple projects without combining their sources, relationships, maintenance or receipts.
 
 ```python
 from prme import MemoryWorkspace, PRMEConfig, Scope

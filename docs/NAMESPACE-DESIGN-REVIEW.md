@@ -2,7 +2,8 @@
 
 Reviewed 2026-09-12 against code and primary documentation. The initial comparison
 below led to the [implemented local workspace API](WORKSPACES.md) at `217facb`.
-The PostgreSQL and hosted grant work remains a design requirement.
+The PostgreSQL schema/pool implementation followed at `b7521bc`; hosted grants
+remain a design requirement. See [PostgreSQL workspace evidence](../benchmarks/results/recovery/2026-09-12/PG-WORKSPACES.md).
 
 PRME's owner and scope filters within one engine cannot distinguish two named
 projects with the same owner and `Scope.PROJECT`. A `project_id` in metadata is
@@ -63,3 +64,20 @@ structured ingestion, pending-work recovery, receipts, encrypted copying and
 real process exits. The full suite and installed public 100-project workflow
 passed. These local results do not prove PostgreSQL isolation or the hosted
 grant requirements above, which remain the next platform boundaries to implement.
+
+
+The PostgreSQL implementation reuses the local lease/cache lifecycle. One root
+pool serves all open project engines; each facade verifies identity, removes
+leftover temporary relations and sets a private-only search path. pgvector's
+schema-qualified symbols let extension types/functions/operators remain visible
+without permitting public-table fallback. Registry and initial schema creation
+publish atomically, and initialized missing relations fail before migration.
+Concurrent workspace instances converge on the same registered project identity.
+
+The installed authored 100-project workflow completed with four cached engines,
+three connections and a native database backup/restore. Sampled client RSS peaked
+at 315.2 MiB; this excludes database-server memory, so it is not comparable to the
+local-process RSS figures above as total resource cost. These results support an
+opt-in PostgreSQL workspace API, not a universal hosted scalability choice.
+Hosted grants, shared-table comparison at larger realistic corpora, namespace
+lifecycle/import, and the full RFC conformance gates remain open.
