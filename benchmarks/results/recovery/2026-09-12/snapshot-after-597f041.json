@@ -1,0 +1,53 @@
+{
+  "passed": true,
+  "kind": "direct-store-snapshot-write-work",
+  "count": 256,
+  "configured_save_interval": 64,
+  "payload_count": 256,
+  "store_snapshot_count": 4,
+  "store_snapshot_bytes": 1076804,
+  "store_snapshot_ms": 91.04749899415765,
+  "store_total_ms": 61417.86454200337,
+  "unsaved_before_close": 0,
+  "close_snapshot_count": 1,
+  "snapshots": [
+    {
+      "bytes": 107632,
+      "milliseconds": 5.479582992848009
+    },
+    {
+      "bytes": 215288,
+      "milliseconds": 0.6573329883394763
+    },
+    {
+      "bytes": 322944,
+      "milliseconds": 0.5379580106819049
+    },
+    {
+      "bytes": 430940,
+      "milliseconds": 84.37262500228826
+    },
+    {
+      "bytes": 430940,
+      "milliseconds": 31.597541994415224
+    }
+  ],
+  "source": {
+    "engine_sha256": "1f135b6ceed94ee70e47cf978c7812c51fce51dce1a8d7b86502d6733f8b5619",
+    "vector_sha256": "99c6cc33b14ec4ba7d3d3e8e669839f8f2964d0e382ce36f4a672c68db85b503"
+  },
+  "python": "3.11.6",
+  "dependencies": {
+    "prme": "0.11.0",
+    "duckdb": "1.4.4",
+    "usearch": "2.23.0",
+    "tantivy": "0.25.1"
+  },
+  "limits": [
+    "Synthetic fixed embeddings; not an end-to-end throughput or retrieval-quality measurement.",
+    "Snapshot file sizes measure serialized output, not physical disk writes or fsync behavior.",
+    "Other machine workloads can affect component and total timings."
+  ],
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0
+}

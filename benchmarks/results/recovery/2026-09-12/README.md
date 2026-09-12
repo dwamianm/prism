@@ -589,3 +589,72 @@ python -m benchmarks.diagnostics.derivation_replanning --output /tmp/replan-clea
 This is one synthetic recovery/cleanup workflow, not extraction-accuracy,
 competitive superiority, throughput or filesystem power-loss evidence. Native
 stage fencing adds transaction work; these checks do not isolate its latency cost.
+
+## Direct-store snapshot write reduction
+
+`597f041` removes an unconditional whole-vector-index save after every direct
+store and deferred raw-source materialization. Vector payloads and metadata
+already commit together before the index operation returns. Startup restores
+unsaved keys from these durable payloads, without an embedding call. The existing
+configured snapshot interval and engine-close flush now govern snapshot writes.
+Lexical commits and failed-work accounting are retained.
+
+The [before](snapshot-before-afc1539.json) (`afc1539`) and
+[after](snapshot-after-597f041.json) (`597f041`) diagnostics each stored and
+acknowledged 256 synthetic records with deterministic 384-dimensional embeddings,
+a snapshot interval of 64, and isolated packs. Both processes exited zero and
+verified the node/payload counts after reopening. Harness source is `597f041`;
+the before run loaded the frozen earlier package. Reports retain implementation
+hashes, dependency versions and individual snapshot sizes.
+
+| Measurement during stores | Before | After |
+|---|---:|---:|
+| Complete vector snapshot writes | 256 | 4 |
+| Serialized snapshot bytes | 55,342,504 | 1,076,804 |
+| Snapshot component time | 6,753 ms | 91 ms |
+| Total time for 256 stores | 59,249 ms | 61,418 ms |
+| Additional snapshot writes on close | 1 | 1 |
+
+Serialized snapshot output decreased by **98.05%**. This measures serialized
+file sizes, not physical disk traffic, write amplification inside the filesystem
+or fsync behavior. It is not a throughput improvement claim: total store time
+was higher in the candidate run, and concurrent development evaluation and test
+workloads differed. Fixed embeddings isolate persistence work; they do not
+measure embedding-service or end-to-end ingestion performance. Periodic full
+snapshots still have size-dependent costs.
+
+Three new checks failed before the change: configured cadence was overridden,
+and public stores could not reach the intended unsaved-snapshot crash boundary.
+Afterward, public-store subprocesses exited abruptly with no snapshot or an older
+partial snapshot. Reopening with an embedding provider that raises on every call
+restored all acknowledged vectors and retained owner isolation, complete work
+status and lexical access. Existing crash injection now targets the durable
+vector index operation rather than the removed per-event `save()` call. A forced
+scheduled-snapshot failure still leaves processing retryable without skipping the
+healthy lexical backend.
+
+On `597f041`, the focused source checks passed 72 with 6 skipped; availability
+checks passed 12 with 2 skipped; the four cadence/diagnostic checks also passed.
+The installed Python 3.13 wheel passed **85 checks, 8 skipped** in 41.32 seconds,
+process exit zero. The [real-embedding synchronous-client workflow](snapshot-live-recovery-597f041.json)
+also completed and exited zero, repairing both accepted requests and retrieving
+the original instruction after reopening. Its package path confirms an installed
+wheel; it is a two-workflow recovery diagnostic, not a quality benchmark.
+
+## HTTP object identity validation
+
+`ededc6d` validates all event/node path identifiers as UUIDs before calling storage,
+matching the newer extraction endpoints. Malformed IDs now produce HTTP 422;
+valid but unknown or foreign IDs remain 404. Canonical string UUIDs are forwarded
+to the engine. The OpenAPI error model accepts both application error strings
+and FastAPI's structured validation-detail arrays, so declared error schemas
+match those responses.
+
+The new boundary tests reproduced ten failures before the change; three existing
+UUID extraction routes already passed. All thirteen checks pass afterward,
+including no storage calls for malformed IDs and canonicalization of uppercase
+UUIDs. The source API/identity/provenance suite passed 69 tests. The final
+installed Python 3.13 wheel (`ededc6d`) passed **73 tests** in 27.19 seconds,
+covering the API suite and the four snapshot-cadence/recovery checks. It emitted
+one Starlette/AnyIO deprecation warning about the `BlockingPortal` alias; the
+process exited zero. These tests do not establish benchmark leadership.
