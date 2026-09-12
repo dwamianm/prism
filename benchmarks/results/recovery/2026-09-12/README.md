@@ -1305,3 +1305,36 @@ paths only; it does not establish package-wide log sanitization.
 The installed `40c375e` wheel also passed all 30 checks with three expected skips
 in 10.29s on Python 3.13 and live PostgreSQL. The [installed record](pending-logs-installed-40c375e.json)
 pins wheel and log hashes and records the observed native exit zero.
+
+## Batched durable raw-source processing
+
+`process_pending()` now combines local lexical replacements into a bounded
+atomic commit after graph/vector preparation. No source is acknowledged before
+that commit. Vector failures remain individual; a lexical batch failure falls
+back to separate document writes, allowing healthy sources to finish. Direct
+`store()` keeps immediate indexing and PostgreSQL keeps its individual writes.
+Cancellation or process exit leaves unacknowledged source jobs available for
+replay. The pass budget is cooperative between sources, with final commit and
+fallback repair allowed to extend it.
+
+The frozen `c89fb94` real-BGE diagnostic copied the same unprocessed artifact
+into each of three serial and three batched trials. All six completed with exact
+candidate and product-context parity for both authored queries. For 32 sources,
+serial processing committed Tantivy 32 times versus once for batched processing.
+Median processing times were 7.01s and 1.06s in the source runtime; the installed
+Python 3.13 wheel measured 6.35s and 0.89s and passed the same parity checks.
+The [source report](materialization-batch-source-c89fb94.json) and
+[installed workflow](materialization-batch-installed-workflow-c89fb94.json)
+retain all trial times, model asset hashes and observed native exits of zero.
+
+These are small authored histories on one host with the embedding model warmed
+before timing. Startup is excluded, and concurrent tests/retrieval work may
+affect timings. Event identities are fresh per run; parity is checked between
+copies within each run. This is evidence of fewer durable commits and local
+workflow improvement, not a competitive speed or memory-quality result.
+
+The [installed recovery tests](materialization-batch-installed-c89fb94.json)
+passed 63 checks with 10 backend-specific skips in 34.94s on Python 3.13 and live
+PostgreSQL. Tests cover atomic rollback, lost acknowledgements, cancellation,
+owner filtering, selective failures, process exits before/after lexical commit,
+direct-write recovery and exact serial/batched retrieval parity. Ruff passed.
