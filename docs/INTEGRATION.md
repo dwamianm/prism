@@ -717,12 +717,23 @@ the separate source-retention confirmation is still pending. This is an opt-in
 policy, not a claim of superior results for every workload.
 
 ```python
-from prme import PRMEConfig
+from prme import MemoryClient, config_from_directory
+from prme.retrieval.config import PackingConfig
 
-config = PRMEConfig(packing={"multipath_ordering": "score"})
+config = config_from_directory("./my_memories")
+config.packing = PackingConfig(multipath_ordering="score")
+
+with MemoryClient(config=config) as client:
+    client.store("Aurora requires deployment approval.", user_id="alice")
+    result = client.retrieve("Aurora deployment policy", user_id="alice")
+    print(result.bundle.render())
 ```
 
-The equivalent environment setting is `PRME_PACKING__MULTIPATH_ORDERING=score`.
+`config_from_directory()` creates the directory and resolves the database, vector
+and lexical paths together. Set typed options before opening the client. Passing
+a `config` to `MemoryClient` uses its paths as-is; its separate `directory` argument
+is ignored. The equivalent environment setting is
+`PRME_PACKING__MULTIPATH_ORDERING=score`.
 New retrieval receipts use schema version 4 and retain the chosen policy in
 `receipt.packing.multipath_ordering`. Versions 1–3 retain their original canonical
 JSON and feedback checksums and always mean density ordering.

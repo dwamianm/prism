@@ -2,7 +2,7 @@
 
 A local-first, embeddable memory substrate for LLM-powered systems.
 Combines event sourcing, graph-based relational modeling, hybrid retrieval,
-and scheduled memory reorganization.
+and explicit or opportunistic memory reorganization.
 """
 
 __version__ = "0.11.0"
@@ -10,7 +10,7 @@ __version__ = "0.11.0"
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from prme.client import MemoryClient
+    from prme.client import MemoryClient, config_from_directory
     from prme.ingestion.pipeline import IngestionPipeline
     from prme.retrieval.models import RetrievalResponse
     from prme.retrieval.pipeline import RetrievalPipeline
@@ -43,6 +43,10 @@ def __getattr__(name: str):
         from prme.client import MemoryClient
 
         return MemoryClient
+    if name == "config_from_directory":
+        from prme.client import config_from_directory
+
+        return config_from_directory
     if name == "IngestionPipeline":
         from prme.ingestion.pipeline import IngestionPipeline
 
@@ -88,4 +92,5 @@ __all__ = [
     "Scope",
     "SourceType",
     "StaleProfileError",
+    "config_from_directory",
 ]
