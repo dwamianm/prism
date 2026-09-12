@@ -183,6 +183,7 @@ class MemoryEngine:
         Dispatches to ``_create_duckdb()`` or ``_create_postgres()``
         based on ``config.backend``. When ``database_url`` is set,
         all storage uses PostgreSQL; otherwise, file-based DuckDB.
+        Missing local storage directories are created, including parents.
 
         Args:
             config: Optional configuration. Defaults to PRMEConfig().
@@ -203,6 +204,13 @@ class MemoryEngine:
         from pathlib import Path
 
         from prme.storage.encryption import EncryptionError, EncryptionProvider
+
+        # A fresh configured pack must work through either public client.
+        # Prepare all directories before opening/decrypting storage so a path
+        # collision fails without touching existing pack contents.
+        Path(config.db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(config.vector_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(config.lexical_path).mkdir(parents=True, exist_ok=True)
 
         async with AsyncExitStack() as startup:
             encryption_provider: EncryptionProvider | None = None

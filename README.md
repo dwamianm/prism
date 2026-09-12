@@ -125,17 +125,16 @@ async def main():
         vector_path="./vectors.usearch",
         lexical_path="./lexical_index",
     )
-    engine = await MemoryEngine.create(config)
-
-    await engine.store("Alice prefers dark mode.", user_id="alice")
-    response = await engine.retrieve("preferences?", user_id="alice")
-    for result in response.results:
-        print(f"[{result.composite_score:.3f}] {result.node.content}")
-
-    await engine.close()
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("Alice prefers dark mode.", user_id="alice")
+        response = await engine.retrieve("preferences?", user_id="alice")
+        for result in response.results:
+            print(f"[{result.composite_score:.3f}] {result.node.content}")
 
 asyncio.run(main())
 ```
+
+Both clients create missing local storage directories, including parent directories.
 
 </details>
 
