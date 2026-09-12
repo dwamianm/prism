@@ -141,3 +141,20 @@ async def test_concurrent_evaluation_preserves_coverage_and_selection_order(tmp_
     assert report["errors"] == 4 and report["coverage"] == 0 and not report["complete"]
     assert [d["question_id"] for d in report["details"]] == report["dataset"]["selected_question_ids"]
     assert json.loads(args.output.read_text())["concurrency"] == 2
+
+
+@pytest.mark.parametrize("worker_exit,matching,expected", [(0, True, True), (-6, True, False), (0, False, False)])
+def test_supervisor_requires_matching_report_and_normal_native_exit(tmp_path, monkeypatch, worker_exit, matching, expected):
+    import json
+    from types import SimpleNamespace
+    from benchmarks.retrieval_eval import supervise
+
+    output = tmp_path / "report.json"
+    output.write_text(json.dumps({"run_id": "current" if matching else "stale", "complete": True}))
+    monkeypatch.setattr("benchmarks.retrieval_eval.subprocess.run",
+                        lambda *args, **kwargs: SimpleNamespace(returncode=worker_exit))
+    result = supervise(output, ["worker"], "current")
+    assert result["complete"] is expected
+    assert result["process_exit_code"] == worker_exit
+    assert result["run_id"] == "current"
+    assert json.loads(output.read_text()) == result

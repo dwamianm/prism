@@ -209,3 +209,38 @@ are development diagnostics, not held-out answer accuracy or competitive scores.
 records provenance preservation, removal of unsupported reasoning directives,
 and identity-based context deduplication. Paired local-reader counterexamples
 are authored development diagnostics, not independent accuracy measurements.
+
+## Product packing replay
+
+Capture the actual public retrieval response while running a development
+source-evidence evaluation, then replay those candidates offline:
+
+```sh
+python -m benchmarks.retrieval_eval \
+  --dataset data/benchmarks/longmemeval/longmemeval_s_cleaned.json \
+  --variant s --split dev --clock question --concurrency 4 \
+  --capture-candidates /tmp/prme-dev-candidates --output /tmp/prme-dev.json
+python -m benchmarks.diagnostics.product_packing \
+  --input /tmp/prme-dev.json --snapshots /tmp/prme-dev-candidates \
+  --output /tmp/prme-product-packing.json
+```
+
+Use a fresh snapshot directory for each run. Snapshots contain benchmark source
+text and full candidate metadata; keep them separate from published summaries.
+Their hashes are retained in the report. The benchmark supervisor records the
+worker's actual process exit and rejects stale output as completion evidence.
+
+The offline comparator first reproduces every saved product context and token
+count exactly. It then compares the current density ordering with composite-score
+ordering **within the multi-path tier only**, using all the same candidates,
+priorities, representations, provenance labels, timestamps and budgets. It uses
+the product's configured tokenizer and reserved overhead, which can differ from
+the shared whole-turn evaluator's protocol. Full source text must be present in
+a content-bearing JSON representation to receive support credit; reference-only
+and key-value pointers receive none. Unlabeled questions remain unscored.
+
+This exploratory command accepts only the development split. It reports paired
+support-retention changes and complete-evidence retention, not generated-answer
+accuracy. It does not change production packing defaults. Run it separately from
+retrieval: its comparator substitution is intentionally confined to a sequential
+offline process.

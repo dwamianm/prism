@@ -16,6 +16,7 @@ import math
 import platform
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -72,6 +73,7 @@ def provenance(config: PRMEConfig) -> dict:
 async def evaluate_question(
     question: dict, config: PRMEConfig, *, budgets, count_tokens, k: int,
     reference_time: datetime | None = None,
+    capture_candidates: Path | None = None,
 ) -> dict:
     turns, gold = longmemeval_sources(question)
     by_id = {turn.id: turn for turn in turns}
@@ -109,6 +111,22 @@ async def evaluate_question(
                 question["question"], user_id=user_id, reference_time=reference_time,
             )
             latencies["prme"] = (time.perf_counter() - start) * 1000
+            snapshot_ref = None
+            if capture_candidates is not None:
+                # Record the actual public response before any evaluator uses
+                # its evidence labels. Keep raw text out of the summary report.
+                snapshot = {
+                    "question_id": question["question_id"],
+                    "packing_config": local.packing.model_dump(mode="json"),
+                    "candidates": [c.model_dump(mode="json") for c in response.results],
+                    "control": {"context": response.bundle.render(),
+                                "tokens": response.bundle.tokens_used},
+                }
+                raw_snapshot = json.dumps(snapshot, ensure_ascii=False, allow_nan=False).encode()
+                filename = hashlib.sha256(question["question_id"].encode()).hexdigest() + ".json"
+                capture_candidates.mkdir(parents=True, exist_ok=True)
+                (capture_candidates / filename).write_bytes(raw_snapshot)
+                snapshot_ref = {"filename": filename, "sha256": hashlib.sha256(raw_snapshot).hexdigest()}
             ranked["prme"] = [
                 node_sources[str(c.node.id)] for c in response.results
                 if str(c.node.id) in node_sources
@@ -155,6 +173,7 @@ async def evaluate_question(
         "source_count": len(turns), "evidence_source_ids": sorted(gold),
         "ingestion_ms": ingestion_ms, "methods": methods,
         "reference_time": response.metadata.reference_time.isoformat(),
+        **({"candidate_snapshot": snapshot_ref} if snapshot_ref is not None else {}),
     }
 
 
@@ -219,7 +238,7 @@ async def run(args) -> dict:
     )
     details = []
     report = {
-        "schema_version": 1, "run_id": str(uuid4()),
+        "schema_version": 1, "run_id": getattr(args, "run_id", None) or str(uuid4()),
         "started_at": datetime.now(timezone.utc).isoformat(),
         "kind": "source-evidence-retrieval", "profile": "raw-turns-static",
         "provenance": provenance(config),
@@ -231,6 +250,7 @@ async def run(args) -> dict:
         "rrf_constant": 60,
         "query_clock": args.clock,
         "concurrency": args.concurrency,
+        "candidate_snapshots_captured": getattr(args, "capture_candidates", None) is not None,
         "limitations": [
             "Evidence retrieval, not answer accuracy or abstention accuracy.",
             "Shared whole-turn evaluation packer, not the PRME product packer.",
@@ -252,6 +272,7 @@ async def run(args) -> dict:
                     question, config, budgets=args.budgets, k=args.k,
                     count_tokens=lambda text: len(encoding.encode(text, disallowed_special=())),
                     reference_time=_parse_haystack_date(question["question_date"]) if args.clock == "question" else None,
+                    capture_candidates=getattr(args, "capture_candidates", None),
                 )
             except Exception as exc:
                 return {"question_id": question["question_id"],
@@ -280,6 +301,25 @@ async def run(args) -> dict:
     return report
 
 
+def supervise(output: Path, command: list[str], run_id: str) -> dict:
+    """Record the native worker's actual exit, rejecting stale output files."""
+    completed = subprocess.run(command, check=False)
+    try:
+        report = json.loads(output.read_bytes())
+    except (OSError, ValueError):
+        report = {}
+    if not isinstance(report, dict) or report.get("run_id") != run_id:
+        report = {"run_id": run_id, "complete": False,
+                  "benchmark_error": "Worker did not produce a report for this run"}
+    report["process_exit_code"] = completed.returncode
+    report["complete"] = bool(report.get("complete") and completed.returncode == 0)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temp = output.with_suffix(output.suffix + ".tmp")
+    temp.write_text(json.dumps(report, indent=2, allow_nan=False))
+    temp.replace(output)
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, required=True)
@@ -293,10 +333,19 @@ def main():
     parser.add_argument("--tokenizer", default="cl100k_base")
     parser.add_argument("--clock", choices=["question", "wall"], default="question")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--capture-candidates", type=Path,
+                        help="Save source-bearing public response snapshots for offline product-packing replay")
+    parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--run-id", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.k < 1 or args.concurrency < 1 or args.limit < 0 or any(b < 1 for b in args.budgets):
         parser.error("k, concurrency, and budgets must be positive; limit must be nonnegative")
-    report = asyncio.run(run(args))
+    if args.worker:
+        report = asyncio.run(run(args))
+    else:
+        run_id = str(uuid4())
+        report = supervise(args.output, [sys.executable, "-m", "benchmarks.retrieval_eval",
+                                        *sys.argv[1:], "--worker", "--run-id", run_id], run_id)
     raise SystemExit(0 if report["complete"] else 1)
 
 
