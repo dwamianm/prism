@@ -1079,7 +1079,7 @@ class MemoryEngine:
         # than awaited: nothing in the response depends on it, so its time
         # budget must not land on the caller's latency (issue #62).
         if self._maintenance_runner:
-            self._maintenance_runner.schedule()
+            self._maintenance_runner.schedule(user_id=user_id)
 
         return event_id
 
@@ -1400,7 +1400,7 @@ class MemoryEngine:
         # than awaited: nothing in the response depends on it, so its time
         # budget must not land on the caller's latency (issue #62).
         if self._maintenance_runner:
-            self._maintenance_runner.schedule()
+            self._maintenance_runner.schedule(user_id=user_id)
 
         return result
 

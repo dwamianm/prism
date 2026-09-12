@@ -9,13 +9,10 @@ has elapsed since the last pass, runs a bounded maintenance cycle:
 auto-promotion of eligible tentative nodes and threshold-based archival
 of decayed nodes.
 
-The pass is deliberately store-wide rather than per-tenant. It has no
-request to take an identity from, and both of its tasks are per-node
-lifecycle transitions driven by that node's own age and decay: neither
-reads one node to decide something about another, so there is nothing to
-leak between tenants. The jobs that do compare nodes to each other
-(deduplicate, alias_resolve, consolidate) are Layer 3 only, and those take
-a user scope from ``organize()`` (issue #66).
+Request-triggered passes inherit the caller's user scope. Each tenant has its
+own cooldown, and at most one background pass runs at a time. Explicit unscoped
+runner calls remain available for trusted operator maintenance. Cross-node jobs
+(deduplicate, alias_resolve, consolidate) remain explicit organize() jobs.
 """
 
 from __future__ import annotations
@@ -23,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
@@ -44,19 +42,32 @@ class MaintenanceRunner:
         self._engine = engine
         self._config = config
         self._last_maintained_at: float = 0.0  # epoch seconds, 0 = never run
+        self._last_by_user: OrderedDict[str, float] = OrderedDict()
         self._task: asyncio.Task[MaintenanceResult | None] | None = None
 
-    def _is_due(self) -> bool:
+    def _is_due(self, user_id: str | None = None) -> bool:
         """Whether a maintenance pass is enabled and past its cooldown."""
         if not self._config.opportunistic_enabled:
             return False
         # First call always runs (last_maintained_at == 0)
-        if self._last_maintained_at <= 0:
+        last_run = self._last_by_user.get(user_id, 0.0) if user_id is not None else self._last_maintained_at
+        if last_run <= 0:
             return True
-        elapsed = time.monotonic() - self._last_maintained_at
+        elapsed = time.monotonic() - last_run
         return elapsed >= self._config.opportunistic_cooldown
 
-    def schedule(self) -> None:
+    def _mark_run(self, user_id: str | None) -> None:
+        if user_id is None:
+            self._last_maintained_at = time.monotonic()
+        else:
+            self._last_by_user.pop(user_id, None)
+            self._last_by_user[user_id] = time.monotonic()
+            # Bound bookkeeping on long-lived multi-tenant servers. Eviction
+            # can permit earlier maintenance; it never changes user isolation.
+            while len(self._last_by_user) > 4096:
+                self._last_by_user.popitem(last=False)
+
+    def schedule(self, *, user_id: str | None = None) -> None:
         """Start a maintenance pass in the background if one is due.
 
         Callers on the user-visible path (retrieve, ingest) use this instead
@@ -67,17 +78,17 @@ class MaintenanceRunner:
         """
         if self._task is not None and not self._task.done():
             return
-        if not self._is_due():
+        if not self._is_due(user_id):
             return
 
-        self._last_maintained_at = time.monotonic()
-        self._task = asyncio.create_task(self._run_scheduled())
+        self._mark_run(user_id)
+        self._task = asyncio.create_task(self._run_scheduled(user_id))
 
-    async def _run_scheduled(self) -> MaintenanceResult | None:
+    async def _run_scheduled(self, user_id: str | None = None) -> MaintenanceResult | None:
         """Background wrapper: never lets a failure escape as a task error."""
         try:
-            result = await self._run_maintenance()
-            self._last_maintained_at = time.monotonic()
+            result = await self._run_maintenance(user_id=user_id)
+            self._mark_run(user_id)
             return result
         except asyncio.CancelledError:
             raise
@@ -86,7 +97,7 @@ class MaintenanceRunner:
                 "Opportunistic maintenance failed; continuing normally",
                 exc_info=True,
             )
-            self._last_maintained_at = time.monotonic()
+            self._mark_run(user_id)
             return None
 
     async def drain(self) -> None:
@@ -103,18 +114,18 @@ class MaintenanceRunner:
         except asyncio.CancelledError:
             pass
 
-    async def maybe_run(self) -> MaintenanceResult | None:
+    async def maybe_run(self, *, user_id: str | None = None) -> MaintenanceResult | None:
         """Check cooldown and run maintenance if due. Returns None if skipped.
 
         Runs the pass inline. ``schedule()`` is the non-blocking variant used
         on the hot path.
         """
-        if not self._is_due():
+        if not self._is_due(user_id):
             return None
 
         try:
-            result = await self._run_maintenance()
-            self._last_maintained_at = time.monotonic()
+            result = await self._run_maintenance(user_id=user_id)
+            self._mark_run(user_id)
             return result
         except Exception:
             logger.warning(
@@ -122,13 +133,14 @@ class MaintenanceRunner:
                 exc_info=True,
             )
             # Reset cooldown even on failure to avoid hammering
-            self._last_maintained_at = time.monotonic()
+            self._mark_run(user_id)
             return None
 
-    async def _run_maintenance(self) -> MaintenanceResult:
+    async def _run_maintenance(self, *, user_id: str | None = None) -> MaintenanceResult:
         """Run bounded maintenance pass: materialize, promote, archive, feedback_apply."""
         start = time.monotonic()
         result = MaintenanceResult()
+        deadline = start + max(0, self._config.opportunistic_budget_ms) / 1000
         batch_size = self._config.opportunistic_batch_size
         now_dt = datetime.now(timezone.utc)
 
@@ -136,12 +148,13 @@ class MaintenanceRunner:
         # Process pending fast-ingested items before other maintenance
         try:
             engine = self._engine
-            if engine._materialization_queue.debt_sync() > 0:
-                budget_ms = getattr(
-                    engine._config, "materialization_budget_ms", 100
+            if time.monotonic() < deadline and engine._materialization_queue.debt_sync() > 0:
+                budget_ms = min(
+                    getattr(engine._config, "materialization_budget_ms", 100),
+                    max(0, int((deadline - time.monotonic()) * 1000)),
                 )
                 await engine._materialization_queue.drain(
-                    engine, budget_ms=budget_ms
+                    engine, budget_ms=budget_ms, user_id=user_id
                 )
         except Exception:
             logger.warning(
@@ -151,14 +164,14 @@ class MaintenanceRunner:
 
         # --- Auto-promotion ---
         try:
-            promoted = await self._auto_promote(batch_size, now_dt)
+            promoted = await self._auto_promote(batch_size, now_dt, user_id=user_id, deadline=deadline)
             result.nodes_promoted = promoted
         except Exception:
             logger.warning("Auto-promotion failed during maintenance", exc_info=True)
 
         # --- Threshold archival ---
         try:
-            archived, deprecated = await self._threshold_archive(batch_size, now_dt)
+            archived, deprecated = await self._threshold_archive(batch_size, now_dt, user_id=user_id, deadline=deadline)
             result.nodes_archived = archived
             result.nodes_deprecated = deprecated
         except Exception:
@@ -172,7 +185,7 @@ class MaintenanceRunner:
         return result
 
     async def _auto_promote(
-        self, batch_size: int, now: datetime
+        self, batch_size: int, now: datetime, *, user_id: str | None = None, deadline: float | None = None
     ) -> int:
         """Promote eligible tentative nodes.
 
@@ -188,10 +201,13 @@ class MaintenanceRunner:
 
         Returns count of nodes promoted.
         """
+        if deadline is not None and time.monotonic() >= deadline:
+            return 0
         cutoff = now - timedelta(days=self._config.promotion_age_days)
 
         # Query the oldest tentative nodes created at/before the cutoff.
         tentative_nodes = await self._engine.query_nodes(
+            user_id=user_id,
             lifecycle_states=[LifecycleState.TENTATIVE],
             created_before=cutoff,
             oldest_first=True,
@@ -200,9 +216,11 @@ class MaintenanceRunner:
 
         promoted = 0
         for node in tentative_nodes:
+            if deadline is not None and time.monotonic() >= deadline:
+                break
             if len(node.evidence_refs) >= self._config.promotion_evidence_count:
                 try:
-                    await self._engine.promote(str(node.id))
+                    await self._engine.promote(str(node.id), user_id=user_id)
                     promoted += 1
                 except ValueError:
                     # Already promoted or invalid transition
@@ -210,7 +228,7 @@ class MaintenanceRunner:
         return promoted
 
     async def _threshold_archive(
-        self, batch_size: int, now: datetime
+        self, batch_size: int, now: datetime, *, user_id: str | None = None, deadline: float | None = None
     ) -> tuple[int, int]:
         """Archive or deprecate nodes below threshold.
 
@@ -219,12 +237,15 @@ class MaintenanceRunner:
 
         Returns (archived_count, deprecated_count).
         """
+        if deadline is not None and time.monotonic() >= deadline:
+            return 0, 0
         active_states = [
             LifecycleState.TENTATIVE,
             LifecycleState.STABLE,
             LifecycleState.CONTESTED,
         ]
         nodes = await self._engine.query_nodes(
+            user_id=user_id,
             lifecycle_states=active_states,
             limit=batch_size,
         )
@@ -233,6 +254,8 @@ class MaintenanceRunner:
         deprecated = 0
 
         for node in nodes:
+            if deadline is not None and time.monotonic() >= deadline:
+                break
             eff_salience = compute_effective_salience(
                 salience_base=node.salience_base,
                 reinforcement_boost=node.reinforcement_boost,
@@ -264,7 +287,7 @@ class MaintenanceRunner:
             # Force archive: salience below force threshold
             if eff_salience < self._config.force_archive_salience_threshold:
                 try:
-                    await self._engine.archive(str(node.id))
+                    await self._engine.archive(str(node.id), user_id=user_id)
                     archived += 1
                     continue
                 except ValueError:
@@ -280,7 +303,7 @@ class MaintenanceRunner:
                     # deprecate() may not exist on all graph stores;
                     # fall back to archive
                     try:
-                        await self._engine.archive(str(node.id))
+                        await self._engine.archive(str(node.id), user_id=user_id)
                         archived += 1
                     except ValueError:
                         pass
@@ -292,7 +315,7 @@ class MaintenanceRunner:
                 and eff_confidence < self._config.archive_confidence_threshold
             ):
                 try:
-                    await self._engine.archive(str(node.id))
+                    await self._engine.archive(str(node.id), user_id=user_id)
                     archived += 1
                 except ValueError:
                     pass

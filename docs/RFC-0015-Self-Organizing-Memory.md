@@ -141,6 +141,12 @@ Opportunistic maintenance runs when ALL of the following are true:
 2. At least `OrganizerConfig.opportunistic_cooldown` seconds have elapsed since the last maintenance pass (default: 3600 seconds / 1 hour).
 3. The current operation is `retrieve()` or `ingest()` (not `store()`, which is a fast path).
 
+Request-triggered passes inherit the requesting `user_id`, including pending
+materialization, promotion, and archival. Cooldowns are independent per tenant,
+with at most one background pass in flight. The in-memory cooldown table retains
+up to 4,096 recently maintained users; eviction permits an earlier next pass,
+never a change of scope. An explicit unscoped runner call is operator maintenance.
+
 The `last_maintained_at` timestamp is stored in the engine's runtime state (not persisted — it resets on restart, which is intentional: the first operation after a restart triggers maintenance).
 
 ### 4.3 Maintenance Jobs
@@ -189,7 +195,14 @@ Pending signals are identified by `FEEDBACK_EVENT` operations that have not yet 
 
 ### 4.4 Time Budget
 
-The entire maintenance pass MUST complete within `OrganizerConfig.opportunistic_budget_ms` milliseconds (default: 200ms). If the budget is exhausted mid-pass, remaining work is deferred to the next pass. The engine MUST NOT block user-facing operations for longer than the budget.
+PRME schedules the pass in the background so the caller does not await it.
+`OrganizerConfig.opportunistic_budget_ms` (default 200ms) is a cooperative budget:
+the runner checks its deadline before each job query and node mutation, and gives
+pending materialization only the remaining time. Once exhausted, it defers further
+work. A database or index write already in flight may finish after the deadline;
+it is not cancelled midway through a durable operation. This supersedes the
+original hard wall-clock guarantee, which synchronous backend operations cannot
+provide safely. Node-count bounds remain in effect.
 
 ### 4.5 Failure Handling
 
