@@ -1,0 +1,94 @@
+{
+  "decision": "reverted_candidate",
+  "reason": "No demonstrated classification gain; one repaired case, one new unsupported preference, two persistent conditional failures; candidate namesake failure was an overly strict object-string check.",
+  "control_commit": "b8bac4b",
+  "candidate_commit": "18392ba",
+  "revert_commit": "3a8cb65",
+  "cases_sha256": "636680d4dff8bc5d429fb09db8739b13c646aefb3ad121a2e5e369143c51f5d0",
+  "control_cases_passed": 9,
+  "candidate_cases_passed_under_original_strict_matcher": 8,
+  "limitations": "Single unseeded local-model runs, authored development probes. Namesake matcher corrected after inspection; original scores retained without presenting a numerical quality delta.",
+  "cases": [
+    {
+      "case": "usage",
+      "control_passed": true,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "possible_usage",
+      "control_passed": false,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "conditional_usage",
+      "control_passed": false,
+      "candidate_passed": false,
+      "candidate_failed_checks": [
+        "expected_claim_kinds"
+      ]
+    },
+    {
+      "case": "explicit_preference",
+      "control_passed": true,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "dislike",
+      "control_passed": true,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "choice",
+      "control_passed": true,
+      "candidate_passed": false,
+      "candidate_failed_checks": [
+        "expected_claim_kinds"
+      ]
+    },
+    {
+      "case": "rejected_choice",
+      "control_passed": true,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "mixed",
+      "control_passed": true,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "past_choice",
+      "control_passed": true,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "service",
+      "control_passed": true,
+      "candidate_passed": true,
+      "candidate_failed_checks": []
+    },
+    {
+      "case": "namesake",
+      "control_passed": true,
+      "candidate_passed": false,
+      "candidate_failed_checks": [
+        "expected_objects_present",
+        "expected_claim_kinds"
+      ]
+    },
+    {
+      "case": "conditional_preference",
+      "control_passed": false,
+      "candidate_passed": false,
+      "candidate_failed_checks": [
+        "epistemic_qualifications_preserved"
+      ]
+    }
+  ]
+}

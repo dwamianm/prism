@@ -59,7 +59,12 @@ become direct semantic graph edges; their semantic accuracy remains unproven.
 Two real-model diagnostic trials still misclassified hypothetical usage as a
 preference; one failed namesake extraction. An extra relationship FACT masked
 the wrong preference in the second diagnostic, so the evaluator now checks all
-claim kinds and preserves the invalid pass as failure evidence. Installed ONNX Runtime telemetry caused a native
+claim kinds and preserves the invalid pass as failure evidence. A subsequent
+12-case classification probe found persistent kind/condition errors. A clearer
+prompt/schema candidate did not establish a gain and was reverted after testing;
+[raw control/candidate results](benchmarks/results/extraction/2026-09-12/README.md)
+remain available. Namesake evaluation now checks actual graph roles instead of
+requiring one exact spelling of an otherwise valid entity mention. Installed ONNX Runtime telemetry caused a native
 shutdown abort; local embeddings now disable that optional uploader by default
 and diagnostics require a clean child-process exit before reporting success. Processing is explicit; retrieval does not run an LLM recovery job.
 

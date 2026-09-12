@@ -32,7 +32,7 @@ def failure_details(exc):
     return {"error_chain": kinds, "validation_errors": validation}
 
 
-def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_epistemic=None):
+def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_epistemic=None, expected_entity_types=None):
     """Assess every claim; an extra FACT cannot hide a misclassified preference."""
     claims = [n for n in nodes if n.node_type in {NodeType.FACT, NodeType.PREFERENCE, NodeType.DECISION}]
     linked = bool(claims) and all(
@@ -40,7 +40,7 @@ def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_ep
         and any(e.edge_type == EdgeType.HAS_FACT and e.target_id == n.id for e in edges)
         for n in claims
     )
-    # All three fixtures describe facts, including the hypothetical usage case.
+    # Default reference fixtures describe facts, including hypothetical usage.
     if expected_kinds is None:
         kinds_ok = bool(claims) and all(n.node_type == NodeType.FACT for n in claims)
         objects_present = bool(claims)
@@ -54,11 +54,26 @@ def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_ep
         )
     allowed = allowed_epistemic or ({"conditional", "hypothetical"} if case == "conditional" else None)
     temporal_ok = allowed is None or all(n.epistemic_type.value in allowed for n in claims)
+    entity_types_ok = True
+    if expected_entity_types is not None:
+        by_id = {n.id: n for n in nodes if n.node_type == NodeType.ENTITY}
+        entity_types_ok = bool(claims) and all(
+            any(e.edge_type == EdgeType.HAS_FACT and e.target_id == claim.id
+                and e.source_id in by_id
+                and by_id[e.source_id].metadata.get("entity_type") == expected_entity_types["subject"]
+                for e in edges)
+            and any(e.edge_type == EdgeType.MENTIONS and e.source_id == claim.id
+                and e.target_id in by_id
+                and by_id[e.target_id].metadata.get("entity_type") == expected_entity_types["object"]
+                for e in edges)
+            for claim in claims
+        )
     associations = all(e.edge_type in {EdgeType.HAS_FACT, EdgeType.MENTIONS} for e in edges)
     preserved = bool(claims) and all(n.content == source for n in claims)
     return {
-        "passed": linked and objects_present and kinds_ok and temporal_ok and associations and preserved,
+        "passed": linked and objects_present and kinds_ok and temporal_ok and entity_types_ok and associations and preserved,
         "expected_objects_present": objects_present,
+        "expected_entity_types_linked": entity_types_ok,
         "expected_claim_kinds": kinds_ok,
         "epistemic_qualifications_preserved": temporal_ok,
         "subject_links_complete": linked,
@@ -73,7 +88,7 @@ async def run(args, *, cases=None):
     started = time.perf_counter()
     cases = cases or [
         ("service", "The Aster service uses PostgreSQL.", {}),
-        ("namesake", "Jordan, the engineer, lives in Jordan, the country.", {}),
+        ("namesake", "Jordan, the engineer, lives in Jordan, the country.", {"expected_entity_types": {"subject": "person", "object": "location"}}),
         (
             "conditional",
             "Alice might use PostgreSQL for the Atlas project if the evaluation succeeds.", {},
@@ -121,6 +136,9 @@ async def run(args, *, cases=None):
                     reports.append(
                         {
                             "case": case,
+                            "source": source,
+                            "evaluated_nodes": [n.model_dump(mode="json", include={"id", "user_id", "node_type", "epistemic_type", "content", "metadata"}) for n in nodes],
+                            "evaluated_edges": [e.model_dump(mode="json", include={"source_id", "target_id", "edge_type"}) for e in plan.edges],
                             **assess_claims(case, source, nodes, plan.edges, **expectation),
                             "expectation": expectation,
                             "edge_types": [edge.edge_type.value for edge in plan.edges],

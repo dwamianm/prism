@@ -63,3 +63,24 @@ def test_classification_probe_requires_each_expected_object_and_its_kind():
     assert not assess_claims("mixed", source, [use], edges, **expected)["passed"]
     wrong = pref.model_copy(update={"node_type": NodeType.FACT})
     assert not assess_claims("mixed", source, [use, wrong], edges, **expected)["passed"]
+
+
+
+def test_namesake_probe_accepts_full_mentions_but_requires_correct_graph_roles():
+    from benchmarks.diagnostics.entity_references import assess_claims
+    from prme.models import MemoryNode, MemoryEdge
+    from prme.types import EdgeType, NodeType
+
+    source = "Jordan, the engineer, lives in Jordan, the country."
+    subject = MemoryNode(content="Jordan, the engineer", user_id="probe", node_type=NodeType.ENTITY,
+                         metadata={"entity_type": "person"})
+    obj = MemoryNode(content="Jordan, the country", user_id="probe", node_type=NodeType.ENTITY,
+                     metadata={"entity_type": "location"})
+    fact = MemoryNode(content=source, user_id="probe", node_type=NodeType.FACT,
+                      metadata={"object": obj.content, "subject_link_status": "resolved"})
+    edges = [MemoryEdge(user_id="probe", source_id=subject.id, target_id=fact.id, edge_type=EdgeType.HAS_FACT),
+             MemoryEdge(user_id="probe", source_id=fact.id, target_id=obj.id, edge_type=EdgeType.MENTIONS)]
+    expected = {"expected_entity_types": {"subject": "person", "object": "location"}}
+    assert assess_claims("namesake", source, [subject, obj, fact], edges, **expected)["passed"]
+    wrong = edges[1].model_copy(update={"target_id": subject.id})
+    assert not assess_claims("namesake", source, [subject, obj, fact], [edges[0], wrong], **expected)["passed"]

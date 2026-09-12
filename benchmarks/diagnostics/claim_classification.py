@@ -31,7 +31,10 @@ CASES = [
     case("mixed", "Maya uses Redis but prefers SQLite.", {"Redis": "fact", "SQLite": "preference"}),
     case("past_choice", "Last month, Noah selected PostgreSQL.", {"PostgreSQL": "decision"}),
     case("service", "The Cedar service uses Redis.", {"Redis": "fact"}),
-    case("namesake", "Jordan, the engineer, lives in Jordan, the country.", {"Jordan": "fact"}),
+    ("namesake", "Jordan, the engineer, lives in Jordan, the country.", {
+        "allowed_epistemic": ["asserted", "observed"],
+        "expected_entity_types": {"subject": "person", "object": "location"},
+    }),
     case("conditional_preference", "If latency is equal, Elena prefers SQLite.", {"SQLite": "preference"}, uncertain=True),
 ]
 

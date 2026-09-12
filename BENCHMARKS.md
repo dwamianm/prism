@@ -189,3 +189,11 @@ cover abrupt exits, saved extraction reuse, installed-package behavior, and vect
 startup cost. They preserve an incomplete local-model trial and distinguish
 component timings from total startup latency. These reliability checks do not
 establish semantic answer accuracy or competitive leadership.
+
+
+[Extraction classification probes](benchmarks/results/extraction/2026-09-12/README.md)
+exercise twelve authored source statements through live local-model ingestion.
+They distinguish claim kind from epistemic status and check every materialized
+claim. A prompt/schema clarification failed to establish a quality gain and was
+reverted. The raw trials and corrected namesake evaluator are retained; these
+are development diagnostics, not held-out answer accuracy or competitive scores.
