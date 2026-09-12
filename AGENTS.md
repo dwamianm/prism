@@ -59,6 +59,10 @@ New retrieval logs include owner-scoped `RetrievalReceipt` snapshots and report
 appends explicit candidate labels with an optional caller-selected retry identity.
 These records survive restart and are exposed through Python, HTTP and MCP.
 They do not mutate weights or feed the legacy engine-global `feedback_apply` job.
+Version 2 receipts capture applied weights, neural/session score operations and
+sort policy for exact returned-candidate replay with `receipt.replay_ranking()`.
+Version 1 canonical JSON/checksums must remain unchanged; those receipts still
+accept labels but cannot replay scores. Replay excludes unseen/filtered candidates.
 Evaluated per-owner/scope learned profiles remain pending; RFC-0017 defines their
 acceptance requirements. Receipt collection is not evidence of learning quality.
 

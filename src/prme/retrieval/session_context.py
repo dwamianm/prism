@@ -15,7 +15,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from prme.retrieval.config import PackingConfig
-from prme.retrieval.models import RetrievalCandidate
+from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment
 
 from prme.types import Scope
 
@@ -131,6 +131,13 @@ async def expand_session_context(
             end = min(len(nodes), pos + window + 1)
 
             context_score = trigger.composite_score * decay
+            provenance = trigger.score_provenance
+            if provenance is not None:
+                provenance = provenance.model_copy(update={
+                    "adjustments": provenance.adjustments + (ScoreAdjustment(
+                        kind="session_decay", coefficient=decay, source_node_id=trigger.node.id,
+                    ),),
+                })
 
             for i in range(start, end):
                 ctx_node = nodes[i]
@@ -149,6 +156,7 @@ async def expand_session_context(
                         lexical_score=0.0,
                         graph_proximity=0.0,
                         composite_score=context_score,
+                        score_provenance=provenance,
                     )
                 )
                 newly_added_ids.add(ctx_id)

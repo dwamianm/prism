@@ -7,14 +7,16 @@ RetrievalResponse, RetrievalMetadata, and ExcludedCandidate.
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 from uuid import UUID, uuid4
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from prme.models.nodes import MemoryNode
+from prme.retrieval.config import ScoringWeights
 from prme.types import QueryIntent, RepresentationLevel, RetrievalMode
 
 
@@ -118,6 +120,79 @@ class ScoreTrace(BaseModel):
     )
 
 
+class ScoreAdjustment(BaseModel):
+    """An ordered, recorded operation after the base composite score."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    kind: Literal["neural_blend", "session_decay"]
+    coefficient: float = Field(allow_inf_nan=False, ge=0, le=1)
+    neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
+    source_node_id: UUID
+
+    @model_validator(mode="after")
+    def validate_operation(self):
+        if (self.kind == "neural_blend") != (self.neural_score is not None):
+            raise ValueError("Only neural blending requires a neural score")
+        return self
+
+
+class ScoreProvenance(BaseModel):
+    """Replay a score using saved features, without mutable graph state.
+
+    Version 1 fixes the composite formula, including ten-decimal rounding,
+    the relevance cap, and the order of subsequent score operations. Applied
+    weights can differ from the request's configured weights.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    formula_version: Literal[1] = 1
+    base_node_id: UUID
+    trace: ScoreTrace
+    weights: ScoringWeights
+    adjustments: tuple[ScoreAdjustment, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_components(self):
+        values = list(self.trace.model_dump().values())
+        values.extend(v for k, v in self.weights.model_dump().items() if k != "node_type_boost")
+        values.extend(self.weights.node_type_boost.values())
+        if not all(math.isfinite(v) for v in values):
+            raise ValueError("Score provenance components must be finite")
+        if self.replay_base_score() != self.trace.composite_score:
+            raise ValueError("Score provenance does not reproduce the base trace")
+        return self
+
+    def replay_base_score(self) -> float:
+        """Recompute the recorded base score, including its relevance cap."""
+        t, w = self.trace, self.weights
+        additive = (w.w_semantic * t.semantic_similarity
+                    + w.w_lexical * t.lexical_relevance
+                    + w.w_graph * t.graph_proximity
+                    + w.w_recency * t.recency_factor
+                    + w.w_salience * t.salience
+                    + w.w_confidence * t.confidence)
+        score = additive * t.epistemic_weight
+        if w.temporal_boost > 0:
+            score += w.temporal_boost * t.temporal_affinity
+        score *= t.node_type_boost
+        relevance = t.semantic_similarity + t.lexical_relevance
+        if w.relevance_floor > 0 and relevance < w.relevance_floor:
+            score = min(score, relevance)
+        return round(score, 10)
+
+    def replay_score(self) -> float:
+        """Apply saved neural blends and session inheritance in order."""
+        score = self.replay_base_score()
+        for operation in self.adjustments:
+            if operation.kind == "neural_blend":
+                assert operation.neural_score is not None
+                score = ((1 - operation.coefficient) * operation.neural_score
+                         + operation.coefficient * score)
+            else:
+                score *= operation.coefficient
+        return score
+
+
 class RetrievalCandidate(BaseModel):
     """Enriched candidate carrying all score components.
 
@@ -152,6 +227,9 @@ class RetrievalCandidate(BaseModel):
     )
     score_trace: ScoreTrace | None = Field(
         default=None, description="Base score breakdown before optional neural blending"
+    )
+    score_provenance: ScoreProvenance | None = Field(
+        default=None, description="Applied weights and ordered operations for exact score replay"
     )
     representation: RepresentationLevel | None = Field(
         default=None, description="Set in packing stage"

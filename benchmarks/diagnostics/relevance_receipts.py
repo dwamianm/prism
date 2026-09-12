@@ -31,6 +31,7 @@ def run():
             response = client.retrieve("What database does Aster use?", user_id="alice", min_score=0)
             assert response.metadata.receipt_persisted
             receipt = client.get_retrieval_receipt(str(response.metadata.request_id), user_id="alice")
+            assert receipt.replay_ranking() == tuple(c.node.id for c in response.results)
             node = next(n for n in response.results if "PostgreSQL" in n.node.content)
             submission = RelevanceSubmission(request_id=receipt.request_id, labels={node.node.id: True},
                                              method="structured_evaluation")
@@ -40,7 +41,9 @@ def run():
             assert client.list_relevance(user_id="bob") == []
             client.archive(str(node.node.id), user_id="alice")
         with MemoryClient(config=config) as client:
-            assert client.get_retrieval_receipt(str(receipt.request_id), user_id="alice") == receipt
+            restored = client.get_retrieval_receipt(str(receipt.request_id), user_id="alice")
+            assert restored == receipt
+            assert restored.replay_ranking() == tuple(c.node.id for c in response.results)
             assert client.get_relevance(str(record.feedback_id), user_id="alice") == record
             assert client.record_relevance(submission, user_id="alice") == record
             assert client.list_relevance(user_id="alice") == [record]
@@ -51,7 +54,8 @@ def run():
                 "repository_sha256": hashlib.sha256(Path(inspect.getfile(RelevanceRepository)).read_bytes()).hexdigest(),
                 "package_path": str(Path(inspect.getfile(RelevanceRepository)).resolve()),
                 "checks": ["real embeddings through public sync client", "returned candidate snapshot and explicit labels",
-                           "owner isolation", "retry identity survives archival and restart", "collection leaves weights unchanged"],
+                           "owner isolation", "retry identity survives archival and restart", "collection leaves weights unchanged",
+                           "exact ranking replay before and after archival and restart"],
                 "limits": "One authored persistence workflow; no learned profile or retrieval accuracy claim."}
 
 

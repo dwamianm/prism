@@ -422,6 +422,12 @@ Both bind access to the source owner's identity and perform no model calls.
 Every successful receipt log preserves returned candidates, score traces, content
 hashes and context membership. `response.metadata.receipt_persisted` reports
 whether that log succeeded; retrieval still works during a logging outage.
+New receipts also preserve applied weights and neural/session score adjustments.
+`receipt.replay_ranking()` reproduces the returned candidate order after restart,
+without a model or the current graph. This covers the saved candidates; it cannot
+recover candidates omitted during retrieval or prove improved answer quality.
+Older version 1 receipts remain readable and usable for labels but cannot replay
+their ranking because they lack that score provenance.
 
 ```python
 from prme import MemoryClient, RelevanceSubmission

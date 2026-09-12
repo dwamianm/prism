@@ -32,6 +32,8 @@ async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config,
         assert receipt.scoring.version_id == response.metadata.scoring_config_version
         assert receipt.reference_time == response.metadata.reference_time
         assert receipt.scopes == (Scope.PROJECT,)
+        assert receipt.schema_version == 2
+        assert receipt.replay_ranking() == tuple(r.node.id for r in response.results)
         assert [(c.node_id, c.score, c.trace) for c in receipt.candidates] == [
             (r.node.id, r.composite_score, r.score_trace) for r in response.results]
         assert all(c.has_content for c in receipt.candidates if c.in_context)
@@ -52,6 +54,30 @@ async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config,
         assert await engine.list_relevance(user_id=user + "-other") == []
         assert engine._config.scoring.version_id == receipt.scoring.version_id
         assert len(engine._feedback_tracker) == 0
+
+
+async def test_legacy_receipt_retains_checksum_and_accepts_feedback(config, user):
+    import json
+    from pathlib import Path
+    raw = (Path(__file__).parent / "fixtures/relevance/receipt-v1.json").read_text()
+    request_id = str(uuid4())
+    raw = raw.replace('"legacy-owner"', json.dumps(user)).replace(
+        "00000000-0000-0000-0000-000000000001", request_id)
+    original_checksum = hashlib.sha256(raw.encode()).hexdigest()
+    async with MemoryEngine.open(config) as engine:
+        await engine._relevance._query(
+            "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
+            "VALUES ($1, 'RETRIEVAL_REQUEST', $2, $3, $4, now())",
+            str(uuid4()), request_id,
+            json.dumps({"receipt": raw, "receipt_checksum": original_checksum}), user)
+        saved = await engine.get_retrieval_receipt(request_id, user_id=user)
+        assert saved.schema_version == 1 and saved.checksum == original_checksum
+        record = await engine.record_relevance(RelevanceSubmission(request_id=saved.request_id,
+            labels={saved.candidates[0].node_id: True}), user_id=user)
+    async with MemoryEngine.open(config) as engine:
+        restored = await engine.get_relevance(str(record.feedback_id), user_id=user)
+        assert restored.receipt_checksum == original_checksum
+        assert await engine.get_retrieval_receipt(request_id, user_id=user + "-other") is None
 
 
 async def test_concurrent_retries_converge_and_conflicting_reuse_is_rejected(config, user):

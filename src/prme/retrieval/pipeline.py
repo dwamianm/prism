@@ -50,6 +50,7 @@ from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope
 
 if TYPE_CHECKING:
+    from prme.models.relevance import RankingPolicy
     from prme.storage.graph_store import GraphStore
     from prme.storage.lexical_index import LexicalIndex
     from prme.storage.vector_index import VectorIndex
@@ -476,12 +477,14 @@ class RetrievalPipeline:
         )
 
         # --- Stage 5a: Neural Reranking (optional) ---
+        ranking_policy: RankingPolicy = "score_path_id"
         if self._reranker is not None:
             scored = await self._reranker.rerank(
                 query=query,
                 candidates=scored,
                 top_k=self._reranker_top_k,
             )
+            ranking_policy = "reranked_prefix"
 
         # --- Stage 5.5: Conflict Metadata Annotation ---
         # Batch-annotate CONTESTED candidates with conflict_flag and
@@ -541,6 +544,7 @@ class RetrievalPipeline:
                 # the expanded set (issue #60). Nodes that already passed are
                 # unaffected; only the newly appended ones can be dropped.
                 if len(expanded) != len(scored):
+                    ranking_policy = "score_id"
                     expanded = _apply_bitemporal_filters(
                         expanded, knowledge_at, event_time_from, event_time_to,
                         effective_time_from, effective_time_to,
@@ -647,7 +651,7 @@ class RetrievalPipeline:
                                    scoring=effective_weights, packing=effective_packing_config,
                                    candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
                                    retrieval_mode=retrieval_mode, time_from=effective_time_from,
-                                   time_to=effective_time_to)
+                                   time_to=effective_time_to, ranking_policy=ranking_policy)
             op_id = str(uuid.uuid4())
             payload = json.dumps({
                 "request_id": str(analysis.request_id),

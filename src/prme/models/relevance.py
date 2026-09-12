@@ -2,13 +2,14 @@
 from datetime import datetime
 import hashlib
 import math
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool, model_validator
+from pydantic import (AwareDatetime, BaseModel, ConfigDict, Field, StrictBool,
+                      SerializerFunctionWrapHandler, model_serializer, model_validator)
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
-from prme.retrieval.models import ScoreTrace
+from prme.retrieval.models import ScoreProvenance, ScoreTrace
 from prme.types import RepresentationLevel, RetrievalMode, Scope
 
 
@@ -35,9 +36,12 @@ class ReceiptCandidate(BaseModel):
         return self
 
 
+RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
+
+
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -52,13 +56,60 @@ class RetrievalReceipt(BaseModel):
     time_from: AwareDatetime | None = None
     time_to: AwareDatetime | None = None
     candidates: tuple[ReceiptCandidate, ...]
+    score_provenance: dict[UUID, ScoreProvenance] | None = None
+    ranking_policy: RankingPolicy | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_version(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data = handler(self)
+        # V1's canonical JSON is its durable checksum input. Never add default
+        # V2 fields when reading or exporting an existing V1 receipt.
+        if self.schema_version == 1:
+            data.pop("score_provenance", None)
+            data.pop("ranking_policy", None)
+        return data
 
     @model_validator(mode="after")
     def unique_candidates(self):
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
+        if self.schema_version == 1:
+            if self.score_provenance is not None or self.ranking_policy is not None:
+                raise ValueError("Version 1 receipts cannot contain version 2 score provenance")
+        else:
+            if self.score_provenance is None or self.ranking_policy is None:
+                raise ValueError("Version 2 receipts require score provenance and ranking policy")
+            if set(self.score_provenance) != set(ids):
+                raise ValueError("Score provenance must cover exactly the returned candidates")
+            for candidate in self.candidates:
+                if self.score_provenance[candidate.node_id].replay_score() != candidate.score:
+                    raise ValueError("Score provenance does not reproduce the returned score")
+            if self.replay_ranking() != tuple(ids):
+                raise ValueError("Score provenance does not reproduce the returned ranking")
         return self
+
+    def replay_ranking(self) -> tuple[UUID, ...]:
+        """Replay the returned candidate ranking without a graph or models.
+
+        This is a fixed-exposure replay: candidates omitted by generation,
+        filtering or result selection are not present in the receipt.
+        """
+        if self.schema_version != 2 or self.score_provenance is None:
+            raise ValueError("Version 1 receipts lack replayable score provenance")
+        scores = {nid: provenance.replay_score() for nid, provenance in self.score_provenance.items()}
+
+        def key(candidate: ReceiptCandidate):
+            nid = candidate.node_id
+            path = candidate.trace.path_score if candidate.trace else 0.0
+            if self.ranking_policy == "score_id":
+                return (0, -scores[nid], 0.0, str(nid))
+            if self.ranking_policy == "reranked_prefix" and candidate.reranker_score is not None:
+                return (0, -scores[nid], 0.0, str(nid))
+            group = 1 if self.ranking_policy == "reranked_prefix" else 0
+            return (group, -scores[nid], -path, str(nid))
+
+        return tuple(c.node_id for c in sorted(self.candidates, key=key))
 
     @property
     def checksum(self) -> str:
@@ -88,7 +139,7 @@ class RelevanceRecord(RelevanceSubmission):
 def make_receipt(*, request_id: UUID, user_id: str, query: str,
                  reference_time: datetime, scopes, scoring, packing, candidates, bundle,
                  min_score=None, result_limit=None, retrieval_mode=RetrievalMode.DEFAULT,
-                 time_from=None, time_to=None) -> RetrievalReceipt:
+                 time_from=None, time_to=None, ranking_policy: RankingPolicy = "score_path_id") -> RetrievalReceipt:
     included = {item.node.id: item for group in bundle.sections.values() for item in group}
     snapshots = []
     for item in candidates:
@@ -104,9 +155,15 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
             has_content=bool(packed and item.node.content.strip() and packed.representation in {
                 RepresentationLevel.FULL, RepresentationLevel.PROSE, RepresentationLevel.STRUCTURED}),
         ))
-    return RetrievalReceipt(request_id=request_id, user_id=user_id, query=query,
+    provenance = {}
+    for candidate in candidates:
+        if candidate.score_provenance is None:
+            raise ValueError("Cannot record replayable receipt without candidate score provenance")
+        provenance[candidate.node.id] = candidate.score_provenance
+    return RetrievalReceipt(schema_version=2, request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,
                             scoring=scoring, packing=packing, candidates=tuple(snapshots),
                             min_score=min_score, result_limit=result_limit, retrieval_mode=retrieval_mode,
                             time_from=time_from, time_to=time_to,
+                            score_provenance=provenance, ranking_policy=ranking_policy,
                             context_sha256=hashlib.sha256(bundle.render().encode()).hexdigest())

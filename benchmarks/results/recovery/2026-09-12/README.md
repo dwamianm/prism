@@ -780,4 +780,7 @@ not demonstrate learned retrieval quality.
 The earlier frozen full suite at `f810c31` finished with **2,071 tests passed,
 51 skipped**, actual exit zero, in 804.91 seconds under concurrent benchmark
 load. It covers historical ingestion, not the later reinforcement/receipt changes.
-A full run at `1461fb0` is tracked separately and remains in progress.
+The frozen full run at `1461fb0` subsequently completed with **2,133 tests passed,
+52 skipped**, actual exit zero, in 809.09 seconds under concurrent benchmark
+load. It includes instruction reinforcement and relevance collection, but
+predates the sync lifecycle additions and version 2 score provenance.

@@ -36,6 +36,29 @@ without a receipt yields no receipt. Saved receipts remain snapshots if a graph
 node changes or is archived later; reconstructing them from current graph state
 would corrupt the training record.
 
+### Score replay (receipt schema version 2)
+
+New receipts record applied scoring weights for each candidate, the base trace,
+and ordered neural-blend/session-decay operations. Session inheritance records
+its source node and keeps that source's features even when the source is absent
+from the returned set. Query-specific recency redistribution is captured after
+it runs. Redistribution cannot exceed the available semantic/lexical weight.
+
+`receipt.replay_ranking()` recomputes scores using formula version 1 and the
+recorded sort policy: composite score/path/ID, a separately reranked prefix and
+base-ranked tail, or score/ID after session expansion. Receipt validation checks
+both score and order reproduction. This operation uses no model, current graph,
+clock or query classifier. It describes only returned candidates; generation,
+filtering, selection omissions, exposure bias and packing cannot be recovered
+from these snapshots. It is not a full counterfactual retrieval evaluation.
+
+Version 1 receipts keep their exact canonical JSON and checksum and continue
+to accept relevance feedback. They lack sufficient score provenance for replay;
+replay raises an explicit error rather than reconstructing features from current
+graph state or assuming that configured weights were actually applied. The
+version 2 fields are omitted entirely when serializing a version 1 receipt.
+This migration preserves existing relevance-record checksum references.
+
 ## Explicit relevance records
 
 `record_relevance(request_id, labels, user_id=..., feedback_id=...)` accepts

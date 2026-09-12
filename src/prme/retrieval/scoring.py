@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 
 from prme.models.nodes import MemoryNode
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
-from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreTrace
+from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreProvenance, ScoreTrace
 from prme.types import DECAY_LAMBDAS, EPISTEMIC_WEIGHTS, DecayProfile, EpistemicType, LifecycleState, QueryIntent
 
 
@@ -472,13 +472,17 @@ def score_and_rank(
             # Redistribute from semantic and lexical proportionally.
             sem_lex_total = weights.w_semantic + weights.w_lexical
             if sem_lex_total > 0:
+                # A valid custom configuration may have less semantic/lexical
+                # mass than the requested increase. Never borrow more than it
+                # owns: negative relevance weights would reward weaker matches.
+                recency_increase = min(recency_increase, sem_lex_total)
                 sem_reduction = recency_increase * (weights.w_semantic / sem_lex_total)
                 lex_reduction = recency_increase * (weights.w_lexical / sem_lex_total)
                 effective_weights = ScoringWeights(
-                    w_semantic=weights.w_semantic - sem_reduction,
-                    w_lexical=weights.w_lexical - lex_reduction,
+                    w_semantic=max(0.0, weights.w_semantic - sem_reduction),
+                    w_lexical=max(0.0, weights.w_lexical - lex_reduction),
                     w_graph=weights.w_graph,
-                    w_recency=target_recency,
+                    w_recency=weights.w_recency + recency_increase,
                     w_salience=weights.w_salience,
                     w_confidence=weights.w_confidence,
                     w_epistemic=weights.w_epistemic,
@@ -503,13 +507,14 @@ def score_and_rank(
         if recency_increase > 0:
             sem_lex_total = effective_weights.w_semantic + effective_weights.w_lexical
             if sem_lex_total > 0:
+                recency_increase = min(recency_increase, sem_lex_total)
                 sem_reduction = recency_increase * (effective_weights.w_semantic / sem_lex_total)
                 lex_reduction = recency_increase * (effective_weights.w_lexical / sem_lex_total)
                 effective_weights = ScoringWeights(
-                    w_semantic=effective_weights.w_semantic - sem_reduction,
-                    w_lexical=effective_weights.w_lexical - lex_reduction,
+                    w_semantic=max(0.0, effective_weights.w_semantic - sem_reduction),
+                    w_lexical=max(0.0, effective_weights.w_lexical - lex_reduction),
                     w_graph=effective_weights.w_graph,
-                    w_recency=target_recency,
+                    w_recency=effective_weights.w_recency + recency_increase,
                     w_salience=effective_weights.w_salience,
                     w_confidence=effective_weights.w_confidence,
                     w_epistemic=effective_weights.w_epistemic,
@@ -545,6 +550,9 @@ def score_and_rank(
 
         candidate.composite_score = trace.composite_score
         candidate.score_trace = trace
+        candidate.score_provenance = ScoreProvenance(
+            base_node_id=candidate.node.id, trace=trace, weights=effective_weights,
+        )
         traces.append(trace)
 
     # Deterministic sort: score descending, path_score descending, then ID ascending.

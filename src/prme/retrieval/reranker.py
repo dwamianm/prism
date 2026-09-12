@@ -12,6 +12,8 @@ import math
 import threading
 from typing import TYPE_CHECKING
 
+from prme.retrieval.models import ScoreAdjustment
+
 if TYPE_CHECKING:
     from prme.retrieval.models import RetrievalCandidate
 
@@ -113,6 +115,14 @@ class CrossEncoderReranker:
             blended = (1.0 - prior_weight) * ce_score + prior_weight * original
             candidate.composite_score = blended
             candidate.reranker_score = ce_score
+            if candidate.score_provenance is not None:
+                provenance = candidate.score_provenance
+                candidate.score_provenance = provenance.model_copy(update={
+                    "adjustments": provenance.adjustments + (ScoreAdjustment(
+                        kind="neural_blend", coefficient=prior_weight,
+                        neural_score=ce_score, source_node_id=candidate.node.id,
+                    ),),
+                })
 
         # Re-sort reranked portion
         to_rerank.sort(key=lambda c: (-c.composite_score, str(c.node.id)))
