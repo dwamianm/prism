@@ -1,0 +1,30 @@
+{
+  "source_commit": "773a2f9",
+  "native_process_exit_code": 0,
+  "production_imports_verified_in_site_packages": true,
+  "production_bytes_match_frozen_commit": true,
+  "wheel_sha256": "dc1497c65fc617b1a4ae959b55c23f381acf801e1696289498350de295847390",
+  "passed": 87,
+  "skipped": 14,
+  "failed": 0,
+  "seconds": 40.99,
+  "log_sha256": "35a6201ba60d0a3a9b63355cadbdadc99f5129a10c91cdde8faa4aecfbc3c22c",
+  "coverage": [
+    "Batch and individual persistence failure boundaries",
+    "Independent healthy indexes under outage",
+    "Native atomicity and lost acknowledgements",
+    "Public drain cancellation and explicit retry",
+    "Process exit recovery before and after commit",
+    "Exact serial/batched candidate and context parity",
+    "Source and direct-store recovery on DuckDB and live PostgreSQL",
+    "Bounded failure categories and logging without formatting provider exceptions"
+  ],
+  "typing": {
+    "prior_commit": "40c375e",
+    "before_diagnostics": 24,
+    "after_diagnostics": 24,
+    "same_messages_after_line_normalization": true,
+    "limits": "Targeted mypy run with follow-imports=silent on engine, lexical index and durable queue; existing errors remain."
+  },
+  "limits": "Installed Python 3.13 checks; backend-specific cases account for skips. Full regression run is recorded separately. No memory-quality claim."
+}

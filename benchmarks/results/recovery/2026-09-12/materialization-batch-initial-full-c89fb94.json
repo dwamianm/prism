@@ -1,0 +1,18 @@
+{
+  "source_commit": "c89fb94",
+  "native_process_exit_code": 1,
+  "failed": 5,
+  "passed": 2487,
+  "skipped": 61,
+  "seconds": 665.42,
+  "log_sha256": "4b02f6ca37a2ced6c54dce8a7408d8be0ba3e95a1a189c4376806a098b2f5959",
+  "failures": [
+    "Logging test depended on a global structlog filter left by earlier tests",
+    "Four outage tests injected failures only into old per-item indexing/flush calls, bypassing new atomic batch persistence"
+  ],
+  "resolution_commits": [
+    "7079ce1",
+    "773a2f9"
+  ],
+  "limits": "Failed full run retained. Focused corrected checks pass; a new full run is required before claiming full-suite success."
+}

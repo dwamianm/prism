@@ -1338,3 +1338,16 @@ passed 63 checks with 10 backend-specific skips in 34.94s on Python 3.13 and liv
 PostgreSQL. Tests cover atomic rollback, lost acknowledgements, cancellation,
 owner filtering, selective failures, process exits before/after lexical commit,
 direct-write recovery and exact serial/batched retrieval parity. Ruff passed.
+
+The [first full run](materialization-batch-initial-full-c89fb94.json) is retained:
+2,487 passed, 61 skipped and five failed. Four outage tests still intercepted
+only the prior per-document indexing/flush path; they now fail the actual batch
+commit and fallback paths. A logging assertion depended on a global structlog
+filter left by earlier tests; it now verifies the queue's log arguments directly
+while preserving the unprintable-exception and next-healthy-job checks.
+
+`773a2f9` also fixes two typing regressions and adds public-drain cancellation
+coverage. The three checked storage modules now have the same 24 pre-existing
+mypy diagnostics as `40c375e`, after line-number normalization. This is not a
+passing project-wide type check. The [updated installed verification](materialization-batch-final-installed-773a2f9.json)
+passed 87 tests with 14 backend-specific skips in 40.99s, with native exit zero.
