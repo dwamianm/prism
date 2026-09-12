@@ -10,12 +10,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import tempfile
 from datetime import datetime
 
 import duckdb
 import numpy as np
 from usearch.index import Index
 
+from prme.storage._threading import run_to_completion
 from prme.storage.embedding import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
@@ -82,6 +84,7 @@ class VectorIndex:
         )
         if os.path.exists(index_path):
             self._index.load(index_path)
+        self._recover_vectors()
 
     def _init_metadata_table(self) -> None:
         """Create the vector_metadata table and sequence if they don't exist."""
@@ -99,6 +102,17 @@ class VectorIndex:
         self._conn.execute(
             "CREATE SEQUENCE IF NOT EXISTS vector_key_seq START 1"
         )
+        # Keep the numerical output in the same durable transaction as metadata.
+        # The USearch file is a debounced snapshot, not the only copy of an
+        # embedding. Existing packs are backfilled from their loaded snapshot.
+        # A separate table avoids ALTER TABLE replay failures on DuckDB 1.4.x
+        # when upgrading packs whose metadata has a function-based default.
+        self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS vector_payloads (
+                vector_key BIGINT PRIMARY KEY,
+                vector_data BLOB NOT NULL
+            )
+        """)
         # Indexes for fast lookups
         self._conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_vector_node
@@ -108,6 +122,79 @@ class VectorIndex:
             CREATE INDEX IF NOT EXISTS idx_vector_user
             ON vector_metadata (user_id)
         """)
+
+    def _recover_vectors(self) -> None:
+        """Reconcile the snapshot against durable metadata before serving reads.
+
+        Read vector payloads in bounded batches. New records can be recovered
+        without inference; old records can only be backfilled when their vector
+        is still present in the snapshot. An already missing legacy vector
+        requires ``prme rebuild`` and is reported explicitly.
+        """
+        orphan_keys = {int(key) for key in self._index.keys}
+        last_key = -1
+        restored = missing_legacy = 0
+        while True:
+            rows = self._conn.execute(
+                "SELECT vm.vector_key, vm.embedding_dim, vp.vector_data "
+                "FROM vector_metadata vm LEFT JOIN vector_payloads vp "
+                "ON vm.vector_key = vp.vector_key "
+                "WHERE vm.vector_key > ? ORDER BY vm.vector_key LIMIT 256", [last_key],
+            ).fetchall()
+            if not rows:
+                break
+            backfill = []
+            for key, dimension, payload in rows:
+                if key in orphan_keys:
+                    orphan_keys.remove(key)
+                    if payload is None:
+                        vector = np.asarray(self._index.get(key), dtype="<f4")
+                        if vector.shape == (dimension,) and np.isfinite(vector).all():
+                            backfill.append((key, vector.tobytes()))
+                elif payload is None:
+                    missing_legacy += 1
+                else:
+                    vector = np.frombuffer(payload, dtype="<f4")
+                    if (vector.shape != (dimension,) or dimension != self._index.ndim
+                            or not np.isfinite(vector).all()):
+                        raise ValueError(
+                            "Cannot restore vector payload: invalid dimensions or values. "
+                            "Use the pack's embedding configuration and rebuild its indexes."
+                        )
+                    self._index.add(key, vector)
+                    restored += 1
+            if backfill:
+                self._conn.executemany(
+                    "INSERT INTO vector_payloads VALUES (?, ?)",
+                    backfill,
+                )
+            last_key = rows[-1][0]
+        for key in orphan_keys:
+            self._index.remove(key)
+        if restored or orphan_keys:
+            self._save_snapshot()
+            logger.info(
+                "vector_index.recovered", extra={
+                    "restored_vectors": restored, "removed_orphans": len(orphan_keys),
+                },
+            )
+        if missing_legacy:
+            logger.warning(
+                "Vector snapshot is missing %d legacy embeddings without durable "
+                "payloads; run prme rebuild to restore their vector search.", missing_legacy,
+            )
+
+    def _save_snapshot(self) -> None:
+        """Replace the last complete snapshot only after the new file is written."""
+        parent = os.path.dirname(os.path.abspath(self._index_path))
+        descriptor, temporary = tempfile.mkstemp(prefix=".prme-vector-", dir=parent)
+        os.close(descriptor)
+        try:
+            self._index.save(temporary)
+            os.replace(temporary, self._index_path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
 
     def _fetch_allowed_keys(
         self,
@@ -177,7 +264,12 @@ class VectorIndex:
         """
         # Generate embedding (provider handles async internally)
         embedding = await self._provider.embed([content])
+        if len(embedding) != 1:
+            raise ValueError("Embedding provider must return exactly one vector per input")
         vector = np.array(embedding[0], dtype=np.float32)
+        if (vector.shape != (self._provider.dimension,) or vector.shape != (self._index.ndim,)
+                or not np.isfinite(vector).all()):
+            raise ValueError("Embedding provider returned invalid dimensions or non-finite values")
 
         async with self._write_lock:
             # DuckDB + USearch writes are synchronous; run them off the
@@ -186,7 +278,7 @@ class VectorIndex:
             # thread-safety fix, issue #39). The full index save is
             # debounced to avoid O(N^2) disk rewrites during ingestion.
             async with self._conn_lock:
-                key = await asyncio.to_thread(
+                key = await run_to_completion(
                     self._do_index, node_id, content, user_id, vector
                 )
 
@@ -209,23 +301,26 @@ class VectorIndex:
             "SELECT nextval('vector_key_seq')"
         ).fetchone()[0]
 
-        # Insert metadata
-        self._conn.execute(
-            """
-            INSERT INTO vector_metadata
-                (vector_key, node_id, user_id, embedding_model,
-                 embedding_version, embedding_dim)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            [
-                key,
-                node_id,
-                user_id,
-                self._provider.model_name,
-                self._provider.model_version,
-                self._provider.dimension,
-            ],
-        )
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._conn.execute(
+                """
+                INSERT INTO vector_metadata
+                    (vector_key, node_id, user_id, embedding_model,
+                     embedding_version, embedding_dim)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [key, node_id, user_id, self._provider.model_name,
+                 self._provider.model_version, self._provider.dimension],
+            )
+            self._conn.execute(
+                "INSERT INTO vector_payloads VALUES (?, ?)",
+                [key, vector.astype("<f4", copy=False).tobytes()],
+            )
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
 
         # Add to USearch index
         self._index.add(key, vector)
@@ -238,7 +333,7 @@ class VectorIndex:
         self._unsaved_inserts += 1
         if self._unsaved_inserts >= self._save_interval:
             try:
-                self._index.save(self._index_path)
+                self._save_snapshot()
             finally:
                 self._unsaved_inserts = 0
 
@@ -260,7 +355,7 @@ class VectorIndex:
         """
         async with self._write_lock:
             async with self._conn_lock:
-                return await asyncio.to_thread(self._do_delete, node_id)
+                return await run_to_completion(self._do_delete, node_id)
 
     def _do_delete(self, node_id: str) -> int:
         """Synchronous delete from USearch + metadata (runs in thread pool).
@@ -289,12 +384,22 @@ class VectorIndex:
                     extra={"vector_key": key, "node_id": node_id, "error": str(exc)},
                 )
 
-        self._conn.execute(
-            "DELETE FROM vector_metadata WHERE node_id = ?", [node_id]
-        )
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._conn.execute(
+                "DELETE FROM vector_payloads WHERE vector_key IN "
+                "(SELECT vector_key FROM vector_metadata WHERE node_id = ?)", [node_id],
+            )
+            self._conn.execute(
+                "DELETE FROM vector_metadata WHERE node_id = ?", [node_id]
+            )
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
         # Persist immediately so the removal is not lost if the process
         # exits before the next debounced save.
-        self._index.save(self._index_path)
+        self._save_snapshot()
         self._unsaved_inserts = 0
         return len(keys)
 
@@ -385,7 +490,7 @@ class VectorIndex:
             # access remains serialized during candidate-path parallelism.
             candidate_keys = [key for key, _distance in matched_keys]
             async with self._conn_lock:
-                allowed_keys = await asyncio.to_thread(
+                allowed_keys = await run_to_completion(
                     self._fetch_allowed_keys,
                     user_id,
                     scope,
@@ -426,7 +531,7 @@ class VectorIndex:
         interleave with a concurrent index ``add``/``save`` (issue #39).
         """
         async with self._write_lock:
-            return await asyncio.to_thread(self._do_search_index, query_vector, k)
+            return await run_to_completion(self._do_search_index, query_vector, k)
 
     def _do_search_index(
         self, query_vector: np.ndarray, k: int
@@ -453,7 +558,7 @@ class VectorIndex:
         resets it. Runs off the event loop under the write lock.
         """
         async with self._write_lock:
-            await asyncio.to_thread(self._index.save, self._index_path)
+            await run_to_completion(self._save_snapshot)
             self._unsaved_inserts = 0
 
     async def clear(self) -> None:
@@ -467,7 +572,7 @@ class VectorIndex:
         """
         async with self._write_lock:
             async with self._conn_lock:
-                await asyncio.to_thread(self._do_clear)
+                await run_to_completion(self._do_clear)
 
     def _do_clear(self) -> None:
         """Synchronous index + metadata reset (runs in thread pool).
@@ -480,10 +585,17 @@ class VectorIndex:
             metric="cos",
             dtype="f32",
         )
-        self._conn.execute("DELETE FROM vector_metadata")
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._conn.execute("DELETE FROM vector_payloads")
+            self._conn.execute("DELETE FROM vector_metadata")
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
         # The sequence is intentionally not reset: keys stay monotonic so a
         # rebuild never reuses a key that an in-flight reference might hold.
-        self._index.save(self._index_path)
+        self._save_snapshot()
         self._unsaved_inserts = 0
 
     async def close(self) -> None:

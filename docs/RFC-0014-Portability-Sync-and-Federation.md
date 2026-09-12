@@ -264,3 +264,36 @@ successful decryption does not modify the pack. Failure to restore ciphertext
 raises `EncryptionError` explicitly; callers must not assume the pack is encrypted
 in that case. Abrupt process termination still bypasses this cleanup; this is not
 crash-proof at-rest encryption while an engine has decrypted files open.
+
+## Local vector snapshot recovery amendment (2026-09-12)
+
+DuckDB commits each newly generated embedding's float32 payload together with
+its vector metadata. The `vector_payloads` table lives in `memory.duckdb`; it is
+derived data, adds approximately four bytes per dimension before database
+overhead/compression, and follows the database's encryption policy. PostgreSQL
+already stores vectors in its transactional node rows and does not use this table.
+
+USearch remains a debounced snapshot. On open, PRME restores keys absent from the
+snapshot using the durable payloads and removes keys absent from metadata. This
+recovers acknowledged inserts after abrupt process exit and prevents stale
+snapshots from resurrecting committed deletions. Snapshot writes use a temporary
+file in the same directory and atomic replacement, preserving the last complete
+file if a new write fails. This is tested for process termination and injected
+I/O failures; it is not a power-loss durability guarantee for the filesystem.
+
+Existing packs are backfilled from their intact USearch vectors without invoking
+an embedding model. Already missing legacy vectors cannot be reconstructed this
+way: startup reports their count and requests `prme rebuild`. Recovery reads
+payloads in batches of 256 and keeps an O(number of vector keys) reconciliation
+set. Large-pack startup cost still requires measurement.
+
+The separate payload table avoids an `ALTER TABLE` migration on metadata with a
+function-based default. An abrupt-exit test reproduced DuckDB 1.4.4's WAL replay
+failure on that alternative, consistent with the upstream
+[DDL replay issue](https://github.com/duckdb/duckdb/issues/21490).
+
+Cancellation during a native vector operation propagates after that operation
+finishes, keeping connection/index locks held until the worker actually stops.
+A cancelled write may have committed; cancellation does not roll it back.
+These changes recover numerical vectors, not arbitrary graph mutations or LLM
+derivation jobs. Those still require a separate durable operation protocol.
