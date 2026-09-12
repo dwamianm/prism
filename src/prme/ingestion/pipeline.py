@@ -321,7 +321,7 @@ class IngestionPipeline:
             for entity in result.entities:
                 entity_scope = scope
 
-                entity_id, _is_new = await entity_merger.find_or_create_entity(
+                entity_id, is_new = await entity_merger.find_or_create_entity(
                     name=entity.name,
                     entity_type=entity.entity_type,
                     user_id=event.user_id,
@@ -331,6 +331,12 @@ class IngestionPipeline:
                     scope=entity_scope,
                 )
                 entity_id_map[entity.name.strip().lower()] = entity_id
+
+                # Reuse does not update the durable entity description. Do not
+                # overwrite its vector with this attempt's uncommitted model
+                # output (or accumulate duplicate local vector entries).
+                if not is_new:
+                    continue
 
                 # Index entity in vector store (not tracked for rollback)
                 entity_text = entity.name
