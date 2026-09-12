@@ -337,3 +337,22 @@ claim full-state replay. Legacy packs need an explicit baseline snapshot for
 state that was never recorded; nondeterministic historical model output cannot
 be retroactively recovered from a raw event alone. No implementation milestone
 or synthetic test substitutes for that evidence.
+
+## Direct-store vector snapshot cadence (2026-09-12)
+
+Direct `store()` and deferred raw-source materialization rely on the vector
+backend's committed numerical payload and metadata before completing work.
+They do not require a complete USearch snapshot rewrite for every event.
+Local indexing persists both rows in one DuckDB transaction before adding the
+native vector; startup restores keys missing from a snapshot without calling
+an embedding provider. The configured `vector_save_interval` controls periodic
+snapshot writes, and engine close still flushes the derived snapshot. PostgreSQL
+persists its vector row in its existing index transaction.
+
+This removes redundant whole-index writes from direct materialization. Lexical
+commit and failure accounting are unchanged. A failed scheduled snapshot still
+propagates through the index operation and leaves work retryable. Abrupt-exit
+checks cover completed public stores with no snapshot and with an older partial
+snapshot, preserving owner isolation and requiring no embedding inference during
+reopening. The source, graph node and work status remain durable independently
+of the derived snapshot's cadence.

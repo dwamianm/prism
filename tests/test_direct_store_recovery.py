@@ -175,7 +175,7 @@ async def main():
             'source': (engine._event_store, 'append'),
             'node': (engine._graph_store, 'create_node'),
             'lexical': (engine._lexical_index, 'flush' if config.backend == 'duckdb' else 'index'),
-            'vector': (engine._vector_index, 'save'),
+            'vector': (engine._vector_index, 'index'),
             'complete': (engine._event_store, 'finish_materialization'),
         }[boundary]
         original = getattr(target, method)

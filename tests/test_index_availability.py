@@ -1,6 +1,6 @@
 """One failed search backend must not prevent indexing in the healthy one."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -68,20 +68,31 @@ async def test_pending_source_retains_healthy_index_and_retries_after_restart(co
 @pytest.mark.parametrize("failed", ["vector", "lexical"])
 async def test_flush_failure_does_not_skip_other_backend(config, user, monkeypatch, failed):
     if config.backend != "duckdb":
-        pytest.skip("Local indexes require explicit snapshot/commit flushing")
-    async with MemoryEngine.open(config) as engine:
+        pytest.skip("Local snapshot/commit failure boundaries")
+    # Force a scheduled vector snapshot, rather than assuming that direct
+    # materialization rewrites the entire vector index on every insertion.
+    local = config.model_copy(update={"vector_save_interval": 1})
+    async with MemoryEngine.open(local) as engine:
         event_id = await engine.ingest_fast(CONTENT, user_id=user)
         healthy = engine._lexical_index if failed == "vector" else engine._vector_index
-        persist = "flush" if failed == "vector" else "save"
+        persist = "flush" if failed == "vector" else "index"
         committed = AsyncMock(wraps=getattr(healthy, persist))
         with monkeypatch.context() as outage:
             outage.setattr(healthy, persist, committed)
             broken = getattr(engine, f"_{failed}_index")
-            outage.setattr(broken, "save" if failed == "vector" else "flush", AsyncMock(side_effect=OSError("disk")))
+            if failed == "vector":
+                outage.setattr(broken, "_save_snapshot", Mock(side_effect=OSError("disk")))
+            else:
+                outage.setattr(broken, "flush", AsyncMock(side_effect=OSError("disk")))
             result = await engine.process_pending(user_id=user)
             assert (result.processed, result.pending, result.failed) == (0, 1, 1)
             committed.assert_awaited()
             assert [hit["node_id"] for hit in await healthy_hits(engine, failed, user)] == [event_id]
+            if failed == "lexical":
+                assert engine._conn.execute(
+                    "SELECT count(*) FROM vector_metadata JOIN vector_payloads USING (vector_key) WHERE node_id = ?",
+                    [event_id],
+                ).fetchone()[0] == 1
 
 
 async def test_both_indexes_failing_preserves_source_and_pending_work(config, user, monkeypatch):

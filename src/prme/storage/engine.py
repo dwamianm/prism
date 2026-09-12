@@ -1316,7 +1316,11 @@ class MemoryEngine:
                 lambda: self._vector_index.index(node_id, node.content, node.user_id, replace=True),
                 label=f"materialize.vector:{node_id}",
             )
-            await self._vector_index.save()
+            # index() commits the numerical payload and metadata before it
+            # returns (in DuckDB, or the PostgreSQL vector row). A USearch
+            # snapshot is derived: startup restores unsaved keys from those
+            # payloads without inference. Preserve the configured snapshot
+            # cadence instead of rewriting the whole index for every source.
         except Exception as exc:
             errors.append(exc)
         if errors:
