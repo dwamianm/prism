@@ -23,6 +23,7 @@ import duckdb
 from prme.models.edges import MemoryEdge
 from prme.storage._threading import run_to_completion
 from prme.models.nodes import MemoryNode
+from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -53,6 +54,11 @@ class DuckPGQGraphStore:
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
     # --- Node Operations ---
+
+    async def commit_derivation(self, plan: DerivationPlan) -> DerivationReceipt:
+        """Publish a journaled graph derivation and its receipt atomically."""
+        from prme.storage.derivation import commit_duckdb
+        return await commit_duckdb(self, plan)
 
     async def create_node(self, node: MemoryNode) -> str:
         """Create a new node in the graph store.

@@ -1,0 +1,183 @@
+"""Atomic graph publication of an already journaled derivation plan.
+
+Inference and external index staging belong before this boundary. This module
+does no provider I/O and never compensates by deleting a committed derivation.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import TYPE_CHECKING
+
+from prme.models.derivation import DerivationPlan, DerivationReceipt, node_checksum
+from prme.models.nodes import MemoryNode
+from prme.storage._threading import run_to_completion
+from prme.types import EpistemicType, LifecycleState
+
+if TYPE_CHECKING:
+    from prme.storage.duckpgq_graph import DuckPGQGraphStore
+    from prme.storage.pg.graph_store import PgGraphStore
+
+
+def _payload(value):
+    return json.loads(value) if isinstance(value, str) else value
+
+
+def _receipt(plan: DerivationPlan, payload) -> DerivationReceipt | None:
+    if payload is None:
+        return None
+    receipt = DerivationReceipt.model_validate(_payload(payload))
+    if (receipt.event_id, receipt.plan_id, receipt.user_id, receipt.plan_checksum) != (
+        plan.event_id, plan.id, plan.user_id, plan.checksum,
+    ):
+        raise ValueError("Derivation receipt conflicts with the requested plan")
+    if receipt.node_ids != tuple(node.id for node in plan.nodes) or receipt.edge_ids != tuple(
+        edge.id for edge in plan.edges + plan.replacements
+    ):
+        raise ValueError("Derivation receipt has different artifact identities")
+    return receipt
+
+
+def _validate_dependencies(plan: DerivationPlan, current: dict[str, MemoryNode]) -> None:
+    for expected in plan.references:
+        actual = current.get(str(expected.id))
+        if actual is None or node_checksum(actual) != node_checksum(expected):
+            raise ValueError("Derivation dependency changed; an explicit replan is required")
+    nodes = {node.id: node for node in plan.nodes + plan.references}
+    states = {key: node.lifecycle_state for key, node in nodes.items()}
+    for edge in plan.replacements:
+        old, new = nodes[edge.target_id], nodes[edge.source_id]
+        active = (LifecycleState.TENTATIVE, LifecycleState.STABLE)
+        if states[old.id] not in active or states[new.id] not in active:
+            raise ValueError("Only tentative or stable assertions can participate in replacement")
+        if new.epistemic_type not in (EpistemicType.OBSERVED, EpistemicType.ASSERTED):
+            raise ValueError("A hypothetical or unverified derivation cannot retire prior knowledge")
+        if old.event_time and new.event_time and new.event_time < old.event_time:
+            raise ValueError("An older effective assertion cannot retire a later assertion")
+        if edge.created_at < old.updated_at:
+            raise ValueError("A replacement cannot precede its dependency's last update")
+        states[old.id] = LifecycleState.SUPERSEDED
+
+
+def _new_receipt(plan: DerivationPlan) -> DerivationReceipt:
+    return DerivationReceipt(
+        event_id=plan.event_id, plan_id=plan.id, user_id=plan.user_id,
+        plan_checksum=plan.checksum, node_ids=tuple(node.id for node in plan.nodes),
+        edge_ids=tuple(edge.id for edge in plan.edges + plan.replacements),
+    )
+
+
+async def commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> DerivationReceipt:
+    snapshot = DerivationPlan.model_validate_json(plan.model_dump_json())
+    async with store._conn_lock:
+        return await run_to_completion(_commit_duckdb, store, snapshot)
+
+
+def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> DerivationReceipt:
+    import numpy as np
+    from prme.storage.event_store import EventStore
+
+    conn = store._conn
+    conn.execute("BEGIN TRANSACTION")
+    try:
+        saved = EventStore(conn)._get_derivation_plan_sync(str(plan.event_id), plan.user_id)
+        if saved is None or saved.checksum != plan.checksum:
+            raise ValueError("Commit requires the exact journaled derivation plan")
+        row = conn.execute(
+            "SELECT payload FROM operations WHERE id = ? AND op_type = 'DERIVATION_COMMITTED'",
+            [plan.receipt_operation_id],
+        ).fetchone()
+        receipt = _receipt(plan, row[0] if row else None)
+        if receipt is None:
+            current = {}
+            for reference in plan.references:
+                node = store._get_node_sync(str(reference.id), True)
+                if node is not None:
+                    current[str(node.id)] = node
+            _validate_dependencies(plan, current)
+            # Numerical staging must already be durable. A saved plan alone
+            # is not evidence that the external vector index was prepared.
+            for embedding in plan.embeddings:
+                rows = conn.execute(
+                    "SELECT vm.embedding_model, vm.embedding_version, vm.embedding_dim, vp.vector_data "
+                    "FROM vector_metadata vm JOIN vector_payloads vp USING (vector_key) "
+                    "WHERE vm.node_id = ? AND vm.user_id = ?",
+                    [str(embedding.node_id), plan.user_id],
+                ).fetchall()
+                expected = (embedding.model, embedding.version, embedding.dimension,
+                            np.asarray(embedding.values, dtype="<f4").tobytes())
+                if not rows or any(tuple(row) != expected for row in rows):
+                    raise ValueError("Prepared vectors must be durably staged before graph publication")
+            for node in plan.nodes:
+                store._create_node_sync(node)
+            for edge in plan.edges:
+                store._create_edge_sync(edge)
+            for edge in plan.replacements:
+                conn.execute(
+                    "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, updated_at = ? WHERE id = ?",
+                    [str(edge.source_id), edge.created_at, str(edge.target_id)],
+                )
+                store._create_edge_sync(edge)
+            receipt = _new_receipt(plan)
+            conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                "VALUES (?, 'DERIVATION_COMMITTED', ?, ?, 'derivation', ?, ?)",
+                [plan.receipt_operation_id, str(plan.event_id), receipt.model_dump_json(), plan.scope.value, receipt.created_at],
+            )
+        conn.execute("COMMIT")
+        return receipt
+    except BaseException:
+        conn.execute("ROLLBACK")
+        raise
+
+
+async def commit_postgres(store: PgGraphStore, plan: DerivationPlan) -> DerivationReceipt:
+    from prme.storage.pg.event_store import PgEventStore
+    from prme.storage.pg.graph_store import _NODE_COLUMNS
+
+    plan = DerivationPlan.model_validate_json(plan.model_dump_json())
+    async with store._pool.acquire() as conn, conn.transaction():
+        # Serialize attempts for this immutable source before checking the
+        # prepared plan and receipt. Future replanning must use this same fence.
+        await conn.fetchrow("SELECT id FROM events WHERE id = $1 FOR UPDATE", str(plan.event_id))
+        saved = await PgEventStore(store._pool)._get_derivation_plan(conn, str(plan.event_id), plan.user_id)
+        if saved is None or saved.checksum != plan.checksum:
+            raise ValueError("Commit requires the exact journaled derivation plan")
+        row = await conn.fetchrow(
+            "SELECT payload FROM operations WHERE id = $1 AND op_type = 'DERIVATION_COMMITTED'",
+            plan.receipt_operation_id,
+        )
+        receipt = _receipt(plan, row["payload"] if row else None)
+        if receipt is not None:
+            return receipt
+        ids = sorted(str(node.id) for node in plan.references)
+        rows = await conn.fetch(
+            f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE", ids,
+        )
+        current = {str(row["id"]): store._record_to_node(row) for row in rows}
+        _validate_dependencies(plan, current)
+        for node in plan.nodes:
+            await store._create_node_on_connection(conn, node)
+        # pgvector and generated text columns become visible in this same
+        # transaction, using already-computed numerical values.
+        for embedding in plan.embeddings:
+            await conn.execute(
+                "UPDATE nodes SET embedding = $1::vector, embedding_model = $2, embedding_version = $3 WHERE id = $4",
+                "[" + ",".join(str(value) for value in embedding.values) + "]",
+                embedding.model, embedding.version, str(embedding.node_id),
+            )
+        for edge in plan.edges:
+            await store._create_edge_on_connection(conn, edge)
+        for edge in plan.replacements:
+            await conn.execute(
+                "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, updated_at = $2 WHERE id = $3",
+                str(edge.source_id), edge.created_at, str(edge.target_id),
+            )
+            await store._create_edge_on_connection(conn, edge)
+        receipt = _new_receipt(plan)
+        await conn.execute(
+            "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+            "VALUES ($1, 'DERIVATION_COMMITTED', $2, $3::jsonb, 'derivation', $4, $5)",
+            plan.receipt_operation_id, str(plan.event_id), receipt.model_dump_json(), plan.scope.value, receipt.created_at,
+        )
+        return receipt

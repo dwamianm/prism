@@ -14,6 +14,7 @@ import duckdb
 
 from prme.models import Event, ProcessingStatus
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
+from prme.models.derivation import DerivationPlan, derivation_operation_id
 from prme.storage._threading import run_to_completion
 from prme.types import Scope
 
@@ -43,6 +44,59 @@ class EventStore:
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
     # --- Public async API ---
+
+    async def get_derivation_plan(self, event_id: str, *, user_id: str) -> DerivationPlan | None:
+        """Read the immutable prepared derivation through the source owner."""
+        async with self._conn_lock:
+            return await run_to_completion(self._get_derivation_plan_sync, event_id, user_id)
+
+    def _get_derivation_plan_sync(self, event_id: str, user_id: str) -> DerivationPlan | None:
+        row = self._conn.execute(
+            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            "ON o.target_id = e.id::VARCHAR WHERE o.id = ? AND e.id = ? "
+            "AND e.user_id = ? AND o.op_type = 'DERIVATION_PREPARED'",
+            [derivation_operation_id(event_id), event_id, user_id],
+        ).fetchone()
+        if row is None:
+            return None
+        payload = json.loads(row[0])
+        plan = (DerivationPlan.model_validate_json(payload["plan"]) if isinstance(payload["plan"], str)
+                else DerivationPlan.model_validate(payload["plan"]))
+        plan.verify_source(user_id, row[1], row[2])
+        if plan.event_id != UUID(event_id) or plan.checksum != payload["checksum"]:
+            raise ValueError("Prepared derivation identity or checksum does not match")
+        return plan
+
+    async def record_derivation_plan(self, plan: DerivationPlan) -> DerivationPlan:
+        """Save the first prepared plan; same-ID payload changes are rejected."""
+        snapshot = DerivationPlan.model_validate_json(plan.model_dump_json())
+        async with self._conn_lock:
+            return await run_to_completion(self._record_derivation_plan_sync, snapshot)
+
+    def _record_derivation_plan_sync(self, plan: DerivationPlan) -> DerivationPlan:
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            source = self._conn.execute(
+                "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(plan.event_id)],
+            ).fetchone()
+            if source is None:
+                raise ValueError("A derivation requires a persisted source event")
+            plan.verify_source(*source)
+            self._conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                "VALUES (?, 'DERIVATION_PREPARED', ?, ?, 'derivation', ?, ?) ON CONFLICT (id) DO NOTHING",
+                [plan.prepared_operation_id, str(plan.event_id),
+                 json.dumps({"plan": plan.model_dump_json(), "checksum": plan.checksum}),
+                 plan.scope.value, plan.created_at],
+            )
+            saved = self._get_derivation_plan_sync(str(plan.event_id), plan.user_id)
+            if saved is None or (saved.id == plan.id and saved.checksum != plan.checksum):
+                raise ValueError("Prepared derivation ID conflicts with a different payload")
+            self._conn.execute("COMMIT")
+            return saved
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
 
     async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
         """Read the saved extraction only through its source owner's boundary."""

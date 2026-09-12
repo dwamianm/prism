@@ -11,6 +11,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
+from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 
@@ -30,6 +31,10 @@ class GraphStore(Protocol):
     """
 
     # --- Node Operations ---
+
+    async def commit_derivation(self, plan: DerivationPlan) -> DerivationReceipt:
+        """Atomically publish the exact journaled plan or return its receipt."""
+        ...
 
     async def create_node(self, node: MemoryNode) -> str:
         """Create a new node in the graph.

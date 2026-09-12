@@ -15,6 +15,7 @@ import asyncpg
 
 from prme.models import Event, ProcessingStatus
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
+from prme.models.derivation import DerivationPlan, derivation_operation_id
 from prme.types import Scope
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,52 @@ class PgEventStore:
 
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
+
+    async def get_derivation_plan(self, event_id: str, *, user_id: str) -> DerivationPlan | None:
+        async with self._pool.acquire() as conn:
+            return await self._get_derivation_plan(conn, event_id, user_id)
+
+    async def _get_derivation_plan(self, conn, event_id: str, user_id: str) -> DerivationPlan | None:
+        row = await conn.fetchrow(
+            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            "ON o.target_id = e.id::text WHERE o.id = $1 AND e.id = $2 "
+            "AND e.user_id = $3 AND o.op_type = 'DERIVATION_PREPARED'",
+            derivation_operation_id(event_id), event_id, user_id,
+        )
+        if row is None:
+            return None
+        payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+        plan = (DerivationPlan.model_validate_json(payload["plan"]) if isinstance(payload["plan"], str)
+                else DerivationPlan.model_validate(payload["plan"]))
+        plan.verify_source(user_id, row["scope"], row["content_hash"])
+        if plan.event_id != UUID(event_id) or plan.checksum != payload["checksum"]:
+            raise ValueError("Prepared derivation identity or checksum does not match")
+        return plan
+
+    async def record_derivation_plan(self, plan: DerivationPlan) -> DerivationPlan:
+        """Concurrent planners converge on the first immutable prepared plan."""
+        plan = DerivationPlan.model_validate_json(plan.model_dump_json())
+        async with self._pool.acquire() as conn, conn.transaction():
+            source = await conn.fetchrow(
+                "SELECT user_id, scope, content_hash FROM events WHERE id = $1", str(plan.event_id),
+            )
+            if source is None:
+                raise ValueError("A derivation requires a persisted source event")
+            plan.verify_source(source["user_id"], source["scope"], source["content_hash"])
+            await conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                "VALUES ($1, 'DERIVATION_PREPARED', $2, $3::jsonb, 'derivation', $4, $5) "
+                "ON CONFLICT (id) DO NOTHING",
+                plan.prepared_operation_id, str(plan.event_id),
+                # Preserve numerical serialization (including signed zero):
+                # JSONB may normalize numbers inside a structured plan object.
+                json.dumps({"plan": plan.model_dump_json(), "checksum": plan.checksum}),
+                plan.scope.value, plan.created_at,
+            )
+            saved = await self._get_derivation_plan(conn, str(plan.event_id), plan.user_id)
+            if saved is None or (saved.id == plan.id and saved.checksum != plan.checksum):
+                raise ValueError("Prepared derivation ID conflicts with a different payload")
+            return saved
 
     async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
         """Read a saved extraction through its immutable source owner's scope."""

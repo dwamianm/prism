@@ -17,6 +17,7 @@ import asyncpg
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
+from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -65,7 +66,16 @@ class PgGraphStore:
 
     # --- Node Operations ---
 
+    async def commit_derivation(self, plan: DerivationPlan) -> DerivationReceipt:
+        """Publish graph state, vectors and a receipt in one transaction."""
+        from prme.storage.derivation import commit_postgres
+        return await commit_postgres(self, plan)
+
     async def create_node(self, node: MemoryNode) -> str:
+        async with self._pool.acquire() as conn:
+            return await self._create_node_on_connection(conn, node)
+
+    async def _create_node_on_connection(self, conn, node: MemoryNode) -> str:
         """Create a new node in the graph store."""
         evidence_json = (
             json.dumps([str(ref) for ref in node.evidence_refs])
@@ -76,47 +86,46 @@ class PgGraphStore:
             json.dumps(node.metadata) if node.metadata is not None else None
         )
 
-        async with self._pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO nodes (
-                    id, node_type, user_id, session_id, scope, content,
-                    metadata, confidence, salience, lifecycle_state,
-                    valid_from, valid_to, superseded_by, evidence_refs,
-                    created_at, updated_at, epistemic_type, source_type,
-                    decay_profile, last_reinforced_at, reinforcement_boost,
-                    salience_base, confidence_base, pinned, event_time, ttl_days
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10,
-                          $11, $12, $13, $14::jsonb, $15, $16, $17, $18,
-                          $19, $20, $21, $22, $23, $24, $25, $26)
-                """,
-                str(node.id),
-                node.node_type.value,
-                node.user_id,
-                node.session_id,
-                node.scope.value,
-                node.content,
-                metadata_json,
-                node.confidence,
-                node.salience,
-                node.lifecycle_state.value,
-                node.valid_from,
-                node.valid_to,
-                str(node.superseded_by) if node.superseded_by else None,
-                evidence_json,
-                node.created_at,
-                node.updated_at,
-                node.epistemic_type.value,
-                node.source_type.value,
-                node.decay_profile.value,
-                node.last_reinforced_at,
-                node.reinforcement_boost,
-                node.salience_base,
-                node.confidence_base,
-                node.pinned,
-                node.event_time,
-                node.ttl_days,
-            )
+        await conn.execute(
+            """
+            INSERT INTO nodes (
+                id, node_type, user_id, session_id, scope, content,
+                metadata, confidence, salience, lifecycle_state,
+                valid_from, valid_to, superseded_by, evidence_refs,
+                created_at, updated_at, epistemic_type, source_type,
+                decay_profile, last_reinforced_at, reinforcement_boost,
+                salience_base, confidence_base, pinned, event_time, ttl_days
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10,
+                      $11, $12, $13, $14::jsonb, $15, $16, $17, $18,
+                      $19, $20, $21, $22, $23, $24, $25, $26)
+            """,
+            str(node.id),
+            node.node_type.value,
+            node.user_id,
+            node.session_id,
+            node.scope.value,
+            node.content,
+            metadata_json,
+            node.confidence,
+            node.salience,
+            node.lifecycle_state.value,
+            node.valid_from,
+            node.valid_to,
+            str(node.superseded_by) if node.superseded_by else None,
+            evidence_json,
+            node.created_at,
+            node.updated_at,
+            node.epistemic_type.value,
+            node.source_type.value,
+            node.decay_profile.value,
+            node.last_reinforced_at,
+            node.reinforcement_boost,
+            node.salience_base,
+            node.confidence_base,
+            node.pinned,
+            node.event_time,
+            node.ttl_days,
+        )
         return str(node.id)
 
     async def get_node(
@@ -449,31 +458,34 @@ class PgGraphStore:
     # --- Edge Operations ---
 
     async def create_edge(self, edge: MemoryEdge) -> str:
+        async with self._pool.acquire() as conn:
+            return await self._create_edge_on_connection(conn, edge)
+
+    async def _create_edge_on_connection(self, conn, edge: MemoryEdge) -> str:
         """Create a new edge between two nodes."""
         metadata_json = (
             json.dumps(edge.metadata) if edge.metadata is not None else None
         )
-        async with self._pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO edges (
-                    id, source_id, target_id, edge_type, user_id,
-                    confidence, valid_from, valid_to, provenance_event_id,
-                    metadata, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11)
-                """,
-                str(edge.id),
-                str(edge.source_id),
-                str(edge.target_id),
-                edge.edge_type.value,
-                edge.user_id,
-                edge.confidence,
-                edge.valid_from,
-                edge.valid_to,
-                str(edge.provenance_event_id) if edge.provenance_event_id else None,
-                metadata_json,
-                edge.created_at,
-            )
+        await conn.execute(
+            """
+            INSERT INTO edges (
+                id, source_id, target_id, edge_type, user_id,
+                confidence, valid_from, valid_to, provenance_event_id,
+                metadata, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11)
+            """,
+            str(edge.id),
+            str(edge.source_id),
+            str(edge.target_id),
+            edge.edge_type.value,
+            edge.user_id,
+            edge.confidence,
+            edge.valid_from,
+            edge.valid_to,
+            str(edge.provenance_event_id) if edge.provenance_event_id else None,
+            metadata_json,
+            edge.created_at,
+        )
         return str(edge.id)
 
     async def get_edges(

@@ -1,6 +1,6 @@
 # RFC-0016: Durable Derivation Commits
 
-**Status:** Draft; prerequisites implemented, commit protocol not yet implemented
+**Status:** Draft; atomic graph commit primitive implemented, ingestion integration and durable work scheduling pending
 **Date:** 2026-09-12
 **Depends on:** RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0014
 
@@ -33,6 +33,35 @@ Current fault-injection work has established these prerequisites:
 These are tested behaviors, not evidence of complete derivation replay. The
 current `_materialize()` still interleaves random-ID graph and index writes.
 Its tracker cannot recover a process killed halfway through those writes.
+
+## Implemented commit primitive
+
+Internal `DerivationPlan` records now preserve source identity, fixed artifacts,
+existing-node snapshots, complete replacement edges, numerical embeddings and
+lexical inputs. Both event stores journal the first plan with a checksum and
+reject changes to the same plan identity. The serialized plan is stored as a JSON
+string inside the operation payload so PostgreSQL JSONB normalization cannot
+change numerical details such as signed zero.
+
+`GraphStore.commit_derivation()` verifies the exact journaled plan inside its
+transaction, checks dependencies, and commits all nodes, edges, replacements and
+one immutable receipt together. PostgreSQL writes prepared vectors in that same
+transaction; DuckDB requires matching durable vector payloads staged beforehand.
+Retry returns the existing receipt and does not reactivate subsequently archived
+nodes. Dependency comparison normalizes timestamp offsets, so moving a pack
+between database timezones does not falsely invalidate unchanged nodes.
+
+Tests cover failures after every node/edge position, independent readers,
+concurrent replay, changed dependencies, source/scope invariants, hypothetical
+replacement rejection, and DuckDB process exits during node insertion, after
+replacement, and after commit before acknowledgement. Restart completes the same
+plan without partial graph state or new model calls. These are component tests.
+
+The normal ingestion pipeline does **not yet call this primitive**. It still
+needs a planner, idempotent external index staging, compaction protection for
+staged artifacts, and persistent extraction work. Version 1 saves one plan per
+source; it has no lease generation, revision switch or automatic replanning.
+Those must be implemented before enabling the complete recovery workflow below.
 
 ## Required behavior
 
