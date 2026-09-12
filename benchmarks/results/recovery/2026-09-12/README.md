@@ -833,4 +833,51 @@ the same seven errors were reproduced at `1461fb0`. Changed-source lint passed.
 A first full-test launch ran before its new worktree finished checking out and
 exited 5 without collecting tests; the simultaneous wheel build also failed for
 the incomplete checkout. After checkout completed, the wheel built successfully
-and a fresh full suite at `aa8684d` was started. Its result remains pending.
+and a fresh full suite at `aa8684d` was started. That run finished with **2,151
+tests passed and 52 skipped**, actual exit zero, in 812.51 seconds under concurrent
+benchmark load. It predates the later finite-multiplier compatibility fix and
+offline learning implementation.
+
+## Offline relevance learning
+
+`55c865a` adds `evaluate_learning` to the async engine and synchronous client,
+plus a standalone evaluator for exported receipt/label models. It captures an
+owner's feedback in one bounded query, resolves immutable receipts in batches,
+fits bounded multipliers for six additive weights and evaluates the proposal on
+separate query groups. Reports include exact input identities/checksums, coverage,
+conflicts, configuration, proposed multipliers and per-query metrics.
+
+Tests cover owner and scope boundaries, missing/corrupt/ambiguous receipts,
+explicit-label membership, retry collapse, conflicting judgments, fixed hash
+splits, caller-specified paraphrase groups, and additions after the snapshot cut.
+Missing labels are not negatives. Feedback overflow and excess pair counts fail
+instead of silently sampling. A top-rank gain with worse mean pairwise ordering
+is rejected. A validation-only label reversal leaves training and fitted weights
+unchanged while rejecting the proposal. Query assignments remain stable when new
+feedback is added.
+
+The final source integration set passed **68 checks with one skip** in 20.08
+seconds; a subsequent focused run included the additional pairwise-regression
+gate and passed **16 checks**. The final installed Python 3.13 wheel passed
+**89 checks with three skips**, actual exit zero, in 26.03 seconds, including
+live PostgreSQL, cancellation and backend status. The three learning/repository
+modules and a strict installed-package consumer passed typing. Changed-source
+lint passed. A full suite at `55c865a` is running separately.
+
+The [authored learning controls](learning-controls-55c865a.json) passed with actual
+process exit zero. They use 100 distinct query IDs with a deliberately constructed
+feature pattern, split into 68 training and 32 validation groups. The positive
+control fits that pattern, and reversing validation labels alone rejects it with
+identical multipliers. These are mechanism checks, **not an independent task
+benchmark or evidence of product retrieval improvement**. The report includes
+fixture and learner hashes and explicitly states this limitation.
+
+The [real BGE public-client workflow](relevance-receipts-55c865a.json) also passed
+with actual exit zero. Its single positive label correctly yields insufficient
+learning evidence; the report reproduces after graph archival and restart.
+No extraction or answer-judging service is used by that workflow.
+
+The learned proposal remains offline: candidate exposure, neural prefix membership
+and session lineage are fixed to the saved observations. Default weights remain
+unchanged. Full-retrieval/task evaluation, feature-model compatibility, durable
+profiles, activation and rollback are still required before production learning.

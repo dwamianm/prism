@@ -144,6 +144,9 @@ Before a learned profile can be activated, the implementation must:
 - keep owner/scope boundaries during collection, fitting, activation and replay;
 - persist the selected profile and input identities before using it;
 - load the correct immutable profile per request without mutating shared weights;
+- bind profile applicability to the feature/scorer/embedding/reranker versions
+  actually evaluated, rather than assuming numeric features from different models
+  are interchangeable;
 - support inspection, deactivation and rollback with reproducible receipts.
 
 Collection tests alone do not prove these requirements, learned quality, or
