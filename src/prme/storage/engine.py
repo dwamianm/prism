@@ -539,7 +539,8 @@ class MemoryEngine:
 
         If vector/lexical indexing fails, the error is logged but the
         store() call does not fail -- the event is already persisted and
-        derived indexes can be rebuilt from the event log.
+        each index is attempted independently. Derived indexes can be
+        rebuilt from the durable graph.
 
         Args:
             content: Text content to store.
@@ -674,14 +675,9 @@ class MemoryEngine:
             label=f"store.node:{node.id}",
         )
 
-        # Step 3: Index into vector and lexical via write queue
+        # Step 3: Attempt each index independently. Local full-text indexing
+        # remains useful even when an embedding provider is unavailable.
         try:
-            await self._write_queue.submit(
-                lambda nid=node_id, c=content, uid=user_id: (
-                    self._vector_index.index(nid, c, uid)
-                ),
-                label=f"store.vector:{node_id}",
-            )
             await self._write_queue.submit(
                 lambda nid=node_id, c=content, uid=user_id, nt=node_type.value, sc=scope.value: (
                     self._lexical_index.index(nid, c, uid, nt, sc)
@@ -690,7 +686,21 @@ class MemoryEngine:
             )
         except Exception:
             logger.warning(
-                "Vector/lexical indexing failed for event %s. "
+                "Lexical indexing failed for event %s. "
+                "Event is persisted; indexes can be rebuilt.",
+                event_id,
+                exc_info=True,
+            )
+        try:
+            await self._write_queue.submit(
+                lambda nid=node_id, c=content, uid=user_id: (
+                    self._vector_index.index(nid, c, uid)
+                ),
+                label=f"store.vector:{node_id}",
+            )
+        except Exception:
+            logger.warning(
+                "Vector indexing failed for event %s. "
                 "Event is persisted; indexes can be rebuilt.",
                 event_id,
                 exc_info=True,
@@ -1278,27 +1288,38 @@ class MemoryEngine:
         if node.lifecycle_state not in ACTIVE_LIFECYCLE_STATES:
             # An explicit retirement during a retry must not resurrect data.
             return
-        # Replace any partial index writes left by a failed attempt.
-        await self._write_queue.submit(
-            lambda: self._vector_index.delete_by_node_id(node_id),
-            label=f"materialize.vector_remove:{node_id}",
-        )
-        await self._write_queue.submit(
-            lambda: self._vector_index.index(node_id, node.content, node.user_id),
-            label=f"materialize.vector:{node_id}",
-        )
-        await self._write_queue.submit(
-            lambda: self._lexical_index.delete_by_node_id(node_id),
-            label=f"materialize.lexical_remove:{node_id}",
-        )
-        await self._write_queue.submit(
-            lambda: self._lexical_index.index(
-                node_id, node.content, node.user_id, node.node_type.value, node.scope.value,
-            ), label=f"materialize.lexical:{node_id}",
-        )
-        await self._vector_index.save()
-        if hasattr(self._lexical_index, "flush"):
-            await self._lexical_index.flush()
+        # Replace partial writes independently and persist each healthy index.
+        # Any failure keeps the durable job pending, even when one search path
+        # is already usable. Cancellation still propagates immediately here.
+        errors: list[Exception] = []
+        try:
+            await self._write_queue.submit(
+                lambda: self._lexical_index.delete_by_node_id(node_id),
+                label=f"materialize.lexical_remove:{node_id}",
+            )
+            await self._write_queue.submit(
+                lambda: self._lexical_index.index(
+                    node_id, node.content, node.user_id, node.node_type.value, node.scope.value,
+                ), label=f"materialize.lexical:{node_id}",
+            )
+            if hasattr(self._lexical_index, "flush"):
+                await self._lexical_index.flush()
+        except Exception as exc:
+            errors.append(exc)
+        try:
+            await self._write_queue.submit(
+                lambda: self._vector_index.delete_by_node_id(node_id),
+                label=f"materialize.vector_remove:{node_id}",
+            )
+            await self._write_queue.submit(
+                lambda: self._vector_index.index(node_id, node.content, node.user_id),
+                label=f"materialize.vector:{node_id}",
+            )
+            await self._vector_index.save()
+        except Exception as exc:
+            errors.append(exc)
+        if errors:
+            raise errors[0]
 
     @property
     def materialization_debt(self) -> int:

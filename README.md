@@ -174,6 +174,12 @@ Processing reports remaining work and retry failures per user; the same methods
 are available on `MemoryClient`. Model summaries do not overwrite original-source
 indexes. Relative dates in extracted facts use the source timestamp.
 
+Raw-source indexing attempts full-text and vector indexes independently. If one
+backend fails, the healthy search path remains available and deferred processing
+stays pending until both indexes succeed. Direct `store()` also attempts both
+indexes, but logs indexing failures without creating a retry job; use
+`prme rebuild` to repair its indexes from the durable graph.
+
 Successful grounded extraction output is saved before graph materialization.
 An indexing retry reuses that output without another LLM call. Inspect it with
 `engine.get_extraction(event_id, user_id="alice")` (also on `MemoryClient`).
