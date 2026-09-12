@@ -56,6 +56,15 @@ Provider metadata must remain stable for its lifetime; create a new provider and
 cache when switching models or preprocessing. Query cache errors do not store
 failed values.
 
+PRME validates the complete response before admitting any batch to the cache:
+exactly one vector per input, the declared dimension, and finite numbers that fit
+float32 storage. Numeric strings, NaN/infinity, incorrect shapes and changed
+provider identity raise `ValueError`. A malformed batch admits no partial results,
+so a repaired provider can retry all failed inputs. Uncached encoding and both
+storage backends apply the same boundary checks. Earlier successful cache entries
+remain available. The checks cannot establish that a provider returned the right
+semantic vector or preserved input ordering; those remain provider contracts.
+
 Supply the provider on every reopen. Its Python implementation, credentials and
 model resources are not serialized into the memory pack. Saved numerical vectors
 and identity metadata remain portable. Reusing a saved effective config whose

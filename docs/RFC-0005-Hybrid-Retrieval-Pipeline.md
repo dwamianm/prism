@@ -147,6 +147,13 @@ primary candidate generation, not every optional expansion or reranker. Changing
 vector dimensions can require index/schema migration and is not an automatic
 model upgrade.
 
+Provider response admission checks require one vector per input, the declared
+dimension and finite float32-compatible values. Entire batches are validated
+before cache insertion; malformed results and identity changes during encoding
+fail without partial cache admission. Query encoding, direct index writes and
+durable preparation use the same checks on both backends. These checks establish
+shape and numeric compatibility, not the semantic correctness of provider output.
+
 ### 4.3 Lexical Search
 
 Run full-text search over memory object `value` fields and event content using the lexical index (BM25 or FTS5).

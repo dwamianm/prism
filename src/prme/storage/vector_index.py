@@ -22,7 +22,7 @@ from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
 from prme.storage.profile_work import ProfileStageFence
 from prme.models.profile import ProfilePublication
-from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query
+from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +315,7 @@ class VectorIndex:
             The integer key assigned to the vector in USearch.
         """
         # Generate embedding (provider handles async internally)
-        embedding = await self._provider.embed([content])
+        embedding = await encode_texts(self._provider, [content])
         if len(embedding) != 1:
             raise ValueError("Embedding provider must return exactly one vector per input")
         vector = np.array(embedding[0], dtype=np.float32)

@@ -17,7 +17,7 @@ from datetime import datetime
 
 import asyncpg
 
-from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query
+from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class PgVectorIndex:
         Returns:
             0 (no integer key; pgvector uses the node UUID directly).
         """
-        embedding = await self._provider.embed([content])
+        embedding = await encode_texts(self._provider, [content])
         vector = embedding[0]
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
 

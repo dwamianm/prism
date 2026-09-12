@@ -48,7 +48,7 @@ from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
 from prme.storage._threading import run_to_completion
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
-from prme.storage.embedding import EmbeddingProvider, create_embedding_provider, validate_embedding_provider
+from prme.storage.embedding import EmbeddingProvider, create_embedding_provider, validate_embedding_provider, encode_texts
 from prme.storage.encryption import EncryptionError
 from prme.storage.event_store import EventStore
 from prme.storage.lexical_index import LexicalIndex
@@ -2488,7 +2488,7 @@ class MemoryEngine:
                                                 (provider.model_name, provider.model_version, provider.dimension))
             plan = await self._profile_work.reusable(profile_key(user_id, scope, entity_name), request_hash, user_id=user_id)
             if plan is None:
-                vectors = await provider.embed([profile_text])
+                vectors = await encode_texts(provider, [profile_text])
                 if len(vectors) != 1:
                     raise ValueError("Profile embedding provider must return exactly one vector")
                 plan = ProfilePublication(

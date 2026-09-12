@@ -11,9 +11,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import importlib.metadata
+import math
 import os
 import threading
 from collections import OrderedDict
+from numbers import Real
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
@@ -96,12 +98,50 @@ def has_query_encoder(provider: EmbeddingProvider | None) -> bool:
     return callable(getattr(provider, "embed_query", None))
 
 
+def _validated_vectors(vectors, *, count: int, dimension: int) -> list[list[float]]:
+    """Own and validate the complete response before any cache/index admission."""
+    try:
+        values = list(vectors)
+        if len(values) != count:
+            raise ValueError("Embedding provider must return exactly one vector per input")
+        result = []
+        for vector in values:
+            items = list(vector)
+            if len(items) != dimension:
+                raise ValueError("Embedding provider returned an unexpected vector dimension")
+            if any(isinstance(v, bool) or not isinstance(v, Real) for v in items):
+                raise ValueError("Embedding provider vectors must contain finite float32-compatible numbers")
+            converted = [float(v) for v in items]
+            if any(not math.isfinite(v) or abs(v) > 3.4028234663852886e38 for v in converted):
+                raise ValueError("Embedding provider vectors must contain finite float32-compatible numbers")
+            result.append(converted)
+        return result
+    except (TypeError, OverflowError) as exc:
+        raise ValueError("Embedding provider returned a malformed vector response") from exc
+
+
+async def encode_texts(provider: EmbeddingProvider, texts: list[str]) -> list[list[float]]:
+    """Validate cardinality, dimensions and values without exposing input text."""
+    identity = validate_embedding_provider(provider)
+    count = len(texts)
+    if not count:
+        return []
+    vectors = await provider.embed(list(texts))
+    if validate_embedding_provider(provider) != identity:
+        raise ValueError("Embedding provider identity changed during encoding")
+    return _validated_vectors(vectors, count=count, dimension=identity[2])
+
+
 async def encode_query(provider: EmbeddingProvider, text: str) -> list[float]:
-    """Use an optional query encoder, preserving legacy provider behavior."""
+    """Use an optional query encoder and validate the returned vector."""
     encoder = getattr(provider, "embed_query", None)
     if callable(encoder):
-        return await encoder(text)
-    return (await provider.embed([text]))[0]
+        identity = validate_embedding_provider(provider)
+        vector = await encoder(text)
+        if validate_embedding_provider(provider) != identity:
+            raise ValueError("Embedding provider identity changed during encoding")
+        return _validated_vectors([vector], count=1, dimension=identity[2])[0]
+    return (await encode_texts(provider, [text]))[0]
 
 
 class FastEmbedProvider:
@@ -369,7 +409,7 @@ class CachedEmbeddingProvider:
 
         # Batch embed uncached texts
         if uncached_texts:
-            new_embeddings = await self._provider.embed(uncached_texts)
+            new_embeddings = await encode_texts(self._provider, uncached_texts)
             for j, idx in enumerate(uncached_indices):
                 # Providers and callers may reuse or modify list buffers. The
                 # cache owns an immutable snapshot; each result owns its list.

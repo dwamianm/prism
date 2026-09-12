@@ -6,7 +6,7 @@ from uuid import UUID
 
 from prme.models import Event, MemoryEdge, MemoryNode
 from prme.models.derivation import DerivationPlan, PreparedEmbedding, PreparedLexicalDocument
-from prme.storage.embedding import EmbeddingProvider
+from prme.storage.embedding import EmbeddingProvider, encode_texts
 from prme.storage.graph_store import GraphStore
 from prme.types import ACTIVE_LIFECYCLE_STATES, EdgeType, NodeType, Scope
 
@@ -159,7 +159,7 @@ class PlanningIndexes:
         if {key for key, _ in inputs} != {node.id for node in nodes}:
             raise ValueError("Every planned node requires an embedding input")
         identity = (provider.model_name, provider.model_version, provider.dimension)
-        vectors = await provider.embed([content for _, content in inputs]) if inputs else []
+        vectors = await encode_texts(provider, [content for _, content in inputs]) if inputs else []
         if len(vectors) != len(inputs):
             raise ValueError("Embedding provider must return one vector per planned input")
         if identity != (provider.model_name, provider.model_version, provider.dimension):
