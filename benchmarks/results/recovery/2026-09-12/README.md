@@ -1029,3 +1029,16 @@ The source scope/trial/filter/receipt set passed **101 checks with one skip** in
 37.17 seconds, actual exit zero. The normalizer and pipeline pass targeted
 typing, and changed-source lint passes. These checks establish request-scope
 behavior, not full ACL or index-side-channel isolation.
+
+The combined installed Python 3.13 wheel at `6bc2763` passed **100 targeted
+checks** in 34.38 seconds, actual exit zero, including PostgreSQL. A strict
+installed consumer accepts enum lists, string names and tuples plus ranking
+trials through the typed public interfaces.
+
+The [real BGE HTTP/MCP workflow](transport-trials-6bc2763.json) also completed with
+supervised process exit zero. Both authenticated transports returned context
+identical to Python at one clock; exported receipts retained the adjustment and
+replayed exact scores. Foreign receipt reads and empty HTTP scopes were rejected.
+The report records the installed package path and observed execution features.
+This is one authored developer workflow, not answer-quality evidence. A full
+frozen suite at `6bc2763` is running separately.
