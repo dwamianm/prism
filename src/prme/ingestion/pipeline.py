@@ -323,6 +323,9 @@ class IngestionPipeline:
             # overwrite its vector with this attempt's uncommitted model
             # output (or accumulate duplicate local vector entries).
             if not is_new:
+                # Retain the chosen entity snapshot before the next scan page
+                # replaces the planner's bounded temporary lookup cache.
+                await graph_store.get_node(entity_id)
                 continue
 
             # Index entity in vector store (not tracked for rollback)

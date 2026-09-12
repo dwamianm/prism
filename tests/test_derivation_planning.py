@@ -7,6 +7,8 @@ import pytest
 
 from prme import MemoryEngine
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractedRelationship, ExtractionResult
+from prme.ingestion.entity_merge import EntityMerger
+from prme.ingestion.planning import PlanningGraph
 from prme.models import Event, MemoryNode
 from prme.types import LifecycleState, NodeType, Scope
 from tests import test_derivation_commits, test_durable_ingestion
@@ -118,3 +120,22 @@ async def test_chain_within_one_source_retires_each_planned_fact_once(config, us
         plan = await engine._pipeline._prepare_plan(result, event)
         assert len(plan.replacements) == 2
         assert plan.replacements[1].target_id == plan.replacements[0].source_id
+
+
+async def test_entity_scan_retains_only_one_page_and_explicitly_read_dependencies(config, user):
+    async with MemoryEngine.open(config) as engine:
+        for i in range(600):
+            await engine._graph_store.create_node(MemoryNode(
+                node_type=NodeType.ENTITY, content=f"Unrelated {i}", user_id=user,
+                metadata={"entity_type": "person"},
+            ))
+        event = Event(content="Alice uses Rust", user_id=user, role="user")
+        graph = PlanningGraph(engine._graph_store, event)
+        merger = EntityMerger(graph, graph)
+        identity, created = await merger.find_or_create_entity(
+            "Alice", "person", user, evidence_event_id=str(event.id), scope=event.scope,
+        )
+        assert created and identity in {str(key) for key in graph.nodes}
+        # Lookup work may scan all 600 entities, but their snapshots must not
+        # accumulate for the lifetime of a large multi-entity derivation.
+        assert not graph._read and len(graph._scan_page) <= 256

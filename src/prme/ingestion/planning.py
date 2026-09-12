@@ -26,6 +26,7 @@ class PlanningGraph:
         self.edges: list[MemoryEdge] = []
         self.replacements: list[MemoryEdge] = []
         self._read: dict[UUID, MemoryNode] = {}
+        self._scan_page: dict[UUID, MemoryNode] = {}
         self._retired: set[UUID] = set()
 
     def _snapshot(self, node: MemoryNode) -> MemoryNode:
@@ -52,12 +53,13 @@ class PlanningGraph:
         key = UUID(node_id)
         if key in self._retired and not include_superseded:
             return None
-        node = self.nodes.get(key) or self._read.get(key)
+        node = self.nodes.get(key) or self._read.get(key) or self._scan_page.get(key)
         if node is None:
             node = await self.graph.get_node(node_id, include_superseded=include_superseded)
             if node is None or (node.user_id, node.scope) != (self.event.user_id, self.event.scope):
                 return None
-            self._read[key] = self._snapshot(node)
+        if key not in self.nodes:
+            self._read.setdefault(key, self._snapshot(node))
             node = self._read[key]
         return node.model_copy(deep=True)
 
@@ -75,15 +77,15 @@ class PlanningGraph:
             user_id=user_id, scope=scope, node_type=node_type,
             after_id=after_id, limit=limit + len(self._retired),
         )
-        for node in durable:
-            self._read.setdefault(node.id, self._snapshot(node))
-        candidates = {node.id: self._read[node.id] for node in durable}
+        candidates = {node.id: self._read.get(node.id) or self._snapshot(node) for node in durable}
         candidates.update(self.nodes)
         result = [node for node in candidates.values()
                   if node.id not in self._retired and node.lifecycle_state in ACTIVE_LIFECYCLE_STATES
                   and (node_type is None or node.node_type == node_type)
                   and (after_id is None or str(node.id) > after_id)]
-        return [node.model_copy(deep=True) for node in sorted(result, key=lambda n: str(n.id))[:limit]]
+        page = sorted(result, key=lambda n: str(n.id))[:limit]
+        self._scan_page = {node.id: node for node in page if node.id not in self.nodes}
+        return [node.model_copy(deep=True) for node in page]
 
     async def get_edges(self, *, source_id: str) -> list[MemoryEdge]:
         if await self.get_node(source_id) is None:

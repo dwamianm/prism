@@ -12,21 +12,21 @@ from tests.test_durable_ingestion import config, user  # noqa: F401
 from tests.test_extraction_updates import ingest_fact
 
 
-async def test_failed_indexing_preserves_old_fact_and_removes_new_fact(config, user, monkeypatch):  # noqa: F811
+async def test_failed_embedding_preparation_preserves_old_fact_without_publishing_new_fact(config, user, monkeypatch):  # noqa: F811
     async with MemoryEngine.open(config) as engine:
         await ingest_fact(engine, user, "Alice uses Python", "Python")
         original = (await engine.query_nodes(user_id=user, node_type=NodeType.FACT))[0]
         engine._pipeline._retry_delays = ()
-        real_index = engine._vector_index.index
+        real_embed = engine._vector_index._provider.embed
 
-        async def fail_replacement(node_id, text, user_id):
-            if "Rust" in text:
-                # A reader during a partial write must still have the old fact.
+        async def fail_replacement(texts):
+            if any("Rust" in text for text in texts):
+                # Inference runs before publication and outside graph locks.
                 assert (await engine._graph_store.get_node(str(original.id))).lifecycle_state == LifecycleState.TENTATIVE
-                raise RuntimeError("Injected indexing failure")
-            return await real_index(node_id, text, user_id)
+                raise RuntimeError("Injected embedding failure")
+            return await real_embed(texts)
 
-        monkeypatch.setattr(engine._vector_index, "index", fail_replacement)
+        monkeypatch.setattr(engine._vector_index._provider, "embed", fail_replacement)
         with pytest.raises(ExtractionError) as failure:
             await ingest_fact(engine, user, "Alice switched from Python to Rust", "Rust",
                               temporal_intent="update", replaces_object="Python")
