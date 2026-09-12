@@ -1351,6 +1351,10 @@ coverage. The three checked storage modules now have the same 24 pre-existing
 mypy diagnostics as `40c375e`, after line-number normalization. This is not a
 passing project-wide type check. The [updated installed verification](materialization-batch-final-installed-773a2f9.json)
 passed 87 tests with 14 backend-specific skips in 40.99s, with native exit zero.
+The corrected [full repository run](materialization-batch-full-773a2f9.json)
+passed **2,494 tests with 63 skips** in 660.68s and exited normally. Source and
+tests matched `773a2f9` throughout; only documentation commits advanced the
+working branch during execution. Skipped cases are not covered by that result.
 
 At 19:36–19:37 UTC, a fresh credential check distinguished two configurations.
 The [inherited process credential](openai-inherited-health-1936.json) returned

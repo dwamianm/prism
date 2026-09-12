@@ -12,7 +12,8 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 |---|---|---|
 | Product context packing | Two fixed local readers improved by 20 judged-correct answers each on the same 119 development questions when multi-path candidates used score ordering. | Custom local rubric, shared histories, one judge; second reader shares its model family. Not an independent test set or competitor result. |
 | Profile fidelity and publication | Complete qualified source excerpts, explicit inference/provenance, exact token budgets, atomic publication and complete scoped source scans. | Profiles are source collections; this does not prove semantic synthesis, exhaustive facts or automatic freshness. |
-| Storage and developer workflow | Full repository regression at `a2eb87d`: 2,462 passed, 57 skipped. Installed Python 3.13 profile workflow also passed. | Tests establish their covered contracts, not answer quality or every deployment environment. |
+| Storage and developer workflow | Full repository regression at `773a2f9`: 2,494 passed, 63 skipped. Installed Python 3.13 batched recovery/failure checks also passed. | Tests establish their covered contracts, not answer quality or every deployment environment. |
+| Deferred raw-source throughput | Local processing now shares a durable lexical commit before acknowledging sources. A frozen 32-source real-model workflow reduced 32 commits to one, with identical candidates and contexts across serial/batch trials. | Small authored histories with warmed embeddings on one host under concurrent load; no competitive speed claim. Direct `store()` still indexes immediately. |
 | Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
 | Matched raw retrieval | All 119 development questions completed against pinned Mem0 OSS. At 4K shared whole-turn packing, PRME source recall was 96.49% versus 93.27%; Mem0 led preferences. | Raw mode, frozen older PRME reference, shared evaluator packer and no answer generation. The 4K interval touches zero; no end-to-end leadership claim. |
 
@@ -51,6 +52,11 @@ These records preserve commit identities, raw-output hashes, failures and limits
    overall 2K mean. Keep its stopword policy experimental until a full-hybrid
    comparison resolves those tradeoffs. PostgreSQL's all-term query semantics
    also need deliberate evaluation; its duplicate-before-limit defect is fixed.
+   The [registered full-hybrid development study](../benchmarks/results/research/2026-09-12/hybrid-lexical-dev-plan.json)
+   compares both lexical policies through actual retrieval, both packing orders
+   and three budgets on all 119 development questions. Its frozen runtime is
+   isolated from subsequent storage changes; await complete native exit before
+   interpreting results. It does not replace the failed confirmation gate.
 
 ## Capability work still required
 
