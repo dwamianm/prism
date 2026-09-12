@@ -42,6 +42,14 @@ This is not a theoretical nicety. It directly determines whether the AI assistan
 
 Every memory object MUST be assigned one of the following epistemic types at creation. The type is immutable except through explicit EPISTEMIC_TRANSITION operations (Section 6).
 
+Startup preserves existing explicit assignments, including hypothetical and
+conditional types. For a legacy local schema missing the epistemic column, the
+migration adds it as nullable and heuristically fills only those NULL rows once,
+preserving confidence. Missing application metadata is not evidence that a node
+needs reclassification. Older defaulted values and past heuristic overwrites
+cannot be reliably distinguished from intentional assignments and are not
+automatically rewritten.
+
 | EpistemicType | Meaning | Default confidence range |
 |---|---|---|
 | `OBSERVED` | Directly witnessed or recorded from a primary source (e.g., explicit user statement, direct measurement). | 0.80 – 0.95 |

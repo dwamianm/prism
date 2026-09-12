@@ -256,9 +256,10 @@ def _migrate_nodes_epistemic_type(conn: duckdb.DuckDBPyConnection) -> None:
     """Add epistemic_type and source_type columns to nodes table if missing.
 
     For existing databases created before these columns were added, this
-    function detects the missing columns and adds them with sensible defaults.
-    DuckDB 1.4.x ALTER TABLE ADD COLUMN does not support NOT NULL, so we
-    use DEFAULT only. New databases use CREATE TABLE with NOT NULL DEFAULT.
+    function leaves legacy epistemic values NULL so startup can distinguish
+    them from explicit modern assignments. Source type defaults to user_stated.
+    New databases use CREATE TABLE with NOT NULL DEFAULT; normal node creation
+    explicitly supplies both values.
 
     Safe to call on databases that already have the columns (no-op).
 
@@ -272,15 +273,20 @@ def _migrate_nodes_epistemic_type(conn: duckdb.DuckDBPyConnection) -> None:
     if result is None:
         conn.execute("""
             ALTER TABLE nodes
-            ADD COLUMN epistemic_type VARCHAR DEFAULT 'asserted'
+            ADD COLUMN epistemic_type VARCHAR
         """)
+        logger.info("Migrated nodes table: added nullable epistemic_type for legacy backfill")
+    source_column = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'nodes' AND column_name = 'source_type'
+    """).fetchone()
+    if source_column is None:
         conn.execute("""
             ALTER TABLE nodes
             ADD COLUMN source_type VARCHAR DEFAULT 'user_stated'
         """)
         logger.info(
-            "Migrated nodes table: added epistemic_type and source_type "
-            "columns (backfilled as 'asserted'/'user_stated')"
+            "Migrated nodes table: added source_type (default 'user_stated')"
         )
 
 
