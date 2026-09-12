@@ -979,3 +979,9 @@ line-number normalization. This is not a globally clean typing result. The
 profile path still uses heuristic name matching and approximate character-based
 budgets, and publication is not transactional. These scope fixes are not evidence
 of answer-quality improvement or complete profile correctness.
+
+The installed Python 3.13 wheel at `87679e7` passed **95 checks** in 31.17 seconds,
+actual exit zero, combining profile/organizer regressions with the earlier
+scope-boundary cases on both backends. A strict installed-package consumer of
+async and sync `consolidate_knowledge(scope=Scope.PROJECT)` also passed. These
+installed-consumer checks do not remove the pre-existing internal typing debt.
