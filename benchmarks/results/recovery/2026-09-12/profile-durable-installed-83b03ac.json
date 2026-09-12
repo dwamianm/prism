@@ -1,0 +1,48 @@
+{
+  "source_commit": "83b03ac",
+  "native_process_exit_code": 0,
+  "production_imports_verified_in_site_packages": true,
+  "production_source_files_verified": 113,
+  "wheel_sha256": "faf29d2cd204b43a7d43ef6748cba9abb60b47fb91c7077c4718910b34208e27",
+  "passed": 86,
+  "skipped": 12,
+  "failed": 0,
+  "seconds": 71.58,
+  "log_sha256": "6c09e6cb4a544a32bd3884c32a4329968d563181d552e645044106cd94a1faed",
+  "real_model_workflow": {
+    "complete": true,
+    "python": "3.13.3",
+    "duckdb": "1.5.5",
+    "prme": "0.11.0",
+    "prme_import_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+    "runner_sha256": "11c5945bc1ed3f6324cad46487e0fa867a88d92bf23ea0c5fe53dbc8906867c6",
+    "limits": "Authored local failure/restart workflow using real BGE embeddings. No competitive quality claim.",
+    "embedding": {
+      "model": "BAAI/bge-small-en-v1.5",
+      "version": "fastembed-0.8.0",
+      "dimension": 384
+    },
+    "recovery": {
+      "processed": 1,
+      "failed": 0,
+      "pending": 0,
+      "errors": {}
+    },
+    "exact_prepared_checksum": "60ecea1c047b970338a8e76996633e0725fe54c16838cb94701c2ecb6c1d970f",
+    "model_free_recovery": true,
+    "retrieved_profile": true,
+    "completed_replay_preserves_archival": true,
+    "foreign_owner_isolated": true
+  },
+  "typing": {
+    "prior_commit": "773a2f9",
+    "before_diagnostics": 24,
+    "after_diagnostics": 23,
+    "new_diagnostics": [],
+    "removed_diagnostics": [
+      "src/prme/storage/engine.py:LINE: error: Cannot infer type of lambda  [misc]"
+    ],
+    "limits": "Equivalent engine/client mypy runs with follow-imports=silent. Existing backend interface and optional dependency typing errors remain; this is not a clean project-wide type check."
+  },
+  "limits": "Installed Python 3.13 authored tests with DuckDB 1.5.5 and live PostgreSQL. Full source regression remains separately tracked. No memory-quality claim."
+}
