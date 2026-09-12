@@ -66,6 +66,15 @@ Memory objects are derived from one or more events by extraction pipelines. The 
 | `SUMMARY` | A compressed representation of multiple events or memory objects over a time window. |
 | `INTENT` | A goal, commitment, or open question that spans multiple sessions. (Requires RFC-0013.) |
 
+In extraction, object kind and epistemic certainty are separate classifications.
+A possible event is a FACT with hypothetical/conditional epistemic status.
+PREFERENCE requires an expressed attitude, such as liking, disliking or wanting;
+DECISION records a choice or commitment actually made, including rejecting an
+option. Use alone does not establish either a preference or a decision. A
+conditional preference remains a PREFERENCE whose epistemic status preserves
+the condition. The built-in extraction schema and prompt state these distinctions;
+they remain model judgments, not deterministic semantic validation.
+
 Each memory object MUST include the following core fields regardless of type:
 
 ```
