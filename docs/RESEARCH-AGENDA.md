@@ -16,6 +16,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 | Deferred raw-source throughput | Local processing now shares a durable lexical commit before acknowledging sources. A frozen 32-source real-model workflow reduced 32 commits to one, with identical candidates and contexts across serial/batch trials. | Small authored histories with warmed embeddings on one host under concurrent load; no competitive speed claim. Direct `store()` still indexes immediately. |
 | Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
 | Matched raw retrieval | All 119 development questions completed against pinned Mem0 OSS. At 4K shared whole-turn packing, PRME source recall was 96.49% versus 93.27%; Mem0 led preferences. | Raw mode, frozen older PRME reference, shared evaluator packer and no answer generation. The 4K interval touches zero; no end-to-end leadership claim. |
+| PersonaMem-v2 pilot | All 96 questions completed and independently verified. Alpha .25 packing answered 42 correctly, density 36, score 41 and no memory 33. | Primary cluster interval includes zero; losses on other-person and health questions. Custom persona-hidden variant, one local reader, no default promotion. |
 
 See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
 [recovery evidence](../benchmarks/results/recovery/2026-09-12/README.md),
@@ -40,7 +41,9 @@ These records preserve commit identities, raw-output hashes, failures and limits
    result distinct from future extraction and actual product-context arms. The
    next protocol must match reader, total rendered tokens and ingestion costs,
    and explicitly support each product's temporal API. Hindsight and Graphiti
-   have been source-audited but not run. Timing from separately run workloads
+   have been source-audited. Hindsight's subsequent authored public-API preflight
+   passed retain/reopen/recall, bank isolation and seven matched embedding inputs;
+   a dataset comparison has not run. Timing from separately run workloads
    cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect
@@ -63,6 +66,13 @@ These records preserve commit identities, raw-output hashes, failures and limits
    improved 4K recall to 95.03%, but retained less assistant evidence than score
    ordering. Carry that single-comparator hypothesis into broader evaluation;
    production defaults and the failed confirmation gate remain unchanged.
+   The [completed PersonaMem pilot](../benchmarks/results/research/2026-09-12/PERSONAMEM-PACKING-STUDY.md)
+   is inconclusive: alpha .25 improves by six correct answers, with a cluster
+   interval that includes zero and category regressions. Post-hoc annotated
+   snippet coverage exposes substantial packing loss, but errors remain even
+   when annotated snippets are complete. Test an explicitly annotation-selected
+   reader control before attributing those errors to retrieval or adding more
+   scoring heuristics. This control must never be reported as product retrieval.
 
 ## Capability work still required
 
