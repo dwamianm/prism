@@ -34,6 +34,7 @@ from prme.models.learning import LearningConfig, LearningEvaluation, RankingMult
 from prme.retrieval.config import ScoringWeights
 from prme.retrieval.scope import ScopeInput
 from prme.models.processing import ProcessingResult, ProcessingStatus
+from prme.models.profile import ProfileJobStatus, ProfileProcessingResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.types import EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
@@ -444,6 +445,22 @@ class MemoryClient:
                 max_profile_tokens=max_profile_tokens,
             )
         )
+
+    def profile_jobs(self, *, user_id: str, scope: Scope | None = None,
+                     status: str = 'pending', limit: int = 100) -> list[ProfileJobStatus]:
+        """Inspect owned profile preparations without exposing source text."""
+        return self._run(self._engine.profile_jobs(
+            user_id=user_id, scope=scope, status=status, limit=limit))
+
+    def resume_profile(self, profile_id: str, *, user_id: str) -> str | None:
+        """Resume saved profile inputs without repeating model inference."""
+        return self._run(self._engine.resume_profile(profile_id, user_id=user_id))
+
+    def process_profiles(self, *, user_id: str, scope: Scope | None = None,
+                         limit: int = 100, budget_ms: float = 5000) -> ProfileProcessingResult:
+        """Process owned preparations with a cooperative budget between jobs."""
+        return self._run(self._engine.process_profiles(
+            user_id=user_id, scope=scope, limit=limit, budget_ms=budget_ms))
 
     def organize(
         self,

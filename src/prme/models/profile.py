@@ -5,10 +5,46 @@ from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import TypedDict
 
-from prme.models.derivation import PreparedEmbedding, canonical_hash
+from prme.models.derivation import PreparedEmbedding, canonical_hash, node_checksum
 from prme.models.nodes import MemoryNode
 from prme.types import EpistemicType, LifecycleState, NodeType, Scope, SourceType
+
+
+class ProfileJobStatus(TypedDict):
+    """Owned prepared-profile job; plan_id is the profile's fixed node UUID."""
+
+    plan_id: str
+    scope: str
+    status: Literal["pending", "complete", "abandoned"]
+    attempts: int
+    last_error: str | None
+
+
+class ProfileProcessingResult(TypedDict):
+    processed: int
+    failed: int
+    pending: int
+    errors: dict[str, str]
+
+
+def profile_request_hash(
+    node: MemoryNode, sources, previous, generation: int, embedding_identity
+) -> str:
+    """Compare prepared requests without allocating fresh identities on retry."""
+    values = node.model_dump(mode="json")
+    for field in ("id", "created_at", "updated_at", "valid_from", "last_reinforced_at"):
+        values.pop(field, None)
+    return canonical_hash(
+        {
+            "node": values,
+            "sources": [node_checksum(n) for n in sources],
+            "previous": [node_checksum(n) for n in previous],
+            "generation": generation,
+            "embedding_identity": list(embedding_identity),
+        }
+    )
 
 
 class StaleProfileError(ValueError):
@@ -45,6 +81,20 @@ class ProfilePublication(BaseModel):
     @property
     def operation_id(self) -> str:
         return str(uuid5(self.node.id, "prme:profile-published:v1"))
+
+    @property
+    def prepared_operation_id(self) -> str:
+        return str(uuid5(self.node.id, "prme:profile-prepared:v1"))
+
+    @property
+    def request_hash(self) -> str:
+        return profile_request_hash(
+            self.node,
+            self.sources,
+            self.previous,
+            self.generation,
+            (self.embedding.model, self.embedding.version, self.embedding.dimension),
+        )
 
     @property
     def checksum(self) -> str:

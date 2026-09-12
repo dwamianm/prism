@@ -338,12 +338,31 @@ deleting a possibly committed view. A call spanning several entities/scopes
 still consists of separate publications, and retiring unsupported old profiles
 uses the existing archive path.
 
-This is an atomic replacement boundary, not a durable organizer job queue.
-Uncommitted profile plans are not journaled or automatically resumed. Failed
-local staging remains protected from ordinary orphan compaction and can occupy
-space until explicit index rebuild. Fenced plan retirement and automatic retry
-remain follow-up work; an interrupted call must not be described as completed.
+Profile preparation is now journaled as a checksummed `PROFILE_PREPARED` operation
+before external staging. Its fixed node identity, complete inputs and numerical
+embedding survive restart. Matching requests reuse the saved plan; a different
+explicit request atomically abandons pending predecessors and records
+`PROFILE_PREPARATION_REPLACED`. Prepared identities reserve the same global
+artifact namespace used by derivations. Managed staging holds a changing work-row
+epoch against replacement and publication for the duration of the native write;
+a no-op SQL update is insufficient on supported DuckDB builds.
 
+`profile_jobs`, `resume_profile` and `process_profiles` expose scoped inspection
+and explicit recovery through both Python clients. Successful graph publication
+and completed work state commit together. Recovery never repeats model inference;
+changed dependencies fail visibly. A cooperative budget applies between jobs,
+and failed attempts move behind unattempted work. Missing work and reservation
+rows are restored from validated immutable operations at startup. Corrupt journal
+records remain unregistered with identity-only diagnostics and prevent retired
+index collection; legacy ownership collisions remain ambiguous. Reconstructed
+work resets operational attempt diagnostics, which are not immutable history.
+
+There is no automatic profile scheduler. Failed or replaced local staging remains
+protected from ordinary orphan compaction and can occupy space until explicit
+index rebuild. Explicit abandonment and fenced abandoned-stage collection remain
+follow-up work. Publication completion describes the graph commit; predecessor
+index eviction occurs afterward. An interrupted call must not be described as
+completed without checking its saved work state.
 
 ### 5.4 OrganizeResult
 

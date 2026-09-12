@@ -368,3 +368,23 @@ checks cover completed public stores with no snapshot and with an older partial
 snapshot, preserving owner isolation and requiring no embedding inference during
 reopening. The source, graph node and work status remain durable independently
 of the derived snapshot's cadence.
+
+
+## Entity-profile preparation recovery
+
+The separate profile publication primitive now journals `PROFILE_PREPARED` inputs
+before local staging, reuses exact prepared requests and atomically records
+replacement of pending preparations. It shares the global artifact ownership
+registry with derivations. A changing unindexed work epoch fences local native
+writes against both replacement and publication, including caller cancellation.
+The completed profile work row commits with its publication receipt.
+
+Scoped Python `profile_jobs`, `resume_profile` and `process_profiles` expose
+explicit recovery without inference. Startup reconstructs missing queue and
+reservation rows from checksummed preparations and validated publication or
+replacement receipts, including when registration markers already exist.
+Operational attempt diagnostics reset on queue reconstruction. Invalid profile
+journals disable retired derivation collection as well, because global artifact
+ownership can no longer be established. Profiles have no automatic scheduler or
+abandoned-stage collector yet. See [RFC-0015](RFC-0015-Self-Organizing-Memory.md)
+and the [profile guide](ENTITY-PROFILES.md) for the public contract.

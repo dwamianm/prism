@@ -193,6 +193,8 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
 
     from prme.storage.profile_publication import HEADS_DDL
     conn.execute(HEADS_DDL)
+    from prme.storage.profile_work import PROFILE_WORK_DDL
+    conn.execute(PROFILE_WORK_DDL)
 
     # --- Operations table ---
     # Stores RETRIEVAL_REQUEST records per RFC-0005 S9 and forward-compatible
@@ -560,4 +562,6 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     _migrate_nodes_event_time(conn)
     from prme.storage.derivation_registry import initialize_duck
     initialize_duck(conn)
+    from prme.storage.profile_registry import initialize_duck as initialize_profiles
+    initialize_profiles(conn)
     return False

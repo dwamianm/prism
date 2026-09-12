@@ -141,7 +141,7 @@ async def test_transaction_failure_after_insert_preserves_old_view(
         assert len(await profiles(engine, user)) == 1
 
 
-async def test_concurrent_rebuilds_cannot_both_publish(config, user, monkeypatch):
+async def test_concurrent_matching_rebuilds_publish_one_generation(config, user, monkeypatch):
     from prme.models.profile import StaleProfileError
 
     async with MemoryEngine.open(config) as engine:
@@ -168,9 +168,13 @@ async def test_concurrent_rebuilds_cannot_both_publish(config, user, monkeypatch
             ],
             return_exceptions=True,
         )
-        assert results.count(1) == 1
-        assert sum(isinstance(result, StaleProfileError) for result in results) == 1
+        assert results.count(1) >= 1
+        assert all(result == 1 or isinstance(result, StaleProfileError) for result in results)
         assert len(await profiles(engine, user)) == 1
+        completed = await engine.profile_jobs(user_id=user, status='complete')
+        assert len(completed) == 1
+        plan = await engine._profile_work.get(completed[0]['plan_id'], user_id=user)
+        assert await engine._graph_store.profile_generation(plan.key) == 1
 
 
 async def test_cancelled_preparation_preserves_old_profile(config, user, monkeypatch):
@@ -335,7 +339,7 @@ async def test_independent_reader_sees_no_partial_replacement(
         assert len(await profiles(engine, user)) == 1
 
 
-@pytest.mark.parametrize("checkpoint", ["staged", "inserted", "committed"])
+@pytest.mark.parametrize("checkpoint", ["prepared", "vector", "staged", "inserted", "committed"])
 async def test_abrupt_exit_keeps_a_complete_profile(config, user, checkpoint):
     import subprocess
     import sys
@@ -359,10 +363,20 @@ prme.storage.engine.create_embedding_provider = lambda _: MockEmbeddingProvider(
 async def main():
     engine = await MemoryEngine.create(PRMEConfig.model_validate_json(sys.argv[1]))
     checkpoint = sys.argv[3]
-    if checkpoint == "staged":
-        original = engine._lexical_index.stage_profile
+    if checkpoint == "prepared":
         async def fault(plan):
-            await original(plan)
+            os._exit(42)
+        engine._publish_prepared_profile = fault
+    elif checkpoint == "vector":
+        original = engine._vector_index.stage
+        async def fault(*args, **kwargs):
+            await original(*args, **kwargs)
+            os._exit(42)
+        engine._vector_index.stage = fault
+    elif checkpoint == "staged":
+        original = engine._lexical_index.stage_profile
+        async def fault(plan, **kwargs):
+            await original(plan, **kwargs)
             os._exit(42)
         engine._lexical_index.stage_profile = fault
     elif checkpoint == "inserted":
@@ -407,15 +421,17 @@ asyncio.run(main())
             assert str(current[0].id) in {
                 row["node_id"] for row in await index.search("Aurora", user)
             }
-        # Failed preparations are not autonomously retried. An explicit rebuild
-        # creates a new complete view and leaves exactly one active profile.
-        assert (
-            await engine.consolidate_knowledge(
-                user_id=user, scope=Scope.PROJECT, entity_names=["Aurora"]
-            )
-            == 1
-        )
-        assert len(await profiles(engine, user)) == 1
+        # Recover the exact saved preparation with models unavailable, including
+        # a commit whose acknowledgement was lost at process exit.
+        engine._vector_index._provider.embed = AsyncMock(side_effect=AssertionError("Cannot infer during recovery"))
+        engine._pipeline._extraction_provider.extract = AsyncMock(side_effect=AssertionError("Cannot extract during recovery"))
+        jobs = await engine.profile_jobs(user_id=user, status="complete" if checkpoint == "committed" else "pending")
+        replacement = next(job for job in jobs if job['plan_id'] != str(old.id))
+        saved = await engine._profile_work.get(replacement['plan_id'], user_id=user)
+        assert await engine.resume_profile(replacement['plan_id'], user_id=user) == replacement['plan_id']
+        assert [str(n.id) for n in await profiles(engine, user)] == [replacement['plan_id']]
+        assert (await engine._profile_work.get(replacement['plan_id'], user_id=user)).checksum == saved.checksum
+
 
 
 async def test_independent_connections_cannot_publish_same_generation(
@@ -438,6 +454,21 @@ async def test_independent_connections_cannot_publish_same_generation(
                     await engine.consolidate_knowledge(
                         user_id=user, scope=Scope.PROJECT, entity_names=["Aurora"]
                     )
+        # Matching workflow requests now share a journaled plan. Keep this
+        # component test about *distinct* publications racing one generation.
+        from uuid import uuid4
+        from prme.models.profile import ProfilePublication
+        second_id = uuid4()
+        first = captured[0]
+        second_plan = ProfilePublication(
+            node=first.node.model_copy(update={'id': second_id}), sources=first.sources,
+            previous=first.previous, generation=first.generation,
+            embedding=first.embedding.model_copy(update={'node_id': second_id}),
+        )
+        if engine._pool is None:
+            await engine._vector_index.stage(second_plan.embedding, user_id=user)
+            await engine._lexical_index.stage_profile(second_plan)
+        captured[1] = second_plan
         if engine._pool is None:
             import duckdb
             from prme.storage.duckpgq_graph import DuckPGQGraphStore

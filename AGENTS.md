@@ -45,8 +45,13 @@ exact token limit, keep distinct episodes and mark generated associations as
 inferred. Name matching remains heuristic. Each replacement uses atomic graph
 publication after index preparation; errors propagate and the prior profile
 remains active until commit. Source collection pages through the active scope
-instead of treating the newest 5,000 nodes as complete history. Interrupted local staging is conservatively retained
-for explicit index rebuild, without an automatic profile retry queue.
+instead of treating the newest 5,000 nodes as complete history. Prepared profiles are journaled before staging; `profile_jobs`, `resume_profile`
+and `process_profiles` provide owner-scoped Python inspection and explicit recovery
+without new model calls. Matching retries reuse fixed inputs; changed requests
+replace pending preparations under a native-stage fence. Missing work rows are
+reconstructed from the immutable journal at startup. There is no automatic profile
+scheduler or abandoned-stage collector; unpublished local staging is retained
+for explicit index rebuild.
 This convenience API is separate from the organizer's `consolidate` job.
 
 ## RFCs

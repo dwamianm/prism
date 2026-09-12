@@ -249,6 +249,8 @@ async def initialize_pg_database(
         # Operations
         from prme.storage.profile_publication import HEADS_DDL
         await conn.execute(HEADS_DDL)
+        from prme.storage.profile_work import PROFILE_WORK_DDL
+        await conn.execute(PROFILE_WORK_DDL)
         await conn.execute(_OPERATIONS_TABLE)
         for idx in _OPERATIONS_INDEXES:
             await conn.execute(idx)
@@ -260,5 +262,7 @@ async def initialize_pg_database(
 
         from prme.storage.derivation_registry import initialize_pg
         await initialize_pg(conn)
+        from prme.storage.profile_registry import initialize_pg as initialize_profiles
+        await initialize_profiles(conn)
 
     logger.info("PostgreSQL schema initialized (embedding_dim=%d)", embedding_dim)

@@ -280,13 +280,15 @@ class LexicalIndex:
             else:
                 await run_to_completion(self._do_stage, documents)
 
-    async def stage_profile(self, plan: ProfilePublication) -> None:
+    async def stage_profile(self, plan: ProfilePublication, *, fence=None) -> None:
         """Durably stage one prepared profile before graph publication.
 
         As with unmanaged derivation staging, an interrupted preparation is
         retained until an explicit rebuild; it is not an active graph memory.
         """
         plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        if fence is not None:
+            fence.verify_plan(plan)
         node = plan.node
         documents = ({
             "node_id": [str(node.id)], "content": [node.content],
@@ -294,7 +296,14 @@ class LexicalIndex:
             "scope": [node.scope.value],
         },)
         async with self._write_lock:
-            await run_to_completion(self._do_stage, documents)
+            if fence is None:
+                await run_to_completion(self._do_stage, documents)
+            else:
+                async with fence.conn_lock:
+                    def guarded():
+                        with fence.hold():
+                            self._do_stage(documents)
+                    await run_to_completion(guarded)
 
     def _do_stage(self, documents: tuple[dict, ...]) -> None:
         # Preserve unrelated normal writes before starting this isolated batch.

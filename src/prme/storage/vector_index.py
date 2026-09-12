@@ -20,6 +20,7 @@ from usearch.index import Index
 from prme.models.derivation import PreparedEmbedding
 from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
+from prme.storage.profile_work import ProfileStageFence
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError
 
 logger = logging.getLogger(__name__)
@@ -336,7 +337,7 @@ class VectorIndex:
 
         return key
 
-    async def stage(self, embedding: PreparedEmbedding, *, user_id: str, fence: DuckDBStageFence | None = None) -> int:
+    async def stage(self, embedding: PreparedEmbedding, *, user_id: str, fence: DuckDBStageFence | ProfileStageFence | None = None) -> int:
         """Durably stage a saved embedding without inference or replacement.
 
         Repeating identical input reuses its key, including after a native

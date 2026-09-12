@@ -3,7 +3,8 @@
 External indexes are staged before entering this boundary. Failed staging never
 retires a usable graph view. A committed operation retains the complete input;
 a repeated commit returns its identity without reactivating an archived view.
-Uncommitted local staging is conservatively retained, not automatically retried.
+Managed callers journal preparation before staging and expose explicit recovery.
+Unpublished local staging remains conservatively retained until index rebuild.
 """
 
 from __future__ import annotations
@@ -100,6 +101,9 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: ProfilePublication) -> str:
             [plan.operation_id],
         ).fetchone()
         if not _replayed(plan, row[0] if row else None):
+            from prme.storage.profile_work import validate_duck_work, reserve_duck
+            managed = validate_duck_work(conn, plan)
+            reserve_duck(conn, plan)
             conn.execute(
                 "INSERT INTO profile_publication_heads VALUES (?, 0) ON CONFLICT DO NOTHING",
                 [plan.key],
@@ -172,6 +176,11 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: ProfilePublication) -> str:
                     node.created_at,
                 ],
             )
+            conn.execute('INSERT INTO profile_registered_plans VALUES (?,?) ON CONFLICT DO NOTHING',
+                         [plan.operation_id, str(node.id)])
+            if managed:
+                conn.execute("UPDATE profile_work SET status='complete', fence_epoch=fence_epoch+1, attempts=attempts+1, last_error=NULL, "
+                             "last_attempt_at=current_timestamp WHERE plan_id=?", [str(node.id)])
         conn.execute("COMMIT")
         return str(node.id)
     except BaseException:
@@ -204,6 +213,9 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
         )
         if _replayed(plan, value):
             return str(node.id)
+        from prme.storage.profile_work import validate_pg_work, reserve_pg
+        managed = await validate_pg_work(conn, plan)
+        await reserve_pg(conn, plan)
         if generation != plan.generation:
             raise StaleProfileError("Profile generation changed; rebuild explicitly")
         ids = sorted(str(n.id) for n in plan.sources + plan.previous)
@@ -248,4 +260,9 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
             node.scope.value,
             node.created_at,
         )
+        await conn.execute('INSERT INTO profile_registered_plans VALUES ($1,$2) ON CONFLICT DO NOTHING',
+                           plan.operation_id, str(node.id))
+        if managed:
+            await conn.execute("UPDATE profile_work SET status='complete', fence_epoch=fence_epoch+1, attempts=attempts+1, last_error=NULL, "
+                               "last_attempt_at=current_timestamp WHERE plan_id=$1", str(node.id))
         return str(node.id)

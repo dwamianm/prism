@@ -57,13 +57,44 @@ beyond the newest 5,000 nodes.
 
 Each replacement becomes visible atomically after index preparation. Until it
 commits, the previous profile stays active. Embedding and storage failures raise
-an exception. A lost commit acknowledgement can still mean a replacement was
-published; inspect current SUMMARY nodes with `query_nodes(user_id=...,
-node_type=NodeType.SUMMARY, scope=...)` when reconciling that outcome. Rebuilding
-creates a fresh profile identity and retires prior profiles for that name.
+an exception. Before staging, the complete profile, source snapshots, fixed UUID
+and numerical embedding are saved in a checksummed immutable operation. An
+unchanged retry reuses that preparation; a changed request replaces it explicitly.
+A successfully published rebuild retires prior profiles for that name.
+
+Prepared work survives restart. The sync client and async engine expose the same
+owner-scoped recovery methods:
+
+```python
+with MemoryClient("./project_memory") as client:
+    jobs = client.profile_jobs(user_id="alice", scope=Scope.PROJECT)
+    result = client.process_profiles(
+        user_id="alice", scope=Scope.PROJECT, limit=20, budget_ms=5000,
+    )
+    print(result["processed"], result["pending"], result["errors"])
+```
+
+`profile_jobs()` defaults to pending work; `status="complete"` and
+`status="abandoned"` inspect the other states. Each dictionary includes `plan_id`
+(the fixed profile node UUID), scope, attempts and a bounded error code.
+`resume_profile(plan_id, user_id=...)` retries one saved preparation without
+calling extraction or embedding models. It returns `None` for an unknown or
+foreign identity. Replaying completed work returns its original identity without
+restaging or reactivating a subsequently archived profile. Changed dependencies
+or a replaced preparation raise `StaleProfileError`; use an explicit
+`consolidate_knowledge()` call to prepare current inputs.
+
+`process_profiles()` reports processed, failed and pending counts plus per-job
+error codes. Its budget is cooperative between jobs, so one publication may
+exceed it. Failed jobs move behind unattempted work. Cancellation leaves unfinished
+preparations available for a later pass. Missing queue rows and ownership entries
+are reconstructed from validated immutable operations at startup; attempt counts
+and timestamps are operational diagnostics and reset when those rows are rebuilt.
 
 A multi-entity call contains separate publications; earlier names may succeed
 before a later one fails. Profiles without enough qualifying sources are retired
-on an explicit rebuild. Interrupted local index staging is retained until an
-explicit index rebuild; there is no automatic profile retry queue. This API is
-separate from the organizer's `consolidate` job.
+on an explicit rebuild. Publication completion records graph visibility; predecessor
+index eviction happens afterward. Unpublished local staging remains protected from
+ordinary orphan collection and can occupy space until explicit index rebuild.
+There is no automatic profile scheduler or abandoned-stage collector. These Python
+methods are separate from the organizer's `consolidate` job.

@@ -115,6 +115,9 @@ def retired_staging(conn, *, user_id: str | None, limit: int = 500) -> tuple[lis
     from prme.storage.event_store import EventStore
     if conn.execute(_PENDING.replace('SELECT o.id, o.payload', 'SELECT 1') + ' LIMIT 1').fetchone():
         return [], "unregistered_plans"
+    from prme.storage.profile_registry import PENDING as PROFILE_PENDING
+    if conn.execute(PROFILE_PENDING + ' LIMIT 1').fetchone():
+        return [], "unregistered_profile_plans"
     scope = ' AND e.user_id = ?' if user_id is not None else ''
     args = [user_id, limit] if user_id is not None else [limit]
     rows = conn.execute(

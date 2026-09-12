@@ -41,7 +41,7 @@ from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingRe
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
-from prme.models.profile import ProfilePublication, profile_key
+from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfileProcessingResult, profile_key
 from prme.models.derivation import PreparedEmbedding
 from prme.storage.relevance import RelevanceRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
@@ -130,6 +130,8 @@ class MemoryEngine:
         self._materialization_queue = DurableMaterializationQueue(
             event_store, batch_size=self._config.materialization_queue_size,
         )
+        from prme.storage.profile_work import ProfileWorkStore
+        self._profile_work = ProfileWorkStore(conn=conn, pool=pool, conn_lock=getattr(event_store, '_conn_lock', None))
 
         # Encryption at rest (issue #14)
         self._encryption_provider: EncryptionProvider | None = None
@@ -2453,36 +2455,100 @@ class MemoryEngine:
                 source_type=SourceType.SYSTEM_INFERRED,
                 decay_profile=DecayProfile.FAST,
             )
+            from prme.models.profile import profile_request_hash
             provider = self._vector_index._provider
-            vectors = await provider.embed([profile_text])
-            if len(vectors) != 1:
-                raise ValueError("Profile embedding provider must return exactly one vector")
-            plan = ProfilePublication(
-                node=profile_node, sources=tuple(selected_sources),
-                previous=tuple(existing_profiles.get(entity_name, [])), generation=generation,
-                embedding=PreparedEmbedding(
-                    node_id=profile_node.id, content=profile_text,
-                    model=provider.model_name, version=provider.model_version,
-                    dimension=provider.dimension, values=tuple(vectors[0]),
-                ),
-            )
-            if self._pool is None:
-                # Stage before graph visibility. Durable vector staging protects
-                # interrupted preparation from ordinary orphan compaction.
-                await self._vector_index.stage(plan.embedding, user_id=user_id)
-                await self._lexical_index.stage_profile(plan)
-            # PostgreSQL writes pgvector and generated text search in this same
-            # graph transaction. Cancellation never triggers destructive cleanup
-            # of a commit whose acknowledgement might have been lost.
-            await self._write_queue.submit(
-                lambda p=plan: self._graph_store.publish_profile(p),
-                label=f"consolidate.publish:{entity_name}",
-            )
+            previous = tuple(existing_profiles.get(entity_name, []))
+            request_hash = profile_request_hash(profile_node, selected_sources, previous, generation,
+                                                (provider.model_name, provider.model_version, provider.dimension))
+            plan = await self._profile_work.reusable(profile_key(user_id, scope, entity_name), request_hash, user_id=user_id)
+            if plan is None:
+                vectors = await provider.embed([profile_text])
+                if len(vectors) != 1:
+                    raise ValueError("Profile embedding provider must return exactly one vector")
+                plan = ProfilePublication(
+                    node=profile_node, sources=tuple(selected_sources), previous=previous, generation=generation,
+                    embedding=PreparedEmbedding(
+                        node_id=profile_node.id, content=profile_text,
+                        model=provider.model_name, version=provider.model_version,
+                        dimension=provider.dimension, values=tuple(vectors[0]),
+                    ),
+                )
+                plan = await self._profile_work.prepare(plan)
+            await self._publish_prepared_profile(plan)
             for stale in existing_profiles.get(entity_name, []):
                 await self._evict_from_indexes(str(stale.id))
             profiles_created += 1
 
         return profiles_created
+
+    async def _publish_prepared_profile(self, plan: ProfilePublication) -> str:
+        from prme.storage.profile_work import ProfileStageFence
+        state = await self._profile_work.status(str(plan.node.id), user_id=plan.node.user_id)
+        if state is None:
+            raise ValueError('Profile publication requires durable preparation')
+        if state['status'] == 'abandoned':
+            from prme.models.profile import StaleProfileError
+            raise StaleProfileError('Profile preparation was replaced by a newer request')
+        if state['status'] != 'complete' and self._pool is None:
+            fence = ProfileStageFence(self._conn, self._event_store._conn_lock, plan)
+            await self._vector_index.stage(plan.embedding, user_id=plan.node.user_id, fence=fence)
+            await self._lexical_index.stage_profile(plan, fence=fence)
+        return await self._write_queue.submit(
+            lambda: self._graph_store.publish_profile(plan), label=f'consolidate.publish:{plan.node.id}',
+        )
+
+    async def profile_jobs(self, *, user_id: str, scope: Scope | None = None, status: str = 'pending', limit: int = 100) -> list[ProfileJobStatus]:
+        """Inspect owned prepared-profile jobs; no source text or model calls."""
+        if status not in {'pending', 'complete', 'abandoned'}:
+            raise ValueError('Unknown profile job status')
+        return await self._profile_work.list(user_id=user_id, scope=Scope(scope) if scope is not None else None,
+                                             status=status, limit=limit)
+
+    async def resume_profile(self, profile_id: str, *, user_id: str) -> str | None:
+        """Publish an owned prepared profile without repeating model inference.
+
+        Returns None for unknown/foreign identities. Changed source snapshots or
+        a replaced preparation raise StaleProfileError; rebuild explicitly with
+        consolidate_knowledge(). Replaying completed work never restages indexes.
+        """
+        plan = await self._profile_work.get(profile_id, user_id=user_id)
+        if plan is None:
+            return None
+        return await self._publish_prepared_profile(plan)
+
+    async def process_profiles(self, *, user_id: str, scope: Scope | None = None, limit: int = 100, budget_ms: float = 5000) -> ProfileProcessingResult:
+        """Resume a bounded owned profile batch, preserving per-job failures.
+
+        Budgets apply between jobs. Failed attempts move behind unattempted jobs.
+        Pending counts cover the selected owner/scope; failures describe this pass.
+        This publishes prepared views, without rerunning extraction or embeddings.
+        """
+        import math
+        import time
+        from prme.ingestion.errors import extraction_failure_code
+        if not math.isfinite(budget_ms) or budget_ms < 0:
+            raise ValueError('budget_ms must be finite and nonnegative')
+        scope = Scope(scope) if scope is not None else None
+        jobs = await self.profile_jobs(user_id=user_id, scope=scope, limit=limit)
+        started, processed, errors = time.monotonic(), 0, {}
+        for job in jobs:
+            if (time.monotonic()-started)*1000 >= budget_ms:
+                break
+            profile_id = job['plan_id']
+            try:
+                if await self.resume_profile(profile_id, user_id=user_id) is None:
+                    raise ValueError('Pending profile work lost its immutable preparation')
+                processed += 1
+            except Exception as exc:
+                state = await self._profile_work.status(profile_id, user_id=user_id)
+                if state is not None and state['status'] == 'complete':
+                    processed += 1
+                    continue
+                reason = extraction_failure_code(exc)
+                await self._profile_work.failed(profile_id, user_id=user_id, reason=reason)
+                errors[profile_id] = reason
+        return {'processed': processed, 'failed': len(errors), 'pending': await self._profile_work.count(user_id=user_id, scope=scope),
+                'errors': errors}
 
     async def end_session(
         self,
