@@ -111,3 +111,33 @@ async def test_real_engine_evidence_comparison(tmp_path, monkeypatch):
     assert category["coverage"] == pytest.approx(1 / 3)
     assert category["errors"] == 1
     assert category["methods"]["bm25"]["metrics"]["recall@5"] == 1
+
+
+async def test_concurrent_evaluation_preserves_coverage_and_selection_order(tmp_path, monkeypatch):
+    import asyncio
+    import json
+    from types import SimpleNamespace
+    from benchmarks import retrieval_eval
+
+    questions = [{**question(), "question_id": f"q-{i}"} for i in range(4)]
+    dataset = tmp_path / "custom.json"
+    dataset.write_text(json.dumps(questions))
+    active = peak = 0
+
+    async def evaluate(q, *args, **kwargs):
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        await asyncio.sleep(.01)
+        active -= 1
+        raise RuntimeError("isolated question failure")
+
+    monkeypatch.setattr(retrieval_eval, "evaluate_question", evaluate)
+    args = SimpleNamespace(dataset=dataset, variant="custom", split="all", seed="test", limit=0,
+                           tokenizer="cl100k_base", budgets=[100], k=10, clock="wall", concurrency=2,
+                           output=tmp_path / "result.json")
+    report = await retrieval_eval.run(args)
+    assert peak == 2
+    assert report["errors"] == 4 and report["coverage"] == 0 and not report["complete"]
+    assert [d["question_id"] for d in report["details"]] == report["dataset"]["selected_question_ids"]
+    assert json.loads(args.output.read_text())["concurrency"] == 2

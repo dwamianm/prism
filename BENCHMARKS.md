@@ -92,6 +92,11 @@ so relative dates use the conversation's clock. `--clock wall` reproduces the
 older behavior for a controlled ablation. Each response records the actual
 clock; neither option applies a historical knowledge cutoff.
 
+Use `--concurrency 4` to evaluate independent questions concurrently, each in
+its own memory pack. Reports retain frozen question order and per-question
+errors. Concurrency is recorded; timing under concurrent workloads is not a
+standalone latency measurement and must not be compared as such.
+
 ```bash
 uv sync --dev
 uv run pytest tests/ -q

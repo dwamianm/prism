@@ -230,10 +230,12 @@ async def run(args) -> dict:
         "tokenizer": args.tokenizer, "budgets": args.budgets, "candidate_limit": args.k,
         "rrf_constant": 60,
         "query_clock": args.clock,
+        "concurrency": args.concurrency,
         "limitations": [
             "Evidence retrieval, not answer accuracy or abstention accuracy.",
             "Shared whole-turn evaluation packer, not the PRME product packer.",
-            "Sequential warm shared-index latency; RRF reports sum of component latencies.",
+            "Methods use sequential warm shared indexes within each question; RRF latency sums its components.",
+            "Concurrent questions and other machine workloads affect timing; these are not standalone latency SLO measurements.",
             "Raw NOTE ingestion with QA pairing and opportunistic maintenance disabled.",
             "Each question uses an isolated temporary local memory pack; configured storage paths are overridden.",
             "Query clock is explicitly selected; question time is not a knowledge-at cutoff.",
@@ -241,17 +243,25 @@ async def run(args) -> dict:
         "details": details,
     }
     start = time.perf_counter()
-    for question in selected:
-        try:
-            detail = await evaluate_question(
-                question, config, budgets=args.budgets, k=args.k,
-                count_tokens=lambda s: len(encoding.encode(s, disallowed_special=())),
-                reference_time=_parse_haystack_date(question["question_date"]) if args.clock == "question" else None,
-            )
-        except Exception as exc:
-            detail = {"question_id": question["question_id"],
-                      "category": question["question_type"], "error": type(exc).__name__}
-        details.append(detail)
+    semaphore = asyncio.Semaphore(args.concurrency)
+
+    async def evaluate_one(question):
+        async with semaphore:
+            try:
+                return await evaluate_question(
+                    question, config, budgets=args.budgets, k=args.k,
+                    count_tokens=lambda text: len(encoding.encode(text, disallowed_special=())),
+                    reference_time=_parse_haystack_date(question["question_date"]) if args.clock == "question" else None,
+                )
+            except Exception as exc:
+                return {"question_id": question["question_id"],
+                        "category": question["question_type"], "error": type(exc).__name__}
+
+    order = {q["question_id"]: i for i, q in enumerate(selected)}
+    tasks = [asyncio.create_task(evaluate_one(q)) for q in selected]
+    for future in asyncio.as_completed(tasks):
+        details.append(await future)
+        details.sort(key=lambda detail: order[detail["question_id"]])
         errors = sum("error" in d for d in details)
         report.update(
             elapsed_seconds=time.perf_counter() - start,
@@ -278,13 +288,14 @@ def main():
     parser.add_argument("--seed", default="prme-evidence-v1")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--k", type=int, default=100)
+    parser.add_argument("--concurrency", type=int, default=1)
     parser.add_argument("--budgets", nargs="+", type=int, default=[2048, 4096, 8192])
     parser.add_argument("--tokenizer", default="cl100k_base")
     parser.add_argument("--clock", choices=["question", "wall"], default="question")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    if args.k < 1 or args.limit < 0 or any(b < 1 for b in args.budgets):
-        parser.error("k and budgets must be positive; limit must be nonnegative")
+    if args.k < 1 or args.concurrency < 1 or args.limit < 0 or any(b < 1 for b in args.budgets):
+        parser.error("k, concurrency, and budgets must be positive; limit must be nonnegative")
     report = asyncio.run(run(args))
     raise SystemExit(0 if report["complete"] else 1)
 
