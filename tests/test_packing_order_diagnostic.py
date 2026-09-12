@@ -1,6 +1,7 @@
 """Counterfactual packing uses identical source candidates and enforces replay."""
 
 from copy import deepcopy
+import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -49,6 +50,23 @@ async def test_experiment_changes_only_order_and_keeps_labels_out_of_reader():
     assert "label-sentinel" not in repr(reader.await_args_list)
     from prme.retrieval import packing
     assert packing.compute_str is compute_str
+
+
+async def test_provenance_costs_count_toward_budget_and_patch_does_not_escape():
+    from prme.retrieval import packing
+    original_renderer = packing._render_entry
+    report = fixture_report()
+    # The budget fits the long source exactly without the additional metadata.
+    result = await compare(report, include_provenance=True)
+    variants = result["details"][0]["variants"]
+    assert len(variants) == 4
+    assert variants["score"]["sources"][0]["id"] == "relevant"
+    assert variants["score_source_type"]["sources"] == [{"id": "short", "representation": "full"}]
+    for name, variant in variants.items():
+        assert variant["tokens"] <= report["token_budget"]
+        entries = [json.loads(line) for line in variant["context"].splitlines() if line.startswith("{")]
+        assert all(("source_type" in entry) == name.endswith("source_type") for entry in entries)
+    assert packing._render_entry is original_renderer
 
 
 @pytest.mark.parametrize("mutation", ["context", "tokens", "missing_snapshot", "exit", "later_question"])
