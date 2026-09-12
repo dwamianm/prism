@@ -537,6 +537,9 @@ def test_current_query_preserves_configured_relevance_floor():
     "What did I use before my current laptop?",
     "How many devices do I use during a typical day?",
     "How many hours do I normally work across both jobs?",
+    "How long have I lived in my current apartment?",
+    "Since when do I use my current computer?",
+    "When did I start my current job?",
 ])
 async def test_historical_and_aggregate_questions_do_not_suppress_earlier_evidence(query):
     from prme.retrieval.query_analysis import analyze_query

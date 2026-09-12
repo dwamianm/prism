@@ -202,6 +202,10 @@ def _is_current_state_query(query_analysis: QueryAnalysis) -> bool:
     """
     if query_analysis.is_aggregation:
         return False
+    # Duration questions need the starting episode even when their subject is
+    # current ("How long have I lived in my current apartment?").
+    if re.search(r"\b(how\s+long|since\s+when|when\s+did|elapsed\s+time)\b", query_analysis.query, re.IGNORECASE):
+        return False
     if re.search(r"\b(before|after|previously|formerly|originally|used to)\b", query_analysis.query, re.IGNORECASE):
         return False
     return bool(_CURRENT_STATE_QUERY_RE.search(query_analysis.query))
