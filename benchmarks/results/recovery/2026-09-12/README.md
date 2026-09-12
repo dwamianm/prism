@@ -658,3 +658,29 @@ installed Python 3.13 wheel (`ededc6d`) passed **73 tests** in 27.19 seconds,
 covering the API suite and the four snapshot-cadence/recovery checks. It emitted
 one Starlette/AnyIO deprecation warning about the `BlockingPortal` alias; the
 process exited zero. These tests do not establish benchmark leadership.
+
+## HTTP source fidelity and empty-source admission
+
+At `e3f3c8d`, HTTP store preserves source classification, session, metadata,
+confidence, event time and TTL (omitted, explicit null and integer overrides).
+Read and retrieval responses retain temporal and provenance fields. Ingest
+preserves session and metadata and supports blocking extraction. Unsupported
+write fields are rejected before admission. Saved-work failures return a scoped
+event receipt, and raw materialization status and repair are accessible over HTTP.
+Restart checks recover the original saved request without creating another event
+or calling an extraction provider. See [the HTTP contract](../../../../docs/HTTP-API.md).
+
+The frozen full suite at `e3f3c8d` passed **2,042 tests with 51 skips** in
+292.65 seconds, using Python 3.11 and live PostgreSQL. The earlier `597f041`
+full run is retained as **2,005 passes, 51 skips, one failure**: a maintenance
+scope test depended on completing work within a real 200ms deadline under load.
+`018618e` gives that scope test a fixed clock; the separate advancing-clock test
+continues to exercise budget exhaustion. Production time budgets were unchanged.
+
+`376178a` then corrected empty-source hashing on admission. The targeted
+source, recovery and provenance suite passed **45 tests with three skips** on
+both backends. An installed Python 3.13 wheel from `1f5375a` passed **104 HTTP,
+source, identity, empty-hash and maintenance checks** with live PostgreSQL in
+14.68 seconds. It emitted one upstream Starlette/AnyIO deprecation warning.
+The full-suite result above predates the one-line empty-source fix; these
+installed and focused checks cover it. No historical event rows were rewritten.
