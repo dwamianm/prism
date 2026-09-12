@@ -711,3 +711,30 @@ explicit processing published the saved three-node plan with identical dates
 and both model providers disabled. The supervised process exited zero; workflow
 time was 18.98 seconds. This demonstrates one temporal/recovery workflow, not
 extraction accuracy or a competitive advantage.
+
+## Scoped instruction repetition
+
+`2fea945` stops treating similarity as automatic confirmation of an instruction.
+The regression setup forces a similarity score of 1.0 and verifies that a negated
+rule, another scope, an ordinary note, a conditional statement, a model-derived
+source or an assistant echo cannot change the existing instruction's evidence
+or confidence. The initial tests reproduced **14 failures with two passes**
+on the previous implementation, across DuckDB and PostgreSQL.
+
+Automatic reinforcement now requires exact text, explicit instruction types,
+user-stated observed/asserted records, a user/human source, the same owner and
+scope, and a source no earlier than the existing instruction. It checks active
+state and existing evidence before crediting a source. Opt-in semantic re-mention
+reinforcement excludes instructions and respects scope. An explicit repetition
+is credited once even with both paths enabled. This remains a repetition
+heuristic, not independent corroboration or empirically calibrated confidence.
+Previously applied boosts are retained.
+
+The source integration run passed **81 checks with two skips** in 49.59 seconds.
+The final installed Python 3.13 wheel passed **83 checks with two skips** in
+38.50 seconds, including the additional positive tests with opt-in re-mention
+enabled and live PostgreSQL. These checks include index availability and snapshot
+recovery. Changed-source lint passed. Ordinary notes now make no instruction
+similarity search, verified by a call-count test; no throughput improvement is
+claimed from these concurrent test timings. The ongoing full suite at `f810c31`
+predates this reinforcement fix and must not be represented as covering it.
