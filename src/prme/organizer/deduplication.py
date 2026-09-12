@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from prme.models.edges import MemoryEdge
 from prme.organizer.merge_policy import compatible_provenance, duplicate_merge_allowed
@@ -326,56 +326,49 @@ async def _transfer_edges(
     from_node_id: str,
     to_node_id: str,
 ) -> None:
-    """Transfer edges from one node to another.
+    """Copy semantic edges without changing validity, provenance or retry IDs.
 
-    For each edge where from_node is source or target, create a
-    corresponding edge pointing to/from to_node. SUPERSEDES edges
-    are not transferred (they are structural, not semantic).
+    Originals remain intact. Partial copies can survive a failed pass, but any
+    failure propagates so callers keep the source node active. Retrying verifies
+    existing deterministic copies rather than appending duplicate relationships.
+    This is retry convergence, not an atomic merge transaction.
     """
     graph = engine._graph_store
-
-    # Get all edges where from_node is source
-    outgoing = await graph.get_edges(source_id=from_node_id)
-    for edge in outgoing:
+    source_node = await engine.get_node(from_node_id)
+    target_node = await engine.get_node(to_node_id)
+    if source_node is None or target_node is None or (
+        source_node.user_id, source_node.scope
+    ) != (target_node.user_id, target_node.scope):
+        raise ValueError("Edge transfer requires existing nodes in the same owner and scope")
+    source_id, target_id = UUID(from_node_id), UUID(to_node_id)
+    originals = await graph.get_edges(node_ids=[from_node_id])
+    existing = {edge.id: edge for edge in await graph.get_edges(node_ids=[to_node_id])}
+    for edge in originals:
         if edge.edge_type == EdgeType.SUPERSEDES:
             continue
-        # Skip self-referential edges to the canonical node
-        if str(edge.target_id) == to_node_id:
+        if edge.user_id != source_node.user_id:
+            raise ValueError("Edge transfer cannot change another owner's relationship")
+        new_source = target_id if edge.source_id == source_id else edge.source_id
+        new_target = target_id if edge.target_id == source_id else edge.target_id
+        # A relationship between the two merged identities collapses away;
+        # an explicit original self-relationship remains one self-relationship.
+        if new_source == new_target and edge.source_id != edge.target_id:
             continue
-        new_edge = MemoryEdge(
-            source_id=UUID(to_node_id),
-            target_id=edge.target_id,
-            edge_type=edge.edge_type,
-            user_id=edge.user_id,
-            confidence=edge.confidence,
-            metadata=edge.metadata,
-        )
+        copied = edge.model_copy(deep=True, update={
+            "id": uuid5(edge.id, f"prme:edge-transfer:v1:{source_id}:{target_id}"),
+            "source_id": new_source, "target_id": new_target,
+        })
+        previous = existing.get(copied.id)
+        if previous is not None:
+            if previous != copied:
+                raise ValueError("Transferred edge identity conflicts with stored content")
+            continue
         try:
-            await graph.create_edge(new_edge)
+            await graph.create_edge(copied)
         except Exception:
-            logger.debug(
-                "Failed to transfer outgoing edge %s", edge.id, exc_info=True
-            )
-
-    # Get all edges where from_node is target
-    incoming = await graph.get_edges(target_id=from_node_id)
-    for edge in incoming:
-        if edge.edge_type == EdgeType.SUPERSEDES:
-            continue
-        # Skip self-referential edges from the canonical node
-        if str(edge.source_id) == to_node_id:
-            continue
-        new_edge = MemoryEdge(
-            source_id=edge.source_id,
-            target_id=UUID(to_node_id),
-            edge_type=edge.edge_type,
-            user_id=edge.user_id,
-            confidence=edge.confidence,
-            metadata=edge.metadata,
-        )
-        try:
-            await graph.create_edge(new_edge)
-        except Exception:
-            logger.debug(
-                "Failed to transfer incoming edge %s", edge.id, exc_info=True
-            )
+            # A concurrent identical retry may have committed this same edge.
+            # No other insertion failure is permission to retire the source.
+            saved = {item.id: item for item in await graph.get_edges(node_ids=[to_node_id])}
+            if saved.get(copied.id) != copied:
+                raise
+        existing[copied.id] = copied

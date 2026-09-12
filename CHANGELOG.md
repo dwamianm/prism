@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validity or provenance; semantic entity aliases remain unverified links.
 - Initialize PostgreSQL vector columns and indexes against the selected table,
   without treating names in other schemas as an existing local installation.
+- Preserve relationship validity and provenance during organizer merges; failed
+  copies keep the source active, and deterministic copy IDs make retries converge.
 
 ## [0.11.0] - 2026-09-11
 

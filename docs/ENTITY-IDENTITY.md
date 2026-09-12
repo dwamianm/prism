@@ -39,6 +39,14 @@ both candidates and actual merges, plus unapplied pairs and its merge-policy
 version. A candidate count greater than zero with no merged nodes can be correct.
 Compatible exact copies can still merge and combine their evidence references.
 
+Copied relationships retain their original validity, provenance, confidence,
+metadata and assertion timestamp. Their transfer IDs are deterministic, so a
+retry verifies existing copies instead of appending the same relationship again.
+A copy failure prevents retiring the source node. Partial copies can remain
+visible after failure; this is retry convergence, not an atomic transaction for
+the complete node/evidence/edge merge. Concurrent unrelated merges still need
+a separate transactional publication protocol.
+
 Alias application rechecks the actual names. A compatible known abbreviation,
 case variant or exact normalized name can merge at the configured confidence
 threshold. A high semantic score by itself only creates a `RELATES_TO` proposal

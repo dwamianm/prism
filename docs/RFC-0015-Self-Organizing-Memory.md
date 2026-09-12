@@ -442,6 +442,12 @@ async def end_session(
 
 This runs a lightweight organize pass with jobs `["promote"]` and a 1-second budget. It is semantically equivalent to calling `organize()` with those parameters.
 
+Relationship transfer during duplicate/alias application preserves temporal
+validity and provenance. Deterministic copied-edge identities permit retries;
+an insertion failure must prevent source retirement unless the exact copy is
+already durably present. Partial copies can remain visible. This is not atomic
+publication of an entire merge or serialization of unrelated concurrent merges.
+
 `ALL_JOBS` lists available jobs. `DEFAULT_JOBS` excludes the legacy global
 `feedback_apply` tuner. Default `organize()` calls use `DEFAULT_JOBS`, with or
 without a user scope. Explicit scoped requests containing `feedback_apply`
