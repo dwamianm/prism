@@ -430,12 +430,14 @@ class MemoryClient:
         self,
         *,
         user_id: str,
+        scope: Scope | None = None,
         entity_names: list[str] | None = None,
     ) -> int:
-        """Build entity knowledge profiles. Returns count of profiles created."""
+        """Build profiles within each scope, or only the explicitly requested scope."""
         return self._run(
             self._engine.consolidate_knowledge(
                 user_id=user_id,
+                scope=scope,
                 entity_names=entity_names,
             )
         )

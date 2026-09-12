@@ -2222,12 +2222,13 @@ class MemoryEngine:
         self,
         *,
         user_id: str,
+        scope: Scope | None = None,
         entity_names: list[str] | None = None,
         max_profile_tokens: int = 500,
     ) -> int:
         """Build entity knowledge profiles from stored nodes.
 
-        Groups all active nodes for a user by detected entity names,
+        Groups active source nodes within each owner/scope by entity name,
         then creates SUMMARY nodes containing consolidated knowledge
         per entity. These profiles are indexed for retrieval, making
         entity-centric facts directly searchable.
@@ -2237,6 +2238,7 @@ class MemoryEngine:
 
         Args:
             user_id: User whose knowledge to consolidate.
+            scope: Only rebuild this scope. Omit to process each scope separately.
             entity_names: Optional list of entity names to consolidate.
                 If None, auto-detects names from content (proper nouns).
             max_profile_tokens: Approximate max tokens per profile node.
@@ -2246,15 +2248,29 @@ class MemoryEngine:
         """
         import re
 
-        # Fetch all active nodes for this user
+        if scope is None:
+            # Profiles have one namespace. Never pool evidence from different
+            # scopes, even when the explicit owner and entity name match.
+            total = 0
+            for namespace in Scope:
+                total += await self.consolidate_knowledge(
+                    user_id=user_id, scope=namespace, entity_names=entity_names,
+                    max_profile_tokens=max_profile_tokens,
+                )
+            return total
+        scope = Scope(scope)
+
+        # Fetch active source nodes only within the requested namespace.
         all_nodes = await self._graph_store.query_nodes(
             user_id=user_id,
+            scopes=[scope],
             lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
             limit=5000,
         )
 
-        if not all_nodes:
-            return 0
+        # A prior generated profile is a derived view, never new evidence.
+        # This also prevents legacy mixed-scope profiles from feeding rebuilds.
+        all_nodes = [node for node in all_nodes if not (node.metadata or {}).get("entity_profile")]
 
         # Index existing entity-profile SUMMARY nodes by entity name so a
         # re-run upserts the profile (archive + evict the stale one) instead
@@ -2263,6 +2279,7 @@ class MemoryEngine:
         existing_summaries = await self._graph_store.query_nodes(
             user_id=user_id,
             node_type=NodeType.SUMMARY,
+            scopes=[scope],
             lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
             limit=5000,
         )
@@ -2272,6 +2289,14 @@ class MemoryEngine:
                 name = meta.get("entity_name")
                 if name:
                     existing_profiles.setdefault(name, []).append(str(node.id))
+
+        async def retire_profile(name: str) -> None:
+            for stale_id in existing_profiles.get(name, []):
+                try:
+                    await self.archive(stale_id, user_id=user_id)
+                except ValueError:
+                    # Already terminal; still remove a stale index entry.
+                    await self._evict_from_indexes(stale_id)
 
         # Auto-detect entity names if not provided
         if entity_names is None:
@@ -2296,6 +2321,8 @@ class MemoryEngine:
                 name for name, count in name_counts.items()
                 if count >= 3
             ]
+            # Reconsider existing views even if their sources no longer qualify.
+            entity_names = list(dict.fromkeys([*entity_names, *existing_profiles]))
 
         if not entity_names:
             return 0
@@ -2310,6 +2337,8 @@ class MemoryEngine:
                     related.append(node)
 
             if len(related) < 2:
+                # An old profile cannot supply its own missing evidence.
+                await retire_profile(entity_name)
                 continue
 
             # Sort by creation time and build profile
@@ -2342,18 +2371,13 @@ class MemoryEngine:
 
             # Upsert: archive and evict any prior profile for this entity so
             # the SUMMARY is replaced, not duplicated, on each consolidation.
-            for stale_id in existing_profiles.get(entity_name, []):
-                try:
-                    await self.archive(stale_id)
-                except ValueError:
-                    # Already in a terminal state — evict from indexes anyway.
-                    await self._evict_from_indexes(stale_id)
+            await retire_profile(entity_name)
 
             # Store as SUMMARY node
             profile_node = MemoryNode(
                 user_id=user_id,
                 node_type=NodeType.SUMMARY,
-                scope=Scope.PERSONAL,
+                scope=scope,
                 content=profile_text,
                 metadata={"entity_profile": True, "entity_name": entity_name},
                 confidence=0.8,
@@ -2378,7 +2402,7 @@ class MemoryEngine:
                 )
                 await self._write_queue.submit(
                     lambda nid=node_id, c=profile_text, uid=user_id: (
-                        self._lexical_index.index(nid, c, uid, "summary", "personal")
+                        self._lexical_index.index(nid, c, uid, "summary", scope.value)
                     ),
                     label=f"consolidate.lexical:{entity_name}",
                 )

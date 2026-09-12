@@ -279,6 +279,19 @@ supplied candidate lists. The same owner's PERSONAL and PROJECT memories must
 remain independent even when their text or entity names match. These checks do
 not implement the broader namespace grant hierarchy in RFC-0004.
 
+The separate `consolidate_knowledge()` convenience API also processes one scope
+at a time. Its optional `scope` argument is available on the async engine and
+sync client; omission visits each scope separately. Profile graph nodes and
+lexical entries inherit the source scope. Earlier generated entity profiles
+are excluded from source matching so they cannot perpetuate mixed-scope content
+or recursively include themselves. On an explicit rebuild, existing profile
+names are reconsidered even if source counts fall below automatic discovery's
+threshold. Profiles without two eligible same-scope sources are archived and
+evicted; underlying source nodes and events remain intact. This handles obsolete
+legacy derived profiles in the scopes actually processed, without moving source
+memories between namespaces. It does not repair prior duplicate evidence writes
+or implement transactional profile publication.
+
 ### 5.4 OrganizeResult
 
 ```python

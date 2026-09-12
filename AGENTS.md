@@ -37,6 +37,11 @@ Despite the name "scheduled," there is **no built-in cron or daemon scheduler**.
 
 **Multi-tenant stores must pass a user scope.** `organize(user_id=...)` confines every job to that user's nodes. An unscoped run is an operator action over all users and is still the default. Duplicate/alias matching and consolidation preserve both owner and scope, including on unscoped runs; a shared application should still maintain tenants explicitly to confine which users are mutated. `feedback_apply` is the exception: scoring weights are engine-global, so it ignores the scope and reports `"scope": "global"`.
 
+`consolidate_knowledge(user_id=..., scope=...)` builds entity profiles within
+one scope; omission visits every scope separately. It excludes generated profiles
+from source evidence and retires obsolete profiles during an explicit rebuild.
+This convenience API is separate from the organizer's `consolidate` job.
+
 ## RFCs
 
 Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0017). See `docs/INDEX.md` for the full listing. Key RFCs include:

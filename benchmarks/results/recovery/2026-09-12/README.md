@@ -949,3 +949,33 @@ misbehaving vector results, valid same-scope matches, evidence preservation and
 restart. The earlier draft of these tests confused returned event IDs with node
 IDs; the corrected baseline and final runs use graph node identities. Changed
 source lint and typing for both organizer modules pass.
+
+The installed Python 3.13 wheel at `6ea522a` passed **73 targeted checks** in
+45.93 seconds, actual exit zero. The run used the installed package (not the
+source tree), including live PostgreSQL and the new namespace regressions.
+
+## Legacy entity-profile scope preservation
+
+The separate `consolidate_knowledge()` helper previously gathered every scope
+for an owner and emitted PERSONAL graph/lexical entries. It could also consume
+its own generated profiles on later passes. Ten regression cases failed on both
+backends before correction. The helper and sync client now accept `scope`; an
+omitted scope visits the six namespaces separately. Generated entity profiles
+are excluded from source evidence, replacements keep their source scope, and
+explicitly scoped calls leave other scopes and owners unchanged.
+
+An additional two-backend regression showed that partitioning alone left an
+obsolete legacy personal profile active when all real sources were in PROJECT.
+Explicit rebuilding now reconsiders existing profile names and archives/evicts
+profiles without two eligible same-scope sources, preserving original source
+nodes and events. The final source regression set passed **73 checks** in
+21.55 seconds, actual exit zero. It covers graph/index/retrieval scope, restart,
+repeat-generation stability, namespace-local source thresholds, scoped sync
+calls, and retirement of the unsupported legacy view.
+
+Lint passes. Direct typing of engine and client reports **25 pre-existing
+diagnostics**; the prior `6ea522a` tree reproduces the same diagnostics after
+line-number normalization. This is not a globally clean typing result. The
+profile path still uses heuristic name matching and approximate character-based
+budgets, and publication is not transactional. These scope fixes are not evidence
+of answer-quality improvement or complete profile correctness.
