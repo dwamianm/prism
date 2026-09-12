@@ -97,6 +97,20 @@ its own memory pack. Reports retain frozen question order and per-question
 errors. Concurrency is recorded; timing under concurrent workloads is not a
 standalone latency measurement and must not be compared as such.
 
+Compare two completed runs on exactly the same selected questions:
+
+```bash
+uv run python -m benchmarks.compare_evidence /tmp/before.json /tmp/after.json \
+  --output /tmp/comparison.json
+```
+
+The comparison rejects errors, missing/duplicate questions, different source
+corpora or labels, and mismatched datasets/budgets. It reports paired changes,
+wins/ties/losses, and a seeded query-bootstrap interval overall and by category.
+Shared histories can make queries dependent, so these intervals are descriptive
+and do not establish population-wide superiority. Development results still
+need a frozen held-out confirmation. Timing is deliberately not compared.
+
 ```bash
 uv sync --dev
 uv run pytest tests/ -q
