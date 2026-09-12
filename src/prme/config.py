@@ -12,7 +12,13 @@ from pydantic_settings import BaseSettings
 from prme.retrieval.config import PackingConfig, ScoringWeights
 
 
-class ExtractionConfig(BaseSettings):
+class _ProjectSettings(BaseSettings):
+    """Read project settings without exporting secrets into process globals."""
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+
+
+class ExtractionConfig(_ProjectSettings):
     """Configuration for the LLM extraction provider.
 
     Controls which LLM provider and model is used for structured
@@ -35,13 +41,19 @@ class ExtractionConfig(BaseSettings):
         default=30.0,
         description="Seconds per extraction call",
     )
+    api_key: SecretStr | None = Field(
+        default=None, description="Optional extraction credential; overrides provider environment variables",
+    )
+    base_url: str | None = Field(
+        default=None, description="Optional extraction endpoint; overrides provider environment variables",
+    )
 
     model_config = {
         "env_prefix": "PRME_EXTRACTION_",
     }
 
 
-class EmbeddingConfig(BaseSettings):
+class EmbeddingConfig(_ProjectSettings):
     """Configuration for the embedding provider."""
 
     provider: str = Field(
@@ -63,7 +75,7 @@ class EmbeddingConfig(BaseSettings):
     }
 
 
-class APIConfig(BaseSettings):
+class APIConfig(_ProjectSettings):
     """Configuration for the HTTP API server (security hardening, issue #34)."""
 
     api_key: str | None = Field(
@@ -97,7 +109,7 @@ class APIConfig(BaseSettings):
     }
 
 
-class OrganizerConfig(BaseSettings):
+class OrganizerConfig(_ProjectSettings):
     """Configuration for self-organizing memory (RFC-0015)."""
 
     opportunistic_enabled: bool = Field(
@@ -226,7 +238,7 @@ class OrganizerConfig(BaseSettings):
     }
 
 
-class PRMEConfig(BaseSettings):
+class PRMEConfig(_ProjectSettings):
     """Root configuration for PRME.
 
     Loads from environment variables with PRME_ prefix,

@@ -257,7 +257,7 @@ class IngestionPipeline:
             logger.error(
                 "ingestion.extraction_failed",
                 event_id=event_id,
-                exc_info=True,
+                error_type=type(exc).__name__,
             )
             self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
             if raise_errors:

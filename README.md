@@ -22,11 +22,11 @@ reliable evidence retrieval, complete aggregation, and correct temporal state.
 
 ## Why PRME?
 
-LLMs are stateless. Every conversation starts from zero. Existing solutions bolt on vector search and call it "memory," but that misses the relational structure of how humans actually remember things — preferences override old ones, decisions have context, facts get corrected.
+Persistent memory helps an assistant carry context between conversations. It
+also needs to preserve evidence, distinguish speculation from facts, and keep
+earlier information available when circumstances change. PRME combines:
 
-PRME models memory the way it actually works:
-
-- **Event sourcing** — immutable append-only log, deterministic rebuild
+- **Durable source history** — immutable append-only events; rebuildable search indexes from the durable graph
 - **Graph-based relational model** — 9 typed node kinds (entities, facts, preferences, decisions, tasks, instructions, summaries, events, notes) with edges capturing relationships, supersedence, and temporal validity
 - **Epistemic state tracking** — memories have lifecycle states (tentative -> stable -> superseded -> archived), confidence scores, contradiction detection, and oscillation dampening
 - **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle
@@ -202,6 +202,16 @@ Endpoints under `/v1`:
 ## Configuration
 
 PRME uses pydantic-settings. Configure via constructor arguments, environment variables (`PRME_` prefix), or `.env` files:
+
+Settings load `.env` from the current working directory. Constructor values take
+priority over process environment variables, which take priority over the file.
+Nested settings support their documented prefixes and `__` paths (for example,
+`PRME_PACKING__TOKEN_BUDGET=4096`). Unrelated application settings are ignored.
+Extraction reads the selected provider's `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`
+and optional `*_BASE_URL` from the environment or `.env`, without exporting them
+into process globals. `ExtractionConfig(api_key=..., base_url=...)` or
+`PRME_EXTRACTION_API_KEY` / `PRME_EXTRACTION_BASE_URL` explicitly override those
+provider settings. Recreate the client after changing credentials.
 
 ```bash
 # Extraction provider

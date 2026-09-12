@@ -9,10 +9,11 @@ and Ollama backends through a single unified interface.
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import structlog
-from pydantic import Field, ValidationInfo, model_validator
+from pydantic import Field, SecretStr, ValidationInfo, model_validator
 
 from prme.ingestion.schema import ExtractedFact, ExtractionResult
 from prme.ingestion.grounding import _mentioned
@@ -185,11 +186,15 @@ class InstructorExtractionProvider:
         model: str | None = None,
         max_retries: int = 3,
         timeout: float = 30.0,
+        api_key: SecretStr | None = None,
+        base_url: str | None = None,
     ) -> None:
         self._provider_string = provider_string
         self._model = model
         self._max_retries = max_retries
         self._timeout = timeout
+        self._api_key = api_key
+        self._base_url = base_url
         self._client: instructor.AsyncInstructor | None = None
 
     def _ensure_client(self) -> instructor.AsyncInstructor:
@@ -200,9 +205,24 @@ class InstructorExtractionProvider:
         """
         if self._client is None:
             import instructor
+            from dotenv import dotenv_values
+
+            # SDK defaults read process variables but do not load .env. Resolve
+            # only the selected provider's settings, without mutating os.environ.
+            kwargs: dict = {}
+            provider_prefix = {"openai": "OPENAI", "anthropic": "ANTHROPIC"}.get(self.provider_name)
+            if provider_prefix:
+                local = dotenv_values(".env")
+                key_name, url_name = f"{provider_prefix}_API_KEY", f"{provider_prefix}_BASE_URL"
+                key = self._api_key.get_secret_value() if self._api_key else os.environ.get(key_name, local.get(key_name))
+                url = self._base_url or os.environ.get(url_name, local.get(url_name))
+                if key:
+                    kwargs["api_key"] = key
+                if url:
+                    kwargs["base_url"] = url
 
             self._client = instructor.from_provider(
-                self._provider_string, async_client=True
+                self._provider_string, async_client=True, **kwargs
             )
         return self._client
 
@@ -267,7 +287,7 @@ class InstructorExtractionProvider:
                 "extraction_failed",
                 provider=self._provider_string,
                 content_length=len(content),
-                exc_info=True,
+                error_type=type(exc).__name__,
             )
             raise ExtractionError(f"Extraction failed ({type(exc).__name__})") from exc
 
@@ -292,4 +312,6 @@ def create_extraction_provider(
         model=config.model,
         max_retries=config.max_retries,
         timeout=config.timeout,
+        api_key=config.api_key,
+        base_url=config.base_url,
     )
