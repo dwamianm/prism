@@ -141,7 +141,10 @@ class PackingConfig(BaseModel):
     """
 
     token_budget: int = Field(
-        default=4096, description="Default context budget in tokens"
+        default=4096, ge=0, description="Default context budget in tokens"
+    )
+    tokenizer: str = Field(
+        default="cl100k_base", description="Tiktoken encoding for the entire rendered memory context",
     )
     min_fidelity: RepresentationLevel = Field(
         default=RepresentationLevel.REFERENCE,
@@ -149,7 +152,8 @@ class PackingConfig(BaseModel):
     )
     overhead_tokens: int = Field(
         default=100,
-        description="Reserved tokens for JSON envelope and separators",
+        ge=0,
+        description="Additional caller-reserved tokens beyond the measured memory context",
     )
     chars_per_token: float = Field(
         default=4.2,

@@ -639,6 +639,8 @@ class RetrievalPipeline:
                 "candidates_filtered": len(excluded),
                 "candidates_included": bundle.included_count,
                 "tokens_used": bundle.tokens_used,
+                "token_budget": bundle.token_budget,
+                "tokenizer": bundle.tokenizer,
                 "scoring_config_version": effective_weights.version_id,
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,

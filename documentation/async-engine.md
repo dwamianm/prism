@@ -163,6 +163,32 @@ Additional parameters vs MemoryClient:
   Reuse it to replay a query against unchanged memory/configuration. It does not
   apply a knowledge cutoff; set `knowledge_at` separately when needed.
 
+## Rendered context and token budgets
+
+```python
+response = await engine.retrieve("What should I remember?", user_id="alice", token_budget=2048)
+context = response.bundle.render()
+print(response.bundle.tokens_used, response.bundle.tokenizer)
+```
+
+Pass this rendered string as the memory context. `tokens_used` counts the whole
+string, including section labels, source IDs, dates, and epistemic metadata.
+`PackingConfig.tokenizer` defaults to `cl100k_base`; select the consuming model's
+encoding (for example `o200k_base`) in the engine configuration. Token counts are
+specific to that encoding. `overhead_tokens` reserves additional space for the
+caller outside the measured context.
+
+Entries retain complete source text or become explicit metadata/references;
+text is never sliced to fit. A tiny budget can produce an empty bundle even for
+pinned memories. Set `min_fidelity=RepresentationLevel.FULL` when references
+without full text are unsuitable. Full node objects remain in `results` for
+inspection; concatenating their content bypasses the bundle's budget.
+
+The separate `format_for_llm(..., token_budget=...)` formatter also counts its
+entire output. It accepts `token_counter=your_model_counter` for tokenizers
+outside tiktoken. Profiles, conflict annotations, and headers consume that same
+budget, so a candidate is included only if the complete rendering fits.
+
 ## Node Operations
 
 ```python

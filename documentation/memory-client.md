@@ -116,6 +116,11 @@ def retrieve(
 - `bundle` — packed context bundle for LLM consumption
 - `metadata` — retrieval timing, candidate counts, backends used
 
+Use `response.bundle.render()` for the exact context counted by
+`response.bundle.tokens_used`. The bundle records its tokenizer. Reconstructing
+text from the full node objects bypasses that budget. See
+[rendered context and budgets](async-engine.md#rendered-context-and-token-budgets).
+
 **Example:**
 
 ```python

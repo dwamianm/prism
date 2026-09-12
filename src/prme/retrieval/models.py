@@ -155,6 +155,9 @@ class RetrievalCandidate(BaseModel):
     token_cost: int = Field(
         default=0, description="Estimated token cost (set in packing stage)"
     )
+    rendered_text: str | None = Field(
+        default=None, description="Faithful text at the selected representation level",
+    )
     conflict_flag: bool = Field(
         default=False,
         description="Whether this node has an unresolved contradiction (CONTESTED state)",
@@ -195,6 +198,12 @@ class MemoryBundle(BaseModel):
         default=RepresentationLevel.REFERENCE,
         description="Minimum representation level used",
     )
+    rendered_context: str = Field(default="", description="The exact context counted against the budget")
+    tokenizer: str | None = Field(default=None, description="Encoding used for tokens_used")
+
+    def render(self) -> str:
+        """Return the already-budgeted context; do not reconstruct full nodes."""
+        return self.rendered_context
 
     def render_system_instructions(self) -> str:
         """Render system instructions as a formatted prompt block.
@@ -211,7 +220,8 @@ class MemoryBundle(BaseModel):
             return ""
         lines = ["## System Instructions"]
         for candidate in instructions:
-            lines.append(f"- {candidate.node.content}")
+            content = candidate.rendered_text if candidate.rendered_text is not None else candidate.node.content
+            lines.append(f"- {content}")
         return "\n".join(lines) + "\n"
 
 

@@ -16,6 +16,16 @@ Most retrieval systems optimise for relevance. RMS optimises for *utility per to
 
 The core metric is the Signal-to-Token Ratio (STR).
 
+**Implemented contract, 2026-09-12:** the product packer now counts its complete
+rendered context with a named tiktoken encoding. `MemoryBundle.render()` returns
+that exact text; `tokens_used` includes headers, separators, and metadata.
+`overhead_tokens` is an additional caller reservation. Content-bearing
+representations retain whole source text; character slicing is not a valid
+PROSE or STRUCTURED representation. Missing space permits explicit references
+or exclusion, including for pins. No always-include rule can exceed the budget.
+The separate LLM formatter enforces the same whole-output rule when a budget
+is supplied and supports a caller-provided tokenizer counter.
+
 ---
 
 ## 2. The Signal-to-Token Ratio (STR)

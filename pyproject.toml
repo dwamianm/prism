@@ -34,6 +34,7 @@ dependencies = [
     "ollama>=0.6",
     "dateparser>=1.2",
     "cryptography>=43.0",
+    "tiktoken>=0.12",
 ]
 
 [project.urls]

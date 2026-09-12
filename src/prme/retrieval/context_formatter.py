@@ -38,6 +38,7 @@ Usage::
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -590,6 +591,7 @@ def format_for_llm(
     max_results: int = 50,
     include_profile: bool = True,
     token_budget: int | None = None,
+    token_counter: Callable[[str], int] | None = None,
 ) -> str:
     """Format retrieval results as text optimized for LLM consumption.
 
@@ -606,18 +608,14 @@ def format_for_llm(
         include_profile: When ``True`` (default), prepend a user profile
             preamble and conflict annotations derived from the PRIME
             dual-memory research. Set to ``False`` for raw formatted output.
-        token_budget: Approximate token ceiling for the retrieved-memory
-            body. When set, the lowest-ranked body entries are dropped until
-            the body fits, so a caller's configured budget (e.g.
-            ``PackingConfig.token_budget``) actually bounds what is sent to
-            the LLM instead of being silently ignored. ``None`` (default)
-            disables trimming and formats every (deduplicated) entry — this
-            preserves exhaustive aggregation, where every item must stay
-            visible for counting. The budget bounds the body entries only;
-            the always-kept profile preamble, conflict annotations, and
-            reasoning guidance are reserved against it but the per-format
-            headers are not, so the rendered string may exceed it by a small
-            header margin.
+        token_budget: Ceiling for the entire rendered context, including
+            profiles, conflicts, notices, headers, and separators. Candidates
+            are considered in relevance order and included whole when they
+            fit; an oversized first candidate is skipped. None disables the
+            budget. No memory is truncated to fit.
+        token_counter: Count tokens in the complete string using the consuming
+            model's tokenizer. Defaults to tiktoken cl100k_base. Supply a custom
+            counter for other models; the ceiling applies to this encoding.
 
     Returns:
         Formatted context string ready for injection into an LLM prompt.
@@ -625,6 +623,24 @@ def format_for_llm(
     # Operate on a private copy. The format variants sort and dedup in place,
     # so we must never mutate the caller's list (callers reuse ``response``).
     display = list(results[:max_results])
+    if token_budget is not None:
+        if token_budget < 0:
+            raise ValueError("token_budget must be nonnegative")
+        from prme.retrieval.tokenization import count_tokens
+
+        counter = token_counter or count_tokens
+        selected: list[RetrievalCandidate] = []
+        rendered = ""
+        for candidate in display:
+            proposed = format_for_llm(
+                [*selected, candidate], query, query_analysis=query_analysis,
+                question_date=question_date, context_hint=context_hint,
+                max_results=max_results, include_profile=include_profile,
+            )
+            if counter(proposed) <= token_budget:
+                selected.append(candidate)
+                rendered = proposed
+        return rendered
     if not display:
         return ""
 
