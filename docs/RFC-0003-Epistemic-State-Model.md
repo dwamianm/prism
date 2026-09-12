@@ -56,6 +56,24 @@ Every memory object MUST be assigned one of the following epistemic types at cre
 
 **On classification accuracy:** Epistemic classification is performed by an extraction pipeline. Extraction pipelines are `[BEST-EFFORT]` — they are not guaranteed to be accurate. A statement classified as INFERRED that was actually OBSERVED is a classification error, not a protocol violation. Implementations SHOULD expose the extraction model's confidence in its own classification as a separate field (`classification_confidence`). `[HYPOTHESIS — classification accuracy thresholds require experimental validation]`
 
+### Source support in PRME ingestion
+
+Extraction requests an exact `evidence_quote` for each fact. Validation requires
+a real source passage and complete subject/object mentions, avoiding matches such
+as “Ann” inside “Marianne”. A citation expands to its surrounding paragraphs so
+a genuine substring cannot silently omit a trailing condition. Fact content is
+that source passage; the model's subject/predicate/object stays in metadata.
+Custom providers that omit citations use the complete message as support and
+must still supply source-supported subject and object values. This deliberately
+rejects unsupported paraphrased object values.
+
+These checks establish source membership, not semantic entailment. Model
+predicates, classifications, relationship labels, and summaries remain fallible.
+Callers can inspect `evidence_refs`, `metadata.evidence_quote`, and
+`metadata.grounding_method` (`source_passage_v1`) to audit the source. Retaining
+whole paragraphs may increase context cost; packing must skip oversized passages
+instead of dropping their qualifications.
+
 ---
 
 ## 4. Source Types and Epistemic Interaction

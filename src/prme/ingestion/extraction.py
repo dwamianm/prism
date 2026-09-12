@@ -79,6 +79,14 @@ prior knowledge
    If unclear, leave temporal_intent as null (the system will use a safe default).
 
 IMPORTANT RULES:
+- Include an evidence_quote for every fact: copy the complete supporting source \
+sentences verbatim, including negation, conditions, exceptions, and time references.
+- Subject and object must occur in the supporting text. Keep object values as \
+written rather than normalizing or paraphrasing them.
+- Using something does not imply preferring it. One occurrence does not imply \
+a habit. Multiple values can coexist (e.g., liking tea and coffee).
+- Preserve conditions and uncertainty. Use conditional or hypothetical epistemic \
+types when appropriate; do not turn a possible future into a current fact.
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.
 - Do NOT infer facts that are not grounded in the source text.

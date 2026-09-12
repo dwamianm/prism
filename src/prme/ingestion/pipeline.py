@@ -340,13 +340,17 @@ class IngestionPipeline:
                 )
 
                 # Build fact content
-                fact_content = f"{fact.subject} {fact.predicate} {fact.object}"
+                # Grounding expands citations to full source paragraphs so
+                # model triples cannot erase negations or trailing conditions.
+                fact_content = fact.evidence_quote or event.content
 
                 # Build metadata
                 fact_metadata: dict = {
                     "subject": fact.subject,
                     "predicate": fact.predicate,
                     "object": fact.object,
+                    "evidence_quote": fact_content,
+                    "grounding_method": "source_passage_v1",
                 }
                 if fact.scope:
                     fact_metadata["suggested_scope"] = fact.scope

@@ -1,18 +1,13 @@
-"""Source text validation for hallucination filtering.
+"""Validate source membership and preserve evidence passages.
 
-Validates extracted entities, facts, and relationships against the
-original source text using substring matching. Items not grounded
-in the source are discarded to prevent LLM hallucinations from
-entering the knowledge graph.
-
-Per user decision: "Validate extracted entities/facts against source
-text -- discard ungrounded/hallucinated extractions."
-
-Per research: Start with conservative substring matching. Better to
-discard valid context-dependent references than accept hallucinations.
+Mention/citation checks reject unsupported text; they do not prove that a
+model's predicate is entailed. Materialized content keeps the source passage
+so the reader can see negations, conditions, and other qualifications.
 """
 
 from __future__ import annotations
+
+import re
 
 import structlog
 
@@ -21,23 +16,48 @@ from prme.ingestion.schema import ExtractionResult
 logger = structlog.get_logger(__name__)
 
 
+def _mentioned(value: str, text: str) -> bool:
+    """Match a nonempty mention without matching Ann inside Marianne."""
+    value = value.strip()
+    if not value:
+        return False
+    return re.search(r"(?<!\w)" + re.escape(value) + r"(?!\w)", text, re.IGNORECASE) is not None
+
+
+def _supporting_passage(quote: str, source: str) -> str | None:
+    """Expand a real citation to paragraph boundaries to retain qualifiers.
+
+    A model can quote a genuine substring while omitting a trailing condition.
+    Keep its surrounding paragraph(s), without inventing a sentence boundary.
+    Repeated quotations conservatively retain the complete source.
+    """
+    if not quote.strip() or quote not in source:
+        return None
+    start = source.find(quote)
+    if source.find(quote, start + 1) != -1:
+        return source
+    end = start + len(quote)
+    separators = list(re.finditer(r"\n\s*\n", source))
+    left = max((m.end() for m in separators if m.end() <= start), default=0)
+    right = min((m.start() for m in separators if m.start() >= end), default=len(source))
+    return source[left:right]
+
+
 def validate_grounding(
     result: ExtractionResult, source_text: str
 ) -> ExtractionResult:
     """Filter out extracted items not grounded in source text.
 
-    Applies substring matching to verify that extracted entities,
-    facts, and relationships reference items actually present in the
-    source text.
+    Verify exact citations and boundary-aware case-insensitive mentions.
 
     Filtering rules:
-    - Entities: name must be a substring of source text (case-insensitive).
-    - Facts: subject must be a substring of source text. The object
-      is not checked because it may be a paraphrased attribute value
-      (e.g., "senior engineer") that doesn't appear verbatim.
+    - Entities: name must occur as a complete mention in the source.
+    - Facts: subject and object must occur in a supporting source passage.
+      Citations expand to paragraphs to retain omitted qualifiers. Custom
+      providers without citations use the complete source as their support.
     - Relationships: both source_entity and target_entity must be
-      substrings of source text.
-    - Summary: always preserved (it's a paraphrase, not an extraction).
+      complete mentions in the source text. Relationship entailment is unverified.
+    - Summary: preserved as model output, not treated as verified evidence.
 
     Args:
         result: The ExtractionResult from LLM extraction.
@@ -46,12 +66,11 @@ def validate_grounding(
     Returns:
         A new ExtractionResult with ungrounded items removed.
     """
-    source_lower = source_text.lower()
 
     # Filter entities: name must appear in source
     grounded_entities = []
     for entity in result.entities:
-        if entity.name.lower() in source_lower:
+        if _mentioned(entity.name, source_text):
             grounded_entities.append(entity)
         else:
             logger.warning(
@@ -61,25 +80,30 @@ def validate_grounding(
                 reason="Entity name not found in source text",
             )
 
-    # Filter facts: subject must appear in source
+    # A citation proves source membership, not semantic entailment. Preserve
+    # the source passage as the fact content instead of trusting a lossy triple.
     grounded_facts = []
     for fact in result.facts:
-        if fact.subject.lower() in source_lower:
-            grounded_facts.append(fact)
+        passage = (
+            _supporting_passage(fact.evidence_quote, source_text)
+            if fact.evidence_quote is not None else source_text
+        )
+        if passage and _mentioned(fact.subject, passage) and _mentioned(fact.object, passage):
+            grounded_facts.append(fact.model_copy(update={"evidence_quote": passage}))
         else:
             logger.warning(
                 "grounding_fact_discarded",
                 subject=fact.subject,
                 predicate=fact.predicate,
                 object=fact.object,
-                reason="Fact subject not found in source text",
+                reason="Missing source support for citation, subject, or object",
             )
 
     # Filter relationships: both endpoints must appear in source
     grounded_relationships = []
     for rel in result.relationships:
-        source_grounded = rel.source_entity.lower() in source_lower
-        target_grounded = rel.target_entity.lower() in source_lower
+        source_grounded = _mentioned(rel.source_entity, source_text)
+        target_grounded = _mentioned(rel.target_entity, source_text)
         if source_grounded and target_grounded:
             grounded_relationships.append(rel)
         else:

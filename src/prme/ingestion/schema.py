@@ -47,6 +47,14 @@ class ExtractedFact(BaseModel):
         description="Relationship or attribute type (e.g., works_at, lives_in, role)"
     )
     object: str = Field(description="Value or target entity")
+    evidence_quote: str | None = Field(
+        default=None,
+        description=(
+            "Exact verbatim source passage supporting the fact, including its subject, "
+            "object, negation, conditions, exceptions, and temporal qualifiers. "
+            "Use complete source sentences; never omit a trailing qualification."
+        ),
+    )
     confidence: float = Field(
         default=0.5,
         ge=0.0,
