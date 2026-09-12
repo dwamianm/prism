@@ -292,6 +292,25 @@ legacy derived profiles in the scopes actually processed, without moving source
 memories between namespaces. It does not repair prior duplicate evidence writes
 or implement transactional profile publication.
 
+Profile format version 2 uses complete literal entity-name boundaries, preserving
+possessives without matching `Ann` inside `Joanna`. Distinct source identities
+remain distinct even when their text or first 80 characters match. It includes
+whole source excerpts with source IDs, event/recording dates, validity and
+original epistemic/provenance labels. The generated association is INFERRED /
+SYSTEM_INFERRED, with confidence capped by the configured inferred matrix value
+and the least-confident included source. It uses the inferred FAST decay profile;
+it does not upgrade quoted conditional or hypothetical statements into observed
+facts. Event evidence references and included source-node identities are retained.
+
+`max_profile_tokens` is now an exact limit under the configured packing tokenizer,
+including the complete profile header, separators and source metadata. Oversized
+sources are skipped intact so smaller later sources can fit; omitted sources
+remain active. Metadata records included/available source counts, encoding and
+tokens. If no complete source fits, no new profile is published. Names and token
+limits are validated before storage access. Existing profiles take this format
+on explicit rebuild; prior artifacts are not silently rewritten. Name matching
+is still a heuristic association, and publication remains nontransactional.
+
 ### 5.4 OrganizeResult
 
 ```python

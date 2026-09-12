@@ -1,4 +1,6 @@
 """Legacy entity profiles must preserve the source namespace on every rebuild."""
+import pytest
+
 from prme import MemoryClient, MemoryEngine
 from prme.types import NodeType, Scope
 from tests import test_durable_ingestion
@@ -94,3 +96,76 @@ async def test_legacy_mixed_profile_is_retired_when_its_scope_has_no_source_evid
         assert not (await engine.retrieve("Aurora", user_id=user, scope=Scope.PERSONAL,
                                          include_cross_scope=False)).results
         assert len(await engine.query_nodes(user_id=user, scopes=[Scope.PROJECT])) == 2
+
+
+async def test_profile_matching_requires_complete_entity_name(config, user):
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("Joanna works on storage.", user_id=user)
+        await engine.store("Joanna uses PostgreSQL.", user_id=user)
+        assert await engine.consolidate_knowledge(user_id=user, entity_names=["Ann"]) == 0
+        assert await profiles(engine, user) == []
+
+
+async def test_profiles_keep_distinct_qualifiers_after_shared_prefix(config, user):
+    prefix = "Aurora's production deployment policy for the customer environment, after the security review, "
+    texts = [prefix + "allows external network access.", prefix + "does not allow external network access."]
+    async with MemoryEngine.open(config) as engine:
+        for text in texts:
+            await engine.store(text, user_id=user)
+        assert await engine.consolidate_knowledge(user_id=user, entity_names=["Aurora"], max_profile_tokens=1000) == 1
+        node = (await profiles(engine, user))[0]
+        assert all(text in node.content for text in texts)
+
+
+async def test_profiles_preserve_source_provenance_and_inferred_status(config, user):
+    from prme.types import EpistemicType, SourceType
+
+    async with MemoryEngine.open(config) as engine:
+        for i in range(2):
+            await engine.store(f"Aurora might use option {i} if the trial succeeds.", user_id=user,
+                               epistemic_type=EpistemicType.CONDITIONAL, source_type=SourceType.USER_STATED)
+        sources = await engine.query_nodes(user_id=user)
+        assert await engine.consolidate_knowledge(user_id=user, entity_names=["Aurora"], max_profile_tokens=1000) == 1
+        node = (await profiles(engine, user))[0]
+        assert node.epistemic_type == EpistemicType.INFERRED
+        assert node.source_type == SourceType.SYSTEM_INFERRED
+        assert node.confidence == pytest.approx(min(engine._confidence_matrix.lookup_with_fallback(
+            EpistemicType.INFERRED, SourceType.SYSTEM_INFERRED), *(source.confidence for source in sources)))
+        assert set(node.evidence_refs) == {event for source in sources for event in source.evidence_refs}
+        assert set(node.metadata['source_node_ids']) == {str(source.id) for source in sources}
+        for source in sources:
+            assert str(source.id) in node.content and source.content in node.content
+        assert 'epistemic=conditional' in node.content
+        assert 'source_type=user_stated' in node.content
+
+
+async def test_profile_budget_counts_full_multilingual_text(config, user):
+    from prme.retrieval.tokenization import count_tokens
+
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("Aurora " + "記憶管理" * 140, user_id=user)
+        await engine.store("Aurora prefers blue.", user_id=user)
+        assert await engine.consolidate_knowledge(user_id=user, entity_names=["Aurora"], max_profile_tokens=250) == 1
+        node = (await profiles(engine, user))[0]
+        assert count_tokens(node.content, config.packing.tokenizer) <= 250
+        assert "Aurora prefers blue." in node.content
+        assert "記憶管理" not in node.content
+        assert len(node.metadata['source_node_ids']) == 1
+        assert node.metadata['source_count_available'] == 2
+        assert node.metadata['source_count_included'] == 1
+        assert node.metadata['tokens_used'] == count_tokens(node.content, config.packing.tokenizer)
+
+
+@pytest.mark.parametrize('kwargs', [
+    {'max_profile_tokens': -1}, {'max_profile_tokens': True}, {'max_profile_tokens': 1.5},
+    {'entity_names': ['']}, {'entity_names': ['  ']}, {'entity_names': 'Aurora'},
+])
+async def test_invalid_profile_options_fail_before_storage(config, user, kwargs, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    async with MemoryEngine.open(config) as engine:
+        query = AsyncMock(side_effect=AssertionError('Invalid input reached storage'))
+        monkeypatch.setattr(engine._graph_store, 'query_nodes', query)
+        with pytest.raises(ValueError):
+            await engine.consolidate_knowledge(user_id=user, **kwargs)
+        query.assert_not_awaited()

@@ -40,6 +40,9 @@ Despite the name "scheduled," there is **no built-in cron or daemon scheduler**.
 `consolidate_knowledge(user_id=..., scope=...)` builds entity profiles within
 one scope; omission visits every scope separately. It excludes generated profiles
 from source evidence and retires obsolete profiles during an explicit rebuild.
+Version 2 profiles preserve complete source excerpts and provenance under an
+exact token limit, keep distinct episodes and mark generated associations as
+inferred. Name matching remains heuristic and publication nontransactional.
 This convenience API is separate from the organizer's `consolidate` job.
 
 ## RFCs

@@ -2243,12 +2243,23 @@ class MemoryEngine:
             scope: Only rebuild this scope. Omit to process each scope separately.
             entity_names: Optional list of entity names to consolidate.
                 If None, auto-detects names from content (proper nouns).
-            max_profile_tokens: Approximate max tokens per profile node.
+            max_profile_tokens: Maximum complete profile tokens, including source
+                metadata, using the configured packing tokenizer.
 
         Returns:
             Number of entity profiles created.
         """
         import re
+        from prme.organizer.profiles import build_profile, mentions_entity
+
+        if type(max_profile_tokens) is not int or max_profile_tokens < 0:
+            raise ValueError("max_profile_tokens must be a nonnegative integer")
+        if entity_names is not None:
+            if not isinstance(entity_names, (list, tuple)) or any(
+                not isinstance(name, str) or not name.strip() for name in entity_names
+            ):
+                raise ValueError("entity_names must contain nonempty strings")
+            entity_names = list(dict.fromkeys(name.strip() for name in entity_names))
 
         if scope is None:
             # Profiles have one namespace. Never pool evidence from different
@@ -2333,9 +2344,8 @@ class MemoryEngine:
         for entity_name in entity_names:
             # Find all nodes mentioning this entity
             related = []
-            entity_lower = entity_name.lower()
             for node in all_nodes:
-                if entity_lower in node.content.lower():
+                if mentions_entity(node.content, entity_name):
                     related.append(node)
 
             if len(related) < 2:
@@ -2343,33 +2353,17 @@ class MemoryEngine:
                 await retire_profile(entity_name)
                 continue
 
-            # Sort by creation time and build profile
-            related.sort(key=lambda n: n.event_time or n.created_at)
-
-            # Deduplicate similar content
-            seen: set[str] = set()
-            unique_facts: list[str] = []
-            for node in related:
-                key = node.content.strip().lower()[:80]
-                if key not in seen:
-                    seen.add(key)
-                    unique_facts.append(node.content.strip())
-
-            # Build profile text within token budget (~4 chars per token)
-            char_budget = max_profile_tokens * 4
-            profile_lines = [f"[Knowledge Profile: {entity_name}]"]
-            used = len(profile_lines[0])
-            for fact in unique_facts:
-                line = f"- {fact}"
-                if used + len(line) > char_budget:
-                    break
-                profile_lines.append(line)
-                used += len(line)
-
-            if len(profile_lines) < 2:
+            excerpt = build_profile(
+                entity_name, related, token_budget=max_profile_tokens,
+                tokenizer=self._config.packing.tokenizer,
+            )
+            if excerpt is None:
                 continue
-
-            profile_text = "\n".join(profile_lines)
+            profile_text, selected_sources, profile_tokens = excerpt
+            confidence = min(
+                self._confidence_matrix.lookup_with_fallback(EpistemicType.INFERRED, SourceType.SYSTEM_INFERRED),
+                *(node.confidence for node in selected_sources),
+            )
 
             # Upsert: archive and evict any prior profile for this entity so
             # the SUMMARY is replaced, not duplicated, on each consolidation.
@@ -2381,14 +2375,21 @@ class MemoryEngine:
                 node_type=NodeType.SUMMARY,
                 scope=scope,
                 content=profile_text,
-                metadata={"entity_profile": True, "entity_name": entity_name},
-                confidence=0.8,
-                confidence_base=0.8,
+                metadata={
+                    "entity_profile": True, "entity_name": entity_name,
+                    "source_node_ids": [str(node.id) for node in selected_sources],
+                    "source_count_available": len(related), "source_count_included": len(selected_sources),
+                    "profile_format_version": 2, "tokens_used": profile_tokens,
+                    "tokenizer": self._config.packing.tokenizer,
+                },
+                evidence_refs=list(dict.fromkeys(ref for node in selected_sources for ref in node.evidence_refs)),
+                confidence=confidence,
+                confidence_base=confidence,
                 salience=0.7,
                 salience_base=0.7,
-                epistemic_type=EpistemicType.OBSERVED,
+                epistemic_type=EpistemicType.INFERRED,
                 source_type=SourceType.SYSTEM_INFERRED,
-                decay_profile=DecayProfile.SLOW,
+                decay_profile=DecayProfile.FAST,
             )
             node_id = await self._write_queue.submit(
                 lambda n=profile_node: self._graph_store.create_node(n),
