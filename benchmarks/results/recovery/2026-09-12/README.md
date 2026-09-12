@@ -2,10 +2,11 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The frozen full suite at `7c53645` passed **1,932 tests with 51 skips**
-on Python 3.11 and live PostgreSQL (247.26 seconds), including research and
-example integration tests. Installed Python 3.13 and real-model workflows,
-including retained failures, are described below.
+product. The latest [identity and maintenance record](IDENTITY-AND-MAINTENANCE.md)
+at `05e6654` passed **2,745 tests with 81 skips** on Python 3.11 and live
+PostgreSQL (354.97 seconds), including research and examples. Installed Python
+3.13 checks and real-BGE workflows also passed. The historical records below
+retain intermediate commits, failures and their individual validation limits.
 
 ## Availability and identity fault checks
 

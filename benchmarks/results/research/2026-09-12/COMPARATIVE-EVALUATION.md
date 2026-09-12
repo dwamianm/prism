@@ -1,9 +1,11 @@
 # Comparative evaluation audit
 
-The current PRME paired study holds reader, judge, question set, source capture,
-context budget and packing runtime fixed while comparing density and score
-ordering. It is a development experiment, not a comparison against other products.
-A separate source-retention confirmation is running. Neither establishes leadership.
+The completed PRME paired development study held reader, judge, question set,
+source capture, context budget and packing runtime fixed while comparing density
+and score ordering. The separate 381-question source-retention confirmation also
+completed and failed its preference-category guard. Density remains the default.
+The completed Mem0 raw-retrieval comparison and PersonaMem pilot/control studies
+are documented below and in the research agenda; none establishes leadership.
 
 The [MemDelta primary paper](https://arxiv.org/html/2606.29914v1) reports that
 reader behavior and embedding choice can change system rankings, and recommends
