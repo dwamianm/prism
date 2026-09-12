@@ -1,0 +1,47 @@
+{
+  "complete": true,
+  "passed": true,
+  "process_exit_code": 0,
+  "identity": {
+    "model": "gemma4:26b",
+    "model_digest": "08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68",
+    "ollama_version": "0.34.0",
+    "options": {
+      "num_ctx": 65536,
+      "num_predict": 1024,
+      "seed": 42,
+      "temperature": 0
+    },
+    "prepared_sha256": "8ba880860726d45d21a4c8872c22714a5fa3ac7b29d3c617ca677e96cdd178db",
+    "runner_sha256": "eecc74233d808b8183d6d9e7140dd5a1c0f1768e29fab4438d4d77b32afc5979"
+  },
+  "logical_predictions": 238,
+  "unique_generations": 238,
+  "reused_predictions": 0,
+  "started_at": "2026-09-12T17:13:50.516028+00:00",
+  "paired_cases": 238,
+  "raw_generation_integrity_verified": true,
+  "files": {
+    "predictions": {
+      "path": "data/benchmarks/packing-reader-gemma26-a89cfe1-predictions.json",
+      "sha256": "86fc307573f1cdb8d7afe2db0f128bf40c350e96af091d0da9305457fc702fcf"
+    },
+    "reader_state": {
+      "path": "data/benchmarks/packing-reader-gemma26-a89cfe1-state.json",
+      "sha256": "96e1e4df97096005b66496bd438dd040d3daf06198c1d8d95601c971d3d27557"
+    },
+    "prepared": {
+      "path": "data/benchmarks/packing-reader-gemma26-a89cfe1-prepared.json",
+      "sha256": "8ba880860726d45d21a4c8872c22714a5fa3ac7b29d3c617ca677e96cdd178db"
+    },
+    "references": {
+      "path": "data/benchmarks/packing-reader-gemma26-a89cfe1-references.json",
+      "sha256": "06bcdc9ba0e19d7144163862ecfcbd7658e67c8a4d884693509f0b102b55d180"
+    },
+    "plan": {
+      "path": "benchmarks/results/packing/2026-09-12/reader-plan-gemma26-a89cfe1.json",
+      "sha256": "92c4d32bdd8860468aebbc14a64f5e8331c666f268779440b6e052efbe6a3415"
+    }
+  },
+  "limits": "All 119 development question pairs; Gemma26 reader-family sensitivity, not judged accuracy or independent confirmation."
+}
