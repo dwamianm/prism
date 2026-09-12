@@ -862,7 +862,9 @@ gate and passed **16 checks**. The final installed Python 3.13 wheel passed
 **89 checks with three skips**, actual exit zero, in 26.03 seconds, including
 live PostgreSQL, cancellation and backend status. The three learning/repository
 modules and a strict installed-package consumer passed typing. Changed-source
-lint passed. A full suite at `55c865a` is running separately.
+lint passed. The frozen full suite at `55c865a` subsequently completed with
+**2,178 tests passed and 52 skipped**, actual exit zero, in 514.98 seconds under
+concurrent benchmark load. It predates the full-pipeline trial changes.
 
 The [authored learning controls](learning-controls-55c865a.json) passed with actual
 process exit zero. They use 100 distinct query IDs with a deliberately constructed
@@ -881,3 +883,43 @@ The learned proposal remains offline: candidate exposure, neural prefix membersh
 and session lineage are fixed to the saved observations. Default weights remain
 unchanged. Full-retrieval/task evaluation, feature-model compatibility, durable
 profiles, activation and rollback are still required before production learning.
+
+## Full-pipeline ranking trials and execution receipts
+
+`669967e` adds explicit `ranking_multipliers` to engine, pipeline and sync-client
+retrieval. The same adjustment function used by the offline learner runs after
+query-specific weight redistribution. Neural prefix selection, session expansion,
+selection and context packing then run normally. No profile is activated and
+engine-global weights remain unchanged. The sync client also gains the engine's
+event-time bounds, explicit base weights and fidelity controls.
+
+New pipeline receipts use version 3 to retain request filters, adjustments and
+reported feature identity. Version 1 and 2 canonical bytes/checksums and relevance
+references remain unchanged. Features include declared model names/versions,
+implementation names, dependency versions and source-file hashes; they are not
+proof that remote model weights are pinned. Pipeline latency now includes receipt
+work and separately reports `receipt_logging_ms`.
+
+The source integration set passed **223 checks with one skip** in 37.84 seconds.
+After adding the logging-latency check, a focused set passed **57 checks with one
+skip** in 19.84 seconds. The final installed Python 3.13 wheel passed **126 checks
+with three skips**, actual exit zero, in 46.83 seconds, including live PostgreSQL,
+cross-scope filtering, cancellation and receipt recovery. Controlled tests show
+that changed weights can select a different adjacent session turn and different
+context; unity reproduces the baseline and simultaneous requests retain their
+own settings. Two initial failures were incorrect test expectations for the mock
+embedding provider name; assertions now use the fixture's declared identity.
+
+The [real BGE sync workflow](relevance-receipts-669967e.json) passed with actual
+exit zero. A request-time trial at the same clock matched rescoring of the saved
+features. Its one-candidate receipt was 4,229 bytes; this is an audit-data example,
+not a storage or latency benchmark. The typed execution/receipt modules and
+pipeline passed typing after resolving JSON-map typing and replacing the older
+untyped operation-pool annotation with a narrow protocol. Changed-source lint
+passed, as did a strict installed-package consumer using the new sync controls.
+A full frozen suite at `669967e` remains in progress.
+
+These checks establish an experimental full-pipeline path, not learned task
+improvement or deployed adaptive profiles. The separately registered
+[packing confirmation](../../packing/2026-09-12/CONFIRMATION.md) evaluates a
+frozen score-ordering candidate using the original retrieval runtime.
