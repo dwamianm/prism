@@ -622,20 +622,29 @@ class PgGraphStore:
         evidence_id: str | None = None,
     ) -> None:
         """Mark two nodes as contradicting each other."""
-        async with self._pool.acquire() as conn:
+        async with self._pool.acquire() as conn, conn.transaction():
+            await conn.fetch(
+                "SELECT id FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
+                [node_a_id, node_b_id],
+            )
             row_a = await conn.fetchrow(
-                "SELECT lifecycle_state, user_id FROM nodes WHERE id = $1",
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1",
                 node_a_id,
             )
             if row_a is None:
                 raise ValueError(f"Node {node_a_id} not found")
 
             row_b = await conn.fetchrow(
-                "SELECT lifecycle_state, user_id FROM nodes WHERE id = $1",
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1",
                 node_b_id,
             )
             if row_b is None:
                 raise ValueError(f"Node {node_b_id} not found")
+
+            if UUID(node_a_id) == UUID(node_b_id):
+                raise ValueError("A node cannot contradict itself")
+            if (row_a["user_id"], row_a["scope"]) != (row_b["user_id"], row_b["scope"]):
+                raise ValueError("Contradiction nodes must have the same user and scope")
 
             state_a = LifecycleState(row_a["lifecycle_state"])
             state_b = LifecycleState(row_b["lifecycle_state"])
@@ -728,18 +737,27 @@ class PgGraphStore:
         evidence_id: str | None = None,
     ) -> None:
         """Resolve a contradiction by declaring a winner and loser."""
-        async with self._pool.acquire() as conn:
+        async with self._pool.acquire() as conn, conn.transaction():
+            await conn.fetch(
+                "SELECT id FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
+                [winner_id, loser_id],
+            )
             winner_row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", winner_id
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1", winner_id
             )
             if winner_row is None:
                 raise ValueError(f"Winner node {winner_id} not found")
 
             loser_row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", loser_id
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1", loser_id
             )
             if loser_row is None:
                 raise ValueError(f"Loser node {loser_id} not found")
+
+            if UUID(winner_id) == UUID(loser_id):
+                raise ValueError("A node cannot resolve a contradiction with itself")
+            if (winner_row["user_id"], winner_row["scope"]) != (loser_row["user_id"], loser_row["scope"]):
+                raise ValueError("Contradiction nodes must have the same user and scope")
 
             winner_state = LifecycleState(winner_row["lifecycle_state"])
             loser_state = LifecycleState(loser_row["lifecycle_state"])

@@ -194,6 +194,12 @@ If two memory objects make contradictory claims about the same entity and attrib
 - Include a `conflict_flag: true` in the retrieval metadata for the lower-ranked object.
 - Do NOT surface both as facts; the retrieval layer MUST present the contradiction explicitly if both are included in the bundle.
 
+In PRME, marking a contradiction and resolving one each commit the node states,
+edge writes, and audit records in one database transaction. A failed write rolls
+back the whole operation. Endpoints must be distinct and share the same user and
+scope, including when resolving legacy edges. PostgreSQL locks both endpoints in
+UUID order before validation to serialize competing resolutions.
+
 **Resolution:** Contradiction resolution occurs when a user or trusted agent asserts which claim is correct. The resolution MUST be recorded as an `EPISTEMIC_TRANSITION` (of the incorrect claim to DEPRECATED) with the resolving actor's ID.
 
 ---

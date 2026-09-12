@@ -13,6 +13,8 @@ path), and supersedence chain traversal.
 import asyncio
 import json
 import logging
+from collections.abc import Callable
+from typing import Any
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -363,7 +365,7 @@ class DuckPGQGraphStore:
         """
         async with self._conn_lock:
             await asyncio.to_thread(
-                self._contradict_sync, node_a_id, node_b_id, evidence_id
+                self._atomic_sync, self._contradict_sync, node_a_id, node_b_id, evidence_id
             )
 
     async def resolve_contradiction(
@@ -392,6 +394,7 @@ class DuckPGQGraphStore:
         """
         async with self._conn_lock:
             await asyncio.to_thread(
+                self._atomic_sync,
                 self._resolve_contradiction_sync,
                 winner_id,
                 loser_id,
@@ -1135,6 +1138,16 @@ class DuckPGQGraphStore:
             [target_state.value, node_id],
         )
 
+    def _atomic_sync(self, operation: Callable[..., None], *args: Any) -> None:
+        """Keep a multi-write lifecycle operation and its audit trail inseparable."""
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            operation(*args)
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
     def _contradict_sync(
         self,
         node_a_id: str,
@@ -1151,18 +1164,23 @@ class DuckPGQGraphStore:
 
         # Validate both nodes exist and are in active state
         row_a = self._conn.execute(
-            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [node_a_id],
         ).fetchone()
         if row_a is None:
             raise ValueError(f"Node {node_a_id} not found")
 
         row_b = self._conn.execute(
-            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [node_b_id],
         ).fetchone()
         if row_b is None:
             raise ValueError(f"Node {node_b_id} not found")
+
+        if UUID(node_a_id) == UUID(node_b_id):
+            raise ValueError("A node cannot contradict itself")
+        if row_a[1:] != row_b[1:]:
+            raise ValueError("Contradiction nodes must have the same user and scope")
 
         state_a = LifecycleState(row_a[0])
         state_b = LifecycleState(row_b[0])
@@ -1251,18 +1269,23 @@ class DuckPGQGraphStore:
 
         # Validate both nodes exist and are CONTESTED
         winner_row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [winner_id],
         ).fetchone()
         if winner_row is None:
             raise ValueError(f"Winner node {winner_id} not found")
 
         loser_row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [loser_id],
         ).fetchone()
         if loser_row is None:
             raise ValueError(f"Loser node {loser_id} not found")
+
+        if UUID(winner_id) == UUID(loser_id):
+            raise ValueError("A node cannot resolve a contradiction with itself")
+        if winner_row[1:] != loser_row[1:]:
+            raise ValueError("Contradiction nodes must have the same user and scope")
 
         winner_state = LifecycleState(winner_row[0])
         loser_state = LifecycleState(loser_row[0])
