@@ -1,6 +1,6 @@
 # RFC-0017: Scoped retrieval feedback and evaluated learning
 
-**Status:** Receipt and relevance-record foundation implemented; evaluated learning pending
+**Status:** Receipts, relevance collection and offline proposal evaluation implemented; profile activation pending
 **Date:** 2026-09-12
 **Depends on:** RFC-0002, RFC-0004, RFC-0005, RFC-0009
 
@@ -77,7 +77,61 @@ both storage backends. A failed validation writes nothing. Different feedback ID
 can preserve conflicting judgments; later training must state how it handles
 repeated/contradictory judgments and must not count retries as independent votes.
 
-## Remaining evaluated-learning requirements
+## Offline proposal evaluation
+
+`MemoryEngine.evaluate_learning` and `MemoryClient.evaluate_learning` capture an
+owner's relevance records in one bounded query and resolve their immutable
+receipts in batches. Admissions after that first query do not enter the cut.
+Exceeding `max_records` fails explicitly. Missing, ambiguous or corrupt receipts
+also fail; snapshotting does not use mutable graph features or live providers.
+The standalone `prme.retrieval.learning.evaluate_learning` accepts exported models.
+
+The first implemented candidate multiplies each of the six applied additive
+weights by a bounded positive factor and renormalizes the sum. Unity reproduces
+the baseline exactly. Query-time features, temporal bonuses, epistemic factors,
+relevance caps, score rounding, recorded neural blends and session inheritance
+are retained. Zero-weight features stay zero. This is an experimental adjustment
+family, not a claim that it is the optimal learning algorithm.
+
+Training uses explicitly positive/negative pairs, a logistic pairwise loss and
+regularization toward unity. A deterministic coordinate search uses a fixed step
+schedule and bounds of 0.25–4. The pairwise loss follows the comparison objective
+described in [the original RankNet paper](https://www.microsoft.com/en-us/research/publication/learning-to-rank-using-gradient-descent/);
+this implementation is not RankNet's neural architecture or gradient optimizer.
+Its bounded weight adjustment is a PRME experiment that requires further task
+comparison. Loss parameters and acceptance thresholds are provisional and saved
+in every report.
+
+Repeated labels on the same request/candidate are collapsed. Conflicting labels
+are excluded and counted; an unlabelled candidate never becomes a negative.
+Requests need both explicit classes. Labels from other scope filters or relevance
+surfaces are reported as excluded. Version 1 receipts remain usable for feedback
+but are excluded from fitting because they lack replayable score provenance.
+
+Queries are normalized for Unicode, whitespace and case; callers can additionally
+group known paraphrases with `query_groups`. A fixed hash assigns each group to
+training or validation independently of dataset size. Adding feedback therefore
+cannot move an existing group into the other split. Each query group receives
+equal objective and metric weight, regardless of its request or pair counts.
+Default minimum coverage is 20 training and 20 validation groups. Validation
+labels never select fitted weights or hyperparameters.
+
+Reports retain input identities/checksums, configuration, exclusions, multipliers
+and per-query metrics. Metrics rank only judged candidates: pairwise ordering
+accuracy and judged NDCG@k. The offline improvement decision requires the configured
+mean validation NDCG gain, a positive lower endpoint of a paired query bootstrap
+95% interval, and no mean pairwise-accuracy regression. A failed gate retains the
+proposed parameters for inspection while returning `no_improvement`; insufficient
+coverage returns unity without fitting. Neither outcome changes active weights.
+
+Even a positive offline result holds observed candidate membership, neural prefix
+membership and session lineage fixed. It does not establish better candidate
+generation, context selection, answers, unseen tasks or complete retrieval under
+changed weights. Reusing validation results for later manual tuning also requires
+a separate final holdout. Persisted profiles, complete-retrieval validation,
+activation, deactivation and rollback remain required before production learning.
+
+## Remaining profile activation requirements
 
 Before a learned profile can be activated, the implementation must:
 

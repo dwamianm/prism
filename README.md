@@ -458,8 +458,27 @@ Receipts add per-candidate metadata to the existing retrieval operation log;
 they do not duplicate candidate text or prove an application used the context.
 Labels preserve the original exposure when graph state changes. They do not
 change facts or weights, and the legacy global feedback tuner does not consume
-them. [Evaluated scoped learning](docs/RFC-0017-Scoped-Retrieval-Learning.md) remains
-pending; this is its durable evidence foundation, not a learned-quality claim.
+them.
+
+Evaluate a proposed adjustment after collecting explicit positive and negative
+judgments across enough distinct queries:
+
+```python
+with MemoryClient("./memories") as memory:
+    report = memory.evaluate_learning(user_id="alice")
+    print(report.decision, report.coverage)
+    # Save report.model_dump_json(indent=2) with your evaluation artifacts.
+```
+
+Pass `scopes=[Scope.PROJECT]` when judging retrievals made with that same scope
+filter. The evaluator separates query groups, reports conflicting labels, fits
+on training queries and checks the proposal on validation queries. It reads a
+bounded snapshot; `max_records` overflow fails instead of truncating silently.
+Insufficient evidence yields `insufficient_data`, and a failed validation gate
+yields `no_improvement`. It leaves active weights unchanged. An offline success
+covers the observed candidates, not full retrieval or generated answers.
+[Scoped profile activation and rollback](docs/RFC-0017-Scoped-Retrieval-Learning.md)
+remain pending.
 
 ## MCP server
 

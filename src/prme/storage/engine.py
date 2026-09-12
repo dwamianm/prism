@@ -28,7 +28,8 @@ import warnings
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
+from uuid import UUID
 
 import duckdb
 
@@ -39,6 +40,7 @@ from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.learning import LearningConfig, LearningEvaluation
 from prme.storage.relevance import RelevanceRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -2052,6 +2054,23 @@ class MemoryEngine:
                              after_id: str | None = None) -> list[RelevanceRecord]:
         """Page by feedback UUID; concurrent inserts may precede the cursor."""
         return await self._relevance.list(user_id=user_id, limit=limit, after_id=after_id)
+
+    async def evaluate_learning(self, *, user_id: str, scopes: list[Scope] | None = None,
+                                surface: Literal["results", "context"] = "results", config: LearningConfig | None = None,
+                                query_groups: dict[UUID, str] | None = None,
+                                max_records: int = 10000) -> LearningEvaluation:
+        """Fit an offline ranking proposal from a bounded, saved feedback cut.
+
+        This returns an inspectable report; it does not activate a profile or
+        mutate engine-global weights. Scope filters must match saved requests.
+        """
+        from prme.retrieval.learning import evaluate_learning
+
+        scope_copy = list(scopes) if scopes is not None else None
+        group_copy = dict(query_groups) if query_groups is not None else None
+        receipts, records = await self._relevance.learning_snapshot(user_id=user_id, max_records=max_records)
+        return await asyncio.to_thread(evaluate_learning, receipts, records, user_id=user_id,
+                                       scopes=scope_copy, surface=surface, config=config, query_groups=group_copy)
 
     # --- Quality Feedback (Issue #24) ---
 

@@ -25,10 +25,12 @@ import threading
 import warnings
 from datetime import datetime
 from collections.abc import Coroutine, Iterator
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
+from uuid import UUID
 
 from prme.config import PRMEConfig
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.learning import LearningConfig, LearningEvaluation
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -304,6 +306,14 @@ class MemoryClient:
     def list_relevance(self, *, user_id: str, limit: int = 100,
                        after_id: str | None = None) -> list[RelevanceRecord]:
         return self._run(self._engine.list_relevance(user_id=user_id, limit=limit, after_id=after_id))
+
+    def evaluate_learning(self, *, user_id: str, scopes: list[Scope] | None = None,
+                          surface: Literal["results", "context"] = "results", config: LearningConfig | None = None,
+                          query_groups: dict[UUID, str] | None = None,
+                          max_records: int = 10000) -> LearningEvaluation:
+        """Fit and evaluate a scoped offline proposal; leave active weights unchanged."""
+        return self._run(self._engine.evaluate_learning(user_id=user_id, scopes=scopes,
+            surface=surface, config=config, query_groups=query_groups, max_records=max_records))
 
     def get_node(self, node_id: str, *, user_id: str | None = None, include_superseded: bool = False) -> MemoryNode | None:
         """Get a single node by ID. Returns MemoryNode or None."""

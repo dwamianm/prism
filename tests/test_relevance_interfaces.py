@@ -54,6 +54,9 @@ def test_sync_client_records_and_reads_relevance(config, user):
         receipt = client.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
         submission = RelevanceSubmission(request_id=receipt.request_id, labels={receipt.candidates[0].node_id: True})
         record = client.record_relevance(submission, user_id=user)
+        learning = client.evaluate_learning(user_id=user)
+        assert learning.decision == "insufficient_data"
+        assert learning.feedback_ids == (record.feedback_id,)
         assert client.get_relevance(str(record.feedback_id), user_id=user) == record
         assert client.list_relevance(user_id=user) == [record]
         nid = str(receipt.candidates[0].node_id)
@@ -68,6 +71,7 @@ def test_sync_client_records_and_reads_relevance(config, user):
         assert client.retrieve("telescope", user_id=user, min_score=0).results == []
         assert client.get_retrieval_receipt(str(receipt.request_id), user_id=user) == receipt
     with MemoryClient(config=config) as client:
+        assert client.evaluate_learning(user_id=user) == learning
         assert client.get_node(nid, user_id=user, include_superseded=True).lifecycle_state.value == "archived"
         assert client.get_relevance(str(record.feedback_id), user_id=user) == record
         assert client.get_event(str(original.evidence_refs[0]), user_id=user) is not None

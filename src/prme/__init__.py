@@ -19,6 +19,7 @@ from prme.config import PRMEConfig
 from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.storage.engine import MemoryEngine
@@ -68,6 +69,8 @@ __all__ = [
     "ExtractionProcessingResult",
     "IngestionPipeline",
     "LifecycleState",
+    "LearningConfig",
+    "LearningEvaluation",
     "MaterializationError",
     "MemoryClient",
     "MemoryEngine",
@@ -78,6 +81,7 @@ __all__ = [
     "RetrievalPipeline",
     "RetrievalResponse",
     "RetrievalReceipt",
+    "RankingMultipliers",
     "RelevanceSubmission",
     "RelevanceRecord",
     "Scope",

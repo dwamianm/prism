@@ -36,6 +36,9 @@ def run():
             submission = RelevanceSubmission(request_id=receipt.request_id, labels={node.node.id: True},
                                              method="structured_evaluation")
             record = client.record_relevance(submission, user_id="alice")
+            learning = client.evaluate_learning(user_id="alice")
+            assert learning.decision == "insufficient_data"
+            assert learning.feedback_ids == (record.feedback_id,)
             assert client.record_relevance(submission, user_id="alice") == record
             assert client.get_retrieval_receipt(str(receipt.request_id), user_id="bob") is None
             assert client.list_relevance(user_id="bob") == []
@@ -47,6 +50,7 @@ def run():
             assert client.get_relevance(str(record.feedback_id), user_id="alice") == record
             assert client.record_relevance(submission, user_id="alice") == record
             assert client.list_relevance(user_id="alice") == [record]
+            assert client.evaluate_learning(user_id="alice") == learning
             assert client._engine._config.scoring.version_id == receipt.scoring.version_id
         return {"passed": True, "embedding_model": "BAAI/bge-small-en-v1.5",
                 "candidate_count": len(receipt.candidates), "receipt_bytes": len(receipt.model_dump_json().encode()),
@@ -55,7 +59,8 @@ def run():
                 "package_path": str(Path(inspect.getfile(RelevanceRepository)).resolve()),
                 "checks": ["real embeddings through public sync client", "returned candidate snapshot and explicit labels",
                            "owner isolation", "retry identity survives archival and restart", "collection leaves weights unchanged",
-                           "exact ranking replay before and after archival and restart"],
+                           "exact ranking replay before and after archival and restart",
+                           "public learning evaluation rejects insufficient evidence and reproduces after restart"],
                 "limits": "One authored persistence workflow; no learned profile or retrieval accuracy claim."}
 
 

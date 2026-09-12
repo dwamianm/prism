@@ -63,8 +63,11 @@ Version 2 receipts capture applied weights, neural/session score operations and
 sort policy for exact returned-candidate replay with `receipt.replay_ranking()`.
 Version 1 canonical JSON/checksums must remain unchanged; those receipts still
 accept labels but cannot replay scores. Replay excludes unseen/filtered candidates.
-Evaluated per-owner/scope learned profiles remain pending; RFC-0017 defines their
-acceptance requirements. Receipt collection is not evidence of learning quality.
+Python `evaluate_learning` fits an offline weight-multiplier proposal from a
+bounded feedback snapshot with stable query splits, explicit pairs, coverage and
+validation metrics. It does not activate weights. Complete-retrieval evaluation,
+persisted per-owner/scope profiles and rollback remain pending under RFC-0017.
+Receipt collection and authored fitting tests are not evidence of product learning quality.
 
 ## Configuration Surface
 
