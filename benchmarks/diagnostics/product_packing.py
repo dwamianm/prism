@@ -8,6 +8,7 @@ credit. No production defaults are changed.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import hashlib
 import inspect
 import json
@@ -59,11 +60,35 @@ def measure(bundle, gold: set[str], config: PackingConfig) -> dict:
     }
 
 
-def compare(report: dict, snapshots: Path, *, samples: int = 2000) -> dict:
+def _validate_confirmation(report: dict, confirmation: dict, samples: int) -> None:
+    if confirmation.get("schema_version") != 1 or report["dataset"]["split"] != "test":
+        raise ValueError("Confirmation requires a version 1 plan and the test split")
+    if confirmation.get("algorithm") != "multipath_score_vs_density_v1" or report["budgets"] != [2048, 4096, 8192]:
+        raise ValueError("Confirmation requires the frozen score/density comparison and budgets")
+    for key in ("sha256", "variant", "split", "split_seed", "selected_question_ids"):
+        if report["dataset"][key] != confirmation["dataset"][key]:
+            raise ValueError(f"Confirmation dataset mismatch: {key}")
+    if (report["provenance"]["commit"] != confirmation["runtime_commit"]
+            or report["provenance"]["dirty"]
+            or report["provenance"]["engine_config"]["packing"] != confirmation["packing_config"]
+            or report["budgets"] != confirmation["budgets"]
+            or report["query_clock"] != "question" or report["profile"] != "raw-turns-static"
+            or samples != confirmation["bootstrap_samples"]):
+        raise ValueError("Confirmation runtime, configuration or sampling mismatch")
+    if (hashlib.sha256(Path(inspect.getfile(pack_context)).read_bytes()).hexdigest() != confirmation["packing_module_sha256"]
+            or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != confirmation["diagnostic_sha256"]):
+        raise ValueError("Confirmation implementation hash mismatch")
+    if datetime.fromisoformat(confirmation["registered_at"]) >= datetime.fromisoformat(report["started_at"]):
+        raise ValueError("Confirmation plan must predate the source run")
+
+
+def compare(report: dict, snapshots: Path, *, samples: int = 2000, confirmation: dict | None = None) -> dict:
     if (not report.get("complete") or report.get("errors")
             or report.get("process_exit_code") != 0):
         raise ValueError("A complete, normally exited source run without errors is required")
-    if report["dataset"]["split"] != "dev":
+    if confirmation is not None:
+        _validate_confirmation(report, confirmation, samples)
+    elif report["dataset"]["split"] != "dev":
         raise ValueError("This exploratory comparator is restricted to the development split")
     selected = report["dataset"]["selected_question_ids"]
     rows = report["details"]
@@ -128,7 +153,7 @@ def compare(report: dict, snapshots: Path, *, samples: int = 2000) -> dict:
             result[str(budget)] = metrics
         return result
 
-    return {
+    result = {
         "complete": True, "baseline_reproduction_passed": True,
         "kind": "development-product-packing-comparison", "dataset": report["dataset"],
         "source_provenance": report["provenance"], "packing_config": config.model_dump(mode="json"),
@@ -150,6 +175,19 @@ def compare(report: dict, snapshots: Path, *, samples: int = 2000) -> dict:
                        for category in sorted({row["category"] for row in details})},
         "details": details,
     }
+    if confirmation is not None:
+        primary = result["summary"]["4096"]["evidence_recall"]
+        criteria = {
+            "positive_primary_gain": primary["delta"] is not None and primary["delta"] > 0,
+            "positive_primary_interval": primary["interval_95"] is not None and primary["interval_95"][0] > 0,
+            "nonnegative_secondary_means": all(result["summary"][str(b)]["evidence_recall"]["delta"] is not None
+                and result["summary"][str(b)]["evidence_recall"]["delta"] >= 0 for b in (2048, 8192)),
+            "nonnegative_primary_category_means": all(v["4096"]["evidence_recall"]["delta"] >= 0
+                for v in result["categories"].values() if v["4096"]["evidence_recall"]["queries"] >= 5),
+        }
+        result.update(kind="test-product-packing-confirmation", confirmation=confirmation,
+                      confirmation_criteria=criteria, quality_gate_passed=all(criteria.values()))
+    return result
 
 
 def main():
@@ -157,9 +195,11 @@ def main():
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--snapshots", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--confirmation", type=Path, help="Prospectively registered frozen test-split plan")
     args = parser.parse_args()
     raw = args.input.read_bytes()
-    result = compare(json.loads(raw), args.snapshots)
+    confirmation = json.loads(args.confirmation.read_bytes()) if args.confirmation else None
+    result = compare(json.loads(raw), args.snapshots, confirmation=confirmation)
     result["input_sha256"] = hashlib.sha256(raw).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")

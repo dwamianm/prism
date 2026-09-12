@@ -1,6 +1,7 @@
 """Product evidence credit requires source text, not merely an included UUID."""
 from copy import deepcopy
 import hashlib
+import inspect
 import json
 
 import pytest
@@ -139,3 +140,38 @@ def test_unicode_separators_inside_source_are_not_json_record_boundaries(separat
     result = measure(pack_context([source], cfg), {"unicode"}, cfg)
     assert result["content_source_ids"] == ["unicode"]
     assert result["evidence_recall"] == 1
+
+
+def confirmation_fixture(tmp_path):
+    import benchmarks.diagnostics.product_packing as diagnostic
+    from pathlib import Path
+    report = fixture_report(tmp_path)
+    report["dataset"].update(split="test", sha256="fixture", variant="custom", split_seed="fixed")
+    report["provenance"].update(commit="frozen", dirty=False)
+    report.update(budgets=[2048, 4096, 8192], query_clock="question", profile="raw-turns-static",
+                  started_at="2026-09-12T00:01:00+00:00")
+    plan = {"schema_version": 1, "algorithm": "multipath_score_vs_density_v1", "dataset": deepcopy(report["dataset"]),
+            "runtime_commit": "frozen", "packing_config": report["provenance"]["engine_config"]["packing"],
+            "budgets": report["budgets"], "bootstrap_samples": 20, "registered_at": "2026-09-12T00:00:00+00:00",
+            "packing_module_sha256": hashlib.sha256(Path(inspect.getfile(pack_context)).read_bytes()).hexdigest(),
+            "diagnostic_sha256": hashlib.sha256(Path(diagnostic.__file__).read_bytes()).hexdigest()}
+    return report, plan
+
+
+def test_test_split_requires_matching_prospective_confirmation_plan(tmp_path):
+    report, plan = confirmation_fixture(tmp_path)
+    with pytest.raises(ValueError, match="development split"):
+        compare(report, tmp_path, samples=20)
+    result = compare(report, tmp_path, samples=20, confirmation=plan)
+    assert result["complete"] and result["kind"] == "test-product-packing-confirmation"
+    assert result["quality_gate_passed"] is False  # No gain at these ample fixture budgets.
+
+
+@pytest.mark.parametrize("field,value", [("runtime_commit", "changed"), ("diagnostic_sha256", "changed"),
+    ("packing_module_sha256", "changed"), ("bootstrap_samples", 21), ("registered_at", "2026-09-12T00:02:00+00:00"),
+    ("algorithm", "a different method")])
+def test_confirmation_rejects_changed_method_or_retroactive_plan(tmp_path, field, value):
+    report, plan = confirmation_fixture(tmp_path)
+    plan[field] = value
+    with pytest.raises(ValueError):
+        compare(report, tmp_path, samples=20, confirmation=plan)
