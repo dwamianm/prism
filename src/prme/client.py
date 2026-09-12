@@ -86,13 +86,15 @@ class MemoryClient:
         *,
         config: PRMEConfig | None = None,
     ) -> None:
+        # A failed constructor must not leave a usable client or emit a
+        # destructor error that hides the original configuration failure.
+        self._closed = True
         self._config = config or config_from_directory(directory)
-        self._closed = False
 
         # Spin up a dedicated event loop on a daemon thread.
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(
-            target=self._loop.run_forever,
+            target=self._run_loop,
             daemon=True,
             name="prme-client",
         )
@@ -104,10 +106,31 @@ class MemoryClient:
         future = asyncio.run_coroutine_threadsafe(
             MemoryEngine.create(self._config), self._loop
         )
-        self._engine: MemoryEngine = future.result(timeout=60)
+        try:
+            self._engine: MemoryEngine = future.result(timeout=60)
+        except BaseException:
+            future.cancel()
+            self._loop.call_soon_threadsafe(self._loop.stop)
+            self._thread.join(timeout=5)
+            raise
+        self._closed = False
 
         # Register atexit so we clean up if the user forgets close().
         atexit.register(self._atexit_close)
+
+    def _run_loop(self) -> None:
+        """Own and close the worker loop even when engine creation fails."""
+        asyncio.set_event_loop(self._loop)
+        try:
+            self._loop.run_forever()
+        finally:
+            pending = asyncio.all_tasks(self._loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                self._loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            self._loop.run_until_complete(self._loop.shutdown_asyncgens())
+            self._loop.close()
 
     # --- Internal helpers ---
 
@@ -399,7 +422,7 @@ class MemoryClient:
             raise encryption_error
 
     def __del__(self) -> None:
-        if not self._closed:
+        if not getattr(self, "_closed", True):
             warnings.warn(
                 "MemoryClient was not closed. Use 'with MemoryClient(...) as client:' "
                 "or call client.close() explicitly.",

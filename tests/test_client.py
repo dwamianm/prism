@@ -235,3 +235,28 @@ class TestOrganize:
             client.store("some content", user_id="alice")
             result = client.organize(user_id="alice", jobs=["promote"])
             assert "promote" in result.jobs_run
+
+
+class TestFailedConstruction:
+    def test_invalid_directory_preserves_original_error(self):
+        partial = MemoryClient.__new__(MemoryClient)
+        with pytest.raises(TypeError):
+            partial.__init__(object())
+        assert partial._closed
+        partial.__del__()  # Must not emit an unraisable AttributeError.
+
+    def test_engine_creation_failure_stops_thread_and_loop(self, tmp_dir, monkeypatch):
+        from unittest.mock import AsyncMock
+        from prme import MemoryEngine
+        monkeypatch.setattr(MemoryEngine, "create", AsyncMock(side_effect=RuntimeError("startup failed")))
+        partial = MemoryClient.__new__(MemoryClient)
+        with pytest.raises(RuntimeError, match="startup failed"):
+            partial.__init__(tmp_dir)
+        assert partial._closed and not partial._thread.is_alive()
+        assert partial._loop.is_closed()
+        partial.close()
+
+    def test_normal_close_releases_event_loop(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            assert not client._loop.is_closed()
+        assert client._loop.is_closed() and not client._thread.is_alive()
