@@ -1079,5 +1079,8 @@ native exit zero: both qualified source statements survive creation, restart,
 retrieval and rebuild; source events remain unchanged; owner/scope boundaries,
 inferred labels, confidence cap and exact token counts hold. The preceding
 TypeError attempt remains retained above. This is an authored workflow rather
-than a benchmark-quality result. A full regression run of the production profile
-change at `88cc5e2` is running separately; its result is not yet claimed.
+than a benchmark-quality result. The frozen full regression run at `88cc5e2` completed with native exit zero:
+**2,359 passed, 52 skipped in 926.35 seconds**, using Python 3.11 and live
+PostgreSQL. It covers the profile source-fidelity change and preceding evaluation
+work; the later sync budget forwarding is covered by the 45 installed checks
+and real client workflow above.

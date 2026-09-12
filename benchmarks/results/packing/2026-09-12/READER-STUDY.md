@@ -161,3 +161,14 @@ judging protocol remain unchanged; reference correctness and source faithfulness
 are separate observations. For `09ba9854_abs`, the wrong bus-savings answer uses
 transport estimates from another session, illustrating the need to resolve which
 trip a generic follow-up refers to before asserting personalized costs.
+
+
+The dense Gemma 4 31B candidate completed the same authored calibration with
+native exit zero: [41/42 correct, zero false accepts](judge-calibration-gemma31-2611be7.json).
+It passed the previously fixed gate with one false reject. The
+[paired judging plan](reader-judging-gemma31-plan.json) was committed before
+judging all 238 completed answers. Its exact declaration, controls, calibration,
+reader inputs, raw state and predictions are pinned. This passing calibration
+permits the study; it does not prove general judge reliability. The paired
+judgment run is underway, and no partial outcome metrics are being used to tune
+its prompts or the independent source-retention confirmation.
