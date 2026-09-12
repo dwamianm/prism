@@ -43,6 +43,13 @@ class Event(MemoryObject):
         default=None, description="Optional structured metadata"
     )
 
+    @model_validator(mode="after")
+    def immutable_update_time(self):
+        # Events never change. Inheriting MemoryObject's wall-clock default
+        # made the same persisted event appear newly updated on every read.
+        object.__setattr__(self, "updated_at", self.created_at)
+        return self
+
     @model_validator(mode="before")
     @classmethod
     def compute_content_hash(cls, data: dict) -> dict:

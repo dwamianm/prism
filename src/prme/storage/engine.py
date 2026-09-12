@@ -1271,9 +1271,9 @@ class MemoryEngine:
         """Read durable raw-ingestion status within one user's events.
 
         Returns None for an unknown/other-user event or an event not accepted
-        through ingest_fast(). A complete status acknowledges materialization;
-        later lifecycle changes may still retire the node. LLM extraction
-        through ingest() is not tracked by this API.
+        through ingest_fast() or the LLM pipeline. A complete status acknowledges
+        raw source materialization, not LLM extraction; later lifecycle changes
+        may still retire the node. LLM derivation progress is not tracked here.
         """
         if not user_id:
             raise ValueError("user_id must be nonempty")

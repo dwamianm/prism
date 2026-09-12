@@ -38,6 +38,16 @@ The reference implementation uses DuckDB for the event store. Implementations MA
 
 ---
 
+### Raw-source recovery
+
+Both fast ingestion and LLM ingestion atomically queue raw-source indexing with
+the event. A provider failure leaves that job pending; scoped retrieval or explicit
+processing can materialize the original NOTE after restart. Its ID and timestamps
+come from the source event. Processing completion acknowledges this raw index,
+not LLM derivation completion. Model summaries cannot overwrite source indexes.
+Events are immutable, so the API's inherited `updated_at` equals `created_at`
+rather than the time a row happened to be read.
+
 ### Current source-reading API
 
 `MemoryEngine.get_event(event_id, user_id=...)` enforces optional owner scoping;

@@ -150,8 +150,13 @@ result = await engine.process_pending(user_id="alice")
 status = await engine.processing_status(event_id, user_id="alice")
 ```
 
-Deferred raw events survive restart. Processing reports remaining work and
-retry failures per user; the same methods are available on `MemoryClient`.
+Deferred raw events survive restart. LLM `ingest()` also queues original-source
+indexing atomically with its event, so extraction failure cannot make that source
+unsearchable after restart. Processing status acknowledges raw NOTE indexing;
+it does **not** report successful LLM extraction or resume lost extraction jobs.
+Processing reports remaining work and retry failures per user; the same methods
+are available on `MemoryClient`. Model summaries do not overwrite original-source
+indexes. Relative dates in extracted facts use the source timestamp.
 
 See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a terminal chat app with persistent memory.
 

@@ -148,7 +148,7 @@ class MaintenanceRunner:
         # Process pending fast-ingested items before other maintenance
         try:
             engine = self._engine
-            if time.monotonic() < deadline and engine._materialization_queue.debt_sync() > 0:
+            if time.monotonic() < deadline and (await engine._materialization_queue.debt()) > 0:
                 budget_ms = min(
                     getattr(engine._config, "materialization_budget_ms", 100),
                     max(0, int((deadline - time.monotonic()) * 1000)),

@@ -1,7 +1,7 @@
 """Two-phase ingestion pipeline orchestrating extraction and materialization.
 
-Phase 1 (immediate): Persist event to EventStore and index content in
-lexical store for instant searchability.
+Phase 1 (immediate): Atomically persist the event and its raw-source indexing
+job. Retrieval or explicit processing completes that work after failures/restart.
 
 Phase 2 (background or awaitable): Extract entities, facts, and relationships
 via LLM, validate grounding against source text, merge entities, detect
@@ -123,8 +123,8 @@ class IngestionPipeline:
     ) -> str:
         """Ingest a message through the two-phase pipeline.
 
-        Phase 1 (immediate): Create and persist the event, index raw
-        content in the lexical store for instant searchability.
+        Phase 1 (immediate): Atomically persist the event and a durable
+        raw-source indexing job.
 
         Phase 2 (background or await): Extract entities, facts, and
         relationships via LLM; validate grounding; merge entities;
@@ -152,17 +152,13 @@ class IngestionPipeline:
             scope=scope,
         )
         event_id = await self._write_queue.submit(
-            lambda ev=event: self._event_store.append(ev),
+            lambda ev=event: self._event_store.append(ev, defer_materialization=True),
             label=f"event.append:{event.id}",
         )
 
-        # Index raw content in lexical store for instant searchability
-        await self._write_queue.submit(
-            lambda eid=str(event.id), c=content, uid=user_id, sc=scope.value: (
-                self._lexical_index.index(eid, c, uid, "event", sc)
-            ),
-            label=f"lexical.index:{event.id}",
-        )
+        # Source indexing is durable deferred work. Retrieval or explicit
+        # processing indexes its raw NOTE; acceptance cannot be undone by a
+        # transient lexical-index failure after the event commit.
 
         logger.info(
             "ingestion.phase1_complete",
@@ -332,7 +328,7 @@ class IngestionPipeline:
                 fact_scope = scope
 
                 # Resolve temporal reference
-                resolved_date = self._resolve_temporal(fact.temporal_ref)
+                resolved_date = self._resolve_temporal(fact.temporal_ref, reference_time=event.timestamp)
 
                 # Determine node type from fact_type
                 node_type = _FACT_TYPE_TO_NODE_TYPE.get(
@@ -400,6 +396,7 @@ class IngestionPipeline:
                     decay_profile=fact_decay_profile,
                     metadata=fact_metadata,
                     evidence_refs=[event.id],
+                    event_time=datetime.fromisoformat(resolved_date) if resolved_date else (event.event_time or event.timestamp),
                 )
                 fact_node_id = await tracked_writer.create_node(fact_node)
 
@@ -491,20 +488,10 @@ class IngestionPipeline:
                         target_found=target_entity_id is not None,
                     )
 
-            # --- Summary (not tracked for rollback) ---
-            if result.summary:
-                await self._write_queue.submit(
-                    lambda eid=event_id, s=result.summary, uid=event.user_id: (
-                        self._vector_index.index(eid, s, uid)
-                    ),
-                    label=f"vector.summary:{event_id}",
-                )
-                await self._write_queue.submit(
-                    lambda eid=event_id, s=result.summary, uid=event.user_id, sc=scope.value: (
-                        self._lexical_index.index(eid, s, uid, "summary", sc)
-                    ),
-                    label=f"lexical.summary:{event_id}",
-                )
+            # The event ID belongs to the original source. A model-generated
+            # summary must never overwrite the vector/text of its raw NOTE.
+            # Raw source indexing is durably queued with the event and can
+            # complete independently of this extraction attempt.
             # Final state transition: either every named replacement commits
             # with its edge, or none do. Index/graph failures above leave prior
             # knowledge untouched while the tracker removes new artifacts.
@@ -535,7 +522,7 @@ class IngestionPipeline:
             ) from exc
 
     @staticmethod
-    def _resolve_temporal(temporal_ref: str | None) -> str | None:
+    def _resolve_temporal(temporal_ref: str | None, *, reference_time: datetime | None = None) -> str | None:
         """Resolve a natural language temporal reference to an ISO date string.
 
         Uses dateparser to parse references like 'yesterday', 'last week',
@@ -553,7 +540,10 @@ class IngestionPipeline:
             temporal_ref,
             settings={
                 "PREFER_DATES_FROM": "past",
-                "RELATIVE_BASE": datetime.now(timezone.utc),
+                "RELATIVE_BASE": reference_time or datetime.now(timezone.utc),
+                "RETURN_AS_TIMEZONE_AWARE": True,
+                "TIMEZONE": "UTC",
+                "TO_TIMEZONE": "UTC",
             },
         )
         if parsed is not None:

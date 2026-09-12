@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ProcessingStatus(BaseModel):
-    """Durable status of an event accepted by ingest_fast()."""
+    """Durable raw-source indexing status from fast or LLM ingestion."""
 
     model_config = ConfigDict(frozen=True)
 
