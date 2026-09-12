@@ -25,14 +25,17 @@ async def capture(engine, user):
     return response, receipt
 
 
-async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config, user):
+@pytest.mark.parametrize("ordering", ["density", "score"])
+async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config, user, ordering):
+    config = config.model_copy(update={"packing": config.packing.model_copy(update={"multipath_ordering": ordering})})
     async with MemoryEngine.open(config) as engine:
         response, receipt = await capture(engine, user)
         assert receipt.context_sha256 == hashlib.sha256(response.bundle.render().encode()).hexdigest()
         assert receipt.scoring.version_id == response.metadata.scoring_config_version
         assert receipt.reference_time == response.metadata.reference_time
         assert receipt.scopes == (Scope.PROJECT,)
-        assert receipt.schema_version == 3
+        assert receipt.schema_version == 4
+        assert receipt.packing.multipath_ordering == ordering
         assert receipt.replay_ranking() == tuple(r.node.id for r in response.results)
         assert [(c.node_id, c.score, c.trace) for c in receipt.candidates] == [
             (r.node.id, r.composite_score, r.score_trace) for r in response.results]
@@ -56,7 +59,7 @@ async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config,
         assert len(engine._feedback_tracker) == 0
 
 
-@pytest.mark.parametrize("version", [1, 2])
+@pytest.mark.parametrize("version", [1, 2, 3])
 async def test_legacy_receipt_retains_checksum_and_accepts_feedback(config, user, version):
     import json
     from pathlib import Path

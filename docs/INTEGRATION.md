@@ -709,6 +709,24 @@ ScoringWeights(
 
 ### PackingConfig
 
+`multipath_ordering="score"` selects composite-score ordering within the multi-path
+priority tier. The default remains `"density"` (score per token). Pins, instructions,
+active tasks, other tiers and measured whole-output budgets keep their existing
+rules. Two local reader studies support the score option on development data;
+the separate source-retention confirmation is still pending. This is an opt-in
+policy, not a claim of superior results for every workload.
+
+```python
+from prme import PRMEConfig
+
+config = PRMEConfig(packing={"multipath_ordering": "score"})
+```
+
+The equivalent environment setting is `PRME_PACKING__MULTIPATH_ORDERING=score`.
+New retrieval receipts use schema version 4 and retain the chosen policy in
+`receipt.packing.multipath_ordering`. Versions 1–3 retain their original canonical
+JSON and feedback checksums and always mean density ordering.
+
 This example chooses smaller candidate limits explicitly; it is not a list of defaults.
 
 ```python

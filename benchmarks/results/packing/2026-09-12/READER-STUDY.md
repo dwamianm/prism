@@ -264,3 +264,15 @@ human. Shared Gemma family errors, development selection and overlapping histori
 still limit this result. It supports further evaluation of the packing change;
 it does not establish competitor superiority or justify bypassing the separately
 registered source-retention confirmation gate.
+
+
+## Public configuration parity
+
+The development alternative is now available through
+`PackingConfig(multipath_ordering="score")`, with density still the default.
+`benchmarks.diagnostics.packing_option` verified all 714 frozen development
+contexts (119 questions, two policies, three budgets) against the original
+experimental hashes, tokens and source-retention measurements. The run completed
+with native exit zero in `public-packing-option-dev-parity.json`. No providers
+were called and no quality result was recomputed or reclassified. The separate
+confirmation continues on its original frozen runtime and comparator.

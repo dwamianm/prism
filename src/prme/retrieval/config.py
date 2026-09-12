@@ -8,6 +8,7 @@ are exported as module-level constants.
 from __future__ import annotations
 
 import hashlib
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -142,6 +143,15 @@ class PackingConfig(BaseModel):
 
     model_config = ConfigDict(allow_inf_nan=False)
 
+    multipath_ordering: Literal["density", "score"] = Field(
+        default="density",
+        description=(
+            "Order multi-path candidates by score per token ('density') or "
+            "composite score ('score'). Score ordering improved development "
+            "source retention and local reader results; confirmation is pending. "
+            "Other priority tiers and whole-output token limits are unchanged."
+        ),
+    )
     token_budget: int = Field(
         default=4096, ge=0, description="Default context budget in tokens"
     )

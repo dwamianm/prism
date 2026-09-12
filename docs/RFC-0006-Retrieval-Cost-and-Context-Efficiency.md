@@ -26,6 +26,15 @@ mean. The density default remains pending a frozen test-partition confirmation;
 see the [study and limitations](../benchmarks/results/packing/2026-09-12/CONFIRMATION.md).
 This supersedes the earlier rationale treating STR as established superior utility.
 
+**Configurable policy:** `PackingConfig.multipath_ordering` accepts `"density"`
+(default) or `"score"`. It changes only the ordering of the multi-path tier; ties
+still use node ID and all representations obey the same measured budget. The
+public implementation reproduces all 714 frozen development contexts and source
+measurements across both arms and three budgets. This is implementation parity,
+not new evidence or completion of the separate confirmation study. New retrieval
+receipts record this policy in schema version 4; legacy receipts preserve their
+original bytes and implicit density semantics.
+
 **Implemented contract, 2026-09-12:** the product packer now counts its complete
 rendered context with a named tiktoken encoding. `MemoryBundle.render()` returns
 that exact text; `tokens_used` includes headers, separators, and metadata.

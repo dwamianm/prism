@@ -2,7 +2,7 @@
 
 Implements 3-priority greedy bin-packing per RFC-0006:
 1. Pinned + active tasks (always include)
-2. Multi-path objects by Signal-to-Token Ratio (STR) descending
+2. Multi-path objects by configured density or composite score descending
 3. Remaining by composite score
 
 Token budget is NEVER exceeded. Mid-object truncation is not permitted --
@@ -206,8 +206,8 @@ def pack_context(
 
     Implements 3-priority greedy bin-packing per RFC-0006 S5:
 
-    1. **Priority 1:** Pinned (salience==1.0) + active tasks -- always include.
-    2. **Priority 2:** Multi-path objects (path_count >= 2) by STR descending.
+    1. **Priority 1:** Pinned + active tasks, subject to the same token limit.
+    2. **Priority 2:** Multi-path objects by configured density or score.
     3. **Priority 3:** Remaining by composite score descending.
 
     Token budget is NEVER exceeded. Mid-object truncation is not permitted.
@@ -276,7 +276,12 @@ def pack_context(
         elif _is_pinned_or_active_task(candidate):
             tier, value = 1, candidate.composite_score
         elif candidate.path_count >= 2:
-            tier, value = 2, compute_str(candidate)
+            tier = 2
+            value = (
+                candidate.composite_score
+                if config.multipath_ordering == "score"
+                else compute_str(candidate)
+            )
         else:
             tier, value = 3, candidate.composite_score
         return tier, -value, str(candidate.node.id)

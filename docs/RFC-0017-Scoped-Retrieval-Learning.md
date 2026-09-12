@@ -77,7 +77,7 @@ Authentication continues to determine the owner of retrievals and receipts.
 No default weights or persisted profile are changed. Controlled comparisons
 require a fixed pack, clock and filters with maintenance/writes excluded.
 
-Actual pipeline receipts now use version 3 and include `execution.parameters`
+Version 3 introduced pipeline receipts that include `execution.parameters`
 and `execution.features`. Parameters record the adjustment, original temporal
 filters, cross-scope behavior and query-processing settings. Features record
 reported embedding/reranker identities, storage implementations, dependency
@@ -91,6 +91,23 @@ when old snapshots are parsed. Version 1 and 2 serializers omit the descriptor
 entirely, preserving old bytes/checksums and relevance references. Versions 2 and
 3 both support score replay and offline evaluation. Full request re-execution
 still requires the original memory artifact and matching feature environment.
+
+### Packing policy and receipt version 4
+
+New pipeline receipts use version 4 and record the explicit
+`packing.multipath_ordering` value. Both density and score ordering retain the
+same priority tiers, source fidelity and budget contract. Version 4 retains the
+execution descriptor and score replay requirements introduced above. A serialized
+version 4 receipt that omits its ordering is invalid.
+
+Versions 1–3 always mean density ordering. Parsing fills that historical meaning
+independently of any future application default; their serializers omit the new
+field to preserve exact canonical bytes, checksums and existing feedback links.
+Those schemas reject a score-ordering claim. Historical version 3 fixture bytes
+were generated with the pre-option `e297d08` runtime. The backend regressions
+check old receipt feedback and new policy recording across graph changes and
+restart. Score replay still describes returned candidate order, not a replay of
+packing or unseen candidates.
 
 ## Explicit relevance records
 

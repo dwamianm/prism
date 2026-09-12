@@ -1185,3 +1185,27 @@ invariance and profile workflow, both with native exit zero. Its focused
 embedding, rebuild, derivation and vector suite passed 77 tests with seven skips
 in 43.83s against the configured local PostgreSQL service. The earlier complete
 repository pass remains tied to `107f535`, before this embedding change.
+
+## Configuration loading and packing receipts
+
+Non-finite scoring and packing values now fail during normal model/environment
+validation (`4d787c6`), including nested node-type boosts and scoped weights.
+Twenty-one regressions failed before the fix; the scoring/configuration/learning
+check set passed 209 tests with four skips. Finite defaults and weight version
+identifiers did not change. A fresh explicit root `.env` probe at 18:07 UTC still
+returned HTTP 429 for both configured OpenAI judge candidates; the sanitized
+report is `openai-health-180749.json`.
+
+The opt-in public packing ordering required receipt schema version 4. Historical
+versions 1–3 keep exact canonical bytes/checksums and implicit density semantics;
+new receipts preserve the explicit ordering and execution descriptor. Nine
+compatibility checks cover canonical bytes, selective exports, legacy-policy
+rejection and version-4 roundtrips. Backend checks cover both orderings, existing
+feedback links, graph mutation and restart. The complete focused packing,
+provenance, receipt and learning set passed 215 tests with one skip in 37.56s.
+The selective-export guard subsequently passed its nine compatibility checks.
+
+That run first exposed a time-dependent test: its fixed 18:00 UTC knowledge
+cutoff correctly excluded newly admitted data after that instant. The same test
+failed on the earlier `e297d08` runtime. It now records admission time after the
+write and retains the separate fixed historical query/event-time bounds.

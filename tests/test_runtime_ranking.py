@@ -61,7 +61,7 @@ async def test_weight_trial_changes_session_expansion_and_preserves_owner_scope(
         assert proposed.metadata.ranking_multipliers == adjustment
         assert engine._config.scoring.model_dump_json() == original_weights
         saved = await engine.get_retrieval_receipt(str(proposed.metadata.request_id), user_id=user)
-        assert saved.schema_version == 3
+        assert saved.schema_version == 4
         assert saved.execution.parameters["ranking_multipliers"] == adjustment.model_dump(mode="json")
         assert saved.replay_ranking() == tuple(c.node.id for c in proposed.results)
     async with MemoryEngine.open(config) as engine:
@@ -89,16 +89,19 @@ async def test_unity_trial_is_identical_and_concurrent_calls_keep_separate_adjus
 async def test_execution_records_filters_and_current_neural_model(config, user, monkeypatch):
     async with MemoryEngine.open(config) as engine:
         await engine.store("telescope", user_id=user, scope=Scope.PROJECT, event_time=NOW - timedelta(days=2))
+        # Admission time is the real clock. A fixed historical knowledge cutoff
+        # eventually excludes this newly stored source, correctly yielding none.
+        known_at = datetime.now(timezone.utc)
         reranker = CrossEncoderReranker(model_name="controlled-neural-model")
         monkeypatch.setattr(reranker, "_predict_sync", Mock(return_value=[.8]))
         engine._retrieval_pipeline._reranker = reranker
         response = await engine.retrieve("telescope", user_id=user, scope=Scope.PROJECT, reference_time=NOW,
-            knowledge_at=NOW, event_time_from=NOW - timedelta(days=3), event_time_to=NOW - timedelta(days=1),
+            knowledge_at=known_at, event_time_from=NOW - timedelta(days=3), event_time_to=NOW - timedelta(days=1),
             include_cross_scope=False)
         assert response.results
         saved = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
         params, features = saved.execution.parameters, saved.execution.features
-        assert params["knowledge_at"] == NOW.isoformat()
+        assert params["knowledge_at"] == known_at.isoformat()
         assert params["event_time_from"] == (NOW - timedelta(days=3)).isoformat()
         assert params["event_time_to"] == (NOW - timedelta(days=1)).isoformat()
         assert params["include_cross_scope"] is False

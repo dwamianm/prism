@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3] = 1
+    schema_version: Literal[1, 2, 3, 4] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -61,6 +61,20 @@ class RetrievalReceipt(BaseModel):
     ranking_policy: RankingPolicy | None = None
     execution: RetrievalExecution | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def historical_packing_policy(cls, value):
+        if isinstance(value, dict) and isinstance(value.get("packing"), dict):
+            version = value.get("schema_version", 1)
+            if "multipath_ordering" not in value["packing"]:
+                if version in (1, 2, 3):
+                    # Historical omission always means density, independently
+                    # of any future application default. Do not mutate input.
+                    return {**value, "packing": {**value["packing"], "multipath_ordering": "density"}}
+                if version == 4:
+                    raise ValueError("Version 4 receipts require an explicit packing ordering")
+        return value
+
     @model_serializer(mode="wrap")
     def serialize_version(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data = handler(self)
@@ -71,12 +85,16 @@ class RetrievalReceipt(BaseModel):
             data.pop("ranking_policy", None)
         if self.schema_version < 3:
             data.pop("execution", None)
+        if self.schema_version < 4 and isinstance(data.get("packing"), dict):
+            data["packing"].pop("multipath_ordering", None)
         return data
 
     @model_validator(mode="after")
     def unique_candidates(self):
-        if (self.schema_version == 3) != (self.execution is not None):
-            raise ValueError("Only version 3 receipts require an execution descriptor")
+        if (self.schema_version >= 3) != (self.execution is not None):
+            raise ValueError("Versions 3 and 4 require an execution descriptor")
+        if self.schema_version < 4 and self.packing.multipath_ordering != "density":
+            raise ValueError("Legacy receipts support only density packing")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -167,7 +185,7 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         if candidate.score_provenance is None:
             raise ValueError("Cannot record replayable receipt without candidate score provenance")
         provenance[candidate.node.id] = candidate.score_provenance
-    return RetrievalReceipt(schema_version=3 if execution is not None else 2, execution=execution,
+    return RetrievalReceipt(schema_version=4 if execution is not None else 2, execution=execution,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,
                             scoring=scoring, packing=packing, candidates=tuple(snapshots),
