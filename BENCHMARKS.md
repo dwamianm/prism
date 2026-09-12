@@ -58,6 +58,12 @@ exit for a nonempty benchmark with a zero score.
 
 ## Available commands
 
+For chronological conflict-memory replay with a local model, see the
+[MemConflict adapter](benchmarks/integrations/MEMCONFLICT.md). It separates source
+dialogues from evaluation labels, reports malformed-message omissions, and
+compares PRME context, BM25 context and empty memory. Its raw answers are unjudged
+diagnostics; it does not report official accuracy.
+
 For controlled evidence retrieval without a generation or judge API, use:
 
 ```bash

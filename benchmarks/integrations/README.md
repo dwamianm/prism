@@ -1,5 +1,8 @@
 # PrecisionMemBench diagnostic adapter
 
+For the separate chronological dialogue replay, see the
+[MemConflict adapter](MEMCONFLICT.md).
+
 `precision_service.py` implements the upstream generic HTTP contract using
 PRME's default local FastEmbed retrieval. It owns temporary memory packs and
 binds to loopback. It is a scratch benchmark service, not a production endpoint.
