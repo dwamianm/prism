@@ -72,7 +72,12 @@ These records preserve commit identities, raw-output hashes, failures and limits
    snippet coverage exposes substantial packing loss, but errors remain even
    when annotated snippets are complete. Test an explicitly annotation-selected
    reader control before attributing those errors to retrieval or adding more
-   scoring heuristics. This control must never be reported as product retrieval.
+   scoring heuristics. The subsequently [completed annotation-selected control](../benchmarks/results/research/2026-09-12/PERSONAMEM-ANNOTATED-READER.md)
+   answered 66/96 versus a fresh no-memory control's 34/96, with a positive
+   persona-cluster interval. It still answered 0/10 other-person questions
+   correctly; two inspected cases assign a colleague's preferences/condition to
+   the user. Audit subject attribution and merge semantics alongside evidence
+   selection. This control is not product retrieval or an independent holdout.
 
 ## Capability work still required
 
