@@ -74,6 +74,15 @@ Callers can inspect `evidence_refs`, `metadata.evidence_quote`, and
 whole paragraphs may increase context cost; packing must skip oversized passages
 instead of dropping their qualifications.
 
+LLM ingestion does not treat differing values as inherently contradictory: a
+person can use Python and Rust or like both tea and coffee. Automatic retirement
+requires `temporal_intent="update"`, an explicit `replaces_object` present in the
+source passage, and an observed/asserted fact. Only the named previous object is
+eligible. Hypothetical, conditional, inferred, and unverified extractions cannot
+retire existing facts. Unnamed changes remain alongside prior evidence until a
+more informed resolution is available. The lower-level supersedence detector
+retains its explicit caller-driven legacy matching mode.
+
 ---
 
 ## 4. Source Types and Epistemic Interaction

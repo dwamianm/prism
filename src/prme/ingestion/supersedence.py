@@ -101,6 +101,7 @@ class SupersedenceDetector:
         *,
         evidence_event_id: str | None = None,
         temporal_intent: str | None = None,
+        replaces_object: str | None = None,
     ) -> list[str]:
         """Detect contradictions and create supersedence or contradiction chains.
 
@@ -125,6 +126,9 @@ class SupersedenceDetector:
             temporal_intent: Intent classification from extraction.
                 "update" or None -> supersedence (default).
                 "assertion" -> contradiction (preserve both).
+            replaces_object: When provided, restrict replacement to this
+                explicitly named old value. The LLM ingestion pipeline always
+                requires it; direct callers retain the legacy matching mode.
 
         Returns:
             List of superseded or contradicted node IDs.
@@ -162,6 +166,11 @@ class SupersedenceDetector:
             existing_object = existing_metadata.get("object")
 
             if existing_predicate is None:
+                continue
+            if replaces_object is not None and (
+                not isinstance(existing_object, str)
+                or existing_object.strip().casefold() != replaces_object.strip().casefold()
+            ):
                 continue
 
             logger.debug(

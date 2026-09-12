@@ -351,6 +351,8 @@ class IngestionPipeline:
                     "object": fact.object,
                     "evidence_quote": fact_content,
                     "grounding_method": "source_passage_v1",
+                    "temporal_intent": fact.temporal_intent,
+                    "replaces_object": fact.replaces_object,
                 }
                 if fact.scope:
                     fact_metadata["suggested_scope"] = fact.scope
@@ -425,16 +427,24 @@ class IngestionPipeline:
                     )
                     await tracked_writer.create_edge(has_fact_edge)
 
-                    # Detect supersedence for the new fact
-                    await supersedence_detector.detect_and_supersede(
-                        new_fact_node_id=fact_node_id,
-                        subject_entity_id=subject_entity_id,
-                        predicate=fact.predicate,
-                        object_value=fact.object,
-                        user_id=event.user_id,
-                        evidence_event_id=event_id,
-                        temporal_intent=fact.temporal_intent,
-                    )
+                    # Different values can coexist. Ingestion only retires an
+                    # explicitly named previous value for a nonconditional
+                    # update; a hypothetical future must not replace reality.
+                    if (
+                        fact.temporal_intent == "update"
+                        and fact.replaces_object
+                        and fact_epistemic_type in (EpistemicType.OBSERVED, EpistemicType.ASSERTED)
+                    ):
+                        await supersedence_detector.detect_and_supersede(
+                            new_fact_node_id=fact_node_id,
+                            subject_entity_id=subject_entity_id,
+                            predicate=fact.predicate,
+                            object_value=fact.object,
+                            user_id=event.user_id,
+                            evidence_event_id=event_id,
+                            temporal_intent="update",
+                            replaces_object=fact.replaces_object,
+                        )
 
                 # Index fact in vector and lexical stores (not tracked for rollback)
                 await self._write_queue.submit(

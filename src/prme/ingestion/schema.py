@@ -95,6 +95,15 @@ class ExtractedFact(BaseModel):
             "claim with no temporal replacement signal. Null if unclear."
         ),
     )
+    replaces_object: str | None = Field(
+        default=None,
+        description=(
+            "Exact previous object value explicitly replaced by this fact in the source "
+            "(e.g., 'Slack' in 'switched from Slack to Signal'). Null unless the source "
+            "explicitly replaces that value. A new preference or another value does not "
+            "by itself replace previous values. Never infer this from memory."
+        ),
+    )
 
     @field_validator("epistemic_type")
     @classmethod

@@ -85,6 +85,9 @@ sentences verbatim, including negation, conditions, exceptions, and time referen
 written rather than normalizing or paraphrasing them.
 - Using something does not imply preferring it. One occurrence does not imply \
 a habit. Multiple values can coexist (e.g., liking tea and coffee).
+- Set replaces_object only for an explicit replacement of a named previous value \
+("switched from Slack to Signal"). "Now also uses Signal" does not replace Slack. \
+Copy the previous value exactly from the supporting passage.
 - Preserve conditions and uncertainty. Use conditional or hypothetical epistemic \
 types when appropriate; do not turn a possible future into a current fact.
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \

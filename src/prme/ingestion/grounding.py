@@ -89,7 +89,12 @@ def validate_grounding(
             if fact.evidence_quote is not None else source_text
         )
         if passage and _mentioned(fact.subject, passage) and _mentioned(fact.object, passage):
-            grounded_facts.append(fact.model_copy(update={"evidence_quote": passage}))
+            replacement = fact.replaces_object
+            if replacement is not None and not _mentioned(replacement, passage):
+                replacement = None
+            grounded_facts.append(fact.model_copy(update={
+                "evidence_quote": passage, "replaces_object": replacement,
+            }))
         else:
             logger.warning(
                 "grounding_fact_discarded",
