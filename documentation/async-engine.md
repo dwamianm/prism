@@ -106,6 +106,28 @@ persisted. Failed work remains pending for a later pass; one failure does not
 block the other items in that batch. A drain budget is cooperative: an indexing
 operation already in progress finishes before the budget is checked again.
 
+## Processing deferred events
+
+```python
+event_id = await engine.ingest_fast("Alice prefers dark mode", user_id="alice")
+status = await engine.processing_status(event_id, user_id="alice")
+result = await engine.process_pending(user_id="alice", budget_ms=1000)
+print(result.processed, result.pending, result.failed)
+status = await engine.processing_status(event_id, user_id="alice")
+print(status.status, status.attempts, status.last_error)
+```
+
+`process_pending()` processes one batch without running organizer jobs. Repeat
+as needed; failed items remain in `pending`, and persistent errors should be
+inspected before retrying. `budget_ms=0` reads current counts without processing.
+Status and counts are read from durable storage and restricted to the supplied
+user. Errors contain the exception type, without provider response text.
+
+`processing_status()` returns `None` for an unknown event, another user's event,
+or an event written through `store()`/`ingest()`. This API tracks only deferred
+raw ingestion, not LLM extraction. A `complete` status records successful
+materialization; a later lifecycle operation may still retire that memory.
+
 ## retrieve()
 
 ```python

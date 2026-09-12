@@ -126,6 +126,21 @@ for result in response.results[:5]:
     print(f"[{result.composite_score:.3f}] {node.node_type.value}: {node.content}")
 ```
 
+## Deferred raw ingestion
+
+For raw ingestion without an LLM, the synchronous client also supports durable
+deferred processing:
+
+```python
+event_id = client.ingest_fast("Alice prefers dark mode", user_id="alice")
+result = client.process_pending(user_id="alice", budget_ms=1000)
+status = client.processing_status(event_id, user_id="alice")
+```
+
+These methods have the same status, retry, scope, and cooperative-budget
+semantics as [the async processing API](async-engine.md#processing-deferred-events).
+They track only events accepted by `ingest_fast()`.
+
 ## ingest()
 
 Ingest content through the LLM extraction pipeline. Automatically extracts entities, facts, relationships, preferences, and decisions.

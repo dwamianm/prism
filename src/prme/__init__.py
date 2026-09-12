@@ -8,6 +8,7 @@ and scheduled memory reorganization.
 __version__ = "0.11.0"
 
 from prme.config import PRMEConfig
+from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.storage.engine import MemoryEngine
 from prme.types import (
     DECAY_LAMBDAS,
@@ -52,6 +53,8 @@ __all__ = [
     "MemoryEngine",
     "NodeType",
     "PRMEConfig",
+    "ProcessingResult",
+    "ProcessingStatus",
     "RetrievalPipeline",
     "RetrievalResponse",
     "Scope",

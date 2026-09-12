@@ -13,7 +13,7 @@ from uuid import UUID
 
 import asyncpg
 
-from prme.models import Event
+from prme.models import Event, ProcessingStatus
 from prme.types import Scope
 
 logger = logging.getLogger(__name__)
@@ -93,6 +93,24 @@ class PgEventStore:
                 "AND status = 'pending'",
                 "complete" if error is None else "pending", error, event_id,
             )
+
+    async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT m.event_id, m.status, m.attempts, m.last_error, m.updated_at "
+                "FROM event_materializations m JOIN events e ON e.id = m.event_id "
+                "WHERE m.event_id = $1 AND e.user_id = $2", event_id, user_id,
+            )
+        return ProcessingStatus(**dict(row)) if row is not None else None
+
+    async def processing_counts(self, *, user_id: str) -> tuple[int, int]:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT count(*), count(m.last_error) FROM event_materializations m "
+                "JOIN events e ON e.id = m.event_id WHERE m.status = 'pending' AND e.user_id = $1",
+                user_id,
+            )
+        return row[0], row[1]
 
     async def get(self, event_id: str) -> Event | None:
         """Retrieve an event by its ID."""

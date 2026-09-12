@@ -27,6 +27,7 @@ from datetime import datetime
 from typing import Any
 
 from prme.config import PRMEConfig
+from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.types import NodeType, Scope
 
 logger = logging.getLogger(__name__)
@@ -233,6 +234,25 @@ class MemoryClient:
     def get_node(self, node_id: str) -> Any:
         """Get a single node by ID. Returns MemoryNode or None."""
         return self._run(self._engine.get_node(node_id))
+
+    def ingest_fast(
+        self, content: str, *, user_id: str, role: str = "user",
+        session_id: str | None = None, metadata: dict | None = None,
+        scope: Scope = Scope.PERSONAL, event_time: datetime | None = None,
+    ) -> str:
+        """Durably accept a raw event; indexing resumes on processing/retrieval."""
+        return self._run(self._engine.ingest_fast(
+            content, user_id=user_id, role=role, session_id=session_id,
+            metadata=metadata, scope=scope, event_time=event_time,
+        ))
+
+    def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
+        """Read durable status for an ingest_fast event owned by this user."""
+        return self._run(self._engine.processing_status(event_id, user_id=user_id))
+
+    def process_pending(self, *, user_id: str, budget_ms: int = 1000) -> ProcessingResult:
+        """Process one bounded batch of deferred raw events; failures stay pending."""
+        return self._run(self._engine.process_pending(user_id=user_id, budget_ms=budget_ms))
 
     def query_nodes(self, **kwargs: Any) -> list[Any]:
         """Query nodes with filters. Returns list of MemoryNode."""

@@ -28,6 +28,45 @@ class MockEmbeddingProvider:
         ]
 
 
+async def test_public_processing_status_survives_retry_and_restart(config, user, monkeypatch):
+    async with MemoryEngine.open(config) as engine:
+        event_id = await engine.ingest_fast("The telescope is blue", user_id=user)
+        foreign = await engine.ingest_fast("Other user's note", user_id=user + "-other")
+        assert await engine.processing_status(event_id, user_id=user + "-other") is None
+        status = await engine.processing_status(event_id, user_id=user)
+        assert status.status == "pending" and status.attempts == 0
+        result = await engine.process_pending(user_id=user, budget_ms=0)
+        assert (result.processed, result.pending, result.failed) == (0, 1, 0)
+
+        with monkeypatch.context() as failure:
+            failure.setattr(engine._vector_index, "index", AsyncMock(side_effect=RuntimeError("private provider detail")))
+            result = await engine.process_pending(user_id=user)
+        assert (result.processed, result.pending, result.failed) == (0, 1, 1)
+        status = await engine.processing_status(event_id, user_id=user)
+        assert status.last_error == "RuntimeError" and status.attempts == 1
+        assert "private provider" not in status.model_dump_json()
+
+    async with MemoryEngine.open(config) as engine:
+        status = await engine.processing_status(event_id, user_id=user)
+        assert status.last_error == "RuntimeError"
+        result = await engine.process_pending(user_id=user)
+        assert (result.processed, result.pending, result.failed) == (1, 0, 0)
+        status = await engine.processing_status(event_id, user_id=user)
+        assert status.status == "complete" and status.attempts == 2
+        assert status.last_error is None
+        assert (await engine.processing_status(foreign, user_id=user + "-other")).status == "pending"
+        assert (await engine.process_pending(user_id=user)).processed == 0
+
+
+async def test_processing_status_does_not_claim_to_track_other_ingestion(config, user):
+    async with MemoryEngine.open(config) as engine:
+        event_id = await engine.store("An ordinary direct write", user_id=user)
+        assert await engine.processing_status(event_id, user_id=user) is None
+        assert await engine.processing_status(str(uuid4()), user_id=user) is None
+        with pytest.raises(ValueError, match="budget_ms"):
+            await engine.process_pending(user_id=user, budget_ms=-1)
+
+
 @pytest.fixture(params=["duckdb", "postgres"])
 def config(request, tmp_path, monkeypatch):
     monkeypatch.setattr(

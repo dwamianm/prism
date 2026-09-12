@@ -121,8 +121,14 @@ For real-time use, the fast path skips graph extraction:
 
 ```python
 # Durably accept the event; defer embedding and indexing
-await engine.ingest_fast(content, user_id="alice", scope=Scope.PERSONAL)
+event_id = await engine.ingest_fast(content, user_id="alice", scope=Scope.PERSONAL)
+# Optional explicit processing; retrieval also processes pending events
+result = await engine.process_pending(user_id="alice")
+status = await engine.processing_status(event_id, user_id="alice")
 ```
+
+Deferred raw events survive restart. Processing reports remaining work and
+retry failures per user; the same methods are available on `MemoryClient`.
 
 See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a terminal chat app with persistent memory.
 

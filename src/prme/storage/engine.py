@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 
 from prme.config import PRMEConfig
-from prme.models import Event, MemoryNode
+from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -1265,6 +1265,34 @@ class MemoryEngine:
             Number of items awaiting graph materialization.
         """
         return self._materialization_queue.debt_sync()
+
+    async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
+        """Read durable raw-ingestion status within one user's events.
+
+        Returns None for an unknown/other-user event or an event not accepted
+        through ingest_fast(). A complete status acknowledges materialization;
+        later lifecycle changes may still retire the node. LLM extraction
+        through ingest() is not tracked by this API.
+        """
+        if not user_id:
+            raise ValueError("user_id must be nonempty")
+        return await self._event_store.processing_status(event_id, user_id=user_id)
+
+    async def process_pending(self, *, user_id: str, budget_ms: int = 1000) -> ProcessingResult:
+        """Process one bounded batch of this user's deferred raw events.
+
+        Failed items remain pending for retry. The time budget is cooperative:
+        an individual operation can exceed it. A zero budget only reads current
+        counts. Repeat passes while pending remains, inspecting failed/status
+        before retrying persistent errors. Never runs organizer jobs or an LLM.
+        """
+        if not user_id:
+            raise ValueError("user_id must be nonempty")
+        if budget_ms < 0:
+            raise ValueError("budget_ms must be nonnegative")
+        processed = await self._materialization_queue.drain(self, budget_ms=budget_ms, user_id=user_id)
+        pending, failed = await self._event_store.processing_counts(user_id=user_id)
+        return ProcessingResult(processed=processed, pending=pending, failed=failed)
 
     # --- Retrieval Operations ---
 

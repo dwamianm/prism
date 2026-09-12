@@ -47,10 +47,30 @@ index changes. Local process-exit recovery and partial-index retry are covered.
 Ruff and diff whitespace checks pass. Two pre-existing coroutine warnings remain
 in the sync client after-close test; address in developer-experience work.
 
-Next: reproducible evidence retrieval measurement on explicit LongMemEval
-variants with frozen splits, artifact provenance, and simple comparable baselines.
-Full event/operation replay, persistent LLM extraction jobs, and public processing
-status remain open; this change closes only the fast-ingestion recovery gap.
+Evidence evaluator delivered: explicit LongMemEval variants, neutral source
+identifiers, stable dev/test splits, provenance, category coverage, recall/MRR/
+nDCG, actual whole-turn token budgets, and BM25/vector/RRF/recency/empty baselines.
+The product packer and LLM extraction need separate measurement. Full S runs
+are in progress on 119 development questions from frozen source checkouts.
+No default ranking replacement based on the initial five-question smoke test.
+
+Correctness fixes since the baseline: explicit replayable retrieval clock;
+query dates no longer silently filter assertion validity; explicit validity
+filters apply to all candidate paths; relative recency compares episode times
+consistently; update-language scoring preserves relevance limits and caller
+configuration. Targeted tests passed against local and live PostgreSQL storage.
+The sync client no longer leaks unawaited coroutines after close.
+
+Public deferred-processing status and bounded scoped processing are implemented
+for both async and sync APIs, with durable error/attempt reporting. These track
+only ingest_fast(), not LLM extraction. Processing/client tests: 36 passed,
+3 backend-specific skips. A full-suite run was invalidated by concurrent source
+edits (mixed imports); rerun from a frozen checkout before accepting it.
+
+Full event/operation replay, persistent LLM extraction jobs, contextual/grounded
+extraction, faithful product context packing, complete scoped enumeration,
+persistent feedback, identity-bound APIs, and comparative agent outcomes remain
+open. The revised delivery order must follow the evidence from these runs.
 
 ## Limits on claims
 

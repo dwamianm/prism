@@ -136,6 +136,15 @@ class TestClientLifecycle:
 
 
 class TestStoreRetrieve:
+    def test_deferred_ingestion_has_public_processing_status(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_id = client.ingest_fast("Alice uses a telescope", user_id="alice")
+            assert client.processing_status(event_id, user_id="alice").status == "pending"
+            result = client.process_pending(user_id="alice")
+            assert result.pending == 0 and result.processed == 1
+            assert client.processing_status(event_id, user_id="alice").status == "complete"
+            assert client.retrieve("telescope", user_id="alice").results
+
     def test_store_returns_uuid(self, tmp_dir):
         with MemoryClient(tmp_dir) as client:
             event_id = client.store("Alice likes dark mode", user_id="alice")

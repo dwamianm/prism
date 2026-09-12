@@ -12,7 +12,7 @@ from uuid import UUID
 
 import duckdb
 
-from prme.models import Event
+from prme.models import Event, ProcessingStatus
 from prme.types import Scope
 
 # Explicit column list used in all SELECT queries to avoid positional
@@ -105,6 +105,28 @@ class EventStore:
                 "AND status = 'pending'",
                 ["complete" if error is None else "pending", error, event_id],
             )
+
+    async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
+        async with self._conn_lock:
+            row = await asyncio.to_thread(lambda: self._conn.execute(
+                "SELECT m.event_id, m.status, m.attempts, m.last_error, m.updated_at "
+                "FROM event_materializations m JOIN events e ON e.id = m.event_id "
+                "WHERE m.event_id = ? AND e.user_id = ?", [event_id, user_id],
+            ).fetchone())
+        if row is None:
+            return None
+        return ProcessingStatus(**dict(zip(
+            ("event_id", "status", "attempts", "last_error", "updated_at"), row,
+        )))
+
+    async def processing_counts(self, *, user_id: str) -> tuple[int, int]:
+        async with self._conn_lock:
+            row = await asyncio.to_thread(lambda: self._conn.execute(
+                "SELECT count(*), count(m.last_error) FROM event_materializations m "
+                "JOIN events e ON e.id = m.event_id WHERE m.status = 'pending' AND e.user_id = ?",
+                [user_id],
+            ).fetchone())
+        return row[0], row[1]
 
     async def get(self, event_id: str) -> Event | None:
         """Retrieve an event by its ID.
