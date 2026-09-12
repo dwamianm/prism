@@ -1209,3 +1209,25 @@ That run first exposed a time-dependent test: its fixed 18:00 UTC knowledge
 cutoff correctly excluded newly admitted data after that instant. The same test
 failed on the earlier `e297d08` runtime. It now records admission time after the
 write and retains the separate fixed historical query/event-time bounds.
+
+Installed `0ed72a8` Python 3.13 checks passed 169 tests with one skip in 37.59s,
+including both storage backends, version-4 policy persistence and historical
+feedback links. The first installed invocation lacked the fixture directory on
+the crash subprocess's import path (168 passed, one failed, one skipped);
+adding the frozen harness root to `PYTHONPATH` corrected that invocation without
+adding its `src` tree. Production imports remained from the installed wheel.
+The installed public packer also reproduced all 714 frozen contexts with native
+exit zero (`public-packing-option-installed-0ed72a8.json` in the packing results).
+
+`5afcf8b` exposes the existing `config_from_directory` helper at the package root
+for custom settings without manually assembling storage paths. The unchanged
+integration-guide snippet executed from the installed wheel with real BGE
+retrieval. Reopening preserved score-ordering receipts and feedback checksums,
+and foreign-owner receipt reads returned no record. The probe's first path
+containment assertion confused macOS `/var` and `/private/var` aliases; resolving
+both paths corrected the harness. The successful native-exit report is
+`directory-config-installed-5afcf8b.json`. Its installed consumer passed strict
+mypy checking; the configuration and receipt source modules also passed mypy.
+
+The complete repository suite is running from clean frozen `0ed72a8`; its final
+exit and totals must be recorded separately before calling that run successful.
