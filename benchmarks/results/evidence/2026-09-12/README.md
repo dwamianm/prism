@@ -61,5 +61,8 @@ historical configurations as the current release or combine partial runs.
 
 
 The [381-question held-out run](heldout/README.md) is now complete with zero
-errors. It does not establish a clear support-recall advantage over vector/RRF
-retrieval; the original-version held-out before/after comparison is still running.
+errors. The original-version run also completed all 381 questions without errors.
+The paired comparison does not establish a held-out improvement: 2,048-token
+support recall changed from 85.12% to 85.27%, with a 95% interval for the change
+of −1.28 to +1.74 percentage points. The evaluation clock also changed. Neither
+that endpoint comparison nor the vector/RRF comparisons establish superiority.

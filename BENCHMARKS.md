@@ -19,8 +19,10 @@ and paired comparisons in the [development report](benchmarks/results/evidence/2
 These measure support retrieval, not end-to-end answer quality. The completed
 [held-out report](benchmarks/results/evidence/2026-09-12/heldout/README.md) covers
 381 questions with zero errors. Its paired comparisons do not establish an
-advantage over vector/RRF baselines. The original-version held-out comparison
-and cross-product answer-quality evaluations remain open.
+advantage over vector/RRF baselines. The original-version run also completed:
+2,048-token support recall changed from 85.12% to 85.27%, with a paired interval
+including zero and a changed evaluation clock. A held-out improvement is not
+established; cross-product answer-quality evaluations remain open.
 
 | Layer | Report |
 |---|---|

@@ -38,12 +38,36 @@ have no multiple-comparison correction. A general improvement is not established
 This is raw NOTE-turn evidence retrieval with a shared whole-turn packer. It
 measures neither PRME's product context formatter nor LLM extraction, answer
 accuracy, lifecycle interpretation, semantic aggregation or competitor products.
-An original-version held-out before/after run has **not** been completed. The
-119-question development comparison cannot be treated as that missing evidence.
+
+## Original-version comparison
+
+The original `168fa0e` run also completed **381/381, zero errors**, with the same
+365 labeled questions, corpus checksum, source counts, evidence labels, token
+budgets and candidate limit. `original-168fa0e.json` preserves that run;
+`before-after.json` contains the paired comparison against `6fc6b67`.
+
+| PRME measure | Original | Updated | Delta, percentage points | 95% interval |
+|---|---:|---:|---:|---:|
+| MRR | 0.6583 | 0.6662 | +0.79 | −0.53 to +2.20 |
+| Recall@10 | 0.8215 | 0.8291 | +0.76 | −0.60 to +2.28 |
+| Support recall / 2,048 tokens | 0.8512 | 0.8527 | +0.15 | −1.28 to +1.74 |
+| Support recall / 4,096 tokens | 0.8868 | 0.8968 | +1.00 | −0.52 to +2.68 |
+| Support recall / 8,192 tokens | 0.9250 | 0.9372 | +1.22 | −0.16 to +2.80 |
+
+**This does not establish a held-out retrieval improvement.** Every displayed
+interval includes zero. At 2,048 tokens, 13 questions improved, 13 worsened and
+339 were unchanged. The matched BM25, vector and RRF controls had zero packed
+recall change at every budget. This is a descriptive endpoint comparison: the
+original used wall-clock query interpretation and the updated run used each
+question's timestamp. It therefore combines software and evaluation-clock
+changes and cannot isolate an algorithm's effect. No held-out question was used
+to revise the frozen profile after observing these results.
 
 Elapsed wall time: 3,423.83 seconds, concurrency four. Other local tests and
 experiments overlapped; baseline timings use already-warm shared indexes.
 Reported timings are not an isolated performance comparison or an SLO.
+The original run took 5,094.04 seconds at concurrency one, also overlapping other
+work. Its elapsed time must not be compared as a speedup against concurrency four.
 
 Reproduce from the frozen source checkout:
 
@@ -59,6 +83,8 @@ Generate the within-run comparison using the current analysis tool:
 ```sh
 python -m benchmarks.compare_methods /tmp/prme-heldout.json \
   --output /tmp/prme-heldout-comparison.json
+python -m benchmarks.compare_evidence original-168fa0e.json duration-6fc6b67.json \
+  --output before-after.json
 ```
 
 Keep this completed test set out of future tuning. New selection, reranking or

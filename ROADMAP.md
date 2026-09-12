@@ -16,7 +16,7 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite passed 1,609 tests with 17 skips and live PostgreSQL.
+completed frozen full suite passed 1,652 tests with 20 skips and live PostgreSQL.
 Failed startup now releases acquired resources on both backends and restores
 encryption after a local pack was decrypted; wrong-key failures preserve the pack.
 Vector payloads now survive abrupt exits before the USearch snapshot is saved;
@@ -25,6 +25,11 @@ Grounded LLM output is now journaled before graph writes and reused on indexing
 retries. Scoped inspection works through the engine, sync client, HTTP and MCP.
 A real local-model fault-injection workflow and installed Python 3.13 ingestion
 both passed; atomic graph replay and durable extraction scheduling remain open.
+Independent indexing preserves a healthy search path during an outage. Scoped
+entity matching now covers older entities beyond the former 100-node window.
+Retrieval distinguishes backend failures from empty results and detected model
+mismatches, with sanitized diagnostics through HTTP/MCP. A newer Python 3.13
+installed wheel passed source, recovery, selection and authenticated API checks.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall
@@ -32,7 +37,10 @@ at 2,048 tokens, versus 90.79% initially; its paired confidence interval still
 touches zero. That frozen profile completed all 381 held-out questions without errors. It
 reaches 85.27% support recall at 2,048 tokens; vector/RRF do better at larger
 budgets, and the paired differences against them include zero. The original
-version's held-out run is still pending; no direct software delta is claimed.
+version also completed all 381 questions with zero errors. Its 2,048-token recall
+was 85.12%; the updated profile's +0.15 percentage-point change has a 95% interval
+of −1.28 to +1.74. The query clock also changed, so this is not an isolated
+algorithm comparison. Held-out retrieval improvement remains unproven.
 Complete reports and comparisons are linked from BENCHMARKS.md. Causal simulation
 repairs removed future-message leakage and event timestamp rewriting; 71 of 74
 checks pass, with three retrieval-quality failures still open. No current-release superiority

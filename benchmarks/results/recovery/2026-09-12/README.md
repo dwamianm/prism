@@ -2,9 +2,40 @@
 
 These checks cover failure recovery and public package workflows. They do not
 measure answer accuracy, full graph replay, or superiority over another memory
-product. The latest frozen full suite at `c828607` passed **1,609 tests, 17 skipped**
-with live PostgreSQL (147.31 seconds). The installed Python 3.13 wheel check used
-`7a1e864`, before the final vector startup optimization.
+product. The latest frozen full suite at `b702cbb` passed **1,652 tests, 20 skipped**
+with live PostgreSQL (146.51 seconds). A Python 3.13 wheel at `66a0a1b` passed
+installed sync-client, default local embedding, restart, source/provenance,
+selection/budget, HTTP identity/filter and MCP HTTP workflow checks. The older
+`7a1e864` wheel additionally ran real local-model extraction, recorded below.
+
+## Availability and identity fault checks
+
+`tests/test_index_availability.py` reproduced local full-text indexing being
+skipped when embeddings failed. Independent index attempts now preserve the
+healthy path, including durable flushing for deferred raw sources. A failed
+backend keeps the job pending; restart/retry converges on one source node.
+Both backends, both-failing cases, owner isolation and local flush failures are
+covered. Direct `store()` still logs failures without scheduling a repair job.
+
+`tests/test_entity_resolution.py` reproduced duplication beyond the newest
+100 entities on both backends. Exact scoped entity matching now walks stable-ID
+pages and reuses older matches. Reuse no longer changes a vector from an
+uncommitted description. This remains conservative matching, not an atomic
+cross-worker entity uniqueness guarantee or a semantic entity-resolution score.
+
+`tests/test_retrieval_backend_status.py` verifies empty searches, model/version
+changes, legacy PostgreSQL metadata, ordinary backend outages, restart and
+HTTP/MCP diagnostics. Incompatible vector hits fall back to other paths; an
+empty successful search is no longer mislabeled as a mismatch. Status uses fixed
+reason codes without provider messages. The combined index/recovery/status
+subset passed 64 tests with 3 skips, and status/MCP checks passed 40 with 1 skip.
+
+`tests/test_retrieval_cancellation.py` reproduced connection-lock release while
+a cancelled retrieval's logging thread was still writing. It now waits for that
+write before releasing the lock. The focused cancellation suite at `66a0a1b`
+passed 4 checks with 1 PostgreSQL-specific skip. Cancelling does not undo an
+already-started write. After these changes, 47 vector/rebuild checks also passed
+under the minimum USearch 2.16.0 / SimSIMD 5.9.11 environment described below.
 
 ## Grounded extraction journal
 
