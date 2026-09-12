@@ -16,6 +16,11 @@ async def run(args, report):
     plan = json.loads(args.plan.read_bytes())
     cases = json.loads(args.inputs.read_bytes())["cases"]
     if (
+        digest(Path(__file__).with_name("hindsight_capture.py").read_bytes())
+        != plan["helper_sha256"]
+    ):
+        raise ValueError("Capture helper differs from registration")
+    if (
         digest(args.inputs.read_bytes()) != plan["inputs_sha256"]
         or digest(Path(__file__).read_bytes()) != plan["runner_sha256"]
     ):
