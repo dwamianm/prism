@@ -1,184 +1,80 @@
-# Research Agenda: Toward 98%+ Memory Accuracy
+# Research agenda: demonstrated memory quality and developer experience
 
-## Failure Analysis (v0.6.0 baseline)
+Updated 2026-09-12. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
+Its historical scores and projected “98%+” target do not establish today's
+performance. GSD completion states and RFC proposals are not acceptance evidence.
+The aim is a leading memory package whose advantages survive reproducible
+comparisons and whose ordinary APIs preserve user data and isolation.
 
-### LME: 93.8% → 98% (need to fix ~20 of 23 failures)
+## What the evidence currently supports
 
-| Root Cause | Count | Examples |
+| Area | Verified result | Boundary |
 |---|---|---|
-| **Aggregation impossible with top-k** | 10 | "How many cuisines?", "Total money spent on workshops?" |
-| **Knowledge update staleness** | 6 | Retrieves old value ("Chicago") when newest is "suburbs" |
-| **Temporal computation errors** | 3 | Miscounts weeks between two events |
-| **Retrieval miss** | 2 | Relevant fact exists but wasn't retrieved |
-| **Abstention false negative** | 2 | Should have abstained, didn't |
+| Product context packing | Two fixed local readers improved by 20 judged-correct answers each on the same 119 development questions when multi-path candidates used score ordering. | Custom local rubric, shared histories, one judge; second reader shares its model family. Not an independent test set or competitor result. |
+| Profile fidelity and publication | Complete qualified source excerpts, explicit inference/provenance, exact token budgets, atomic publication and complete scoped source scans. | Profiles are source collections; this does not prove semantic synthesis, exhaustive facts or automatic freshness. |
+| Storage and developer workflow | Full repository regression at `107f535`: 2,400 passed, 57 skipped. Installed Python 3.13 profile workflow also passed. | Tests establish their covered contracts, not answer quality or every deployment environment. |
+| Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
+| Competitor preparation | Pinned Mem0 source, matched BGE assets, recommended NLP and BM25 support, raw storage and metadata checks pass. | Compatibility preflight is not comparative accuracy. |
 
-### LoCoMo: 81.8% → 98% (need to fix ~25 of 27 failures)
+See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
+[recovery evidence](../benchmarks/results/recovery/2026-09-12/README.md),
+[entity profile guide](ENTITY-PROFILES.md), and
+[comparative protocol audit](../benchmarks/results/research/2026-09-12/COMPARATIVE-EVALUATION.md).
+These records preserve commit identities, raw-output hashes, failures and limits.
 
-| Root Cause | Count | Examples |
-|---|---|---|
-| **Fact buried in noise** | 8+ | "How many children?" — fact is incidental in a long turn |
-| **Similar-but-wrong event** | 5+ | Retrieves a *different* painting project |
-| **Entity fact not consolidated** | 5+ | "Where did Caroline move from?" — never extracted to fact |
-| **Temporal reasoning** | 3 | Imprecise date inference from conversation context |
-| **Inference across signals** | 1 | "Is Caroline religious?" — requires holistic synthesis |
+## Immediate decisions and their gates
 
-### The Core Problem
+1. **Complete the frozen packing confirmation.** The
+   [registered 381-question protocol](../benchmarks/results/packing/2026-09-12/confirmation-plan.json)
+   compares the selected ordering at 2K, 4K and 8K tokens. Require complete native
+   process exit, exact control reproduction, positive 4K evidence-recall change
+   with a positive lower confidence bound, and the declared budget/category
+   guards. Do not adjust the hypothesis after reading test results. Keep density
+   as the production default until the gate has been evaluated. A passing source
+   gate supports a configurable packing change; it does not by itself establish
+   answer-accuracy gains on the test partition.
+2. **Measure a matched external baseline.** The
+   [registered Mem0 development comparison](../benchmarks/results/research/2026-09-12/mem0-raw-dev-plan.json)
+   uses identical raw turns, BGE model assets, 100-result output limits and a
+   shared whole-turn token packer. All 119 development questions and failures
+   remain visible. This isolates raw retrieval; neither system extracts facts.
+   Preserve that distinction when adding later extraction and product-context
+   arms. Timing from separately run workloads cannot support a speed ratio.
+3. **Explain remaining failures before adding techniques.** Use completed results
+   to separate missing sources, lost qualifiers, insufficient context, incorrect
+   temporal or episode associations, arithmetic and task-completion errors.
+   Preserve ambiguous annotations and reader/judge disagreements. Improvements
+   must work beyond the examples used to discover them.
 
-The current architecture is **retrieve-and-present**: find relevant text chunks, stuff them into context, and hope the LLM generates the right answer. This hits a ceiling because:
+## Capability work still required
 
-1. **Raw content is noisy** — A 200-word conversation turn might contain one 10-word fact. Token budget fills with noise before critical facts surface.
-2. **Top-k can't do exhaustive queries** — "How many X?" requires ALL instances, not the best 10.
-3. **No temporal state tracking** — "What is X now?" requires finding the latest value, but retrieval scores by relevance, not recency.
-4. **No reconstruction** — Humans don't replay memories verbatim; they reconstruct from schemas + cues. We should too.
+| Gap | Next implementation/evaluation requirement |
+|---|---|
+| Named projects and domains | Enforce an explicit namespace through reads, writes, graph/index candidates, derivation, maintenance, receipts and migration on both backends. A metadata filter alone cannot prevent cross-project merges. Separate packs remain the supported workaround. Full grants and hierarchy require their own tests. |
+| Reliable compact semantic memory | Compare grounded extraction and source-backed summaries with raw-turn baselines under the same reader and token/cost conditions. Retain qualifiers, temporal boundaries, contradictions and provenance; compression ratio alone is insufficient. |
+| Profile maintenance recovery | Extend atomic publication with durable preparation/retry and cleanup of unpublished staged indexes. Do not describe an atomic commit as a durable organizer queue. |
+| Temporal and aggregate questions | Prove coverage of the queried set and distinguish episodes and reference clocks. Counting retrieved top-k items is not an exhaustive count; newest mention alone is not truth. Evaluate multi-session, updates and abstention together. |
+| Adaptive retrieval | Complete scoped profile activation and rollback only after replay evaluation from immutable feedback receipts. Global weight changes must not silently use one tenant's feedback for another. See RFC-0017. |
+| Developer experience | Keep installed-wheel sync/async examples runnable, ownership and scope explicit, failures actionable and retries bounded. Test first write, restart, retrieval, recovery and migration without repository-only imports. |
 
----
+The existing [namespace RFC](RFC-0004-Namespace-and-Scope-Isolation.md),
+[derivation RFC](RFC-0016-Durable-Derivation-Commits.md), and
+[learning RFC](RFC-0017-Scoped-Retrieval-Learning.md) describe constraints and
+proposals. Their draft requirements need implementation evidence; they do not
+replace the observed gaps above.
 
-## Research Theories
+## Evidence needed for a leadership claim
 
-### Theory 1: Memory Consolidation Pipeline (MCP)
+A credible claim must name the versions, tasks and resource constraints where
+PRME leads. Require independently reproducible runs against current, correctly
+configured alternatives, fixed ingestion/reader/judge conditions, more than one
+reader family, measured ingestion and retrieval costs, and held-out task data.
+Include updates, abstention, conflicting claims, multi-session reasoning and
+interactive task completion rather than relying on one static QA total.
 
-**Inspiration**: Hippocampal replay during sleep — the brain consolidates episodic memories into semantic knowledge through repeated reactivation.
-
-**Proposal**: Multi-level memory hierarchy with automatic consolidation:
-
-```
-Level 0: Raw Events (append-only log)
-    ↓ [extraction]
-Level 1: Session Distillation (every fact/preference/decision per session)
-    ↓ [entity consolidation]  
-Level 2: Entity Knowledge Cards (structured, always-current view per entity)
-    ↓ [schema abstraction]
-Level 3: User Schema (habits, routines, relationships, compact profile)
-```
-
-**How it helps**:
-- Aggregation queries hit Level 2: "How many cuisines?" → count entity→cuisine edges
-- Knowledge update queries hit Level 2: entity card always has the LATEST value
-- Single-hop queries hit Level 2: "How many children does Melanie have?" → `Melanie.children.count = 3`
-- Multi-hop queries combine Level 2 cards: "What inspired Caroline's painting for the art show?" → look up `Caroline.art_show_painting.inspiration`
-
-**Key innovation**: Level 2 Knowledge Cards are **living documents** — every new event that mentions an entity triggers a card update. The card is never stale.
-
-**Expected impact**: Fixes knowledge_update (6), aggregation (10), single_hop buried-fact (8) = ~24 failures across both benchmarks.
-
-### Theory 2: Reconstructive Retrieval
-
-**Inspiration**: Bartlett's Schema Theory — human memory is reconstructive, not reproductive. We don't replay; we rebuild from schemas + cues + semantic knowledge.
-
-**Proposal**: Replace retrieve-and-present with a multi-phase reconstruction:
-
-```
-Phase 1: Query Analysis → What answer SHAPE do I need?
-    - count → need exhaustive list + counting
-    - entity attribute → need entity card lookup
-    - temporal → need timeline + date arithmetic
-    - comparison → need two entities' attributes
-    
-Phase 2: Schema Activation → What knowledge structure fits?
-    - Activate the right retrieval strategy per shape
-    
-Phase 3: Cue Retrieval → Get DISTILLED cues, not raw text
-    - Retrieve from Level 2 (entity cards) first
-    - Only drill to Level 0 (raw events) for detail/verification
-    
-Phase 4: Reconstruction → Build the answer from cues + schema
-    - LLM reconstructs with structured cues, not raw context
-    
-Phase 5: Verification → Spot-check against raw events
-    - For high-stakes answers, verify key facts against source events
-```
-
-**How it helps**:
-- Aggregation: Schema says "count" → do exhaustive entity query, not top-k text search
-- Knowledge updates: Schema says "current state" → look up entity card, not search events
-- Multi-hop: Schema says "chain" → traverse entity graph, not text similarity
-
-**Expected impact**: Fundamentally changes the retrieval→generation interface from "here's text, figure it out" to "here's structured knowledge, reconstruct the answer."
-
-### Theory 3: Exhaustive Retrieval for Aggregation Queries
-
-**The problem**: "How many cuisines have I tried?" with top-k retrieval might find 3 of 4 cuisine mentions. The system confidently answers "3" when the answer is "4". Worse, it might retrieve adjacent events and hallucinate "5".
-
-**Proposal**: When query intent = AGGREGATION:
-1. Extract the aggregation target entity/type ("cuisines", "properties viewed", "workshops attended")
-2. Do a graph traversal: find ALL nodes connected to the target via relevant edges
-3. Return the complete set to the LLM, not a relevance-ranked subset
-4. Use Level 2 entity cards which already have pre-aggregated counts
-
-**Key insight**: Aggregation queries don't need the "best" results; they need ALL results. This is a fundamentally different retrieval mode.
-
-### Theory 4: Temporal State Machine
-
-**The problem**: "Where does Rachel live now?" requires finding the LATEST mention of Rachel's location, not the highest-scoring one. If Rachel moved 3 times, the system might return the most semantically similar mention (the one with the best embedding match), which could be any of the three.
-
-**Proposal**: For each entity attribute that changes over time, maintain a **state timeline**:
-```
-Rachel.location: [
-    {value: "New York", valid_from: 2023-01-01, valid_to: 2023-06-15},
-    {value: "Chicago", valid_from: 2023-06-15, valid_to: 2023-09-01},
-    {value: "suburbs", valid_from: 2023-09-01, valid_to: null},  ← CURRENT
-]
-```
-
-Queries about "current" state simply look up `valid_to = null`. No retrieval needed.
-
-**Key insight**: This already exists partially in the graph store (valid_from/valid_to on edges). But it's not being leveraged for retrieval. The retrieval pipeline should check entity state timelines BEFORE doing embedding search.
-
-### Theory 5: Context Compression via Fact Distillation
-
-**The problem**: A 200-word conversation turn like "Hey, I went to the store today and picked up some groceries. Oh, I also redeemed that $5 coupon on coffee creamer at Target. The cashier was so nice..." contains one retrievable fact: "Redeemed $5 coupon on coffee creamer at Target."
-
-**Proposal**: At ingestion time, extract facts into compressed form:
-- Raw: 200 words → Distilled: 10 words per fact
-- Store both, but retrieve distilled facts by default
-- This means a 4000-token budget fits ~400 facts instead of ~20 raw events
-- 20x more knowledge per token
-
-**How it helps**:
-- single_hop "Where did Caroline move from?" → "Caroline moved from Sweden" is retrievable
-- Context packing: 400 facts > 20 raw events for information density
-- Aggregation: scan 400 distilled facts for all cuisine mentions in one pass
-
-### Theory 6: Contrastive Memory Encoding
-
-**The problem**: "tennis" and "table tennis" have embedding similarity ~0.85. The system can't distinguish them via vector search. Similarly, "vintage cameras" vs "vintage films", "San Francisco" vs "Sacramento".
-
-**Proposal**: Store contrastive features alongside each fact:
-- When a new fact is similar to an existing one (cosine > 0.8), compute and store what DISTINGUISHES them
-- At retrieval time, verify the retrieved fact matches the query's distinguishing features
-- This is "elaborative encoding" from cognitive psychology
-
----
-
-## Implementation Roadmap
-
-### Phase A: Memory Consolidation (highest impact)
-1. Enhance ingestion to always extract distilled facts (not just when organizer runs)
-2. Build Entity Knowledge Cards (Level 2) — auto-updating structured summaries
-3. Build aggregation indexes on entity cards
-
-### Phase B: Reconstructive Retrieval
-4. Implement answer-shape classification in query analysis
-5. Build schema-driven retrieval strategies (entity lookup, graph traversal, timeline query)
-6. Replace context-stuffing with structured cue packing
-
-### Phase C: Temporal State Machine  
-7. Implement entity attribute timelines with valid_from/valid_to
-8. Add "current state" fast-path in retrieval for knowledge-update queries
-
-### Phase D: Context Compression
-9. Dual storage: raw events + distilled facts with cross-references
-10. Fact-first context packing (facts fill budget before raw events)
-
-### Phase E: Contrastive Encoding
-11. Near-duplicate detection at ingestion
-12. Contrastive feature storage and verification at retrieval
-
----
-
-## Success Criteria
-
-- LME ≥ 98% (470 queries, gpt-5-mini)
-- LoCoMo ≥ 98% (152 queries, gpt-5-mini)  
-- No regression on synthetic benchmarks
-- Retrieval latency < 500ms p95
+Publish failure coverage and category regressions beside aggregate changes.
+Pin datasets, model assets, code/configuration and token accounting. Keep raw
+source and extraction costs visible, distinguish public product behavior from
+adapter-added behavior, and make comparisons runnable from an installed package.
+The current local studies advance that evidence; they do not establish that PRME
+is the best memory system available.

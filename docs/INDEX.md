@@ -21,6 +21,12 @@ This index covers the complete Revised Relational Memory Substrate (RMS) RFC sui
 
 ---
 
+## Current implementation evidence
+
+The [research agenda](RESEARCH-AGENDA.md) tracks verified results, active
+comparison protocols and remaining capability gaps. RFC status and historical
+benchmark targets are not evidence of current product quality.
+
 ## RFC Listing
 
 ### Tier 0 — Foundation
