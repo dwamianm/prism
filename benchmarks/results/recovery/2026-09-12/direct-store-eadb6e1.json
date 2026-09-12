@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "python": "3.13.3",
+  "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/engine.py",
+  "engine_sha256": "c843019f2b252fda120cafd5fc1b8105b176a6116cc3a98be6327f162ef67e63",
+  "dependencies": {
+    "prme": "0.11.0",
+    "duckdb": "1.5.5",
+    "tantivy": "0.26.0",
+    "usearch": "2.26.2",
+    "fastembed": "0.8.0",
+    "onnxruntime": "1.30.0"
+  },
+  "checks": [
+    "public synchronous store retains pending indexing",
+    "graph failure exposes saved event ID",
+    "restart repairs both requests with real default embeddings",
+    "foreign user cannot drain requests",
+    "original typed fields preserved",
+    "retrieval finds repaired instruction",
+    "no LLM extraction invoked"
+  ],
+  "limits": "Two synthetic recovery workflows with injected storage faults. Not an accuracy or latency benchmark.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0,
+  "production_commit": "eadb6e1",
+  "diagnostic_sha256": "d5e4235deda8f09574772cb152c3d3d6d88f76e4ba029e1952e5da3f0356a284"
+}

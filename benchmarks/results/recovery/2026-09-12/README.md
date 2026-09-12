@@ -419,3 +419,61 @@ real OpenAI SDK exception types and a stalled async provider through public
 ingestion; they do not contact the remote provider. Retry limits and scheduling
 remain unchanged. Previously saved failure codes are not reclassified. These are
 recovery/DX checks, not memory-accuracy evidence.
+
+
+## Direct typed stores and synchronous API controls
+
+At `d9c6392`, `store()` atomically saves its event, complete initial typed node
+and a materialization job. A graph creation failure exposes the accepted source
+ID through `MaterializationError`; an index outage leaves a durable pending job.
+Public scoped processing repairs the request after restart without LLM extraction.
+Existing IDs, classification, confidence, timestamps and retention settings are
+preserved. Existing retired nodes remain retired. Tantivy replacement commits
+its delete/add together; vector replacement publishes a new durable generation
+before removing the old one, so a failed retry retains healthy search results.
+
+Validation at this storage commit:
+
+- **116 passed, 8 skipped** in the cross-backend recovery/index subset (23.07s).
+- **1,901 passed, 45 skipped** in the full Python 3.11 suite with live PostgreSQL
+  (240.59s). The implementation was pinned to the detached `d9c6392` worktree;
+  tests ran from the unchanged repository at the same commit.
+- **91 passed, 8 skipped** in the Python 3.13 installed-wheel recovery subset
+  (22.51s). Abrupt-exit subprocess tests deliberately import the corresponding
+  frozen checkout's source; the parent tests exercise the installed package.
+
+Real process exits cover source/request commit, graph creation, lexical commit,
+vector save and completion acknowledgement on both backends. Native Tantivy
+add/commit faults, native vector insertion failure, alternating index outages,
+concurrent vector replacement, a corrupted request checksum, tenant boundaries
+and rollback after operation-ID collision are also covered. PostgreSQL lexical
+publication is already durable with its graph row; its exit hook is the lexical
+index call, rather than a nonexistent Tantivy-style flush.
+
+`eadb6e1` then adds `epistemic_type`, `source_type` and `ttl_days` to
+`MemoryClient.store()`, with the async engine's existing semantics. It exports the
+two classification enums from `prme`. The client suite passed **25 checks**,
+including restart recovery for configured TTL, explicit TTL and no expiry.
+The final installed Python 3.13 wheel passed **58 checks with 3 skips** (9.30s),
+covering the client and direct-store recovery suites with live PostgreSQL.
+The full suite was not rerun for these additive forwarding/export changes.
+
+[The supervised installed-wheel workflow](direct-store-eadb6e1.json) uses real
+BAAI/bge-small-en-v1.5 embeddings through FastEmbed. Two synthetic requests survive
+an indexing outage and a graph creation outage; scoped synchronous processing
+repairs both after reopening the pack and retrieval finds the instruction.
+Explicit classification and TTL survive recovery. LLM extraction is replaced
+with a function that fails if called. The supervisor records success only after
+normal child exit, including native-library shutdown. Reproduce with:
+
+```sh
+python -m benchmarks.diagnostics.direct_store_recovery --output /tmp/direct-store.json
+```
+
+These checks establish specific recovery and API behavior, not extraction
+accuracy, comparative leadership, latency or filesystem power-loss guarantees.
+Direct-store completion excludes optional reinforcement, supersedence and QA
+pairing; it is not a fenced multi-worker derivation commit. Historical direct
+stores without these records are not retroactively queued, and full organizer
+and manual-operation replay remains unfinished. Index durability adds synchronous
+commit work; this run does not isolate its latency cost.
