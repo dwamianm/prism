@@ -137,6 +137,11 @@ Unknown failures retain bounded class names; exception chains are cycle-safe and
 bounded. Provider messages and response bodies are not recorded. Public blocking
 ingestion exposes the sanitized reason_code alongside its persisted event_id.
 The same code survives restart in extraction status on either backend.
+Deferred raw-materialization failures and serialized write-job failures also log
+bounded categories instead of exception messages or tracebacks. A failed job's
+original exception still reaches its caller; formatting a provider exception is
+not required for the queue to continue processing healthy jobs. This is scoped
+to those failure paths, not a claim that all application logging is sanitized.
 
 Claims increment a persistent generation and attempt count. Heartbeats renew
 live leases, while extraction journaling, plan binding and graph publication

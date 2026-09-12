@@ -1286,3 +1286,18 @@ passed. This does not claim PostgreSQL and Tantivy have identical query semantic
 Installed `5a77fd5` Python 3.13 verification passed all 39 lexical and transport
 checks in 3.83s with native exit zero. The [installed report](pg-lexical-limit-installed-5a77fd5.json)
 pins the wheel and log hashes; production imports were verified in `site-packages`.
+
+## Pending-work failure logging
+
+An authored provider failure reproduced a disclosure through raw-materialization
+warning tracebacks on both backends, despite sanitized persisted status. The
+serialized DuckDB write queue also formatted provider exception messages.
+Both paths now report the event/job identity and bounded failure category.
+They do not format exception messages or attach tracebacks. Original job
+exceptions still propagate to callers; a provider exception whose `__str__`
+raises no longer prevents the queue from accepting the next healthy job.
+
+The two backend regressions failed before the change. Recovery, failure-category
+and concurrency verification passed 30 tests with three expected backend-specific
+skips in 9.55s, using live PostgreSQL. Ruff passed. This covers these logging
+paths only; it does not establish package-wide log sanitization.

@@ -73,10 +73,9 @@ class DurableMaterializationQueue:
                 except Exception as exc:
                     # Retain only exception type, not provider responses which
                     # could contain secrets or source content.
-                    await self._store.finish_materialization(
-                        str(event.id), error=extraction_failure_code(exc),
-                    )
-                    logger.warning("Materialization failed for %s", event.id, exc_info=True)
+                    reason = extraction_failure_code(exc)
+                    await self._store.finish_materialization(str(event.id), error=reason)
+                    logger.warning("Materialization failed for %s (%s)", event.id, reason)
                 else:
                     await self._store.finish_materialization(str(event.id))
                     completed += 1

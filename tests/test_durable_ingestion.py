@@ -28,7 +28,7 @@ class MockEmbeddingProvider:
         ]
 
 
-async def test_public_processing_status_survives_retry_and_restart(config, user, monkeypatch):
+async def test_public_processing_status_survives_retry_and_restart(config, user, monkeypatch, caplog, capsys):
     async with MemoryEngine.open(config) as engine:
         event_id = await engine.ingest_fast("The telescope is blue", user_id=user)
         foreign = await engine.ingest_fast("Other user's note", user_id=user + "-other")
@@ -45,6 +45,11 @@ async def test_public_processing_status_survives_retry_and_restart(config, user,
         status = await engine.processing_status(event_id, user_id=user)
         assert status.last_error == "RuntimeError" and status.attempts == 1
         assert "private provider" not in status.model_dump_json()
+        assert "private provider" not in caplog.text
+        output = capsys.readouterr()
+        assert "private provider" not in output.out + output.err
+        assert any(event_id in record.getMessage() and "RuntimeError" in record.getMessage()
+                   for record in caplog.records)
 
     async with MemoryEngine.open(config) as engine:
         status = await engine.processing_status(event_id, user_id=user)

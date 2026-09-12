@@ -17,6 +17,8 @@ from typing import Any, Callable, Coroutine
 
 import structlog
 
+from prme.ingestion.errors import extraction_failure_code
+
 logger = structlog.get_logger(__name__)
 
 
@@ -122,7 +124,7 @@ class WriteQueue:
                 logger.error(
                     "write_queue.job_failed",
                     label=job.label,
-                    error=str(exc),
+                    error_type=extraction_failure_code(exc),
                 )
                 if not job.future.done():
                     job.future.set_exception(exc)
