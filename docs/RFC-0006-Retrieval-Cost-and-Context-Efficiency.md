@@ -26,6 +26,14 @@ or exclusion, including for pins. No always-include rule can exceed the budget.
 The separate LLM formatter enforces the same whole-output rule when a budget
 is supplied and supports a caller-provided tokenizer counter.
 
+Aware timestamps are rendered in UTC before token counting or date-relative
+annotations. Equivalent instants must produce identical context and token costs
+regardless of their returned timezone offset. Local engine connections select
+UTC explicitly: DuckDB otherwise uses the host timezone for TIMESTAMPTZ output
+([timestamp semantics](https://duckdb.org/docs/current/sql/data_types/timestamp)).
+This changes presentation, not the stored instant. Legacy naive in-memory dates
+remain nominal; formatting must not silently attach the host timezone to them.
+
 ---
 
 ## 2. The Signal-to-Token Ratio (STR)

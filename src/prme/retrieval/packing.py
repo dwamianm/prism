@@ -17,6 +17,7 @@ import json
 from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
 from prme.retrieval.models import MemoryBundle, RetrievalCandidate
 from prme.retrieval.tokenization import count_tokens
+from prme.retrieval.time import as_utc
 from prme.types import LifecycleState, NodeType, RepresentationLevel
 
 
@@ -302,9 +303,9 @@ def _render_entry(candidate: RetrievalCandidate) -> str:
         "id": str(node.id), "type": node.node_type.value, "scope": node.scope.value,
         "epistemic": node.epistemic_type.value, "memory_lifecycle": node.lifecycle_state.value,
         "representation": candidate.representation.value,
-        "event_time": node.event_time.isoformat() if node.event_time else None,
-        "valid_from": node.valid_from.isoformat(),
-        "valid_to": node.valid_to.isoformat() if node.valid_to else None,
+        "event_time": as_utc(node.event_time).isoformat() if node.event_time else None,
+        "valid_from": as_utc(node.valid_from).isoformat(),
+        "valid_to": as_utc(node.valid_to).isoformat() if node.valid_to else None,
         "text": candidate.rendered_text,
     }
     return json.dumps(entry, ensure_ascii=False, separators=(",", ":"))

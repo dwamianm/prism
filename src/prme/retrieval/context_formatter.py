@@ -43,6 +43,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from prme.retrieval.packing import estimate_token_cost
+from prme.retrieval.time import as_utc
 
 if TYPE_CHECKING:
     from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
@@ -301,10 +302,10 @@ def format_days_ago(event_dt: datetime, question_dt: datetime) -> str:
     """Format the time difference between *event_dt* and *question_dt*.
 
     Returns a human-readable string like ``~2 weeks ago (14 days)``.
-    Uses date-level comparison to avoid same-day time-of-day artifacts.
+    Uses UTC date-level comparison to avoid host-offset and time-of-day artifacts.
     """
     # Compare dates, not datetimes, to avoid intra-day sign flips
-    diff = (question_dt.date() - event_dt.date()).days
+    diff = (as_utc(question_dt).date() - as_utc(event_dt).date()).days
     if diff < 0:
         return f"in {-diff} days"
     if diff == 0:
@@ -601,7 +602,8 @@ def format_for_llm(
         query_analysis: Optional QueryAnalysis for intent-aware formatting.
         question_date: Reference date for temporal computations (e.g.
             "today" in the conversation). If ``None``, date-relative
-            annotations are skipped.
+            annotations are skipped. Aware dates are rendered in UTC, matching
+            stored event timestamps rather than the host's local timezone.
         context_hint: Override auto-detection with an explicit context type.
             One of ``"temporal"``, ``"knowledge_update"``, ``"default"``.
         max_results: Maximum number of results to include.
@@ -622,6 +624,8 @@ def format_for_llm(
     """
     # Operate on a private copy. The format variants sort and dedup in place,
     # so we must never mutate the caller's list (callers reuse ``response``).
+    if question_date is not None:
+        question_date = as_utc(question_date)
     display = list(results[:max_results])
     if token_budget is not None:
         if token_budget < 0:
@@ -702,7 +706,7 @@ def format_for_llm(
 
 def _get_event_dt(candidate) -> datetime:
     """Extract the best available datetime from a candidate."""
-    return candidate.node.event_time or candidate.node.created_at
+    return as_utc(candidate.node.event_time or candidate.node.created_at)
 
 
 def _select_entries(

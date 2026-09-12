@@ -271,6 +271,9 @@ class MemoryEngine:
             # Open DuckDB connection
             conn = duckdb.connect(config.db_path)
             startup.callback(conn.close)
+            # TIMESTAMPTZ preserves instants but DuckDB presents them in the
+            # host timezone by default. A portable pack uses canonical UTC.
+            conn.execute("SET TimeZone = 'UTC'")
 
             # Initialize schema (tables, indexes, DuckPGQ attempt)
             initialize_database(conn)
