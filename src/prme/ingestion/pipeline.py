@@ -107,6 +107,8 @@ class IngestionPipeline:
         self._supersedence_detector = SupersedenceDetector(graph_store, graph_writer) if graph_writer else SupersedenceDetector(graph_store, WriteQueueGraphWriter(graph_store, write_queue))
         self._retry_tasks: dict[str, asyncio.Task] = {}
         self._background_tasks: set[asyncio.Task] = set()
+        self._retry_delays = (5, 30, 180)
+        self._closing = False
 
     async def ingest(
         self,
@@ -222,7 +224,8 @@ class IngestionPipeline:
         return event_ids
 
     async def _extract_and_materialize(
-        self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL
+        self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL,
+        *, retry_attempt: int = 0,
     ) -> None:
         """Run LLM extraction, validate grounding, and materialize results.
 
@@ -256,7 +259,7 @@ class IngestionPipeline:
                 event_id=event_id,
                 exc_info=True,
             )
-            self._schedule_retry(event, event_id, scope=scope)
+            self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
 
     async def _materialize(
         self,
@@ -553,7 +556,9 @@ class IngestionPipeline:
             attempt: Current attempt number (1-based).
             scope: Ingestion-level scope to forward on retry.
         """
-        if attempt > 3:
+        if self._closing:
+            return
+        if attempt > len(self._retry_delays):
             logger.error(
                 "ingestion.max_retries_exceeded",
                 event_id=event_id,
@@ -561,7 +566,7 @@ class IngestionPipeline:
             )
             return
 
-        delay = 5 * (6 ** (attempt - 1))
+        delay = self._retry_delays[attempt - 1]
         logger.warning(
             "ingestion.retry_scheduled",
             event_id=event_id,
@@ -571,19 +576,16 @@ class IngestionPipeline:
 
         async def _retry() -> None:
             await asyncio.sleep(delay)
-            try:
-                await self._extract_and_materialize(event, event_id, scope)
-            except Exception:
-                logger.error(
-                    "ingestion.retry_failed",
-                    event_id=event_id,
-                    attempt=attempt,
-                    exc_info=True,
-                )
-                self._schedule_retry(event, event_id, attempt + 1, scope=scope)
+            await self._extract_and_materialize(event, event_id, scope, retry_attempt=attempt)
 
         task = asyncio.create_task(_retry())
         self._retry_tasks[event_id] = task
+
+        def discard(completed: asyncio.Task) -> None:
+            if self._retry_tasks.get(event_id) is completed:
+                self._retry_tasks.pop(event_id, None)
+
+        task.add_done_callback(discard)
 
     async def shutdown(self, drain_timeout: float = 10.0) -> None:
         """Drain pending background tasks then shut down.
@@ -597,6 +599,9 @@ class IngestionPipeline:
         Args:
             drain_timeout: Maximum seconds to wait for background tasks.
         """
+        # Background tasks can fail while draining; prevent them from
+        # scheduling new retries after this cancellation pass.
+        self._closing = True
         # Cancel retry tasks immediately (long sleeps, not worth draining)
         for task in self._retry_tasks.values():
             task.cancel()

@@ -84,6 +84,12 @@ async def ingest_batch(
 
 ## ingest_fast()
 
+The LLM `ingest()` path retries extraction failures at 5, 30, and 180 seconds,
+then stops. Those retries are in-process and are cancelled at shutdown; they
+are not yet restart-safe. The original source event remains durable. Use the
+deferred raw path below when you require restart-safe indexing without LLM
+extraction.
+
 The fast path commits the event and its pending work atomically, without embedding or LLM calls. Retrieval or organization materializes a raw NOTE with the original event ID, provenance, and timestamps. Pending work survives restart; the configured queue size bounds each batch rather than dropping events. Use `ingest()` when you need LLM extraction. Latency depends on the database commit.
 
 ```python
