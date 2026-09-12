@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Report the package version consistently in REST metadata and MCP resources.
 - Enforce node ownership for engine operations that accept node IDs.
 - Reapply scope, bi-temporal, and epistemic filters after late retrieval stages.
 - Serialize organizer SQL through the shared DuckDB connection lock.

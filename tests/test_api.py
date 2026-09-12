@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from prme import __version__
 from prme.api.app import create_app
 from prme.config import APIConfig, PRMEConfig
 
@@ -62,7 +63,7 @@ class TestHealth:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert "version" in data
+        assert data["version"] == __version__
 
     def test_stats_returns_counts(self, client):
         resp = client.get("/v1/stats")

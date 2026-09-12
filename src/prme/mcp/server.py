@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
 
+from prme import __version__
 from prme.config import PRMEConfig
 from prme.types import NodeType, Scope
 
@@ -405,7 +406,7 @@ async def memory_archive_node(
 @mcp.resource("memory://health")
 async def resource_health() -> str:
     """PRME engine health status."""
-    return json.dumps({"status": "ok", "version": "0.4.0"})
+    return json.dumps({"status": "ok", "version": __version__})
 
 
 @mcp.resource("memory://stats")
@@ -430,7 +431,7 @@ async def resource_stats() -> str:
     return json.dumps({
         "node_count": node_count,
         "backend": backend,
-        "version": "0.4.0",
+        "version": __version__,
     })
 
 

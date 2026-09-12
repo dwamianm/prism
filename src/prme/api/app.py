@@ -15,6 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from prme import __version__
 from prme.config import PRMEConfig
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ def create_app(config: PRMEConfig | None = None) -> FastAPI:
     app = FastAPI(
         title="PRME API",
         description="Portable Relational Memory Engine — HTTP API",
-        version="0.3.0",
+        version=__version__,
         lifespan=lifespan,
     )
 

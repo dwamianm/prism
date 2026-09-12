@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from prme import __version__
 from prme.api.models import (
     ErrorResponse,
     HealthResponse,
@@ -480,7 +481,7 @@ async def get_chain(
 )
 async def health(request: Request) -> HealthResponse:
     """Health check endpoint."""
-    return HealthResponse(status="ok", version="0.3.0")
+    return HealthResponse(status="ok", version=__version__)
 
 
 @router.get(

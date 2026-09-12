@@ -10,6 +10,8 @@ import json
 
 import pytest
 
+from prme import __version__
+
 from mcp.shared.memory import create_connected_server_and_client_session
 
 
@@ -282,7 +284,7 @@ class TestResources:
         result = await session.read_resource(AnyUrl("memory://health"))
         data = json.loads(result.contents[0].text)
         assert data["status"] == "ok"
-        assert data["version"] == "0.4.0"
+        assert data["version"] == __version__
 
     async def test_stats_resource(self, session):
         from pydantic import AnyUrl
