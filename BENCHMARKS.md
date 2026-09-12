@@ -154,3 +154,22 @@ Tracked in [#64](https://github.com/dwamianm/prism/issues/64):
 
 Scope isolation, temporal eligibility, provenance, and deterministic exact
 retrieval remain correctness gates regardless of answer-score improvements.
+
+
+## Precision and causal simulation diagnostics
+
+The [PrecisionMemBench report](benchmarks/results/precision/2026-09-12/README.md)
+preserves failures and discloses fixture-supplied behavior. Candidate recall alone
+misses irrelevant-memory pollution. Score-floor sweeps on this small synthetic
+suite are development calibration, not held-out validation or vendor comparisons.
+
+Run all causal simulation checks, retaining failures, with:
+
+```sh
+uv run --no-sync python -m scripts.run_simulations --output /tmp/prme-simulations.json
+```
+
+Use repeatable `--scenario NAME` to narrow diagnosis. Every selected checkpoint
+must pass for exit status zero; incomplete/empty runs and scenario errors fail.
+The previous 80% success threshold has been removed. These keyword/ranking tests
+are regression diagnostics and do not establish semantic answer accuracy.

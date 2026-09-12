@@ -42,7 +42,7 @@ Delivered and tested:
 
 - Durable raw ingestion work survives restart/process exit, partial indexing,
   bounded queues and scoped drains. Async/sync processing status and retries
-  expose durable attempts/errors. This currently covers ingest_fast() only.
+  expose durable attempts/errors. This covers ingest_fast() and raw source indexing after LLM ingestion; LLM derivation replay remains separate.
 - Retrieval has an explicit replayable reference time. Query-date interpretation
   is separated from caller validity filters; episode recency and relevance floors
   are consistent. Historical, aggregation, and duration questions preserve older
@@ -72,12 +72,28 @@ Delivered and tested:
   scope boundaries, group by UTC episode time, and remain INFERRED. New summaries
   are indexed; failures remove partial artifacts and preserve original sources.
 
-Validation: frozen 68e443d passed 1,459 tests / 12 skips with live PostgreSQL.
-The subsequent causal simulation timeline regression passed; contradiction
-transaction tests passed 42 checks / 1 backend-specific skip. A built wheel
-installed cleanly on Python 3.13.3 and passed real local embedding, restart
-recovery, processing status, scoped retrieval and close. Installed-wheel positive
-and negative static consumer checks passed with mypy 1.19.1.
+- Contradiction creation/resolution commits state, edges and audit records
+  atomically on both backends. Contested nodes remain visible through every
+  active graph read and actual hybrid retrieval.
+- HTTP per-user bearer keys and MCP per-user HTTP / fixed-user stdio identities
+  bind every read, write and resource. Request-triggered maintenance uses tenant
+  scope, separate cooldowns and a cooperative budget. Global feedback tuning
+  remains operator-only; database RLS is not implemented.
+- Public event reads and exact event-to-node resolution preserve original source
+  access and concurrent store receipts. LLM failures preserve durable raw source
+  indexing; relative dates use the source clock, and immutable event reads retain
+  their original timestamps.
+- Explicit score floors/count limits apply before packing, expose exclusion
+  reasons, and permit empty results. HTTP filters, mode and limit now work;
+  unsupported/misspelled filter keys fail validation. Defaults are unchanged
+  pending semantic relevance calibration.
+
+Validation: frozen f0ec234 passed 1,519 tests / 12 skips with live PostgreSQL.
+Selection and API controls passed 90 targeted checks; the subsequent frozen full
+suite is running. A built wheel installed cleanly on Python 3.13.3 and passed
+real local embedding, restart recovery, processing status, scoped retrieval and
+close. Installed-wheel static consumer checks passed with mypy 1.19.1; a fresh
+wheel covering subsequent server/source/selection changes remains to be tested.
 
 Measurement: full LongMemEval S histories, fixed 119-question development split,
 neutral source IDs, evidence recall/MRR/nDCG, actual whole-turn token budgets,
@@ -102,8 +118,8 @@ and rewrote immutable event timestamps to simulate aging. It now ingests message
 at their causal arrival time, retrieves with an explicit clock, scopes organizer
 runs, and isolates/cleans temporary packs. The corrected suite passes 71/74 checks;
 remaining failures concern API-decision relevance, current database state, and
-CEO replacement ordering. The script's legacy 80% exit threshold is not a claim
-that these scenarios all pass.
+CEO replacement ordering. The legacy 80% success threshold has been removed: every checkpoint must pass,
+errors fail the run, and JSON preserves the complete results.
 
 Remote extraction: updated project credentials now authenticate, but the provider
 returns credit_balance_exhausted / insufficient_quota. Local Ollama qwen3.5:4b
@@ -115,9 +131,16 @@ claim follows from these diagnostics.
 
 Still open: crash-resumable LLM derivation jobs, complete event/operation replay,
 contextual extraction and semantic entailment, complete semantic aggregation,
-bounded faithful semantic compression, persistent outcome feedback, identity-bound
-shared APIs, held-out comparisons and longitudinal agent outcomes. Atomic graph
+bounded faithful semantic compression, persistent outcome feedback, database-enforced
+shared isolation, held-out comparisons and longitudinal agent outcomes. Atomic graph
 replacement is not a complete ingestion transaction or durable derivation log.
+
+The unmodified external PrecisionMemBench adapter exposed excessive irrelevant
+results: baseline single-turn 11/77 assertions passed (zero active retrieval
+passes), precision 0.0653, recall 0.9884; session 0/12 passed. A development score
+floor sweep shows a strong precision/recall tradeoff, not a justified universal
+threshold. Reports and adapter caveats are retained under benchmarks/results/
+precision/2026-09-12/. Learned relevance models are being investigated separately.
 
 ## Limits on claims
 

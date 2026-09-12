@@ -16,7 +16,7 @@ processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
 atomic replacement commits; and working project `.env` configuration. A fresh
 Python 3.13 wheel passed restart recovery and scoped retrieval. The latest
-completed frozen full suite passed 1,459 tests with 12 skips and live PostgreSQL.
+completed frozen full suite passed 1,519 tests with 12 skips and live PostgreSQL.
 
 Four full-history development evaluations exposed and repaired a recency
 heuristic regression. The final development profile reaches 91.96% support recall
@@ -27,7 +27,15 @@ repairs removed future-message leakage and event timestamp rewriting; 71 of 74
 checks pass, with three retrieval-quality failures still open. No current-release superiority
 claim is supported yet. Next gates remain complete reproducible held-out evidence,
 semantic extraction quality, durable LLM derivations/replay, complete aggregation,
-identity-bound APIs, and actual agent/developer outcomes.
+database-enforced isolation, and actual agent/developer outcomes.
+
+Local branch implementation now also includes per-user HTTP/MCP identities,
+scoped request maintenance, atomic contradiction operations, original event
+reads and precise derivation lookup. Explicit score/count selection works across
+the engine and clients; HTTP filter/mode/limit parameters are no longer ignored.
+PrecisionMemBench exposed excessive irrelevant candidates (11/77 single-turn
+assertions and 0/12 session assertions passed); application-calibrated selection
+is available, while a reliable default acceptance policy remains a quality gap.
 
 ## First delivery
 
@@ -74,7 +82,7 @@ A subsequent CI run exposed an intermittent post-close lexical directory cleanup
 
 PR #69 subsequently merged and closed #66 after all eight CI checks passed, including live PostgreSQL on Python 3.11–3.13. Its first CI attempt hit the intermittent cleanup race recorded in #71; the affected job passed on retry.
 
-Issue #35 remains open: engine ownership checks landed, but identity binding did not. Issue #67's original claim of no PostgreSQL CI job is stale: the job exists, and its branch triggers and test dependency setup were repaired in #69.
+Issue #35 remains open on GitHub; identity binding is implemented and tested on the current local branch, pending delivery. Issue #67's original claim of no PostgreSQL CI job is stale: the job exists, and its branch triggers and test dependency setup were repaired in #69.
 
 ## Release gates
 
