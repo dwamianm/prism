@@ -46,7 +46,10 @@ def store(
     scope: Scope = Scope.PERSONAL,
     metadata: dict | None = None,
     confidence: float | None = None,
+    epistemic_type: EpistemicType | None = None,
+    source_type: SourceType | None = None,
     event_time: datetime | None = None,
+    ttl_days: int | None = ...,
 ) -> str  # returns event UUID
 ```
 
@@ -63,6 +66,9 @@ def store(
 | `metadata` | `dict \| None` | `None` | Arbitrary key-value metadata |
 | `confidence` | `float \| None` | `None` | Override initial confidence (0.0-1.0) |
 | `event_time` | `datetime \| None` | `None` | When the event occurred (default: now) |
+| `epistemic_type` | `EpistemicType \| None` | `None` | Override inferred assertion status |
+| `source_type` | `SourceType \| None` | `None` | Override inferred source provenance |
+| `ttl_days` | `int \| None` | `...` | Omit for configured default; `None` disables expiry; an integer sets days |
 
 **Returns:** Event UUID as a string.
 

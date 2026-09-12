@@ -31,7 +31,7 @@ from prme.config import PRMEConfig
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
-from prme.types import LifecycleState, NodeType, RetrievalMode, Scope
+from prme.types import EpistemicType, LifecycleState, NodeType, RetrievalMode, Scope, SourceType
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
 from prme.retrieval.models import RetrievalResponse
@@ -179,9 +179,16 @@ class MemoryClient:
         scope: Scope = Scope.PERSONAL,
         metadata: dict | None = None,
         confidence: float | None = None,
+        epistemic_type: EpistemicType | None = None,
+        source_type: SourceType | None = None,
         event_time: datetime | None = None,
+        ttl_days: int | None = ...,
     ) -> str:
-        """Store a memory. Returns the event UUID."""
+        """Store a memory. Returns the event UUID.
+
+        Classification overrides and TTL match the async engine. Omit ttl_days
+        to use the configured per-type default, or pass None for no expiry.
+        """
         return self._run(
             self._engine.store(
                 content,
@@ -192,7 +199,10 @@ class MemoryClient:
                 scope=scope,
                 metadata=metadata,
                 confidence=confidence,
+                epistemic_type=epistemic_type,
+                source_type=source_type,
                 event_time=event_time,
+                ttl_days=ttl_days,
             )
         )
 

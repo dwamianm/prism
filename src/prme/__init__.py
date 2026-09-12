@@ -26,9 +26,11 @@ from prme.types import (
     DEFAULT_DECAY_PROFILE_MAPPING,
     DecayProfile,
     EdgeType,
+    EpistemicType,
     LifecycleState,
     NodeType,
     Scope,
+    SourceType,
 )
 
 
@@ -58,6 +60,7 @@ __all__ = [
     "DEFAULT_DECAY_PROFILE_MAPPING",
     "DecayProfile",
     "EdgeType",
+    "EpistemicType",
     "ExtractionError",
     "ExtractionRecord",
     "ExtractionStatus",
@@ -74,4 +77,5 @@ __all__ = [
     "RetrievalPipeline",
     "RetrievalResponse",
     "Scope",
+    "SourceType",
 ]

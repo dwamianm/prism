@@ -44,7 +44,7 @@ async def store(
 ) -> str
 ```
 
-The async API exposes additional parameters not available on `MemoryClient`:
+Both the async API and `MemoryClient.store()` accept these explicit controls:
 
 - `epistemic_type` — override auto-inference (OBSERVED, ASSERTED, INFERRED, etc.)
 - `source_type` — override auto-inference (USER_STATED, SYSTEM_INFERRED, etc.)
