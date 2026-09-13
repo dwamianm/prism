@@ -14,7 +14,9 @@ This is a conservative English guard, not general coreference resolution. It
 does not disambiguate several quoted speakers inside one event or equal names
 belonging to different people.
 
-New prepared derivations identify these rules as `event_local_references_v4`.
+New prepared derivations identify qualifier-aware rules as `claim_qualifiers_v5`.
+Prepared plans using `event_local_references_v4` and earlier policies remain
+valid immutable replay inputs.
 Previously saved plans preserve their policy, node IDs and checksums and replay
 unchanged. The default for an omitted historical policy remains the previous
 value. Existing incorrectly merged identities are not automatically split; doing

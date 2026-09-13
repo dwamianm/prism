@@ -1,36 +1,47 @@
-# Local extraction model check
+# Local extraction model checks
 
-[`classification-qwen35-9b.json`](classification-qwen35-9b.json) retains the
-complete output of the existing 12-case authored classification diagnostic run
-against Ollama `qwen3.5:9b` (local digest `6488c96fa5fa`). The fixed checks cover
-usage, possible and conditional usage, preferences, dislikes, choices, mixed
-claims, temporal phrasing, and namesake entities. This is a development probe,
-not held-out accuracy or competitive evidence.
+These reports exercise a fixed 12-case authored diagnostic against local Ollama
+`qwen3.5:9b` (digest `6488c96fa5fa`). The cases cover ordinary, possible and
+conditional usage, preferences and dislikes, explicit and rejected choices,
+mixed claims, temporal phrasing, and namesake entities. They are development
+probes, not held-out accuracy or competitive evidence.
 
-The model passed **10/12 cases** in **348.114 seconds** with three configured
-schema attempts. It correctly classified conditional usage, choices, rejected
-choices, mixed claims, and ordinary preferences. It failed the namesake contract
-by adding an extra `role=engineer` claim and failed to mark a conditional
-preference as conditional. The dislike case passed the current structural check,
-but inspection found `Noah does not like Redis` represented as the positive
-predicate `likes` with the negation retained only in the full evidence passage.
-A separate four-statement smoke call likewise emitted a positive `prefers coffee`
-triple for `does not prefer coffee`.
+[`classification-qwen35-9b.json`](classification-qwen35-9b.json) preserves the
+pre-qualifier baseline. It passed **10/12 cases** in **348.114 seconds**, but
+semantic inspection found that negated preferences could still be represented
+as positive triples. This motivated typed claim polarity, exact condition
+capture, and stricter modality validation.
 
-The current runtime deliberately materializes the full source passage as claim
-content, so those qualifications remain available to a reader. Triple metadata
-is still semantically lossy. The 9B model is therefore retained as a local
-diagnostic option and is not selected as PRME's default extractor.
+[`classification-qualifiers-default-temperature-qwen35-9b.json`](classification-qualifiers-default-temperature-qwen35-9b.json)
+is an exact-policy repeat after those schema changes, before PRME explicitly
+controlled sampling temperature. It passed **8/12 cases** in **563.579 seconds**.
+The model mislabeled possible and conditional future usage as decisions, then
+exhausted its retries on the dislike and namesake cases. An earlier unseeded run
+of the same candidate happened to pass 12/12. The repeat demonstrates why a
+single successful local run is insufficient evidence.
 
-The previous `qwen3.5:4b` authored run passed 8/12 cases. That observation does
-not establish a controlled model-quality improvement: the reports are single,
-unseeded executions and model output can vary. The 9B run's prompt, response
-schema, fixtures, inputs, evaluated graph nodes, and raw extractions are preserved
-in the JSON report.
+PRME now sends extraction temperature zero by default and rejects uncertain or
+contingent future actions classified as completed decisions unless their source
+contains an explicit choice or commitment. A targeted check of the possible and
+conditional cases passed all six executions across three repetitions in
+**243.872 seconds**. The final complete run is preserved in
+[`classification-qualifiers-temperature-zero-qwen35-9b.json`](classification-qualifiers-temperature-zero-qwen35-9b.json):
+it passed **11/12 cases** in **321.454 seconds**. The remaining mixed-claim case
+exhausted retries because the model returned a non-verbatim citation; PRME
+correctly rejected that output instead of weakening its source boundary.
 
-Reproduce with an installed Ollama model:
+The accompanying implementation passed the complete local code suite with live
+PostgreSQL: **3,261 passed, 93 skipped**. The 9B model remains a useful local
+diagnostic option, but its latency and remaining citation-format failure do not
+support selecting it as PRME's default extractor or making a stable accuracy or
+leadership claim.
+
+The reports retain prompt, response-schema and fixture hashes, graph assertions,
+and raw extraction output. Reproduce the temperature-zero run with an installed
+Ollama model:
 
 ```bash
+PRME_EXTRACTION_TEMPERATURE=0 \
 python -m benchmarks.diagnostics.claim_classification \
   --model qwen3.5:9b --timeout 120 --output classification.json
 ```

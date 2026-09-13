@@ -55,7 +55,7 @@ automatically rewritten.
 | `OBSERVED` | Directly witnessed or recorded from a primary source (e.g., explicit user statement, direct measurement). | 0.80 – 0.95 |
 | `ASSERTED` | Stated as fact by a user or agent, but not independently verified. | 0.65 – 0.85 |
 | `INFERRED` | Derived by the system from patterns, co-occurrences, or reasoning. Not directly stated. | 0.40 – 0.70 |
-| `HYPOTHETICAL` | Explicitly speculative or conditional. The user or agent framed this as uncertain or possible. | 0.15 – 0.45 |
+| `HYPOTHETICAL` | Explicitly speculative or possible without a stated condition. | 0.15 – 0.45 |
 | `CONDITIONAL` | True only if a stated condition holds. Requires condition evaluation at retrieval time. | 0.30 – 0.65 |
 | `DEPRECATED` | Previously valid but now determined to be incorrect, outdated, or superseded. | — |
 | `UNVERIFIED` | Received from an external or untrusted source; awaiting corroboration before promotion. | 0.10 – 0.40 |
@@ -65,12 +65,15 @@ automatically rewritten.
 **On classification accuracy:** Epistemic classification is performed by an extraction pipeline. Extraction pipelines are `[BEST-EFFORT]` — they are not guaranteed to be accurate. A statement classified as INFERRED that was actually OBSERVED is a classification error, not a protocol violation. Implementations SHOULD expose the extraction model's confidence in its own classification as a separate field (`classification_confidence`). `[HYPOTHESIS — classification accuracy thresholds require experimental validation]`
 
 Epistemic status is independent of claim kind: facts, preferences and decisions
-can depend on unresolved conditions. The schema permits `conditional`; the
-built-in prompt's main type list groups conditions under `hypothetical`, while
-later instructions permit both. An explicit-menu clarification was tested and
-reverted after it failed to fix the target error and introduced other failures.
-This inconsistency and classification accuracy remain unresolved; see the
-[complete authored probe and follow-up](../benchmarks/results/research/2026-09-12/AUTHORED-EXTRACTION-RESULTS.md).
+can depend on unresolved conditions. Built-in providers distinguish speculative
+claims (`hypothetical`) from claims with an explicit if/unless condition
+(`conditional`). They require the exact condition text and reject uncertain or
+contingent future actions classified as completed decisions unless the source
+contains an explicit choice or commitment. Structured extraction defaults to
+temperature zero; callers may change it, but should first measure the selected
+provider. These controls reduce known category collapses without making model
+classification infallible. See the
+[local extraction diagnostics](../benchmarks/results/extraction/2026-09-13/README.md).
 The prompt does not evaluate conditions or automatically reclassify saved records.
 
 ### Source support in PRME ingestion
@@ -86,6 +89,17 @@ rejects unsupported paraphrased object values.
 The built-in Instructor provider requires citations in its response schema and
 passes the source to local validation, allowing its configured validation retries
 to repair missing citations or unsupported values before materialization.
+
+Built-in providers also require semantic `polarity` (`positive` or `negative`)
+for each fact and relationship. An explicit condition must be reproduced from
+the cited source and is stored with `condition_state="unknown"`. Custom and
+legacy providers remain compatible: omitted polarity becomes `unknown`, and an
+unsupported or missing condition is removed while the claim is treated as
+hypothetical. Retrieval exposes these qualifiers in provenance labels. DEFAULT
+mode includes a conditional claim only when its stored condition state is
+`true`; EXPLICIT mode retains unknown, false and expired conditions for audit.
+PRME does not yet run a condition evaluator. A caller that confirms or rejects a
+condition should record new current evidence rather than infer truth from age.
 
 These checks establish source membership, not semantic entailment. Model
 predicates, classifications, relationship labels, and summaries remain fallible.
@@ -114,10 +128,12 @@ LLM ingestion does not treat differing values as inherently contradictory: a
 person can use Python and Rust or like both tea and coffee. Automatic retirement
 requires `temporal_intent="update"`, an explicit `replaces_object` present in the
 source passage, and an observed/asserted fact. Only the named previous object is
-eligible. Hypothetical, conditional, inferred, and unverified extractions cannot
-retire existing facts. Unnamed changes remain alongside prior evidence until a
-more informed resolution is available. The lower-level supersedence detector
-retains its explicit caller-driven legacy matching mode.
+eligible. A known negative update can retire the same known-positive claim, such
+as "no longer uses Python" replacing "uses Python"; unknown historical polarity
+is never guessed. Hypothetical, conditional, inferred, and unverified extractions
+cannot retire existing facts. Unnamed changes remain alongside prior evidence
+until a more informed resolution is available. The lower-level supersedence
+detector retains its explicit caller-driven legacy matching mode.
 
 Explicit backend supersedence, contradiction and resolution accept optional
 evidence only when the event exists in the affected nodes' owner and scope.
@@ -143,6 +159,7 @@ Source type (RFC-0001, Section 7) interacts with epistemic type to determine the
 | ASSERTED | 0.80 | 0.75 | 0.60 | 0.65 | 0.70 |
 | INFERRED | — | 0.60 | 0.55 | 0.50 | 0.55 |
 | HYPOTHETICAL | 0.35 | — | 0.25 | 0.30 | — |
+| CONDITIONAL | 0.45 | — | 0.30 | 0.35 | 0.40 |
 | UNVERIFIED | — | — | 0.20 | 0.25 | 0.30 |
 
 Cells marked `—` represent combinations that SHOULD NOT occur in practice. Implementations MAY emit a warning if they detect such a combination.

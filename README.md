@@ -290,12 +290,17 @@ filtering as other claims. `HAS_FACT` connects the subject to its claim;
 `MENTIONS` connects a claim to its resolved object entity. Model predicates stay
 in metadata: ingestion does not turn a model's `part_of` or `caused_by` label into
 a structural edge. These links aid retrieval; graph paths do not prove entailment.
-Built-in providers must cite and classify relationships. Legacy/custom providers
-that omit classification produce unverified model claims, excluded from default
-retrieval at the standard confidence setting. A fact covering the same endpoints
-and passage takes precedence over an additional relationship label; the saved
-extraction still contains both. Existing committed graphs and saved plans retain
-their original behavior; this change does not migrate historical edges.
+Built-in providers must cite, classify, and identify the semantic polarity of
+facts and relationships. Explicit if/unless conditions must be copied from the
+cited source. They are stored with an unknown condition state and remain outside
+DEFAULT retrieval until a caller records that the condition is true; EXPLICIT
+retrieval keeps every state available for audit. Legacy/custom providers that
+omit polarity retain `unknown`; relationships that omit classification become
+unverified model claims, excluded from default retrieval at the standard
+confidence setting. A fact covering the same endpoints and passage takes
+precedence over an additional relationship label; the saved extraction still
+contains both. Existing committed graphs and saved plans retain their original
+behavior; this change does not migrate historical edges.
 
 Successful grounded extraction output is saved before graph materialization.
 An indexing retry reuses that output without another LLM call. Inspect it with
@@ -393,9 +398,21 @@ optional telemetry uploader. The setting is process-wide and an explicit value
 is preserved. If your application imports ONNX Runtime first, set this variable
 before that import to apply the same startup behavior.
 
-For a custom Ollama extraction endpoint, use its OpenAI-compatible URL, for
-example `ExtractionConfig(provider="ollama", model="qwen3.5:4b",
-base_url="http://localhost:11434/v1")`. The `/v1` path is required by the
+For a custom Ollama extraction endpoint, use its OpenAI-compatible URL:
+
+```python
+from prme.config import ExtractionConfig
+
+extraction = ExtractionConfig(
+    provider="ollama",
+    model="qwen3.5:4b",
+    base_url="http://localhost:11434/v1",
+)
+```
+
+Structured extraction uses temperature zero by default to reduce output
+variance. Set `temperature` directly or with `PRME_EXTRACTION_TEMPERATURE` only
+after benchmarking the selected provider. The `/v1` path is required by the
 extraction adapter; omitting `base_url` uses the local default.
 
 See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a terminal chat app with persistent memory.

@@ -187,12 +187,17 @@ Legacy sources are not automatically enrolled in extraction work. Unmanaged or
 ambiguous staging remains conservatively retained; collection only covers the
 explicitly replaced, uniquely owned revision protocol above.
 
-New plans use materialization policy `relationship_claims_v3`: relationship
+Historical plans using materialization policy `relationship_claims_v3` keep their
+original behavior. Current plans use `claim_qualifiers_v5`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
-edges. Type-qualified object references avoid arbitrary namesake links. Existing
-`source_passage_v1` and `typed_references_v2` plans remain readable and replay
-their saved artifacts unchanged. Recovery never regenerates an existing plan
-under the current policy implicitly; historical committed edges are not migrated.
+edges, unresolved personal references remain event-local, and claim polarity and
+explicit conditions are preserved in node metadata. Type-qualified object
+references avoid arbitrary namesake links. Conditional claims start with an
+unknown condition state and stay out of DEFAULT retrieval until confirmed.
+Existing `source_passage_v1`, `typed_references_v2`, and
+`event_local_references_v4` plans remain readable and replay their saved artifacts
+unchanged. Recovery never regenerates an existing plan under the current policy
+implicitly; historical committed edges are not migrated.
 
 ## Required behavior
 

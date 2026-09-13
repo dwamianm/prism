@@ -676,10 +676,12 @@ ExtractionConfig(
     model="gpt-4o-mini",                 # PRME_EXTRACTION_MODEL
     max_retries=3,                       # PRME_EXTRACTION_MAX_RETRIES
     timeout=30.0,                        # PRME_EXTRACTION_TIMEOUT
+    temperature=0.0,                     # PRME_EXTRACTION_TEMPERATURE
 )
 ```
 
-Supported providers: `"openai"`, `"anthropic"`, `"ollama"`.
+Supported providers: `"openai"`, `"anthropic"`, `"ollama"`. Temperature zero
+favors repeatable schema-constrained extraction. Benchmark before increasing it.
 
 ### ScoringWeights
 

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Typed claim polarity and exact explicit conditions for built-in LLM
+  extraction. Conditional claims retain an auditable state and stay out of
+  default retrieval until confirmed.
 - `MemoryWorkspace` and lease-scoped `NamespaceMemory` for named local projects,
   with stable pack identity, bounded idle-engine eviction, shared embeddings,
   process ownership and cancellation-safe lease cleanup.
@@ -23,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Structured extraction now sends a configurable sampling temperature, defaulting
+  to zero, and rejects uncertain or contingent future actions mislabeled as
+  completed decisions. Explicit known-negative updates can retire the same
+  known-positive claim without guessing legacy polarity.
 - PostgreSQL now honors the default `vector_exact_search=True`, materializing
   eligible rows before distance ordering to prevent filtered HNSW starvation.
   `False` explicitly permits approximate search. Broad exact queries may cost

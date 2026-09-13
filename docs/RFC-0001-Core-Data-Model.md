@@ -248,18 +248,19 @@ edge. The same rule applies to object `MENTIONS` links and relationship claims:
 an unresolved endpoint omits that link, while preserving the source-cited claim.
 This does not establish semantic identity, entailment, or namesake resolution
 across conversations. Relationship predicates remain model metadata on FACT
-nodes; ingestion does not map them directly to structural edge types. New
-prepared plans record `relationship_claims_v3`; existing saved plans retain their
-original materialization policy and replay unchanged.
+nodes; ingestion does not map them directly to structural edge types. Existing
+saved plans retain their original materialization policy and replay unchanged.
 
-New plans now explicitly record `event_local_references_v4`. Unresolved English
-personal references (`I`, `we`, `they`, etc.) reuse an identity only within the
-same source event, with matching unresolved-reference metadata and provenance.
-Absent event provenance or a legacy globally merged reference does not authorize
-reuse. Explicit non-personal types retain named-entity behavior. Historical plans
-retain their serialized policies/checksums; the model's missing-policy default
-has not changed. This does not solve within-message quotation/coreference or
-same-name homonyms. See [entity identity and merge rules](ENTITY-IDENTITY.md).
+New plans explicitly record `claim_qualifiers_v5`. Unresolved English personal
+references (`I`, `we`, `they`, etc.) reuse an identity only within the same source
+event, with matching unresolved-reference metadata and provenance. Claim nodes
+also preserve semantic polarity and exact explicit conditions; conditions start
+with an unknown state. Absent event provenance or a legacy globally merged
+reference does not authorize reuse. Explicit non-personal types retain
+named-entity behavior. Historical plans retain their serialized policies and
+checksums; the model's missing-policy default has not changed. This does not solve
+within-message quotation/coreference, condition evaluation, or same-name
+homonyms. See [entity identity and merge rules](ENTITY-IDENTITY.md).
 
 
 ---
