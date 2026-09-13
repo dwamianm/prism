@@ -19,9 +19,15 @@
   "full_postgres_suite": {
     "isolated_database": "prme_metadata_keys_full_20260913",
     "log": "/tmp/prme-metadata-keys-full-pg.log",
+    "log_sha256": "a34d8f371d98be6e11f5b440e8c09db660fd279c01298c479ef2a1019f639050",
+    "native_exit_code": 0,
+    "native_exit_observed_at": "2026-09-13T19:31:37.296613+00:00",
     "native_session_id": 41799,
+    "passed": 3172,
+    "seconds": 551.97,
+    "skipped": 85,
     "source_commit": "022a4c1",
-    "status": "running"
+    "status": "complete"
   },
   "installed": {
     "log_sha256": "dc3ad3644fecc8729218e0feb52bb04a2f91a3436da21d6f256711baf065fdc0",

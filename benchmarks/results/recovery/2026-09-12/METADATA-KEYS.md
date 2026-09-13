@@ -18,8 +18,8 @@ A fresh Python 3.13.3 wheel passed the same 72 checks and four skips; all 129
 installed Python files matched the frozen source before and after testing.
 Coverage includes absence of source/node/recovery work after rejected metadata,
 direct-node and deferred-extraction admission, caller mutation, legacy metadata
-and snapshot compatibility. The full live-PostgreSQL suite is running; it is not
-counted as passed here.
+and snapshot compatibility. The full live-PostgreSQL suite exited zero with
+3,172 passed and 85 skipped in 551.97 seconds on the same frozen source.
 
 This does not restore previously discarded values or validate arbitrary
 low-level graph/table mutations. See [structured evidence](metadata-keys-e3350b1.json),
