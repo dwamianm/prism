@@ -134,10 +134,11 @@ reproduced product improvements; no published total replaces the checks here.
 
 The [complete authored extraction probe](../benchmarks/results/research/2026-09-12/AUTHORED-EXTRACTION-RESULTS.md)
 retains Qwen's 10/12 and Gemma's 11/12 checks, including ambiguous kind labels
-and one incorrectly asserted conditional preference. A prompt clarification now
-lists `conditional` explicitly and separates it from claim kind. Its registered
-follow-up uses a wheel differing from the baseline in that source file alone;
-no improvement is assumed before the fixed probes finish.
+and one incorrectly asserted conditional preference. The isolated prompt-only
+follow-up produced Qwen 8/12 and Gemma 11/12: Qwen's target error persisted with
+two additional failed checks; Gemma fixed conditional usage but timed out on
+namesake extraction. The unproven prompt change was reverted. All failures,
+identity checks and the rollback are retained in the linked report.
 
 | Gap | Next implementation/evaluation requirement |
 |---|---|

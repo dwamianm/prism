@@ -1,0 +1,466 @@
+{
+  "analysis_script_sha256": "06e032ec12e365fcf2e899891662c10dd5a0ae851eea4df5fef13b26f5850950",
+  "complete": true,
+  "kind": "conditional-prompt-complete-model-results",
+  "limits": [
+    "Twelve pre-existing authored development probes, not held-out accuracy or competitor quality.",
+    "Type, source preservation and reference checks do not prove semantic entailment.",
+    "Extraction uses native provider defaults; reader/judge settings are not reused.",
+    "Saved extraction is structured output, not raw SDK responses; complete model token cost is not measured.",
+    "Post-hoc prompt clarification informed by authored failures; not an independent test.",
+    "Baseline overlapped other local work; this sequential run cannot establish a causal model-speed improvement.",
+    "Native extraction sampling defaults are retained; single runs do not establish a statistical prompt effect.",
+    "Provider failures are retained, not independently reproduced. The earlier baseline overlapped local judging; before/after latency is not a controlled speed comparison."
+  ],
+  "models": {
+    "gemma4:26b": {
+      "cases_passed": 11,
+      "cases_retained": 12,
+      "native_exit_code": 1,
+      "outcomes": [
+        {
+          "association_edges_only": true,
+          "case": "usage",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "possible_usage",
+          "claim_epistemic_types": [
+            "hypothetical"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "conditional_usage",
+          "claim_epistemic_types": [
+            "conditional"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "explicit_preference",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "dislike",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "choice",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "decision"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "rejected_choice",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "decision"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "mixed",
+          "claim_epistemic_types": [
+            "asserted",
+            "asserted"
+          ],
+          "claim_node_types": [
+            "preference",
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "past_choice",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "decision"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "service",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "case": "namesake",
+          "error_chain": [
+            "ExtractionError",
+            "ExtractionError",
+            "TimeoutError",
+            "CancelledError"
+          ],
+          "error_type": "ExtractionError",
+          "passed": false
+        },
+        {
+          "association_edges_only": true,
+          "case": "conditional_preference",
+          "claim_epistemic_types": [
+            "conditional"
+          ],
+          "claim_node_types": [
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        }
+      ],
+      "report_sha256": "857e4748f5c22d05c99969c38141f1e043f62aec365085f2ce3cd0327afa8034"
+    },
+    "qwen3.5:4b": {
+      "cases_passed": 8,
+      "cases_retained": 12,
+      "native_exit_code": 1,
+      "outcomes": [
+        {
+          "association_edges_only": true,
+          "case": "usage",
+          "claim_epistemic_types": [
+            "asserted"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "possible_usage",
+          "claim_epistemic_types": [
+            "hypothetical"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "conditional_usage",
+          "claim_epistemic_types": [
+            "conditional"
+          ],
+          "claim_node_types": [
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": false,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": false,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "explicit_preference",
+          "claim_epistemic_types": [
+            "asserted"
+          ],
+          "claim_node_types": [
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "dislike",
+          "claim_epistemic_types": [
+            "asserted",
+            "asserted"
+          ],
+          "claim_node_types": [
+            "preference",
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": false,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": false,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "choice",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "decision"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "rejected_choice",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": false,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": false,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "mixed",
+          "claim_epistemic_types": [
+            "observed",
+            "observed"
+          ],
+          "claim_node_types": [
+            "fact",
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "past_choice",
+          "claim_epistemic_types": [
+            "observed"
+          ],
+          "claim_node_types": [
+            "decision"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "service",
+          "claim_epistemic_types": [
+            "asserted"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "namesake",
+          "claim_epistemic_types": [
+            "asserted"
+          ],
+          "claim_node_types": [
+            "fact"
+          ],
+          "epistemic_qualifications_preserved": true,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": true,
+          "subject_links_complete": true
+        },
+        {
+          "association_edges_only": true,
+          "case": "conditional_preference",
+          "claim_epistemic_types": [
+            "asserted"
+          ],
+          "claim_node_types": [
+            "preference"
+          ],
+          "epistemic_qualifications_preserved": false,
+          "expected_claim_count": true,
+          "expected_claim_kinds": true,
+          "expected_entity_types_linked": true,
+          "expected_objects_present": true,
+          "full_source_preserved": true,
+          "passed": false,
+          "subject_links_complete": true
+        }
+      ],
+      "report_sha256": "8905476d08b339486500ba9f92065f4bd0f9ce4df7efcf1c90fff7854b39e55c"
+    }
+  },
+  "source_commit": "96a8e61",
+  "structured_assessments_reproduced": true
+}

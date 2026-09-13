@@ -1,0 +1,42 @@
+{
+  "complete": true,
+  "decision": "Revert unproven prompt change; target Qwen conditional-preference failure persists and two additional checks fail. Gemma fixes conditional usage but times out on namesake. Single native-default runs do not establish a causal prompt effect.",
+  "identities_verified": true,
+  "limits": [
+    "Twelve pre-existing authored development probes, not held-out accuracy or competitor quality.",
+    "Type, source preservation and reference checks do not prove semantic entailment.",
+    "Extraction uses native provider defaults; reader/judge settings are not reused.",
+    "Saved extraction is structured output, not raw SDK responses; complete model token cost is not measured.",
+    "Post-hoc prompt clarification informed by authored failures; not an independent test.",
+    "Baseline overlapped other local work; this sequential run cannot establish a causal model-speed improvement.",
+    "Native extraction sampling defaults are retained; single runs do not establish a statistical prompt effect."
+  ],
+  "models": [
+    {
+      "cases_passed": 8,
+      "cases_retained": 12,
+      "log_sha256": "e5202263105bd97746c278248436e934f6bf961e1aca6e3f28266c6c6afca41f",
+      "model": "qwen3.5:4b",
+      "native_parent_exit_code": 1,
+      "observed_at": "2026-09-13T17:27:32.846842+00:00",
+      "report_sha256": "8905476d08b339486500ba9f92065f4bd0f9ce4df7efcf1c90fff7854b39e55c",
+      "workflow_passed": false
+    },
+    {
+      "cases_passed": 11,
+      "cases_retained": 12,
+      "log_sha256": "02926bc017f3ce9e9cdd4e5116da8cf2c2834461366383bf6b18c8e74f6c361c",
+      "model": "gemma4:26b",
+      "native_parent_exit_code": 1,
+      "observed_at": "2026-09-13T17:35:44.978615+00:00",
+      "report_sha256": "857e4748f5c22d05c99969c38141f1e043f62aec365085f2ce3cd0327afa8034",
+      "workflow_passed": false
+    }
+  ],
+  "native_outer_exit_code": 0,
+  "native_session_id": 88798,
+  "observed_at": "2026-09-13T17:36:23.382024+00:00",
+  "plan_sha256": "96a7e04f0625062f2fb2f2b2a0572d2ae83a3b43df8b96d52860871cca0e9f17",
+  "restored_prompt_module_sha256": "ef77ada7f7aa0717ec2b56a03459b4f5827098dc2528fd37a75588bbddc61831",
+  "rollback_commit": "1a5bbd3d6ea7cd1c4a9e03078d38e9096dcf6eaf"
+}
