@@ -332,6 +332,16 @@ def analyze(args):
         "inputs_sha256": digest(inputs_raw),
         "references_sha256": digest(refs_raw),
         "analyzer_sha256": digest(Path(__file__).read_bytes()),
+        "source_artifacts": {
+            name: digest(getattr(args, name).read_bytes())
+            for name in [
+                "completion",
+                "prme_report",
+                "hindsight_report",
+                "prme_plan",
+                "hindsight_plan",
+            ]
+        },
         "overall": summary(details),
         "categories": {
             category: summary([r for r in details if r["category"] == category])
