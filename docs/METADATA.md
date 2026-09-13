@@ -33,7 +33,7 @@ such values to null in the initial node snapshot while retaining them in the
 event; raw ingestion could retain them in both. New validation does not rewrite
 existing source events or claim to recover values already converted to null.
 
-Lifecycle, reinforcement and organizer-merge journals can preserve special
+Lifecycle, reinforcement, organizer-merge and consolidation-retirement journals can preserve special
 floats from existing nodes. Their checksummed raw record uses
 `prme-special-floats-v1` only when needed: the encoded value has explicit null
 placeholders, with typed paths recording `nan`, `positive_infinity` or

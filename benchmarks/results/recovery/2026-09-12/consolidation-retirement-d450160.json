@@ -1,0 +1,109 @@
+{
+  "after_index_migration": {
+    "log_path": "/tmp/prme-consolidation-retirement-focused-index.log",
+    "log_sha256": "5b333fb9a7bc38ff20103351dc03526dbadad215aa7bf3f22731f673c8750563",
+    "native_exit_code": 0,
+    "native_session_id": 94265,
+    "summary": "50 passed, 1 skipped in 15.68s"
+  },
+  "before": {
+    "log_path": "/tmp/prme-consolidation-retirement-before-final.log",
+    "log_sha256": "882b251e3f203365eee87e04a9acd519a6c8d518cd8755fe58f04b4989b252fa",
+    "native_exit_code": 1,
+    "native_session_id": 4202,
+    "summary": "5 failed, 5 skipped in 2.42s"
+  },
+  "final_focused": {
+    "log_path": "/tmp/prme-consolidation-retirement-final.log",
+    "log_sha256": "f11eccf401d2fbc0951159aa7916b6fc1c7f746ac64fb16cef2020a23d96a974",
+    "native_exit_code": 0,
+    "native_session_id": 69392,
+    "summary": "84 passed, 6 skipped in 21.63s"
+  },
+  "first_native_race_attempt": {
+    "log_path": "/tmp/prme-consolidation-retirement-focused.log",
+    "log_sha256": "0269f4f897390763218b97c8b1616b40720a640828b56a91a05f6ac90a8fd811",
+    "native_exit_code": 1,
+    "native_session_id": 63125,
+    "summary": "1 failed, 49 passed, 1 skipped in 17.10s"
+  },
+  "frozen_checkout": "/tmp/prme-consolidation-retirement-final",
+  "full_postgres": {
+    "log_path": "/tmp/prme-consolidation-retirement-full.log",
+    "native_session_id": 28444,
+    "source_commit": "d450160",
+    "status": "running"
+  },
+  "installed": {
+    "log_path": "/tmp/prme-consolidation-retirement-installed.log",
+    "log_sha256": "c8635481cc471f41ee8de772546ffaaf39b2817dcb1f15c510e25255641e69aa",
+    "native_exit_code": 0,
+    "native_session_id": 23941,
+    "summary": "84 passed, 6 skipped in 34.64s"
+  },
+  "installed_identity": {
+    "installed_package": "/private/tmp/prme-consolidation-retirement-wheel/lib/python3.13/site-packages/prme",
+    "package_files_matched": 130,
+    "package_manifest_sha256": "84c47f8835ceceb3bd31fe7ce003d0f82755807d50c3ce8eaf6d291a98fd7bf6",
+    "pytest_exit_code": 0,
+    "source_commit": "d450160",
+    "test_files": [
+      "tests/test_consolidation_retirement_atomic.py",
+      "tests/test_consolidation_safety.py",
+      "tests/test_simulation_organizer_clock.py",
+      "tests/test_consolidation.py",
+      "tests/test_atomic_lifecycle.py"
+    ],
+    "wheel_sha256": "6fff22cd2c1d8013a7d17a5d2c0497226322526d51dfb90e477a87ed48acb18d"
+  },
+  "limitations": [
+    "Summary creation is still separate and duplicate summaries remain unresolved.",
+    "Retirement commits per source, not as one all-or-nothing cluster transaction.",
+    "Index eviction follows commit.",
+    "The DuckDB claim assumes supported mutations and no custom mutable-column indexes.",
+    "Full regression is pending; the prior failing simulation and answer studies are not promoted."
+  ],
+  "observed_at": "2026-09-13T20:07:10.140158+00:00",
+  "public_types": {
+    "native_exit_code": 0,
+    "native_session_id": 92095
+  },
+  "query_diagnostic": {
+    "duckdb": "1.4.4",
+    "limits": [
+      "Synthetic SQL on a shared host; not product retrieval latency.",
+      "Fixed indexed-then-unindexed order can have cache effects.",
+      "No inference about large-pack capacity or universal query performance."
+    ],
+    "medians_ms": {
+      "with_lifecycle_index": {
+        "global_active": 4.600375003064983,
+        "rare_contested": 0.21404199651442468,
+        "tenant_active": 0.4888535040663555
+      },
+      "without_lifecycle_index": {
+        "global_active": 4.855395993217826,
+        "rare_contested": 0.21831250342074782,
+        "tenant_active": 0.5217084981268272
+      }
+    },
+    "module_sha256": "3703a2f21b2d0769e219891c6340de2a317fea15997b9d953ca2b5dee7baa0b2",
+    "native_exit_code": 0,
+    "native_session_id": 18704,
+    "path": "data/benchmarks/lifecycle-index-query-check.json",
+    "rows": 100000,
+    "sha256": "791267b5039be52850e5cc25b291bca5efba275343d5ff32da5c4c444ac06ce8"
+  },
+  "ruff": {
+    "command": "ruff check src/ tests/",
+    "native_exit_code": 0
+  },
+  "source_commit": "d450160",
+  "timestamp_write_restore_attempt": {
+    "log_path": "/tmp/prme-consolidation-retirement-focused-final.log",
+    "log_sha256": "1b134d8f42ef3051ddef3b923a920a0ac2dadb8c6e375715b3a5eece9109d927",
+    "native_exit_code": 1,
+    "native_session_id": 58805,
+    "summary": "1 failed, 49 passed, 1 skipped in 16.12s"
+  }
+}

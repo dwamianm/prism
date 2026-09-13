@@ -1,0 +1,15 @@
+{
+  "installed_package": "/private/tmp/prme-consolidation-retirement-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 130,
+  "package_manifest_sha256": "84c47f8835ceceb3bd31fe7ce003d0f82755807d50c3ce8eaf6d291a98fd7bf6",
+  "pytest_exit_code": 0,
+  "source_commit": "d450160",
+  "test_files": [
+    "tests/test_consolidation_retirement_atomic.py",
+    "tests/test_consolidation_safety.py",
+    "tests/test_simulation_organizer_clock.py",
+    "tests/test_consolidation.py",
+    "tests/test_atomic_lifecycle.py"
+  ],
+  "wheel_sha256": "6fff22cd2c1d8013a7d17a5d2c0497226322526d51dfb90e477a87ed48acb18d"
+}
