@@ -30,3 +30,39 @@ loss accounting. The running model-reader trial is separate and unchanged.
 
 See [the registration](packing-regression-plan.json). Complete source and answer
 evidence on additional tasks remain necessary before any leadership claim.
+
+The capture and independent verifier both exited zero. All 4,572 contexts and
+2,286 controls passed. There are 365 labelled questions in 360 connected groups;
+the other 16 questions have no source-recall value.
+
+| Budget | Density | Score | Quarter-length | Combined |
+|---|---:|---:|---:|---:|
+| 2K | 53.64% | 77.26% | 82.04% | 83.70% |
+| 4K | 65.04% | 85.77% | 89.37% | 90.55% |
+| 8K | 72.90% | 90.03% | 93.88% | 94.56% |
+
+The primary quarter-length gain at 4K is 24.34 percentage points, with a
+descriptive group-bootstrap interval of 20.47 to 28.38 points: 136 wins, two
+losses and 227 ties. The combined policy gains 25.52 points over density
+(21.54 to 29.69), with 139 wins, two losses and 224 ties. Both have positive
+4K mean changes in every category. Preference recall rises from 78.26% to
+92.03% for both; its category interval still crosses zero, and one preference
+question loses evidence. This improves the observed preference mean without
+rewriting the original score policy's failed confirmation.
+
+The combination adds five assistant-source wins over quarter-length at 4K,
+but loses on two multi-session questions. Its overall 1.18-point difference has
+a descriptive interval of 0.08 to 2.49 points. At 2K, quarter-length has six
+individual losses versus density and the combination has seven. Neither loses
+versus density at 8K. All individual losses, including combination-versus-quarter
+tradeoffs, are retained in the linked completion record.
+
+Decision: this supports implementing a public opt-in policy with exact context
+parity, reproducible receipts and documented tradeoffs, followed by complete
+answer evaluation. It does not justify a default change, a claim of no
+regressions or a leadership claim. The separate one-head answer trial does not
+test these quarter-length policies.
+
+See [native capture completion](packing-regression-completion.json),
+[all verified category results](packing-regression-verification.json), and
+[verification completion and every loss](packing-regression-verifier-completion.json).

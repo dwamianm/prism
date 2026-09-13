@@ -1,11 +1,13 @@
 {
   "contexts": "data/benchmarks/packing-regression-contexts",
   "log": "/tmp/prme-packing-regression-run.log",
+  "native_exit_code": 0,
   "native_session_id": 69739,
   "observed_at": "2026-09-13T19:17:56.692253+00:00",
   "output": "data/benchmarks/packing-regression.json",
   "plan_sha256": "d259c87d1d0a4241621e4d3f263f5abdc99a5547680cc15a59482af12c275eac",
   "registration_commit": "73e6938",
   "source_commit": "2ca7f09",
-  "status": "running"
+  "status": "complete_verified",
+  "verifier_native_exit_code": 0
 }

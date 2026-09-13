@@ -149,6 +149,16 @@ a cluster interval touching zero; at 2K it also loses one question against that
 simpler rule. This reused development cohort supports further testing, not a
 default change. Source recall remains distinct from answer correctness.
 
+The [larger fixed packing regression](../benchmarks/results/research/2026-09-12/PACKING-REGRESSION-STUDY.md)
+then verified all 4,572 contexts on the already examined 381-question partition,
+including exact reproduction of 2,286 original controls. At 4K, quarter-length
+retains 89.37% of labelled evidence and the combined policy 90.55%, versus 65.04%
+for density. Both improve every category mean, including preferences, but each
+loses on two questions. The combination improves assistant retention while
+losing on two multi-session questions versus quarter-length. Next: a public
+opt-in policy with exact context/receipt parity and complete answer validation.
+The original failed score-policy gate and density default remain unchanged.
+
 ## Capability work still required
 
 The [current provenance research review](../benchmarks/results/research/2026-09-12/PROVENANCE-RESEARCH-UPDATE.md)
