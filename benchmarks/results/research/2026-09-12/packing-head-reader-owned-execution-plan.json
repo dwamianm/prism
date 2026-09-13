@@ -1,0 +1,29 @@
+{
+  "identity": {
+    "binary_sha256": "c816ec43629787a7bd0168a965ece0641575ef602af82d4de0e48c821fc0d177",
+    "checkout_commit": "9dd6a911d72f9dbc993cc68dd50e77144ed181e8",
+    "checkout_dirty": false,
+    "child_network": {
+      "NO_PROXY": "127.0.0.1,localhost",
+      "no_proxy": "127.0.0.1,localhost"
+    },
+    "module_sha256": "85a39f25f24b9d87f76ff8de91504f26e96464cde2dd232a7613e3062ad4a1ed",
+    "python_sha256": "a4366d9cd2f4d63260a479cc58ff88abfde916bd46b0f0e12eb58baabe6f5a1a",
+    "reader_registration_sha256": "b03158723b9a94b9ed95939a0874d46002becb3128479aefc2734b1373884a04",
+    "server_options": {
+      "OLLAMA_MAX_LOADED_MODELS": "1",
+      "OLLAMA_NO_CLOUD": "1",
+      "OLLAMA_NUM_PARALLEL": "1"
+    },
+    "service_helper_sha256": "c9de44009845b0b97db44293605f1714f8d1366c1e6ee72231d92b34bb80a002"
+  },
+  "inventory": {
+    "models": {
+      "gemma4:26b": "08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68",
+      "gemma4:31b": "6316f0629137b426c9d9b853ffc4c8209589f30ee39aebede6285096c0ff47e7",
+      "qwen3.5:4b": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd"
+    },
+    "version": "0.34.0"
+  },
+  "registered_at": "2026-09-13T19:08:53.161773+00:00"
+}

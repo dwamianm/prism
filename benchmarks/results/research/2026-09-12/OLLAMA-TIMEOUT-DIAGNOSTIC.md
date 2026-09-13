@@ -28,3 +28,19 @@ questions and controls. Do not select only failed prompts for a replacement
 quality score or change another workload's server configuration.
 
 See the [sanitized observations](ollama-timeout-health-20260913.json).
+
+A separately registered task-server probe has now completed with native exit
+zero. The server used the existing assets, one loaded model and one parallel
+request, on its own ephemeral loopback port. All six authored canaries completed
+at the requested context sizes: 65,536 for both readers and 32,768 for the judge.
+First/warm request times were 2.08/0.19 seconds for Qwen, 3.67/0.22 for Gemma26
+and 6.85/1.11 for Gemma31. These tiny requests are not a benchmark speed claim.
+The server exited zero and its port was closed afterward. The existing service
+was not stopped or reconfigured. Six canaries do not prove that a long trial
+will finish or identify the cause of earlier shared-service timeouts.
+
+The [probe plan](ollama-load-probe-plan.json) fixes binary/module hashes,
+model digests, options and a 90-second single-attempt timeout. Its
+[completion record](ollama-load-probe-completion.json) binds all raw artifacts
+and observed contexts. Authored checks cover retained timeout/context-mismatch
+failures and a real failed child process with owned-server cleanup.
