@@ -1,0 +1,110 @@
+{
+  "before": {
+    "deselected": 14,
+    "failed": 2,
+    "reason": "Both raw Python write paths accepted a naive source datetime."
+  },
+  "build_note": "Initial python -m build invocation lacked the optional build frontend; uv build succeeded without changing runtime dependencies.",
+  "checks": [
+    "naive source clock rejected before durable event/work admission on both backends",
+    "aware offset or absent clock retained through pending recovery and restart",
+    "synchronous client propagates clock validation errors",
+    "MCP transport accepts aware clock and exposes source/validity clocks separately",
+    "MCP rejects naive clock before engine write",
+    "owner isolation after restart"
+  ],
+  "focused_live_backends": {
+    "passed": 56,
+    "skipped": 3
+  },
+  "full": {
+    "native_exit_code": 0,
+    "passed": 2941,
+    "seconds": 455.12,
+    "skipped": 81,
+    "tool_session_id": 72913
+  },
+  "installed": {
+    "native_exit_code": 0,
+    "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme",
+    "passed": 151,
+    "python": "3.13.3",
+    "seconds": 32.98,
+    "skipped": 12,
+    "source_files_verified": 124,
+    "tool_session_id": 1229
+  },
+  "kind": "raw-source-clock-admission-and-recovery",
+  "limits": [
+    "Separate overlapping source/installed invocations; skips are not covered.",
+    "Existing saved rows and derivation plans are not rewritten.",
+    "No extraction accuracy or competitive quality claim."
+  ],
+  "lint": {
+    "corrected": true,
+    "prior_errors": 23,
+    "prior_files": 4
+  },
+  "local": {
+    "passed": 31,
+    "skipped": 8
+  },
+  "logs": {
+    "backends": {
+      "native_exit_code": 0,
+      "path": "/tmp/prme-source-clocks-backends.log",
+      "sha256": "4a99bae0e563731709315665d56b4184b43a0884ecc252ce347a06a3edb269e9"
+    },
+    "build": {
+      "native_exit_code": 0,
+      "path": "/tmp/prme-source-clocks-build-uv.log",
+      "sha256": "0baeb84b91afc6d7841faabfbde0d770b86d4483777e37627d7db353c2a0448f"
+    },
+    "build_initial": {
+      "native_exit_code": 1,
+      "path": "/tmp/prme-source-clocks-build.log",
+      "sha256": "f48b7dfac86539860e9c4ac397168cd90b5d8cc7c767edea39d284c694f8a211"
+    },
+    "full": {
+      "native_exit_code": 0,
+      "path": "/tmp/prme-source-clocks-full.log",
+      "sha256": "4d024eb56c9e60777348aad7d0f25275c2c2455c989a1521c515f561e42b1f6b"
+    },
+    "install": {
+      "native_exit_code": 0,
+      "path": "/tmp/prme-source-clocks-install.log",
+      "sha256": "fa916df82f744b34475ad1edbfafc50698fd8fd0b555d36673e24249aa650f20"
+    },
+    "installed": {
+      "native_exit_code": 0,
+      "path": "/tmp/prme-source-clocks-installed.log",
+      "sha256": "707d38f7824aa572c44b456be4fd01ec3a93570f60ae2eb65f4e2cea13526ae9"
+    },
+    "lint_after": {
+      "native_exit_code": 0,
+      "path": "/tmp/prme-source-clocks-lint-after.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    "lint_before": {
+      "native_exit_code": 1,
+      "path": "/tmp/prme-source-clocks-lint.log",
+      "sha256": "f96464c3f12566b59a8b2c5a4aed6547794931c74240f6299a216cdfa07e5e94"
+    },
+    "local": {
+      "native_exit_code": 0,
+      "path": "/tmp/prme-source-clocks-local.log",
+      "sha256": "a635dccae092fd89085ca0013909aabd75ff7c864dfe21f4f89617de2a34d28c"
+    },
+    "red": {
+      "native_exit_code": 1,
+      "path": "/tmp/prme-raw-source-clocks-before.log",
+      "sha256": "4bd2a742b38931af4abbd7414af677e27543090676573875cb723c1bc25b50ea"
+    }
+  },
+  "recorded_at": "2026-09-13T03:02:15.205304+00:00",
+  "source_commit": "f9665fb",
+  "wheel": {
+    "path": "/tmp/prme-source-clocks-dist/prme-0.11.0-py3-none-any.whl",
+    "sha256": "d3682d12f88c20ca55222bb1884f1e1e967a3ea2b0bf00000a19e218251a0587"
+  }
+}

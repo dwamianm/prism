@@ -1,0 +1,8 @@
+{
+  "checked_at": "2026-09-13T02:50:15.429981+00:00",
+  "credential_source": "explicit root .env",
+  "trigger": "user reports usage reset",
+  "success": false,
+  "error_type": "RateLimitError",
+  "http_status": 429
+}

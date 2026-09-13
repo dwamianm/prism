@@ -1,6 +1,11 @@
 # Recovery and developer workflow evidence
 
-The latest [PostgreSQL workspace record](PG-WORKSPACES.md) at `b7521bc` passed
+The latest [source-clock record](SOURCE-CLOCKS.md) at `f9665fb` passed **2,941
+source tests with 81 skips** and **151 installed-wheel checks with 12 skips**,
+including live PostgreSQL. Raw writes now reject ambiguous source clocks before
+admission, and MCP preserves source clocks separately from validity dates.
+
+The preceding [PostgreSQL workspace record](PG-WORKSPACES.md) at `b7521bc` passed
 **2,877 source tests with 81 skips**, including live PostgreSQL. The installed
 selection passed **143 tests with 13 skips** after a test-fixture portability fix.
 The real-BGE 100-project concurrent retrieval and native backup/restore workflow
