@@ -29,8 +29,8 @@ class Event(MemoryObject):
         default=None,
         description=(
             "When the event actually happened in the real world (UTC). "
-            "None means same as ingestion timestamp. Enables bi-temporal "
-            "queries: ingestion_time vs event_time (issue #21)."
+            "None means the source time is unknown or unspecified. "
+            "The timestamp field records ingestion time separately."
         ),
     )
     role: str = Field(description="Conversation role, e.g. 'user', 'assistant', 'tool', or 'system'")
