@@ -55,7 +55,9 @@ These records preserve commit identities, raw-output hashes, failures and limits
    metadata missing from five results; native role and timestamp fields remained
    present. PRME was stopped, and Hindsight continues an operational failure audit.
    A [native-provenance adapter preflight](../benchmarks/results/research/2026-09-12/HINDSIGHT-NATIVE-PROVENANCE-PREFLIGHT.md)
-   is testing the correct returned fields before another complete registration.
+   passed on three authored histories and the operationally failing case; all 24
+   product/budget contexts reproduced with unlabelled analysis. Another complete
+   dataset registration awaits the full operational failure audit.
    The [common-reader protocol](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-PROTOCOL.md)
    is frozen for Qwen/Gemma plus fresh empty controls. Its authored live reader
    check passed; the separate judge passed 41/42 calibration controls with zero

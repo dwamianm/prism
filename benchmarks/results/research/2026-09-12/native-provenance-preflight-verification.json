@@ -1,0 +1,92 @@
+{
+  "recorded_at": "2026-09-13T00:18:36.087653+00:00",
+  "kind": "native-provenance-adapter-operational-preflight",
+  "worker_commit": "f7e86a1",
+  "cases": 4,
+  "case_origins": {
+    "authored": 3,
+    "previously_failed_development_case": 1
+  },
+  "no_quality_labels": true,
+  "products": {
+    "prme": {
+      "native_exit_code": 0,
+      "complete": true,
+      "errors": 0,
+      "cases": 4,
+      "missing_metadata_unit_counts": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "report": {
+        "path": "data/benchmarks/prme-native-provenance-preflight-f7e86a1.json",
+        "sha256": "6f9dca4e096878a9e85a2dda6170012ab63eaea84e644e3c67d6fc83c6eb5083"
+      },
+      "plan": {
+        "path": "benchmarks/results/research/2026-09-12/prme-native-provenance-preflight-plan.json",
+        "sha256": "a8b758aeb8f7fe53d8c18e8ef33006cc8cb269f133f835c6c811cea8090954c2"
+      },
+      "log": {
+        "path": "/tmp/prme-prme-native-provenance-preflight-f7e86a1.log",
+        "sha256": "3802c9d2dbbc55b390d99b71140a41c23046ba5ccef3c1e5517d6bdc6c338398"
+      }
+    },
+    "hindsight": {
+      "native_exit_code": 0,
+      "complete": true,
+      "errors": 0,
+      "cases": 4,
+      "missing_metadata_unit_counts": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "report": {
+        "path": "data/benchmarks/hindsight-native-provenance-preflight-f7e86a1.json",
+        "sha256": "009c7c8092afc99db1aeb5f22b31391a53fbd9bc278bf97688fca51b4eee6a43"
+      },
+      "plan": {
+        "path": "benchmarks/results/research/2026-09-12/hindsight-native-provenance-preflight-plan.json",
+        "sha256": "41da7542ec637991912ac65e6cddd52f00bfc6a4f7482524edda4ab057dc7b35"
+      },
+      "log": {
+        "path": "/tmp/prme-hindsight-native-provenance-preflight-f7e86a1.log",
+        "sha256": "3863e0f2115ed678161c9f0ab99b8c5ebb8e37e7ec9cf975a068bf0517f721f2"
+      }
+    }
+  },
+  "analysis": {
+    "native_exit_code": 0,
+    "verified": true,
+    "all_metrics_unlabelled": true,
+    "context_reproductions": 24,
+    "report": {
+      "path": "data/benchmarks/native-provenance-preflight-f7e86a1-analysis.json",
+      "sha256": "671df03ea1d992cb0f55d79b6ed13392644a547236ba56cbb74c774a5a23d07e"
+    },
+    "completion": {
+      "path": "data/benchmarks/native-provenance-preflight-f7e86a1-completion.json",
+      "sha256": "585cb7c491860f5029d8f2341adca2fa99f6b5fc623080cf93a7a9153d2a7cff"
+    },
+    "log": {
+      "path": "/tmp/prme-native-provenance-preflight-f7e86a1-analysis.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "contracts": {
+    "passed": 91,
+    "native_exit_code": 0,
+    "log": {
+      "path": "/tmp/prme-public-context-native-fields-tests.log",
+      "sha256": "42f876f717fa760d779d287f4e9eeb43a8e2d92096f5cd2d1fc335d96fde2dab"
+    }
+  },
+  "limits": [
+    "Operational preflight only; no retrieval-quality or generated-answer scores inspected.",
+    "The fresh Hindsight diagnostic returned four units with absent metadata; the original failure returned five. No cross-run identical-candidate claim is made.",
+    "The prior strict dataset worker continues its full operational failure audit; no full replacement run is registered yet."
+  ]
+}

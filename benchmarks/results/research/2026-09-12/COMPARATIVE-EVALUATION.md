@@ -224,3 +224,14 @@ The [separate judge calibration](hindsight-prme-reader-judge-calibration-verific
 passed 41/42 authored controls, with zero false accepts and one false rejection.
 Both parent and worker exited zero. These are operational/calibration results;
 the failed dataset captures remain ineligible for reader generation or scoring.
+
+
+The [native-provenance adapter preflight](native-provenance-preflight-verification.json)
+completed all four cases on both products with native exit zero. It includes
+three authored histories and the operationally failing dataset case, with all
+evidence labels removed from analysis. All 24 product/budget contexts reproduced
+exactly, and 91 focused tests pass. The fresh diagnostic returned four units with
+absent custom metadata, versus five in the original failure; no identical-output
+claim is made. Their native context and time fields remain in the actual rendered
+context. This validates an explicitly different adapter protocol, not a quality
+result or permission to reuse failed dataset outputs.
