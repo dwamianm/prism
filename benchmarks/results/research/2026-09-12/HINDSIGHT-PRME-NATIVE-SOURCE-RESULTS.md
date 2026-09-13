@@ -67,9 +67,9 @@ The [registered common readers](HINDSIGHT-PRME-READER-PROTOCOL.md) consume only
 the exact verified actual 4K contexts, with a fresh empty-memory control. Both
 plans and the prepared input hash were committed at `f1a0b64` before generation.
 Both readers completed all 357 logical predictions each with native exit zero;
-every saved response and prompt reproduced offline. The complete 714-judgment
-export is prepared under the frozen plan for separate calibrated judging.
-No answer-quality score is reported here.
+every saved response and prompt reproduced offline. Separate calibrated judging
+and scoring also completed with native exit zero. The [answer report](HINDSIGHT-PRME-READER-RESULTS.md)
+retains every outcome and category loss; the source metrics here remain distinct.
 
 These are development questions that already informed PRME changes, not an
 independent holdout. The 111 base-question/history groups do not capture every

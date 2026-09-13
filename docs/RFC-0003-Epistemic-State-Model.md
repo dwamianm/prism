@@ -64,6 +64,13 @@ automatically rewritten.
 
 **On classification accuracy:** Epistemic classification is performed by an extraction pipeline. Extraction pipelines are `[BEST-EFFORT]` — they are not guaranteed to be accurate. A statement classified as INFERRED that was actually OBSERVED is a classification error, not a protocol violation. Implementations SHOULD expose the extraction model's confidence in its own classification as a separate field (`classification_confidence`). `[HYPOTHESIS — classification accuracy thresholds require experimental validation]`
 
+The built-in extraction prompt explicitly lists `conditional` alongside the
+other creation-time types. Epistemic status is independent of claim kind: facts,
+preferences and decisions can all depend on unresolved conditions. The prompt
+does not evaluate those conditions or automatically reclassify saved extractions.
+This clarification does not establish classification accuracy; the authored
+probe and its limits are recorded in the research evidence.
+
 ### Source support in PRME ingestion
 
 Extraction requests an exact `evidence_quote` for each fact and relationship. Validation requires

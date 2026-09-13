@@ -17,6 +17,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 | Deferred raw-source throughput | Local processing now shares a durable lexical commit before acknowledging sources. A frozen 32-source real-model workflow reduced 32 commits to one, with identical candidates and contexts across serial/batch trials. | Small authored histories with warmed embeddings on one host under concurrent load; no competitive speed claim. Direct `store()` still indexes immediately. |
 | Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
 | Matched raw retrieval | All 119 development questions completed against pinned Mem0 OSS. At 4K shared whole-turn packing, PRME source recall was 96.49% versus 93.27%; Mem0 led preferences. | Raw mode, frozen older PRME reference, shared evaluator packer and no answer generation. The 4K interval touches zero; no end-to-end leadership claim. |
+| Matched raw-context answers | [Complete PRME–Hindsight comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-RESULTS.md): Qwen 53/119 versus 52/119, Gemma 71/119 versus 56/119. All 714 logical judgments and native artifact chains verified. | Qwen's paired group interval includes zero. Both readers answer only 1/9 assistant questions correctly with PRME. Development cohort, custom local judge, raw profiles; no consistent overall leadership or default-promotion claim. |
 | PersonaMem-v2 pilot | All 96 questions completed and independently verified. Alpha .25 packing answered 42 correctly, density 36, score 41 and no memory 33. | Primary cluster interval includes zero; losses on other-person and health questions. Custom persona-hidden variant, one local reader, no default promotion. |
 
 See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
@@ -70,10 +71,11 @@ These records preserve commit identities, raw-output hashes, failures and limits
    keeps reader families separate and reports category losses. Dataset reader
    input and plans are frozen at `f1a0b64`; Qwen completed all 357 predictions
    with native exit zero and offline reproduction of every saved response.
-   Gemma also completed all 357 predictions with native exit zero. Both readers'
-   responses reproduce offline; all 714 judgments are prepared under the frozen
-   judge plan. Separate calibrated judging is next.
-   No answer-quality result is available yet.
+   Gemma also completed all 357 predictions with native exit zero. The
+   [complete judged results](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-RESULTS.md)
+   verify all 714 logical judgments: PRME versus Hindsight is 53/52 correct with
+   Qwen and 71/56 with Gemma. Assistant memory is a consistent loss, 1/9 for
+   PRME versus 8/9 and 7/9. A stronger source-recall total has not solved packing.
    Timing under concurrent load cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect
@@ -121,6 +123,13 @@ The [current provenance research review](../benchmarks/results/research/2026-09-
 adds MemIR, Agent Zero Memory and AttriMem as hypotheses/comparison candidates.
 It distinguishes claim support, source opening and credit assignment from
 reproduced product improvements; no published total replaces the checks here.
+
+The [complete authored extraction probe](../benchmarks/results/research/2026-09-12/AUTHORED-EXTRACTION-RESULTS.md)
+retains Qwen's 10/12 and Gemma's 11/12 checks, including ambiguous kind labels
+and one incorrectly asserted conditional preference. A prompt clarification now
+lists `conditional` explicitly and separates it from claim kind. Its registered
+follow-up uses a wheel differing from the baseline in that source file alone;
+no improvement is assumed before the fixed probes finish.
 
 | Gap | Next implementation/evaluation requirement |
 |---|---|
