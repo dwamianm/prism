@@ -125,6 +125,12 @@ loss at 4K. One multi-session question regressed at 2K. All 714 contexts passed
 independent measurement checks. Answer-reader validation and broader regression
 evidence remain necessary; this does not change the product default.
 
+The [first one-head answer trial](../benchmarks/results/research/2026-09-12/PACKING-HEAD-READER-INCOMPLETE.md)
+stopped before judging when Gemma timed out after logging 245 of 357 predictions.
+Qwen completed all 357. Saved responses and native exits are verified, but this
+incomplete trial has no comparative answer score. A follow-up must register a
+fresh complete trial; failed outcomes cannot be selectively replaced.
+
 ## Capability work still required
 
 The [current provenance research review](../benchmarks/results/research/2026-09-12/PROVENANCE-RESEARCH-UPDATE.md)

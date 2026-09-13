@@ -1,0 +1,42 @@
+{
+  "artifacts": {
+    "prepared.json": "4d3b5bdf10272183a75319ac2c41cb01e878538947218ec7c8c114ecf1b007ad",
+    "reader-0-completion.json": "e4b2b2097b23b3958cf60fc552c44acfe0a1f5b24211d83d23c84f3a4f6af44f",
+    "reader-0-plan.json": "462fa0bd04d677507dd276f74f632e287b5b56b02decc819bb960e7cd1e83f8e",
+    "reader-0-state.json": "d39f41327689823a06fbf9a91bcd75cf1598a5596f3e65c45cedaab68449219b",
+    "reader-0.json": "2b189fc6cb7ac71f84b3d1dc2edb6f9352f2b5cb9a2832046d2daa61faab6bea",
+    "reader-0.log": "e2cdb92534cefe5d0faf2176eb4c99eb16ceee945b338b3c8f41aaf8e22f82ed",
+    "reader-1-completion.json": "1398376636c5de333eb4247afdd3bdf5464b9e718a2af39cfba2c556c12d9747",
+    "reader-1-plan.json": "c9c2f5bbc356461ab50b0c0e0370b8619ae21f30c5c6d43ee280ea9220309789",
+    "reader-1-state.json": "815b448cf637a0b15053490abdac2842a4461aeeeb6248d3daf6f20650468552",
+    "reader-1.json": "11d02f59f8643408ff4c61fd56935039e4a2dc7d0a4a76e8d0f31795081dd3bd",
+    "reader-1.log": "c27ac98e7317abbce6bc7012db4708b9eeda5d6c0076770823175ea37bef5e58"
+  },
+  "complete": false,
+  "downstream_judging_started": false,
+  "gemma": {
+    "failed_at": "2026-09-13T18:19:39.436618+00:00",
+    "failure_type": "TimeoutError",
+    "last_logged_logical_prediction": 245,
+    "native_exit_code": 1,
+    "request_timeout_seconds": 180,
+    "response_received": false,
+    "unique_saved_responses_verified": 213
+  },
+  "limits": [
+    "Incomplete development study; no comparative answer score or production default decision.",
+    "Partial answers were checked structurally and by checksum, not inspected for correctness.",
+    "A future trial must be freshly registered; failed attempts cannot be selectively replaced."
+  ],
+  "native_driver_exit_code": 1,
+  "observed_at": "2026-09-13T18:22:58.435501+00:00",
+  "qwen": {
+    "all_responses_verified": true,
+    "logical_predictions": 357,
+    "native_exit_code": 0,
+    "unique_generations": 313
+  },
+  "registration_sha256": "5fa08c5790be81ad51d2605565712d20dde122c19a9bdf89a9fc71ffcda3e993",
+  "scores_available": false,
+  "source_commit": "70c4fa9"
+}
