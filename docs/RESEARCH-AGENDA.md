@@ -117,6 +117,11 @@ These records preserve commit identities, raw-output hashes, failures and limits
 
 ## Capability work still required
 
+The [current provenance research review](../benchmarks/results/research/2026-09-12/PROVENANCE-RESEARCH-UPDATE.md)
+adds MemIR, Agent Zero Memory and AttriMem as hypotheses/comparison candidates.
+It distinguishes claim support, source opening and credit assignment from
+reproduced product improvements; no published total replaces the checks here.
+
 | Gap | Next implementation/evaluation requirement |
 |---|---|
 | Named projects and domains | `MemoryWorkspace` manages identity-checked local packs and PostgreSQL schemas with shared embeddings and a bounded lease cache. PostgreSQL projects share a bounded connection pool; the installed 100-project backup/restore workflow passed. The [workspace guide](WORKSPACES.md) states cancellation, background-extraction and operator boundaries. Next: hosted credential-to-project grants, larger realistic partition benchmarks, explicit legacy import and lifecycle operations. A metadata filter alone is insufficient, and the full grant hierarchy remains unimplemented. |
