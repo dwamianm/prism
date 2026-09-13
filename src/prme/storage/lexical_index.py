@@ -305,6 +305,29 @@ class LexicalIndex:
                             self._do_stage(documents)
                     await run_to_completion(guarded)
 
+    async def stage_consolidation(self, plan, *, fence=None) -> None:
+        """Durably stage one journaled consolidation document idempotently."""
+        from prme.models.consolidation import ConsolidationPublication
+
+        plan = ConsolidationPublication.model_validate_json(plan.model_dump_json())
+        if fence is not None:
+            fence.verify_plan(plan)
+        node = plan.node
+        documents = ({
+            "node_id": [str(node.id)], "content": [node.content],
+            "user_id": [node.user_id], "node_type": [node.node_type.value],
+            "scope": [node.scope.value],
+        },)
+        async with self._write_lock:
+            if fence is None:
+                await run_to_completion(self._do_stage, documents)
+            else:
+                async with fence.conn_lock:
+                    def guarded():
+                        with fence.hold():
+                            self._do_stage(documents)
+                    await run_to_completion(guarded)
+
     def _do_stage(self, documents: tuple[dict, ...]) -> None:
         # Preserve unrelated normal writes before starting this isolated batch.
         self._commit_locked()

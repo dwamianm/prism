@@ -100,15 +100,17 @@ def _retire_duckdb(store, source_id, summary_id, policy):
     conn = store._conn
     conn.execute('BEGIN TRANSACTION')
     try:
-        # Schema initialization removes the mutable lifecycle ART index.
-        # Supported graph mutations then share this updated_at column claim;
-        # indexed lifecycle delete/insert updates would bypass it.
+        # Use a real updated_at write as the DuckDB conflict claim. A no-op
+        # assignment can be elided for freshly published generated nodes,
+        # allowing a concurrent writer to win and making this transaction fail
+        # only after it has already authorized retirement. Ineligible attempts
+        # roll back below, so they do not leave a maintenance-only timestamp.
         for identity in sorted({source_id, summary_id}):
-            conn.execute('UPDATE nodes SET updated_at=updated_at WHERE id=?', [identity])
+            conn.execute('UPDATE nodes SET updated_at=current_timestamp WHERE id=?', [identity])
         source = store._get_node_sync(source_id, True)
         summary = store._get_node_sync(summary_id, True)
         if not eligible(source, summary, **policy):
-            conn.execute('COMMIT')
+            conn.execute('ROLLBACK')
             return False
         _checkpoint('validated')
         at = policy['at']

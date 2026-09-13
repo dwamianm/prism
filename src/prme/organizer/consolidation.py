@@ -21,12 +21,20 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid5
 
+from prme.models.consolidation import (
+    ConsolidationPublication,
+    consolidation_key,
+    consolidation_request_hash,
+)
+from prme.models.derivation import PreparedEmbedding
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.models import ConsolidationResult
 from prme.types import (
     EdgeType,
+    DecayProfile,
     EpistemicType,
     LifecycleState,
     NodeType,
@@ -212,9 +220,48 @@ async def consolidate_cluster(
     Returns:
         The created SUMMARY MemoryNode.
     """
-    # Fetch all member nodes
+    summary, _created = await _consolidate_cluster(engine, cluster)
+    return summary
+
+
+async def _lineage_summaries(
+    engine: MemoryEngine, *, user_id: str, scope, key: str
+) -> tuple[list[MemoryNode], list[MemoryNode]]:
+    """Return active and retired summaries for one exact owner-scoped lineage."""
+    active_states = {LifecycleState.TENTATIVE, LifecycleState.STABLE}
+    active: list[MemoryNode] = []
+    retired: list[MemoryNode] = []
+    after_id: str | None = None
+    while True:
+        page = await engine._graph_store.scan_nodes(
+            user_id=user_id,
+            scope=scope,
+            node_type=NodeType.SUMMARY,
+            lifecycle_states=list(LifecycleState),
+            after_id=after_id,
+            limit=500,
+        )
+        if not page:
+            break
+        for node in page:
+            metadata = node.metadata or {}
+            if (
+                metadata.get("consolidation_summary") is True
+                and metadata.get("consolidation_key") == key
+            ):
+                (active if node.lifecycle_state in active_states else retired).append(node)
+        after_id = str(page[-1].id)
+    return active, retired
+
+
+async def _consolidate_cluster(
+    engine: MemoryEngine,
+    cluster: MemoryCluster,
+) -> tuple[MemoryNode, bool]:
+    """Prepare, stage, and atomically publish one extractive summary."""
+    # Fetch all member nodes from a de-duplicated input identity list.
     members: list[MemoryNode] = []
-    for mid in cluster.member_ids:
+    for mid in dict.fromkeys(cluster.member_ids):
         node = await engine.get_node(mid, include_superseded=False)
         if node is not None and node.lifecycle_state in {LifecycleState.TENTATIVE, LifecycleState.STABLE}:
             members.append(node)
@@ -240,62 +287,141 @@ async def consolidate_cluster(
     avg_confidence = sum(m.confidence for m in selected) / len(selected)
     max_salience = max(m.salience for m in selected)
     evidence_refs = list(dict.fromkeys(ref for m in selected for ref in [m.id, *m.evidence_refs]))
-
-    user_id = owner
-
-    # Store the summary node via engine.store()
-    _event_id = await engine.store(
-        summary_content,
-        user_id=user_id,
-        node_type=NodeType.SUMMARY,
-        scope=centroid.scope,
-        metadata={
-            "consolidation_coverage": coverage, "cluster_size": len(members),
-            "consolidation_content_sha256": hashlib.sha256(summary_content.encode()).hexdigest(),
-        },
+    members = sorted(members, key=lambda node: str(node.id))
+    selected_ids = [str(node.id) for node in selected]
+    key = consolidation_key(owner, centroid.scope, (node.id for node in members))
+    provider = engine._vector_index._provider
+    request_hash = consolidation_request_hash(
+        members,
+        content=summary_content,
         confidence=avg_confidence,
-        epistemic_type=EpistemicType.INFERRED,
-        source_type=SourceType.SYSTEM_INFERRED,
-    )
-
-    # Retrieve the created summary node
-    nodes = await engine.query_nodes(
-        user_id=user_id, node_type=NodeType.SUMMARY,
-        content_contains_any=[str(selected[0].id)], limit=500,
-    )
-    summary_node: MemoryNode | None = None
-    for n in nodes:
-        if any(str(ref) == _event_id for ref in n.evidence_refs):
-            summary_node = n
-            break
-
-    if summary_node is None:
-        raise RuntimeError("Failed to retrieve created summary node")
-
-    # Update the summary node with proper evidence_refs and salience
-    await engine._graph_store.update_node(
-        str(summary_node.id),
-        evidence_refs=list(dict.fromkeys([*summary_node.evidence_refs, *evidence_refs])),
-        salience_base=max_salience,
         salience=max_salience,
-        confidence_base=avg_confidence,
-        confidence=avg_confidence,
+        selected_ids=selected_ids,
+        embedding_identity=(
+            provider.model_name,
+            provider.model_version,
+            provider.dimension,
+        ),
     )
+    previous, retired = await _lineage_summaries(
+        engine, user_id=owner, scope=centroid.scope, key=key
+    )
+    matching = [
+        node
+        for node in previous
+        if (node.metadata or {}).get("consolidation_request_hash") == request_hash
+    ]
+    if len(previous) == 1 and len(matching) == 1:
+        for stale in retired:
+            await engine._evict_from_indexes(str(stale.id))
+        return matching[0], False
 
-    # Create DERIVED_FROM edges from summary to each member
-    for member in selected:
-        edge = MemoryEdge(
-            source_id=summary_node.id,
-            target_id=member.id,
-            edge_type=EdgeType.DERIVED_FROM,
-            user_id=user_id,
+    generation = await engine._graph_store.consolidation_generation(key)
+    summary_id = uuid5(UUID(key), f"{request_hash}:{generation}")
+    plan = await engine._graph_store.get_prepared_consolidation(
+        str(summary_id), user_id=owner
+    )
+    if plan is None:
+        summary_node = MemoryNode(
+            id=summary_id,
+            user_id=owner,
+            node_type=NodeType.SUMMARY,
+            scope=centroid.scope,
+            content=summary_content,
+            metadata={
+                "consolidation_summary": True,
+                "consolidation_key": key,
+                "consolidation_request_hash": request_hash,
+                "consolidation_generation": generation,
+                "consolidation_coverage": coverage,
+                "source_node_ids": [str(node.id) for node in members],
+                "selected_source_node_ids": selected_ids,
+                "cluster_size": len(members),
+                "consolidation_content_sha256": hashlib.sha256(summary_content.encode()).hexdigest(),
+                "consolidation_format_version": 2,
+            },
+            evidence_refs=evidence_refs,
             confidence=avg_confidence,
+            confidence_base=avg_confidence,
+            salience=max_salience,
+            salience_base=max_salience,
+            epistemic_type=EpistemicType.INFERRED,
+            source_type=SourceType.SYSTEM_INFERRED,
+            decay_profile=DecayProfile.FAST,
         )
-        await engine._graph_store.create_edge(edge)
+        edges = tuple(
+            MemoryEdge(
+                id=uuid5(summary_id, f"derived-from:{member.id}"),
+                source_id=summary_id,
+                target_id=member.id,
+                edge_type=EdgeType.DERIVED_FROM,
+                user_id=owner,
+                confidence=avg_confidence,
+                valid_from=summary_node.created_at,
+                created_at=summary_node.created_at,
+            )
+            for member in selected
+        )
+        from prme.storage.embedding import encode_texts
 
-    # Re-fetch the updated node
-    updated_node = await engine.get_node(str(summary_node.id))
-    return updated_node if updated_node is not None else summary_node
+        vectors = await encode_texts(provider, [summary_content])
+        if len(vectors) != 1:
+            raise ValueError("Consolidation embedding provider must return exactly one vector")
+        plan = ConsolidationPublication(
+            node=summary_node,
+            sources=tuple(members),
+            previous=tuple(sorted(previous, key=lambda node: str(node.id))),
+            edges=edges,
+            embedding=PreparedEmbedding(
+                node_id=summary_id,
+                content=summary_content,
+                model=provider.model_name,
+                version=provider.model_version,
+                dimension=provider.dimension,
+                values=tuple(vectors[0]),
+            ),
+            generation=generation,
+            request_hash=request_hash,
+        )
+        plan = await engine._graph_store.prepare_consolidation(plan)
+
+    if engine._pool is None:
+        import asyncio
+        import duckdb
+
+        from prme.models.consolidation import StaleConsolidationError
+        from prme.storage.consolidation_publication import ConsolidationStageFence
+
+        fence = ConsolidationStageFence(
+            engine._conn, engine._event_store._conn_lock, plan
+        )
+        for attempt in range(10):
+            try:
+                await engine._vector_index.stage(
+                    plan.embedding, user_id=owner, fence=fence
+                )
+                await engine._lexical_index.stage_consolidation(plan, fence=fence)
+                break
+            except (duckdb.ConstraintException, duckdb.TransactionException) as exc:
+                if attempt == 9:
+                    raise StaleConsolidationError(
+                        "Concurrent consolidation staging did not settle; retry"
+                    ) from exc
+                await asyncio.sleep(0.01 * (attempt + 1))
+            except ValueError as exc:
+                if "LockBusy" not in str(exc) or attempt == 9:
+                    raise
+                await asyncio.sleep(0.01 * (attempt + 1))
+    node_id = await engine._write_queue.submit(
+        lambda: engine._graph_store.publish_consolidation(plan),
+        label=f"consolidation.publish:{plan.node.id}",
+    )
+    for stale in (*plan.previous, *retired):
+        await engine._evict_from_indexes(str(stale.id))
+    published = await engine.get_node(node_id)
+    if published is None:
+        raise RuntimeError("Consolidation publication did not produce an active summary")
+    return published, True
 
 
 async def forget_consolidated(
@@ -403,8 +529,8 @@ async def run_consolidation_pipeline(
 
         try:
             # Consolidate
-            summary_node = await consolidate_cluster(engine, cluster)
-            summaries_created += 1
+            summary_node, created = await _consolidate_cluster(engine, cluster)
+            summaries_created += int(created)
             total_consolidated += len((summary_node.metadata or {}).get("consolidation_coverage", {}))
 
             # Forget

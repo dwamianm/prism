@@ -27,6 +27,7 @@ from prme.storage.organizer_merge import MergeResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
+from prme.models.consolidation import ConsolidationPublication
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -74,6 +75,26 @@ class DuckPGQGraphStore:
     async def publish_profile(self, plan: ProfilePublication) -> str:
         """Atomically replace a generated profile after index preparation."""
         from prme.storage.profile_publication import commit_duckdb
+        return await commit_duckdb(self, plan)
+
+    async def consolidation_generation(self, key: str) -> int:
+        from prme.storage.consolidation_publication import generation_duckdb
+        return await generation_duckdb(self, key)
+
+    async def prepare_consolidation(
+        self, plan: ConsolidationPublication
+    ) -> ConsolidationPublication:
+        from prme.storage.consolidation_publication import prepare_duckdb
+        return await prepare_duckdb(self, plan)
+
+    async def get_prepared_consolidation(
+        self, node_id: str, *, user_id: str
+    ) -> ConsolidationPublication | None:
+        from prme.storage.consolidation_publication import get_prepared_duckdb
+        return await get_prepared_duckdb(self, node_id, user_id=user_id)
+
+    async def publish_consolidation(self, plan: ConsolidationPublication) -> str:
+        from prme.storage.consolidation_publication import commit_duckdb
         return await commit_duckdb(self, plan)
 
     async def create_node(self, node: MemoryNode) -> str:

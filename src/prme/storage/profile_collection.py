@@ -25,8 +25,13 @@ def collection_operation_id(plan):
 def registry_queries():
     from prme.storage.derivation_registry import _PENDING
     from prme.storage.profile_registry import PENDING
+    from prme.storage.consolidation_publication import PENDING as CONSOLIDATION_PENDING
 
-    return _PENDING + " LIMIT 1", PENDING + " LIMIT 1"
+    return (
+        _PENDING + " LIMIT 1",
+        PENDING + " LIMIT 1",
+        CONSOLIDATION_PENDING + " LIMIT 1",
+    )
 
 
 def validate_collect_duck(conn, plan):

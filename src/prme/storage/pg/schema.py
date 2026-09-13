@@ -251,6 +251,8 @@ async def initialize_pg_database(
         await initialize_pg(conn)
         from prme.storage.profile_registry import initialize_pg as initialize_profiles
         await initialize_profiles(conn)
+        from prme.storage.consolidation_publication import initialize_pg as initialize_consolidations
+        await initialize_consolidations(conn)
 
     logger.info("PostgreSQL schema initialized (embedding_dim=%d)", embedding_dim)
 

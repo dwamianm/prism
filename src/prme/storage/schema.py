@@ -566,4 +566,6 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     initialize_duck(conn)
     from prme.storage.profile_registry import initialize_duck as initialize_profiles
     initialize_profiles(conn)
+    from prme.storage.consolidation_publication import initialize_duck as initialize_consolidations
+    initialize_consolidations(conn)
     return False
