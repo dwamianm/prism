@@ -33,8 +33,7 @@ _EXPLICIT_CONDITION_RE = re.compile(
     re.IGNORECASE,
 )
 _UNCERTAINTY_RE = re.compile(
-    r"\b(?:might|may|could|possibly|perhaps|maybe)\b",
-    re.IGNORECASE,
+    r"(?i:\b(?:might|could|possibly|perhaps|maybe)\b)|\bmay\b"
 )
 _EXPLICIT_DECISION_RE = re.compile(
     r"\b(?:decid\w*|chos(?:e|en)|select(?:ed|s)?|opt(?:ed|s)?|agree(?:d|s)?|"

@@ -165,6 +165,29 @@ def test_builtin_explicit_choice_remains_a_decision():
     assert result.facts[0].fact_type == "decision"
 
 
+def test_person_named_may_is_not_treated_as_uncertain():
+    source = "May uses Redis."
+    payload = {
+        "entities": [
+            {"name": "May", "entity_type": "person"},
+            {"name": "Redis", "entity_type": "product"},
+        ],
+        "facts": [{
+            "subject": "May",
+            "predicate": "uses",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "fact_type": "fact",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+
+
 def test_grounding_downgrades_conditionals_without_supported_condition():
     source = "If approval is granted, Alice uses email."
     unsupported = fact(
