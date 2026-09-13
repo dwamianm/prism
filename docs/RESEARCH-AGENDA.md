@@ -117,6 +117,14 @@ These records preserve commit identities, raw-output hashes, failures and limits
    the user. Audit subject attribution and merge semantics alongside evidence
    selection. This control is not product retrieval or an independent holdout.
 
+The [fixed one-head packing experiment](../benchmarks/results/research/2026-09-12/PACKING-HEAD-STUDY.md)
+retains the top-scored ordinary multi-path candidate before density packing. On
+the examined 119-question development cohort, 4K whole-source recall rose from
+74.85% to 81.51%, recovering seven assistant sources with no per-question source
+loss at 4K. One multi-session question regressed at 2K. All 714 contexts passed
+independent measurement checks. Answer-reader validation and broader regression
+evidence remain necessary; this does not change the product default.
+
 ## Capability work still required
 
 The [current provenance research review](../benchmarks/results/research/2026-09-12/PROVENANCE-RESEARCH-UPDATE.md)
