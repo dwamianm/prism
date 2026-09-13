@@ -1,0 +1,16 @@
+{
+  "kind": "authored-preflight-shutdown-amendment",
+  "registered_at": "2026-09-13T03:13:23.509990+00:00",
+  "reason": "Installed Uvicorn capture_signals restores handlers and re-raises captured signals after graceful shutdown (server.py lines 323-340). The original preflight incorrectly demanded exit zero after explicitly sending SIGTERM.",
+  "expected_server_native_exit_code": -15,
+  "required_new_checks": [
+    "every original client assertion",
+    "Application shutdown complete log from this process",
+    "read original retained event and external-trace node after server termination",
+    "preflight parent native exit zero"
+  ],
+  "unchanged": "Product adapter, installed PRME, upstream client, authored source, context budget and request sequence. Fresh store and output; no task or correctness scoring.",
+  "uvicorn_source_sha256": "7c1dbd656835c9cdd6f92078ffc80bcc6007824ab322aff15435bd89c068e0be",
+  "initial_server_log_sha256": "fae1506bb49752ec4b8cc2de6f1418b1f3b6d454ad6c7a8179ae52636c332226",
+  "initial_parent_native_exit_code": 1
+}
