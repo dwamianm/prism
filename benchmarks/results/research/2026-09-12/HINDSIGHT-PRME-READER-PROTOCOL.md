@@ -75,3 +75,15 @@ consolidation and full graph capabilities. Development questions have already
 informed PRME changes. No result establishes overall market leadership. Report
 saved inference counts/times alongside ingestion/retrieval records without
 claiming a fair speed or dollar-cost comparison under concurrent local load.
+
+## Scoring implementation freeze
+
+Before any dataset generation or quality inspection, the registration also pins
+`public_context_judge.py` and `public_context_scores.py`. The judge worker checks
+frozen inputs and complete native-exited calibration, preserves raw responses and
+forbids retrying a failed study. Final scoring independently reproduces reader
+predictions, opaque judge inputs, product/reader mappings and every judge verdict
+from their saved responses. A changed answer, missing arm, swapped mapping or
+failed native exit blocks scoring. The scorer reports separate reader-family
+comparisons and every category, including abstention, using 2,000 paired bootstrap
+samples and fixed seed 42. No additional inference occurs during verification.
