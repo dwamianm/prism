@@ -131,6 +131,24 @@ Qwen completed all 357. Saved responses and native exits are verified, but this
 incomplete trial has no comparative answer score. A follow-up must register a
 fresh complete trial; failed outcomes cannot be selectively replaced.
 
+The [fresh 600-second-timeout follow-up](../benchmarks/results/research/2026-09-12/PACKING-HEAD-READER-TIMEOUT-FOLLOWUP.md)
+also stopped, during Qwen at 315/357 logged predictions. All 275 saved unique
+responses passed structural/checksum checks, but Gemma and judging never
+started. Neither incomplete trial supports comparative answer scores.
+Time-correlated local server logs include a model-loading timeout and a closed
+client connection. The service responds and all three model digests remain
+available; this does not establish a hardware or model-capacity cause. Diagnose
+execution before another complete reader run or a larger model download.
+
+The [fixed packing composition study](../benchmarks/results/research/2026-09-12/PACKING-COMPOSITION-STUDY.md)
+completed all 1,428 contexts with independent verification and exact reproduction
+of 714 prior controls. Combining one reserved head with the quarter-length rule
+retains 95.91% of labelled sources at 4K, versus 95.03% for quarter-length and
+74.85% for density. Its primary gain over quarter-length is one question, with
+a cluster interval touching zero; at 2K it also loses one question against that
+simpler rule. This reused development cohort supports further testing, not a
+default change. Source recall remains distinct from answer correctness.
+
 ## Capability work still required
 
 The [current provenance research review](../benchmarks/results/research/2026-09-12/PROVENANCE-RESEARCH-UPDATE.md)
