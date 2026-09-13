@@ -1,0 +1,64 @@
+{
+  "before": {
+    "failed": 24,
+    "failure": "All invalid evidence cases failed to raise",
+    "log_sha256": "49a6f4127487f0bb74e872f41effed9fd310b2ea97d171df339d6cd1ddb94c62",
+    "native_exit_code": 1,
+    "seconds": 5.48
+  },
+  "focused_source": {
+    "log_sha256": "c42575d0b01d41ba8055cd19586bdab64c434395fda703b8b40bdc6bef1221ba",
+    "native_exit_code": 0,
+    "passed": 112,
+    "seconds": 20.65,
+    "skipped": 0
+  },
+  "frozen_source_commit": "c6023c7",
+  "full_postgres_suite": {
+    "isolated_database": "prme_transition_evidence_20260913",
+    "log": "/tmp/prme-transition-evidence-full-pg.log",
+    "native_session_id": 77909,
+    "status": "running"
+  },
+  "installed": {
+    "log_sha256": "5ab537dfaec69002bac6d93073dc5a7cea2ef143d29873cfa30269d2929aa160",
+    "native_exit_code": 0,
+    "passed": 112,
+    "seconds": 20.1,
+    "skipped": 0,
+    "verification_sha256": "b83352afa4ca49934cadeea87eeb7a3dabd82797afe5b32aa7321b26fff80792"
+  },
+  "installed_guide_smoke": {
+    "complete": true,
+    "embedding": "default real provider; no mock injection",
+    "guide_sha256": "fff2a16a6d2060872b4e9623bf6b3f5870017e825d72a5dcb4da47a21252e7de",
+    "installed_package": "/private/tmp/prme-transition-evidence-wheel/lib/python3.13/site-packages/prme/__init__.py",
+    "log_sha256": "333c43d4fbcd3249b1cb6a6b0a2b0dcf752006e6228c7d0923c5e965e71aed00",
+    "native_exit_code": 0,
+    "source_commit": "c6023c7"
+  },
+  "limits": [
+    "Provenance membership and scope checks do not establish semantic entailment.",
+    "Optional omitted evidence remains allowed for explicit caller decisions.",
+    "Arbitrary low-level graph writes and complete historical replay are outside this change."
+  ],
+  "observed_at": "2026-09-13T18:26:17.655525+00:00",
+  "retained_harness_corrections": [
+    {
+      "log_sha256": "55bcc52e607f63d697a4ad3398f3c694952039d9ce9234d33dbcac423cde2c97",
+      "native_exit_code": 1,
+      "reason": "Initial new tests used a positional get_edges argument; not product-defect evidence."
+    },
+    {
+      "log_sha256": "94dc4a9010d064973a1b6e6671b184036e050328740f08dbd138e694d35b4afb",
+      "native_exit_code": 4,
+      "reason": "A supplied test filename did not exist; no tests collected."
+    },
+    {
+      "log_sha256": "cf6a0f8866908cc7521595f2e74add9b0e05bfee492a609e1f3d11ff085872db",
+      "native_exit_code": 1,
+      "reason": "Existing contradiction fixture referenced a fabricated event; updated to persist real same-owner/scope evidence."
+    }
+  ],
+  "runtime_commit": "ca045a9"
+}

@@ -1,0 +1,15 @@
+{
+  "installed_package": "/private/tmp/prme-transition-evidence-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 127,
+  "package_manifest_sha256": "5bccaa7aa67569b8d7497ad2fc7d7a8128c26062577fe2dbd02acf15433130cc",
+  "pytest_exit_code": 0,
+  "source_commit": "c6023c7",
+  "test_files": [
+    "tests/test_transition_evidence.py",
+    "tests/test_contradiction_modeling.py",
+    "tests/test_pg_graph_store.py",
+    "tests/test_atomic_contradictions.py",
+    "tests/test_contradiction.py"
+  ],
+  "wheel_sha256": "1989cb7c9a6b7b1d25e525ae509467c3bd33d5961dec1e9186685d89fe2e63e6"
+}

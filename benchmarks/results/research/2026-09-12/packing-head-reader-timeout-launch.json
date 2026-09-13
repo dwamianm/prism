@@ -1,0 +1,15 @@
+{
+  "directory": "data/benchmarks/packing-head-reader-9dd6a91",
+  "focused_tests": {
+    "log_sha256": "906a0e8f3eeec6b887a6237d42284337318c4edf330b3bb727fffa4fc0b46ad6",
+    "native_exit_code": 0,
+    "passed": 36
+  },
+  "native_session_id": 42923,
+  "no_quality_score_before_complete_native_chain": true,
+  "observed_at": "2026-09-13T18:26:17.657811+00:00",
+  "registration_sha256": "d596bc188131735164f05861f59e38c20b953ada7e0f1468e792efdc44efe115",
+  "root_commit_before_launch": "e1b8aa0",
+  "source_commit": "9dd6a91",
+  "status": "running"
+}
