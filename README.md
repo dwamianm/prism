@@ -246,6 +246,12 @@ echoes and speculative rules do not confirm an instruction. Opt-in semantic
 re-mention reinforcement also stays within scope and excludes instructions.
 This heuristic is not calibrated evidence of truth; prior boosts are retained.
 
+Explicit `reinforce(node_id, evidence_id=..., user_id=...)` requires an existing
+evidence event in the node's owner and scope. Invalid references change nothing;
+omitting evidence remains a caller confirmation. Reinforcement preserves values
+already above its increment caps. It does not verify semantic support or make
+repeated confirmations independent evidence.
+
 Completion covers the node and indexes; optional reinforcement, supersedence and
 QA pairing run afterward and are not replayed by this job. Retired nodes remain
 retired. Historical direct stores without repair jobs still need `prme rebuild`

@@ -34,7 +34,14 @@ repetition heuristic, not independent corroboration or calibrated confidence.
 Opt-in semantic re-mention reinforcement excludes instructions and stays within
 the source owner/scope, so it cannot bypass this instruction policy.
 Explicit `reinforce()` remains a caller-driven operation with its existing
-capped increments; the general update formula and correlation controls below
+capped increments. It preserves values already above the increment caps.
+An explicit evidence ID must identify an existing event in the node's owner
+and scope, even for an unscoped operator; invalid evidence changes neither
+confidence, salience, timestamps nor references. Omitting evidence remains a
+caller confirmation, not external corroboration. This check does not establish
+that the event semantically supports the node, make repeated calls idempotent,
+or implement concurrent reinforcement accumulation and full operation replay.
+The general update formula and correlation controls below
 remain design requirements rather than claims about this heuristic. Historical
 incorrect reinforcement is not retroactively undone.
 

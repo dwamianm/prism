@@ -2115,17 +2115,20 @@ class MemoryEngine:
         Bumps reinforcement_boost by +0.15 (capped at 0.5) and
         confidence_base by +0.05 (capped at 0.95). Updates
         last_reinforced_at to now. Optionally appends an evidence
-        reference.
+        reference. Values already above these boost caps are preserved.
 
         Args:
             node_id: The node to reinforce.
-            evidence_id: Optional event ID to append to evidence_refs.
+            evidence_id: Optional existing event ID to append to evidence_refs.
+                It must belong to the node's owner and scope, including for
+                an unscoped operator call.
             user_id: When given, only a node this user owns is reinforced;
                 anyone else's node raises as if it did not exist.
 
         Raises:
-            ValueError: If the node does not exist, or is owned by another
-                user when user_id is given.
+            ValueError: If the node does not exist, is owned by another user
+                when user_id is given, or the evidence is unavailable within
+                the node's owner and scope. Invalid evidence changes nothing.
         """
         from datetime import timezone
         from uuid import UUID
@@ -2134,8 +2137,19 @@ class MemoryEngine:
         if node is None:
             raise ValueError(f"Node {node_id!r} not found")
 
-        new_boost = min(node.reinforcement_boost + 0.15, 0.5)
-        new_confidence_base = min(node.confidence_base + 0.05, 0.95)
+        evidence_ref = None
+        if evidence_id is not None:
+            message = "Evidence event not found in the node's owner and scope"
+            try:
+                evidence_ref = UUID(evidence_id)
+            except (ValueError, TypeError, AttributeError):
+                raise ValueError(message) from None
+            evidence = await self.get_event(str(evidence_ref), user_id=node.user_id)
+            if evidence is None or evidence.scope != node.scope:
+                raise ValueError(message)
+
+        new_boost = max(node.reinforcement_boost, min(node.reinforcement_boost + 0.15, 0.5))
+        new_confidence_base = max(node.confidence_base, min(node.confidence_base + 0.05, 0.95))
         now = datetime.now(timezone.utc)
 
         updates: dict = {
@@ -2144,8 +2158,8 @@ class MemoryEngine:
             "last_reinforced_at": now,
         }
 
-        if evidence_id is not None:
-            new_refs = list(node.evidence_refs) + [UUID(evidence_id)]
+        if evidence_ref is not None:
+            new_refs = list(node.evidence_refs) + [evidence_ref]
             updates["evidence_refs"] = new_refs
 
         await self._graph_store.update_node(node_id, **updates)
