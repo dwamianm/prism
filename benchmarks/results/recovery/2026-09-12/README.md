@@ -1,6 +1,14 @@
 # Recovery and developer workflow evidence
 
-The latest [source-clock record](SOURCE-CLOCKS.md) at `f9665fb` passed **2,941
+The latest [reinforcement evidence record](REINFORCEMENT-EVIDENCE.md) passed
+**2,988 source tests with 81 skips**, including live PostgreSQL. The installed
+package passed 129 selected checks and nine corrected legacy fixture checks in
+separate invocations. Explicit reinforcement rejects missing, foreign and
+cross-scope evidence before mutation and preserves values above its increment
+caps. The initial full run's two outdated positive fixtures and their correction
+are retained in the record.
+
+The preceding [source-clock record](SOURCE-CLOCKS.md) at `f9665fb` passed **2,941
 source tests with 81 skips** and **151 installed-wheel checks with 12 skips**,
 including live PostgreSQL. Raw writes now reject ambiguous source clocks before
 admission, and MCP preserves source clocks separately from validity dates.
