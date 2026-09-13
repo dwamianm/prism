@@ -58,6 +58,10 @@ def fixture_inputs(tmp_path):
             "verification_passed": True,
             "questions": 1,
             "inputs_sha256": reader.digest(inputs.read_bytes()),
+            "source_artifacts": {
+                "prme_plan": "registered-p",
+                "hindsight_plan": "registered-h",
+            },
             "details": [
                 {
                     "case_id": "opaque-0",

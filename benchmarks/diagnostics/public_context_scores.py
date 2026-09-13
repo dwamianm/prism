@@ -75,6 +75,29 @@ def analyze(args):
             "Judge inputs or mapping do not reproduce verified reader artifacts"
         )
     registration = json.loads(args.registration.read_bytes())
+    capture_raw = args.capture_analysis.read_bytes()
+    capture = json.loads(capture_raw)
+    capture_completion = json.loads(args.capture_completion.read_bytes())
+    if (
+        capture_completion["native_exit_code"] != 0
+        or capture_completion["report_sha256"] != digest(capture_raw)
+        or not capture["complete"]
+        or not capture["verification_passed"]
+        or capture["inputs_sha256"] != registration["neutral_inputs_sha256"]
+        or any(
+            capture["source_artifacts"][product + "_plan"] != expected
+            for product, expected in registration["capture_plan_sha256"].items()
+        )
+    ):
+        raise ValueError("Capture analysis differs from the registered native study")
+    for paths in readers.values():
+        prepared = json.loads(paths["prepared_path"].read_bytes())
+        if prepared["analysis_sha256"] != digest(capture_raw) or prepared[
+            "analysis_completion_sha256"
+        ] != digest(args.capture_completion.read_bytes()):
+            raise ValueError(
+                "Reader contexts are bound to a different capture analysis"
+            )
     if registration["scorer_sha256"] != digest(Path(__file__).read_bytes()):
         raise ValueError("Scoring implementation differs from registration")
     if any(
@@ -87,6 +110,7 @@ def analyze(args):
         plan["registration_sha256"] != digest(args.registration.read_bytes())
         or plan["mapping_sha256"] != digest(args.mapping.read_bytes())
         or plan["judge"] != registration["judge_declaration"]
+        or plan["worker_sha256"] != registration["judge_worker_sha256"]
     ):
         raise ValueError("Judge plan differs from registered study")
     _, result = verify_result(
@@ -146,6 +170,8 @@ def analyze(args):
                 "state",
                 "report",
                 "completion",
+                "capture_analysis",
+                "capture_completion",
             )
         },
         "limits": [
@@ -174,6 +200,8 @@ def main():
         "state",
         "report",
         "completion",
+        "capture-analysis",
+        "capture-completion",
         "output",
     ):
         parser.add_argument("--" + name, required=True, type=Path)

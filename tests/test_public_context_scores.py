@@ -41,7 +41,12 @@ def pipeline(tmp_path, monkeypatch):
         {
             "reader_declarations": {"reader": reader_plan["reader"]},
             "judge_declaration": declared,
+            "judge_worker_sha256": digest(Path(judge.__file__).read_bytes()),
             "scorer_sha256": digest(Path(scoring.__file__).read_bytes()),
+            "capture_plan_sha256": {
+                "prme": "registered-p",
+                "hindsight": "registered-h",
+            },
             "references_sha256": digest(refs_path.read_bytes()),
             "expected_cases": 1,
             "budget": 4096,
@@ -104,6 +109,8 @@ def pipeline(tmp_path, monkeypatch):
         state=state_path,
         report=report_path,
         completion=completion_path,
+        capture_analysis=tmp_path / "analysis.json",
+        capture_completion=tmp_path / "completion.json",
     ), calls
 
 
@@ -128,7 +135,10 @@ def test_entire_reader_judge_chain_reproduces_scores_without_network(
     assert metric["group_bootstrap"]["interval_95"] is None
 
 
-@pytest.mark.parametrize("mutation", ["native", "verdict", "mapping", "reader-answer"])
+@pytest.mark.parametrize(
+    "mutation",
+    ["native", "verdict", "mapping", "reader-answer", "capture-native", "capture-plan"],
+)
 def test_scores_reject_native_failure_and_forged_verdict_or_product_mapping(
     tmp_path, monkeypatch, mutation
 ):
@@ -153,6 +163,20 @@ def test_scores_reject_native_failure_and_forged_verdict_or_product_mapping(
         mapping = json.loads(args.mapping.read_bytes())
         mapping["mapping"][0]["arm"] = "empty"
         write(args.mapping, mapping)
+    elif mutation.startswith("capture-"):
+        if mutation == "capture-plan":
+            capture = json.loads(args.capture_analysis.read_bytes())
+            capture["source_artifacts"]["hindsight_plan"] = (
+                "different-renderer-or-input-policy"
+            )
+            write(args.capture_analysis, capture)
+        write(
+            args.capture_completion,
+            {
+                "native_exit_code": 130 if mutation == "capture-native" else 0,
+                "report_sha256": digest(args.capture_analysis.read_bytes()),
+            },
+        )
     else:
         paths = json.loads(args.readers.read_bytes())["reader"]
         p = Path(paths["report_path"])

@@ -15,5 +15,15 @@
     "Failed judge request preservation and retry rejection",
     "Separate reader-family totals, explicit category regressions and abstention results"
   ],
-  "limits": "Controlled authored fixtures and mocked service for scoring contracts; not dataset accuracy."
+  "limits": "Controlled authored fixtures and mocked service for scoring contracts; not dataset accuracy.",
+  "capture_binding_checks": {
+    "passed": 101,
+    "native_exit_code": 0,
+    "scorer_sha256": "2c82f30a0e74d938464e88cea3b9d8071331f2d8109fa2d3da312c90fd74f997",
+    "log": {
+      "path": "/tmp/prme-public-context-capture-binding-tests-final.log",
+      "sha256": "ac9ac20b7542bc7b3a59c3f97b9bd0f5bcb1b6d02364198ae4dcd58ca45511dc"
+    },
+    "covers": "Final scores reject native-failed capture analysis, different registered capture plans, or contexts bound to a different analysis. The judge worker must also match its registration."
+  }
 }

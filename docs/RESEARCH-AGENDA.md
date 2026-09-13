@@ -51,18 +51,20 @@ These records preserve commit identities, raw-output hashes, failures and limits
    Both use FastEmbed 0.8.0 and identical numerical dependencies/model assets.
    Complete source readback and returned-text validation precede analysis; actual
    returned contexts remain separate from shared whole-turn reconstruction.
-   Its strict metadata-preservation gate subsequently rejected optional custom
-   metadata missing from five results; native role and timestamp fields remained
-   present. PRME was stopped, and Hindsight continues an operational failure audit.
-   A [native-provenance adapter preflight](../benchmarks/results/research/2026-09-12/HINDSIGHT-NATIVE-PROVENANCE-PREFLIGHT.md)
-   passed on three authored histories and the operationally failing case; all 24
-   product/budget contexts reproduced with unlabelled analysis. Another complete
-   dataset registration awaits the full operational failure audit.
+   Its strict metadata-preservation gate rejected missing optional custom metadata
+   in two cases. The full 119-case operational audit completed with native exit 1;
+   all seven affected units retained native role and timestamp fields. PRME was
+   stopped after nine cases. The [native-provenance preflight](../benchmarks/results/research/2026-09-12/native-provenance-preflight-verification.json)
+   passed both products and all 24 context reproductions without quality labels.
+   A [fresh complete comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NATIVE-DEV-PROTOCOL.md)
+   is registered at `2f3ac2e` and running from fresh stores; failed captures are excluded.
    The [common-reader protocol](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-PROTOCOL.md)
    is frozen for Qwen/Gemma plus fresh empty controls. Its authored live reader
    check passed; the separate judge passed 41/42 calibration controls with zero
-   false accepts. No dataset quality results have been inspected. Timing under
-   concurrent load cannot support a speed ratio.
+   false accepts. Final scoring verifies native capture, reader and judge chains,
+   keeps reader families separate and reports category losses. No dataset quality
+   results have been inspected. Timing under concurrent load cannot support a
+   speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect
    temporal or episode associations, arithmetic and task-completion errors.

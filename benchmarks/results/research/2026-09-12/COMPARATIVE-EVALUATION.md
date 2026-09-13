@@ -206,10 +206,11 @@ passed both workers and the complete analyzer with native exit zero; 14 contract
 tests also pass. This verifies the capture/analysis path, not
 comparative quality. The normalized run subsequently rejected optional custom metadata missing from
 five returned units in `case-0046`; native source role and timestamp fields
-remained present. PRME was stopped with native exit 130. Hindsight continues
-recording full operational failure coverage. No dataset quality scores have
-been inspected; the [native-provenance adapter preflight](HINDSIGHT-NATIVE-PROVENANCE-PREFLIGHT.md)
-precedes any complete replacement registration. All 119 successful cases and both
+remained present. PRME was stopped with native exit 130. Hindsight completed all
+119 attempts with native exit 1 and two such failures: `case-0046` and
+`case-0112`, affecting seven units in total. The [complete audit](hindsight-normalized-native-failure-audit.json)
+retains their native role/time checks and confirms no other failure category.
+No dataset quality scores have been inspected. All 119 successful cases and both
 native exit codes remain required before analysis. These raw profiles disable LLM extraction and cannot
 establish full-system or answer-quality leadership.
 
@@ -235,3 +236,13 @@ absent custom metadata, versus five in the original failure; no identical-output
 claim is made. Their native context and time fields remain in the actual rendered
 context. This validates an explicitly different adapter protocol, not a quality
 result or permission to reuse failed dataset outputs.
+
+
+The [replacement comparison](HINDSIGHT-PRME-NATIVE-DEV-PROTOCOL.md) is registered
+at `2f3ac2e` and running from entirely fresh stores and capture paths. It explicitly
+selects native returned provenance and records absent optional metadata without
+filling it from sources. Both products must complete all 119 cases and exit zero
+before analysis or the two-reader answer study. [Scoring verification](public-context-scoring-verification.json)
+checks raw capture/reader/judge identity, native exits, complete verdict coverage
+and product mappings before separate reader-family/category reports. The configured
+provider recheck at 00:28 UTC still returned HTTP 429; local study work continues.
