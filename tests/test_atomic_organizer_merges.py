@@ -274,8 +274,11 @@ async def test_direct_transaction_preserves_isolation(config, user, difference):
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
 def test_journal_must_not_silently_convert_non_finite_metadata_to_null(value):
+    import json
+    import math
     from prme.models import MemoryNode
-    from prme.storage.organizer_merge import MergeRecord, _payload
+    from prme.storage import _snapshot_json
+    from prme.storage.organizer_merge import MergeRecord, _payload, _replayed
     from prme.types import NodeType
     from uuid import uuid4
     keep = MemoryNode(content="Aster", node_type=NodeType.ENTITY, user_id="authored")
@@ -284,8 +287,12 @@ def test_journal_must_not_silently_convert_non_finite_metadata_to_null(value):
         canonical_before=keep, retired_before=retired, canonical_after=keep, retired_after=retired,
         original_edges=(), published_edges=())
     record.canonical_before.metadata = {"diagnostic_score": value}
-    with pytest.raises(ValueError, match="JSON"):
-        _payload(record)
+    payload = _payload(record)
+    restored = MergeRecord.model_validate(_snapshot_json.loads(json.loads(payload)["record"]))
+    actual = restored.canonical_before.metadata["diagnostic_score"]
+    assert math.isnan(actual) if math.isnan(value) else actual == value
+    result = _replayed(payload, record.operation_id, sorted([str(keep.id), str(retired.id)]), record.user_id, record.kind)
+    assert result.applied is False
 
 
 async def test_existing_compact_json_journals_keep_their_identity(config, user, monkeypatch):

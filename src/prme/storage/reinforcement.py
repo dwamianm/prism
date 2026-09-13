@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from prme.models.nodes import MemoryNode
 from prme.storage._threading import run_to_completion
+from prme.storage import _snapshot_json
 
 EVIDENCE_ERROR = "Evidence event not found in the node's owner and scope"
 
@@ -101,14 +102,7 @@ def _values(node, evidence):
 
 
 def _payload(record):
-    def encode(value):
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, UUID):
-            return str(value)
-        raise TypeError("Reinforcement record cannot be represented as JSON")
-
-    raw = json.dumps(record.model_dump(mode="python"), default=encode, allow_nan=False)
+    raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps(
         {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
     )
@@ -119,7 +113,7 @@ def read_record(payload):
     value = json.loads(payload) if isinstance(payload, str) else payload
     if hashlib.sha256(value["record"].encode()).hexdigest() != value["sha256"]:
         raise ValueError("Reinforcement journal checksum mismatch")
-    record = ReinforcementRecord.model_validate_json(value["record"])
+    record = ReinforcementRecord.model_validate(_snapshot_json.loads(value["record"]))
     if (
         record.before.id != record.after.id
         or record.before.user_id != record.after.user_id

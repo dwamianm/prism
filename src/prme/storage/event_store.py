@@ -197,6 +197,10 @@ class EventStore:
         Returns:
             The string representation of the event's UUID.
         """
+        from prme.storage.metadata import snapshot_metadata
+        event = event.model_copy(update={"metadata": snapshot_metadata(event.metadata)})
+        if store_node is not None:
+            store_node = store_node.model_copy(update={"metadata": snapshot_metadata(store_node.metadata)})
         record = None
         if store_node is not None:
             if defer_extraction:

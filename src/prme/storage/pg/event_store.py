@@ -161,6 +161,10 @@ class PgEventStore:
     async def append(self, event: Event, *, defer_materialization: bool = False,
                      defer_extraction: bool = False, store_node: MemoryNode | None = None) -> str:
         """Append an event and optional typed store intent/work atomically."""
+        from prme.storage.metadata import snapshot_metadata
+        event = event.model_copy(update={"metadata": snapshot_metadata(event.metadata)})
+        if store_node is not None:
+            store_node = store_node.model_copy(update={"metadata": snapshot_metadata(store_node.metadata)})
         record = None
         if store_node is not None:
             if defer_extraction:

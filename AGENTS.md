@@ -27,6 +27,15 @@ Query → intent classification + entity extraction + time detection → candida
 
 ## Memory Object Lifecycle
 
+New event/direct-node metadata must be finite and JSON-serializable. Admission
+copies metadata before awaiting backend locks/connections; it does not validate
+all low-level graph writes. Existing rows remain readable. Journal snapshots for
+lifecycle, reinforcement and organizer merges use `_snapshot_json` to preserve
+legacy non-finite values through a versioned path encoding; finite record bytes
+and old raw checksums must remain unchanged. Do not restore Pydantic JSON
+serialization that silently converts non-finite metadata to null. See
+`docs/METADATA.md` for exact compatibility limits.
+
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 
 ## Organizer

@@ -84,6 +84,14 @@ rows are still readable under their original semantics.
 
 ### Direct typed storage recovery
 
+New event and direct-node metadata are validated and copied to a finite JSON
+snapshot before waiting for the backend lock/connection. Non-finite or unsupported
+values fail before event/work admission on both backends. Existing source rows
+are not rewritten. Legacy non-finite graph metadata can be retained in lifecycle,
+reinforcement and merge journals using the versioned `prme-special-floats-v1`
+path encoding; finite snapshot bytes and old raw checksums remain unchanged.
+See [metadata handling](METADATA.md) for encoding and compatibility boundaries.
+
 Content hashing covers the exact source string, including empty text and
 whitespace. New empty events carry SHA-256 of the empty byte sequence, not an
 empty hash field, so they can satisfy the same durable source-binding checks.

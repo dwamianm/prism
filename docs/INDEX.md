@@ -35,6 +35,9 @@ Python and CLI contracts separately from draft RFC requirements.
 [Explicit memory corrections](MEMORY-CORRECTIONS.md) documents source retention,
 node/event identities, scoped evidence and the sync/async replacement workflow.
 
+[Metadata handling](METADATA.md) covers finite JSON admission, copied inputs and
+lossless special-float snapshots for previously admitted graph metadata.
+
 ## RFC Listing
 
 ### Tier 0 — Foundation

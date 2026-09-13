@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage._threading import run_to_completion
+from prme.storage import _snapshot_json
 from prme.types import EdgeType, LifecycleState
 
 if TYPE_CHECKING:
@@ -58,15 +59,7 @@ def _result(record, applied):
 
 
 def _payload(record):
-    # Pydantic's JSON serializer converts non-finite metadata to null. A durable
-    # input/output record must reject that lossy conversion, never hide it.
-    def encode(value):
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, UUID):
-            return str(value)
-        raise TypeError("Merge record value cannot be represented as JSON")
-    text = json.dumps(record.model_dump(mode="python"), default=encode, allow_nan=False)
+    text = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps({"record": text, "sha256": hashlib.sha256(text.encode()).hexdigest()})
 
 
@@ -77,7 +70,7 @@ def _replayed(value, operation, ids, user_id, kind):
     raw = payload["record"]
     if hashlib.sha256(raw.encode()).hexdigest() != payload["sha256"]:
         raise ValueError("Organizer merge journal checksum mismatch")
-    record = MergeRecord.model_validate_json(raw)
+    record = MergeRecord.model_validate(_snapshot_json.loads(raw))
     if (record.operation_id, record.user_id, record.kind) != (operation, user_id, kind) or sorted(
         [str(record.canonical_before.id), str(record.retired_before.id)]
     ) != ids:

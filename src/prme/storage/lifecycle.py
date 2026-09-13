@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from prme.models.nodes import MemoryNode
 from prme.storage._threading import run_to_completion
+from prme.storage import _snapshot_json
 from prme.types import LifecycleState, validate_transition
 
 Action = Literal["promote", "archive", "deprecate"]
@@ -47,14 +48,7 @@ def _validate(node, node_id, action):
 
 
 def _payload(record):
-    def encode(value):
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, UUID):
-            return str(value)
-        raise TypeError("Lifecycle record cannot be represented as JSON")
-
-    raw = json.dumps(record.model_dump(mode="python"), default=encode, allow_nan=False)
+    raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps(
         {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
     )
@@ -64,7 +58,7 @@ def read_record(payload):
     value = json.loads(payload) if isinstance(payload, str) else payload
     if hashlib.sha256(value["record"].encode()).hexdigest() != value["sha256"]:
         raise ValueError("Lifecycle journal checksum mismatch")
-    record = LifecycleRecord.model_validate_json(value["record"])
+    record = LifecycleRecord.model_validate(_snapshot_json.loads(value["record"]))
     if (
         record.before.id != record.after.id
         or record.before.user_id != record.after.user_id
@@ -74,8 +68,10 @@ def read_record(payload):
         raise ValueError("Lifecycle journal identity mismatch")
     _validate(record.before, str(record.before.id), record.action)
     unchanged = {"lifecycle_state", "updated_at"}
-    if record.before.model_dump(exclude=unchanged) != record.after.model_dump(
-        exclude=unchanged
+    if _snapshot_json.dumps(
+        record.before.model_dump(exclude=unchanged), sort_keys=True
+    ) != _snapshot_json.dumps(
+        record.after.model_dump(exclude=unchanged), sort_keys=True
     ):
         raise ValueError("Lifecycle journal changes unrelated node fields")
     return record
