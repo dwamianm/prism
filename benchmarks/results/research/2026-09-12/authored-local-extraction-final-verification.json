@@ -1,0 +1,1 @@
+{"models": ["gemma4:26b", "qwen3.5:4b"], "native_identity_check_exit_code": 0, "native_summary_exit_code": 0, "package_files_verified": 124, "phase": "final", "plan_sha256": "585c698ec6db14dde29a7dfd8ec42cd1b3c5d016fad8f21e085242dda0c92d2f", "summary_script_sha256": "1ebdf338fa0eef0138550bccca3b1906ae4cb3a7a222e836be0f9a9579faeb7d", "verified": true}
