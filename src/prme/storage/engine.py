@@ -2116,6 +2116,8 @@ class MemoryEngine:
         confidence_base by +0.05 (capped at 0.95). Updates
         last_reinforced_at to now. Optionally appends an evidence
         reference. Values already above these boost caps are preserved.
+        Validation, mutation and a complete before/after journal record commit
+        together. Concurrent successful calls accumulate their increments.
 
         Args:
             node_id: The node to reinforce.
@@ -2130,39 +2132,9 @@ class MemoryEngine:
                 when user_id is given, or the evidence is unavailable within
                 the node's owner and scope. Invalid evidence changes nothing.
         """
-        from datetime import timezone
-        from uuid import UUID
-
-        node = await self._owned_node(node_id, user_id)
-        if node is None:
-            raise ValueError(f"Node {node_id!r} not found")
-
-        evidence_ref = None
-        if evidence_id is not None:
-            message = "Evidence event not found in the node's owner and scope"
-            try:
-                evidence_ref = UUID(evidence_id)
-            except (ValueError, TypeError, AttributeError):
-                raise ValueError(message) from None
-            evidence = await self.get_event(str(evidence_ref), user_id=node.user_id)
-            if evidence is None or evidence.scope != node.scope:
-                raise ValueError(message)
-
-        new_boost = max(node.reinforcement_boost, min(node.reinforcement_boost + 0.15, 0.5))
-        new_confidence_base = max(node.confidence_base, min(node.confidence_base + 0.05, 0.95))
-        now = datetime.now(timezone.utc)
-
-        updates: dict = {
-            "reinforcement_boost": new_boost,
-            "confidence_base": new_confidence_base,
-            "last_reinforced_at": now,
-        }
-
-        if evidence_ref is not None:
-            new_refs = list(node.evidence_refs) + [evidence_ref]
-            updates["evidence_refs"] = new_refs
-
-        await self._graph_store.update_node(node_id, **updates)
+        await self._graph_store.reinforce_node(
+            node_id, user_id=user_id, evidence_id=evidence_id,
+        )
 
     async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
         """Read the immutable returned-candidate snapshot through its owner."""

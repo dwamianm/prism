@@ -395,6 +395,10 @@ class PgGraphStore:
         "updated_at",
     }
 
+    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None) -> None:
+        from prme.storage.reinforcement import reinforce_postgres
+        await reinforce_postgres(self, node_id, user_id=user_id, evidence_id=evidence_id)
+
     async def update_node(self, node_id: str, **updates) -> None:
         """Update specific fields on an existing node.
 

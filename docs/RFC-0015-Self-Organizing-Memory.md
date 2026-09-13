@@ -592,7 +592,24 @@ Virtual decay metadata (`decay_profile`, `last_reinforced_at`, `reinforcement_bo
 - `last_reinforced_at` is the timestamp of the most recent `REINFORCE` operation (or `created_at` if none).
 - `reinforcement_boost` is computable from the sequence of `REINFORCE` operations.
 
-All fields satisfy the deterministic rebuild requirement (RFC-0001 §4.6).
+This is the rebuild requirement, not a statement that historical mutations are
+fully replayable. New explicit `reinforce()` calls validate ownership and evidence,
+read current values, apply increments and append a versioned `REINFORCE` operation
+in one backend transaction. Its checksummed record retains complete before/after
+nodes and the optional evidence event. Recorded outputs are read back from the
+database so stored numeric precision is preserved. PostgreSQL locks the target
+row before reading; DuckDB holds the connection lock through native completion.
+Concurrent successful calls accumulate. An aborted transaction publishes neither
+the node change nor the operation.
+
+The current `additive_caps_v1` policy preserves the existing +0.15 boost / +0.05
+confidence increments, 0.5 / 0.95 increment caps and above-cap values. It does not
+prove that cited evidence semantically supports the claim, re-evaluate conditions,
+apply every proposed RFC-0008 saturation rule, or deduplicate separate calls.
+There is no caller-selected idempotency key: a repeated call is another signal.
+Older unjournaled reinforcement and other historical organizer/manual mutations
+cannot be reconstructed from these new records. Full historical replay remains
+incomplete.
 
 ### 9.3 Backend Agnostic
 

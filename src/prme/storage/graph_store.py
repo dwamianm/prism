@@ -35,6 +35,10 @@ class GraphStore(Protocol):
 
     # --- Node Operations ---
 
+    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None) -> None:
+        """Atomically validate, reinforce and journal a node without lost updates."""
+        ...
+
     async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
         """Atomically publish the exact journaled plan or return its receipt."""
         ...

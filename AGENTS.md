@@ -72,6 +72,13 @@ index eviction follows commit and remains repairable by compaction. Do not
 restore separate evidence/edge/lifecycle writes or infer rollback from a cancelled
 caller. Historical organizer/manual mutations are not all replayable yet.
 
+Explicit `reinforce()` validates owner/scope evidence and commits current-value
+increments with a checksummed complete before/after `REINFORCE` record in one
+backend transaction. Successful concurrent calls accumulate; injected failures
+roll back both graph and journal. Existing increment caps and above-cap values
+are preserved. Separate calls still count separately; this is not idempotent
+retry, semantic evidence verification or complete historical replay.
+
 ## RFCs
 
 Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0017). See `docs/INDEX.md` for the full listing. Key RFCs include:
