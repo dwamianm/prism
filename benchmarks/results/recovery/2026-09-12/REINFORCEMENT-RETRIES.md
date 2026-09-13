@@ -27,8 +27,8 @@ Coverage includes concurrent identical and changed-node keys, restart, lost
 acknowledgement, cancelled native work, rollback before commit, scoped ownership,
 changed evidence, retention of later archival, legacy record parsing, the sync
 client, real HTTP request/response behavior, existing reinforcement semantics,
-and the API suite. The full suite with live PostgreSQL is still running at this
-checkpoint. That pending run is not represented as passed.
+and the API suite. The full suite with live PostgreSQL passed 3,025 tests
+with 82 skips in 476.72 seconds (native exit 0).
 
 Request identity is not semantic evidence verification or independent-source
 corroboration. New records cannot reconstruct older unjournaled mutations or

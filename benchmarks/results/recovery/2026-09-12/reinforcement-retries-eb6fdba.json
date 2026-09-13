@@ -18,8 +18,14 @@
   "full_postgres_suite": {
     "isolated_database": "prme_reinforcement_retries_20260913",
     "log": "/tmp/prme-reinforcement-retries-full-pg.log",
+    "log_sha256": "80cc5db209453e0271df96b8f2f6235c50aa6cb7f98643e36969ae5fd8830798",
+    "native_exit_code": 0,
     "native_session_id": 92297,
-    "status": "running"
+    "passed": 3025,
+    "seconds": 476.72,
+    "skipped": 82,
+    "status": "complete",
+    "verified_at": "2026-09-13T18:11:47.731214+00:00"
   },
   "installed": {
     "log_sha256": "ced3ec6ec442eb9e04f61b3ca3ace8be9007ecc71548ff4bcf1dbec3b7706428",
