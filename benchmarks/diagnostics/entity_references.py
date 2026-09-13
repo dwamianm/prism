@@ -208,6 +208,7 @@ async def run(args, *, cases=None):
     out["provider"] = "ollama"
     out["model"] = args.model
     out["provider_max_retries"] = 3
+    out["provider_temperature"] = config.extraction.temperature
     return out
 
 

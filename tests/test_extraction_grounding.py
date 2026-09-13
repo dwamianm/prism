@@ -108,6 +108,62 @@ def test_builtin_explicit_condition_cannot_be_materialized_as_asserted():
     with pytest.raises(ValidationError, match="explicit if/unless condition"):
         _CitedExtractionResult.model_validate(payload, context={"source_text": source})
 
+    payload["facts"][0].update({
+        "epistemic_type": "conditional",
+        "condition": "approval is granted",
+        "fact_type": "decision",
+    })
+    with pytest.raises(ValidationError, match="not a decision"):
+        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+
+
+def test_builtin_uncertainty_cannot_be_materialized_as_asserted_decision():
+    source = "Alice might use Redis after evaluation."
+    payload = {
+        "entities": [
+            {"name": "Alice", "entity_type": "person"},
+            {"name": "Redis", "entity_type": "product"},
+        ],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "fact_type": "decision",
+            "epistemic_type": "asserted",
+        }],
+    }
+    with pytest.raises(ValidationError, match="hypothetical or conditional"):
+        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+
+    payload["facts"][0]["epistemic_type"] = "hypothetical"
+    with pytest.raises(ValidationError, match="not a decision"):
+        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+
+
+def test_builtin_explicit_choice_remains_a_decision():
+    source = "Alice decided to use Redis."
+    payload = {
+        "entities": [
+            {"name": "Alice", "entity_type": "person"},
+            {"name": "Redis", "entity_type": "product"},
+        ],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "fact_type": "decision",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].fact_type == "decision"
+
 
 def test_grounding_downgrades_conditionals_without_supported_condition():
     source = "If approval is granted, Alice uses email."

@@ -32,6 +32,15 @@ _EXPLICIT_CONDITION_RE = re.compile(
     r"\b(?:if|unless|provided\s+that|as\s+long\s+as|only\s+if)\b",
     re.IGNORECASE,
 )
+_UNCERTAINTY_RE = re.compile(
+    r"\b(?:might|may|could|possibly|perhaps|maybe)\b",
+    re.IGNORECASE,
+)
+_EXPLICIT_DECISION_RE = re.compile(
+    r"\b(?:decid\w*|chos(?:e|en)|select(?:ed|s)?|opt(?:ed|s)?|agree(?:d|s)?|"
+    r"commit(?:ted|s)?|reject(?:ed|s)?)\b",
+    re.IGNORECASE,
+)
 
 
 def _validate_condition(epistemic_type: str, condition: str | None, evidence_quote: str) -> None:
@@ -44,6 +53,21 @@ def _validate_condition(epistemic_type: str, condition: str | None, evidence_quo
             raise ValueError("conditional claims require a verbatim condition from evidence_quote")
     elif condition is not None:
         raise ValueError("condition is only valid when epistemic_type is conditional")
+
+
+def _validate_modality(
+    fact_type: str, epistemic_type: str, evidence_quote: str
+) -> None:
+    """Reject common uncertainty and contingent-action category collapses."""
+    uncertain = _UNCERTAINTY_RE.search(evidence_quote) is not None
+    if uncertain and epistemic_type not in {"hypothetical", "conditional"}:
+        raise ValueError("might/may/could claims require hypothetical or conditional epistemic_type")
+    if (
+        fact_type == "decision"
+        and (uncertain or _EXPLICIT_CONDITION_RE.search(evidence_quote))
+        and _EXPLICIT_DECISION_RE.search(evidence_quote) is None
+    ):
+        raise ValueError("a contingent future action is not a decision without an explicit choice or commitment")
 
 
 class _CitedFact(ExtractedFact):
@@ -68,6 +92,7 @@ class _CitedFact(ExtractedFact):
             if not _mentioned(self.subject, self.evidence_quote) or not _mentioned(self.object, self.evidence_quote):
                 raise ValueError("subject and object must occur in evidence_quote; use source values without paraphrasing")
             _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
+            _validate_modality(self.fact_type, self.epistemic_type, self.evidence_quote)
         return self
 
 
@@ -87,6 +112,7 @@ class _CitedRelationship(ExtractedRelationship):
             if not _mentioned(self.source_entity, self.evidence_quote) or not _mentioned(self.target_entity, self.evidence_quote):
                 raise ValueError("relationship endpoints must occur in evidence_quote")
             _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
+            _validate_modality("fact", self.epistemic_type, self.evidence_quote)
         return self
 
 
@@ -250,6 +276,7 @@ class InstructorExtractionProvider:
             provider_string.
         max_retries: Number of instructor retries for schema validation failures.
         timeout: Timeout in seconds per extraction call.
+        temperature: Sampling temperature passed to the provider.
     """
 
     def __init__(
@@ -259,6 +286,7 @@ class InstructorExtractionProvider:
         model: str | None = None,
         max_retries: int = 3,
         timeout: float = 30.0,
+        temperature: float = 0.0,
         api_key: SecretStr | None = None,
         base_url: str | None = None,
     ) -> None:
@@ -266,6 +294,7 @@ class InstructorExtractionProvider:
         self._model = model
         self._max_retries = max_retries
         self._timeout = timeout
+        self._temperature = temperature
         self._api_key = api_key
         self._base_url = base_url
         self._client: instructor.AsyncInstructor | None = None
@@ -353,6 +382,7 @@ class InstructorExtractionProvider:
                     {"role": role, "content": content},
                 ],
                 "max_retries": self._max_retries,
+                "temperature": self._temperature,
             }
             model_id = self._resolve_model_id()
             if model_id:
@@ -390,6 +420,7 @@ def create_extraction_provider(
         model=config.model,
         max_retries=config.max_retries,
         timeout=config.timeout,
+        temperature=config.temperature,
         api_key=config.api_key,
         base_url=config.base_url,
     )

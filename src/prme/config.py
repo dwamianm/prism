@@ -52,6 +52,17 @@ class ExtractionConfig(_ProjectSettings):
         default=30.0,
         description="Seconds per extraction call",
     )
+    temperature: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=2.0,
+        allow_inf_nan=False,
+        description=(
+            "Sampling temperature for structured extraction. Zero favors "
+            "repeatable schema-constrained output; increase only after "
+            "benchmarking extraction quality for the selected provider."
+        ),
+    )
     lease_seconds: float = Field(
         default=300.0, gt=0, allow_inf_nan=False,
         description="Durable extraction lease; active workers renew it and commit rechecks ownership",

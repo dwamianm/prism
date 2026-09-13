@@ -41,6 +41,22 @@ def test_constructor_then_environment_then_file_precedence(project_env, monkeypa
     assert ExtractionConfig(model="from-constructor").model == "from-constructor"
 
 
+def test_extraction_temperature_defaults_to_deterministic_and_loads_from_env(
+    project_env, monkeypatch
+):
+    assert ExtractionConfig().temperature == 0.0
+    monkeypatch.setenv("PRME_EXTRACTION_TEMPERATURE", "0.25")
+    assert ExtractionConfig().temperature == pytest.approx(0.25)
+
+
+@pytest.mark.parametrize("temperature", [-0.01, 2.01, float("nan")])
+def test_extraction_temperature_rejects_invalid_values(project_env, temperature):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        ExtractionConfig(temperature=temperature)
+
+
 def test_constructor_typos_remain_errors_with_a_shared_dotenv_file(project_env):
     from pydantic import ValidationError
 

@@ -53,10 +53,13 @@ async def test_model_derived_from_provider_string_when_not_given():
 
 
 async def test_factory_forwards_configured_model():
-    config = ExtractionConfig(provider="bedrock", model=BEDROCK_MODEL)
+    config = ExtractionConfig(
+        provider="bedrock", model=BEDROCK_MODEL, temperature=0.25
+    )
     provider = create_extraction_provider(config)
     assert isinstance(provider, InstructorExtractionProvider)
     assert provider._resolve_model_id() == BEDROCK_MODEL
+    assert provider._temperature == 0.25
 
 
 async def test_openai_model_still_passed():
@@ -66,6 +69,7 @@ async def test_openai_model_still_passed():
     with patch.object(provider, "_ensure_client", return_value=client):
         await provider.extract("hello", role="user")
     assert client.create.await_args.kwargs["model"] == "gpt-4o-mini"
+    assert client.create.await_args.kwargs["temperature"] == 0.0
 
 
 async def test_provider_error_is_not_a_successful_empty_extraction():
