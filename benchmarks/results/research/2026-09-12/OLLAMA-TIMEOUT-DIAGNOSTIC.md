@@ -44,3 +44,13 @@ model digests, options and a 90-second single-attempt timeout. Its
 [completion record](ollama-load-probe-completion.json) binds all raw artifacts
 and observed contexts. Authored checks cover retained timeout/context-mismatch
 failures and a real failed child process with owned-server cleanup.
+
+The subsequent full trial on the owned service did fail with a GPU allocation
+error. The service logged `Insufficient Memory` and failed graph computation;
+the following HTTP 200 body had no model identity or completed answer. Reader
+validation rejected it and stopped the chain before judging. This new evidence
+supports investigating memory pressure for this run; it does not retrospectively
+identify the causes of the two earlier timeouts. Tiny loading canaries did not
+exercise the failing sustained workload. See the
+[retained trial failure](packing-head-reader-owned-incomplete.json). No larger
+model download follows from these observations.

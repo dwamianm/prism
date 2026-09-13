@@ -1,0 +1,20 @@
+{
+  "all_fit_conservative_16384_bound": false,
+  "all_fit_conservative_32768_bound": true,
+  "current_num_ctx": 65536,
+  "fixed_headroom": 4096,
+  "frozen_payload_source": "9dd6a91",
+  "inference": "A fresh 32768-context execution probe can preserve all original input text under the existing conservative headroom guard.",
+  "limits": [
+    "No new generation performed.",
+    "Byte headroom is not exact model tokenization.",
+    "No guarantee of stable GPU allocation or unchanged answer behavior.",
+    "The failed benchmark remains failed; any new context configuration requires a fresh registered study."
+  ],
+  "logical_prompts": 357,
+  "maximum_prompt_bytes_plus_existing_headroom": 20358,
+  "model_or_input_changes": false,
+  "num_predict": 1024,
+  "observed_at": "2026-09-13T19:44:05.134145+00:00",
+  "prepared_sha256": "4d3b5bdf10272183a75319ac2c41cb01e878538947218ec7c8c114ecf1b007ad"
+}

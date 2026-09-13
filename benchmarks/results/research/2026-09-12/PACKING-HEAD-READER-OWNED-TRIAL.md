@@ -29,3 +29,19 @@ leadership. No production packing default changes follow from this trial alone.
 See [reader registration](packing-head-reader-owned-registration.json),
 [execution registration](packing-head-reader-owned-execution-plan.json) and
 [loading observations](OLLAMA-TIMEOUT-DIAGNOSTIC.md).
+
+The trial ended with native exit 1. Qwen completed all 357 logical predictions
+(313 unique generations); Gemma stopped after 161 logical predictions and 140
+saved valid generations. The next response had an empty model name, `done=false`
+and no token counts. The identity guard rejected it, and judging never started.
+Immediately before that response, the owned service logged a Metal GPU
+out-of-memory error and failed graph computation. The wrapper reaped its server
+with exit 0, and its port was confirmed closed.
+
+This is an observed allocation failure in this run, not evidence that a larger
+model would help or proof of the causes of the earlier shared-service timeouts.
+No peak-memory trace or host-wide workload isolation was collected. Preserve this
+failed study without retries; establish a bounded memory configuration before a
+new registered trial. No partial answer correctness was inspected. This head1
+experiment does not evaluate the new balanced packing policy's answer quality.
+See the [failure record](packing-head-reader-owned-incomplete.json).

@@ -155,9 +155,24 @@ including exact reproduction of 2,286 original controls. At 4K, quarter-length
 retains 89.37% of labelled evidence and the combined policy 90.55%, versus 65.04%
 for density. Both improve every category mean, including preferences, but each
 loses on two questions. The combination improves assistant retention while
-losing on two multi-session questions versus quarter-length. Next: a public
-opt-in policy with exact context/receipt parity and complete answer validation.
+losing on two multi-session questions versus quarter-length. The public
+`balanced` opt-in now reproduces all 4,500 saved density/score/balanced contexts
+over 500 questions and three budgets. Installed receipt compatibility and the
+guide workflow pass; complete balanced answer validation remains pending. See
+the [implementation verification](../benchmarks/results/recovery/2026-09-12/BALANCED-PACKING.md).
 The original failed score-policy gate and density default remain unchanged.
+
+The latest full default-policy simulation run passed 70/74 checkpoints. Three
+failures reproduced before balanced was added; consolidation differed between
+runs and remains unresolved. Preserve this failing CI gate and investigate
+retrieval/ranking and simulation reproducibility without weakening assertions.
+The separate owned-service head1 answer trial failed before judging after a
+logged GPU out-of-memory error; no partial answer scores were inspected.
+All original prompts fit the existing conservative headroom check at 32K,
+suggesting a fresh bounded-memory probe before another registered trial, with
+the existing model assets. See the
+[failure record](../benchmarks/results/research/2026-09-12/packing-head-reader-owned-incomplete.json)
+and [context bounds](../benchmarks/results/research/2026-09-12/ollama-owned-context-headroom.json).
 
 ## Capability work still required
 
