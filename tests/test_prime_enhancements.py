@@ -142,6 +142,23 @@ class TestNodeTypeBoost:
             event_trace.composite_score * 1.15, rel=1e-6,
         )
 
+    @pytest.mark.parametrize("node_type", [NodeType.DECISION, NodeType.INSTRUCTION])
+    def test_actionable_semantic_nodes_receive_full_default_boost(self, node_type):
+        now = datetime.now(timezone.utc)
+        candidate = _make_candidate(node=_make_node(node_type=node_type))
+        event = _make_candidate(node=_make_node(node_type=NodeType.EVENT))
+
+        candidate_trace = compute_composite_score(
+            candidate, DEFAULT_SCORING_WEIGHTS, now=now
+        )
+        event_trace = compute_composite_score(
+            event, DEFAULT_SCORING_WEIGHTS, now=now
+        )
+
+        assert candidate_trace.composite_score == pytest.approx(
+            event_trace.composite_score * 1.15, rel=1e-6
+        )
+
     def test_event_node_no_boost(self):
         """EVENT node gets 1.0x (no boost)."""
         now = datetime.now(timezone.utc)
@@ -217,7 +234,7 @@ class TestNodeTypeBoost:
         event_trace = compute_composite_score(event_cand, DEFAULT_SCORING_WEIGHTS, now=now)
 
         assert fact_trace.node_type_boost == 1.15
-        assert decision_trace.node_type_boost == 1.10
+        assert decision_trace.node_type_boost == 1.15
         assert event_trace.node_type_boost == 1.0
 
     def test_version_id_changes_with_boost(self):

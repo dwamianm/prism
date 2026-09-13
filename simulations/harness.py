@@ -145,7 +145,7 @@ class CheckpointResult:
 
     checkpoint: SimCheckpoint
     passed: bool
-    top_results: list[dict]  # [{content, score, node_type, lifecycle_state}]
+    top_results: list[dict]  # Ranked content plus component scores and provenance paths.
     expected_found: list[str]  # expected keywords that were found
     expected_missing: list[str]  # expected keywords that were NOT found
     excluded_found: list[str]  # excluded keywords that appeared (bad)
@@ -523,6 +523,15 @@ class SimulationRunner:
                 "score": r.composite_score,
                 "node_type": r.node.node_type.value,
                 "lifecycle_state": r.node.lifecycle_state.value,
+                "paths": list(r.paths),
+                "path_count": r.path_count,
+                "semantic_score": r.semantic_score,
+                "lexical_score": r.lexical_score,
+                "graph_proximity": r.graph_proximity,
+                "score_trace": (
+                    r.score_trace.model_dump(mode="json")
+                    if r.score_trace is not None else None
+                ),
             })
 
         # Check keywords against top result content

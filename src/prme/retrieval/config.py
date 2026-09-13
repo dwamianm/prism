@@ -68,9 +68,9 @@ class ScoringWeights(BaseModel):
         default={
             "fact": 1.15,
             "preference": 1.15,
-            "decision": 1.10,
+            "decision": 1.15,
             "summary": 1.10,
-            "instruction": 1.10,
+            "instruction": 1.15,
         },
         description=(
             "Per-node-type multiplicative boost to composite score. "

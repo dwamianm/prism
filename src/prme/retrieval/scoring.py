@@ -172,6 +172,16 @@ _CURRENT_STATE_QUERY_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Present-tense state questions imply "current" in ordinary conversation, but
+# only justify recency reweighting when the retrieved set contains an explicit
+# update. This avoids making unrelated newer memories outrank an older stable
+# fact merely because the caller omitted the word "current".
+_IMPLICIT_CURRENT_STATE_QUERY_RE = re.compile(
+    r"(?:^\s*who\s+(?:is|are)\b"
+    r"|^\s*what\s+(?:\w+\s+){1,4}(?:does|is|has)\b)",
+    re.IGNORECASE,
+)
+
 
 def _has_update_language(content: str) -> bool:
     """Check whether content contains temporal update signal words.
@@ -210,7 +220,13 @@ def _is_current_state_query(query_analysis: QueryAnalysis) -> bool:
         return False
     if re.search(r"\b(before|after|previously|formerly|originally|used to)\b", query_analysis.query, re.IGNORECASE):
         return False
-    return bool(_CURRENT_STATE_QUERY_RE.search(query_analysis.query))
+    explicit_current = _CURRENT_STATE_QUERY_RE.search(query_analysis.query) is not None
+    if query_analysis.intent == QueryIntent.TEMPORAL and not explicit_current:
+        return False
+    return bool(
+        explicit_current
+        or _IMPLICIT_CURRENT_STATE_QUERY_RE.search(query_analysis.query)
+    )
 
 
 # Compiled regex for detecting recent-episodic query language.
@@ -456,9 +472,23 @@ def score_and_rank(
     Returns:
         Tuple of (sorted candidates, corresponding score traces).
     """
-    # Determine if supersedence-aware scoring applies.
-    is_current_query = (
-        query_analysis is not None and _is_current_state_query(query_analysis)
+    # Explicit current-state wording keeps the established recency behavior.
+    # For merely present-tense questions, require an update in the candidate
+    # set; otherwise unrelated newer memories can outrank an older stable fact.
+    implicit_current = bool(
+        query_analysis is not None
+        and _IMPLICIT_CURRENT_STATE_QUERY_RE.search(query_analysis.query)
+    )
+    is_current_query = bool(
+        query_analysis is not None
+        and _is_current_state_query(query_analysis)
+        and (
+            not implicit_current
+            or any(
+                _has_update_language(candidate.node.content)
+                for candidate in candidates
+            )
+        )
     )
 
     # If current-state query, compute adjusted weights: increase recency

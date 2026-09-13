@@ -165,6 +165,8 @@ class TestCurrentStateQueryDetection:
             "What is our stack at the moment?",
             "What language is the project written in these days?",
             "What is presently the main database?",
+            "What database does the project use?",
+            "Who is the CEO of the company?",
         ],
     )
     def test_detects_current_state_query(self, query: str):
@@ -190,6 +192,15 @@ class TestCurrentStateQueryDetection:
             intent=QueryIntent.TEMPORAL,
             time_from=now - timedelta(days=7),
             time_to=now,
+        )
+        assert _is_current_state_query(analysis) is False
+
+    def test_present_tense_wording_with_historical_date_is_not_current(self):
+        analysis = _make_query_analysis(
+            "What database is used in 2024?",
+            intent=QueryIntent.TEMPORAL,
+            time_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            time_to=datetime(2024, 12, 31, tzinfo=timezone.utc),
         )
         assert _is_current_state_query(analysis) is False
 
@@ -251,6 +262,23 @@ class TestSupersedenceAwareScoring:
 
         # The update fact should rank higher despite lower semantic score
         assert ranked[0].node.content == update_fact.node.content
+
+    def test_current_question_without_update_evidence_keeps_base_weights(self):
+        candidate = _make_candidate(
+            content="PostgreSQL is the primary database",
+            semantic_score=0.8,
+            lexical_score=0.8,
+        )
+
+        ranked, _ = score_and_rank(
+            [candidate],
+            DEFAULT_SCORING_WEIGHTS,
+            query_analysis=_make_query_analysis(
+                "What database does the project use?"
+            ),
+        )
+
+        assert ranked[0].score_provenance.weights.w_recency == 0.10
 
     def test_regular_query_does_not_boost(self):
         """Non-current-state queries should not apply supersedence boost."""
