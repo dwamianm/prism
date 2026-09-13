@@ -54,3 +54,10 @@ and was narrowed before final verification.
 These authored checks establish the coverage contract and protect the observed
 ranking failures. They do not establish exhaustive natural-language aggregation,
 held-out answer accuracy, or competitive leadership.
+
+The complete test suite also passed with live PostgreSQL and pgvector:
+**3,279 passed, 93 skipped** in 511.33 seconds. A Python 3.13 wheel built as
+`prme-0.11.0-py3-none-any.whl`, installed with resolved dependencies into a
+fresh environment, and ran outside the repository. Its sync workflow stored two
+records, returned aggregation coverage `(candidate=2, selected=1, context=1)`,
+rendered the warning, and reopened the durable receipt successfully.
