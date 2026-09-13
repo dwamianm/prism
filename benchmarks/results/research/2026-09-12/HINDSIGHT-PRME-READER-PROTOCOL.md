@@ -2,7 +2,9 @@
 
 Registered before dataset capture completion or inspection of its quality
 outcomes. This is a separate answer-generation study following the normalized
-raw-memory capture at `f5a2a69`, not a change to its source-recall protocol.
+raw-memory capture using the [native-provenance protocol](HINDSIGHT-PRME-NATIVE-DEV-PROTOCOL.md).
+The failed `f5a2a69` captures are ineligible; no generation settings or scoring
+choices change when binding this fresh input protocol.
 All 119 development cases remain included. No new independent holdout is claimed.
 
 ## Frozen comparison

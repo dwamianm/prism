@@ -1,0 +1,39 @@
+{
+  "recorded_at": "2026-09-13T00:25:52.244521+00:00",
+  "kind": "complete-operational-failure-audit-not-quality-comparison",
+  "worker_commit": "f5a2a69",
+  "hindsight_native_exit_code": 1,
+  "hindsight_cases": 119,
+  "hindsight_errors": 2,
+  "source_turns": 59021,
+  "failure_cases": [
+    {
+      "case_id": "case-0046",
+      "stage": "return_validation",
+      "error_type": "ValueError",
+      "missing_metadata_units": 5,
+      "public_capture_sha256": "859a9698fd77fa27f8800a6021d588fd145db6d1e74178da9b27ef9657bbb478",
+      "native_role_and_time_preserved": true
+    },
+    {
+      "case_id": "case-0112",
+      "stage": "return_validation",
+      "error_type": "ValueError",
+      "missing_metadata_units": 2,
+      "public_capture_sha256": "f63542d092c60ab9c091bf3877f7bfb6c09a89ab2897ee881b0e348cea17b2e1",
+      "native_role_and_time_preserved": true
+    }
+  ],
+  "report": {
+    "path": "data/benchmarks/hindsight-normalized-dev-f5a2a69.json",
+    "sha256": "3ad69bf8128ecfbba01995546e7e4c5dead6238a1b03ca048b0bcef0912a498d"
+  },
+  "log": {
+    "path": "/tmp/prme-hindsight-normalized-dev-f5a2a69.log",
+    "sha256": "c1e1ef18f988304e5761de70b48ae11d70860eaa90c47f817e797a985e8b2863"
+  },
+  "prme_native_exit_code": 130,
+  "prme_completed_cases": 9,
+  "quality_inspected": false,
+  "limits": "119 attempted cases and native exit 1; failed run retained. Missing optional metadata in two cases is the sole recorded failure category. No result merging or quality selection."
+}
