@@ -1,0 +1,3240 @@
+{
+  "analyzer_sha256": "fab53f686c08ee724fc7b10531fb15aed7ed29061760727332b92df8f5697505",
+  "answer_quality": "Separate registered reader study in progress; not scored here.",
+  "artifacts": {
+    "analysis": {
+      "path": "data/benchmarks/hindsight-prme-native-dev-2f3ac2e-analysis.json",
+      "sha256": "fa09e11efca3df5c54f37cfda1921ac3721a38c248ec4e21714f7ad939b0f508"
+    },
+    "analysis_completion": {
+      "path": "benchmarks/results/research/2026-09-12/hindsight-prme-native-dev-analysis-completion.json",
+      "sha256": "868e2054ecf2602642204599082f11576f1dd7cbee635f5f3cc5ccf7922a0b57"
+    },
+    "capture_completion": {
+      "path": "benchmarks/results/research/2026-09-12/hindsight-prme-native-dev-completion.json",
+      "sha256": "f8c6649c3465c5a8527b4288f7d4be97fe36930e8f8e05916570cf52225e2f17"
+    },
+    "hindsight_report": {
+      "path": "data/benchmarks/hindsight-native-dev-2f3ac2e.json",
+      "sha256": "e9510290aac6e780fb986eb1806606688bc73885e8383e31a759a8338f56196d"
+    },
+    "prme_report": {
+      "path": "data/benchmarks/prme-native-dev-2f3ac2e.json",
+      "sha256": "f5e0085ac85b7e9b7ae219d46716bd29a82e332a5d3be6254158812f913392cb"
+    }
+  },
+  "categories": {
+    "knowledge-update": {
+      "2048": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.75,
+            "before": 0.26666666666666666,
+            "delta": 0.48333333333333334,
+            "groups": 20,
+            "interval_95": [
+              0.225,
+              0.7
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 3,
+            "wins": 15
+          },
+          "query_bootstrap": {
+            "after": 0.75,
+            "before": 0.26666666666666666,
+            "delta": 0.48333333333333334,
+            "groups": 20,
+            "interval_95": [
+              0.225,
+              0.7
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 3,
+            "wins": 15
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.75,
+            "before": 0.26666666666666666,
+            "delta": 0.48333333333333334,
+            "groups": 20,
+            "interval_95": [
+              0.225,
+              0.7
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 3,
+            "wins": 15
+          },
+          "query_bootstrap": {
+            "after": 0.75,
+            "before": 0.26666666666666666,
+            "delta": 0.48333333333333334,
+            "groups": 20,
+            "interval_95": [
+              0.225,
+              0.7
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 3,
+            "wins": 15
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.975,
+            "before": 0.48333333333333334,
+            "delta": 0.4916666666666667,
+            "groups": 20,
+            "interval_95": [
+              0.3333333333333333,
+              0.65
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 5,
+            "wins": 15
+          },
+          "query_bootstrap": {
+            "after": 0.975,
+            "before": 0.48333333333333334,
+            "delta": 0.4916666666666667,
+            "groups": 20,
+            "interval_95": [
+              0.3333333333333333,
+              0.65
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 5,
+            "wins": 15
+          }
+        }
+      },
+      "4096": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.85,
+            "before": 0.55,
+            "delta": 0.3,
+            "groups": 20,
+            "interval_95": [
+              0.15,
+              0.45
+            ],
+            "losses": 1,
+            "queries": 20,
+            "ties": 8,
+            "wins": 11
+          },
+          "query_bootstrap": {
+            "after": 0.85,
+            "before": 0.55,
+            "delta": 0.3,
+            "groups": 20,
+            "interval_95": [
+              0.15,
+              0.45
+            ],
+            "losses": 1,
+            "queries": 20,
+            "ties": 8,
+            "wins": 11
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.85,
+            "before": 0.55,
+            "delta": 0.3,
+            "groups": 20,
+            "interval_95": [
+              0.15,
+              0.45
+            ],
+            "losses": 1,
+            "queries": 20,
+            "ties": 8,
+            "wins": 11
+          },
+          "query_bootstrap": {
+            "after": 0.85,
+            "before": 0.55,
+            "delta": 0.3,
+            "groups": 20,
+            "interval_95": [
+              0.15,
+              0.45
+            ],
+            "losses": 1,
+            "queries": 20,
+            "ties": 8,
+            "wins": 11
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.55,
+            "delta": 0.45,
+            "groups": 20,
+            "interval_95": [
+              0.3,
+              0.6
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 6,
+            "wins": 14
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.55,
+            "delta": 0.45,
+            "groups": 20,
+            "interval_95": [
+              0.3,
+              0.6
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 6,
+            "wins": 14
+          }
+        }
+      },
+      "8192": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.9,
+            "before": 0.775,
+            "delta": 0.125,
+            "groups": 20,
+            "interval_95": [
+              -0.025,
+              0.275
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 12,
+            "wins": 6
+          },
+          "query_bootstrap": {
+            "after": 0.9,
+            "before": 0.775,
+            "delta": 0.125,
+            "groups": 20,
+            "interval_95": [
+              -0.025,
+              0.275
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 12,
+            "wins": 6
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.9,
+            "before": 0.775,
+            "delta": 0.125,
+            "groups": 20,
+            "interval_95": [
+              -0.025,
+              0.275
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 12,
+            "wins": 6
+          },
+          "query_bootstrap": {
+            "after": 0.9,
+            "before": 0.775,
+            "delta": 0.125,
+            "groups": 20,
+            "interval_95": [
+              -0.025,
+              0.275
+            ],
+            "losses": 2,
+            "queries": 20,
+            "ties": 12,
+            "wins": 6
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.925,
+            "delta": 0.075,
+            "groups": 20,
+            "interval_95": [
+              0.0,
+              0.15
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 17,
+            "wins": 3
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.925,
+            "delta": 0.075,
+            "groups": 20,
+            "interval_95": [
+              0.0,
+              0.15
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 17,
+            "wins": 3
+          }
+        }
+      }
+    },
+    "multi-session": {
+      "2048": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.5833333333333334,
+            "before": 0.14322916666666666,
+            "delta": 0.4401041666666667,
+            "groups": 30,
+            "interval_95": [
+              0.3151041666666667,
+              0.5677083333333334
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 6,
+            "wins": 25
+          },
+          "query_bootstrap": {
+            "after": 0.5833333333333334,
+            "before": 0.14322916666666666,
+            "delta": 0.4401041666666667,
+            "groups": 32,
+            "interval_95": [
+              0.3203125,
+              0.5651041666666666
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 6,
+            "wins": 25
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.5833333333333334,
+            "before": 0.14322916666666666,
+            "delta": 0.4401041666666667,
+            "groups": 30,
+            "interval_95": [
+              0.3151041666666667,
+              0.5677083333333334
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 6,
+            "wins": 25
+          },
+          "query_bootstrap": {
+            "after": 0.5833333333333334,
+            "before": 0.14322916666666666,
+            "delta": 0.4401041666666667,
+            "groups": 32,
+            "interval_95": [
+              0.3203125,
+              0.5651041666666666
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 6,
+            "wins": 25
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.8333333333333334,
+            "before": 0.23177083333333334,
+            "delta": 0.6015625,
+            "groups": 30,
+            "interval_95": [
+              0.4453125,
+              0.75
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 5,
+            "wins": 26
+          },
+          "query_bootstrap": {
+            "after": 0.8333333333333334,
+            "before": 0.23177083333333334,
+            "delta": 0.6015625,
+            "groups": 32,
+            "interval_95": [
+              0.4557291666666667,
+              0.7473958333333334
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 5,
+            "wins": 26
+          }
+        }
+      },
+      "4096": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.6666666666666666,
+            "before": 0.296875,
+            "delta": 0.3697916666666667,
+            "groups": 30,
+            "interval_95": [
+              0.24494949494949494,
+              0.5080645161290323
+            ],
+            "losses": 2,
+            "queries": 32,
+            "ties": 10,
+            "wins": 20
+          },
+          "query_bootstrap": {
+            "after": 0.6666666666666666,
+            "before": 0.296875,
+            "delta": 0.3697916666666667,
+            "groups": 32,
+            "interval_95": [
+              0.234375,
+              0.5130208333333334
+            ],
+            "losses": 2,
+            "queries": 32,
+            "ties": 10,
+            "wins": 20
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.6666666666666666,
+            "before": 0.296875,
+            "delta": 0.3697916666666667,
+            "groups": 30,
+            "interval_95": [
+              0.24494949494949494,
+              0.5080645161290323
+            ],
+            "losses": 2,
+            "queries": 32,
+            "ties": 10,
+            "wins": 20
+          },
+          "query_bootstrap": {
+            "after": 0.6666666666666666,
+            "before": 0.296875,
+            "delta": 0.3697916666666667,
+            "groups": 32,
+            "interval_95": [
+              0.234375,
+              0.5130208333333334
+            ],
+            "losses": 2,
+            "queries": 32,
+            "ties": 10,
+            "wins": 20
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.9166666666666666,
+            "before": 0.3411458333333333,
+            "delta": 0.5755208333333334,
+            "groups": 30,
+            "interval_95": [
+              0.4090909090909091,
+              0.7171717171717171
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 7,
+            "wins": 24
+          },
+          "query_bootstrap": {
+            "after": 0.9166666666666666,
+            "before": 0.3411458333333333,
+            "delta": 0.5755208333333334,
+            "groups": 32,
+            "interval_95": [
+              0.421875,
+              0.7317708333333334
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 7,
+            "wins": 24
+          }
+        }
+      },
+      "8192": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.796875,
+            "before": 0.5963541666666666,
+            "delta": 0.20052083333333334,
+            "groups": 30,
+            "interval_95": [
+              0.06770833333333333,
+              0.3284313725490196
+            ],
+            "losses": 4,
+            "queries": 32,
+            "ties": 14,
+            "wins": 14
+          },
+          "query_bootstrap": {
+            "after": 0.796875,
+            "before": 0.5963541666666666,
+            "delta": 0.20052083333333334,
+            "groups": 32,
+            "interval_95": [
+              0.06770833333333333,
+              0.3411458333333333
+            ],
+            "losses": 4,
+            "queries": 32,
+            "ties": 14,
+            "wins": 14
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.796875,
+            "before": 0.5963541666666666,
+            "delta": 0.20052083333333334,
+            "groups": 30,
+            "interval_95": [
+              0.06770833333333333,
+              0.3284313725490196
+            ],
+            "losses": 4,
+            "queries": 32,
+            "ties": 14,
+            "wins": 14
+          },
+          "query_bootstrap": {
+            "after": 0.796875,
+            "before": 0.5963541666666666,
+            "delta": 0.20052083333333334,
+            "groups": 32,
+            "interval_95": [
+              0.06770833333333333,
+              0.3411458333333333
+            ],
+            "losses": 4,
+            "queries": 32,
+            "ties": 14,
+            "wins": 14
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.9583333333333334,
+            "before": 0.6380208333333334,
+            "delta": 0.3203125,
+            "groups": 30,
+            "interval_95": [
+              0.16666666666666666,
+              0.4823232323232323
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 15,
+            "wins": 16
+          },
+          "query_bootstrap": {
+            "after": 0.9583333333333334,
+            "before": 0.6380208333333334,
+            "delta": 0.3203125,
+            "groups": 32,
+            "interval_95": [
+              0.18229166666666666,
+              0.4661458333333333
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 15,
+            "wins": 16
+          }
+        }
+      }
+    },
+    "single-session-assistant": {
+      "2048": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.0,
+            "before": 0.5555555555555556,
+            "delta": -0.5555555555555556,
+            "groups": 9,
+            "interval_95": [
+              -0.8888888888888888,
+              -0.2222222222222222
+            ],
+            "losses": 5,
+            "queries": 9,
+            "ties": 4,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 0.0,
+            "before": 0.5555555555555556,
+            "delta": -0.5555555555555556,
+            "groups": 9,
+            "interval_95": [
+              -0.8888888888888888,
+              -0.2222222222222222
+            ],
+            "losses": 5,
+            "queries": 9,
+            "ties": 4,
+            "wins": 0
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.0,
+            "before": 0.4444444444444444,
+            "delta": -0.4444444444444444,
+            "groups": 9,
+            "interval_95": [
+              -0.7777777777777778,
+              -0.1111111111111111
+            ],
+            "losses": 4,
+            "queries": 9,
+            "ties": 5,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 0.0,
+            "before": 0.4444444444444444,
+            "delta": -0.4444444444444444,
+            "groups": 9,
+            "interval_95": [
+              -0.7777777777777778,
+              -0.1111111111111111
+            ],
+            "losses": 4,
+            "queries": 9,
+            "ties": 5,
+            "wins": 0
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.5555555555555556,
+            "delta": 0.4444444444444444,
+            "groups": 9,
+            "interval_95": [
+              0.1111111111111111,
+              0.7777777777777778
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 5,
+            "wins": 4
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.5555555555555556,
+            "delta": 0.4444444444444444,
+            "groups": 9,
+            "interval_95": [
+              0.1111111111111111,
+              0.7777777777777778
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 5,
+            "wins": 4
+          }
+        }
+      },
+      "4096": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.0,
+            "before": 0.7777777777777778,
+            "delta": -0.7777777777777778,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -0.4444444444444444
+            ],
+            "losses": 7,
+            "queries": 9,
+            "ties": 2,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 0.0,
+            "before": 0.7777777777777778,
+            "delta": -0.7777777777777778,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -0.4444444444444444
+            ],
+            "losses": 7,
+            "queries": 9,
+            "ties": 2,
+            "wins": 0
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.0,
+            "before": 0.6666666666666666,
+            "delta": -0.6666666666666666,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -0.3333333333333333
+            ],
+            "losses": 6,
+            "queries": 9,
+            "ties": 3,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 0.0,
+            "before": 0.6666666666666666,
+            "delta": -0.6666666666666666,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -0.3333333333333333
+            ],
+            "losses": 6,
+            "queries": 9,
+            "ties": 3,
+            "wins": 0
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.6666666666666666,
+            "delta": 0.3333333333333333,
+            "groups": 9,
+            "interval_95": [
+              0.0,
+              0.6666666666666666
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 6,
+            "wins": 3
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.6666666666666666,
+            "delta": 0.3333333333333333,
+            "groups": 9,
+            "interval_95": [
+              0.0,
+              0.6666666666666666
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 6,
+            "wins": 3
+          }
+        }
+      },
+      "8192": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.0,
+            "before": 1.0,
+            "delta": -1.0,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -1.0
+            ],
+            "losses": 9,
+            "queries": 9,
+            "ties": 0,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 0.0,
+            "before": 1.0,
+            "delta": -1.0,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -1.0
+            ],
+            "losses": 9,
+            "queries": 9,
+            "ties": 0,
+            "wins": 0
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.0,
+            "before": 0.8888888888888888,
+            "delta": -0.8888888888888888,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -0.6666666666666666
+            ],
+            "losses": 8,
+            "queries": 9,
+            "ties": 1,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 0.0,
+            "before": 0.8888888888888888,
+            "delta": -0.8888888888888888,
+            "groups": 9,
+            "interval_95": [
+              -1.0,
+              -0.6666666666666666
+            ],
+            "losses": 8,
+            "queries": 9,
+            "ties": 1,
+            "wins": 0
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "groups": 9,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "groups": 9,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          }
+        }
+      }
+    },
+    "single-session-preference": {
+      "2048": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          },
+          "query_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          },
+          "query_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.14285714285714285,
+            "delta": 0.7142857142857143,
+            "groups": 7,
+            "interval_95": [
+              0.2857142857142857,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          },
+          "query_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.14285714285714285,
+            "delta": 0.7142857142857143,
+            "groups": 7,
+            "interval_95": [
+              0.2857142857142857,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          }
+        }
+      },
+      "4096": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          },
+          "query_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          },
+          "query_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.07142857142857142,
+            "delta": 0.7857142857142857,
+            "groups": 7,
+            "interval_95": [
+              0.35714285714285715,
+              1.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 0,
+            "wins": 6
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.9285714285714286,
+            "before": 0.21428571428571427,
+            "delta": 0.7142857142857143,
+            "groups": 7,
+            "interval_95": [
+              0.42857142857142855,
+              1.0
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 2,
+            "wins": 5
+          },
+          "query_bootstrap": {
+            "after": 0.9285714285714286,
+            "before": 0.21428571428571427,
+            "delta": 0.7142857142857143,
+            "groups": 7,
+            "interval_95": [
+              0.42857142857142855,
+              1.0
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 2,
+            "wins": 5
+          }
+        }
+      },
+      "8192": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.35714285714285715,
+            "delta": 0.5,
+            "groups": 7,
+            "interval_95": [
+              0.0,
+              0.8571428571428571
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 2,
+            "wins": 4
+          },
+          "query_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.35714285714285715,
+            "delta": 0.5,
+            "groups": 7,
+            "interval_95": [
+              0.0,
+              0.8571428571428571
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 2,
+            "wins": 4
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.35714285714285715,
+            "delta": 0.5,
+            "groups": 7,
+            "interval_95": [
+              0.0,
+              0.8571428571428571
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 2,
+            "wins": 4
+          },
+          "query_bootstrap": {
+            "after": 0.8571428571428571,
+            "before": 0.35714285714285715,
+            "delta": 0.5,
+            "groups": 7,
+            "interval_95": [
+              0.0,
+              0.8571428571428571
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 2,
+            "wins": 4
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.5714285714285714,
+            "delta": 0.42857142857142855,
+            "groups": 7,
+            "interval_95": [
+              0.14285714285714285,
+              0.7142857142857143
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 3,
+            "wins": 4
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.5714285714285714,
+            "delta": 0.42857142857142855,
+            "groups": 7,
+            "interval_95": [
+              0.14285714285714285,
+              0.7142857142857143
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 3,
+            "wins": 4
+          }
+        }
+      }
+    },
+    "single-session-user": {
+      "2048": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.8823529411764706,
+            "before": 0.35294117647058826,
+            "delta": 0.5294117647058824,
+            "groups": 17,
+            "interval_95": [
+              0.29411764705882354,
+              0.7647058823529411
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 8,
+            "wins": 9
+          },
+          "query_bootstrap": {
+            "after": 0.8823529411764706,
+            "before": 0.35294117647058826,
+            "delta": 0.5294117647058824,
+            "groups": 17,
+            "interval_95": [
+              0.29411764705882354,
+              0.7647058823529411
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 8,
+            "wins": 9
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.8823529411764706,
+            "before": 0.35294117647058826,
+            "delta": 0.5294117647058824,
+            "groups": 17,
+            "interval_95": [
+              0.29411764705882354,
+              0.7647058823529411
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 8,
+            "wins": 9
+          },
+          "query_bootstrap": {
+            "after": 0.8823529411764706,
+            "before": 0.35294117647058826,
+            "delta": 0.5294117647058824,
+            "groups": 17,
+            "interval_95": [
+              0.29411764705882354,
+              0.7647058823529411
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 8,
+            "wins": 9
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.9411764705882353,
+            "before": 0.8235294117647058,
+            "delta": 0.11764705882352941,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.29411764705882354
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 15,
+            "wins": 2
+          },
+          "query_bootstrap": {
+            "after": 0.9411764705882353,
+            "before": 0.8235294117647058,
+            "delta": 0.11764705882352941,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.29411764705882354
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 15,
+            "wins": 2
+          }
+        }
+      },
+      "4096": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.9411764705882353,
+            "before": 0.7647058823529411,
+            "delta": 0.17647058823529413,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.35294117647058826
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 14,
+            "wins": 3
+          },
+          "query_bootstrap": {
+            "after": 0.9411764705882353,
+            "before": 0.7647058823529411,
+            "delta": 0.17647058823529413,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.35294117647058826
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 14,
+            "wins": 3
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.9411764705882353,
+            "before": 0.7647058823529411,
+            "delta": 0.17647058823529413,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.35294117647058826
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 14,
+            "wins": 3
+          },
+          "query_bootstrap": {
+            "after": 0.9411764705882353,
+            "before": 0.7647058823529411,
+            "delta": 0.17647058823529413,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.35294117647058826
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 14,
+            "wins": 3
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.8823529411764706,
+            "delta": 0.11764705882352941,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.29411764705882354
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 15,
+            "wins": 2
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.8823529411764706,
+            "delta": 0.11764705882352941,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.29411764705882354
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 15,
+            "wins": 2
+          }
+        }
+      },
+      "8192": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.9411764705882353,
+            "delta": 0.058823529411764705,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.17647058823529413
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 16,
+            "wins": 1
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.9411764705882353,
+            "delta": 0.058823529411764705,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.17647058823529413
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 16,
+            "wins": 1
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 0.9411764705882353,
+            "delta": 0.058823529411764705,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.17647058823529413
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 16,
+            "wins": 1
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 0.9411764705882353,
+            "delta": 0.058823529411764705,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.17647058823529413
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 16,
+            "wins": 1
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          },
+          "query_bootstrap": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "groups": 17,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          }
+        }
+      }
+    },
+    "temporal-reasoning": {
+      "2048": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.7126436781609196,
+            "before": 0.16666666666666666,
+            "delta": 0.5459770114942528,
+            "groups": 28,
+            "interval_95": [
+              0.34523809523809523,
+              0.7272727272727273
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 8,
+            "wins": 20
+          },
+          "query_bootstrap": {
+            "after": 0.7126436781609196,
+            "before": 0.16666666666666666,
+            "delta": 0.5459770114942528,
+            "groups": 29,
+            "interval_95": [
+              0.3448275862068966,
+              0.7183908045977011
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 8,
+            "wins": 20
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.7126436781609196,
+            "before": 0.16666666666666666,
+            "delta": 0.5459770114942528,
+            "groups": 28,
+            "interval_95": [
+              0.34523809523809523,
+              0.7272727272727273
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 8,
+            "wins": 20
+          },
+          "query_bootstrap": {
+            "after": 0.7126436781609196,
+            "before": 0.16666666666666666,
+            "delta": 0.5459770114942528,
+            "groups": 29,
+            "interval_95": [
+              0.3448275862068966,
+              0.7183908045977011
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 8,
+            "wins": 20
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.9655172413793104,
+            "before": 0.3563218390804598,
+            "delta": 0.6091954022988506,
+            "groups": 28,
+            "interval_95": [
+              0.4540229885057471,
+              0.7559523809523809
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 9,
+            "wins": 20
+          },
+          "query_bootstrap": {
+            "after": 0.9655172413793104,
+            "before": 0.3563218390804598,
+            "delta": 0.6091954022988506,
+            "groups": 29,
+            "interval_95": [
+              0.4482758620689655,
+              0.764367816091954
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 9,
+            "wins": 20
+          }
+        }
+      },
+      "4096": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.8620689655172413,
+            "before": 0.39080459770114945,
+            "delta": 0.47126436781609193,
+            "groups": 28,
+            "interval_95": [
+              0.3103448275862069,
+              0.625
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 9,
+            "wins": 19
+          },
+          "query_bootstrap": {
+            "after": 0.8620689655172413,
+            "before": 0.39080459770114945,
+            "delta": 0.47126436781609193,
+            "groups": 29,
+            "interval_95": [
+              0.3103448275862069,
+              0.6264367816091954
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 9,
+            "wins": 19
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.8620689655172413,
+            "before": 0.39080459770114945,
+            "delta": 0.47126436781609193,
+            "groups": 28,
+            "interval_95": [
+              0.3103448275862069,
+              0.625
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 9,
+            "wins": 19
+          },
+          "query_bootstrap": {
+            "after": 0.8620689655172413,
+            "before": 0.39080459770114945,
+            "delta": 0.47126436781609193,
+            "groups": 29,
+            "interval_95": [
+              0.3103448275862069,
+              0.6264367816091954
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 9,
+            "wins": 19
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.9655172413793104,
+            "before": 0.5229885057471264,
+            "delta": 0.4425287356321839,
+            "groups": 28,
+            "interval_95": [
+              0.2988505747126437,
+              0.5862068965517241
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 10,
+            "wins": 19
+          },
+          "query_bootstrap": {
+            "after": 0.9655172413793104,
+            "before": 0.5229885057471264,
+            "delta": 0.4425287356321839,
+            "groups": 29,
+            "interval_95": [
+              0.3045977011494253,
+              0.5804597701149425
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 10,
+            "wins": 19
+          }
+        }
+      },
+      "8192": {
+        "actual_document_hit_recall": {
+          "group_bootstrap": {
+            "after": 0.9310344827586207,
+            "before": 0.8333333333333334,
+            "delta": 0.09770114942528736,
+            "groups": 28,
+            "interval_95": [
+              -0.005555555555555554,
+              0.21264367816091953
+            ],
+            "losses": 2,
+            "queries": 29,
+            "ties": 20,
+            "wins": 7
+          },
+          "query_bootstrap": {
+            "after": 0.9310344827586207,
+            "before": 0.8333333333333334,
+            "delta": 0.09770114942528736,
+            "groups": 29,
+            "interval_95": [
+              -0.005747126436781608,
+              0.20689655172413793
+            ],
+            "losses": 2,
+            "queries": 29,
+            "ties": 20,
+            "wins": 7
+          }
+        },
+        "actual_whole_turn_record_recall": {
+          "group_bootstrap": {
+            "after": 0.9310344827586207,
+            "before": 0.8333333333333334,
+            "delta": 0.09770114942528736,
+            "groups": 28,
+            "interval_95": [
+              -0.005555555555555554,
+              0.21264367816091953
+            ],
+            "losses": 2,
+            "queries": 29,
+            "ties": 20,
+            "wins": 7
+          },
+          "query_bootstrap": {
+            "after": 0.9310344827586207,
+            "before": 0.8333333333333334,
+            "delta": 0.09770114942528736,
+            "groups": 29,
+            "interval_95": [
+              -0.005747126436781608,
+              0.20689655172413793
+            ],
+            "losses": 2,
+            "queries": 29,
+            "ties": 20,
+            "wins": 7
+          }
+        },
+        "shared_whole_turn_recall": {
+          "group_bootstrap": {
+            "after": 0.9655172413793104,
+            "before": 0.8793103448275862,
+            "delta": 0.08620689655172414,
+            "groups": 28,
+            "interval_95": [
+              0.016666666666666666,
+              0.17857142857142858
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 25,
+            "wins": 4
+          },
+          "query_bootstrap": {
+            "after": 0.9655172413793104,
+            "before": 0.8793103448275862,
+            "delta": 0.08620689655172414,
+            "groups": 29,
+            "interval_95": [
+              0.017241379310344827,
+              0.1724137931034483
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 25,
+            "wins": 4
+          }
+        }
+      }
+    }
+  },
+  "complete": true,
+  "contexts_verified": 714,
+  "history_or_question_groups": 111,
+  "inputs_sha256": "bec6326c513fee3e35163c93f225432f5e91166ea6c40654e55b2f6bda611f7d",
+  "kind": "complete-normalized-native-raw-memory-development-comparison",
+  "limits": [
+    "Development cohort, no superiority gate or independent holdout",
+    "Shared whole-turn packer reconstructs documents and measures ranking only",
+    "Actual Hindsight context is adapter-rendered from exact returned units",
+    "Whole-turn-in-one-record diagnostic can miss complete evidence distributed across chunks",
+    "No answer generation, extraction comparison or fair speed ratio",
+    "Groups cover abstention pairs and identical histories, not all partial history dependence"
+  ],
+  "metadata_omission_cases": 2,
+  "metadata_omission_units": 6,
+  "overall": {
+    "2048": {
+      "actual_document_hit_recall": {
+        "group_bootstrap": {
+          "after": 0.6608187134502924,
+          "before": 0.23026315789473684,
+          "delta": 0.4305555555555556,
+          "groups": 111,
+          "interval_95": [
+            0.32448377581120946,
+            0.5282738095238095
+          ],
+          "losses": 10,
+          "queries": 114,
+          "ties": 29,
+          "wins": 75
+        },
+        "query_bootstrap": {
+          "after": 0.6608187134502924,
+          "before": 0.23026315789473684,
+          "delta": 0.4305555555555556,
+          "groups": 114,
+          "interval_95": [
+            0.32456140350877194,
+            0.5299707602339181
+          ],
+          "losses": 10,
+          "queries": 114,
+          "ties": 29,
+          "wins": 75
+        }
+      },
+      "actual_whole_turn_record_recall": {
+        "group_bootstrap": {
+          "after": 0.6608187134502924,
+          "before": 0.22149122807017543,
+          "delta": 0.43932748538011696,
+          "groups": 111,
+          "interval_95": [
+            0.33620689655172414,
+            0.5355072463768116
+          ],
+          "losses": 9,
+          "queries": 114,
+          "ties": 30,
+          "wins": 75
+        },
+        "query_bootstrap": {
+          "after": 0.6608187134502924,
+          "before": 0.22149122807017543,
+          "delta": 0.43932748538011696,
+          "groups": 114,
+          "interval_95": [
+            0.3347953216374269,
+            0.5358187134502924
+          ],
+          "losses": 9,
+          "queries": 114,
+          "ties": 30,
+          "wins": 75
+        }
+      },
+      "shared_whole_turn_recall": {
+        "group_bootstrap": {
+          "after": 0.922514619883041,
+          "before": 0.4159356725146199,
+          "delta": 0.506578947368421,
+          "groups": 111,
+          "interval_95": [
+            0.4252136752136752,
+            0.5862068965517241
+          ],
+          "losses": 2,
+          "queries": 114,
+          "ties": 39,
+          "wins": 73
+        },
+        "query_bootstrap": {
+          "after": 0.922514619883041,
+          "before": 0.4159356725146199,
+          "delta": 0.506578947368421,
+          "groups": 114,
+          "interval_95": [
+            0.4239766081871345,
+            0.5891812865497076
+          ],
+          "losses": 2,
+          "queries": 114,
+          "ties": 39,
+          "wins": 73
+        }
+      }
+    },
+    "4096": {
+      "actual_document_hit_recall": {
+        "group_bootstrap": {
+          "after": 0.7485380116959064,
+          "before": 0.4590643274853801,
+          "delta": 0.2894736842105263,
+          "groups": 111,
+          "interval_95": [
+            0.18898809523809523,
+            0.38392857142857145
+          ],
+          "losses": 12,
+          "queries": 114,
+          "ties": 43,
+          "wins": 59
+        },
+        "query_bootstrap": {
+          "after": 0.7485380116959064,
+          "before": 0.4590643274853801,
+          "delta": 0.2894736842105263,
+          "groups": 114,
+          "interval_95": [
+            0.19298245614035087,
+            0.39035087719298245
+          ],
+          "losses": 12,
+          "queries": 114,
+          "ties": 43,
+          "wins": 59
+        }
+      },
+      "actual_whole_turn_record_recall": {
+        "group_bootstrap": {
+          "after": 0.7485380116959064,
+          "before": 0.4502923976608187,
+          "delta": 0.2982456140350877,
+          "groups": 111,
+          "interval_95": [
+            0.20072463768115942,
+            0.3922413793103448
+          ],
+          "losses": 11,
+          "queries": 114,
+          "ties": 44,
+          "wins": 59
+        },
+        "query_bootstrap": {
+          "after": 0.7485380116959064,
+          "before": 0.4502923976608187,
+          "delta": 0.2982456140350877,
+          "groups": 114,
+          "interval_95": [
+            0.2046783625730994,
+            0.39473684210526316
+          ],
+          "losses": 11,
+          "queries": 114,
+          "ties": 44,
+          "wins": 59
+        }
+      },
+      "shared_whole_turn_recall": {
+        "group_bootstrap": {
+          "after": 0.9634502923976608,
+          "before": 0.5226608187134503,
+          "delta": 0.4407894736842105,
+          "groups": 111,
+          "interval_95": [
+            0.3567251461988304,
+            0.5196078431372549
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 46,
+          "wins": 67
+        },
+        "query_bootstrap": {
+          "after": 0.9634502923976608,
+          "before": 0.5226608187134503,
+          "delta": 0.4407894736842105,
+          "groups": 114,
+          "interval_95": [
+            0.36257309941520466,
+            0.52046783625731
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 46,
+          "wins": 67
+        }
+      }
+    },
+    "8192": {
+      "actual_document_hit_recall": {
+        "group_bootstrap": {
+          "after": 0.8201754385964912,
+          "before": 0.756578947368421,
+          "delta": 0.06359649122807018,
+          "groups": 111,
+          "interval_95": [
+            -0.025811209439528023,
+            0.1493993993993994
+          ],
+          "losses": 18,
+          "queries": 114,
+          "ties": 64,
+          "wins": 32
+        },
+        "query_bootstrap": {
+          "after": 0.8201754385964912,
+          "before": 0.756578947368421,
+          "delta": 0.06359649122807018,
+          "groups": 114,
+          "interval_95": [
+            -0.025584795321637425,
+            0.1527777777777778
+          ],
+          "losses": 18,
+          "queries": 114,
+          "ties": 64,
+          "wins": 32
+        }
+      },
+      "actual_whole_turn_record_recall": {
+        "group_bootstrap": {
+          "after": 0.8201754385964912,
+          "before": 0.7478070175438597,
+          "delta": 0.07236842105263158,
+          "groups": 111,
+          "interval_95": [
+            -0.011160714285714286,
+            0.15789473684210525
+          ],
+          "losses": 17,
+          "queries": 114,
+          "ties": 65,
+          "wins": 32
+        },
+        "query_bootstrap": {
+          "after": 0.8201754385964912,
+          "before": 0.7478070175438597,
+          "delta": 0.07236842105263158,
+          "groups": 114,
+          "interval_95": [
+            -0.014619883040935672,
+            0.15789473684210525
+          ],
+          "losses": 17,
+          "queries": 114,
+          "ties": 65,
+          "wins": 32
+        }
+      },
+      "shared_whole_turn_recall": {
+        "group_bootstrap": {
+          "after": 0.97953216374269,
+          "before": 0.8282163742690059,
+          "delta": 0.1513157894736842,
+          "groups": 111,
+          "interval_95": [
+            0.09492753623188406,
+            0.21884057971014492
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 86,
+          "wins": 27
+        },
+        "query_bootstrap": {
+          "after": 0.97953216374269,
+          "before": 0.8282163742690059,
+          "delta": 0.1513157894736842,
+          "groups": 114,
+          "interval_95": [
+            0.09502923976608188,
+            0.2149122807017544
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 86,
+          "wins": 27
+        }
+      }
+    }
+  },
+  "products": {
+    "hindsight": {
+      "complete": true,
+      "documents_verified": 59021,
+      "embedding_records": [
+        {
+          "calls": 467,
+          "characters": 495457,
+          "texts": 489
+        },
+        {
+          "calls": 490,
+          "characters": 488228,
+          "texts": 505
+        },
+        {
+          "calls": 590,
+          "characters": 517492,
+          "texts": 607
+        },
+        {
+          "calls": 446,
+          "characters": 488824,
+          "texts": 462
+        },
+        {
+          "calls": 469,
+          "characters": 484834,
+          "texts": 481
+        },
+        {
+          "calls": 522,
+          "characters": 501132,
+          "texts": 548
+        },
+        {
+          "calls": 511,
+          "characters": 508512,
+          "texts": 545
+        },
+        {
+          "calls": 505,
+          "characters": 503927,
+          "texts": 534
+        },
+        {
+          "calls": 449,
+          "characters": 491666,
+          "texts": 468
+        },
+        {
+          "calls": 513,
+          "characters": 499317,
+          "texts": 525
+        },
+        {
+          "calls": 511,
+          "characters": 508867,
+          "texts": 534
+        },
+        {
+          "calls": 462,
+          "characters": 490234,
+          "texts": 482
+        },
+        {
+          "calls": 522,
+          "characters": 507587,
+          "texts": 538
+        },
+        {
+          "calls": 477,
+          "characters": 511997,
+          "texts": 496
+        },
+        {
+          "calls": 477,
+          "characters": 504307,
+          "texts": 496
+        },
+        {
+          "calls": 508,
+          "characters": 501042,
+          "texts": 536
+        },
+        {
+          "calls": 522,
+          "characters": 505491,
+          "texts": 537
+        },
+        {
+          "calls": 521,
+          "characters": 503586,
+          "texts": 533
+        },
+        {
+          "calls": 512,
+          "characters": 490597,
+          "texts": 527
+        },
+        {
+          "calls": 478,
+          "characters": 495024,
+          "texts": 500
+        },
+        {
+          "calls": 501,
+          "characters": 496536,
+          "texts": 520
+        },
+        {
+          "calls": 524,
+          "characters": 505041,
+          "texts": 550
+        },
+        {
+          "calls": 482,
+          "characters": 507517,
+          "texts": 509
+        },
+        {
+          "calls": 474,
+          "characters": 512236,
+          "texts": 498
+        },
+        {
+          "calls": 506,
+          "characters": 510092,
+          "texts": 533
+        },
+        {
+          "calls": 492,
+          "characters": 513256,
+          "texts": 501
+        },
+        {
+          "calls": 458,
+          "characters": 483084,
+          "texts": 482
+        },
+        {
+          "calls": 481,
+          "characters": 509455,
+          "texts": 496
+        },
+        {
+          "calls": 498,
+          "characters": 510732,
+          "texts": 512
+        },
+        {
+          "calls": 505,
+          "characters": 496707,
+          "texts": 536
+        },
+        {
+          "calls": 462,
+          "characters": 505382,
+          "texts": 480
+        },
+        {
+          "calls": 494,
+          "characters": 495287,
+          "texts": 517
+        },
+        {
+          "calls": 494,
+          "characters": 495132,
+          "texts": 506
+        },
+        {
+          "calls": 517,
+          "characters": 491979,
+          "texts": 526
+        },
+        {
+          "calls": 501,
+          "characters": 518624,
+          "texts": 526
+        },
+        {
+          "calls": 488,
+          "characters": 506054,
+          "texts": 508
+        },
+        {
+          "calls": 607,
+          "characters": 505587,
+          "texts": 630
+        },
+        {
+          "calls": 505,
+          "characters": 491012,
+          "texts": 517
+        },
+        {
+          "calls": 586,
+          "characters": 511014,
+          "texts": 602
+        },
+        {
+          "calls": 507,
+          "characters": 506698,
+          "texts": 525
+        },
+        {
+          "calls": 467,
+          "characters": 516776,
+          "texts": 499
+        },
+        {
+          "calls": 451,
+          "characters": 500501,
+          "texts": 473
+        },
+        {
+          "calls": 516,
+          "characters": 511894,
+          "texts": 541
+        },
+        {
+          "calls": 491,
+          "characters": 507452,
+          "texts": 526
+        },
+        {
+          "calls": 486,
+          "characters": 495540,
+          "texts": 501
+        },
+        {
+          "calls": 497,
+          "characters": 505059,
+          "texts": 517
+        },
+        {
+          "calls": 481,
+          "characters": 483495,
+          "texts": 491
+        },
+        {
+          "calls": 494,
+          "characters": 500192,
+          "texts": 516
+        },
+        {
+          "calls": 479,
+          "characters": 510554,
+          "texts": 502
+        },
+        {
+          "calls": 513,
+          "characters": 492330,
+          "texts": 531
+        },
+        {
+          "calls": 487,
+          "characters": 501051,
+          "texts": 513
+        },
+        {
+          "calls": 521,
+          "characters": 504774,
+          "texts": 541
+        },
+        {
+          "calls": 398,
+          "characters": 504855,
+          "texts": 446
+        },
+        {
+          "calls": 467,
+          "characters": 508953,
+          "texts": 490
+        },
+        {
+          "calls": 524,
+          "characters": 511071,
+          "texts": 537
+        },
+        {
+          "calls": 524,
+          "characters": 482331,
+          "texts": 538
+        },
+        {
+          "calls": 509,
+          "characters": 493554,
+          "texts": 522
+        },
+        {
+          "calls": 523,
+          "characters": 508621,
+          "texts": 551
+        },
+        {
+          "calls": 513,
+          "characters": 505429,
+          "texts": 522
+        },
+        {
+          "calls": 504,
+          "characters": 516163,
+          "texts": 524
+        },
+        {
+          "calls": 467,
+          "characters": 494278,
+          "texts": 491
+        },
+        {
+          "calls": 543,
+          "characters": 503801,
+          "texts": 565
+        },
+        {
+          "calls": 456,
+          "characters": 509414,
+          "texts": 486
+        },
+        {
+          "calls": 491,
+          "characters": 487074,
+          "texts": 518
+        },
+        {
+          "calls": 524,
+          "characters": 494809,
+          "texts": 536
+        },
+        {
+          "calls": 617,
+          "characters": 501656,
+          "texts": 636
+        },
+        {
+          "calls": 514,
+          "characters": 507649,
+          "texts": 536
+        },
+        {
+          "calls": 477,
+          "characters": 503849,
+          "texts": 503
+        },
+        {
+          "calls": 481,
+          "characters": 494778,
+          "texts": 502
+        },
+        {
+          "calls": 430,
+          "characters": 509609,
+          "texts": 467
+        },
+        {
+          "calls": 496,
+          "characters": 506851,
+          "texts": 518
+        },
+        {
+          "calls": 507,
+          "characters": 505032,
+          "texts": 528
+        },
+        {
+          "calls": 468,
+          "characters": 494254,
+          "texts": 489
+        },
+        {
+          "calls": 475,
+          "characters": 505106,
+          "texts": 491
+        },
+        {
+          "calls": 480,
+          "characters": 496818,
+          "texts": 505
+        },
+        {
+          "calls": 514,
+          "characters": 503022,
+          "texts": 524
+        },
+        {
+          "calls": 488,
+          "characters": 502424,
+          "texts": 514
+        },
+        {
+          "calls": 480,
+          "characters": 515582,
+          "texts": 505
+        },
+        {
+          "calls": 479,
+          "characters": 500041,
+          "texts": 515
+        },
+        {
+          "calls": 463,
+          "characters": 495627,
+          "texts": 486
+        },
+        {
+          "calls": 529,
+          "characters": 517371,
+          "texts": 553
+        },
+        {
+          "calls": 493,
+          "characters": 502581,
+          "texts": 518
+        },
+        {
+          "calls": 592,
+          "characters": 512246,
+          "texts": 612
+        },
+        {
+          "calls": 507,
+          "characters": 503567,
+          "texts": 527
+        },
+        {
+          "calls": 438,
+          "characters": 497493,
+          "texts": 469
+        },
+        {
+          "calls": 508,
+          "characters": 486650,
+          "texts": 525
+        },
+        {
+          "calls": 486,
+          "characters": 485403,
+          "texts": 502
+        },
+        {
+          "calls": 460,
+          "characters": 494178,
+          "texts": 477
+        },
+        {
+          "calls": 465,
+          "characters": 506176,
+          "texts": 492
+        },
+        {
+          "calls": 480,
+          "characters": 510502,
+          "texts": 512
+        },
+        {
+          "calls": 524,
+          "characters": 504778,
+          "texts": 542
+        },
+        {
+          "calls": 477,
+          "characters": 491262,
+          "texts": 493
+        },
+        {
+          "calls": 520,
+          "characters": 511048,
+          "texts": 547
+        },
+        {
+          "calls": 481,
+          "characters": 492119,
+          "texts": 498
+        },
+        {
+          "calls": 508,
+          "characters": 509637,
+          "texts": 531
+        },
+        {
+          "calls": 480,
+          "characters": 509622,
+          "texts": 513
+        },
+        {
+          "calls": 483,
+          "characters": 496431,
+          "texts": 504
+        },
+        {
+          "calls": 545,
+          "characters": 496244,
+          "texts": 569
+        },
+        {
+          "calls": 460,
+          "characters": 497209,
+          "texts": 480
+        },
+        {
+          "calls": 452,
+          "characters": 496461,
+          "texts": 476
+        },
+        {
+          "calls": 517,
+          "characters": 508444,
+          "texts": 529
+        },
+        {
+          "calls": 497,
+          "characters": 500848,
+          "texts": 516
+        },
+        {
+          "calls": 517,
+          "characters": 520833,
+          "texts": 547
+        },
+        {
+          "calls": 449,
+          "characters": 497947,
+          "texts": 469
+        },
+        {
+          "calls": 490,
+          "characters": 493764,
+          "texts": 519
+        },
+        {
+          "calls": 443,
+          "characters": 488227,
+          "texts": 478
+        },
+        {
+          "calls": 506,
+          "characters": 490388,
+          "texts": 526
+        },
+        {
+          "calls": 544,
+          "characters": 498872,
+          "texts": 560
+        },
+        {
+          "calls": 467,
+          "characters": 522365,
+          "texts": 499
+        },
+        {
+          "calls": 528,
+          "characters": 508296,
+          "texts": 551
+        },
+        {
+          "calls": 534,
+          "characters": 514817,
+          "texts": 549
+        },
+        {
+          "calls": 477,
+          "characters": 509399,
+          "texts": 501
+        },
+        {
+          "calls": 468,
+          "characters": 489761,
+          "texts": 489
+        },
+        {
+          "calls": 512,
+          "characters": 497002,
+          "texts": 530
+        },
+        {
+          "calls": 551,
+          "characters": 499970,
+          "texts": 571
+        },
+        {
+          "calls": 487,
+          "characters": 523316,
+          "texts": 517
+        },
+        {
+          "calls": 473,
+          "characters": 493192,
+          "texts": 496
+        },
+        {
+          "calls": 530,
+          "characters": 514180,
+          "texts": 549
+        },
+        {
+          "calls": 534,
+          "characters": 507514,
+          "texts": 556
+        }
+      ],
+      "errors": 0,
+      "questions": 119,
+      "source_files_verified": 323,
+      "sources": 59021,
+      "timings_seconds": {
+        "ingestion_seconds": {
+          "median": 7.537742415996036,
+          "sum": 902.8097566270153
+        },
+        "retrieval_seconds": {
+          "median": 0.03130574998795055,
+          "sum": 4.665194999688538
+        },
+        "startup_seconds": {
+          "median": 0.8640436670102645,
+          "sum": 106.01438249991043
+        }
+      }
+    },
+    "prme": {
+      "complete": true,
+      "documents_verified": 59021,
+      "embedding_records": [
+        {
+          "calls": 467,
+          "characters": 484279,
+          "texts": 467
+        },
+        {
+          "calls": 490,
+          "characters": 475283,
+          "texts": 490
+        },
+        {
+          "calls": 590,
+          "characters": 503587,
+          "texts": 590
+        },
+        {
+          "calls": 446,
+          "characters": 478253,
+          "texts": 446
+        },
+        {
+          "calls": 469,
+          "characters": 472423,
+          "texts": 469
+        },
+        {
+          "calls": 522,
+          "characters": 488266,
+          "texts": 522
+        },
+        {
+          "calls": 511,
+          "characters": 496064,
+          "texts": 511
+        },
+        {
+          "calls": 505,
+          "characters": 491726,
+          "texts": 505
+        },
+        {
+          "calls": 449,
+          "characters": 480961,
+          "texts": 449
+        },
+        {
+          "calls": 513,
+          "characters": 487289,
+          "texts": 513
+        },
+        {
+          "calls": 511,
+          "characters": 496651,
+          "texts": 511
+        },
+        {
+          "calls": 462,
+          "characters": 479209,
+          "texts": 462
+        },
+        {
+          "calls": 522,
+          "characters": 492962,
+          "texts": 522
+        },
+        {
+          "calls": 477,
+          "characters": 498416,
+          "texts": 477
+        },
+        {
+          "calls": 477,
+          "characters": 491969,
+          "texts": 477
+        },
+        {
+          "calls": 508,
+          "characters": 488793,
+          "texts": 508
+        },
+        {
+          "calls": 522,
+          "characters": 493173,
+          "texts": 522
+        },
+        {
+          "calls": 521,
+          "characters": 489231,
+          "texts": 521
+        },
+        {
+          "calls": 512,
+          "characters": 478529,
+          "texts": 512
+        },
+        {
+          "calls": 478,
+          "characters": 483591,
+          "texts": 478
+        },
+        {
+          "calls": 501,
+          "characters": 484635,
+          "texts": 501
+        },
+        {
+          "calls": 524,
+          "characters": 492469,
+          "texts": 524
+        },
+        {
+          "calls": 482,
+          "characters": 495815,
+          "texts": 482
+        },
+        {
+          "calls": 474,
+          "characters": 500881,
+          "texts": 474
+        },
+        {
+          "calls": 506,
+          "characters": 497909,
+          "texts": 506
+        },
+        {
+          "calls": 492,
+          "characters": 501274,
+          "texts": 492
+        },
+        {
+          "calls": 458,
+          "characters": 472070,
+          "texts": 458
+        },
+        {
+          "calls": 481,
+          "characters": 497829,
+          "texts": 481
+        },
+        {
+          "calls": 498,
+          "characters": 497985,
+          "texts": 498
+        },
+        {
+          "calls": 505,
+          "characters": 484463,
+          "texts": 505
+        },
+        {
+          "calls": 462,
+          "characters": 494400,
+          "texts": 462
+        },
+        {
+          "calls": 494,
+          "characters": 482435,
+          "texts": 494
+        },
+        {
+          "calls": 494,
+          "characters": 483540,
+          "texts": 494
+        },
+        {
+          "calls": 517,
+          "characters": 479521,
+          "texts": 517
+        },
+        {
+          "calls": 501,
+          "characters": 506605,
+          "texts": 501
+        },
+        {
+          "calls": 488,
+          "characters": 494430,
+          "texts": 488
+        },
+        {
+          "calls": 607,
+          "characters": 491155,
+          "texts": 607
+        },
+        {
+          "calls": 505,
+          "characters": 479167,
+          "texts": 505
+        },
+        {
+          "calls": 586,
+          "characters": 497223,
+          "texts": 586
+        },
+        {
+          "calls": 507,
+          "characters": 494679,
+          "texts": 507
+        },
+        {
+          "calls": 467,
+          "characters": 505386,
+          "texts": 467
+        },
+        {
+          "calls": 451,
+          "characters": 489690,
+          "texts": 451
+        },
+        {
+          "calls": 516,
+          "characters": 499523,
+          "texts": 516
+        },
+        {
+          "calls": 491,
+          "characters": 495440,
+          "texts": 491
+        },
+        {
+          "calls": 486,
+          "characters": 484070,
+          "texts": 486
+        },
+        {
+          "calls": 497,
+          "characters": 493231,
+          "texts": 497
+        },
+        {
+          "calls": 481,
+          "characters": 472245,
+          "texts": 481
+        },
+        {
+          "calls": 494,
+          "characters": 488308,
+          "texts": 494
+        },
+        {
+          "calls": 479,
+          "characters": 499076,
+          "texts": 479
+        },
+        {
+          "calls": 513,
+          "characters": 480175,
+          "texts": 513
+        },
+        {
+          "calls": 487,
+          "characters": 489330,
+          "texts": 487
+        },
+        {
+          "calls": 521,
+          "characters": 491538,
+          "texts": 521
+        },
+        {
+          "calls": 397,
+          "characters": 492753,
+          "texts": 397
+        },
+        {
+          "calls": 467,
+          "characters": 497753,
+          "texts": 467
+        },
+        {
+          "calls": 524,
+          "characters": 498571,
+          "texts": 524
+        },
+        {
+          "calls": 524,
+          "characters": 470008,
+          "texts": 524
+        },
+        {
+          "calls": 509,
+          "characters": 481597,
+          "texts": 509
+        },
+        {
+          "calls": 523,
+          "characters": 496025,
+          "texts": 523
+        },
+        {
+          "calls": 513,
+          "characters": 493464,
+          "texts": 513
+        },
+        {
+          "calls": 504,
+          "characters": 502414,
+          "texts": 504
+        },
+        {
+          "calls": 467,
+          "characters": 483058,
+          "texts": 467
+        },
+        {
+          "calls": 543,
+          "characters": 490876,
+          "texts": 543
+        },
+        {
+          "calls": 456,
+          "characters": 496298,
+          "texts": 456
+        },
+        {
+          "calls": 491,
+          "characters": 475238,
+          "texts": 491
+        },
+        {
+          "calls": 524,
+          "characters": 482530,
+          "texts": 524
+        },
+        {
+          "calls": 617,
+          "characters": 487084,
+          "texts": 617
+        },
+        {
+          "calls": 514,
+          "characters": 495388,
+          "texts": 514
+        },
+        {
+          "calls": 477,
+          "characters": 492354,
+          "texts": 477
+        },
+        {
+          "calls": 481,
+          "characters": 482857,
+          "texts": 481
+        },
+        {
+          "calls": 430,
+          "characters": 498963,
+          "texts": 430
+        },
+        {
+          "calls": 496,
+          "characters": 495002,
+          "texts": 496
+        },
+        {
+          "calls": 507,
+          "characters": 492364,
+          "texts": 507
+        },
+        {
+          "calls": 468,
+          "characters": 483070,
+          "texts": 468
+        },
+        {
+          "calls": 475,
+          "characters": 491909,
+          "texts": 475
+        },
+        {
+          "calls": 480,
+          "characters": 485276,
+          "texts": 480
+        },
+        {
+          "calls": 514,
+          "characters": 491013,
+          "texts": 514
+        },
+        {
+          "calls": 488,
+          "characters": 490677,
+          "texts": 488
+        },
+        {
+          "calls": 480,
+          "characters": 503030,
+          "texts": 480
+        },
+        {
+          "calls": 479,
+          "characters": 486921,
+          "texts": 479
+        },
+        {
+          "calls": 463,
+          "characters": 484430,
+          "texts": 463
+        },
+        {
+          "calls": 529,
+          "characters": 504726,
+          "texts": 529
+        },
+        {
+          "calls": 493,
+          "characters": 490738,
+          "texts": 493
+        },
+        {
+          "calls": 592,
+          "characters": 498232,
+          "texts": 592
+        },
+        {
+          "calls": 507,
+          "characters": 491509,
+          "texts": 507
+        },
+        {
+          "calls": 438,
+          "characters": 486793,
+          "texts": 438
+        },
+        {
+          "calls": 508,
+          "characters": 473494,
+          "texts": 508
+        },
+        {
+          "calls": 486,
+          "characters": 473910,
+          "texts": 486
+        },
+        {
+          "calls": 460,
+          "characters": 481763,
+          "texts": 460
+        },
+        {
+          "calls": 465,
+          "characters": 493197,
+          "texts": 465
+        },
+        {
+          "calls": 480,
+          "characters": 496712,
+          "texts": 480
+        },
+        {
+          "calls": 524,
+          "characters": 490856,
+          "texts": 524
+        },
+        {
+          "calls": 477,
+          "characters": 478426,
+          "texts": 477
+        },
+        {
+          "calls": 520,
+          "characters": 498542,
+          "texts": 520
+        },
+        {
+          "calls": 481,
+          "characters": 479616,
+          "texts": 481
+        },
+        {
+          "calls": 508,
+          "characters": 496390,
+          "texts": 508
+        },
+        {
+          "calls": 480,
+          "characters": 496877,
+          "texts": 480
+        },
+        {
+          "calls": 483,
+          "characters": 484905,
+          "texts": 483
+        },
+        {
+          "calls": 545,
+          "characters": 483229,
+          "texts": 545
+        },
+        {
+          "calls": 460,
+          "characters": 486232,
+          "texts": 460
+        },
+        {
+          "calls": 452,
+          "characters": 485580,
+          "texts": 452
+        },
+        {
+          "calls": 517,
+          "characters": 495267,
+          "texts": 517
+        },
+        {
+          "calls": 497,
+          "characters": 488961,
+          "texts": 497
+        },
+        {
+          "calls": 517,
+          "characters": 508335,
+          "texts": 517
+        },
+        {
+          "calls": 449,
+          "characters": 487172,
+          "texts": 449
+        },
+        {
+          "calls": 490,
+          "characters": 481362,
+          "texts": 490
+        },
+        {
+          "calls": 443,
+          "characters": 475894,
+          "texts": 443
+        },
+        {
+          "calls": 506,
+          "characters": 478353,
+          "texts": 506
+        },
+        {
+          "calls": 544,
+          "characters": 483988,
+          "texts": 544
+        },
+        {
+          "calls": 467,
+          "characters": 510969,
+          "texts": 467
+        },
+        {
+          "calls": 528,
+          "characters": 495703,
+          "texts": 528
+        },
+        {
+          "calls": 534,
+          "characters": 499503,
+          "texts": 534
+        },
+        {
+          "calls": 477,
+          "characters": 496947,
+          "texts": 477
+        },
+        {
+          "calls": 468,
+          "characters": 477611,
+          "texts": 468
+        },
+        {
+          "calls": 512,
+          "characters": 484785,
+          "texts": 512
+        },
+        {
+          "calls": 551,
+          "characters": 486586,
+          "texts": 551
+        },
+        {
+          "calls": 487,
+          "characters": 510890,
+          "texts": 487
+        },
+        {
+          "calls": 473,
+          "characters": 479524,
+          "texts": 473
+        },
+        {
+          "calls": 530,
+          "characters": 501614,
+          "texts": 530
+        },
+        {
+          "calls": 534,
+          "characters": 493677,
+          "texts": 534
+        }
+      ],
+      "errors": 0,
+      "questions": 119,
+      "source_files_verified": 124,
+      "sources": 59021,
+      "timings_seconds": {
+        "ingestion_seconds": {
+          "median": 44.44174645899329,
+          "sum": 5539.251176672173
+        },
+        "retrieval_seconds": {
+          "median": 0.18371012498391792,
+          "sum": 25.12665916394326
+        },
+        "startup_seconds": {
+          "median": 0.0423732920025941,
+          "sum": 5.758583131886553
+        }
+      }
+    }
+  },
+  "questions": 119,
+  "references_sha256": "7cb3110d941b0c11c851dbe4eb124a774686fffbf3c9b6c83c8d351978cf7721",
+  "source_artifacts": {
+    "completion": "f8c6649c3465c5a8527b4288f7d4be97fe36930e8f8e05916570cf52225e2f17",
+    "hindsight_plan": "a3087e344448064d8de837510899047a0488a0a51826419098163bc43fe012a7",
+    "hindsight_report": "e9510290aac6e780fb986eb1806606688bc73885e8383e31a759a8338f56196d",
+    "prme_plan": "d906129b630f6f8c7423346633a10e42be5c7662a5ccac668dd009c527d5903e",
+    "prme_report": "f5e0085ac85b7e9b7ae219d46716bd29a82e332a5d3be6254158812f913392cb"
+  },
+  "speed_claim": "None: products ran concurrently on different storage backends, with other host activity.",
+  "verification_passed": true
+}

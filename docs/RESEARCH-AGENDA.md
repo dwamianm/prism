@@ -57,14 +57,20 @@ These records preserve commit identities, raw-output hashes, failures and limits
    stopped after nine cases. The [native-provenance preflight](../benchmarks/results/research/2026-09-12/native-provenance-preflight-verification.json)
    passed both products and all 24 context reproductions without quality labels.
    A [fresh complete comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NATIVE-DEV-PROTOCOL.md)
-   is registered at `2f3ac2e` and running from fresh stores; failed captures are excluded.
+   completed both 119-case captures with zero errors and native exit zero; failed
+   captures are excluded. The [source comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NATIVE-SOURCE-RESULTS.md)
+   verified all 714 contexts. At 4K shared whole-turn packing, PRME retained
+   96.35% of labelled sources versus 52.27%; actual document-hit recall was
+   74.85% versus 45.91%. PRME lost all nine assistant evidence sources from its
+   actual bundle, while Hindsight retained seven. These are source metrics only.
    The [common-reader protocol](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-PROTOCOL.md)
    is frozen for Qwen/Gemma plus fresh empty controls. Its authored live reader
    check passed; the separate judge passed 41/42 calibration controls with zero
    false accepts. Final scoring verifies native capture, reader and judge chains,
-   keeps reader families separate and reports category losses. No dataset quality
-   results have been inspected. Timing under concurrent load cannot support a
-   speed ratio.
+   keeps reader families separate and reports category losses. Dataset reader
+   input and plans are frozen at `f1a0b64`; Qwen generation is running, with
+   Gemma and judging to follow. No answer-quality result is available yet.
+   Timing under concurrent load cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect
    temporal or episode associations, arithmetic and task-completion errors.
