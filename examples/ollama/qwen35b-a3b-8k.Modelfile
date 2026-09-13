@@ -1,0 +1,6 @@
+FROM qwen3.5:35b-a3b
+
+# Extraction inputs are short; bounding context avoids reserving the base
+# model's 256K window and keeps this profile practical on a 48 GB Mac.
+PARAMETER num_ctx 8192
+PARAMETER temperature 0

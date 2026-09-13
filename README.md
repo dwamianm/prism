@@ -398,14 +398,24 @@ optional telemetry uploader. The setting is process-wide and an explicit value
 is preserved. If your application imports ONNX Runtime first, set this variable
 before that import to apply the same startup behavior.
 
-For a custom Ollama extraction endpoint, use its OpenAI-compatible URL:
+For a custom Ollama extraction endpoint, use its OpenAI-compatible URL. On a
+48 GB Apple Silicon development machine, the bounded `qwen3.5:35b-a3b` profile
+in [`examples/ollama/qwen35b-a3b-8k.Modelfile`](examples/ollama/qwen35b-a3b-8k.Modelfile)
+passed PRME's 12-case qualifier diagnostic twice and was faster than the tested
+9B profile:
+
+```bash
+ollama pull qwen3.5:35b-a3b
+ollama create prme-qwen3.5:35b-a3b-8k \
+  -f examples/ollama/qwen35b-a3b-8k.Modelfile
+```
 
 ```python
 from prme.config import ExtractionConfig
 
 extraction = ExtractionConfig(
     provider="ollama",
-    model="qwen3.5:4b",
+    model="prme-qwen3.5:35b-a3b-8k",
     base_url="http://localhost:11434/v1",
 )
 ```
@@ -413,7 +423,11 @@ extraction = ExtractionConfig(
 Structured extraction uses temperature zero by default to reduce output
 variance. Set `temperature` directly or with `PRME_EXTRACTION_TEMPERATURE` only
 after benchmarking the selected provider. The `/v1` path is required by the
-extraction adapter; omitting `base_url` uses the local default.
+extraction adapter; omitting `base_url` uses the local default. The 35B-A3B
+profile requires about 23 GB on disk and was observed at about 22 GB loaded;
+use the same 8K profile with `qwen3.5:9b` on lower-memory systems. See the
+[`raw diagnostic evidence`](benchmarks/results/extraction/2026-09-13/README.md)
+for timings, hashes, limitations, and reproduction commands.
 
 See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough and [`examples/chat.py`](examples/chat.py) for a terminal chat app with persistent memory.
 

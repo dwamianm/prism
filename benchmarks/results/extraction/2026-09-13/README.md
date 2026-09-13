@@ -30,18 +30,44 @@ it passed **11/12 cases** in **321.454 seconds**. The remaining mixed-claim case
 exhausted retries because the model returned a non-verbatim citation; PRME
 correctly rejected that output instead of weakening its source boundary.
 
+An equal-context comparison then bounded both local candidates to 8,192 tokens.
+[`classification-qualifiers-qwen9b-8k.json`](classification-qualifiers-qwen9b-8k.json)
+passed **12/12 cases** in **314.123 seconds** and its worker exited successfully.
+The first checked 9B invocation did not publish a worker report after a transport
+failure; the preserved report is the successful direct worker retry.
+
+[`classification-qualifiers-qwen35b-a3b-8k-run1.json`](classification-qualifiers-qwen35b-a3b-8k-run1.json)
+and [`run2`](classification-qualifiers-qwen35b-a3b-8k-run2.json) each passed
+**12/12 cases**, in **145.166** and **135.049 seconds**. Both checked processes
+exited zero, and their structured extraction arrays were byte-identical after
+canonical JSON serialization (`sha256:87a2fb624150fc5efe7895ba48052f42946acdbbe5d4ff7774f577275b0764d0`).
+Ollama reported an approximately 22 GB fully GPU-resident load for the 35B-A3B
+profile and 5.7 GB for 9B on the tested 48 GB Apple Silicon machine. The larger
+mixture-of-experts candidate was 2.2x faster by the mean elapsed time of its two
+runs versus the successful 9B run. This is an observed single-machine result,
+not a general hardware benchmark.
+
 The accompanying implementation passed the complete local code suite with live
-PostgreSQL: **3,261 passed, 93 skipped**. The 9B model remains a useful local
-diagnostic option, but its latency and remaining citation-format failure do not
-support selecting it as PRME's default extractor or making a stable accuracy or
-leadership claim.
+PostgreSQL: **3,268 passed, 93 skipped**. For capable local hardware, the tested
+35B-A3B profile is PRME's recommended high-quality Ollama extractor. The 9B
+profile remains the lower-memory option. Neither becomes the package-wide
+default because a 23 GB model download and roughly 22 GB loaded model are not a
+portable assumption, and these authored probes are not held-out accuracy or
+competitive evidence.
 
 The reports retain prompt, response-schema and fixture hashes, graph assertions,
 and raw extraction output. Reproduce the temperature-zero run with an installed
 Ollama model:
 
 ```bash
+ollama create prme-qwen3.5:35b-a3b-8k \
+  -f examples/ollama/qwen35b-a3b-8k.Modelfile
 PRME_EXTRACTION_TEMPERATURE=0 \
 python -m benchmarks.diagnostics.claim_classification \
-  --model qwen3.5:9b --timeout 120 --output classification.json
+  --model prme-qwen3.5:35b-a3b-8k --timeout 180 --output classification.json
 ```
+
+Raw-report SHA-256 digests are `9b490f222d8488dd7c0b662abde07fb6b6e1d825de1ac1741a8eb56bb1e1a7ba`
+(35B run 1), `b64ece11f2f4f604bf5778bdc5278624086c64a63da5468e8b57ca8704b5d8d5`
+(35B run 2), and `f39f2092a8523f05604a2ed406138cf24bd9446f40f077a736f1585fbf048283`
+(9B 8K worker).

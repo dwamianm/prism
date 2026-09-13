@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A reproducible 8K-context Ollama profile for `qwen3.5:35b-a3b`, with two
+  successful strict extraction reports and an equal-context 9B comparison.
 - Typed claim polarity and exact explicit conditions for built-in LLM
   extraction. Conditional claims retain an auditable state and stay out of
   default retrieval until confirmed.

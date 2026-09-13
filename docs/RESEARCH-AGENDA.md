@@ -190,10 +190,10 @@ reproduced product improvements; no published total replaces the checks here.
 The [current local extraction diagnostics](../benchmarks/results/extraction/2026-09-13/README.md)
 supersede the earlier prompt-only candidate. They preserve typed polarity and
 exact conditions, use configurable temperature-zero extraction, and reject
-uncertain or contingent actions mislabeled as completed decisions. Qwen passed
-11/12 in the complete final run; the remaining failure was a correctly rejected
-non-verbatim citation. These authored probes still require held-out and
-provider-diverse validation.
+uncertain or contingent actions mislabeled as completed decisions. Equal-context
+Qwen 9B and 35B-A3B profiles each passed 12/12; the 35B-A3B profile repeated the
+result with byte-identical structured outputs and lower observed latency. These
+authored probes still require held-out and provider-diverse validation.
 
 | Gap | Next implementation/evaluation requirement |
 |---|---|
