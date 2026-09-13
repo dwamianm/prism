@@ -45,7 +45,13 @@ These records preserve commit identities, raw-output hashes, failures and limits
    and explicitly support each product's temporal API. Hindsight and Graphiti
    have been source-audited. Hindsight's subsequent authored public-API preflight
    passed retain/reopen/recall, bank isolation and seven matched embedding inputs;
-   a dataset comparison has not run. Timing from separately run workloads
+   the first strict dataset capture stopped when native ingress removed control
+   characters. A [fresh normalized comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NORMALIZED-DEV-PROTOCOL.md)
+   is now running all 119 development questions against installed PRME `b7521bc`.
+   Both use FastEmbed 0.8.0 and identical numerical dependencies/model assets.
+   Complete source readback and returned-text validation precede analysis; actual
+   returned contexts remain separate from shared whole-turn reconstruction.
+   No dataset quality results have been inspected. Timing under concurrent load
    cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect

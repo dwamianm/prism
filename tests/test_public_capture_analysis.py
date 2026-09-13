@@ -78,3 +78,89 @@ def test_normalization_preserves_text_whitespace_and_original_input():
         "U+007F": 1,
         "U+D800": 1,
     }
+
+
+def test_capture_analysis_rejects_untrusted_completion_before_scoring(tmp_path):
+    """A complete-looking report cannot bypass native exit and artifact gates."""
+    import json
+    from types import SimpleNamespace
+
+    import pytest
+
+    from benchmarks.diagnostics.compare_public_captures import analyze
+    from benchmarks.diagnostics.hindsight_capture import digest
+
+    def save(name, value):
+        path = tmp_path / (name + ".json")
+        path.write_text(json.dumps(value))
+        return path
+
+    case = {"case_id": "one", "question": "Which?", "turns": []}
+    references = [{"case_id": "one"}]
+    args = SimpleNamespace(
+        inputs=save("inputs", {"cases": [case]}),
+        references=save("references", {"references": references}),
+    )
+    plan = {
+        "inputs_sha256": digest(args.inputs.read_bytes()),
+        "reference_sha256": digest(args.references.read_bytes()),
+        "case_ids": ["one"],
+        "runner_sha256": "registered-runner",
+        "versions": {"library": "pinned"},
+        "embedding_assets": {"model": "pinned"},
+    }
+    args.prme_plan = save("plan", plan)
+    report = {
+        "plan_sha256": digest(args.prme_plan.read_bytes()),
+        "runner_sha256": plan["runner_sha256"],
+        "versions": plan["versions"],
+        "embedding_assets": plan["embedding_assets"],
+        "complete": True,
+        "errors": 0,
+        "details": [{"case_id": "one"}],
+    }
+
+    def completion(report_value, exit_code=0):
+        args.prme_report = save("report", report_value)
+        args.completion = save(
+            "completion",
+            {
+                "products": {
+                    "prme": {
+                        "native_exit_code": exit_code,
+                        "report_sha256": digest(args.prme_report.read_bytes()),
+                    }
+                }
+            },
+        )
+
+    completion(report, 130)
+    with pytest.raises(ValueError, match="Native success"):
+        analyze(args)
+
+    completion(report)
+    args.prme_report.write_text("{}")
+    with pytest.raises(ValueError, match="Completion hash"):
+        analyze(args)
+
+    completion(dict(report, complete=False))
+    with pytest.raises(ValueError, match="Successful complete"):
+        analyze(args)
+
+    completion(dict(report, details=[]))
+    with pytest.raises(ValueError, match="Successful complete"):
+        analyze(args)
+
+    completion(dict(report, versions={"library": "unexpected"}))
+    with pytest.raises(ValueError, match="Reported runtime"):
+        analyze(args)
+
+    completion(report)
+    args.prme_plan = save("changed-plan", dict(plan, case_ids=[]))
+    completion(dict(report, plan_sha256=digest(args.prme_plan.read_bytes())))
+    with pytest.raises(ValueError, match="Registered case coverage"):
+        analyze(args)
+
+    args.references = save("duplicate-references", {"references": references * 2})
+    with pytest.raises(ValueError, match="Ambiguous input/reference coverage"):
+        analyze(args)

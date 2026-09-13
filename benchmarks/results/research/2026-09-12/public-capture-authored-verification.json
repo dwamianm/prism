@@ -1,0 +1,106 @@
+{
+  "recorded_at": "2026-09-13T00:04:46.413533+00:00",
+  "kind": "authored-public-capture-and-analysis-integration",
+  "dataset_quality_inspected": false,
+  "runtime_workers_commit": "f5a2a69",
+  "analyzer": {
+    "path": "benchmarks/diagnostics/compare_public_captures.py",
+    "sha256": "d488d25557cfbb9033058b01d3a12b3d68b41cd91400d21ed1899fcc2cca1dcb"
+  },
+  "checks": {
+    "command": "pytest tests/test_public_capture_analysis.py tests/test_hindsight_capture_protocol.py -q",
+    "native_exit_code": 0,
+    "passed": 14,
+    "log": {
+      "path": "/tmp/prme-public-capture-analysis-tests-final.log",
+      "sha256": "afd29dde277673ae5fdf4065212d4ff9dfcfb69674649964c2810313752808d3"
+    }
+  },
+  "inputs": {
+    "path": "data/benchmarks/hindsight-capture-authored-inputs.json",
+    "sha256": "d77c5e14a80dfa6db65b43e06f4dac9a35c5b5868bcfedb5aa683e24e2586c96"
+  },
+  "references": {
+    "path": "data/benchmarks/public-capture-authored-analysis-references.json",
+    "sha256": "2bf5e8d1c1c4177c4d6c413ac46beea3afe1f89bbb4ce2726eb6ef7bdc95b7c0"
+  },
+  "products": {
+    "prme": {
+      "native_exit_code": 0,
+      "complete": true,
+      "cases": 3,
+      "errors": 0,
+      "source_files_verified": 124,
+      "versions": {
+        "duckdb": "1.5.5",
+        "fastembed": "0.8.0",
+        "numpy": "2.4.2",
+        "onnxruntime": "1.24.2",
+        "prme": "0.11.0",
+        "tantivy": "0.26.0",
+        "tiktoken": "0.14.0",
+        "usearch": "2.26.2"
+      },
+      "report": {
+        "path": "data/benchmarks/prme-authored-analysis-f5a2a69.json",
+        "sha256": "dd0ba9cc97da4fc524885098f39f4d79038f18cb47506d363c064f86dca89538"
+      },
+      "plan": {
+        "path": "benchmarks/results/research/2026-09-12/prme-authored-analysis-plan.json",
+        "sha256": "647ddce16e5a3fd7e1703b4ea8d79456db3392b33576936bab1bef44e5f88ec7"
+      },
+      "log": {
+        "path": "/tmp/prme-prme-authored-analysis-f5a2a69.log",
+        "sha256": "7d4cc09b08c7a1ab48f2a64c5f207bbe38de3892eb377faa97dd9e169c2e225d"
+      }
+    },
+    "hindsight": {
+      "native_exit_code": 0,
+      "complete": true,
+      "cases": 3,
+      "errors": 0,
+      "source_files_verified": 323,
+      "versions": {
+        "fastembed": "0.8.0",
+        "hindsight-api-slim": "0.9.2",
+        "numpy": "2.4.2",
+        "onnxruntime": "1.24.2",
+        "tiktoken": "0.14.0"
+      },
+      "report": {
+        "path": "data/benchmarks/hindsight-authored-analysis-f5a2a69.json",
+        "sha256": "caaeaa72dc183ea40a19e0f2fe8d0d2dbf35bcebedfaabf84dbb3da1098deca8"
+      },
+      "plan": {
+        "path": "benchmarks/results/research/2026-09-12/hindsight-authored-analysis-plan.json",
+        "sha256": "64d8d9d18546cb9dcdd8da9d61bde54a61f0353c23748832fd3c38a7140ca410"
+      },
+      "log": {
+        "path": "/tmp/prme-hindsight-authored-analysis-f5a2a69.log",
+        "sha256": "5d0a84dd200d3848cedcbc9f01b9812c29d0b7761f9b8afdbf5dd208f622630a"
+      }
+    }
+  },
+  "analysis": {
+    "native_exit_code": 0,
+    "verified": true,
+    "cases": 3,
+    "report": {
+      "path": "data/benchmarks/public-capture-authored-analysis-guarded.json",
+      "sha256": "ee4b1f9224268d505cbd69681b8a44a1bdc688e4095691b644c12647ad2b7d96"
+    },
+    "completion": {
+      "path": "data/benchmarks/public-capture-authored-analysis-completion.json",
+      "sha256": "559ada104db8045d08250fb382a33cdd0d80688488a5d37d5cbc4a2e5ca25fc1"
+    },
+    "log": {
+      "path": "/tmp/prme-public-capture-authored-analysis-guarded.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "limits": [
+    "Three authored cases, not dataset or competitive quality evidence.",
+    "Reference labels are analysis-only; workers do not receive them.",
+    "Existing interrupted strict captures remain excluded; normalized dataset runs continue separately."
+  ]
+}

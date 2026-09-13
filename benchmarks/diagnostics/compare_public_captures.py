@@ -118,7 +118,12 @@ def analyze(args):
     reference_data = json.loads(refs_raw)
     references = {r["case_id"]: r for r in reference_data["references"]}
     expected = [c["case_id"] for c in cases]
-    if len(set(expected)) != len(cases) or set(references) != set(expected):
+    if (
+        not cases
+        or len(set(expected)) != len(cases)
+        or len(reference_data["references"]) != len(references)
+        or set(references) != set(expected)
+    ):
         raise ValueError("Ambiguous input/reference coverage")
     config = {}
     reports = {}
@@ -140,6 +145,13 @@ def analyze(args):
             "reference_sha256"
         ] != digest(refs_raw):
             raise ValueError("Study inputs differ")
+        if plan["case_ids"] != expected:
+            raise ValueError("Registered case coverage differs")
+        if any(
+            report[field] != plan[field]
+            for field in ["runner_sha256", "versions", "embedding_assets"]
+        ):
+            raise ValueError("Reported runtime differs from registration")
         if (
             not report["complete"]
             or report["errors"]

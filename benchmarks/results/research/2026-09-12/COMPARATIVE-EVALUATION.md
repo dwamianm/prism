@@ -54,14 +54,16 @@ selection. We will not copy published totals into a PRME leadership claim.
 
 ## Concrete gaps exposed
 
-PRME distinguishes users and six scope types, but currently has no named project
-or arbitrary domain namespace field in its memory objects or retrieval API.
-Two projects belonging to the same owner therefore require separate packs for
-isolation; a `project_id` metadata key is not an enforced boundary. RFC-0004's
-full namespace/grant model remains unimplemented. Entity profiles originally also
-published nontransactionally. That gap is now fixed by atomic publication
-(`430e1b3`) and complete scoped source scans (`107f535`), with backend fault,
-concurrency and abrupt-exit coverage. Durable preparation/retry remains separate.
+The original named-project gap now has a public `MemoryWorkspace` API. Named
+projects use identity-checked local packs or PostgreSQL schemas, a bounded lease
+cache and shared embeddings; PostgreSQL also shares a bounded connection pool.
+The installed [100-project native backup/restore workflow](../../recovery/2026-09-12/PG-WORKSPACES.md)
+passed, including separate source and merged-entity verification. A metadata
+`project_id` remains insufficient for isolation; RFC-0004's full hosted grants
+remain unimplemented. Entity profiles now publish atomically, scan complete
+scoped sources and journal prepared work for explicit recovery and abandonment.
+See the [workspace guide](../../../../../docs/WORKSPACES.md) and
+[profile guide](../../../../../docs/ENTITY-PROFILES.md) for supported boundaries.
 
 The next comparative work needs pinned competitor versions, named model and
 embedding conditions, matched questions and token/latency budgets, ingestion
@@ -87,8 +89,8 @@ Mem0's individual calls and failed its 1e-6 tolerance; that failure is preserved
 in `mem0-compatibility-c7ee362-attempt1.json`. A corrected comparison retained the
 observed batch-versus-single maximum difference of 0.000223577 rather than
 loosening the tolerance. This checks compatibility, not extraction quality,
-answer accuracy or product leadership. Real comparative evaluation remains to
-be registered and run with matched inputs, reader, budgets and cost accounting.
+answer accuracy or product leadership. The later 119-question raw-turn
+comparison is reported below; matched-reader answer evaluation remains pending.
 
 ## Next external protocols: Hindsight and Graphiti
 
@@ -175,3 +177,34 @@ abstention. No LLM calls, retries or outcome-based exclusions were used. Runtime
 measurements remain in the raw report, but concurrent workloads and separate
 runs preclude a fair speed ratio. Preference coverage is a demonstrated remaining
 gap; this study does not establish the best end-to-end memory system.
+
+## Fresh PRME–Hindsight public-context capture
+
+The [normalized development protocol](HINDSIGHT-PRME-NORMALIZED-DEV-PROTOCOL.md)
+is registered at `f5a2a69`. Fresh installed PRME `b7521bc` and pinned Hindsight
+`bde55237` use the same FastEmbed 0.8.0, ONNX Runtime 1.24.2, NumPy 2.4.2,
+tiktoken 0.14.0 and BGE assets. Workers receive 119 neutral queries and all 59,021
+source turns, with opaque identifiers and no answers, categories or evidence labels.
+
+The prior strict capture is retained as stopped, not a quality result: Hindsight's
+native sanitizer removed 29 U+0002 characters from one document, violating the
+exact-byte readback gate. Both processes were interrupted with native exit 130.
+The fresh protocol applies the same declared control-character normalization to
+both inputs (41 removed characters across three source records). No printable
+text, turn, blank record or query is removed. No quality outcomes were inspected
+before the amendment; interrupted outputs will not be merged into the fresh run.
+
+Both workers verify public source readback and exact returned text. The analyzer
+reproduces contexts at 2K/4K/8K and separately reports shared whole-turn ranking,
+actual content-bearing source hits and complete source text within a record.
+Pointers do not count as content; partial chunks do not count as whole sources.
+Hindsight's actual context is an explicitly disclosed adapter rendering of its
+returned units. It does not substitute original documents for partial returns.
+
+A fresh [three-case authored integration run](public-capture-authored-verification.json)
+passed both workers and the complete analyzer with native exit zero; 14 contract
+tests also pass. This verifies the capture/analysis path, not
+comparative quality. Dataset capture is in progress; no dataset quality scores
+have been inspected. All 119 successful cases and both native exit codes are
+required before analysis. These raw profiles disable LLM extraction and cannot
+establish full-system or answer-quality leadership.
