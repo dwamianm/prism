@@ -1,7 +1,6 @@
 """Authored end-to-end capture and strict reader boundaries before dataset use."""
 
 from dataclasses import asdict
-import json
 
 import pytest
 

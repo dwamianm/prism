@@ -11,7 +11,9 @@ import pytest
 
 from prme import MemoryEngine
 from tests.test_durable_ingestion import MockEmbeddingProvider
-from tests.test_fresh_pack_paths import fresh_config
+from tests import test_fresh_pack_paths
+
+fresh_config = test_fresh_pack_paths.fresh_config
 
 
 async def test_store_respects_configured_snapshot_interval(fresh_config, monkeypatch):

@@ -5,7 +5,10 @@ import pytest
 
 from prme import MemoryEngine
 from prme.models import Event
-from tests.test_durable_ingestion import config, user
+from tests import test_durable_ingestion
+
+config = test_durable_ingestion.config
+user = test_durable_ingestion.user
 
 
 @pytest.mark.parametrize("content", ["", " \n", "telescope", "観測"])

@@ -9,7 +9,10 @@ from prme import MemoryEngine
 from prme.api.app import create_app
 from prme.config import APIConfig, PRMEConfig
 from prme.ingestion.schema import ExtractionResult
-from tests.test_durable_ingestion import config, user
+from tests import test_durable_ingestion
+
+config = test_durable_ingestion.config
+user = test_durable_ingestion.user
 
 
 def app_for(config, engine, owner):
