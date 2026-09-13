@@ -263,7 +263,7 @@ class TestSupersedenceAwareScoring:
         # The update fact should rank higher despite lower semantic score
         assert ranked[0].node.content == update_fact.node.content
 
-    def test_current_question_without_update_evidence_keeps_base_weights(self):
+    def test_relational_question_without_update_uses_semantic_answer_class(self):
         candidate = _make_candidate(
             content="PostgreSQL is the primary database",
             semantic_score=0.8,
@@ -278,7 +278,47 @@ class TestSupersedenceAwareScoring:
             ),
         )
 
-        assert ranked[0].score_provenance.weights.w_recency == 0.10
+        applied = ranked[0].score_provenance.weights
+        assert applied.w_recency == 0.10
+        assert applied.w_semantic == pytest.approx(0.45)
+        assert applied.w_lexical == 0
+
+    def test_relational_answer_class_is_not_swamped_by_generic_overlap(self):
+        relevant = _make_candidate(
+            content="Services deploy to Kubernetes clusters on AWS",
+            semantic_score=0.70,
+            lexical_score=0.0,
+        )
+        generic_overlap = _make_candidate(
+            content="The team meets every Monday",
+            semantic_score=0.65,
+            lexical_score=1.0,
+        )
+
+        ranked, _ = score_and_rank(
+            [generic_overlap, relevant],
+            DEFAULT_SCORING_WEIGHTS,
+            query_analysis=_make_query_analysis(
+                "What infrastructure does the team use?"
+            ),
+        )
+
+        assert ranked[0].node.content == relevant.node.content
+
+    def test_broad_multi_answer_question_keeps_lexical_evidence(self):
+        candidate = _make_candidate(
+            content="The team implemented zero-trust networking",
+            semantic_score=0.5,
+            lexical_score=0.8,
+        )
+        ranked, _ = score_and_rank(
+            [candidate],
+            DEFAULT_SCORING_WEIGHTS,
+            query_analysis=_make_query_analysis(
+                "What technologies and tools does the team use?"
+            ),
+        )
+        assert ranked[0].score_provenance.weights.w_lexical == pytest.approx(0.2)
 
     def test_regular_query_does_not_boost(self):
         """Non-current-state queries should not apply supersedence boost."""

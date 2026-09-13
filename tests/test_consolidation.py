@@ -153,6 +153,56 @@ class TestClusterDetection:
         finally:
             await engine.close()
 
+    @pytest.mark.asyncio
+    async def test_equivalent_histories_cluster_independently_of_generated_ids(
+        self, tmp_path,
+    ):
+        contents = [
+            "Python is widely used for machine learning",
+            "Python is a popular language for ML projects",
+            "Python is commonly used in machine learning applications",
+            "Python is the top choice for ML development",
+            "The team deploys services to Kubernetes",
+        ]
+        source_time = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+        async def signature(root: Path):
+            lexical = root / "lexical"
+            lexical.mkdir(parents=True)
+            engine = await create_engine(PRMEConfig(
+                db_path=str(root / "memory.duckdb"),
+                vector_path=str(root / "vectors.usearch"),
+                lexical_path=str(lexical),
+            ))
+            try:
+                for offset, content in enumerate(contents):
+                    await engine.store(
+                        content,
+                        user_id="same-owner",
+                        node_type=NodeType.FACT,
+                        event_time=source_time + timedelta(days=offset),
+                    )
+                nodes = await engine.query_nodes(user_id="same-owner")
+                content_by_id = {str(node.id): node.content for node in nodes}
+                clusters = await cluster_similar_memories(
+                    engine, user_id="same-owner",
+                    min_cluster_size=3, similarity_threshold=0.70,
+                )
+                return sorted(
+                    (
+                        cluster.topic_summary,
+                        tuple(sorted(content_by_id[mid] for mid in cluster.member_ids)),
+                    )
+                    for cluster in clusters
+                )
+            finally:
+                await engine.close()
+
+        first = await signature(tmp_path / "first")
+        second = await signature(tmp_path / "second")
+        assert first
+        assert first == second
+
 
 # ---------------------------------------------------------------------------
 # Test consolidation

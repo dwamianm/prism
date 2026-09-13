@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Explicit aggregation coverage on Python, HTTP, MCP, durable retrieval records,
+  and packed model context. Natural-language counts/lists report candidate,
+  selection and context truncation without claiming exhaustive enumeration.
 - A reproducible 8K-context Ollama profile for `qwen3.5:35b-a3b`, with two
   successful strict extraction reports and an equal-context 9B comparison.
 - Typed claim polarity and exact explicit conditions for built-in LLM
@@ -48,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Make greedy consolidation clustering and source selection stable across
+  equivalent histories with different generated UUIDs. Singular relational
+  state questions use semantic answer-class relevance so generic subject words
+  do not swamp the requested relation.
 - Make extractive consolidation publication durable and idempotent. Unchanged
   clusters reuse one summary; changed source snapshots atomically publish a new
   generation with its provenance edges and archive the predecessor. DuckDB

@@ -182,6 +182,16 @@ _IMPLICIT_CURRENT_STATE_QUERY_RE = re.compile(
     re.IGNORECASE,
 )
 
+# In "What <category> does <subject> use?" questions, the category often names
+# the answer class rather than text expected in evidence ("infrastructure" ->
+# "Kubernetes"). Exact overlap is then dominated by generic subject/verb terms.
+_RELATIONAL_ANSWER_CLASS_QUERY_RE = re.compile(
+    r"^\s*what\s+"
+    r"(?![^?\n]*\b(?:and|or)\b[^?\n]*\bdoes\b)"
+    r"(?:\w+\s+){1,4}does\b",
+    re.IGNORECASE,
+)
+
 
 def _has_update_language(content: str) -> bool:
     """Check whether content contains temporal update signal words.
@@ -479,15 +489,19 @@ def score_and_rank(
         query_analysis is not None
         and _IMPLICIT_CURRENT_STATE_QUERY_RE.search(query_analysis.query)
     )
+    has_update_evidence = bool(
+        query_analysis is not None
+        and any(
+            _has_update_language(candidate.node.content)
+            for candidate in candidates
+        )
+    )
     is_current_query = bool(
         query_analysis is not None
         and _is_current_state_query(query_analysis)
         and (
             not implicit_current
-            or any(
-                _has_update_language(candidate.node.content)
-                for candidate in candidates
-            )
+            or has_update_evidence
         )
     )
 
@@ -497,6 +511,21 @@ def score_and_rank(
     # penalized. This makes newer facts rank above older ones even when
     # the older fact has higher semantic similarity.
     effective_weights = weights
+    if (
+        query_analysis is not None
+        and implicit_current
+        and not has_update_evidence
+        and _RELATIONAL_ANSWER_CLASS_QUERY_RE.search(query_analysis.query)
+    ):
+        # The literal terms after "does" usually identify the subject and a
+        # generic relation. Let semantic similarity resolve the answer class
+        # instead of rewarding those incidental overlaps. This changes only
+        # relevance composition; recency remains at the configured baseline.
+        effective_weights = ScoringWeights.model_validate({
+            **weights.model_dump(),
+            "w_semantic": weights.w_semantic + weights.w_lexical,
+            "w_lexical": 0.0,
+        })
     if is_current_query:
         target_recency = 0.25
         target_lambda = max(weights.recency_lambda, 0.05)

@@ -63,6 +63,19 @@ class MemoryCluster:
     topic_summary: str
 
 
+def _stable_source_key(node: MemoryNode) -> tuple:
+    """Order equivalent source histories independently of generated UUIDs."""
+    source_time = node.event_time or node.created_at
+    return (
+        node.user_id,
+        node.scope.value,
+        source_time,
+        node.content.casefold(),
+        node.content,
+        str(node.id),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Pipeline functions
 # ---------------------------------------------------------------------------
@@ -127,7 +140,7 @@ async def cluster_similar_memories(
     assigned: set[str] = set()
     clusters: list[MemoryCluster] = []
 
-    for node in sorted(all_nodes, key=lambda n: str(n.id)):
+    for node in sorted(all_nodes, key=_stable_source_key):
         nid = str(node.id)
         if nid in assigned:
             continue
@@ -174,9 +187,12 @@ async def cluster_similar_memories(
         avg_sim = sum(similarities) / len(similarities) if similarities else 0.0
 
         # Centroid = the member with the highest confidence
-        centroid_id = max(
+        centroid_id = min(
             member_ids,
-            key=lambda mid: node_map[mid].confidence if mid in node_map else 0.0,
+            key=lambda mid: (
+                -node_map[mid].confidence,
+                _stable_source_key(node_map[mid]),
+            ),
         )
 
         # Topic summary = content of the centroid node
@@ -279,7 +295,10 @@ async def _consolidate_cluster(
 
     # This is an extractive excerpt, not a lossless abstraction of every
     # cluster member. Preserve complete source text and its temporal meaning.
-    selected = sorted(members, key=lambda n: (-n.confidence, str(n.id)))[:3]
+    selected = sorted(
+        members,
+        key=lambda node: (-node.confidence, _stable_source_key(node)),
+    )[:3]
     summary_content = f"[Consolidated excerpt: {len(selected)} of {len(members)} memories]\n" + "\n\n".join(
         _render_source(m) for m in selected
     )

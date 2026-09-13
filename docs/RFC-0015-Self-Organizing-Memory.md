@@ -271,6 +271,11 @@ summary. Omitted, changed, pinned, recent, high-confidence, or other-namespace
 sources remain active. Legacy summaries without coverage metadata cannot
 authorize retirement. Similarity alone is not evidence that details are redundant.
 
+Greedy cluster discovery orders sources by owner, scope, source time and content,
+with UUID only as a final exact-duplicate tie-breaker. Centroid and excerpt-source
+ties use the same source order after confidence. Equivalent histories therefore
+do not change clustering merely because ingestion generated different UUIDs.
+
 Summary creation uses a checksummed `ConsolidationPublication`. A request hash
 covers every source snapshot, selected-source order, exact rendered content,
 scores, policy version, and embedding identity. The owner, scope, and sorted
