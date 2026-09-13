@@ -72,6 +72,15 @@ index eviction follows commit and remains repairable by compaction. Do not
 restore separate evidence/edge/lifecycle writes or infer rollback from a cancelled
 caller. Historical organizer/manual mutations are not all replayable yet.
 
+Single-node `promote`, `archive` and `deprecate` validate the current lifecycle
+inside the same backend transaction as the update and a checksummed
+`LIFECYCLE_CHANGED` before/after record. PostgreSQL holds the target row lock;
+DuckDB holds its connection lock until native work finishes. This prevents a
+stale promotion from reactivating a concurrently archived node. PostgreSQL
+supports contested-to-deprecated transitions directly. Invalid transitions still
+raise; these operations have no caller-supplied retry identity. Raw graph updates
+and older mutations are not covered by this record or a complete replay engine.
+
 Explicit `reinforce()` validates owner/scope evidence and commits current-value
 increments with a checksummed complete before/after `REINFORCE` record in one
 backend transaction. Successful concurrent calls accumulate; injected failures

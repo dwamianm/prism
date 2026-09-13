@@ -436,6 +436,10 @@ class GraphStore(Protocol):
         """
         ...
 
+    async def deprecate(self, node_id: str) -> None:
+        """Atomically transition a contested node to deprecated and journal it."""
+        ...
+
     async def archive(self, node_id: str) -> None:
         """Archive a node (terminal state).
 

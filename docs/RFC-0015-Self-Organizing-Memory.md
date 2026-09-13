@@ -464,6 +464,23 @@ acknowledgments do not imply rollback. Full historical graph reconstruction stil
 requires records for other organizer/manual mutations; this operation does not
 retroactively invent those inputs.
 
+Single-node `promote`, `archive` and `deprecate` now validate the current state
+and commit the update with a version 1 `LIFECYCLE_CHANGED` record in one backend
+transaction. The checksummed record retains complete before/after nodes and
+the action under `lifecycle_transitions_v1`. PostgreSQL locks the target row
+before reading it, preventing stale promotion from restoring an archived node.
+DuckDB retains its connection lock until native work finishes, including when
+the caller is cancelled. Both backends implement contested-to-deprecated
+transitions. Existing organizer summary logs remain separate from this atomic
+per-node record.
+
+Invalid or repeated terminal transitions still raise `ValueError`; there is no
+caller-supplied idempotency key for these actions. After an ambiguous outcome,
+inspect the current node with retired states included. Index eviction follows
+archival and remains repairable by compaction. These records cover the named
+transition methods, not arbitrary low-level `update_node` calls or older
+unjournaled mutations. Full historical replay remains incomplete.
+
 `ALL_JOBS` lists available jobs. `DEFAULT_JOBS` excludes the legacy global
 `feedback_apply` tuner. Default `organize()` calls use `DEFAULT_JOBS`, with or
 without a user scope. Explicit scoped requests containing `feedback_apply`

@@ -310,8 +310,8 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If the node doesn't exist or the transition is invalid.
         """
-        async with self._conn_lock:
-            await run_to_completion(self._promote_sync, node_id)
+        from prme.storage.lifecycle import transition_duckdb
+        await transition_duckdb(self, node_id, "promote")
 
     async def supersede(
         self,
@@ -454,8 +454,8 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If the node doesn't exist or is already archived.
         """
-        async with self._conn_lock:
-            await run_to_completion(self._archive_sync, node_id)
+        from prme.storage.lifecycle import transition_duckdb
+        await transition_duckdb(self, node_id, "archive")
 
     async def deprecate(self, node_id: str) -> None:
         """Deprecate a node (mark as confirmed incorrect).
@@ -471,8 +471,8 @@ class DuckPGQGraphStore:
             ValueError: If the node doesn't exist or the transition
                 is invalid.
         """
-        async with self._conn_lock:
-            await run_to_completion(self._deprecate_sync, node_id)
+        from prme.storage.lifecycle import transition_duckdb
+        await transition_duckdb(self, node_id, "deprecate")
 
     # --- Graph Traversal ---
 
@@ -1028,32 +1028,6 @@ class DuckPGQGraphStore:
 
     # --- Lifecycle sync methods ---
 
-    def _promote_sync(self, node_id: str) -> None:
-        """Promote a tentative node to stable (sync)."""
-        row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
-        ).fetchone()
-        if row is None:
-            raise ValueError(f"Node {node_id} not found")
-
-        current_state = LifecycleState(row[0])
-        target_state = LifecycleState.STABLE
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot promote: node is {current_state.value}, "
-                f"only Tentative nodes can be promoted"
-            )
-
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?, updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, node_id],
-        )
-
     def _supersede_sync(
         self,
         old_node_id: str,
@@ -1125,58 +1099,6 @@ class DuckPGQGraphStore:
             provenance_event_id=provenance_uuid,
         )
         self._create_edge_sync(edge)
-
-    def _archive_sync(self, node_id: str) -> None:
-        """Archive a node (sync)."""
-        row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
-        ).fetchone()
-        if row is None:
-            raise ValueError(f"Node {node_id} not found")
-
-        current_state = LifecycleState(row[0])
-        target_state = LifecycleState.ARCHIVED
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot archive: node is {current_state.value}, "
-                f"Archived nodes cannot be transitioned"
-            )
-
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?, updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, node_id],
-        )
-
-    def _deprecate_sync(self, node_id: str) -> None:
-        """Deprecate a node (sync)."""
-        row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
-        ).fetchone()
-        if row is None:
-            raise ValueError(f"Node {node_id} not found")
-
-        current_state = LifecycleState(row[0])
-        target_state = LifecycleState.DEPRECATED
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot deprecate: node is {current_state.value}, "
-                f"transition to DEPRECATED not allowed"
-            )
-
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?, updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, node_id],
-        )
 
     def _atomic_sync(self, operation: Callable[..., None], *args: Any) -> None:
         """Keep a multi-write lifecycle operation and its audit trail inseparable."""

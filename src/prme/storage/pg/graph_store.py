@@ -575,28 +575,9 @@ class PgGraphStore:
     # --- Lifecycle Transitions ---
 
     async def promote(self, node_id: str) -> None:
-        """Promote a tentative node to stable."""
-        async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", node_id
-            )
-            if row is None:
-                raise ValueError(f"Node {node_id} not found")
-
-            current_state = LifecycleState(row["lifecycle_state"])
-            target_state = LifecycleState.STABLE
-
-            if not validate_transition(current_state, target_state):
-                raise ValueError(
-                    f"Cannot promote: node is {current_state.value}, "
-                    f"only Tentative nodes can be promoted"
-                )
-
-            await conn.execute(
-                "UPDATE nodes SET lifecycle_state = $1, updated_at = now() WHERE id = $2",
-                target_state.value,
-                node_id,
-            )
+        """Atomically validate, apply and journal the promote transition."""
+        from prme.storage.lifecycle import transition_postgres
+        await transition_postgres(self, node_id, "promote")
 
     async def supersede(
         self,
@@ -898,29 +879,15 @@ class PgGraphStore:
                 resolver_actor_id,
             )
 
+    async def deprecate(self, node_id: str) -> None:
+        """Atomically deprecate a contested node, preserving transition provenance."""
+        from prme.storage.lifecycle import transition_postgres
+        await transition_postgres(self, node_id, "deprecate")
+
     async def archive(self, node_id: str) -> None:
-        """Archive a node (terminal state)."""
-        async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", node_id
-            )
-            if row is None:
-                raise ValueError(f"Node {node_id} not found")
-
-            current_state = LifecycleState(row["lifecycle_state"])
-            target_state = LifecycleState.ARCHIVED
-
-            if not validate_transition(current_state, target_state):
-                raise ValueError(
-                    f"Cannot archive: node is {current_state.value}, "
-                    f"Archived nodes cannot be transitioned"
-                )
-
-            await conn.execute(
-                "UPDATE nodes SET lifecycle_state = $1, updated_at = now() WHERE id = $2",
-                target_state.value,
-                node_id,
-            )
+        """Atomically validate, apply and journal the archive transition."""
+        from prme.storage.lifecycle import transition_postgres
+        await transition_postgres(self, node_id, "archive")
 
     # --- Graph Traversal ---
 
