@@ -1,0 +1,47 @@
+{
+  "before": {
+    "failed": 2,
+    "failures": [
+      "Concurrent PostgreSQL promotion reactivated an archived node",
+      "PostgreSQL lacked deprecate"
+    ],
+    "log_sha256": "93ec8bc45a7aa63ef7bd3ec3bbd6fa070fe5b8fdb92cf98bcfac925b3b0c4b1f",
+    "native_exit_code": 1,
+    "passed": 1,
+    "seconds": 0.73,
+    "skipped": 1
+  },
+  "focused_source": {
+    "log_sha256": "cc4f21012046abb04b08a1b43d8b7645ba360a091063759a61ca1fd3d7e337b0",
+    "native_exit_code": 0,
+    "passed": 183,
+    "seconds": 39.09,
+    "skipped": 2
+  },
+  "frozen_source_commit": "e15bb40",
+  "full_postgres_suite": {
+    "isolated_database": "prme_lifecycle_atomic_20260913",
+    "log": "/tmp/prme-lifecycle-atomic-full-pg.log",
+    "native_session_id": 18405,
+    "status": "running"
+  },
+  "installed": {
+    "log_sha256": "ac365702127ad32af9760d1b274a86c62671f0e9d6f8a567076436137c56457c",
+    "native_exit_code": 0,
+    "passed": 183,
+    "seconds": 32.03,
+    "skipped": 2,
+    "verification_sha256": "d6bcdd8cea62803109578a06ea4b9cdb38461c679eab2a560bb2aa627a5c7307"
+  },
+  "limits": [
+    "Named single-node transitions only; arbitrary raw graph updates remain outside the journal.",
+    "No caller request identity or complete historical replay.",
+    "Cancellation or a lost acknowledgement may follow a committed change; index cleanup remains repairable."
+  ],
+  "observed_at": "2026-09-13T18:15:54.504489+00:00",
+  "runtime_commit": "cd898c8",
+  "skip_reasons": [
+    "PostgreSQL inter-connection race does not apply to DuckDB",
+    "DuckDB native worker cancellation test does not apply to PostgreSQL"
+  ]
+}
