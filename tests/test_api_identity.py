@@ -58,6 +58,10 @@ async def test_bound_http_operations_isolate_two_users(config, user, monkeypatch
             for path in ("", "/neighborhood", "/chain"):
                 response = await client.get(f"/v1/nodes/{b.id}{path}", headers=auth("first-token"))
                 assert response.status_code == 404
+            provenance = await client.get(
+                f"/v1/nodes/{b.id}/provenance", headers=auth("first-token")
+            )
+            assert provenance.status_code == 404
             for operation, body in (
                 ("promote", None), ("archive", None), ("reinforce", None),
                 ("condition", {"state": "true"}),

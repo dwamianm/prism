@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   weight without losing their conditional classification.
 - MCP `memory_store` parity for role, session, metadata, confidence, epistemic
   type, and source type, allowing agents to create qualified memories directly.
+- Tenant-scoped node provenance on sync/async Python, HTTP, and MCP, including
+  owned source events, explicit missing-evidence signals, valid contradiction
+  links, and bounded chronological operation pages with opaque cursors.
 - Explicit aggregation coverage on Python, HTTP, MCP, durable retrieval records,
   and packed model context. Natural-language counts/lists report candidate,
   selection and context truncation without claiming exhaustive enumeration.

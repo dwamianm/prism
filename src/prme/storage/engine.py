@@ -36,6 +36,7 @@ import duckdb
 from prme.config import PRMEConfig
 from prme.ingestion.errors import MaterializationError, extraction_failure_code
 from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
+from prme.models.provenance import NodeProvenance
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
@@ -60,6 +61,7 @@ from prme.retrieval.selection import validate_selection
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
+    EdgeType,
     EpistemicType,
     LifecycleState,
     NodeType,
@@ -1844,6 +1846,74 @@ class MemoryEngine:
         if event is None:
             return []
         return await self._graph_store.get_event_nodes(event_id, user_id=user_id)
+
+    async def get_provenance(
+        self,
+        node_id: str,
+        *,
+        user_id: str | None = None,
+        operation_cursor: str | None = None,
+        operation_limit: int = 100,
+    ) -> NodeProvenance | None:
+        """Return owned source evidence, transitions, and contradiction links.
+
+        Operation pages are chronological. Pass ``next_operation_cursor`` from
+        the response to continue. Missing or foreign nodes return ``None``.
+        Missing evidence references are reported explicitly rather than hidden.
+        """
+        from prme.storage.provenance import node_operations
+
+        node = await self.get_node(
+            node_id, user_id=user_id, include_superseded=True
+        )
+        if node is None:
+            return None
+        node_id = str(node.id)
+        operations, next_cursor = await node_operations(
+            self._graph_store, node_id, cursor=operation_cursor,
+            limit=operation_limit,
+        )
+
+        evidence_events = []
+        missing_evidence_refs = []
+        for evidence_id in dict.fromkeys(node.evidence_refs):
+            event = await self.get_event(str(evidence_id), user_id=node.user_id)
+            if event is None or event.scope != node.scope:
+                missing_evidence_refs.append(evidence_id)
+            else:
+                evidence_events.append(event)
+
+        edges = await self._graph_store.get_edges(
+            node_ids=[node_id], edge_type=EdgeType.CONTRADICTS
+        )
+        counterpart_ids = {
+            str(edge.target_id if str(edge.source_id) == node_id else edge.source_id)
+            for edge in edges
+        }
+        counterparts = await self._graph_store.get_nodes(
+            sorted(counterpart_ids), include_superseded=True
+        ) if counterpart_ids else []
+        visible_counterparts = {
+            item.id for item in counterparts
+            if item.user_id == node.user_id and item.scope == node.scope
+        }
+        contradiction_edges = tuple(sorted(
+            (
+                edge for edge in edges
+                if edge.user_id == node.user_id
+                and (edge.target_id if edge.source_id == node.id else edge.source_id)
+                in visible_counterparts
+            ),
+            key=lambda edge: (edge.created_at, str(edge.id)),
+        ))
+        return NodeProvenance(
+            node=node,
+            evidence_events=tuple(evidence_events),
+            missing_evidence_refs=tuple(missing_evidence_refs),
+            operations=operations,
+            contradiction_edges=contradiction_edges,
+            next_operation_cursor=next_cursor,
+        )
 
     async def get_events(
         self, user_id: str, **kwargs

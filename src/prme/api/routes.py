@@ -19,6 +19,7 @@ from prme import __version__
 from prme.storage.reinforcement import ReinforcementConflict
 from prme.storage.condition_evaluation import ConditionEvaluationConflict
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.provenance import NodeProvenance
 from prme.api.models import (
     AcceptedWorkErrorResponse,
     ConditionEvaluationRequest,
@@ -474,6 +475,31 @@ async def get_node(request: Request, node_id: UUID) -> NodeResponse:
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
     return _node_to_response(node)
+
+
+@router.get(
+    "/nodes/{node_id}/provenance",
+    response_model=NodeProvenance,
+    summary="Get node evidence and transition history",
+    responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+)
+async def get_node_provenance(
+    request: Request,
+    node_id: UUID,
+    operation_cursor: str | None = None,
+    operation_limit: int = Query(default=100, ge=1, le=1000),
+) -> NodeProvenance:
+    """Read a tenant-scoped chronological page of node provenance."""
+    try:
+        result = await _get_engine(request).get_provenance(
+            str(node_id), user_id=_user_id(request),
+            operation_cursor=operation_cursor, operation_limit=operation_limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Node {str(node_id)!r} not found")
+    return result
 
 
 @router.get(

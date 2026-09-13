@@ -516,6 +516,36 @@ async def memory_get_node(
         return _internal_error("memory_get_node", e)
 
 
+async def memory_get_provenance(
+    node_id: str,
+    operation_cursor: str | None = None,
+    operation_limit: int = 100,
+    ctx: Context = None,
+) -> str:
+    """Get owned source evidence, transitions, and contradiction links.
+
+    Pass next_operation_cursor from a response to continue chronological
+    operation history.
+    """
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    try:
+        result = await engine.get_provenance(
+            node_id, user_id=user_id, operation_cursor=operation_cursor,
+            operation_limit=operation_limit,
+        )
+        if result is None:
+            return json.dumps({"error": f"Node {node_id!r} not found"})
+        return result.model_dump_json()
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_provenance", exc)
+
+
 async def memory_get_event(event_id: str, ctx: Context = None) -> str:
     """Read the original source event behind a node's evidence_refs.
 
@@ -784,7 +814,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
-                 memory_promote_node, memory_archive_node, memory_evaluate_condition):
+                 memory_promote_node, memory_archive_node, memory_evaluate_condition,
+                 memory_get_provenance):
         server.tool()(tool)
     server.resource("memory://health")(resource_health)
     @server.resource("memory://stats")

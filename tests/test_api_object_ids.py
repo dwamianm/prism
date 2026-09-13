@@ -16,7 +16,8 @@ ROUTES = [
     ("GET", "/events/{event_id}/processing-status"),
     ("GET", "/events/{event_id}/extraction"), ("GET", "/events/{event_id}/extraction-status"),
     ("POST", "/events/{event_id}/retry-extraction"),
-    ("GET", "/nodes/{node_id}"), ("PUT", "/nodes/{node_id}/promote"),
+    ("GET", "/nodes/{node_id}"), ("GET", "/nodes/{node_id}/provenance"),
+    ("PUT", "/nodes/{node_id}/promote"),
     ("PUT", "/nodes/{node_id}/archive"), ("PUT", "/nodes/{node_id}/reinforce"),
     ("GET", "/nodes/{node_id}/neighborhood"), ("GET", "/nodes/{node_id}/chain"),
 ]

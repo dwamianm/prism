@@ -31,6 +31,7 @@ from uuid import UUID
 from prme.config import PRMEConfig
 from prme.storage.embedding import EmbeddingProvider
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.provenance import NodeProvenance
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.retrieval.config import ScoringWeights
 from prme.retrieval.scope import ScopeInput
@@ -368,6 +369,16 @@ class MemoryClient:
     def get_node(self, node_id: str, *, user_id: str | None = None, include_superseded: bool = False) -> MemoryNode | None:
         """Get a single node by ID. Returns MemoryNode or None."""
         return self._run(self._engine.get_node(node_id, user_id=user_id, include_superseded=include_superseded))
+
+    def get_provenance(
+        self, node_id: str, *, user_id: str | None = None,
+        operation_cursor: str | None = None, operation_limit: int = 100,
+    ) -> NodeProvenance | None:
+        """Read owned evidence and a chronological page of node operations."""
+        return self._run(self._engine.get_provenance(
+            node_id, user_id=user_id, operation_cursor=operation_cursor,
+            operation_limit=operation_limit,
+        ))
 
     def supersede(self, old_node_id: str, new_node_id: str, *,
                   evidence_id: str | None = None, user_id: str | None = None) -> None:

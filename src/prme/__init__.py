@@ -21,6 +21,7 @@ from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.provenance import NodeProvenance, OperationAuditRecord
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -98,6 +99,8 @@ __all__ = [
     "NamespaceIdentityError",
     "WorkspaceError",
     "NodeType",
+    "NodeProvenance",
+    "OperationAuditRecord",
     "PRMEConfig",
     "ProcessingResult",
     "ProcessingStatus",

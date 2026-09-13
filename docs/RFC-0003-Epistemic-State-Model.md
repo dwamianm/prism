@@ -326,6 +326,16 @@ Every memory object MUST be able to answer the following questions from the even
 
 Implementations MUST expose a provenance query API that returns this information for any object ID without requiring access to derived tables.
 
+PRME exposes `get_provenance()` on both Python clients,
+`GET /v1/nodes/{node_id}/provenance` over HTTP, and
+`memory_get_provenance` over MCP. The tenant-scoped view returns the current
+node classification, owned evidence events, missing evidence references,
+same-owner/same-scope contradiction edges, and bounded chronological pages from
+the operation log. Payloads remain in their durable stored form so checksummed
+records can be independently verified. The current node is used only for access
+control and to locate its evidence; source and transition history come from the
+append-only event and operation logs.
+
 ---
 
 ## 10. What This Model Does NOT Claim

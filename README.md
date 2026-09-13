@@ -124,6 +124,10 @@ with MemoryClient("./my_memories") as client:
 The state change and its complete before/after `EPISTEMIC_TRANSITION` record
 commit together. Reuse `request_id` after a timeout. A true condition is scored
 as asserted; false, unknown, and expired states remain outside default retrieval.
+Use `client.get_provenance(claim_id, user_id="alice")` to inspect its owned
+source events, missing evidence, contradiction links, and paged transition
+history. The async engine exposes the same method; HTTP uses
+`GET /v1/nodes/{node_id}/provenance`, and MCP uses `memory_get_provenance`.
 
 The [packing guide](docs/PACKING.md) explains exact context budgets and the
 experimental `balanced` policy. It improved source retention in completed

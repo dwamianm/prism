@@ -153,6 +153,9 @@ class TestStoreRetrieve:
                 result.node.id == node.id
                 for result in client.retrieve("deploy Atlas", user_id="alice").results
             )
+            provenance = client.get_provenance(str(node.id), user_id="alice")
+            assert provenance.node.id == node.id
+            assert provenance.operations[0].op_type == "EPISTEMIC_TRANSITION"
 
     def test_deferred_ingestion_has_public_processing_status(self, tmp_dir):
         with MemoryClient(tmp_dir) as client:

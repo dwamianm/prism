@@ -372,6 +372,15 @@ class TestConditionEvaluation:
             headers={"Idempotency-Key": request_id},
         )
         assert conflict.status_code == 409
+        provenance = client.get(f"/v1/nodes/{stored['node_id']}/provenance")
+        assert provenance.status_code == 200
+        history = provenance.json()
+        assert history["node"]["id"] == stored["node_id"]
+        assert history["operations"][0]["op_type"] == "EPISTEMIC_TRANSITION"
+        assert client.get(
+            f"/v1/nodes/{stored['node_id']}/provenance",
+            params={"operation_cursor": "bad"},
+        ).status_code == 422
 
     def test_condition_validation_errors(self, client):
         stored = client.post(

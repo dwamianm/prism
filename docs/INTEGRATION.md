@@ -403,6 +403,26 @@ provides the synchronous equivalent. HTTP uses
 `PUT /v1/nodes/{node_id}/condition` with an optional UUID `Idempotency-Key`
 header; MCP exposes `memory_evaluate_condition`.
 
+#### `engine.get_provenance()`
+
+```python
+history = await engine.get_provenance(
+    node_id, user_id="alice", operation_limit=100,
+)
+next_page = await engine.get_provenance(
+    node_id, user_id="alice",
+    operation_cursor=history.next_operation_cursor,
+)
+```
+
+Returns the current node, owned source events, references whose source event is
+missing or outside the node scope, same-owner/same-scope contradiction edges,
+and a chronological page of raw operation records. The page limit is 1–1000;
+the opaque cursor is stable for append-only operation history. Missing and
+foreign nodes return `None`. `MemoryClient.get_provenance()` is the synchronous
+equivalent. HTTP exposes `GET /v1/nodes/{node_id}/provenance`; MCP exposes
+`memory_get_provenance`.
+
 ---
 
 #### `engine.close()`

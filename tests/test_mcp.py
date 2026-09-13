@@ -73,6 +73,7 @@ class TestToolDiscovery:
             "memory_promote_node",
             "memory_archive_node",
             "memory_evaluate_condition",
+            "memory_get_provenance",
         }
         assert expected.issubset(names), f"Missing tools: {expected - names}"
 
@@ -348,6 +349,12 @@ class TestLifecycle:
             "memory_evaluate_condition", {**arguments, "state": "false"}
         )
         assert "request_id" in json.loads(conflict.content[0].text)["error"]
+        provenance = await session.call_tool("memory_get_provenance", {
+            "node_id": node_id,
+        })
+        history = json.loads(provenance.content[0].text)
+        assert history["node"]["id"] == node_id
+        assert history["operations"][0]["op_type"] == "EPISTEMIC_TRANSITION"
 
 
 # ---------------------------------------------------------------------------

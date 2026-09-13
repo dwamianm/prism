@@ -51,6 +51,7 @@ async def test_stdio_binding_protects_tools_and_resources(config, user):  # noqa
             ("memory_organize", {"user_id": user + "-other"}),
             ("memory_organize", {"jobs": "feedback_apply"}),
             ("memory_get_node", {"node_id": foreign}),
+            ("memory_get_provenance", {"node_id": foreign}),
             ("memory_promote_node", {"node_id": foreign}),
             ("memory_archive_node", {"node_id": foreign}),
             ("memory_evaluate_condition", {"node_id": foreign, "state": "true"}),
@@ -94,7 +95,8 @@ async def test_http_credentials_bind_each_request_and_resource(config, user):  #
             stored_data = json.loads(stored.json()["result"]["content"][0]["text"])
             assert "error" not in stored_data
             own = stored_data["node_id"]
-            for tool in ("memory_get_node", "memory_promote_node", "memory_archive_node",
+            for tool in ("memory_get_node", "memory_get_provenance",
+                         "memory_promote_node", "memory_archive_node",
                          "memory_evaluate_condition"):
                 arguments = {"node_id": foreign}
                 if tool == "memory_evaluate_condition":
