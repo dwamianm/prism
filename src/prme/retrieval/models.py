@@ -285,6 +285,10 @@ class MemoryBundle(BaseModel):
     )
     rendered_context: str = Field(default="", description="The exact context counted against the budget")
     tokenizer: str | None = Field(default=None, description="Encoding used for tokens_used")
+    coverage_notice: str | None = Field(
+        default=None,
+        description="System-authored coverage boundary included in rendered_context",
+    )
 
     def render(self) -> str:
         """Return the already-budgeted context; do not reconstruct full nodes."""
@@ -308,6 +312,36 @@ class MemoryBundle(BaseModel):
             content = candidate.rendered_text if candidate.rendered_text is not None else candidate.node.content
             lines.append(f"- {content}")
         return "\n".join(lines) + "\n"
+
+
+AggregationLimitation = Literal[
+    "semantic_matching",
+    "candidate_limit",
+    "backend_failure",
+    "score_floor",
+    "result_limit",
+    "token_budget",
+]
+
+
+class AggregationCoverage(BaseModel):
+    """Coverage boundary for a natural-language count or list request.
+
+    Hybrid retrieval can surface useful evidence but cannot prove that a
+    semantic criterion matched every stored real-world item. ``exhaustive`` is
+    therefore deliberately false; complete stored-record traversal is exposed
+    separately through ``scan_nodes`` and ``iter_nodes``.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: Literal["semantic_candidates", "candidate_limited", "context_limited"]
+    exhaustive: Literal[False] = False
+    candidate_count: int = Field(ge=0, description="Unique candidates before explicit selection")
+    selected_count: int = Field(ge=0, description="Candidates returned after score/count selection")
+    context_count: int = Field(ge=0, description="Selected candidates present in the packed context")
+    limitations: tuple[AggregationLimitation, ...] = ("semantic_matching",)
+    candidate_limit_paths: tuple[str, ...] = ()
 
 
 class RetrievalMetadata(BaseModel):
@@ -352,6 +386,10 @@ class RetrievalMetadata(BaseModel):
     backend_failures: dict[str, str] = Field(
         default_factory=dict,
         description="Failed primary candidate paths with sanitized reason codes; empty means no detected failure",
+    )
+    aggregation_coverage: AggregationCoverage | None = Field(
+        default=None,
+        description="Explicit non-exhaustive coverage for detected count/list queries",
     )
 
 

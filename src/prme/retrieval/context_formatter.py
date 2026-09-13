@@ -371,7 +371,7 @@ def _detect_context_type(
 
     q = query.lower()
 
-    # Aggregation: count/total/list-all queries need exhaustive display.
+    # Aggregation: count/total/list-all queries need a broad candidate display.
     if query_analysis and query_analysis.is_aggregation:
         return "aggregation"
     if _AGGREGATION_GUARD_RE.search(q):
@@ -598,7 +598,8 @@ def format_for_llm(
             annotations are skipped. Aware dates are rendered in UTC, matching
             stored event timestamps rather than the host's local timezone.
         context_hint: Override auto-detection with an explicit context type.
-            One of ``"temporal"``, ``"knowledge_update"``, ``"default"``.
+            One of ``"aggregation"``, ``"temporal"``,
+            ``"knowledge_update"``, ``"default"``.
         max_results: Maximum number of results to include.
         include_profile: When ``True`` (default), prepend a user profile
             preamble and conflict annotations derived from the PRIME
@@ -620,6 +621,7 @@ def format_for_llm(
     if question_date is not None:
         question_date = as_utc(question_date)
     display = _select_entries(list(results[:max_results]), None, None)
+    ctx_type = context_hint or _detect_context_type(query, query_analysis)
     if token_budget is not None:
         if token_budget < 0:
             raise ValueError("token_budget must be nonnegative")
@@ -637,11 +639,19 @@ def format_for_llm(
             if counter(proposed) <= token_budget:
                 selected.append(candidate)
                 rendered = proposed
+        if not rendered and ctx_type == "aggregation":
+            coverage_only = format_for_llm(
+                [], query, query_analysis=query_analysis,
+                question_date=question_date, context_hint=context_hint,
+                max_results=max_results, include_profile=include_profile,
+            )
+            if counter(coverage_only) <= token_budget:
+                return coverage_only
         return rendered
     if not display:
+        if ctx_type == "aggregation":
+            return _format_aggregation([], query, question_date)
         return ""
-
-    ctx_type = context_hint or _detect_context_type(query, query_analysis)
 
     parts: list[str] = []
     # Record IDs already rendered elsewhere (profile preamble) so the body
@@ -832,7 +842,7 @@ def _format_aggregation(
     exclude_keys: set[str] | None = None,
     token_budget: int | None = None,
 ) -> str:
-    """Aggregation formatting: chronological, deduplicated, with counting guidance."""
+    """Format semantic aggregation candidates with an explicit coverage boundary."""
     # Dedup (incl. profile-overlap) and budget via the shared selector, then
     # display chronologically. ``sorted`` — never mutate the caller's list.
     selected = _select_entries(results, exclude_keys, token_budget)
@@ -860,6 +870,8 @@ def _format_aggregation(
         "AGGREGATION TASK: The question asks for a count, total, or list.\n"
         f"Below are {unique_count} distinct memory records in chronological order "
         "(repeated record IDs removed). Different records may describe the same item.\n"
+        "COVERAGE: These are semantic retrieval candidates, not an exhaustive "
+        "stored-record enumeration. Do not claim a complete count or list from them.\n"
         "IMPORTANT COUNTING RULES:\n"
         "- Count ONLY items that EXACTLY match the question's criteria.\n"
         "- Two mentions of the same item = 1 count (not 2).\n"

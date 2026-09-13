@@ -635,15 +635,21 @@ class TestTokenBudgetEnforcement:
         assert "Entry 049" not in bounded
 
     def test_default_none_budget_keeps_every_entry(self):
-        # Default (token_budget=None) preserves exhaustive aggregation: every
-        # in-scope unique entry survives (max_results raised so the slice, not
-        # the budget, is what bounds the set).
+        # Default (token_budget=None) preserves every supplied aggregation
+        # candidate (max_results raised so the slice, not the budget, bounds
+        # this already-retrieved set).
         cands = [_make_candidate(f"distinct item {i}") for i in range(60)]
         out = format_for_llm(
             cands, "how many items", include_profile=False, max_results=60,
         )
+        assert "not an exhaustive stored-record enumeration" in out
         for i in range(60):
             assert f"distinct item {i}" in out
+
+    def test_empty_aggregation_still_reports_coverage_boundary(self):
+        out = format_for_llm([], "how many museums", include_profile=False)
+        assert "Below are 0 distinct memory records" in out
+        assert "not an exhaustive stored-record enumeration" in out
 
 
 class TestNoInPlaceMutation:

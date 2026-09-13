@@ -18,7 +18,7 @@ not a reproducible measurement of the current product.
 
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:
-reliable evidence retrieval, complete aggregation, and correct temporal state.
+reliable evidence retrieval, explicit aggregation coverage, and correct temporal state.
 
 For applications that need fewer memories, `retrieve(..., limit=5, min_score=0.5)`
 applies a count cap and an inclusive score floor **before context packing**.
@@ -35,6 +35,16 @@ The HTTP API accepts `limit`, `min_score`, `token_budget`, and `mode`, plus type
 relaxes epistemic filtering within the generated candidate pool; it is not an
 exhaustive historical scan. The MCP `memory_retrieve` tool also accepts score,
 count, and token bounds.
+
+Natural-language count and list queries return
+`response.metadata.aggregation_coverage`. Semantic retrieval always reports
+`exhaustive=False`; it includes candidate, selected, and packed-context counts,
+stable limitation codes, and the backend paths that reached a candidate cap.
+The packed context contains the same non-exhaustive boundary within its measured
+token budget, so a downstream model cannot silently treat retrieved candidates
+as a complete corpus. HTTP and MCP expose the structure under
+`metrics.aggregation_coverage`. Use `iter_nodes()` or `scan_nodes()` when the
+task is complete stored-record enumeration.
 
 ## Why PRME?
 

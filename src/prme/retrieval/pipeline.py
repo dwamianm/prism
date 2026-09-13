@@ -40,6 +40,7 @@ from prme.retrieval.config import (
 )
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
+    AggregationCoverage,
     FilterMetadata,
     RetrievalCandidate,
     RetrievalMetadata,
@@ -60,6 +61,11 @@ if TYPE_CHECKING:
     from prme.storage.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
+
+_AGGREGATION_COVERAGE_NOTICE = (
+    "Aggregation coverage: semantic candidates only; this is not an exhaustive "
+    "stored-record enumeration. Do not claim a complete count or list from this context."
+)
 
 
 class _OperationConnection(Protocol):
@@ -297,11 +303,13 @@ class RetrievalPipeline:
                 }
             )
 
-        # --- Aggregation: exhaustive keyword scan ---
+        # --- Aggregation: supplementary keyword scan ---
         # For aggregation queries, supplement embedding search with a
-        # comprehensive lexical scan using key terms from the query.
+        # broader bounded lexical scan using key terms from the query.
         # This catches events that embedding similarity misses.
         aggregation_extra: list[RetrievalCandidate] = []
+        aggregation_term_limit_reached = False
+        aggregation_scan_failed = False
         if analysis.is_aggregation:
             import re
             # Extract content words (nouns, verbs) from the query
@@ -339,7 +347,10 @@ class RetrievalPipeline:
             agg_hits: list[dict] = []
             for hits in term_results:
                 if isinstance(hits, BaseException):
+                    aggregation_scan_failed = True
                     continue
+                if len(hits) >= 50:
+                    aggregation_term_limit_reached = True
                 for hit in hits:
                     nid = hit["node_id"]
                     if nid not in agg_seen_ids:
@@ -361,7 +372,11 @@ class RetrievalPipeline:
                                 lexical_score=hit.get("score", 0.0),
                             ))
                 except Exception:
-                    pass
+                    aggregation_scan_failed = True
+                    logger.debug(
+                        "Aggregation candidate resolution failed; continuing",
+                        exc_info=True,
+                    )
 
         # --- Stages 2-3: Candidate Generation + Merging ---
         candidate_diagnostics = CandidateDiagnostics()
@@ -377,6 +392,24 @@ class RetrievalPipeline:
             config=candidate_config,
             diagnostics=candidate_diagnostics,
         )
+
+        aggregation_candidate_limit_paths: list[str] = []
+        if analysis.is_aggregation:
+            backend_limits = {
+                "GRAPH": candidate_config.graph_max_candidates,
+                "VECTOR": candidate_config.vector_k,
+                "LEXICAL": candidate_config.lexical_k,
+                "PINNED": 500,
+            }
+            aggregation_candidate_limit_paths.extend(
+                backend
+                for backend, backend_limit in backend_limits.items()
+                if candidate_counts.get(backend, 0) >= backend_limit
+            )
+            if aggregation_term_limit_reached:
+                aggregation_candidate_limit_paths.append("LEXICAL_AGG")
+            if aggregation_scan_failed:
+                candidate_diagnostics.backend_failures["LEXICAL_AGG"] = "backend_error"
 
         # Merge aggregation extras into candidate pool
         if aggregation_extra:
@@ -644,6 +677,8 @@ class RetrievalPipeline:
                     exc_info=True,
                 )
 
+        aggregation_candidate_count = len(scored) if analysis.is_aggregation else 0
+
         # Apply selection to results and the bundle together. Explicit count
         # and score bounds apply to pinned/tasks and adjacent context as well.
         scored, selection_excluded = select_candidates(scored, min_score=min_score, limit=limit)
@@ -652,7 +687,42 @@ class RetrievalPipeline:
         traces = [c.score_trace for c in scored if c.score_trace is not None]
 
         # --- Stage 6: Context Packing ---
-        bundle = await asyncio.to_thread(pack_context, scored, config=effective_packing_config)
+        bundle = await asyncio.to_thread(
+            pack_context,
+            scored,
+            config=effective_packing_config,
+            coverage_notice=_AGGREGATION_COVERAGE_NOTICE if analysis.is_aggregation else None,
+        )
+
+        aggregation_coverage: AggregationCoverage | None = None
+        if analysis.is_aggregation:
+            limitation_codes = ["semantic_matching"]
+            if aggregation_candidate_limit_paths:
+                limitation_codes.append("candidate_limit")
+            if candidate_diagnostics.backend_failures:
+                limitation_codes.append("backend_failure")
+            selection_reasons = {item.reason for item in selection_excluded}
+            if "below_threshold" in selection_reasons:
+                limitation_codes.append("score_floor")
+            if "result_limit" in selection_reasons:
+                limitation_codes.append("result_limit")
+            if bundle.excluded_ids:
+                limitation_codes.append("token_budget")
+
+            if bundle.excluded_ids:
+                coverage_status = "context_limited"
+            elif len(limitation_codes) > 1:
+                coverage_status = "candidate_limited"
+            else:
+                coverage_status = "semantic_candidates"
+            aggregation_coverage = AggregationCoverage(
+                status=coverage_status,
+                candidate_count=aggregation_candidate_count,
+                selected_count=len(scored),
+                context_count=bundle.included_count,
+                limitations=tuple(limitation_codes),
+                candidate_limit_paths=tuple(aggregation_candidate_limit_paths),
+            )
 
         # --- Retrieval Logging ---
         logging_started = time.monotonic()
@@ -671,6 +741,8 @@ class RetrievalPipeline:
                 "epistemic_weights": {key: value for key, value in self._epistemic_weights.items()}
                     if self._epistemic_weights is not None else None,
                 "unverified_confidence_threshold": self._unverified_confidence_threshold,
+                "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
+                    if aggregation_coverage is not None else None,
                 "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
                 "reranker_top_k": self._reranker_top_k,
                 "query_reformulation": {"enabled": self._enable_query_reformulation,
@@ -704,6 +776,8 @@ class RetrievalPipeline:
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
                 "backend_failures": candidate_diagnostics.backend_failures,
+                "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
+                    if aggregation_coverage is not None else None,
                 "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
                 "time_from": effective_time_from.isoformat() if effective_time_from else None,
                 "time_to": effective_time_to.isoformat() if effective_time_to else None,
@@ -752,6 +826,7 @@ class RetrievalPipeline:
             backends_used=list(candidate_counts.keys()),
             embedding_mismatch=embedding_mismatch,
             backend_failures=candidate_diagnostics.backend_failures,
+            aggregation_coverage=aggregation_coverage,
         )
 
         # Build filter metadata for debugging/explainability.

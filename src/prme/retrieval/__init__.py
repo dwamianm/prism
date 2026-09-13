@@ -15,6 +15,7 @@ from prme.retrieval.config import (
 from prme.retrieval.context_formatter import format_for_llm
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
+    AggregationCoverage,
     ExcludedCandidate,
     MemoryBundle,
     QueryAnalysis,
@@ -35,6 +36,7 @@ from prme.retrieval.snapshots import (
 )
 
 __all__ = [
+    "AggregationCoverage",
     "DEFAULT_PACKING_CONFIG",
     "DEFAULT_SCORING_WEIGHTS",
     "EntitySnapshot",

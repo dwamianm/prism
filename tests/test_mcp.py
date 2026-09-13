@@ -198,6 +198,19 @@ class TestRetrieve:
         data = json.loads(result.content[0].text)
         assert "error" in data
 
+    async def test_retrieve_exposes_aggregation_coverage(self, session):
+        result = await session.call_tool("memory_retrieve", {
+            "query": "How many museums did I visit?",
+            "user_id": "counter",
+            "include_context": True,
+        })
+        data = json.loads(result.content[0].text)
+        coverage = data["metrics"]["aggregation_coverage"]
+        assert coverage["exhaustive"] is False
+        assert coverage["status"] == "semantic_candidates"
+        assert coverage["candidate_count"] == 0
+        assert data["context"].startswith("Aggregation coverage:")
+
 
 # ---------------------------------------------------------------------------
 # Get Node

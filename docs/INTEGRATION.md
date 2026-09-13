@@ -882,6 +882,8 @@ class MemoryBundle(BaseModel):
     token_budget: int
     budget_remaining: int
     min_fidelity: RepresentationLevel
+    rendered_context: str
+    coverage_notice: str | None       # Counted system boundary when applicable
 ```
 
 ### RetrievalResponse (full return type)
@@ -906,7 +908,17 @@ class RetrievalMetadata(BaseModel):
     timing_ms: float
     backends_used: list[str]
     embedding_mismatch: bool
+    backend_failures: dict[str, str]
+    aggregation_coverage: AggregationCoverage | None
 ```
+
+For detected natural-language counts and lists, `aggregation_coverage` reports
+`exhaustive=False`, candidate/selection/context counts, stable limitation codes,
+and candidate paths observed at their configured caps. The rendered bundle also
+contains a token-counted non-exhaustive warning. Use `scan_nodes()` or
+`iter_nodes()` for complete stored-record traversal; semantic retrieval cannot
+prove that every real-world item matching a natural-language criterion was
+found or deduplicated.
 
 ---
 

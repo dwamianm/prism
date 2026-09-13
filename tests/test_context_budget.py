@@ -53,6 +53,28 @@ def test_tiny_budgets_do_not_force_a_pinned_memory_or_negative_remaining():
         assert bundle.render() == ""
 
 
+def test_coverage_notice_is_counted_and_never_emits_unqualified_evidence():
+    source = candidate("A qualifying museum visit")
+    notice = "Coverage: semantic candidates only; not exhaustive."
+    roomy = pack_context(
+        [source],
+        PackingConfig(token_budget=1000, overhead_tokens=0),
+        coverage_notice=notice,
+    )
+    assert roomy.coverage_notice == notice
+    assert roomy.render().startswith(notice)
+    assert roomy.tokens_used == tokens(roomy.render())
+
+    too_small = pack_context(
+        [source],
+        PackingConfig(token_budget=1, overhead_tokens=0),
+        coverage_notice=notice,
+    )
+    assert too_small.render() == ""
+    assert too_small.coverage_notice is None
+    assert too_small.excluded_ids == [source.node.id]
+
+
 def test_pinned_flag_takes_priority_even_with_low_salience():
     pin = candidate("Preserve this pinned note", score=.01, pinned=True)
     other = candidate("A distracting unpinned note", score=1)

@@ -405,6 +405,22 @@ the matching set. Audited exports should use an unchanged pack and complete
 pending ingestion first. Semantic aggregation still requires deciding which
 stored assertions describe the same item and what evidence is missing.
 
+Natural-language count and list retrievals expose this boundary directly as
+`RetrievalMetadata.aggregation_coverage`. It reports unique candidates before
+explicit selection, returned candidates, context-included candidates, stable
+limitation codes (`semantic_matching`, candidate/backend limits, score/count
+selection, and token budget), and any backend path observed at its candidate
+cap. `exhaustive` is always false for semantic retrieval. The token-counted
+memory bundle starts with the same coverage warning; if that warning cannot fit,
+the packer emits no unqualified evidence. The alternate `format_for_llm()` path
+also emits the boundary, including when zero candidates were found.
+
+Coverage metadata and the exact structure are recorded in the retrieval
+operation and versioned execution descriptor. HTTP and MCP return it under
+`metrics.aggregation_coverage`. These diagnostics explain the retrieved set;
+they do not turn semantic matching into corpus enumeration or deduplicate
+multiple assertions about one real-world item.
+
 *End of RFC-0005*
 
 

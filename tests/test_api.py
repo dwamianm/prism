@@ -184,6 +184,19 @@ class TestRetrieve:
         )
         assert resp.status_code == 422
 
+    def test_retrieve_exposes_aggregation_coverage(self, client):
+        resp = client.post(
+            "/v1/retrieve",
+            json={"query": "How many museums did I visit?", "user_id": "counter"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        coverage = data["metrics"]["aggregation_coverage"]
+        assert coverage["exhaustive"] is False
+        assert coverage["status"] == "semantic_candidates"
+        assert coverage["candidate_count"] == 0
+        assert data["bundle"]["rendered_context"].startswith("Aggregation coverage:")
+
 
 # ---------------------------------------------------------------------------
 # Organize
