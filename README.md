@@ -165,6 +165,29 @@ result = await engine.process_pending(user_id="alice")
 status = await engine.processing_status(event_id, user_id="alice")
 ```
 
+For a raw conversation import, accept the events first and then process them
+together. This lets the local index share a durable commit:
+
+```python
+with MemoryClient("./memories") as memory:
+    event_ids = [
+        memory.ingest_fast(
+            message["content"], user_id="alice", role=message["role"],
+            session_id="imported-conversation",
+        )
+        for message in messages
+    ]
+    result = memory.process_pending(user_id="alice", budget_ms=30_000)
+    print(result.processed, result.pending, result.failed)
+```
+
+Each event is durably accepted separately; the whole import is not one
+transaction. `pending` means more processing remains, and `failed` reports
+failed attempts in that pass. Fix any underlying failure and process the same
+owner's pending work again, rather than resubmitting accepted source events.
+Use `ingest()` when the import needs LLM extraction, or `store()` for immediate
+typed storage.
+
 For imported conversations, `ingest()` accepts a timezone-aware `event_time`:
 
 ```python
