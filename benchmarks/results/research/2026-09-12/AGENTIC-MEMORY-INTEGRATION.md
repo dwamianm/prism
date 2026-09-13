@@ -69,6 +69,12 @@ complete group selection, and match actor, prompts, context budget and allowed
 feedback across memory arms. Preserve whole groups and per-person outcomes;
 the authored adapter preflight is not a benchmark success rate.
 
+The [authored native scorer audit](MEMORYARENA-TRAVEL-SCORER-AUDIT.md) found two
+issues that must be addressed before interpreting a travel quality result:
+missing travelers disappear from the denominator, and short matching prefixes
+can receive full slot credit. A separate coverage validator now rejects missing,
+duplicate and unexpected submissions. It does not correct native similarity.
+
 The [formal reasoning runner](https://github.com/ZexueHe/MemoryArena/blob/6cd9de14b71915e39ac742a20dc33785e14b6aab/run_math.py)
 requires an additional model judge. Its default no-judge-feedback path passes
 no reward to `build_memory_entry`; the inspected builder stores task, solution

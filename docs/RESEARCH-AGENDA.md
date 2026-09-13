@@ -68,8 +68,10 @@ These records preserve commit identities, raw-output hashes, failures and limits
    check passed; the separate judge passed 41/42 calibration controls with zero
    false accepts. Final scoring verifies native capture, reader and judge chains,
    keeps reader families separate and reports category losses. Dataset reader
-   input and plans are frozen at `f1a0b64`; Qwen generation is running, with
-   Gemma and judging to follow. No answer-quality result is available yet.
+   input and plans are frozen at `f1a0b64`; Qwen completed all 357 predictions
+   with native exit zero and offline reproduction of every saved response.
+   Gemma generation is running; joint judging follows both complete runs.
+   No answer-quality result is available yet.
    Timing under concurrent load cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect
@@ -122,6 +124,7 @@ These records preserve commit identities, raw-output hashes, failures and limits
 | Temporal and aggregate questions | Prove coverage of the queried set and distinguish episodes and reference clocks. Counting retrieved top-k items is not an exhaustive count; newest mention alone is not truth. Evaluate multi-session, updates and abstention together. |
 | Adaptive retrieval | Complete scoped profile activation and rollback only after replay evaluation from immutable feedback receipts. Global weight changes must not silently use one tenant's feedback for another. See RFC-0017. |
 | Developer experience | Keep installed-wheel sync/async examples runnable, ownership and scope explicit, failures actionable and retries bounded. Test first write, restart, retrieval, recovery and migration without repository-only imports. |
+| Interactive task completion | The [MemoryArena adapter](../benchmarks/results/research/2026-09-12/AGENTIC-MEMORY-INTEGRATION.md) passed the unmodified upstream client with installed PRME, real embeddings, task isolation and restart provenance. The authored travel scorer audit exposes omitted-failure denominator changes and prefix false accepts. Require exact registered cohort coverage and validate task scoring before interpreting any travel success rate. No interactive dataset task has been scored. |
 
 The existing [namespace RFC](RFC-0004-Namespace-and-Scope-Isolation.md),
 [derivation RFC](RFC-0016-Durable-Derivation-Commits.md), and
