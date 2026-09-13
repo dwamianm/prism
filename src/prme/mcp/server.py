@@ -46,6 +46,9 @@ def _node_to_dict(node: Any) -> dict[str, Any]:
         "metadata": node.metadata,
         "created_at": node.created_at.isoformat(),
         "updated_at": node.updated_at.isoformat(),
+        "event_time": node.event_time.isoformat() if node.event_time else None,
+        "valid_from": node.valid_from.isoformat(),
+        "valid_to": node.valid_to.isoformat() if node.valid_to else None,
         "superseded_by": str(node.superseded_by) if node.superseded_by else None,
         "evidence_refs": [str(r) for r in node.evidence_refs],
         "pinned": node.pinned,
@@ -125,6 +128,7 @@ async def memory_store(
     node_type: str = "note",
     scope: str = "personal",
     ctx: Context = None,
+    event_time: Optional[AwareDatetime] = None,
 ) -> str:
     """Store a memory.
 
@@ -137,6 +141,7 @@ async def memory_store(
         node_type: Type of memory node. One of: entity, fact, decision,
             preference, task, instruction, summary, note. Default: note.
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
+        event_time: Original source time with timezone; separate from admission and validity.
     """
     engine = _get_engine(ctx)
     try:
@@ -163,6 +168,7 @@ async def memory_store(
             node_type=nt,
             scope=sc,
             metadata=meta,
+            event_time=event_time,
         )
 
         nodes = await engine.get_event_nodes(event_id, user_id=user_id)

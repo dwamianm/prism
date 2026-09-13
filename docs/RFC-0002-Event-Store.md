@@ -75,6 +75,12 @@ resolved temporal reference inherit it. Explicit older-effective replacements
 remain historical rather than retiring later facts. Existing saved plans retain
 their original timestamps on retry; this is not a retroactive temporal migration.
 Timezone-free new imports are rejected; missing source time is not guessed.
+This admission check also applies to Python `store()` and `ingest_fast()` and
+their synchronous client equivalents, before any event or recovery job is
+written. MCP `memory_store` accepts the same aware source clock; returned nodes
+expose `event_time`, `valid_from` and `valid_to` separately. An omitted source
+clock remains null through raw-source and direct-store recovery. Existing stored
+rows are still readable under their original semantics.
 
 ### Direct typed storage recovery
 

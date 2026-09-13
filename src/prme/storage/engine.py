@@ -621,9 +621,9 @@ class MemoryEngine:
                 from node_type via heuristic.
             source_type: Source provenance type. If None, inferred from
                 node_type and role via heuristic.
-            event_time: Optional datetime of when the event actually happened
-                in the real world (UTC). None means same as ingestion time.
-                Enables bi-temporal queries (issue #21).
+            event_time: Optional timezone-aware datetime of when the event
+                happened in the source. None preserves an unknown source time;
+                admission and validity times remain separate.
             ttl_days: Time-to-live in days from creation. Ellipsis (default)
                 means look up from organizer config by node_type. None means
                 no TTL. An explicit int overrides the config default.
@@ -631,6 +631,9 @@ class MemoryEngine:
         Returns:
             String UUID of the created event (source of truth ID).
         """
+        from prme.ingestion.temporal import validate_source_time
+
+        validate_source_time(event_time)
         # Infer epistemic_type and source_type if not provided
         # Lazy imports to avoid circular dependencies
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
@@ -1257,11 +1260,14 @@ class MemoryEngine:
             session_id: Optional session identifier.
             metadata: Optional structured metadata.
             scope: Memory scope (personal, project, org).
-            event_time: When the event happened, if different from ingestion.
+            event_time: Timezone-aware source time, if different from ingestion.
 
         Returns:
             String UUID of the persisted event.
         """
+        from prme.ingestion.temporal import validate_source_time
+
+        validate_source_time(event_time)
         # Step 1: Persist event to event store (source of truth)
         event = Event(
             content=content,

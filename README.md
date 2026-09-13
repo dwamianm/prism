@@ -189,6 +189,12 @@ use ingestion time. Batch ingestion admits messages sequentially and is not an
 all-or-nothing transaction. Dates without a timezone are rejected before that
 message is admitted. This does not rewrite already journaled extraction plans.
 
+Raw `store()` and `ingest_fast()` writes accept the same timezone-aware clock,
+including through `MemoryClient`; omitted source times remain unknown. MCP
+`memory_store` also accepts `event_time`, and node responses expose source time
+and validity dates separately. None of these APIs infer a timezone for a naive
+datetime.
+
 Deferred raw events survive restart. LLM `ingest()` also queues original-source
 indexing atomically with its event, so extraction failure cannot make that source
 unsearchable after restart. For these ingestion paths, processing status acknowledges raw NOTE indexing;

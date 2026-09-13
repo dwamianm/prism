@@ -7,6 +7,8 @@ of tools and resources without starting a subprocess.
 from __future__ import annotations
 
 import json
+from datetime import datetime
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -85,6 +87,36 @@ class TestToolDiscovery:
 
 
 class TestStore:
+    async def test_store_source_clock_is_returned_separately_from_validity(self, session):
+        clock = "2025-04-03T09:15:00+05:30"
+        result = await session.call_tool("memory_store", {
+            "content": "Imported telescope observation",
+            "user_id": "source-clock-user",
+            "event_time": clock,
+        })
+        assert not result.isError
+        stored = json.loads(result.content[0].text)
+        assert stored["node_id"]
+        result = await session.call_tool("memory_get_node", {
+            "node_id": stored["node_id"],
+        })
+        node = json.loads(result.content[0].text)
+        assert datetime.fromisoformat(node["event_time"]) == datetime.fromisoformat(clock)
+        assert datetime.fromisoformat(node["valid_from"]) > datetime.fromisoformat(clock)
+        assert node["valid_to"] is None
+
+    async def test_store_rejects_timezone_free_clock_before_engine_write(self, session, monkeypatch):
+        write = AsyncMock(side_effect=AssertionError("invalid clock reached storage"))
+        monkeypatch.setattr("prme.storage.engine.MemoryEngine.store", write)
+        result = await session.call_tool("memory_store", {
+            "content": "Ambiguous imported observation",
+            "user_id": "source-clock-user",
+            "event_time": "2025-04-03T09:15:00",
+        })
+        assert result.isError
+        assert "timezone" in result.content[0].text.lower()
+        write.assert_not_awaited()
+
     async def test_store_basic(self, session):
         result = await session.call_tool("memory_store", {
             "content": "Paris is the capital of France",
