@@ -22,8 +22,14 @@
   "full_postgres_suite": {
     "isolated_database": "prme_lifecycle_atomic_20260913",
     "log": "/tmp/prme-lifecycle-atomic-full-pg.log",
+    "log_sha256": "6ab4e48a222e16e3a02fb4d7dd09e557d97985401da7e777488c4fecfe5e3c57",
+    "native_exit_code": 0,
     "native_session_id": 18405,
-    "status": "running"
+    "passed": 3054,
+    "seconds": 682.39,
+    "skipped": 84,
+    "status": "complete",
+    "verified_at": "2026-09-13T18:25:23.661550+00:00"
   },
   "installed": {
     "log_sha256": "ac365702127ad32af9760d1b274a86c62671f0e9d6f8a567076436137c56457c",

@@ -19,7 +19,8 @@ All 126 installed Python source files matched the frozen source before and after
 testing. Checks include the actual PostgreSQL inter-connection race, state and
 journal rollback, restart, invalid terminal transitions, foreign ownership,
 corrupted records, native cancellation and post-commit index eviction failure.
-The full live-PostgreSQL suite is running and is not counted as passed here.
+The full live-PostgreSQL suite passed 3,054 tests with 84 skips in 682.39 seconds
+(native exit 0).
 
 These operations do not have caller-supplied retry IDs. Invalid or repeated
 terminal transitions still raise; inspect current state after an ambiguous
