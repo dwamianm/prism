@@ -81,6 +81,7 @@ def fixture_inputs(tmp_path):
 
 def prepared_files(tmp_path, monkeypatch):
     calls = fake_service(monkeypatch)
+    monkeypatch.setattr(reader, "_generate", lambda base, body: reader.runtime.request(base, "/api/chat", body))
     values = fixture_inputs(tmp_path)
     prepared = reader.prepare(*values)
     path = tmp_path / "prepared.json"
@@ -186,3 +187,27 @@ def test_truncated_response_is_retained_and_cannot_be_replaced_by_retry(
     with pytest.raises(ValueError, match="failed attempts"):
         reader.run(path, plan, state, "test")
     assert not calls
+
+
+def test_timeout_is_declared_retained_and_not_retried(tmp_path, monkeypatch):
+    generate = reader._generate
+    _, path, plan, _ = prepared_files(tmp_path, monkeypatch)
+    monkeypatch.setattr(reader, "_generate", generate)
+    attempts = []
+
+    def unavailable(request, *, timeout):
+        attempts.append(timeout)
+        raise TimeoutError("Authored unavailable generation")
+
+    monkeypatch.setattr(reader.urllib.request, "urlopen", unavailable)
+    state = tmp_path / "state.json"
+    with pytest.raises(TimeoutError):
+        reader.run(path, plan, state, "http://localhost")
+    failed = json.loads(state.read_bytes())
+    assert len(failed["failed_attempts"]) == 1
+    assert failed["failed_attempts"][0]["error_type"] == "TimeoutError"
+    assert failed["failed_attempts"][0]["response"] is None
+    assert attempts == [json.loads(plan.read_bytes())["reader"]["request_timeout_seconds"]]
+    with pytest.raises(ValueError, match="failed attempts"):
+        reader.run(path, plan, state, "http://localhost")
+    assert len(attempts) == 1

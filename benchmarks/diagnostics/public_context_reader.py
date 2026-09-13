@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
+import urllib.request
 
 from benchmarks.diagnostics import packing_reader as runtime
 from benchmarks.diagnostics.hindsight_capture import canonical, digest, write
@@ -16,6 +17,7 @@ import tiktoken
 ARMS = ("memory_a", "memory_b", "empty")
 PRODUCTS = {"prme": "memory_a", "hindsight": "memory_b"}
 OPTIONS = dict(runtime.OPTIONS)
+GENERATION_TIMEOUT_SECONDS = 600
 
 
 def declaration(model, base_url):
@@ -24,6 +26,7 @@ def declaration(model, base_url):
         "model_digest": runtime.model_digest(base_url, model),
         "ollama_version": runtime.request(base_url, "/api/version")["version"],
         "options": OPTIONS,
+        "request_timeout_seconds": GENERATION_TIMEOUT_SECONDS,
         "system_prompt": GENERATION_SYSTEM_PROMPT,
         "runner_sha256": digest(Path(__file__).read_bytes()),
         "runtime_helper_sha256": digest(Path(runtime.__file__).read_bytes()),
@@ -168,6 +171,17 @@ def validate_response(response, model):
     return runtime.validate_response(response)
 
 
+def _generate(base_url, body):
+    """One bounded request, with no transport or outcome retry."""
+    request = urllib.request.Request(
+        base_url.rstrip("/") + "/api/chat",
+        data=canonical(body),
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=GENERATION_TIMEOUT_SECONDS) as response:
+        return json.load(response)
+
+
 def run(prepared_path, plan_path, state_path, base_url):
     raw = prepared_path.read_bytes()
     prepared = json.loads(raw)
@@ -224,7 +238,7 @@ def run(prepared_path, plan_path, state_path, base_url):
                         != declared["model_digest"]
                     ):
                         raise ValueError("Model changed before generation")
-                    response = runtime.request(base_url, "/api/chat", body)
+                    response = _generate(base_url, body)
                     validate_response(response, declared["model"])
                     if (
                         runtime.model_digest(base_url, declared["model"])

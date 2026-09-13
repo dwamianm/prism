@@ -25,6 +25,7 @@ def verify_predictions(
         or declared["runtime_helper_sha256"]
         != digest(Path(reader.runtime.__file__).read_bytes())
         or declared["options"] != reader.OPTIONS
+        or declared.get("request_timeout_seconds") != reader.GENERATION_TIMEOUT_SECONDS
         or declared["system_prompt"] != reader.GENERATION_SYSTEM_PROMPT
     ):
         raise ValueError("Reader reproduction code or configuration differs")
