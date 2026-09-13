@@ -1,0 +1,32 @@
+{
+  "dataset_or_task_runs": false,
+  "kind": "read-only-upstream-feasibility-audit",
+  "memoryagentbench": {
+    "checkout": "/tmp/prme-memoryagentbench-audit",
+    "commit": "fe1735de8cf8b9908e1e3d3b5612afc815698062",
+    "files": {
+      "README.md": "a71d5730d1ada9e0471cbb3e2cd2d36e343d751298a69e3d368af878753eab7f",
+      "agent.py": "c6eff40e29ee74368a28ce0a7b3d8a113507274d14c38b31b0bf06c474809af0",
+      "utils/eval_data_utils.py": "f5d564996d63a07454999e94ab01087d4d07939f69936045c700fd57d338cb68"
+    },
+    "source": "https://github.com/HUST-AI-HYZ/MemoryAgentBench"
+  },
+  "memoryarena": {
+    "checkout": "/tmp/prme-memoryarena-audit",
+    "commit": "6cd9de14b71915e39ac742a20dc33785e14b6aab",
+    "files": {
+      "README.md": "717264347ce69182d4b4a7809e1e8deabdbe570c6950f42f347c5522e85eb243",
+      "agent/math.py": "33faff8e13f7c12d69d375f319fa151102a8268b8a52d1795304a325e2e85141",
+      "agent/search.py": "de74f03af2dfc51ae000b861326a54df07f989e65d017f4491c831ed648843b6",
+      "memory/client.py": "9efc1c037c9b94d4b17e5d69c4ed80bd5ad7c7f982688b56903b7e0116d62bff",
+      "memory/memory_systems/long_context.py": "3e836759a650fd3dbe497ad5bc3c0962bf9fb1515407dbcd313eec5ab63ed5b6",
+      "memory/memory_systems/rag.py": "241c89a951ebd56d585b9e8ea3ccd261100f61da872a5472ebad415d4f3913f5",
+      "memory/server.py": "9afd21b346ba4b70f1f6a504260f2e4cd4707d918a9040f95e2c31fd00e97211",
+      "run_math.py": "6d652ac1218e2d296a80e3fdb3281106ed1a16187ed3d648636b45f6ce895b6a",
+      "run_travel.py": "3b35937f0caba4c2b614f42d1b0cd0d4f32242973e4942bca5eda89df82e5d5f",
+      "setup_formal_reasoning.md": "104b188e292a48bd9930bd527503288d6aa33d0f7fedd97d549fa0c723c72ec5",
+      "setup_travel.md": "1727b73c119916f3a2475fa2063de1e6d255c45a81f25d3060e13fc37b1b478d"
+    },
+    "source": "https://github.com/ZexueHe/MemoryArena"
+  }
+}
