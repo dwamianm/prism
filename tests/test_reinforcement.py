@@ -137,7 +137,9 @@ class TestReinforce:
             assert original is not None
             original_refs_count = len(original.evidence_refs)
 
-            evidence_uuid = str(uuid4())
+            evidence_uuid = await engine.ingest_fast(
+                "A confirming observation", user_id="test-user", scope=Scope.PERSONAL,
+            )
             await engine.reinforce(node_id, evidence_id=evidence_uuid)
 
             updated = await engine.get_node(node_id)
@@ -233,7 +235,13 @@ class TestReinforce:
             assert original is not None
             original_count = len(original.evidence_refs)
 
-            ids = [str(uuid4()) for _ in range(3)]
+            ids = [
+                await engine.ingest_fast(
+                    f"Confirming observation {index}",
+                    user_id="test-user", scope=Scope.PERSONAL,
+                )
+                for index in range(3)
+            ]
             for eid in ids:
                 await engine.reinforce(node_id, evidence_id=eid)
 
