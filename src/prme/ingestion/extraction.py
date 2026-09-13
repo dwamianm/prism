@@ -122,8 +122,13 @@ temporal text in the temporal_ref field.
    - "observed" — directly stated or witnessed ("I work at Google")
    - "asserted" — claimed as fact without direct evidence
    - "inferred" — derived from context ("Based on their questions, they know Python")
-   - "hypothetical" — speculative or conditional
+   - "hypothetical" — speculative, uncertain, or possible
+   - "conditional" — true only if a stated condition holds
    - "unverified" — from untrusted or unverified source
+   Apply this classification independently of fact_type: facts, preferences, \
+and decisions can all be conditional. An explicit statement of a conditional \
+preference does not establish an unconditional preference. Do not assume an \
+unresolved condition has been satisfied.
    Default to "asserted" if unclear.
 
 8. **Temporal Intent**: For each fact, classify its temporal_intent:
