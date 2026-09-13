@@ -38,6 +38,9 @@ node/event identities, scoped evidence and the sync/async replacement workflow.
 [Metadata handling](METADATA.md) covers finite JSON admission, copied inputs and
 lossless special-float snapshots for previously admitted graph metadata.
 
+[Context packing](PACKING.md) explains density, score and experimental balanced
+ordering, exact token budgets, evidence limits and receipt compatibility.
+
 ## RFC Listing
 
 ### Tier 0 — Foundation

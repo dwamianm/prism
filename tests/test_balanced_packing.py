@@ -1,0 +1,65 @@
+"""The public option must retain the exact tested policy and legacy receipt bytes."""
+
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+from benchmarks.diagnostics.packing_composition import pack
+from prme.models.relevance import RetrievalReceipt
+from prme.retrieval.config import PackingConfig
+from prme.retrieval.packing import pack_context
+from tests.test_packing_order_option import candidate
+
+
+@pytest.mark.parametrize("budget", [0, 20, 300, 900, 2000, 8000])
+@pytest.mark.parametrize("fidelity", ["reference", "full"])
+def test_public_balanced_matches_fixed_experiment_without_mutating_inputs(budget, fidelity):
+    values = [candidate(1, "Only if the pilot succeeds. " * 100, .99),
+              candidate(2, "Pinned source", .01, pinned=True),
+              *[candidate(i + 3, f"Short source {i}", .4) for i in range(8)]]
+    before = [c.model_dump(mode="json") for c in values]
+    config = PackingConfig(token_budget=budget, min_fidelity=fidelity)
+    expected = pack(values, config, reserve_head=True, alpha=.25)
+    actual = pack_context(values, config.model_copy(update={"multipath_ordering": "balanced"}))
+    assert actual.render() == expected.render()
+    assert actual.tokens_used == expected.tokens_used
+    assert actual.excluded_ids == expected.excluded_ids
+    assert [c.model_dump(mode="json") for c in values] == before
+
+
+@pytest.mark.parametrize("name,checksum", [
+    ("receipt-v4.json", "2e3bbf779423fd0aaec89d4d75b25677316ca130ebc568f24f5ace35955679f6"),
+    ("receipt-v4-score.json", "dad272c4448c0c7e0a4d543591be6cebeb3141e2582d90e1df3b4359a9605e05"),
+])
+def test_prechange_v4_wire_bytes_remain_identical(name, checksum):
+    raw = (Path(__file__).parent / "fixtures/relevance" / name).read_text()
+    assert hashlib.sha256(raw.encode()).hexdigest() == checksum
+    receipt = RetrievalReceipt.model_validate_json(raw)
+    assert receipt.model_dump_json() == raw and receipt.checksum == checksum
+
+
+@pytest.mark.parametrize("version", [1, 2, 3, 4])
+def test_older_versions_cannot_claim_balanced_packing(version):
+    raw = json.loads((Path(__file__).parent / f"fixtures/relevance/receipt-v{version}.json").read_text())
+    raw["packing"]["multipath_ordering"] = "balanced"
+    with pytest.raises(ValidationError):
+        RetrievalReceipt.model_validate(raw)
+
+
+def test_version_five_requires_policy_and_execution_and_replays_scores():
+    raw = json.loads((Path(__file__).parent / "fixtures/relevance/receipt-v4.json").read_text())
+    raw["schema_version"] = 5
+    raw["packing"]["multipath_ordering"] = "balanced"
+    receipt = RetrievalReceipt.model_validate(raw)
+    assert RetrievalReceipt.model_validate_json(receipt.model_dump_json()).checksum == receipt.checksum
+    assert receipt.replay_ranking() == tuple(c.node_id for c in receipt.candidates)
+    without_policy = json.loads(receipt.model_dump_json())
+    without_policy["packing"].pop("multipath_ordering")
+    with pytest.raises(ValidationError, match="explicit packing ordering"):
+        RetrievalReceipt.model_validate(without_policy)
+    raw.pop("execution")
+    with pytest.raises(ValidationError, match="execution descriptor"):
+        RetrievalReceipt.model_validate(raw)

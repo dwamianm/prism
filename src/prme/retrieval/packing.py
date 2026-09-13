@@ -2,7 +2,7 @@
 
 Implements 3-priority greedy bin-packing per RFC-0006:
 1. Pinned + active tasks (always include)
-2. Multi-path objects by configured density or composite score descending
+2. Multi-path objects by configured density, score or balanced ordering
 3. Remaining by composite score
 
 Token budget is NEVER exceeded. Mid-object truncation is not permitted --
@@ -207,7 +207,7 @@ def pack_context(
     Implements 3-priority greedy bin-packing per RFC-0006 S5:
 
     1. **Priority 1:** Pinned + active tasks, subject to the same token limit.
-    2. **Priority 2:** Multi-path objects by configured density or score.
+    2. **Priority 2:** Multi-path objects by configured density, score or balanced ordering.
     3. **Priority 3:** Remaining by composite score descending.
 
     Token budget is NEVER exceeded. Mid-object truncation is not permitted.
@@ -238,6 +238,16 @@ def pack_context(
         candidate.representation = RepresentationLevel.FULL
         candidate.token_cost = count_tokens(_render_entry(candidate), config.tokenizer)
         full_costs[str(candidate.node.id)] = candidate.token_cost
+
+    # A reserved head changes only ordering inside the ordinary multi-path tier.
+    # It must still fit through the same representation and whole-output checks.
+    balanced_head = None
+    if config.multipath_ordering == "balanced":
+        eligible = [c for c in candidates if c.path_count >= 2
+                    and c.node.node_type != NodeType.INSTRUCTION
+                    and not _is_pinned_or_active_task(c)]
+        if eligible:
+            balanced_head = min(eligible, key=lambda c: (-c.composite_score, str(c.node.id))).node.id
 
     def _try_include(candidate: RetrievalCandidate) -> None:
         nonlocal rendered, tokens_used
@@ -277,11 +287,13 @@ def pack_context(
             tier, value = 1, candidate.composite_score
         elif candidate.path_count >= 2:
             tier = 2
-            value = (
-                candidate.composite_score
-                if config.multipath_ordering == "score"
-                else compute_str(candidate)
-            )
+            if config.multipath_ordering == "balanced":
+                value = (float("inf") if candidate.node.id == balanced_head else
+                         candidate.composite_score / max(candidate.token_cost, 1) ** 0.25)
+            elif config.multipath_ordering == "score":
+                value = candidate.composite_score
+            else:
+                value = compute_str(candidate)
         else:
             tier, value = 3, candidate.composite_score
         return tier, -value, str(candidate.node.id)

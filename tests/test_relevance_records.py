@@ -25,7 +25,7 @@ async def capture(engine, user):
     return response, receipt
 
 
-@pytest.mark.parametrize("ordering", ["density", "score"])
+@pytest.mark.parametrize("ordering", ["density", "score", "balanced"])
 async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config, user, ordering):
     config = config.model_copy(update={"packing": config.packing.model_copy(update={"multipath_ordering": ordering})})
     async with MemoryEngine.open(config) as engine:
@@ -34,7 +34,7 @@ async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config,
         assert receipt.scoring.version_id == response.metadata.scoring_config_version
         assert receipt.reference_time == response.metadata.reference_time
         assert receipt.scopes == (Scope.PROJECT,)
-        assert receipt.schema_version == 4
+        assert receipt.schema_version == (5 if ordering == "balanced" else 4)
         assert receipt.packing.multipath_ordering == ordering
         assert receipt.replay_ranking() == tuple(r.node.id for r in response.results)
         assert [(c.node_id, c.score, c.trace) for c in receipt.candidates] == [
@@ -59,7 +59,7 @@ async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config,
         assert len(engine._feedback_tracker) == 0
 
 
-@pytest.mark.parametrize("version", [1, 2, 3])
+@pytest.mark.parametrize("version", [1, 2, 3, 4])
 async def test_legacy_receipt_retains_checksum_and_accepts_feedback(config, user, version):
     import json
     from pathlib import Path

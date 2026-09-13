@@ -89,6 +89,11 @@ with MemoryClient("./my_memories") as client:
 
 `MemoryClient` is a synchronous wrapper — no `async`/`await` needed. It works everywhere: scripts, notebooks, FastAPI apps.
 
+The [packing guide](docs/PACKING.md) explains exact context budgets and the
+experimental `balanced` policy. It improved source retention in completed
+studies, with individual losses; density remains the default pending broader
+answer validation.
+
 For exports and counts, enumerate the stored records instead of counting search
 results. Iteration reads every matching node in bounded pages:
 

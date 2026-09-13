@@ -42,7 +42,7 @@ def test_score_option_preserves_long_relevant_source_instead_of_short_lower_scor
     )
     budget = pack_context([long], roomy).tokens_used
     contexts = {}
-    for ordering, expected in [("density", short), ("score", long)]:
+    for ordering, expected in [("density", short), ("score", long), ("balanced", long)]:
         cfg = PackingConfig(
             token_budget=budget,
             overhead_tokens=0,
@@ -61,7 +61,7 @@ def test_score_option_preserves_long_relevant_source_instead_of_short_lower_scor
     assert [c.model_dump(mode="json") for c in [short, long]] == before
 
 
-@pytest.mark.parametrize("ordering", ["density", "score"])
+@pytest.mark.parametrize("ordering", ["density", "score", "balanced"])
 @pytest.mark.parametrize(
     "priority",
     [
@@ -91,5 +91,7 @@ def test_default_and_environment_selection_are_explicit(monkeypatch):
     assert PackingConfig().multipath_ordering == "density"
     monkeypatch.setenv("PRME_PACKING__MULTIPATH_ORDERING", "score")
     assert PRMEConfig(_env_file=None).packing.multipath_ordering == "score"
+    monkeypatch.setenv("PRME_PACKING__MULTIPATH_ORDERING", "balanced")
+    assert PRMEConfig(_env_file=None).packing.multipath_ordering == "balanced"
     with pytest.raises(ValidationError):
         PackingConfig(multipath_ordering="typo")

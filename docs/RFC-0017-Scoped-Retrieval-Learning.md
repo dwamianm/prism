@@ -113,6 +113,22 @@ check old receipt feedback and new policy recording across graph changes and
 restart. Score replay still describes returned candidate order, not a replay of
 packing or unseen candidates.
 
+### Experimental balanced policy and receipt version 5
+
+Balanced packing reserves the highest-scored ordinary multi-path candidate and
+then applies the fixed quarter-length penalty. It uses the same priority tiers,
+whole-source rendering and measured budget. The public option is explicit;
+density remains the default. Completed source studies do not prove answer
+quality or authorize a learned profile.
+
+Only balanced pipeline retrievals need the new version 5 receipt. They require
+an explicit ordering and execution descriptor and retain the existing score
+replay and exposure checks. Density/score pipeline receipts still use version 4.
+Versions 1–4 reject a balanced claim and preserve their canonical bytes and
+feedback checksum references. The pre-change version 4 fixture bytes cover both
+existing policies. Consumers must support version 5 before accepting balanced
+receipts; no new packing replay guarantee is introduced.
+
 ## Explicit relevance records
 
 `record_relevance(request_id, labels, user_id=..., feedback_id=...)` accepts

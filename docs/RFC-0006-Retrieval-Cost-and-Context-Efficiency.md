@@ -29,14 +29,21 @@ see the [study and limitations](../benchmarks/results/packing/2026-09-12/CONFIRM
 This supersedes the earlier rationale treating STR as established superior utility.
 
 **Configurable policy:** `PackingConfig.multipath_ordering` accepts `"density"`
-(default) or `"score"`. It changes only the ordering of the multi-path tier; ties
+(default), `"score"` or experimental `"balanced"`. It changes only the ordering of the multi-path tier; ties
 still use node ID and all representations obey the same measured budget. The
 public implementation reproduces all 714 frozen development contexts and source
 measurements across both arms and three budgets. This is implementation parity,
 not additional quality evidence. The completed confirmation failed its
 preference-category guard. New retrieval
 receipts record this policy in schema version 4; legacy receipts preserve their
-original bytes and implicit density semantics.
+original bytes and implicit density semantics. Balanced ordering reserves the
+highest-scored ordinary multi-path candidate, then orders the remainder by
+score divided by full-entry tokens to the power 0.25. The head still obeys
+ordinary fidelity and budget checks. Balanced emits version 5 receipts; default
+density and explicit score continue to emit version 4. No legacy receipt bytes
+change. The [packing guide](PACKING.md) describes the completed source-retention
+studies, per-question losses and pending answer validation. This option does not
+supersede the failed score-policy default-promotion gate.
 
 **Implemented contract, 2026-09-12:** the product packer now counts its complete
 rendered context with a named tiktoken encoding. `MemoryBundle.render()` returns

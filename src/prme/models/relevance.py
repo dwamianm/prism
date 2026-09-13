@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4] = 1
+    schema_version: Literal[1, 2, 3, 4, 5] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -71,8 +71,8 @@ class RetrievalReceipt(BaseModel):
                     # Historical omission always means density, independently
                     # of any future application default. Do not mutate input.
                     return {**value, "packing": {**value["packing"], "multipath_ordering": "density"}}
-                if version == 4:
-                    raise ValueError("Version 4 receipts require an explicit packing ordering")
+                if version in (4, 5):
+                    raise ValueError("Versions 4 and 5 require an explicit packing ordering")
         return value
 
     @model_serializer(mode="wrap")
@@ -92,9 +92,11 @@ class RetrievalReceipt(BaseModel):
     @model_validator(mode="after")
     def unique_candidates(self):
         if (self.schema_version >= 3) != (self.execution is not None):
-            raise ValueError("Versions 3 and 4 require an execution descriptor")
+            raise ValueError("Versions 3 through 5 require an execution descriptor")
         if self.schema_version < 4 and self.packing.multipath_ordering != "density":
             raise ValueError("Legacy receipts support only density packing")
+        if self.schema_version < 5 and self.packing.multipath_ordering == "balanced":
+            raise ValueError("Balanced packing requires a version 5 receipt")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -185,7 +187,10 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         if candidate.score_provenance is None:
             raise ValueError("Cannot record replayable receipt without candidate score provenance")
         provenance[candidate.node.id] = candidate.score_provenance
-    return RetrievalReceipt(schema_version=4 if execution is not None else 2, execution=execution,
+    if packing.multipath_ordering == "balanced" and execution is None:
+        raise ValueError("Balanced packing receipts require an execution descriptor")
+    version = 5 if packing.multipath_ordering == "balanced" else (4 if execution is not None else 2)
+    return RetrievalReceipt(schema_version=version, execution=execution,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,
                             scoring=scoring, packing=packing, candidates=tuple(snapshots),

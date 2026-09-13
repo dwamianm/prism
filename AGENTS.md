@@ -136,9 +136,13 @@ sort policy for exact returned-candidate replay with `receipt.replay_ranking()`.
 Version 1 canonical JSON/checksums must remain unchanged; those receipts still
 accept labels but cannot replay scores. Replay excludes unseen/filtered candidates.
 Version 3 adds request parameters and reported feature identity in extensible
-execution maps. New pipeline receipts use version 4 to record the explicit
+execution maps. Density/score pipeline receipts use version 4 to record the explicit
 packing order; versions 1–3 retain their canonical bytes and implicit density
-ordering. `PackingConfig.multipath_ordering="score"` is available as an opt-in;
+ordering. Experimental `multipath_ordering="balanced"` reserves the highest-scored
+ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
+It emits version 5 receipts with explicit ordering and execution; versions 1–4
+cannot claim balanced and retain their canonical bytes. See `docs/PACKING.md`.
+`PackingConfig.multipath_ordering="score"` is available as an opt-in;
 the default remains `"density"`: the frozen 381-question confirmation improved
 overall source recall but failed its preference-category non-regression guard.
 Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
