@@ -425,6 +425,14 @@ See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough an
 - **Organizer** — twelve registered jobs, including index compaction; `centrality_boost` is currently a stub. Explicit passes run through `prme organize`. Retrieve/ingest can schedule opportunistic in-process maintenance; there is no built-in cron or daemon scheduler.
 - **Storage** — DuckDB (events + graph), usearch (HNSW vectors), Tantivy (full-text). Optional PostgreSQL backend with asyncpg + pgvector.
 
+Extractive consolidation is idempotent for an unchanged source set. The organizer
+journals the complete prepared summary and embedding, stages local indexes under a
+database fence, and atomically publishes the summary, provenance edges, predecessor
+archival, and generation receipt. A retry after interruption reuses the saved
+embedding; independent engine instances converge on one active summary. Adding or
+removing a cluster member starts a separate lineage rather than guessing that the
+new similarity cluster represents the same concept.
+
 ## CLI
 
 PRME includes a command-line tool for setup and memory inspection:

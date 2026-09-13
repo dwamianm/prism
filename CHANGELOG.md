@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Make extractive consolidation publication durable and idempotent. Unchanged
+  clusters reuse one summary; changed source snapshots atomically publish a new
+  generation with its provenance edges and archive the predecessor. DuckDB
+  journals and fences external index staging for restart and multi-engine recovery;
+  PostgreSQL serializes concurrent publications through the generation head.
 - Keep unresolved personal references local to their source event during new
   ingestion. Historical prepared derivations retain their original replay policy.
 - Prevent organizer similarity matches from merging different claim text,

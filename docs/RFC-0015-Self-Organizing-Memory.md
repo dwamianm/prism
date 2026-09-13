@@ -257,9 +257,10 @@ async def organize(
 
 Index compaction preserves prepared vector identities with no graph node yet
 (RFC-0016). Their durable staging claims distinguish them from ordinary orphaned
-index entries. Published inactive nodes remain eligible for eviction. Automatic
-collection of abandoned prepared identities awaits the derivation coordinator;
-until then, explicit deletion or an offline rebuild collects them.
+index entries. This includes derivations, entity profiles, and extractive
+consolidation publications. Published inactive nodes remain eligible for eviction.
+Automatic collection of abandoned consolidation identities is not yet exposed;
+an offline rebuild collects them.
 
 Consolidation currently produces an extractive excerpt of up to three sources,
 not a lossless abstraction of the entire cluster. Clusters and their summaries
@@ -269,6 +270,24 @@ requires recorded coverage matching the current source and an unchanged active
 summary. Omitted, changed, pinned, recent, high-confidence, or other-namespace
 sources remain active. Legacy summaries without coverage metadata cannot
 authorize retirement. Similarity alone is not evidence that details are redundant.
+
+Summary creation uses a checksummed `ConsolidationPublication`. A request hash
+covers every source snapshot, selected-source order, exact rendered content,
+scores, policy version, and embedding identity. The owner, scope, and sorted
+source identities form its lineage key. An unchanged active request reuses one
+summary. A changed source under the same lineage creates a new generation; new
+node and `DERIVED_FROM` edges, predecessor archival, generation advancement, and
+the complete `CONSOLIDATION_PUBLISHED` operation commit atomically. PostgreSQL
+writes pgvector in that transaction. DuckDB first journals
+`CONSOLIDATION_PREPARED`, reserves the artifact identity, and stages the exact
+vector and lexical document under a changing database fence. A restart reuses
+that saved numerical input without re-embedding. Independent engines either
+return the same committed identity or retry a transient staging conflict.
+
+The lineage is intentionally exact for a fixed source-identity set. If clustering
+adds or removes a source, it forms a new lineage; the earlier summary remains a
+separate generated view until normal lifecycle maintenance archives it. This
+avoids guessing that two changing similarity clusters represent the same concept.
 
 `forget_consolidated()` rechecks each source and its summary inside a backend
 transaction. Coverage, summary content, owner/scope, active state, source event
@@ -280,13 +299,13 @@ encoding. An ineligible or already retired source is a no-op. Storage failures
 propagate; there is no fallback that archives a source after supersedence fails.
 External index eviction follows commit and remains repairable.
 
-PostgreSQL locks both endpoints in UUID order. DuckDB claims the `updated_at`
-column used by supported graph mutations. Local schema initialization removes
+PostgreSQL locks both endpoints in UUID order. DuckDB makes a real `updated_at`
+write on both endpoints and rolls it back when retirement is ineligible; a no-op
+assignment can be optimized away. Local schema initialization removes
 the `idx_nodes_lifecycle` ART index: changing that indexed field could replace
 a row and bypass a concurrent column claim. Owner, type and scope indexes remain.
 Raw external SQL, custom mutable-column indexes and historical unjournaled
-retirements are outside this guarantee. This does not make the separate summary
-creation path atomic or eliminate duplicate summaries of unchanged clusters.
+retirements are outside this guarantee.
 
 Duplicate and alias discovery partitions exact/string matches by owner and scope.
 Semantic searches request the same scope and verify each returned node against
