@@ -82,6 +82,14 @@ index eviction follows commit and remains repairable by compaction. Do not
 restore separate evidence/edge/lifecycle writes or infer rollback from a cancelled
 caller. Historical organizer/manual mutations are not all replayable yet.
 
+Consolidation retirement rechecks current source/summary coverage and policy
+inside one transaction, then commits the supersedence edge and a checksummed
+`CONSOLIDATION_RETIRED` before/after record. It must not fall back to archive on
+supersedence failure. Local initialization removes `idx_nodes_lifecycle` because
+indexed lifecycle replacement can bypass DuckDB column update claims. Do not
+reintroduce mutable-column ART indexes without proving concurrent validation.
+Summary creation/reuse remains separate and is not yet atomic or idempotent.
+
 Single-node `promote`, `archive` and `deprecate` validate the current lifecycle
 inside the same backend transaction as the update and a checksummed
 `LIFECYCLE_CHANGED` before/after record. PostgreSQL holds the target row lock;

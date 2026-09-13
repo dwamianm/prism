@@ -19,7 +19,7 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from prme.models.edges import MemoryEdge
@@ -329,68 +329,25 @@ async def forget_consolidated(
     Returns:
         Count of archived nodes.
     """
+    import math
+    if (type(preserve_recent_days) is not int or preserve_recent_days < 0
+            or not math.isfinite(min_confidence_preserve)
+            or not 0 <= min_confidence_preserve <= 1):
+        raise ValueError("Invalid consolidation retirement policy")
     now = datetime.now(timezone.utc)
-    recent_cutoff = now - timedelta(days=preserve_recent_days)
-    archived_count = 0
-    summary = await engine.get_node(summary_node_id, user_id=user_id, include_superseded=False)
-    if summary is None or summary.node_type != NodeType.SUMMARY:
-        return 0
-    if summary.lifecycle_state not in {LifecycleState.TENTATIVE, LifecycleState.STABLE}:
-        return 0
-    if (summary.metadata or {}).get("consolidation_content_sha256") != hashlib.sha256(summary.content.encode()).hexdigest():
-        return 0
-    coverage = (summary.metadata or {}).get("consolidation_coverage", {})
-
-    for mid in cluster.member_ids:
-        node = await engine.get_node(
-            mid, include_superseded=False, user_id=user_id
+    retired = 0
+    for source_id in dict.fromkeys(cluster.member_ids):
+        changed = await engine._graph_store.retire_consolidated(
+            source_id, summary_node_id, user_id=user_id, at=now,
+            preserve_recent_days=preserve_recent_days,
+            min_confidence_preserve=min_confidence_preserve,
         )
-        if node is None:
-            continue
-
-        # Only retire a source demonstrably represented in the current
-        # summary. Legacy/partial/edited summaries do not authorize forgetting.
-        if (
-            node.pinned
-            or node.lifecycle_state not in {LifecycleState.TENTATIVE, LifecycleState.STABLE}
-            or (node.user_id, node.scope) != (summary.user_id, summary.scope)
-            or coverage.get(mid) != _source_fingerprint(node)
-            or _render_source(node) not in summary.content
-        ):
-            continue
-
-        # Preserve high-confidence nodes
-        if node.confidence >= min_confidence_preserve:
-            logger.debug(
-                "Preserving high-confidence node %s (confidence=%.2f)",
-                mid, node.confidence,
-            )
-            continue
-
-        # Preserve recent nodes
-        if node.created_at > recent_cutoff:
-            logger.debug(
-                "Preserving recent node %s (created_at=%s)",
-                mid, node.created_at,
-            )
-            continue
-
-        # Archive via supersede (marks superseded_by and transitions state)
-        try:
-            await engine.supersede(mid, summary_node_id, user_id=user_id)
-            archived_count += 1
-        except ValueError:
-            # Node may already be in a terminal state
-            logger.debug(
-                "Could not supersede node %s, attempting direct archive", mid
-            )
-            try:
-                await engine.archive(mid, user_id=user_id)
-                archived_count += 1
-            except ValueError:
-                logger.debug("Could not archive node %s, skipping", mid)
-
-    return archived_count
+        if changed:
+            # External index eviction follows the durable transaction. An
+            # error must never compensate by archiving against stale evidence.
+            retired += 1
+            await engine._evict_from_indexes(source_id)
+    return retired
 
 
 async def run_consolidation_pipeline(

@@ -270,6 +270,24 @@ summary. Omitted, changed, pinned, recent, high-confidence, or other-namespace
 sources remain active. Legacy summaries without coverage metadata cannot
 authorize retirement. Similarity alone is not evidence that details are redundant.
 
+`forget_consolidated()` rechecks each source and its summary inside a backend
+transaction. Coverage, summary content, owner/scope, active state, source event
+time, pinning, age, confidence and retained evidence must still match the
+retirement policy. The source transition, supersedence edge and checksummed
+`CONSOLIDATION_RETIRED` before/after record commit together. The record includes
+the summary snapshot and policy clock, using the lossless metadata snapshot
+encoding. An ineligible or already retired source is a no-op. Storage failures
+propagate; there is no fallback that archives a source after supersedence fails.
+External index eviction follows commit and remains repairable.
+
+PostgreSQL locks both endpoints in UUID order. DuckDB claims the `updated_at`
+column used by supported graph mutations. Local schema initialization removes
+the `idx_nodes_lifecycle` ART index: changing that indexed field could replace
+a row and bypass a concurrent column claim. Owner, type and scope indexes remain.
+Raw external SQL, custom mutable-column indexes and historical unjournaled
+retirements are outside this guarantee. This does not make the separate summary
+creation path atomic or eliminate duplicate summaries of unchanged clusters.
+
 Duplicate and alias discovery partitions exact/string matches by owner and scope.
 Semantic searches request the same scope and verify each returned node against
 the durable graph before proposing a pair. Both apply functions recheck owner

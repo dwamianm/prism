@@ -149,10 +149,12 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes (node_type)"
     )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_nodes_lifecycle "
-        "ON nodes (lifecycle_state)"
-    )
+    # An indexed lifecycle update is a delete/insert on supported DuckDB.
+    # That can bypass an in-flight updated_at column claim made by a source
+    # validator. Keep mutable lifecycle state out of ART indexes so supported
+    # graph mutations conflict on the shared updated_at write instead.
+    # Existing packs receive the same correction during initialization.
+    conn.execute("DROP INDEX IF EXISTS idx_nodes_lifecycle")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_nodes_scope ON nodes (scope)"
     )

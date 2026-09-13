@@ -365,6 +365,11 @@ class DuckPGQGraphStore:
             rows = await run_to_completion(lambda: self._conn.execute(sql, params).fetchall())
         return [self._row_to_node(row) for row in rows]
 
+    async def retire_consolidated(self, source_id: str, summary_id: str, **policy: Any) -> bool:
+        """Retire only current, eligible sources covered by an active summary."""
+        from prme.storage.consolidation_retirement import retire_duckdb
+        return await retire_duckdb(self, source_id, summary_id, **policy)
+
     async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
         """Commit all replacement states and edges together."""
         if not replacements:

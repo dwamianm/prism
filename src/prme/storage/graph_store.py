@@ -208,6 +208,10 @@ class GraphStore(Protocol):
 
     # --- Edge Operations ---
 
+    async def retire_consolidated(self, source_id: str, summary_id: str, **policy: Any) -> bool:
+        """Atomically retire a source only while its summary coverage is valid."""
+        ...
+
     async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
         """Atomically replace nodes and create edges for (old, new, evidence).
 

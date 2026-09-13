@@ -589,6 +589,11 @@ class PgGraphStore:
         """Atomically update replacement state and its provenance edge."""
         await self.supersede_many([(old_node_id, new_node_id, evidence_id)])
 
+    async def retire_consolidated(self, source_id: str, summary_id: str, **policy) -> bool:
+        """Lock source and summary, then validate coverage and commit retirement."""
+        from prme.storage.consolidation_retirement import retire_postgres
+        return await retire_postgres(self, source_id, summary_id, **policy)
+
     async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
         """Commit all replacements in one transaction with ordered row locks."""
         if not replacements:
