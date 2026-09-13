@@ -8,7 +8,8 @@ guard remain unchanged. This is reused regression evidence, not an unseen
 holdout or a production promotion gate.
 
 All original source, comparison, plan and candidate hashes are checked against
-the native completion manifest. The new worker receives only candidate records,+packing configuration and neutral control measurements, with outcome labels
+the native completion manifest. The new worker receives only candidate records,
+packing configuration and neutral control measurements, with outcome labels
 removed. Every density and score control must reproduce, including all 2,286
 prior context hashes and structural measurements. The original 4K rendered source
 control must also reproduce exactly. The first source-control compatibility
