@@ -11,11 +11,12 @@ import secrets
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from prme import __version__
+from prme.storage.reinforcement import ReinforcementConflict
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.api.models import (
     AcceptedWorkErrorResponse,
@@ -30,6 +31,7 @@ from prme.api.models import (
     OrganizeRequest,
     OrganizeResponse,
     RelevanceRequest,
+    ReinforceRequest,
     RetrieveRequest,
     RetrieveResponse,
     RetrieveResultItem,
@@ -129,6 +131,10 @@ def _node_to_response(node) -> NodeResponse:
         lifecycle_state=node.lifecycle_state.value if hasattr(node.lifecycle_state, "value") else str(node.lifecycle_state),
         confidence=node.confidence,
         salience=node.salience,
+        confidence_base=node.confidence_base,
+        salience_base=node.salience_base,
+        reinforcement_boost=node.reinforcement_boost,
+        last_reinforced_at=node.last_reinforced_at.isoformat() if node.last_reinforced_at else None,
         epistemic_type=node.epistemic_type.value if node.epistemic_type and hasattr(node.epistemic_type, "value") else (str(node.epistemic_type) if node.epistemic_type else None),
         source_type=node.source_type.value if node.source_type and hasattr(node.source_type, "value") else (str(node.source_type) if node.source_type else None),
         scope=node.scope.value if hasattr(node.scope, "value") else str(node.scope),
@@ -562,15 +568,27 @@ async def archive_node(request: Request, node_id: UUID) -> NodeResponse:
 @router.put(
     "/nodes/{node_id}/reinforce",
     summary="Reinforce a node",
-    responses={404: {"model": ErrorResponse}},
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse},
+               422: {"model": ErrorResponse}},
 )
-async def reinforce_node(request: Request, node_id: UUID) -> NodeResponse:
-    """Reinforce a memory node, boosting confidence and salience."""
+async def reinforce_node(
+    request: Request, node_id: UUID,
+    idempotency_key: UUID | None = Header(default=None, alias="Idempotency-Key"),
+    body: ReinforceRequest | None = None,
+) -> NodeResponse:
+    """Confirm a node; reuse a UUID Idempotency-Key header for safe retries."""
     node_key = str(node_id)
     engine = _get_engine(request)
 
     try:
-        await engine.reinforce(node_key, user_id=_user_id(request))
+        kwargs = {"user_id": _user_id(request)}
+        if idempotency_key is not None:
+            kwargs["request_id"] = str(idempotency_key)
+        if body is not None and body.evidence_id is not None:
+            kwargs["evidence_id"] = str(body.evidence_id)
+        await engine.reinforce(node_key, **kwargs)
+    except ReinforcementConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 

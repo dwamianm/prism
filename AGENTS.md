@@ -76,8 +76,11 @@ Explicit `reinforce()` validates owner/scope evidence and commits current-value
 increments with a checksummed complete before/after `REINFORCE` record in one
 backend transaction. Successful concurrent calls accumulate; injected failures
 roll back both graph and journal. Existing increment caps and above-cap values
-are preserved. Separate calls still count separately; this is not idempotent
-retry, semantic evidence verification or complete historical replay.
+are preserved. Optional owner-scoped `request_id` UUIDs make same-request retries
+idempotent across restart, with changed node/evidence requests rejected. Unkeyed
+calls remain separate signals. Version 2 records retain request identity; version
+1 records keep their original checksums. This is not semantic evidence verification
+or complete historical replay. See `docs/REINFORCEMENT.md`.
 
 ## RFCs
 

@@ -7,6 +7,7 @@ DuckPGQ limitations.
 """
 
 from datetime import datetime
+from uuid import UUID
 from typing import Any, Protocol, runtime_checkable
 
 from prme.models.edges import MemoryEdge
@@ -35,7 +36,7 @@ class GraphStore(Protocol):
 
     # --- Node Operations ---
 
-    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None) -> None:
+    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None, request_id: str | UUID | None = None) -> None:
         """Atomically validate, reinforce and journal a node without lost updates."""
         ...
 

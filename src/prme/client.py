@@ -339,6 +339,12 @@ class MemoryClient:
         return self._run(self._engine.evaluate_learning(user_id=user_id, scopes=scopes,
             surface=surface, config=config, query_groups=query_groups, max_records=max_records))
 
+    def reinforce(self, node_id: str, evidence_id: str | None = None, *,
+                  user_id: str | None = None, request_id: str | UUID | None = None) -> None:
+        """Confirm a memory; reuse request_id to retry without a second increment."""
+        self._run(self._engine.reinforce(node_id, evidence_id=evidence_id,
+                                       user_id=user_id, request_id=request_id))
+
     def get_node(self, node_id: str, *, user_id: str | None = None, include_superseded: bool = False) -> MemoryNode | None:
         """Get a single node by ID. Returns MemoryNode or None."""
         return self._run(self._engine.get_node(node_id, user_id=user_id, include_superseded=include_superseded))

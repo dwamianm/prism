@@ -2109,6 +2109,7 @@ class MemoryEngine:
         evidence_id: str | None = None,
         *,
         user_id: str | None = None,
+        request_id: str | UUID | None = None,
     ) -> None:
         """Reinforce a memory node, boosting its confidence and salience.
 
@@ -2124,6 +2125,10 @@ class MemoryEngine:
             evidence_id: Optional existing event ID to append to evidence_refs.
                 It must belong to the node's owner and scope, including for
                 an unscoped operator call.
+            request_id: Optional caller-generated UUID for safe retries. The same
+                owner, node and evidence reuse one committed confirmation across
+                restarts. Reusing the key for a different request raises ValueError.
+                Omit it or use a new UUID to record another confirmation.
             user_id: When given, only a node this user owns is reinforced;
                 anyone else's node raises as if it did not exist.
 
@@ -2133,7 +2138,7 @@ class MemoryEngine:
                 the node's owner and scope. Invalid evidence changes nothing.
         """
         await self._graph_store.reinforce_node(
-            node_id, user_id=user_id, evidence_id=evidence_id,
+            node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id,
         )
 
     async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:

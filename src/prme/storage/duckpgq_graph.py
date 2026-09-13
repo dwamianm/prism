@@ -58,9 +58,9 @@ class DuckPGQGraphStore:
 
     # --- Node Operations ---
 
-    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None) -> None:
+    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None, request_id: str | UUID | None = None) -> None:
         from prme.storage.reinforcement import reinforce_duckdb
-        await reinforce_duckdb(self, node_id, user_id=user_id, evidence_id=evidence_id)
+        await reinforce_duckdb(self, node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id)
 
     async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
         """Publish a journaled graph derivation and its receipt atomically."""

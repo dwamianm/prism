@@ -162,3 +162,6 @@ Because the original suite implicitly required all features simultaneously. A mi
 ---
 
 *End of Index*
+
+[Memory confirmations and safe retries](REINFORCEMENT.md) covers the async engine,
+synchronous client and HTTP idempotency header.

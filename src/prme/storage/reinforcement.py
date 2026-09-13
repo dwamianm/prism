@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from typing import Literal
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel, ConfigDict
 
@@ -18,9 +18,10 @@ EVIDENCE_ERROR = "Evidence event not found in the node's owner and scope"
 
 class ReinforcementRecord(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    version: Literal[1] = 1
+    version: Literal[1, 2] = 2
     policy: Literal["additive_caps_v1"] = "additive_caps_v1"
     operation_id: UUID
+    request_id: UUID | None = None
     evidence_id: UUID | None
     before: MemoryNode
     after: MemoryNode
@@ -38,6 +39,53 @@ def _evidence_id(evidence_id):
         return UUID(evidence_id)
     except (ValueError, TypeError, AttributeError):
         raise ValueError(EVIDENCE_ERROR) from None
+
+
+class ReinforcementConflict(ValueError):
+    """A caller's retry identity is already bound to another confirmation."""
+
+
+def _request_id(value):
+    if value is None:
+        return None
+    if not isinstance(value, (str, UUID)):
+        raise ValueError("request_id must be a UUID")
+    try:
+        return UUID(str(value))
+    except ValueError:
+        raise ValueError("request_id must be a UUID") from None
+
+
+def _operation_id(owner, request_id):
+    if request_id is None:
+        return uuid4()
+    return uuid5(
+        NAMESPACE_URL,
+        json.dumps(
+            ["prme:reinforcement:v2", owner, str(request_id)], separators=(",", ":")
+        ),
+    )
+
+
+def _replayed(row, operation_id, request_id, node, evidence):
+    if row is None:
+        return False
+    kind, payload = row
+    if kind != "REINFORCE":
+        raise ReinforcementConflict("request_id is already bound to another operation")
+    record = read_record(payload)
+    if (
+        record.operation_id != operation_id
+        or record.request_id != request_id
+        or record.before.id != node.id
+        or record.before.user_id != node.user_id
+        or record.before.scope != node.scope
+        or record.evidence_id != evidence
+    ):
+        raise ReinforcementConflict(
+            "request_id is already bound to a different reinforcement"
+        )
+    return True
 
 
 def _values(node, evidence):
@@ -78,6 +126,12 @@ def read_record(payload):
         or record.before.scope != record.after.scope
     ):
         raise ValueError("Reinforcement journal identity mismatch")
+    if record.version == 1 and record.request_id is not None:
+        raise ValueError("Legacy reinforcement journal cannot contain a request_id")
+    if record.request_id is not None and record.operation_id != _operation_id(
+        record.before.user_id, record.request_id
+    ):
+        raise ValueError("Reinforcement journal request identity mismatch")
     return record
 
 
@@ -85,18 +139,28 @@ def _checkpoint(stage):
     """Transaction fault-injection point, with no external work."""
 
 
-async def reinforce_duckdb(store, node_id, *, user_id, evidence_id):
+async def reinforce_duckdb(store, node_id, *, user_id, evidence_id, request_id=None):
+    request_id = _request_id(request_id)
     async with store._conn_lock:
-        await run_to_completion(_reinforce_duckdb, store, node_id, user_id, evidence_id)
+        await run_to_completion(
+            _reinforce_duckdb, store, node_id, user_id, evidence_id, request_id
+        )
 
 
-def _reinforce_duckdb(store, node_id, user_id, evidence_id):
+def _reinforce_duckdb(store, node_id, user_id, evidence_id, request_id):
     conn = store._conn
     conn.execute("BEGIN TRANSACTION")
     try:
         before = store._get_node_sync(node_id, True)
         _validate_node(before, node_id, user_id)
         evidence = _evidence_id(evidence_id)
+        operation = _operation_id(before.user_id, request_id)
+        row = conn.execute(
+            "SELECT op_type,payload FROM operations WHERE id=?", [str(operation)]
+        ).fetchone()
+        if _replayed(row, operation, request_id, before, evidence):
+            conn.execute("COMMIT")
+            return
         if (
             evidence is not None
             and conn.execute(
@@ -116,7 +180,11 @@ def _reinforce_duckdb(store, node_id, user_id, evidence_id):
         _checkpoint("updated")
         after = store._get_node_sync(node_id, True)
         record = ReinforcementRecord(
-            operation_id=uuid4(), evidence_id=evidence, before=before, after=after
+            operation_id=operation,
+            request_id=request_id,
+            evidence_id=evidence,
+            before=before,
+            after=after,
         )
         conn.execute(
             """INSERT INTO operations
@@ -138,20 +206,34 @@ def _reinforce_duckdb(store, node_id, user_id, evidence_id):
         raise
 
 
-async def reinforce_postgres(store, node_id, *, user_id, evidence_id):
+async def reinforce_postgres(store, node_id, *, user_id, evidence_id, request_id=None):
     from prme.storage.pg.graph_store import _NODE_COLUMNS
 
+    request_id = _request_id(request_id)
     async with store._pool.acquire() as conn, conn.transaction():
         # Read after acquiring the row lock: independent callers cannot compute
         # increments or evidence lists from the same obsolete snapshot.
         row = await conn.fetchrow(
             f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id=$1 "
             "AND ($2::text IS NULL OR user_id=$2) FOR UPDATE",
-            node_id, user_id,
+            node_id,
+            user_id,
         )
         before = store._record_to_node(row) if row is not None else None
         _validate_node(before, node_id, user_id)
         evidence = _evidence_id(evidence_id)
+        operation = _operation_id(before.user_id, request_id)
+        existing = await conn.fetchrow(
+            "SELECT op_type,payload FROM operations WHERE id=$1", str(operation)
+        )
+        if _replayed(
+            tuple(existing) if existing else None,
+            operation,
+            request_id,
+            before,
+            evidence,
+        ):
+            return
         if (
             evidence is not None
             and await conn.fetchval(
@@ -178,12 +260,17 @@ async def reinforce_postgres(store, node_id, *, user_id, evidence_id):
         _checkpoint("updated")
         after = store._record_to_node(row)
         record = ReinforcementRecord(
-            operation_id=uuid4(), evidence_id=evidence, before=before, after=after
+            operation_id=operation,
+            request_id=request_id,
+            evidence_id=evidence,
+            before=before,
+            after=after,
         )
-        await conn.execute(
+        inserted = await conn.fetchval(
             """INSERT INTO operations
             (id, op_type, target_id, payload, actor_id, namespace_id, created_at)
-            VALUES ($1, 'REINFORCE', $2, $3::jsonb, $4, $5, $6)""",
+            VALUES ($1, 'REINFORCE', $2, $3::jsonb, $4, $5, $6)
+            ON CONFLICT (id) DO NOTHING RETURNING id""",
             str(record.operation_id),
             node_id,
             _payload(record),
@@ -191,4 +278,10 @@ async def reinforce_postgres(store, node_id, *, user_id, evidence_id):
             before.scope.value,
             now,
         )
+        if inserted is None:
+            # A simultaneous changed-node request may have won the same key
+            # while holding a different row lock. Roll back this entire change.
+            raise ReinforcementConflict(
+                "request_id is already bound to a different reinforcement"
+            )
         _checkpoint("journal")

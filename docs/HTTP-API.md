@@ -150,3 +150,13 @@ time; a concurrent insert can precede the cursor. Records retain the original
 exposure even after graph changes. Collection does not modify facts, change
 weights, or establish learned quality. The legacy global feedback tuner does not
 consume these records; evaluated scoped learning remains pending in RFC-0017.
+
+## Confirming a memory
+
+`PUT /v1/nodes/{node_id}/reinforce` accepts an optional UUID `Idempotency-Key`
+header and optional body `{"evidence_id": "<event UUID>"}`. Keep the same key,
+node and evidence for retries; changing the request under a used key returns 409.
+A key is scoped to the node's owner within its memory namespace. The response
+contains the current node, including any changes made since the original call.
+Without a key, each call is a separate confirmation. See
+[confirmation and retry semantics](REINFORCEMENT.md).

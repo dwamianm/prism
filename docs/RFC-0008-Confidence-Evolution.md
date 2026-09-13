@@ -39,8 +39,12 @@ An explicit evidence ID must identify an existing event in the node's owner
 and scope, even for an unscoped operator; invalid evidence changes neither
 confidence, salience, timestamps nor references. Omitting evidence remains a
 caller confirmation, not external corroboration. This check does not establish
-that the event semantically supports the node, make repeated calls idempotent,
-or implement concurrent reinforcement accumulation and full operation replay.
+that the event semantically supports the node. New reinforcement is atomic and
+journals complete before/after nodes; successful concurrent confirmations
+accumulate. An optional owner-scoped `request_id` UUID makes identical retries
+idempotent across restart, while changed node/evidence requests using that key
+fail. Unkeyed calls remain separate signals. Full historical operation replay
+remains incomplete; see [confirmation and retry semantics](REINFORCEMENT.md).
 The general update formula and correlation controls below
 remain design requirements rather than claims about this heuristic. Historical
 incorrect reinforcement is not retroactively undone.

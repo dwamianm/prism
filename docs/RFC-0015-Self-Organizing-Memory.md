@@ -606,7 +606,12 @@ The current `additive_caps_v1` policy preserves the existing +0.15 boost / +0.05
 confidence increments, 0.5 / 0.95 increment caps and above-cap values. It does not
 prove that cited evidence semantically supports the claim, re-evaluate conditions,
 apply every proposed RFC-0008 saturation rule, or deduplicate separate calls.
-There is no caller-selected idempotency key: a repeated call is another signal.
+An optional owner-scoped `request_id` UUID binds a confirmation to its node and
+evidence. Same-request retries reuse the version 2 journal record, including after
+restart; changed requests using that key fail without mutation. Calls without a
+key or with a new UUID remain separate signals. Version 1 records retain their
+original checksum semantics and are not retroactively keyed. See
+[the confirmation guide](REINFORCEMENT.md) for sync, async and HTTP use.
 Older unjournaled reinforcement and other historical organizer/manual mutations
 cannot be reconstructed from these new records. Full historical replay remains
 incomplete.

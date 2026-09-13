@@ -10,6 +10,7 @@ from prme.models.relevance import RelevanceSubmission
 from prme.models.learning import RankingMultipliers
 
 from typing import Annotated, Any, Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -27,6 +28,13 @@ from prme.models.processing import ProcessingStatus
 # ---------------------------------------------------------------------------
 # Store
 # ---------------------------------------------------------------------------
+
+
+class ReinforceRequest(BaseModel):
+    """Optional owned evidence for a node confirmation."""
+
+    model_config = ConfigDict(extra="forbid")
+    evidence_id: UUID | None = None
 
 
 class StoreRequest(BaseModel):
@@ -234,6 +242,10 @@ class NodeResponse(BaseModel):
     lifecycle_state: str
     confidence: float
     salience: float
+    confidence_base: float | None = Field(default=None, description="Stored base confidence before virtual decay")
+    salience_base: float | None = Field(default=None, description="Stored base salience before virtual decay")
+    reinforcement_boost: float | None = None
+    last_reinforced_at: str | None = None
     epistemic_type: str | None = None
     source_type: str | None = None
     scope: str
