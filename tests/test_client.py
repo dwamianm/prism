@@ -23,7 +23,7 @@ import pytest
 
 from prme.client import MemoryClient, config_from_directory
 from prme.config import PRMEConfig
-from prme.types import NodeType, Scope
+from prme.types import ConditionState, EpistemicType, NodeType, Scope
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +136,24 @@ class TestClientLifecycle:
 
 
 class TestStoreRetrieve:
+    def test_condition_evaluation_roundtrip(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_id = client.store(
+                "If approved, deploy Atlas.", user_id="alice",
+                epistemic_type=EpistemicType.CONDITIONAL,
+                metadata={"condition": "approved"},
+            )
+            node = client.get_event_nodes(event_id, user_id="alice")[0]
+            updated = client.evaluate_condition(
+                str(node.id), ConditionState.TRUE, user_id="alice",
+                request_id="4fae6bcc-3904-4ad3-859e-ea14c3ec31c5",
+            )
+            assert updated.metadata["condition_state"] == "true"
+            assert any(
+                result.node.id == node.id
+                for result in client.retrieve("deploy Atlas", user_id="alice").results
+            )
+
     def test_deferred_ingestion_has_public_processing_status(self, tmp_dir):
         with MemoryClient(tmp_dir) as client:
             event_id = client.ingest_fast("Alice uses a telescope", user_id="alice")

@@ -640,6 +640,22 @@ class MemoryEngine:
 
         if epistemic_type is None:
             epistemic_type = infer_epistemic_type(node_type)
+        if epistemic_type == EpistemicType.CONDITIONAL:
+            node_metadata = dict(metadata or {})
+            condition = node_metadata.get("condition")
+            if not isinstance(condition, str) or not condition.strip():
+                raise ValueError(
+                    "Conditional memories require non-empty metadata.condition"
+                )
+            requested_state = node_metadata.get("condition_state", "unknown")
+            if requested_state != "unknown":
+                raise ValueError(
+                    "New conditional memories must start with condition_state='unknown'; "
+                    "call evaluate_condition() after storing"
+                )
+            node_metadata["condition"] = condition.strip()
+            node_metadata["condition_state"] = "unknown"
+            metadata = node_metadata
         if source_type is None:
             source_type = infer_source_type(node_type, role=role)
         if confidence is None:
@@ -1860,6 +1876,38 @@ class MemoryEngine:
         if user_id is not None:
             await self._require_owned(node_id, user_id)
         await self._graph_store.promote(node_id)
+
+    async def evaluate_condition(
+        self,
+        node_id: str,
+        state,
+        *,
+        user_id: str | None = None,
+        evidence_id: str | None = None,
+        request_id: str | UUID | None = None,
+        evaluation_method="user",
+        reason: str | None = None,
+        actor_id: str | None = None,
+        evaluated_at: datetime | None = None,
+    ) -> MemoryNode:
+        """Record an explicit condition evaluation and return the updated claim.
+
+        The mutation and its checksummed EPISTEMIC_TRANSITION journal record
+        commit together. Reuse ``request_id`` to retry safely after an ambiguous
+        response. Optional evidence must be an event in the claim's owner/scope.
+        PRME records the supplied evaluation; it does not infer condition truth.
+        """
+        return await self._graph_store.evaluate_condition(
+            node_id,
+            state,
+            user_id=user_id,
+            evidence_id=evidence_id,
+            request_id=request_id,
+            evaluation_method=evaluation_method,
+            reason=reason,
+            actor_id=actor_id,
+            evaluated_at=evaluated_at,
+        )
 
     async def supersede(
         self,

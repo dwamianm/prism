@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Atomic, evidence-aware condition evaluation across Python, HTTP, MCP, DuckDB,
+  and PostgreSQL. Retry IDs are durable, state changes retain checksummed
+  before/after records, and confirmed conditions receive asserted retrieval
+  weight without losing their conditional classification.
+- MCP `memory_store` parity for role, session, metadata, confidence, epistemic
+  type, and source type, allowing agents to create qualified memories directly.
 - Explicit aggregation coverage on Python, HTTP, MCP, durable retrieval records,
   and packed model context. Natural-language counts/lists report candidate,
   selection and context truncation without claiming exhaustive enumeration.

@@ -20,7 +20,16 @@ from prme import __version__
 from prme.config import PRMEConfig
 from prme.models.relevance import RelevanceSubmission
 from prme.models.learning import RankingMultipliers
-from prme.types import NodeType, Scope, RepresentationLevel, RetrievalMode
+from prme.types import (
+    ConditionEvaluationMethod,
+    ConditionState,
+    EpistemicType,
+    NodeType,
+    RepresentationLevel,
+    RetrievalMode,
+    Scope,
+    SourceType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +136,14 @@ async def memory_store(
     user_id: Optional[str] = None,
     node_type: str = "note",
     scope: str = "personal",
-    ctx: Context = None,
     event_time: Optional[AwareDatetime] = None,
+    role: str = "user",
+    session_id: Optional[str] = None,
+    metadata: Optional[dict[str, Any]] = None,
+    confidence: Optional[float] = None,
+    epistemic_type: Optional[EpistemicType] = None,
+    source_type: Optional[SourceType] = None,
+    ctx: Context = None,
 ) -> str:
     """Store a memory.
 
@@ -142,6 +157,12 @@ async def memory_store(
             preference, task, instruction, summary, note. Default: note.
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
         event_time: Original source time with timezone; separate from admission and validity.
+        role: Source role used for default provenance inference.
+        session_id: Optional conversation or episode identifier.
+        metadata: Optional structured application metadata.
+        confidence: Optional initial confidence from zero to one.
+        epistemic_type: Optional explicit epistemic classification.
+        source_type: Optional explicit provenance classification.
     """
     engine = _get_engine(ctx)
     try:
@@ -159,15 +180,18 @@ async def memory_store(
     except ValueError:
         return json.dumps({"error": f"Invalid scope: {scope!r}. Valid: {[e.value for e in Scope]}"})
 
-    meta = None
-
     try:
         event_id = await engine.store(
             content,
             user_id=user_id,
             node_type=nt,
             scope=sc,
-            metadata=meta,
+            role=role,
+            session_id=session_id,
+            metadata=metadata,
+            confidence=confidence,
+            epistemic_type=epistemic_type,
+            source_type=source_type,
             event_time=event_time,
         )
 
@@ -175,6 +199,8 @@ async def memory_store(
         node_id = next((str(n.id) for n in nodes if n.content == content and n.node_type == nt), None)
 
         return json.dumps({"event_id": event_id, "node_id": node_id})
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
     except Exception as e:
         return _internal_error("memory_store", e)
 
@@ -651,6 +677,46 @@ async def memory_archive_node(
         return _internal_error("memory_archive_node", e)
 
 
+async def memory_evaluate_condition(
+    node_id: str,
+    state: ConditionState,
+    evidence_id: str | None = None,
+    request_id: str | None = None,
+    evaluation_method: ConditionEvaluationMethod = ConditionEvaluationMethod.USER,
+    reason: str | None = None,
+    evaluated_at: AwareDatetime | None = None,
+    ctx: Context = None,
+) -> str:
+    """Record whether a saved conditional claim currently applies.
+
+    PRME records the supplied evaluation and provenance; it does not infer the
+    condition. Reuse request_id after an ambiguous response to avoid a duplicate
+    transition.
+    """
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    try:
+        updated = await engine.evaluate_condition(
+            node_id,
+            state,
+            user_id=user_id,
+            evidence_id=evidence_id,
+            request_id=request_id,
+            evaluation_method=evaluation_method,
+            reason=reason,
+            actor_id=user_id or "mcp-operator",
+            evaluated_at=evaluated_at,
+        )
+        return json.dumps(_node_to_dict(updated))
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_evaluate_condition", exc)
+
+
 # ---------------------------------------------------------------------------
 # Resources
 # ---------------------------------------------------------------------------
@@ -718,7 +784,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
-                 memory_promote_node, memory_archive_node):
+                 memory_promote_node, memory_archive_node, memory_evaluate_condition):
         server.tool()(tool)
     server.resource("memory://health")(resource_health)
     @server.resource("memory://stats")

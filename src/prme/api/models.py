@@ -15,6 +15,8 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from prme.types import (
+    ConditionEvaluationMethod,
+    ConditionState,
     EpistemicType,
     NodeType,
     RetrievalMode,
@@ -35,6 +37,17 @@ class ReinforceRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     evidence_id: UUID | None = None
+
+
+class ConditionEvaluationRequest(BaseModel):
+    """Explicit evaluation of a conditional memory claim."""
+
+    model_config = ConfigDict(extra="forbid")
+    state: ConditionState
+    evidence_id: UUID | None = None
+    evaluation_method: ConditionEvaluationMethod = ConditionEvaluationMethod.USER
+    reason: str | None = Field(default=None, min_length=1, max_length=4000)
+    evaluated_at: AwareDatetime | None = None
 
 
 class StoreRequest(BaseModel):

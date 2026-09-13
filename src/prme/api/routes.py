@@ -17,9 +17,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from prme import __version__
 from prme.storage.reinforcement import ReinforcementConflict
+from prme.storage.condition_evaluation import ConditionEvaluationConflict
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.api.models import (
     AcceptedWorkErrorResponse,
+    ConditionEvaluationRequest,
     ErrorResponse,
     ExtractionProcessRequest,
     HealthResponse,
@@ -198,6 +200,8 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONRes
         event_id = await engine.store(**kwargs)
     except MaterializationError as exc:
         return _accepted_work_failure(exc)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
         nodes = await engine.get_event_nodes(event_id, user_id=kwargs["user_id"])
@@ -595,6 +599,44 @@ async def reinforce_node(
     updated = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if updated is None:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found after reinforce")
+    return _node_to_response(updated)
+
+
+@router.put(
+    "/nodes/{node_id}/condition",
+    summary="Evaluate a conditional memory",
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse},
+               422: {"model": ErrorResponse}},
+)
+async def evaluate_condition(
+    request: Request,
+    node_id: UUID,
+    body: ConditionEvaluationRequest,
+    idempotency_key: UUID | None = Header(default=None, alias="Idempotency-Key"),
+) -> NodeResponse:
+    """Record a condition state; reuse Idempotency-Key for safe retries."""
+    node_key = str(node_id)
+    engine = _get_engine(request)
+    owner = _user_id(request)
+    node = await engine.get_node(node_key, include_superseded=True, user_id=owner)
+    if node is None:
+        raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
+    try:
+        updated = await engine.evaluate_condition(
+            node_key,
+            body.state,
+            user_id=owner,
+            evidence_id=str(body.evidence_id) if body.evidence_id else None,
+            request_id=str(idempotency_key) if idempotency_key else None,
+            evaluation_method=body.evaluation_method,
+            reason=body.reason,
+            actor_id=owner or "api-operator",
+            evaluated_at=body.evaluated_at,
+        )
+    except ConditionEvaluationConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _node_to_response(updated)
 
 

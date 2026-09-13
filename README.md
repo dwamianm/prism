@@ -55,6 +55,7 @@ earlier information available when circumstances change. PRME combines:
 - **Durable source history** — immutable append-only events; rebuildable search indexes from the durable graph
 - **Graph-based relational model** — 9 typed node kinds (entities, facts, preferences, decisions, tasks, instructions, summaries, events, notes) with edges capturing relationships, supersedence, and temporal validity
 - **Epistemic state tracking** — memories have lifecycle states (tentative -> stable -> superseded -> archived), confidence scores, contradiction detection, and oscillation dampening
+- **Auditable conditions** — conditional claims begin unresolved, stay out of factual retrieval, and can be evaluated through an atomic, retry-safe transition with evidence
 - **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle
 - **Self-organizing memory** — organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival
 - **Dual-stream ingestion** — durable fast path with deferred graph materialization and indexing
@@ -98,6 +99,31 @@ with MemoryClient("./my_memories") as client:
 ```
 
 `MemoryClient` is a synchronous wrapper — no `async`/`await` needed. It works everywhere: scripts, notebooks, FastAPI apps.
+
+Conditional memories require explicit condition text and always start unresolved.
+Record the result when a user, tool, rule, or model evaluates that condition:
+
+```python
+from prme import ConditionState, EpistemicType, MemoryClient
+
+with MemoryClient("./my_memories") as client:
+    event_id = client.store(
+        "If the release is approved, deploy Atlas.",
+        user_id="alice",
+        epistemic_type=EpistemicType.CONDITIONAL,
+        metadata={"condition": "the release is approved"},
+    )
+    claim = client.get_event_nodes(event_id, user_id="alice")[0]
+    client.evaluate_condition(
+        str(claim.id), ConditionState.TRUE, user_id="alice",
+        request_id="9ee0440b-4ea4-48c5-87ed-c1f43546475b",
+        evaluation_method="tool", reason="Approval service confirmed",
+    )
+```
+
+The state change and its complete before/after `EPISTEMIC_TRANSITION` record
+commit together. Reuse `request_id` after a timeout. A true condition is scored
+as asserted; false, unknown, and expired states remain outside default retrieval.
 
 The [packing guide](docs/PACKING.md) explains exact context budgets and the
 experimental `balanced` policy. It improved source retention in completed
@@ -303,7 +329,8 @@ a structural edge. These links aid retrieval; graph paths do not prove entailmen
 Built-in providers must cite, classify, and identify the semantic polarity of
 facts and relationships. Explicit if/unless conditions must be copied from the
 cited source. They are stored with an unknown condition state and remain outside
-DEFAULT retrieval until a caller records that the condition is true; EXPLICIT
+DEFAULT retrieval until a caller records that the condition is true with
+`evaluate_condition()`; EXPLICIT
 retrieval keeps every state available for audit. Legacy/custom providers that
 omit polarity retain `unknown`; relationships that omit classification become
 unverified model claims, excluded from default retrieval at the standard

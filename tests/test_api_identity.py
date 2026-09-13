@@ -58,8 +58,14 @@ async def test_bound_http_operations_isolate_two_users(config, user, monkeypatch
             for path in ("", "/neighborhood", "/chain"):
                 response = await client.get(f"/v1/nodes/{b.id}{path}", headers=auth("first-token"))
                 assert response.status_code == 404
-            for operation in ("promote", "archive", "reinforce"):
-                response = await client.put(f"/v1/nodes/{b.id}/{operation}", headers=auth("first-token"))
+            for operation, body in (
+                ("promote", None), ("archive", None), ("reinforce", None),
+                ("condition", {"state": "true"}),
+            ):
+                response = await client.put(
+                    f"/v1/nodes/{b.id}/{operation}", headers=auth("first-token"),
+                    json=body,
+                )
                 assert response.status_code == 404
             assert await engine.get_node(str(b.id), user_id=other) == before
             # Legacy cross-user graph edges must not expose the other endpoint.

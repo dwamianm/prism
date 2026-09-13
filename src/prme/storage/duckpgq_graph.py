@@ -63,6 +63,10 @@ class DuckPGQGraphStore:
         from prme.storage.reinforcement import reinforce_duckdb
         await reinforce_duckdb(self, node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id)
 
+    async def evaluate_condition(self, node_id: str, state, **kwargs):
+        from prme.storage.condition_evaluation import evaluate_condition_duckdb
+        return await evaluate_condition_duckdb(self, node_id, state, **kwargs)
+
     async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
         """Publish a journaled graph derivation and its receipt atomically."""
         from prme.storage.derivation import commit_duckdb

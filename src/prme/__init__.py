@@ -28,6 +28,8 @@ from prme.storage.engine import MemoryEngine
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.embedding import CachedEmbeddingProvider, EmbeddingProvider, QueryEmbeddingProvider
 from prme.types import (
+    ConditionEvaluationMethod,
+    ConditionState,
     DECAY_LAMBDAS,
     DEFAULT_DECAY_PROFILE_MAPPING,
     DecayProfile,
@@ -69,6 +71,8 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "ConditionEvaluationMethod",
+    "ConditionState",
     "DECAY_LAMBDAS",
     "DEFAULT_DECAY_PROFILE_MAPPING",
     "DecayProfile",

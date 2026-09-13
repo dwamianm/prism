@@ -53,6 +53,7 @@ async def test_stdio_binding_protects_tools_and_resources(config, user):  # noqa
             ("memory_get_node", {"node_id": foreign}),
             ("memory_promote_node", {"node_id": foreign}),
             ("memory_archive_node", {"node_id": foreign}),
+            ("memory_evaluate_condition", {"node_id": foreign, "state": "true"}),
         ):
             result = await session.call_tool(name, arguments)
             assert "error" in json.loads(result.content[0].text)
@@ -93,8 +94,12 @@ async def test_http_credentials_bind_each_request_and_resource(config, user):  #
             stored_data = json.loads(stored.json()["result"]["content"][0]["text"])
             assert "error" not in stored_data
             own = stored_data["node_id"]
-            for tool in ("memory_get_node", "memory_promote_node", "memory_archive_node"):
-                denied = await rpc("tools/call", {"name": tool, "arguments": {"node_id": foreign}})
+            for tool in ("memory_get_node", "memory_promote_node", "memory_archive_node",
+                         "memory_evaluate_condition"):
+                arguments = {"node_id": foreign}
+                if tool == "memory_evaluate_condition":
+                    arguments["state"] = "true"
+                denied = await rpc("tools/call", {"name": tool, "arguments": arguments})
                 assert "not found" in json.loads(denied.json()["result"]["content"][0]["text"])["error"]
             for name, arguments in (
                 ("memory_store", {"content": "forged", "user_id": other}),

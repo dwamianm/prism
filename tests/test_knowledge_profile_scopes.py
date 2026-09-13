@@ -123,7 +123,8 @@ async def test_profiles_preserve_source_provenance_and_inferred_status(config, u
     async with MemoryEngine.open(config) as engine:
         for i in range(2):
             await engine.store(f"Aurora might use option {i} if the trial succeeds.", user_id=user,
-                               epistemic_type=EpistemicType.CONDITIONAL, source_type=SourceType.USER_STATED)
+                               epistemic_type=EpistemicType.CONDITIONAL, source_type=SourceType.USER_STATED,
+                               metadata={"condition": "the trial succeeds"})
         sources = await engine.query_nodes(user_id=user)
         assert await engine.consolidate_knowledge(user_id=user, entity_names=["Aurora"], max_profile_tokens=1000) == 1
         node = (await profiles(engine, user))[0]

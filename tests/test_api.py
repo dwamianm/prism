@@ -318,6 +318,78 @@ class TestPromote:
         assert resp.status_code == 404
 
 
+class TestConditionEvaluation:
+    def test_new_condition_must_start_unresolved(self, client):
+        base = {
+            "content": "If approved, deploy Atlas.",
+            "user_id": "condition-user",
+            "epistemic_type": "conditional",
+        }
+        missing = client.post("/v1/store", json=base)
+        assert missing.status_code == 422
+        bypass = client.post(
+            "/v1/store",
+            json={**base, "metadata": {"condition": "approved", "condition_state": "true"}},
+        )
+        assert bypass.status_code == 422
+
+    def test_evaluate_condition_and_retry(self, client):
+        stored = client.post(
+            "/v1/store",
+            json={
+                "content": "If approved, deploy Atlas.",
+                "user_id": "condition-user",
+                "epistemic_type": "conditional",
+                "metadata": {
+                    "condition": "approved",
+                    "condition_state": "unknown",
+                },
+            },
+        ).json()
+        request_id = "d02ff165-b68f-4d5f-8883-5fb1c171f457"
+        body = {
+            "state": "true",
+            "evaluation_method": "tool",
+            "reason": "Approval service confirmed",
+            "evaluated_at": "2026-09-13T12:30:00Z",
+        }
+        response = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition",
+            json=body,
+            headers={"Idempotency-Key": request_id},
+        )
+        assert response.status_code == 200
+        assert response.json()["metadata"]["condition_state"] == "true"
+        replay = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition",
+            json=body,
+            headers={"Idempotency-Key": request_id},
+        )
+        assert replay.status_code == 200
+        conflict = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition",
+            json={**body, "state": "false"},
+            headers={"Idempotency-Key": request_id},
+        )
+        assert conflict.status_code == 409
+
+    def test_condition_validation_errors(self, client):
+        stored = client.post(
+            "/v1/store", json={"content": "Ordinary fact", "user_id": "condition-user"}
+        ).json()
+        invalid = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition", json={"state": "true"}
+        )
+        assert invalid.status_code == 422
+        assert client.put(
+            "/v1/nodes/00000000-0000-0000-0000-000000000000/condition",
+            json={"state": "true"},
+        ).status_code == 404
+        assert client.put(
+            f"/v1/nodes/{stored['node_id']}/condition", json={"state": "maybe"}
+        ).status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Archive
 # ---------------------------------------------------------------------------

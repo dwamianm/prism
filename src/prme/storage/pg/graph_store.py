@@ -420,6 +420,10 @@ class PgGraphStore:
         from prme.storage.reinforcement import reinforce_postgres
         await reinforce_postgres(self, node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id)
 
+    async def evaluate_condition(self, node_id: str, state, **kwargs):
+        from prme.storage.condition_evaluation import evaluate_condition_postgres
+        return await evaluate_condition_postgres(self, node_id, state, **kwargs)
+
     async def update_node(self, node_id: str, **updates) -> None:
         """Update specific fields on an existing node.
 

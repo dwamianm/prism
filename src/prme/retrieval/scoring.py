@@ -382,11 +382,23 @@ def compute_composite_score(
     days_since_update = max(0.0, (recency_anchor - reference_time).total_seconds() / 86400.0)
     recency = min(1.0, math.exp(-weights.recency_lambda * days_since_update) * recency_multiplier)
 
+    # A condition's current state determines its effective epistemic treatment
+    # without erasing the durable fact that the claim is conditional.
+    effective_epistemic_type = node.epistemic_type
+    if node.epistemic_type == EpistemicType.CONDITIONAL:
+        condition_state = (node.metadata or {}).get("condition_state", "unknown")
+        effective_epistemic_type = {
+            "true": EpistemicType.ASSERTED,
+            "unknown": EpistemicType.HYPOTHETICAL,
+            "false": EpistemicType.DEPRECATED,
+            "expired": EpistemicType.DEPRECATED,
+        }.get(condition_state, EpistemicType.CONDITIONAL)
+
     # Epistemic weight: config override dict (str keys) or module-level default (Enum keys).
     if epistemic_weights is not None:
-        epistemic_weight = epistemic_weights.get(node.epistemic_type.value, 0.7)
+        epistemic_weight = epistemic_weights.get(effective_epistemic_type.value, 0.7)
     else:
-        epistemic_weight = EPISTEMIC_WEIGHTS.get(node.epistemic_type, 0.7)
+        epistemic_weight = EPISTEMIC_WEIGHTS.get(effective_epistemic_type, 0.7)
 
     # Path score: multi-path corroboration (tiebreaker only).
     path_score = min(candidate.path_count / 3.0, 1.0)

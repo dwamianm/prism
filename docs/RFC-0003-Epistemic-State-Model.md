@@ -101,6 +101,15 @@ mode includes a conditional claim only when its stored condition state is
 PRME does not yet run a condition evaluator. A caller that confirms or rejects a
 condition should record new current evidence rather than infer truth from age.
 
+PRME exposes that recording step as `evaluate_condition()` on the async and
+sync Python APIs, `PUT /v1/nodes/{node_id}/condition` over HTTP, and
+`memory_evaluate_condition` over MCP. A new conditional claim must include exact
+condition text and begins at `UNKNOWN`; callers cannot mark it true during
+creation and bypass the transition journal. Evaluation can cite a same-owner,
+same-scope event and accepts a retry UUID for idempotent recovery after an
+ambiguous response. PRME still does not automatically decide whether a condition
+holds.
+
 These checks establish source membership, not semantic entailment. Model
 predicates, classifications, relationship labels, and summaries remain fallible.
 Callers can inspect `evidence_refs`, `metadata.evidence_quote`, and
@@ -185,12 +194,22 @@ evaluated_at:       Timestamp?
 
 | condition_state | Retrieval treatment |
 |---|---|
-| `TRUE` | Treat as ASSERTED. Surface normally. |
-| `FALSE` | Suppress from DEFAULT retrieval. Available in EXPLICIT mode. |
-| `UNKNOWN` | Treat as HYPOTHETICAL. Apply HYPOTHETICAL confidence weight. |
-| `EXPIRED` | Treat as DEPRECATED. |
+| `TRUE` | Treat as ASSERTED. Surface normally with ASSERTED retrieval weight. |
+| `FALSE` | Suppress from DEFAULT retrieval. Rank as DEPRECATED in EXPLICIT mode. |
+| `UNKNOWN` | Suppress from DEFAULT retrieval. Apply HYPOTHETICAL retrieval weight in EXPLICIT mode. |
+| `EXPIRED` | Suppress from DEFAULT retrieval. Treat as DEPRECATED in EXPLICIT mode. |
 
 Condition evaluation is `[BEST-EFFORT]`. The system MAY use an LLM call to evaluate whether a condition is currently true based on the current context. When LLM evaluation is used, the result MUST be logged as an `EPISTEMIC_TRANSITION` operation with `evaluation_method: "llm"` in the payload.
+
+PRME preserves `epistemic_type=CONDITIONAL` while changing
+`metadata.condition_state`. This refines the original transition diagram below:
+conditionality describes why a claim can apply, while condition state describes
+whether it applies now. Erasing the type after a true evaluation would make a
+later false evaluation indistinguishable from retracting an unconditional fact.
+Every evaluation therefore records its method, actor, time, reason, optional
+evidence, and complete before/after snapshots in one checksummed
+`EPISTEMIC_TRANSITION` operation. The node update and operation commit in the
+same transaction on both supported backends.
 
 ---
 
@@ -209,8 +228,8 @@ INFERRED    ──► ASSERTED       (confirmed by user or external source)
 INFERRED    ──► DEPRECATED     (contradiction received)
 HYPOTHETICAL ──► ASSERTED      (hypothesis confirmed)
 HYPOTHETICAL ──► DEPRECATED    (hypothesis refuted)
-CONDITIONAL ──► ASSERTED       (condition evaluated TRUE)
-CONDITIONAL ──► DEPRECATED     (condition evaluated FALSE)
+CONDITIONAL/UNKNOWN ──► CONDITIONAL/TRUE|FALSE|EXPIRED (condition evaluated)
+CONDITIONAL/<state>  ──► CONDITIONAL/<state>           (condition re-evaluated)
 ANY         ──► DEPRECATED     (explicit deprecation via DEPRECATE operation)
 ```
 

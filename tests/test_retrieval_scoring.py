@@ -186,6 +186,40 @@ class TestEpistemicFiltering:
         assert [candidate.node.id for candidate in kept] == [node.id]
         assert excluded == []
 
+    @pytest.mark.parametrize(
+        ("state", "effective_type"),
+        [
+            ("true", EpistemicType.ASSERTED),
+            ("unknown", EpistemicType.HYPOTHETICAL),
+            ("false", EpistemicType.DEPRECATED),
+            ("expired", EpistemicType.DEPRECATED),
+        ],
+    )
+    def test_condition_state_controls_epistemic_weight(self, state, effective_type):
+        node = MemoryNode(
+            id=uuid4(), user_id="user-1", node_type=NodeType.FACT,
+            content="If approved, deploy.", epistemic_type=EpistemicType.CONDITIONAL,
+            metadata={"condition_state": state},
+        )
+        trace = compute_composite_score(
+            _make_candidate(node=node), DEFAULT_SCORING_WEIGHTS,
+            now=node.updated_at,
+        )
+        assert trace.epistemic_weight == EPISTEMIC_WEIGHTS[effective_type]
+
+    def test_confirmed_condition_uses_configured_asserted_weight(self):
+        node = MemoryNode(
+            id=uuid4(), user_id="user-1", node_type=NodeType.FACT,
+            content="If approved, deploy.", epistemic_type=EpistemicType.CONDITIONAL,
+            metadata={"condition_state": "true"},
+        )
+        trace = compute_composite_score(
+            _make_candidate(node=node), DEFAULT_SCORING_WEIGHTS,
+            epistemic_weights={"asserted": 0.83, "conditional": 0.11},
+            now=node.updated_at,
+        )
+        assert trace.epistemic_weight == 0.83
+
 
 # ---------------------------------------------------------------------------
 # Composite Score Tests

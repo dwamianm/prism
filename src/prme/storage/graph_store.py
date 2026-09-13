@@ -16,7 +16,7 @@ from prme.storage.organizer_merge import MergeResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
-from prme.types import EdgeType, LifecycleState, NodeType, Scope
+from prme.types import ConditionState, EdgeType, LifecycleState, NodeType, Scope
 
 
 @runtime_checkable
@@ -38,6 +38,12 @@ class GraphStore(Protocol):
 
     async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None, request_id: str | UUID | None = None) -> None:
         """Atomically validate, reinforce and journal a node without lost updates."""
+        ...
+
+    async def evaluate_condition(
+        self, node_id: str, state: ConditionState | str, **kwargs: Any
+    ) -> MemoryNode:
+        """Atomically evaluate a conditional claim and journal the transition."""
         ...
 
     async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:

@@ -38,7 +38,7 @@ from prme.models.processing import ProcessingResult, ProcessingStatus
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
-from prme.types import EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
+from prme.types import ConditionEvaluationMethod, ConditionState, EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
 from prme.retrieval.models import RetrievalResponse
@@ -316,6 +316,26 @@ class MemoryClient:
     def archive(self, node_id: str, *, user_id: str | None = None) -> None:
         """Retire a node from retrieval while retaining its durable source."""
         self._run(self._engine.archive(node_id, user_id=user_id))
+
+    def evaluate_condition(
+        self,
+        node_id: str,
+        state: ConditionState | str,
+        *,
+        user_id: str | None = None,
+        evidence_id: str | None = None,
+        request_id: str | UUID | None = None,
+        evaluation_method: ConditionEvaluationMethod | str = ConditionEvaluationMethod.USER,
+        reason: str | None = None,
+        actor_id: str | None = None,
+        evaluated_at: datetime | None = None,
+    ) -> MemoryNode:
+        """Set a conditional claim's state; reuse request_id for safe retries."""
+        return self._run(self._engine.evaluate_condition(
+            node_id, state, user_id=user_id, evidence_id=evidence_id,
+            request_id=request_id, evaluation_method=evaluation_method,
+            reason=reason, actor_id=actor_id, evaluated_at=evaluated_at,
+        ))
 
     def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
         return self._run(self._engine.get_retrieval_receipt(request_id, user_id=user_id))

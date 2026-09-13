@@ -199,6 +199,11 @@ are outside this job's completion boundary.
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
 
+An explicit `EpistemicType.CONDITIONAL` requires
+`metadata={"condition": "..."}`. New conditional memories always begin with
+`condition_state="unknown"`; setting a resolved state during creation is
+rejected so an evaluation cannot bypass its audit record.
+
 ---
 
 #### `engine.ingest()`
@@ -373,6 +378,30 @@ async def archive(self, node_id: str) -> None          # → ARCHIVED (terminal)
 ```
 
 All raise `ValueError` if the transition is invalid per the lifecycle state machine.
+
+#### `engine.evaluate_condition()`
+
+```python
+updated = await engine.evaluate_condition(
+    node_id,
+    ConditionState.TRUE,
+    user_id="alice",
+    evidence_id=approval_event_id,
+    request_id="9ee0440b-4ea4-48c5-87ed-c1f43546475b",
+    evaluation_method=ConditionEvaluationMethod.TOOL,
+    reason="Approval service confirmed",
+)
+```
+
+This is an explicit recorded evaluation, not an automatic truth inference.
+Mutation and a checksummed `EPISTEMIC_TRANSITION` record with the complete
+before/after claim commit atomically. Evidence must belong to the same owner and
+scope. Reusing `request_id` safely retries the same evaluation; changing its
+inputs raises a conflict. The conditional epistemic type remains intact so a
+changing condition can be evaluated again. `MemoryClient.evaluate_condition()`
+provides the synchronous equivalent. HTTP uses
+`PUT /v1/nodes/{node_id}/condition` with an optional UUID `Idempotency-Key`
+header; MCP exposes `memory_evaluate_condition`.
 
 ---
 

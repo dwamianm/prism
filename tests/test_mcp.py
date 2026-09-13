@@ -72,6 +72,7 @@ class TestToolDiscovery:
             "memory_get_extraction",
             "memory_promote_node",
             "memory_archive_node",
+            "memory_evaluate_condition",
         }
         assert expected.issubset(names), f"Missing tools: {expected - names}"
 
@@ -268,6 +269,14 @@ class TestOrganize:
 
 
 class TestLifecycle:
+    async def test_new_condition_must_start_unresolved(self, session):
+        result = await session.call_tool("memory_store", {
+            "content": "If approved, deploy Atlas.",
+            "user_id": "condition-user",
+            "epistemic_type": "conditional",
+        })
+        assert "metadata.condition" in json.loads(result.content[0].text)["error"]
+
     async def test_promote_node(self, session):
         # Store a node
         store_result = await session.call_tool("memory_store", {
@@ -311,6 +320,34 @@ class TestLifecycle:
         })
         data = json.loads(result.content[0].text)
         assert "error" in data
+
+    async def test_evaluate_condition_and_retry(self, session):
+        stored = await session.call_tool("memory_store", {
+            "content": "If approved, deploy Atlas.",
+            "user_id": "condition-user",
+            "epistemic_type": "conditional",
+            "metadata": {"condition": "approved", "condition_state": "unknown"},
+        })
+        node_id = json.loads(stored.content[0].text)["node_id"]
+        request_id = "b58d4597-4d95-4597-af61-3fe8d0f1d989"
+        arguments = {
+            "node_id": node_id,
+            "state": "true",
+            "request_id": request_id,
+            "evaluation_method": "tool",
+            "reason": "Approval service confirmed",
+            "evaluated_at": "2026-09-13T12:30:00Z",
+        }
+        result = await session.call_tool("memory_evaluate_condition", arguments)
+        data = json.loads(result.content[0].text)
+        assert "error" not in data, data
+        assert data["metadata"]["condition_state"] == "true"
+        replay = await session.call_tool("memory_evaluate_condition", arguments)
+        assert json.loads(replay.content[0].text)["metadata"]["condition_state"] == "true"
+        conflict = await session.call_tool(
+            "memory_evaluate_condition", {**arguments, "state": "false"}
+        )
+        assert "request_id" in json.loads(conflict.content[0].text)["error"]
 
 
 # ---------------------------------------------------------------------------

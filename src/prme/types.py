@@ -135,6 +135,24 @@ class EpistemicType(str, Enum):
     UNVERIFIED = "unverified"
 
 
+class ConditionState(str, Enum):
+    """Current evaluation state for a conditional memory claim."""
+
+    UNKNOWN = "unknown"
+    TRUE = "true"
+    FALSE = "false"
+    EXPIRED = "expired"
+
+
+class ConditionEvaluationMethod(str, Enum):
+    """How a caller determined the current condition state."""
+
+    USER = "user"
+    TOOL = "tool"
+    RULE = "rule"
+    LLM = "llm"
+
+
 class DecayProfile(str, Enum):
     """Decay rate profiles for memory object salience/confidence decay (RFC-0015).
 
