@@ -27,7 +27,8 @@ Query → intent classification + entity extraction + time detection → candida
 
 ## Memory Object Lifecycle
 
-New event/direct-node metadata must be finite and JSON-serializable. Admission
+New event/direct-node metadata must be finite and JSON-serializable, with no
+object keys that collide after JSON normalization. Admission
 copies metadata before awaiting backend locks/connections; it does not validate
 all low-level graph writes. Existing rows remain readable. Journal snapshots for
 lifecycle, reinforcement and organizer merges use `_snapshot_json` to preserve

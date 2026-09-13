@@ -1,0 +1,41 @@
+{
+  "before": {
+    "failed": 16,
+    "log_sha256": "594791587ec8264d786c3520809ebafa0de69c69706d2170792587a78a58f00e",
+    "native_exit_code": 1,
+    "passed": 1,
+    "reason": "Nested Python object keys collapsed to duplicate JSON keys and were admitted instead of rejected.",
+    "seconds": 2.48,
+    "source_commit": "73e6938"
+  },
+  "focused_source": {
+    "log_sha256": "c06690a01956db1f9911940958ee96d913c85cdb9fd9d9d568f0d2788c7b51ed",
+    "native_exit_code": 0,
+    "passed": 72,
+    "seconds": 9.63,
+    "skipped": 4
+  },
+  "frozen_source_commit": "022a4c1",
+  "full_postgres_suite": {
+    "isolated_database": "prme_metadata_keys_full_20260913",
+    "log": "/tmp/prme-metadata-keys-full-pg.log",
+    "native_session_id": 41799,
+    "source_commit": "022a4c1",
+    "status": "running"
+  },
+  "installed": {
+    "log_sha256": "dc3ad3644fecc8729218e0feb52bb04a2f91a3436da21d6f256711baf065fdc0",
+    "native_exit_code": 0,
+    "passed": 72,
+    "seconds": 9.33,
+    "skipped": 4,
+    "verification_sha256": "28a5006193e9a2d1da7c218f14713f652cfa8d37135fd5e6c0b0cf33e5d6f73c"
+  },
+  "limits": [
+    "New event/direct-node admission only; arbitrary low-level graph writes are outside this check.",
+    "Already lost values in older JSON cannot be recovered by the admission guard.",
+    "Unambiguous JSON normalization remains supported; this does not preserve Python key types."
+  ],
+  "observed_at": "2026-09-13T19:20:14.109897+00:00",
+  "runtime_commit": "e3350b1"
+}
