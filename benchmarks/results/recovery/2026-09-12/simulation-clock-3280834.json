@@ -1,0 +1,92 @@
+{
+  "changed_scope": "simulation clock coverage and evaluator regression tests",
+  "diagnostic": {
+    "consolidation_outcomes": [
+      true,
+      true,
+      false
+    ],
+    "native_exit_code": 0,
+    "native_session_id": 95253,
+    "observations": [
+      "All requested organizer jobs ran in all three second checkpoints.",
+      "Each run produced two summaries selecting the same three sources within that run.",
+      "Fresh UUIDs led to different source selections across runs.",
+      "For the same widely-used-Python source, semantic score, effective confidence and salience were identical; normalized lexical scores were .2377280954, .2382734087 and .5463931489.",
+      "This locates the score variation in lexical relevance; it is not an identical-event-log replay test."
+    ],
+    "probe_script_path": "/tmp/prme-consolidation-observe.py",
+    "probe_script_sha256": "669aa043a022fd3e2bf67392a3b1437adf141a58ff5854a1d004172cc8192aa2",
+    "raw_path": "data/benchmarks/consolidation-observation.json",
+    "raw_sha256": "6639bc174ec26f8220b617b027af1006e30914eb0f3fe611ee4927f02857cbae",
+    "reference_time": "2026-09-13T12:00:00+00:00",
+    "runs": 3
+  },
+  "limitations": [
+    "The simulation CI gate still fails.",
+    "The corrected run changed which fourth checkpoint failed; do not infer quality improvement from a selected run.",
+    "Background budgets and new object IDs remain variable; full deterministic workload replay is not implemented.",
+    "No production scoring, packing policy or benchmark acceptance threshold changed."
+  ],
+  "observed_at": "2026-09-13T19:50:20.266280+00:00",
+  "package_runtime_changed": false,
+  "previous_goal_turn": "progress: balanced implementation verified and owned reader allocation failure identified",
+  "scenarios": {
+    "complete": true,
+    "failures": [
+      {
+        "description": "Decision about migration to GraphQL should be retrievable",
+        "expected_missing": [
+          "GraphQL"
+        ],
+        "ranking_failures": [],
+        "scenario": "bi_temporal"
+      },
+      {
+        "description": "After MySQL->PostgreSQL migration, PostgreSQL should dominate",
+        "expected_missing": [],
+        "ranking_failures": [
+          "'PostgreSQL' (rank 4) should rank above 'MySQL' (rank 2)"
+        ],
+        "scenario": "changing_facts"
+      },
+      {
+        "description": "New CEO (Jane Doe) should supersede old (John Smith)",
+        "expected_missing": [],
+        "ranking_failures": [
+          "'Jane' (rank 2) should rank above 'John Smith' (rank 1)"
+        ],
+        "scenario": "eval_supersedence_handling"
+      },
+      {
+        "description": "Instructions should dominate behavioral/guidelines queries",
+        "expected_missing": [
+          "Python"
+        ],
+        "ranking_failures": [],
+        "scenario": "procedural_memory"
+      }
+    ],
+    "log_sha256": "31f95d70e5ca6f6e5751ef93eaf9554118e1687898962631460d3c1eeae915dc",
+    "native_exit_code": 1,
+    "native_session_id": 68137,
+    "passed": 70,
+    "path": "data/benchmarks/simulation-clock-corrected.json",
+    "sha256": "672f73e2835479beeadd9759686c7ae71896c83af2f102e9bc992bab39382a1f",
+    "successful": false,
+    "total": 74
+  },
+  "source_commit": "3280834",
+  "tests_after": {
+    "log_sha256": "945436888e05c631e95b85d761c6fd8e6f09c8b6e11f539892f8183b171da519",
+    "native_exit_code": 0,
+    "native_session_id": 79793,
+    "summary": "11 passed, 4 skipped in 3.20s"
+  },
+  "tests_before": {
+    "log_sha256": "96b15b961926d0511c4fc3ecc509590793908ad718b6a580f5d3b3f1313db766",
+    "native_exit_code": 1,
+    "native_session_id": 81846,
+    "summary": "2 failed in 0.77s"
+  }
+}

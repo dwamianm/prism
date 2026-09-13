@@ -163,9 +163,15 @@ the [implementation verification](../benchmarks/results/recovery/2026-09-12/BALA
 The original failed score-policy gate and density default remain unchanged.
 
 The latest full default-policy simulation run passed 70/74 checkpoints. Three
-failures reproduced before balanced was added; consolidation differed between
-runs and remains unresolved. Preserve this failing CI gate and investigate
-retrieval/ranking and simulation reproducibility without weakening assertions.
+failures reproduced before balanced was added. A subsequent
+[simulation clock correction](../benchmarks/results/recovery/2026-09-12/SIMULATION-CLOCK.md)
+fixes real-time leakage into maintenance age checks and native mutation timestamps.
+Its full run also passed 70/74, with procedural memory replacing consolidation
+as the fourth failure. Repeated consolidation runs select different excerpts
+from tied-confidence sources and show varying normalized lexical scores; they
+also create duplicate summaries of unchanged sources. Preserve this failing
+CI gate and investigate retrieval/ranking, consolidation reuse and simulation
+reproducibility without weakening assertions.
 The separate owned-service head1 answer trial failed before judging after a
 logged GPU out-of-memory error; no partial answer scores were inspected.
 All original prompts fit the existing conservative headroom check at 32K,
