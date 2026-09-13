@@ -1,5 +1,14 @@
 # Fresh one-head reader trial with a longer transport timeout
 
+Outcome: the fresh trial also stopped, this time during Qwen generation, with a
+`TimeoutError` and no response. The native reader and outer driver exited one.
+All 275 saved unique responses passed structural and checksum verification;
+their correctness was not inspected. Gemma generation, judging and scoring did
+not start. There is no comparative score, and the failed state is retained.
+See [the complete failure record](packing-head-reader-timeout-incomplete.json).
+Increasing the timeout did not make the complete trial reliable; investigate
+execution before another full model run.
+
 The first trial stopped when one Gemma request returned no response within the
 180-second socket timeout. Its partial results remain separately recorded and
 are not resumed or selectively repaired.

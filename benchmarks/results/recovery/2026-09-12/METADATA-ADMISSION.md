@@ -22,7 +22,8 @@ matched the frozen source before and after testing. Coverage includes finite
 metadata restart, rejected admission and work, nested-input mutation, raw legacy
 reinforcement/retry/archival/restart, journal byte compatibility, special-float
 reconstruction, malformed paths and existing atomic lifecycle/merge workflows.
-The full live-PostgreSQL suite is running and is not counted as passed here.
+The full live-PostgreSQL suite then exited zero: 3,136 passed and 85 skipped
+in 811.10 seconds, using the same frozen source and an isolated database.
 
 Three earlier focused failures reflected the old requirement to reject any
 non-finite merge journal. Those tests now enforce strict JSON, restored numeric
