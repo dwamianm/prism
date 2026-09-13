@@ -6,7 +6,12 @@ and an optional summary. All models include LLM-friendly Field descriptions
 to guide structured extraction via instructor.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
+
+
+ClaimPolarity = Literal["positive", "negative", "unknown"]
 
 
 class ExtractedEntity(BaseModel):
@@ -49,6 +54,15 @@ class ExtractedFact(BaseModel):
         description="Relationship or attribute type (e.g., works_at, lives_in, role)"
     )
     object: str = Field(description="Value or target entity")
+    polarity: ClaimPolarity = Field(
+        default="unknown",
+        description=(
+            "Semantic polarity of the proposition after accounting for negation. "
+            "Use 'negative' for does not, never, no longer, rejected, or against; "
+            "use 'positive' only when the proposition is affirmed. 'unknown' is "
+            "reserved for custom or legacy providers that cannot classify it."
+        ),
+    )
     evidence_quote: str | None = Field(
         default=None,
         description=(
@@ -86,6 +100,14 @@ class ExtractedFact(BaseModel):
             "inferred (derived from context), hypothetical (speculative), "
             "conditional (depends on conditions), unverified (from untrusted source). "
             "DEPRECATED is not allowed at creation time."
+        ),
+    )
+    condition: str | None = Field(
+        default=None,
+        description=(
+            "Exact verbatim source span describing what must be true for a "
+            "conditional claim to apply. Required when epistemic_type is "
+            "'conditional'; null otherwise."
         ),
     )
     temporal_intent: str | None = Field(
@@ -139,8 +161,14 @@ class ExtractedRelationship(BaseModel):
     relationship_type: str = Field(
         description="Source-supported relationship predicate, such as lives_in or works_at; do not force it into a graph edge category"
     )
+    polarity: ClaimPolarity = Field(
+        default="unknown", description=ExtractedFact.model_fields["polarity"].description
+    )
     evidence_quote: str | None = Field(default=None, description=ExtractedFact.model_fields["evidence_quote"].description)
     epistemic_type: str = Field(default="unverified", description=ExtractedFact.model_fields["epistemic_type"].description)
+    condition: str | None = Field(
+        default=None, description=ExtractedFact.model_fields["condition"].description
+    )
 
     @field_validator("epistemic_type")
     @classmethod

@@ -92,8 +92,25 @@ def validate_grounding(
             replacement = fact.replaces_object
             if replacement is not None and not _mentioned(replacement, passage):
                 replacement = None
+            condition = fact.condition
+            if condition is not None and condition not in passage:
+                logger.warning(
+                    "grounding_condition_discarded",
+                    subject=fact.subject,
+                    reason="Condition is not a verbatim span of the supporting passage",
+                )
+                condition = None
+            epistemic_type = fact.epistemic_type
+            if epistemic_type == "conditional" and condition is None:
+                # An unevaluable conditional must not enter default retrieval as
+                # an ordinary assertion. Hypothetical is the conservative legacy
+                # fallback until a provider supplies the actual condition.
+                epistemic_type = "hypothetical"
             grounded_facts.append(fact.model_copy(update={
-                "evidence_quote": passage, "replaces_object": replacement,
+                "evidence_quote": passage,
+                "replaces_object": replacement,
+                "condition": condition,
+                "epistemic_type": epistemic_type,
             }))
         else:
             logger.warning(
@@ -108,10 +125,26 @@ def validate_grounding(
     grounded_relationships = []
     for rel in result.relationships:
         passage = _supporting_passage(rel.evidence_quote, source_text) if rel.evidence_quote is not None else source_text
-        source_grounded = bool(passage) and _mentioned(rel.source_entity, passage)
-        target_grounded = bool(passage) and _mentioned(rel.target_entity, passage)
-        if source_grounded and target_grounded:
-            grounded_relationships.append(rel.model_copy(update={"evidence_quote": passage}))
+        source_grounded = passage is not None and _mentioned(rel.source_entity, passage)
+        target_grounded = passage is not None and _mentioned(rel.target_entity, passage)
+        if passage is not None and source_grounded and target_grounded:
+            condition = rel.condition
+            if condition is not None and condition not in passage:
+                logger.warning(
+                    "grounding_relationship_condition_discarded",
+                    source_entity=rel.source_entity,
+                    target_entity=rel.target_entity,
+                    reason="Condition is not a verbatim span of the supporting passage",
+                )
+                condition = None
+            epistemic_type = rel.epistemic_type
+            if epistemic_type == "conditional" and condition is None:
+                epistemic_type = "hypothetical"
+            grounded_relationships.append(rel.model_copy(update={
+                "evidence_quote": passage,
+                "condition": condition,
+                "epistemic_type": epistemic_type,
+            }))
         else:
             ungrounded_side = (
                 "source_entity"

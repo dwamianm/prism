@@ -40,6 +40,7 @@ from typing import TYPE_CHECKING
 
 from prme.retrieval.packing import estimate_token_cost
 from prme.retrieval.time import as_utc
+from prme.types import EpistemicType
 
 if TYPE_CHECKING:
     from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
@@ -212,8 +213,21 @@ def _record_key(candidate: RetrievalCandidate) -> str:
 
 def _provenance_label(candidate: RetrievalCandidate) -> str:
     node = candidate.node
-    return (f"[source_type={node.source_type.value}; epistemic={node.epistemic_type.value}; "
-            f"memory_lifecycle={node.lifecycle_state.value}]")
+    fields = [
+        f"source_type={node.source_type.value}",
+        f"epistemic={node.epistemic_type.value}",
+        f"memory_lifecycle={node.lifecycle_state.value}",
+    ]
+    metadata = node.metadata or {}
+    polarity = metadata.get("polarity")
+    if polarity in {"positive", "negative"}:
+        fields.append(f"polarity={polarity}")
+    if node.epistemic_type == EpistemicType.CONDITIONAL:
+        state = metadata.get("condition_state", "unknown")
+        if state not in {"unknown", "true", "false", "expired"}:
+            state = "unknown"
+        fields.append(f"condition_state={state}")
+    return "[" + "; ".join(fields) + "]"
 
 
 def compute_time_offsets(query: str, question_dt: datetime) -> str:

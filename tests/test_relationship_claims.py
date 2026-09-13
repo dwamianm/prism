@@ -20,7 +20,8 @@ def extraction(source, *, epistemic="hypothetical"):
     return ExtractionResult(
         entities=[ExtractedEntity(name="Alice", entity_type="person"), ExtractedEntity(name="Acme", entity_type="organization")],
         relationships=[ExtractedRelationship(source_entity="Alice", target_entity="Acme", relationship_type="works_at",
-                                              evidence_quote=source, epistemic_type=epistemic)],
+                                              polarity="positive", evidence_quote=source, epistemic_type=epistemic,
+                                              condition=source if epistemic == "conditional" else None)],
     )
 
 

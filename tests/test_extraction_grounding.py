@@ -3,8 +3,10 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
 
 from prme import MemoryEngine
+from prme.ingestion.extraction import _CitedExtractionResult
 from prme.ingestion.grounding import validate_grounding
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.types import NodeType
@@ -49,6 +51,85 @@ def test_repeated_quote_keeps_both_distinct_qualifications():
     assert result.facts[0].evidence_quote == source
 
 
+def test_builtin_fact_requires_explicit_polarity():
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "likes",
+            "object": "tea",
+            "evidence_quote": "Alice likes tea.",
+        }],
+    }
+    with pytest.raises(ValidationError, match="polarity"):
+        _CitedExtractionResult.model_validate(
+            payload, context={"source_text": "Alice likes tea."}
+        )
+
+
+@pytest.mark.parametrize("condition", [None, "manager approval"])
+def test_builtin_conditional_requires_verbatim_condition(condition):
+    source = "If approval is granted, Alice uses email."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "conditional",
+            "condition": condition,
+        }],
+    }
+    with pytest.raises(ValidationError, match="verbatim condition"):
+        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+
+    payload["facts"][0]["condition"] = "approval is granted"
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].condition == "approval is granted"
+
+
+def test_builtin_explicit_condition_cannot_be_materialized_as_asserted():
+    source = "If approval is granted, Alice uses email."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    with pytest.raises(ValidationError, match="explicit if/unless condition"):
+        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+
+
+def test_grounding_downgrades_conditionals_without_supported_condition():
+    source = "If approval is granted, Alice uses email."
+    unsupported = fact(
+        evidence_quote=source,
+        epistemic_type="conditional",
+        condition="the manager agrees",
+    )
+    grounded = validate_grounding(ExtractionResult(facts=[unsupported]), source)
+    assert grounded.facts[0].condition is None
+    assert grounded.facts[0].epistemic_type == "hypothetical"
+
+    supported = fact(
+        evidence_quote=source,
+        epistemic_type="conditional",
+        condition="approval is granted",
+    )
+    grounded = validate_grounding(ExtractionResult(facts=[supported]), source)
+    assert grounded.facts[0].condition == "approval is granted"
+    assert grounded.facts[0].epistemic_type == "conditional"
+
+
 def test_entity_substrings_are_not_distinct_people():
     result = validate_grounding(ExtractionResult(entities=[
         ExtractedEntity(name="Ann", entity_type="person"),
@@ -70,3 +151,24 @@ async def test_materialized_fact_retains_conditions_and_source_provenance(config
         assert nodes[0].metadata["evidence_quote"] == source
         assert nodes[0].metadata["grounding_method"] == "source_passage_v1"
         assert str(nodes[0].evidence_refs[0]) == str(event_id)
+
+
+async def test_materialized_claim_persists_typed_qualifiers(config, user):  # noqa: F811
+    source = "If approval is granted, Alice does not use email."
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = AsyncMock(return_value=ExtractionResult(
+            facts=[fact(
+                evidence_quote=source,
+                epistemic_type="conditional",
+                condition="approval is granted",
+                polarity="negative",
+            )],
+        ))
+        event_id = await engine.ingest(source, user_id=user, wait_for_extraction=True)
+        node = next(
+            node for node in await engine.get_event_nodes(event_id, user_id=user)
+            if node.node_type == NodeType.FACT
+        )
+        assert node.metadata["polarity"] == "negative"
+        assert node.metadata["condition"] == "approval is granted"
+        assert node.metadata["condition_state"] == "unknown"

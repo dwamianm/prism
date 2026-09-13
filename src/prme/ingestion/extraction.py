@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
 import structlog
@@ -27,11 +28,31 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
+_EXPLICIT_CONDITION_RE = re.compile(
+    r"\b(?:if|unless|provided\s+that|as\s+long\s+as|only\s+if)\b",
+    re.IGNORECASE,
+)
+
+
+def _validate_condition(epistemic_type: str, condition: str | None, evidence_quote: str) -> None:
+    """Require explicit conditional syntax to remain typed and auditable."""
+    has_explicit_condition = _EXPLICIT_CONDITION_RE.search(evidence_quote) is not None
+    if has_explicit_condition and epistemic_type != "conditional":
+        raise ValueError("an explicit if/unless condition requires epistemic_type conditional")
+    if epistemic_type == "conditional":
+        if not condition or condition not in evidence_quote:
+            raise ValueError("conditional claims require a verbatim condition from evidence_quote")
+    elif condition is not None:
+        raise ValueError("condition is only valid when epistemic_type is conditional")
+
 
 class _CitedFact(ExtractedFact):
     """Built-in providers must return source support or retry validation."""
 
     fact_type: Literal["fact", "decision", "preference"] = "fact"
+    polarity: Literal["positive", "negative"] = Field(
+        description=ExtractedFact.model_fields["polarity"].description
+    )
 
     evidence_quote: str = Field(
         min_length=1,
@@ -46,10 +67,14 @@ class _CitedFact(ExtractedFact):
                 raise ValueError("evidence_quote must be copied verbatim from the source")
             if not _mentioned(self.subject, self.evidence_quote) or not _mentioned(self.object, self.evidence_quote):
                 raise ValueError("subject and object must occur in evidence_quote; use source values without paraphrasing")
+            _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
         return self
 
 
 class _CitedRelationship(ExtractedRelationship):
+    polarity: Literal["positive", "negative"] = Field(
+        description=ExtractedFact.model_fields["polarity"].description
+    )
     evidence_quote: str = Field(min_length=1, description=ExtractedFact.model_fields["evidence_quote"].description)
     epistemic_type: str = Field(description=ExtractedFact.model_fields["epistemic_type"].description)
 
@@ -61,6 +86,7 @@ class _CitedRelationship(ExtractedRelationship):
                 raise ValueError("relationship evidence_quote must be copied verbatim from the source")
             if not _mentioned(self.source_entity, self.evidence_quote) or not _mentioned(self.target_entity, self.evidence_quote):
                 raise ValueError("relationship endpoints must occur in evidence_quote")
+            _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
         return self
 
 
@@ -95,11 +121,13 @@ fact is
    - A fact_type: use "fact" for general facts, "decision" for decisions \
 made or communicated (e.g., "We decided to use PostgreSQL"), and \
 "preference" for personal preferences expressed (e.g., "I prefer dark mode")
+   - A polarity: "positive" when the proposition is affirmed or "negative" \
+when it is denied, rejected, stopped, or stated with does not/never/no longer
 
 3. **Relationships** between entities: How entities relate to each other. \
 Use a source-supported predicate such as lives_in, works_at, or uses. Do not \
 force residence into part_of, or infer causation from co-occurrence. Include \
-an evidence_quote and epistemic_type for every relationship. Prefer a fact \
+an evidence_quote, epistemic_type, and polarity for every relationship. Prefer a fact \
 triple for a statement; do not repeat it as a separate relationship.
 
 4. **Summary**: A brief 1-2 sentence summary of the message content.
@@ -122,9 +150,11 @@ temporal text in the temporal_ref field.
    - "observed" — directly stated or witnessed ("I work at Google")
    - "asserted" — claimed as fact without direct evidence
    - "inferred" — derived from context ("Based on their questions, they know Python")
-   - "hypothetical" — speculative or conditional
+   - "hypothetical" — speculative or possible without an explicit condition
+   - "conditional" — applies only if an explicitly stated condition is true
    - "unverified" — from untrusted or unverified source
-   Default to "asserted" if unclear.
+   Default to "asserted" if unclear. For "conditional", copy the exact source \
+span describing the condition into condition. Otherwise set condition to null.
 
 8. **Temporal Intent**: For each fact, classify its temporal_intent:
    - "update" — this fact replaces a prior state (signals: "now", "changed to", \
@@ -142,6 +172,12 @@ IMPORTANT RULES:
   object_entity_type, source_entity_type, or target_entity_type to identify the intended listed entity.
 - Relationship claims must preserve negations, uncertainty, and conditions just as facts do.
   Use conditional or hypothetical for possible relationships; never convert them to current reality.
+- Polarity is independent of fact_type and epistemic_type. A dislike is a \
+  negative preference; a rejected option is a negative decision. Keep the \
+  predicate about the underlying relation and express denial in polarity.
+- An action that will occur only if a future condition becomes true is a \
+  conditional fact, not a decision, unless the source separately states that \
+  the choice or commitment has already been made.
 - Include an evidence_quote for every fact: copy the complete supporting source \
 sentences verbatim, including negation, conditions, exceptions, and time references.
 - Subject and object must occur in the supporting text. Keep object values as \

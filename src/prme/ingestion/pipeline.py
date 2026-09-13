@@ -471,6 +471,7 @@ class IngestionPipeline:
                 predicate=rel.relationship_type, object=rel.target_entity,
                 object_entity_type=rel.target_entity_type, evidence_quote=passage,
                 epistemic_type=rel.epistemic_type, confidence=rel.confidence,
+                polarity=rel.polarity, condition=rel.condition,
             ), True))
 
         # --- Source-cited claims ---
@@ -503,11 +504,15 @@ class IngestionPipeline:
                 "subject": fact.subject,
                 "predicate": fact.predicate,
                 "object": fact.object,
+                "polarity": fact.polarity,
                 "evidence_quote": fact_content,
                 "grounding_method": "source_passage_v1",
                 "temporal_intent": fact.temporal_intent,
                 "replaces_object": fact.replaces_object,
             }
+            if fact.condition is not None:
+                fact_metadata["condition"] = fact.condition
+                fact_metadata["condition_state"] = "unknown"
             if fact.scope:
                 fact_metadata["suggested_scope"] = fact.scope
             if fact.temporal_ref:
@@ -599,6 +604,7 @@ class IngestionPipeline:
                         evidence_event_id=event_id,
                         temporal_intent="update",
                         replaces_object=fact.replaces_object,
+                        polarity=fact.polarity,
                     )
 
             if object_entity_id:

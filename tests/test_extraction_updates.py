@@ -65,3 +65,29 @@ async def test_fabricated_replacement_target_cannot_retire_existing_fact(config,
         assert len(nodes) == 2
         assert all(n.lifecycle_state == LifecycleState.TENTATIVE for n in nodes)
         assert next(n for n in nodes if n.metadata["object"] == "Rust").metadata["replaces_object"] is None
+
+
+async def test_negative_update_retires_same_known_positive_claim(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        await ingest_fact(
+            engine, user, "Alice uses Python", "Python", polarity="positive"
+        )
+        await ingest_fact(
+            engine,
+            user,
+            "Alice no longer uses Python",
+            "Python",
+            polarity="negative",
+            temporal_intent="update",
+            replaces_object="Python",
+        )
+        nodes = await engine.query_nodes(
+            user_id=user,
+            node_type=NodeType.FACT,
+            lifecycle_states=list(LifecycleState),
+        )
+        positive = next(node for node in nodes if node.metadata["polarity"] == "positive")
+        negative = next(node for node in nodes if node.metadata["polarity"] == "negative")
+        assert positive.lifecycle_state == LifecycleState.SUPERSEDED
+        assert positive.superseded_by == negative.id
+        assert negative.lifecycle_state == LifecycleState.TENTATIVE

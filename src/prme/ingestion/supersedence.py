@@ -102,6 +102,7 @@ class SupersedenceDetector:
         evidence_event_id: str | None = None,
         temporal_intent: str | None = None,
         replaces_object: str | None = None,
+        polarity: str = "unknown",
     ) -> list[str]:
         """Detect contradictions and create supersedence or contradiction chains.
 
@@ -129,6 +130,9 @@ class SupersedenceDetector:
             replaces_object: When provided, restrict replacement to this
                 explicitly named old value. The LLM ingestion pipeline always
                 requires it; direct callers retain the legacy matching mode.
+            polarity: Semantic polarity of the new claim. A known negative
+                update can retire the same positive object; unknown polarity
+                retains the legacy differing-object behavior.
 
         Returns:
             List of superseded or contradicted node IDs.
@@ -164,6 +168,7 @@ class SupersedenceDetector:
             existing_metadata = target_node.metadata or {}
             existing_predicate = existing_metadata.get("predicate")
             existing_object = existing_metadata.get("object")
+            existing_polarity = existing_metadata.get("polarity", "unknown")
 
             if existing_predicate is None:
                 continue
@@ -180,9 +185,16 @@ class SupersedenceDetector:
                 existing_fact_id=target_id,
             )
 
-            # Check for contradiction: predicate matches but object differs
+            # A value change contradicts the prior object. A known negative
+            # update also contradicts the same known-positive proposition,
+            # such as "no longer uses Slack" after "uses Slack".
             if _predicates_match(predicate, existing_predicate):
-                if existing_object != object_value:
+                polarity_reversal = (
+                    existing_object == object_value
+                    and polarity == "negative"
+                    and existing_polarity == "positive"
+                )
+                if existing_object != object_value or polarity_reversal:
                     if temporal_intent == "assertion":
                         # True contradiction: preserve both objects
                         logger.info(

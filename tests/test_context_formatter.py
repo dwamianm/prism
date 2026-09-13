@@ -15,7 +15,7 @@ from prme.retrieval.context_formatter import (
 )
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import estimate_token_cost
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import EpistemicType, LifecycleState, NodeType, Scope
 
 # Zero-width space the sanitizer inserts to break forged reserved markers.
 _ZW = "​"
@@ -139,6 +139,22 @@ class TestFormatForLlm:
         assert "[1]" in result
         assert "2023-06-15" in result
         assert "Some fact" in result
+
+    def test_format_exposes_claim_polarity_and_condition_state(self):
+        node = MemoryNode(
+            user_id="test",
+            node_type=NodeType.PREFERENCE,
+            scope=Scope.PERSONAL,
+            content="If it is raining, Alice does not prefer walking.",
+            epistemic_type=EpistemicType.CONDITIONAL,
+            metadata={"polarity": "negative", "condition_state": "unknown"},
+        )
+        result = format_for_llm(
+            [RetrievalCandidate(node=node, composite_score=0.5)],
+            "What does Alice prefer?",
+        )
+        assert "polarity=negative" in result
+        assert "condition_state=unknown" in result
 
     def test_temporal_sorts_chronologically(self):
         c1 = _make_candidate(

@@ -32,7 +32,9 @@ def failure_details(exc):
     return {"error_chain": kinds, "validation_errors": validation}
 
 
-def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_epistemic=None, expected_entity_types=None, expected_claim_count=None):
+def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_epistemic=None,
+                  expected_entity_types=None, expected_claim_count=None,
+                  expected_polarities=None, expected_conditions=None):
     """Assess every claim; an extra FACT cannot hide a misclassified preference."""
     claims = [n for n in nodes if n.node_type in {NodeType.FACT, NodeType.PREFERENCE, NodeType.DECISION}]
     linked = bool(claims) and all(
@@ -55,6 +57,29 @@ def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_ep
     allowed = allowed_epistemic or ({"conditional", "hypothetical"} if case == "conditional" else None)
     temporal_ok = allowed is None or all(n.epistemic_type.value in allowed for n in claims)
     count_ok = expected_claim_count is None or len(claims) == expected_claim_count
+    if expected_polarities is None:
+        polarities_ok = True
+    else:
+        expected = {obj.casefold(): polarity for obj, polarity in expected_polarities.items()}
+        polarities_ok = bool(claims) and all(
+            node.metadata.get("polarity")
+            == expected.get(node.metadata.get("object", "").casefold())
+            for node in claims
+        )
+    if expected_conditions is None:
+        conditions_ok = True
+    else:
+        expected = {obj.casefold(): condition for obj, condition in expected_conditions.items()}
+        relevant = [
+            node for node in claims
+            if node.metadata.get("object", "").casefold() in expected
+        ]
+        conditions_ok = len(relevant) == len(expected) and all(
+            expected[node.metadata.get("object", "").casefold()]
+            in (node.metadata.get("condition") or "")
+            and node.metadata.get("condition_state") == "unknown"
+            for node in relevant
+        )
     entity_types_ok = True
     if expected_entity_types is not None:
         by_id = {n.id: n for n in nodes if n.node_type == NodeType.ENTITY}
@@ -72,12 +97,15 @@ def assess_claims(case, source, nodes, edges, *, expected_kinds=None, allowed_ep
     associations = all(e.edge_type in {EdgeType.HAS_FACT, EdgeType.MENTIONS} for e in edges)
     preserved = bool(claims) and all(n.content == source for n in claims)
     return {
-        "passed": linked and count_ok and objects_present and kinds_ok and temporal_ok and entity_types_ok and associations and preserved,
+        "passed": linked and count_ok and objects_present and kinds_ok and temporal_ok
+        and polarities_ok and conditions_ok and entity_types_ok and associations and preserved,
         "expected_objects_present": objects_present,
         "expected_claim_count": count_ok,
         "expected_entity_types_linked": entity_types_ok,
         "expected_claim_kinds": kinds_ok,
         "epistemic_qualifications_preserved": temporal_ok,
+        "claim_polarities_preserved": polarities_ok,
+        "conditions_preserved": conditions_ok,
         "subject_links_complete": linked,
         "association_edges_only": associations,
         "full_source_preserved": preserved,

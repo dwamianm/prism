@@ -13,9 +13,14 @@ from benchmarks.diagnostics.entity_references import run
 from benchmarks.diagnostics._process import checked_report
 
 
-def case(name, source, kinds, *, uncertain=False):
+def case(name, source, kinds, *, uncertain=False, negative=(), conditions=None):
     return name, source, {
         "expected_kinds": kinds,
+        "expected_polarities": {
+            value: "negative" if value in negative else "positive"
+            for value in kinds
+        },
+        **({"expected_conditions": conditions} if conditions else {}),
         "expected_claim_count": len(kinds),
         "allowed_epistemic": ["hypothetical", "conditional"] if uncertain else ["asserted", "observed"],
     }
@@ -24,20 +29,23 @@ def case(name, source, kinds, *, uncertain=False):
 CASES = [
     case("usage", "Maya uses Redis.", {"Redis": "fact"}),
     case("possible_usage", "Maya might use Redis after evaluation.", {"Redis": "fact"}, uncertain=True),
-    case("conditional_usage", "If latency improves, Noah will use SQLite.", {"SQLite": "fact"}, uncertain=True),
+    case("conditional_usage", "If latency improves, Noah will use SQLite.", {"SQLite": "fact"}, uncertain=True,
+         conditions={"SQLite": "latency improves"}),
     case("explicit_preference", "Elena prefers PostgreSQL.", {"PostgreSQL": "preference"}),
-    case("dislike", "Noah does not like Redis.", {"Redis": "preference"}),
+    case("dislike", "Noah does not like Redis.", {"Redis": "preference"}, negative={"Redis"}),
     case("choice", "Maya chose SQLite.", {"SQLite": "decision"}),
-    case("rejected_choice", "Elena decided against Redis.", {"Redis": "decision"}),
+    case("rejected_choice", "Elena decided against Redis.", {"Redis": "decision"}, negative={"Redis"}),
     case("mixed", "Maya uses Redis but prefers SQLite.", {"Redis": "fact", "SQLite": "preference"}),
     case("past_choice", "Last month, Noah selected PostgreSQL.", {"PostgreSQL": "decision"}),
     case("service", "The Cedar service uses Redis.", {"Redis": "fact"}),
     ("namesake", "Jordan, the engineer, lives in Jordan, the country.", {
         "allowed_epistemic": ["asserted", "observed"],
         "expected_entity_types": {"subject": "person", "object": "location"},
+        "expected_polarities": {"Jordan": "positive"},
         "expected_claim_count": 1,
     }),
-    case("conditional_preference", "If latency is equal, Elena prefers SQLite.", {"SQLite": "preference"}, uncertain=True),
+    case("conditional_preference", "If latency is equal, Elena prefers SQLite.", {"SQLite": "preference"}, uncertain=True,
+         conditions={"SQLite": "latency is equal"}),
 ]
 
 

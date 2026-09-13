@@ -17,8 +17,8 @@ user = test_durable_ingestion.user
 
 def namesakes(*, qualified=True, reverse=False):
     entities = [{"name": "Jordan", "entity_type": "person"}, {"name": "Jordan", "entity_type": "location"}]
-    fact = {"subject": "Jordan", "object_entity_type": "location", "predicate": "lives_in", "object": "Jordan", "evidence_quote": "Jordan lives in Jordan."}
-    rel = {"source_entity": "Jordan", "target_entity": "Jordan", "relationship_type": "relates_to", "evidence_quote": "Jordan lives in Jordan.", "epistemic_type": "asserted"}
+    fact = {"subject": "Jordan", "object_entity_type": "location", "predicate": "lives_in", "object": "Jordan", "polarity": "positive", "evidence_quote": "Jordan lives in Jordan."}
+    rel = {"source_entity": "Jordan", "target_entity": "Jordan", "relationship_type": "relates_to", "polarity": "positive", "evidence_quote": "Jordan lives in Jordan.", "epistemic_type": "asserted"}
     if qualified:
         fact["subject_entity_type"] = rel["source_entity_type"] = "person"
         rel["target_entity_type"] = "location"
@@ -27,9 +27,9 @@ def namesakes(*, qualified=True, reverse=False):
 
 @pytest.mark.parametrize("payload", [
     {"entities": [{"name": "Aster", "entity_type": "product"}], "facts": [
-        {"subject": "Aster service", "predicate": "uses", "object": "PostgreSQL", "evidence_quote": "The Aster service uses PostgreSQL."}]},
+        {"subject": "Aster service", "predicate": "uses", "object": "PostgreSQL", "polarity": "positive", "evidence_quote": "The Aster service uses PostgreSQL."}]},
     {"entities": [{"name": "Aster", "entity_type": "product"}, {"name": "PostgreSQL", "entity_type": "product"}],
-     "relationships": [{"source_entity": "Aster", "target_entity": "uses PostgreSQL", "relationship_type": "relates_to", "evidence_quote": "Jordan lives in Jordan.", "epistemic_type": "asserted"}]},
+     "relationships": [{"source_entity": "Aster", "target_entity": "uses PostgreSQL", "relationship_type": "relates_to", "polarity": "positive", "evidence_quote": "Jordan lives in Jordan.", "epistemic_type": "asserted"}]},
     namesakes(qualified=False),
 ])
 def test_builtin_schema_rejects_missing_and_ambiguous_references(payload):
@@ -64,7 +64,7 @@ async def test_namesake_types_wire_correct_entities_independent_of_order(config,
         relationships = await engine._graph_store.get_edges(source_id=str(fact.id), target_id=str(entities["location"].id))
         assert len(relationships) == 1 and relationships[0].edge_type == EdgeType.MENTIONS
         plan = await engine._event_store.get_derivation_plan(event_id, user_id=user)
-        assert plan.materialization_policy == "event_local_references_v4"
+        assert plan.materialization_policy == "claim_qualifiers_v5"
         assert await engine.get_event_nodes(event_id, user_id=user + "-other") == []
 
 
@@ -92,7 +92,7 @@ def test_builtin_rejects_ambiguous_or_wrongly_typed_object(qualifier):
 
 def test_builtin_accepts_literal_object_without_entity_entry():
     payload = {"entities": [{"name": "Alice", "entity_type": "person"}], "facts": [
-        {"subject": "Alice", "predicate": "likes", "object": "green", "evidence_quote": "Alice likes green."}
+        {"subject": "Alice", "predicate": "likes", "object": "green", "polarity": "positive", "evidence_quote": "Alice likes green."}
     ]}
     assert _CitedExtractionResult.model_validate(payload).facts[0].object == "green"
 
