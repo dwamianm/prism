@@ -20,6 +20,14 @@ the admitted source. JSON normalization still applies: tuples become arrays,
 for example. This is an event-admission contract; it does not validate arbitrary
 low-level graph or table mutations.
 
+JSON object keys must remain unambiguous after normalization. A nested Python
+mapping such as `{1: "first", "1": "second"}` would otherwise serialize both
+keys as `"1"`, silently losing one value when read. Admission rejects collisions
+at any nesting depth with `ValueError("Metadata object keys collide after JSON
+serialization")`, before writing an event or work. Unambiguous key conversions
+still work; the same key in separate objects is not a collision. Already lost
+values in older records cannot be reconstructed by this check.
+
 Older DuckDB packs could admit non-finite metadata. Direct storage could convert
 such values to null in the initial node snapshot while retaining them in the
 event; raw ingestion could retain them in both. New validation does not rewrite

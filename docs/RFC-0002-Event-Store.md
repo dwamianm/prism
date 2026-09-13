@@ -86,7 +86,9 @@ rows are still readable under their original semantics.
 
 New event and direct-node metadata are validated and copied to a finite JSON
 snapshot before waiting for the backend lock/connection. Non-finite or unsupported
-values fail before event/work admission on both backends. Existing source rows
+values and object keys that collide during JSON normalization fail before
+event/work admission on both backends. A string key and a numeric key must not
+silently overwrite each other after serialization. Existing source rows
 are not rewritten. Legacy non-finite graph metadata can be retained in lifecycle,
 reinforcement and merge journals using the versioned `prme-special-floats-v1`
 path encoding; finite snapshot bytes and old raw checksums remain unchanged.
