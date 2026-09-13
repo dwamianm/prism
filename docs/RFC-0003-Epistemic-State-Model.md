@@ -119,6 +119,16 @@ retire existing facts. Unnamed changes remain alongside prior evidence until a
 more informed resolution is available. The lower-level supersedence detector
 retains its explicit caller-driven legacy matching mode.
 
+Explicit backend supersedence, contradiction and resolution accept optional
+evidence only when the event exists in the affected nodes' owner and scope.
+Validation occurs inside the state/relationship transaction; an invalid item in
+`supersede_many` aborts the whole batch. Malformed, missing and foreign references
+share one availability error, and malformed evidence is no longer silently
+dropped. Omitted evidence remains permitted for caller-driven decisions. This
+checks provenance membership, not entailment. The
+[correction guide](MEMORY-CORRECTIONS.md) covers the public sync/async replacement
+workflow, including retained sources and ambiguous completion outcomes.
+
 ---
 
 ## 4. Source Types and Epistemic Interaction

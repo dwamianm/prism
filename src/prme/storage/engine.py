@@ -1874,7 +1874,8 @@ class MemoryEngine:
         Args:
             old_node_id: Node being replaced.
             new_node_id: Replacement node.
-            evidence_id: Optional event ID for provenance.
+            evidence_id: Optional existing event ID in the nodes' owner and
+                scope. Invalid or unavailable evidence rejects the transition.
             user_id: When given, both nodes must belong to this user. A
                 supersedence edge that crosses users is never legitimate: it
                 would let one user's memory retire another's.

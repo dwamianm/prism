@@ -32,6 +32,9 @@ Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
 Python and CLI contracts separately from draft RFC requirements.
 
+[Explicit memory corrections](MEMORY-CORRECTIONS.md) documents source retention,
+node/event identities, scoped evidence and the sync/async replacement workflow.
+
 ## RFC Listing
 
 ### Tier 0 — Foundation

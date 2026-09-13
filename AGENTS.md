@@ -81,6 +81,14 @@ supports contested-to-deprecated transitions directly. Invalid transitions still
 raise; these operations have no caller-supplied retry identity. Raw graph updates
 and older mutations are not covered by this record or a complete replay engine.
 
+`supersede`, `supersede_many`, `contradict` and `resolve_contradiction` validate
+optional evidence inside their existing transactions. The event must exist in
+the nodes' owner and scope; malformed, missing and foreign references all fail
+with the same availability error. Invalid batch evidence rolls back the whole
+batch. This is provenance membership, not semantic entailment or validation of
+arbitrary low-level edges. `MemoryClient.supersede` exposes explicit corrections
+to synchronous callers. See `docs/MEMORY-CORRECTIONS.md`.
+
 Explicit `reinforce()` validates owner/scope evidence and commits current-value
 increments with a checksummed complete before/after `REINFORCE` record in one
 backend transaction. Successful concurrent calls accumulate; injected failures

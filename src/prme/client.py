@@ -349,6 +349,12 @@ class MemoryClient:
         """Get a single node by ID. Returns MemoryNode or None."""
         return self._run(self._engine.get_node(node_id, user_id=user_id, include_superseded=include_superseded))
 
+    def supersede(self, old_node_id: str, new_node_id: str, *,
+                  evidence_id: str | None = None, user_id: str | None = None) -> None:
+        """Replace a memory within one owner/scope, retaining its original source."""
+        self._run(self._engine.supersede(old_node_id, new_node_id,
+                                        evidence_id=evidence_id, user_id=user_id))
+
     def ingest_fast(
         self, content: str, *, user_id: str, role: str = "user",
         session_id: str | None = None, metadata: dict | None = None,

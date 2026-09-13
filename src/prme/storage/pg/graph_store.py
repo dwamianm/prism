@@ -617,12 +617,8 @@ class PgGraphStore:
                     raise ValueError("Replacement node must be active")
                 if not validate_transition(LifecycleState(old["lifecycle_state"]), LifecycleState.SUPERSEDED):
                     raise ValueError(f"Cannot supersede: node is {old['lifecycle_state']}")
-                provenance = None
-                if evidence_id is not None:
-                    try:
-                        provenance = UUID(evidence_id)
-                    except ValueError:
-                        logger.warning("Invalid evidence UUID; storing edge without provenance")
+                from prme.storage.transition_evidence import validate_postgres
+                provenance = await validate_postgres(conn, evidence_id, old["user_id"], old["scope"])
                 edge = MemoryEdge(
                     source_id=UUID(new_id), target_id=UUID(old_id),
                     edge_type=EdgeType.SUPERSEDES, user_id=old["user_id"],
@@ -688,6 +684,10 @@ class PgGraphStore:
                     f"'{state_b.value}' does not allow transition to CONTESTED"
                 )
 
+            from prme.storage.transition_evidence import validate_postgres
+            provenance_uuid = await validate_postgres(conn, evidence_id, row_a["user_id"], row_a["scope"])
+            evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
+
             # Transition both to CONTESTED
             await conn.execute(
                 "UPDATE nodes SET lifecycle_state = $1, updated_at = now() WHERE id = $2",
@@ -699,18 +699,6 @@ class PgGraphStore:
                 LifecycleState.CONTESTED.value,
                 node_b_id,
             )
-
-            # Create CONTRADICTS edge: node_b -> node_a
-            provenance_uuid = None
-            if evidence_id is not None:
-                try:
-                    provenance_uuid = UUID(evidence_id)
-                except ValueError:
-                    logger.warning(
-                        "evidence_id %r is not a valid UUID, storing edge "
-                        "without provenance reference",
-                        evidence_id,
-                    )
 
             edge = MemoryEdge(
                 source_id=UUID(node_b_id),
@@ -820,6 +808,10 @@ class PgGraphStore:
                 raise ValueError(
                     f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
                 )
+
+            from prme.storage.transition_evidence import validate_postgres
+            evidence = await validate_postgres(conn, evidence_id, winner_row["user_id"], winner_row["scope"])
+            evidence_id = str(evidence) if evidence is not None else None
 
             # Transition winner to STABLE
             await conn.execute(

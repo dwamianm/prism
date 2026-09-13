@@ -1065,6 +1065,9 @@ class DuckPGQGraphStore:
                 f"only Tentative or Stable nodes can be superseded"
             )
 
+        from prme.storage.transition_evidence import validate_duckdb
+        provenance_uuid = validate_duckdb(self._conn, evidence_id, old_row[1], old_row[2])
+
         # Update old node
         self._conn.execute(
             """
@@ -1076,19 +1079,6 @@ class DuckPGQGraphStore:
             """,
             [target_state.value, new_node_id, old_node_id],
         )
-
-        # Create SUPERSEDES edge: new_node -> old_node
-        # Parse evidence_id as UUID if valid, otherwise store None
-        provenance_uuid = None
-        if evidence_id is not None:
-            try:
-                provenance_uuid = UUID(evidence_id)
-            except ValueError:
-                logger.warning(
-                    "evidence_id %r is not a valid UUID, storing edge "
-                    "without provenance reference",
-                    evidence_id,
-                )
 
         edge = MemoryEdge(
             source_id=UUID(new_node_id),
@@ -1158,6 +1148,10 @@ class DuckPGQGraphStore:
                 f"'{state_b.value}' does not allow transition to CONTESTED"
             )
 
+        from prme.storage.transition_evidence import validate_duckdb
+        provenance_uuid = validate_duckdb(self._conn, evidence_id, row_a[1], row_a[2])
+        evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
+
         # Transition both nodes to CONTESTED
         self._conn.execute(
             """
@@ -1175,18 +1169,6 @@ class DuckPGQGraphStore:
             """,
             [LifecycleState.CONTESTED.value, node_b_id],
         )
-
-        # Create CONTRADICTS edge: node_b (newer) -> node_a (older)
-        provenance_uuid = None
-        if evidence_id is not None:
-            try:
-                provenance_uuid = UUID(evidence_id)
-            except ValueError:
-                logger.warning(
-                    "evidence_id %r is not a valid UUID, storing edge "
-                    "without provenance reference",
-                    evidence_id,
-                )
 
         edge = MemoryEdge(
             source_id=UUID(node_b_id),
@@ -1281,6 +1263,10 @@ class DuckPGQGraphStore:
             raise ValueError(
                 f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
             )
+
+        from prme.storage.transition_evidence import validate_duckdb
+        evidence = validate_duckdb(self._conn, evidence_id, winner_row[1], winner_row[2])
+        evidence_id = str(evidence) if evidence is not None else None
 
         # Transition winner to STABLE
         self._conn.execute(
