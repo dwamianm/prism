@@ -97,3 +97,49 @@ def test_full_serialized_budget_includes_metadata_and_never_truncates_text():
             json.loads(line)["text"] for line in result["context"].split("\n") if line
         ]
         assert all(text in [row["text"], second["text"]] for text in texts)
+
+
+def test_missing_optional_metadata_is_recorded_without_reconstruction():
+    from benchmarks.diagnostics.hindsight_capture import missing_metadata
+
+    row = unit()
+    row.update(
+        metadata=None,
+        context="source role: user",
+        mentioned_at="2025-05-01T12:00:00+00:00",
+        occurred_start=None,
+        occurred_end=None,
+        text="Shaded paths",
+    )
+    response = {"results": [row]}
+    with pytest.raises(ValueError, match="provenance"):
+        returned_units(response, case(), {"s0:t0": ["unit-0"]})
+    assert returned_units(
+        response, case(), {"s0:t0": ["unit-0"]}, allow_missing_metadata=True
+    ) == ["s0:t0"]
+    omissions = missing_metadata(response)
+    assert len(omissions) == 1 and len(omissions[0]["fields"]) == 4
+    context = context_from_units(
+        [row], 4096, tiktoken.get_encoding("cl100k_base"), renderer="native_fields_v2"
+    )
+    rendered = json.loads(context["context"])
+    assert rendered["text"] == "Shaded paths"
+    assert rendered["context"] == row["context"]
+    assert rendered["mentioned_at"] == row["mentioned_at"]
+    assert "only in summer" not in context["context"]
+    assert row["metadata"] is None
+
+
+@pytest.mark.parametrize(
+    "metadata", [{"source_role": "assistant"}, {"source_role": None}, []]
+)
+def test_optional_metadata_policy_still_rejects_conflicting_or_invalid_values(metadata):
+    row = unit()
+    row["metadata"] = metadata
+    with pytest.raises(ValueError):
+        returned_units(
+            {"results": [row]},
+            case(),
+            {"s0:t0": ["unit-0"]},
+            allow_missing_metadata=True,
+        )

@@ -69,7 +69,7 @@ def validate_case(case):
     return case
 
 
-def returned_units(response, case, retained):
+def returned_units(response, case, retained, *, allow_missing_metadata=False):
     sources = {turn["id"]: turn for turn in case["turns"]}
     unit_owners = {unit: source for source, units in retained.items() for unit in units}
     if sum(map(len, retained.values())) != len(unit_owners):
@@ -85,9 +85,13 @@ def returned_units(response, case, retained):
             raise ValueError("Unknown, duplicated or foreign returned unit")
         seen.add(row["id"])
         expected = sources[source]
-        metadata = row["metadata"] or {}
+        metadata = row["metadata"]
+        if metadata is not None and not isinstance(metadata, dict):
+            raise ValueError("Invalid returned metadata type")
+        metadata = metadata or {}
         if any(
             metadata.get(key) != expected[field]
+            and not (allow_missing_metadata and key not in metadata)
             for key, field in [
                 ("source_turn", "id"),
                 ("source_session", "session_id"),
@@ -101,8 +105,24 @@ def returned_units(response, case, retained):
     return list(dict.fromkeys(row["document_id"] for row in response["results"]))
 
 
-def context_from_units(rows, budget, encoding):
+def missing_metadata(response):
+    """Record omissions without filling them from the original documents."""
+    fields = ("source_turn", "source_session", "source_role", "source_date")
+    return [
+        {"unit_id": row["id"], "source_id": row["document_id"], "fields": absent}
+        for row in response["results"]
+        if (
+            absent := [
+                field for field in fields if field not in (row["metadata"] or {})
+            ]
+        )
+    ]
+
+
+def context_from_units(rows, budget, encoding, *, renderer="metadata_v1"):
     """Adapter renderer of returned units only; never substitute a source document."""
+    if renderer not in {"metadata_v1", "native_fields_v2"}:
+        raise ValueError("Unknown context renderer")
     entries, ids = [], []
     for row in rows:
         metadata = row["metadata"] or {}
@@ -113,6 +133,21 @@ def context_from_units(rows, budget, encoding):
             "date": metadata.get("source_date"),
             "text": row["text"],
         }
+        if renderer == "native_fields_v2":
+            entry = {
+                "id": row["id"],
+                "source": row["document_id"],
+                "text": row["text"],
+                **{
+                    field: row.get(field)
+                    for field in (
+                        "context",
+                        "occurred_start",
+                        "occurred_end",
+                        "mentioned_at",
+                    )
+                },
+            }
         proposed = "\n".join([*entries, canonical(entry).decode()])
         if len(encoding.encode(proposed, disallowed_special=())) <= budget:
             entries.append(canonical(entry).decode())
@@ -359,11 +394,20 @@ async def run(args, report):
                         "retained": retained,
                     },
                 )
-                row["ranked_source_ids"] = returned_units(public, case, retained)[
-                    : plan["candidate_limit"]
-                ]
+                row["ranked_source_ids"] = returned_units(
+                    public,
+                    case,
+                    retained,
+                    allow_missing_metadata=plan.get("allow_missing_metadata", False),
+                )[: plan["candidate_limit"]]
+                row["missing_metadata"] = missing_metadata(public)
                 row["contexts"] = {
-                    str(b): context_from_units(public["results"], b, encoding)
+                    str(b): context_from_units(
+                        public["results"],
+                        b,
+                        encoding,
+                        renderer=plan.get("context_renderer", "metadata_v1"),
+                    )
                     for b in plan["context_budgets"]
                 }
                 snapshot = {

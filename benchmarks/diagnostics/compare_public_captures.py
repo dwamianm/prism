@@ -12,6 +12,7 @@ from benchmarks.diagnostics.hindsight_capture import (
     context_from_units,
     digest,
     returned_units,
+    missing_metadata,
     validate_case,
     write,
 )
@@ -200,8 +201,17 @@ def analyze(args):
                 raise ValueError("Snapshot identity differs")
             if product == "hindsight":
                 ranked = returned_units(
-                    snapshot["response"], case, snapshot["retained"]
+                    snapshot["response"],
+                    case,
+                    snapshot["retained"],
+                    allow_missing_metadata=config[product].get(
+                        "allow_missing_metadata", False
+                    ),
                 )[: config[product]["candidate_limit"]]
+                omissions = missing_metadata(snapshot["response"])
+                if omissions != saved.get("missing_metadata", []):
+                    raise ValueError("Returned metadata omission audit differs")
+                row["hindsight_missing_metadata"] = omissions
             else:
                 nodes = snapshot["node_sources"]
                 if len(nodes) != len(sources) or set(nodes.values()) != set(sources):
@@ -223,7 +233,10 @@ def analyze(args):
                 stored = snapshot["contexts"][str(budget)]
                 if product == "hindsight":
                     reproduced = context_from_units(
-                        snapshot["response"]["results"], budget, encoding
+                        snapshot["response"]["results"],
+                        budget,
+                        encoding,
+                        renderer=config[product].get("context_renderer", "metadata_v1"),
                     )
                     entries = [
                         (value["source"], value["text"], True)
