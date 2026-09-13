@@ -749,10 +749,13 @@ PRME_ENCRYPTION_KEY=your-secret-key    # Passphrase (PBKDF2 -> Fernet AES-128-CB
 # Run all tests
 pytest tests/ -q
 
-# Run simulations (19 scenarios)
+# Run simulations
 python -m simulations --list           # List available scenarios
 python -m simulations                  # Run all
 python -m simulations changing_facts   # Run specific scenario
+
+# CI checkpoint gate: retains failures and exits nonzero if any checkpoint fails
+python -m scripts.run_simulations --output simulation-results.json
 
 # Run benchmarks
 python -m benchmarks                   # All benchmarks
@@ -761,6 +764,13 @@ python -m benchmarks epistemic         # Epistemic benchmark only
 # Stress tests (opt-in)
 PRME_STRESS_TESTS=1 pytest tests/test_stress.py
 ```
+
+Simulations advance source arrival and memory-maintenance clocks together;
+execution budgets still use real elapsed time. Fresh runs generate fresh object
+IDs, and organizer excerpt selection can differ when source confidence ties.
+They are workload checks, not replay of one identical event log. Preserve failed
+checkpoints when comparing runs; passing unit tests alone does not establish
+retrieval quality.
 
 ## Documentation
 

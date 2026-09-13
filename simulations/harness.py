@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,18 +29,29 @@ from simulations.evaluation import (
 
 logger = logging.getLogger(__name__)
 
-# Modules that call datetime.now() and affect scoring determinism.
+# Modules that create memory timestamps or make age/validity decisions.
+# Include native mutation helpers: freezing only the engine leaves their
+# reinforcement/lifecycle timestamps in real time. Budgets still use monotonic.
 # Each uses ``from datetime import datetime`` so we patch the local name.
 _DATETIME_PATCH_TARGETS = [
     "prme.models.base.datetime",
     "prme.models.events.datetime",
     "prme.models.nodes.datetime",
+    "prme.models.edges.datetime",
+    "prme.models.derivation.datetime",
+    "prme.models.extraction.datetime",
     "prme.storage.engine.datetime",
     "prme.storage.duckpgq_graph.datetime",
+    "prme.storage.lifecycle.datetime",
+    "prme.storage.reinforcement.datetime",
+    "prme.storage.organizer_merge.datetime",
+    "prme.storage.extraction_work.datetime",
     "prme.retrieval.pipeline.datetime",
     "prme.retrieval.scoring.datetime",
+    "prme.retrieval.snapshots.datetime",
     "prme.organizer.jobs.datetime",
     "prme.organizer.maintenance.datetime",
+    "prme.organizer.consolidation.datetime",
     "simulations.harness.datetime",
 ]
 
@@ -62,14 +73,12 @@ def _freeze_time(instant: datetime):
     """Context manager that freezes datetime.now() across scoring modules."""
     previous = _FrozenDatetime._frozen_now
     _FrozenDatetime._frozen_now = instant
-    patches = [patch(target, _FrozenDatetime) for target in _DATETIME_PATCH_TARGETS]
-    for p in patches:
-        p.start()
     try:
-        yield
+        with ExitStack() as stack:
+            for target in _DATETIME_PATCH_TARGETS:
+                stack.enter_context(patch(target, _FrozenDatetime))
+            yield
     finally:
-        for p in patches:
-            p.stop()
         _FrozenDatetime._frozen_now = previous
 
 
