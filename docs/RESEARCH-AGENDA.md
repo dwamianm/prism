@@ -1,6 +1,6 @@
 # Research agenda: demonstrated memory quality and developer experience
 
-Updated 2026-09-12. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
+Updated 2026-09-13. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
 Its historical scores and projected “98%+” target do not establish today's
 performance. GSD completion states and RFC proposals are not acceptance evidence.
 The aim is a leading memory package whose advantages survive reproducible
@@ -14,6 +14,8 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 | Profile fidelity and publication | Complete qualified source excerpts, explicit inference/provenance, exact token budgets, atomic publication and complete scoped source scans. | Profiles are source collections; this does not prove semantic synthesis, exhaustive facts or automatic freshness. |
 | Storage and developer workflow | [Latest PostgreSQL workspace validation](../benchmarks/results/recovery/2026-09-12/PG-WORKSPACES.md) at `b7521bc`: full regression passed 2,877 tests with 81 skips, including live PostgreSQL, research and examples. The installed selection passed 143 tests with 13 skips. The real-BGE 100-project concurrent retrieval and native backup/restore workflow completed; a separate verifier checked all source and merged-entity evidence in both retained dumps. | Separate overlapping invocations at recorded commits. Authored recovery, eligibility and namespace contracts do not establish answer quality, hosted project grants or all deployment environments. Client resource samples exclude database-server memory. |
 | Identity and maintenance | Unresolved personal references stay event-local; merging preserves type/provenance/validity, including copied relationships. Default maintenance no longer consumes anonymous feedback to change global weights. New merges atomically journal evidence, relationships and supersedence. | These are reproduced storage contracts. Coreference, equal-name disambiguation, full historical organizer replay and scoped learning activation remain incomplete. |
+| Claim qualifiers | Built-in extraction preserves typed polarity and exact explicit conditions, rejects common modality collapses, and excludes unresolved conditions from default retrieval. Temperature-zero Qwen passed 11/12 authored cases; the full implementation suite passed 3,261 tests with live PostgreSQL. | Authored local probes, not held-out accuracy. Qwen still exhausted strict citation retries on one mixed claim; no automatic condition evaluator is implemented. |
+| Retrieval semantics | Present-state ranking recognizes ordinary “what does” and “who is” queries without applying inferred recency when no explicit update exists. Decisions and instructions share the full semantic-node boost. Two consecutive full simulation runs passed 74/74; the complete live-PostgreSQL suite passed 3,268 tests. | Authored causal scenarios and regression tests. They do not establish held-out answer quality or optimal default weights. |
 | Deferred raw-source throughput | Local processing now shares a durable lexical commit before acknowledging sources. A frozen 32-source real-model workflow reduced 32 commits to one, with identical candidates and contexts across serial/batch trials. | Small authored histories with warmed embeddings on one host under concurrent load; no competitive speed claim. Direct `store()` still indexes immediately. |
 | Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
 | Matched raw retrieval | All 119 development questions completed against pinned Mem0 OSS. At 4K shared whole-turn packing, PRME source recall was 96.49% versus 93.27%; Mem0 led preferences. | Raw mode, frozen older PRME reference, shared evaluator packer and no answer generation. The 4K interval touches zero; no end-to-end leadership claim. |
@@ -162,16 +164,14 @@ guide workflow pass; complete balanced answer validation remains pending. See
 the [implementation verification](../benchmarks/results/recovery/2026-09-12/BALANCED-PACKING.md).
 The original failed score-policy gate and density default remain unchanged.
 
-The latest full default-policy simulation run passed 70/74 checkpoints. Three
-failures reproduced before balanced was added. A subsequent
-[simulation clock correction](../benchmarks/results/recovery/2026-09-12/SIMULATION-CLOCK.md)
-fixes real-time leakage into maintenance age checks and native mutation timestamps.
-Its full run also passed 70/74, with procedural memory replacing consolidation
-as the fourth failure. Repeated consolidation runs select different excerpts
-from tied-confidence sources and show varying normalized lexical scores; they
-also create duplicate summaries of unchanged sources. Preserve this failing
-CI gate and investigate retrieval/ranking, consolidation reuse and simulation
-reproducibility without weakening assertions.
+The [simulation clock correction](../benchmarks/results/recovery/2026-09-12/SIMULATION-CLOCK.md)
+fixed real-time leakage into maintenance age checks and native mutation
+timestamps, but its full run still passed only 70/74. Consolidation publication
+is now checksummed, atomic and restart-safe; unchanged and concurrent attempts
+reuse one active summary. Current-state and actionable-memory scoring then
+reproduced the remaining four failures before correction and passed the complete
+gate twice at 74/74. See the
+[current scoring evidence](../benchmarks/results/recovery/2026-09-13/SCORING-SEMANTICS.md).
 The separate owned-service head1 answer trial failed before judging after a
 logged GPU out-of-memory error; no partial answer scores were inspected.
 All original prompts fit the existing conservative headroom check at 32K,
@@ -187,22 +187,22 @@ adds MemIR, Agent Zero Memory and AttriMem as hypotheses/comparison candidates.
 It distinguishes claim support, source opening and credit assignment from
 reproduced product improvements; no published total replaces the checks here.
 
-The [complete authored extraction probe](../benchmarks/results/research/2026-09-12/AUTHORED-EXTRACTION-RESULTS.md)
-retains Qwen's 10/12 and Gemma's 11/12 checks, including ambiguous kind labels
-and one incorrectly asserted conditional preference. The isolated prompt-only
-follow-up produced Qwen 8/12 and Gemma 11/12: Qwen's target error persisted with
-two additional failed checks; Gemma fixed conditional usage but timed out on
-namesake extraction. The unproven prompt change was reverted. All failures,
-identity checks and the rollback are retained in the linked report.
+The [current local extraction diagnostics](../benchmarks/results/extraction/2026-09-13/README.md)
+supersede the earlier prompt-only candidate. They preserve typed polarity and
+exact conditions, use configurable temperature-zero extraction, and reject
+uncertain or contingent actions mislabeled as completed decisions. Qwen passed
+11/12 in the complete final run; the remaining failure was a correctly rejected
+non-verbatim citation. These authored probes still require held-out and
+provider-diverse validation.
 
 | Gap | Next implementation/evaluation requirement |
 |---|---|
 | Named projects and domains | `MemoryWorkspace` manages identity-checked local packs and PostgreSQL schemas with shared embeddings and a bounded lease cache. PostgreSQL projects share a bounded connection pool; the installed 100-project backup/restore workflow passed. The [workspace guide](WORKSPACES.md) states cancellation, background-extraction and operator boundaries. Next: hosted credential-to-project grants, larger realistic partition benchmarks, explicit legacy import and lifecycle operations. A metadata filter alone is insufficient, and the full grant hierarchy remains unimplemented. |
 | Organizer replay coverage | Duplicate/alias merges, explicit reinforcement, single-node lifecycle transitions and consolidation retirement now atomically retain complete before/after records. Confirmation request IDs survive retries; pairwise transitions reject unavailable owner/scope evidence. Legacy non-finite metadata has an explicit lossless snapshot encoding. Other organizer/manual mutations and historical data still lack complete replay inputs; extend coverage without inventing past events. External index cleanup remains a separate repairable step. |
-| Consolidation publication and reuse | [Retirement now validates current coverage inside its transaction](../benchmarks/results/recovery/2026-09-12/CONSOLIDATION-RETIREMENT.md), including late source/summary changes. The native DuckDB lifecycle-index race is corrected. Summary creation still uses separate store/metadata/edge writes and can duplicate unchanged clusters. Next: durable prepared summary publication with atomic provenance, scoped source identity, concurrent reuse and restart recovery. A content-only lookup or process-local lock is insufficient. |
+| Consolidation quality | [Publication is now durable, atomic and idempotent](../benchmarks/results/recovery/2026-09-13/CONSOLIDATION-PUBLICATION.md), with deterministic request generations, restart recovery and cross-engine concurrency checks on both backends. Next: compare source-backed summaries with raw episodes under matched reader, token and ingestion-cost conditions. Atomic publication proves consistency, not summary usefulness. |
 | Reliable compact semantic memory | Compare grounded extraction and source-backed summaries with raw-turn baselines under the same reader and token/cost conditions. Retain qualifiers, temporal boundaries, contradictions and provenance; compression ratio alone is insufficient. |
 | Profile maintenance recovery | Durable prepared inputs, owner-scoped Python recovery, journal reconstruction and fenced replacement are implemented. Explicit abandonment and fenced collection of unpublished staging are implemented. Next: evaluated scheduled maintenance policy. No automatic profile scheduler is present. |
-| Temporal and aggregate questions | Prove coverage of the queried set and distinguish episodes and reference clocks. Counting retrieved top-k items is not an exhaustive count; newest mention alone is not truth. Evaluate multi-session, updates and abstention together. |
+| Temporal and aggregate questions | Present-state and dated-history routing now pass the full causal simulation gate. Next: prove coverage of the queried set for counts and lists. Counting retrieved top-k items is not an exhaustive count; evaluate multi-session aggregation, updates and abstention together. |
 | Adaptive retrieval | Complete scoped profile activation and rollback only after replay evaluation from immutable feedback receipts. Global weight changes must not silently use one tenant's feedback for another. See RFC-0017. |
 | Developer experience | Installed-wheel sync/async workflows cover confirmation retries and [explicit corrections](MEMORY-CORRECTIONS.md), including retained sources and scoped evidence. [Metadata admission](METADATA.md) rejects nonportable values and ambiguous JSON key collisions consistently, and preserves legacy values in journals. Keep testing first write, restart, retrieval, recovery and migration without repository-only imports; these checks do not establish end-to-end memory quality. |
 | Interactive task completion | The [MemoryArena adapter](../benchmarks/results/research/2026-09-12/AGENTIC-MEMORY-INTEGRATION.md) passed the unmodified upstream client with installed PRME, real embeddings, task isolation and restart provenance. The authored travel scorer audit exposes omitted-failure denominator changes and prefix false accepts. Require exact registered cohort coverage and validate task scoring before interpreting any travel success rate. No interactive dataset task has been scored. |

@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Current-state retrieval now recognizes ordinary present-tense state questions,
+  while inferred recency reweighting requires explicit update evidence and dated
+  temporal queries remain historical. Decisions and instructions receive the
+  same default semantic-node boost as facts and preferences.
 - Structured extraction now sends a configurable sampling temperature, defaulting
   to zero, and rejects uncertain or contingent future actions mislabeled as
   completed decisions. Explicit known-negative updates can retire the same
