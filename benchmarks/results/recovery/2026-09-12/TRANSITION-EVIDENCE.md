@@ -25,7 +25,12 @@ a nonexistent test file and collected nothing. One existing contradiction fixtur
 used a fabricated evidence UUID; it now appends an actual same-owner/scope event
 and checks the relationship's provenance. These unsuccessful attempts remain
 hashed in the structured record rather than being counted as product findings
-or passing verification.
+or passing verification. The first full suite passed 3,098 tests with 84 skips
+and failed one additional end-to-end fixture that also supplied a fabricated
+evidence UUID. That fixture now appends a real source and checks edge provenance.
+The focused source follow-up passed 50 tests, and all five tests in the corrected
+end-to-end module passed against the installed wheel. A fresh full suite is running
+on the corrected source; the unsuccessful full attempt remains recorded.
 
 Membership and ownership checks do not prove entailment. Arbitrary low-level
 edge writes, caller retry keys for corrections, and complete historical replay
