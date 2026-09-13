@@ -33,7 +33,10 @@
   "full_postgres_suite": {
     "isolated_database": "prme_transition_evidence_20260913",
     "log": "/tmp/prme-transition-evidence-full-pg-final.log",
+    "log_sha256": "46490fa807bdee99461379249e0f1e8fe0d0305b2b632820594e9d490dec358c",
+    "native_exit_code": 0,
     "native_session_id": 98173,
+    "passed": 3100,
     "previous_attempt": {
       "failed": 1,
       "failure": "End-to-end contradiction fixture supplied a fabricated evidence UUID; corrected to append a real source.",
@@ -45,8 +48,11 @@
       "source_commit": "c6023c7"
     },
     "runtime_commit": "ca045a9",
+    "seconds": 535.73,
+    "skipped": 84,
     "source_commit": "5ae009f",
-    "status": "running"
+    "status": "complete",
+    "verified_at": "2026-09-13T18:43:45.906234+00:00"
   },
   "installed": {
     "log_sha256": "5ab537dfaec69002bac6d93073dc5a7cea2ef143d29873cfa30269d2929aa160",

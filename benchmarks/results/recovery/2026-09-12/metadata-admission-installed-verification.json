@@ -1,0 +1,16 @@
+{
+  "installed_package": "/private/tmp/prme-metadata-admission-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 129,
+  "package_manifest_sha256": "8bfbda0e3e326350addd5f6780eaabdabc480e2ac75570b28f0b43feab8a33a5",
+  "pytest_exit_code": 0,
+  "source_commit": "82ea929",
+  "test_files": [
+    "tests/test_metadata_admission.py",
+    "tests/test_snapshot_json.py",
+    "tests/test_atomic_lifecycle.py",
+    "tests/test_reinforcement_retries.py",
+    "tests/test_reinforcement_atomic.py",
+    "tests/test_atomic_organizer_merges.py"
+  ],
+  "wheel_sha256": "26ef731447d56eb4269e612982c9c6514c5bf6a13bb6d05064741cee58461e19"
+}
