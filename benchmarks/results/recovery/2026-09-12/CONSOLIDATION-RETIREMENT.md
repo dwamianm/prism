@@ -49,8 +49,15 @@ The PostgreSQL schema is unchanged.
   and after testing. Source tests use DuckDB 1.4.4; this installed environment
   uses DuckDB 1.5.5.
 - Repository Ruff and strict public-client mypy passed.
-- Full live PostgreSQL suite is tracked separately; its native completion must
-  be recorded before calling that check passed.
+- Full CI test directory with live PostgreSQL: **3,109 passed, 89 skipped**,
+  443.57 seconds, native exit 0. The temporary database was removed afterward.
+- Remaining repository collections ran separately from the same frozen source:
+  **101 research tests passed** and **14 example tests passed**. The example run
+  emitted its existing helper-class collection warning. These three collections
+  account for 3,224 passing tests; they were not one combined invocation.
+- The supplemental legacy-metadata test, added after the frozen full run,
+  passed **3 checks, 3 skipped** and preserved NaN and both infinities through
+  an actual retirement record. Its PostgreSQL fixture variants are skipped.
 
 A separate 100,000-row synthetic SQL check returned identical ordered IDs for
 three query shapes before and after index removal. Median milliseconds changed
@@ -63,3 +70,7 @@ performance claim. The runnable probe is
 
 No packing default, quality score or simulation assertion changed. The existing
 70/74 scenario gate and incomplete answer studies remain unresolved.
+
+See the [verification record](consolidation-retirement-d450160.json) and
+[installed package identity](consolidation-retirement-installed-verification.json)
+for native exits, retained failure attempts, artifact hashes and collection scope.
