@@ -204,7 +204,23 @@ returned units. It does not substitute original documents for partial returns.
 A fresh [three-case authored integration run](public-capture-authored-verification.json)
 passed both workers and the complete analyzer with native exit zero; 14 contract
 tests also pass. This verifies the capture/analysis path, not
-comparative quality. Dataset capture is in progress; no dataset quality scores
-have been inspected. All 119 successful cases and both native exit codes are
-required before analysis. These raw profiles disable LLM extraction and cannot
+comparative quality. The normalized run subsequently rejected optional custom metadata missing from
+five returned units in `case-0046`; native source role and timestamp fields
+remained present. PRME was stopped with native exit 130. Hindsight continues
+recording full operational failure coverage. No dataset quality scores have
+been inspected; the [native-provenance adapter preflight](HINDSIGHT-NATIVE-PROVENANCE-PREFLIGHT.md)
+precedes any complete replacement registration. All 119 successful cases and both
+native exit codes remain required before analysis. These raw profiles disable LLM extraction and cannot
 establish full-system or answer-quality leadership.
+
+
+The [common-reader protocol](HINDSIGHT-PRME-READER-PROTOCOL.md) freezes two reader
+families, exact verified 4K contexts and fresh empty-memory controls. A separate
+worker accepts only neutral questions, dates and context strings. The [live
+three-case reader preflight](public-context-reader-authored-verification.json)
+completed nine logical predictions from seven unique requests with native exit
+zero; offline verification reproduced every prediction from its raw response.
+The [separate judge calibration](hindsight-prme-reader-judge-calibration-verification.json)
+passed 41/42 authored controls, with zero false accepts and one false rejection.
+Both parent and worker exited zero. These are operational/calibration results;
+the failed dataset captures remain ineligible for reader generation or scoring.

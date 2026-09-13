@@ -47,12 +47,20 @@ These records preserve commit identities, raw-output hashes, failures and limits
    passed retain/reopen/recall, bank isolation and seven matched embedding inputs;
    the first strict dataset capture stopped when native ingress removed control
    characters. A [fresh normalized comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NORMALIZED-DEV-PROTOCOL.md)
-   is now running all 119 development questions against installed PRME `b7521bc`.
+   began all 119 development questions against installed PRME `b7521bc`.
    Both use FastEmbed 0.8.0 and identical numerical dependencies/model assets.
    Complete source readback and returned-text validation precede analysis; actual
    returned contexts remain separate from shared whole-turn reconstruction.
-   No dataset quality results have been inspected. Timing under concurrent load
-   cannot support a speed ratio.
+   Its strict metadata-preservation gate subsequently rejected optional custom
+   metadata missing from five results; native role and timestamp fields remained
+   present. PRME was stopped, and Hindsight continues an operational failure audit.
+   A [native-provenance adapter preflight](../benchmarks/results/research/2026-09-12/HINDSIGHT-NATIVE-PROVENANCE-PREFLIGHT.md)
+   is testing the correct returned fields before another complete registration.
+   The [common-reader protocol](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-PROTOCOL.md)
+   is frozen for Qwen/Gemma plus fresh empty controls. Its authored live reader
+   check passed; the separate judge passed 41/42 calibration controls with zero
+   false accepts. No dataset quality results have been inspected. Timing under
+   concurrent load cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
    to separate missing sources, lost qualifiers, insufficient context, incorrect
    temporal or episode associations, arithmetic and task-completion errors.
