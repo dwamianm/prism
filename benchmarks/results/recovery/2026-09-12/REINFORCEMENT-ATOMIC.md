@@ -21,8 +21,10 @@ before/after records, and persistence after reopening. The regression's old
 read-barrier hook was confined to the concurrent calls after moving validation
 into the backend; it must not stall the unrelated post-operation inspection.
 
-The full source suite is still running at this checkpoint. These focused passes
-are not a full-suite result. See [structured evidence](reinforcement-atomic-483cc68.json)
+The full source suite completed with native exit 0: 2,510 passed and 577 skipped
+in 432.36 seconds. PostgreSQL was not configured for that full invocation; its
+39-test focused run and installed run above used a live isolated database. The
+full result must not be described as a complete live-PostgreSQL suite. See [structured evidence](reinforcement-atomic-483cc68.json)
 and [installed verification](reinforcement-atomic-installed-verification.json).
 
 Separate calls still count as separate signals; no caller-selected idempotency

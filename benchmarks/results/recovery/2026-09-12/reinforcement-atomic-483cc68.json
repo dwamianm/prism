@@ -7,9 +7,14 @@
     "skipped": 0
   },
   "full_suite": {
-    "log": "/tmp/prme-reinforcement-atomic-full.log",
+    "log_sha256": "ac88a384cafd74458802ba8a4b68b33d46222137e76694af6ba8847db0a39ddc",
+    "native_exit_code": 0,
     "native_session_id": 76837,
-    "status": "running"
+    "passed": 2510,
+    "postgres_configured": false,
+    "seconds": 432.36,
+    "skipped": 577,
+    "status": "complete"
   },
   "installed": {
     "duration_seconds": 18.23,
