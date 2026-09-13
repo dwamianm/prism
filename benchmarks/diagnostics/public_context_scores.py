@@ -21,12 +21,13 @@ COMPARISONS = {
 }
 
 
-def summarize(details, groups, readers):
+def summarize(details, groups, readers, *, comparisons=None):
     """Each reader gets its own comparisons, including every registered category."""
+    comparisons = COMPARISONS if comparisons is None else comparisons
 
     def metrics(rows, model):
         values = {}
-        for name, (before, after) in COMPARISONS.items():
+        for name, (before, after) in comparisons.items():
             pairs = [
                 (int(row["answers"][model][before]), int(row["answers"][model][after]))
                 for row in rows
