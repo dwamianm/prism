@@ -66,9 +66,9 @@ replacement policy solves it without other regressions.
 The [registered common readers](HINDSIGHT-PRME-READER-PROTOCOL.md) consume only
 the exact verified actual 4K contexts, with a fresh empty-memory control. Both
 plans and the prepared input hash were committed at `f1a0b64` before generation.
-Qwen completed all 357 logical predictions with native exit zero; every saved
-response and prompt reproduced offline. Gemma generation is running; joint
-export and separate calibrated judging follow its native completion.
+Both readers completed all 357 logical predictions each with native exit zero;
+every saved response and prompt reproduced offline. The complete 714-judgment
+export is prepared under the frozen plan for separate calibrated judging.
 No answer-quality score is reported here.
 
 These are development questions that already informed PRME changes, not an

@@ -70,7 +70,9 @@ These records preserve commit identities, raw-output hashes, failures and limits
    keeps reader families separate and reports category losses. Dataset reader
    input and plans are frozen at `f1a0b64`; Qwen completed all 357 predictions
    with native exit zero and offline reproduction of every saved response.
-   Gemma generation is running; joint judging follows both complete runs.
+   Gemma also completed all 357 predictions with native exit zero. Both readers'
+   responses reproduce offline; all 714 judgments are prepared under the frozen
+   judge plan. Separate calibrated judging is next.
    No answer-quality result is available yet.
    Timing under concurrent load cannot support a speed ratio.
 3. **Explain remaining failures before adding techniques.** Use completed results
