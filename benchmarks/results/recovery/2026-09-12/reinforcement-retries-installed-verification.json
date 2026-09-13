@@ -1,0 +1,17 @@
+{
+  "installed_package": "/private/tmp/prme-reinforcement-retries-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 125,
+  "package_manifest_sha256": "9af887911d8a810aa180f3539ccc7275687f6bd0103c7e84aaede93791e1a2c2",
+  "pytest_exit_code": 0,
+  "source_commit": "ab4f362",
+  "test_files": [
+    "tests/test_reinforcement_retries.py",
+    "tests/test_reinforcement_retry_surfaces.py",
+    "tests/test_reinforcement_atomic.py",
+    "tests/test_reinforcement_evidence.py",
+    "tests/test_reinforcement.py",
+    "tests/test_api_object_ids.py",
+    "tests/test_api.py"
+  ],
+  "wheel_sha256": "42d56edcbf59640e4d046a0496839819c921140bcd909966ab5fb93ebcb21e8b"
+}

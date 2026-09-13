@@ -3,7 +3,8 @@
 `reinforce()` applies a caller confirmation to one memory node. It increases the
 reinforcement boost by 0.15 and base confidence by 0.05, up to increment caps of
 0.5 and 0.95 respectively. Values already above those caps are preserved.
-An optional evidence event must exist in the same owner and scope as the node.
+An optional evidence event must exist in the same owner and scope as the node
+when applying a new confirmation.
 
 Generate a request UUID once and save it with your application's job before the
 first call. Reuse that UUID, node and evidence if the call times out, loses its

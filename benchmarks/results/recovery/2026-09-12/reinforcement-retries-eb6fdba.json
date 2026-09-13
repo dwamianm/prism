@@ -1,0 +1,41 @@
+{
+  "before": {
+    "failed": 4,
+    "log_sha256": "45fd9e8bdbd740165985069b60c84d8b7882471840fba290ad06dddc027521aa",
+    "native_exit_code": 1,
+    "reason": "Caller-supplied request_id was unavailable",
+    "skipped": 4
+  },
+  "focused_source": {
+    "log_sha256": "e10469ac226d3426e8306177c05ab5e37eb4d84f2bd967309129b52ea84a8532",
+    "native_exit_code": 0,
+    "passed": 115,
+    "seconds": 17.33,
+    "skip_reason": "DuckDB native worker cancellation test is not applicable to PostgreSQL",
+    "skipped": 1
+  },
+  "frozen_source_commit": "ab4f362",
+  "full_postgres_suite": {
+    "isolated_database": "prme_reinforcement_retries_20260913",
+    "log": "/tmp/prme-reinforcement-retries-full-pg.log",
+    "native_session_id": 92297,
+    "status": "running"
+  },
+  "installed": {
+    "log_sha256": "ced3ec6ec442eb9e04f61b3ca3ace8be9007ecc71548ff4bcf1dbec3b7706428",
+    "native_exit_code": 0,
+    "passed": 115,
+    "seconds": 30.19,
+    "skipped": 1,
+    "verification_sha256": "b31c6cfd9aadd7a2addbfe22589a56205a7c03206c0de266946be368ca800576",
+    "warning": "Upstream Starlette uses a deprecated AnyIO alias",
+    "warnings": 1
+  },
+  "limits": [
+    "Keys deduplicate confirmations, not semantic evidence or independent corroboration.",
+    "Unkeyed calls retain separate-signal behavior.",
+    "New version 2 records do not reconstruct missing historical updates."
+  ],
+  "observed_at": "2026-09-13T17:59:46.342545+00:00",
+  "runtime_commit": "eb6fdba"
+}
