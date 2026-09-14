@@ -26,8 +26,10 @@ packed context at 2,048, 4,096, and 8,192-token budgets.
 This is a pipeline and provenance diagnostic, not a product-quality or
 leadership benchmark. With one temporal-reasoning question, it cannot estimate
 general retrieval quality, answer accuracy, abstention, or statistical
-uncertainty. The next evidence step is a clean preregistered multi-category
-cohort using the same raw/extracted protocol.
+uncertainty. The later [multi-category cohort](SOURCE-LINEAGE-COHORT.md) also
+found that this smoke counted derived nodes before the evaluator drained and
+mapped the product's deferred raw NOTE path. Its derived-node counts remain
+valid; use the cohort's 80/80 result for corrected durable source coverage.
 
 Artifacts:
 
