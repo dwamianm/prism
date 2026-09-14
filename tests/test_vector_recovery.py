@@ -153,6 +153,19 @@ async def test_old_snapshot_cannot_resurrect_deleted_vectors(database, tmp_path,
     assert set(np.asarray(open_index(database, tmp_path, OfflineProvider())._index.keys)) == expected
 
 
+async def test_loaded_empty_snapshot_accepts_first_new_vector(database, tmp_path):
+    """USearch's loaded empty native object must not be reused for insertion."""
+    index = open_index(database, tmp_path, save_interval=1)
+    await index.index("one", "first", "alice")
+    await index.delete_by_node_id("one")
+    assert len(index._index) == 0
+
+    reopened = open_index(database, tmp_path)
+    key = await reopened.index("two", "second", "alice")
+    assert reopened._index.contains(key)
+    assert len(reopened._index) == 1
+
+
 async def test_failed_snapshot_write_preserves_previous_complete_file(database, tmp_path, monkeypatch):
     index = open_index(database, tmp_path, save_interval=1)
     await index.index("one", "first", "alice")

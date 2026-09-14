@@ -465,6 +465,12 @@ small numerical differences; preserving recorded vectors remains necessary for
 exact historical replay. The rebuild `batch_size` argument controls database
 pagination, not embedding batch size, and already indexes one node per call.
 
+An empty USearch snapshot is reopened into a fresh native index before durable
+payload recovery. USearch 2.23.0 can crash when adding the first vector to a
+loaded snapshot whose final vector was removed before saving; discarding that
+empty native object loses no search data and keeps archive/delete followed by
+restart and reuse safe. Nonempty snapshots retain the normal recovery path.
+
 The throughput tradeoff depends on text lengths. A local 64-text authored probe
 measured roughly 153 ms instead of 43 ms for short texts, but 435 ms instead of
 571 ms for mixed lengths. These are illustrative ONNX-only timings, not end-to-end
