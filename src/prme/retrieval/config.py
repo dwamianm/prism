@@ -166,6 +166,16 @@ class PackingConfig(BaseModel):
             "is omitted when it cannot fit without displacing a memory record."
         ),
     )
+    context_format: Literal["auditable", "compact"] = Field(
+        default="auditable",
+        description=(
+            "Render packed records as self-describing JSON objects ('auditable') "
+            "or schema-declared JSON arrays with short bundle-local references "
+            "('compact'). Both formats retain type, scope, epistemic state, "
+            "lifecycle, source provenance, temporal fields, and the complete "
+            "selected representation text."
+        ),
+    )
     token_budget: int = Field(
         default=4096, ge=0, description="Default context budget in tokens"
     )

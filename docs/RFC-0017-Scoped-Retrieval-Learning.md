@@ -136,7 +136,7 @@ receipts; no new packing replay guarantee is introduced.
 
 ### Context guidance and receipt version 6
 
-All current pipeline retrievals use version 6 and record
+Version 6 pipeline retrievals record
 `packing.context_guidance_mode` as `"off"`, `"temporal"`, or `"all"`. The field
 affects the exact context exposed to an answering model, even when a particular
 query receives no prefix, so it is part of the durable packing configuration.
@@ -147,6 +147,16 @@ Versions 1–5 always mean guidance was off. Their serializers omit the later
 field, retain canonical bytes and feedback checksums, and reject claims that
 guidance was enabled. Version 5 remains valid for historical balanced receipts;
 versions 4 and 5 are no longer emitted by the current pipeline.
+
+### Compact context and receipt version 7
+
+Current pipeline retrievals use version 7 and explicitly record
+`packing.context_format` as `"auditable"` or `"compact"`. Compact rendering
+changes the exact model exposure while retaining all evidence-state and temporal
+fields, so an omitted format cannot be inferred for a new receipt. Versions 1–6
+always mean the historical auditable JSON-object renderer; their serializers
+omit the later field and preserve canonical bytes and feedback checksums. Version
+7 keeps the version 6 execution, ordering, and guidance requirements.
 
 ## Explicit relevance records
 

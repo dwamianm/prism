@@ -31,7 +31,7 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 2
+ADAPTER_SCHEMA_VERSION = 3
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
@@ -62,6 +62,7 @@ def _config_identity(agent: Any) -> dict[str, object]:
         "embedding_model": "BAAI/bge-small-en-v1.5",
         "embedding_dimension": 384,
         "packing_policy": "balanced",
+        "context_format": agent.prme_context_format,
     }
 
 
@@ -81,6 +82,7 @@ def _config(root: Path, agent: Any) -> PRMEConfig:
         packing=PackingConfig(
             token_budget=agent.prme_token_budget,
             multipath_ordering="balanced",
+            context_format=agent.prme_context_format,
         ),
         enable_qa_pairing=False,
         enable_query_reformulation=False,
@@ -153,6 +155,9 @@ def initialize_prme_agent(
         config.get("prme_max_chunk_chars", _DEFAULT_CHUNK_CHARS)
     )
     agent.prme_user_id = str(config.get("prme_user_id", "memoryagentbench")).strip()
+    agent.prme_context_format = str(
+        config.get("prme_context_format", "auditable")
+    ).strip()
     if not agent.prme_user_id:
         raise ValueError("prme_user_id must be non-empty")
     if agent.prme_result_limit <= 0:
@@ -161,6 +166,8 @@ def initialize_prme_agent(
         raise ValueError("prme_token_budget must be positive")
     if agent.prme_max_chunk_chars < 512:
         raise ValueError("prme_max_chunk_chars must be at least 512")
+    if agent.prme_context_format not in {"auditable", "compact"}:
+        raise ValueError("prme_context_format must be 'auditable' or 'compact'")
 
     agent.prme_pack_path = Path(agent.agent_save_to_folder) / "prme_pack"
     agent.prme_client = None
@@ -340,6 +347,7 @@ def _save_retrieval(
         "request_id": request_id,
         "receipt_persisted": receipt_persisted,
         "token_budget": agent.prme_token_budget,
+        "context_format": agent.prme_context_format,
         "context_token_count": context_token_count,
         "included_count": included_count,
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),

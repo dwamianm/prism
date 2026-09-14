@@ -884,9 +884,12 @@ is ignored. The equivalent environment setting is
 Temporal context guidance is enabled by default; disable it with
 `PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
 experimental current-state and personalization prompts. Every current retrieval
-receipt uses schema version 6 and retains both policies in `receipt.packing`.
-Versions 1–5 retain their original canonical JSON and feedback checksums and
-always mean context guidance was off.
+receipt uses schema version 7 and retains ordering, guidance, and context format
+in `receipt.packing`. Set `PRME_PACKING__CONTEXT_FORMAT=compact` to use
+schema-declared JSON arrays and bundle-local references; `auditable` remains the
+default. Versions 1–6 retain their original canonical JSON and feedback checksums
+and always mean auditable rendering. Versions 1–5 also mean context guidance was
+off.
 
 This example chooses smaller candidate limits explicitly; it is not a list of defaults.
 
@@ -898,6 +901,7 @@ PackingConfig(
     token_budget=4096,               # Context budget in tokens
     min_fidelity=RepresentationLevel.REFERENCE,  # Minimum fidelity
     overhead_tokens=100,             # Additional caller reserve beyond measured context
+    context_format="auditable",      # Or "compact" for schema-declared arrays
     graph_max_candidates=50,         # Max from graph traversal
     vector_k=50,                     # Max from vector search
     lexical_k=50,                    # Max from lexical search

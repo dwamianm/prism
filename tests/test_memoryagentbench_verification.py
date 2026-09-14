@@ -86,6 +86,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "embedding_model": "BAAI/bge-small-en-v1.5",
         "embedding_dimension": 384,
         "packing_policy": "balanced",
+        "context_format": "auditable",
     }
     manifest = {
         "schema_version": adapter.ADAPTER_SCHEMA_VERSION,
@@ -120,6 +121,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "request_id": "de305d54-75b4-431b-adb2-eb6b9e546014",
         "receipt_persisted": True,
         "token_budget": 4096,
+        "context_format": "auditable",
         "context_token_count": count_tokens(context),
         "included_count": 1,
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),

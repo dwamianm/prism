@@ -133,15 +133,17 @@ content hashes, configuration and context membership through the authenticated
 owner. A logging failure does not fail retrieval; it sets the flag to false.
 Legacy requests without a receipt return 404.
 
-New pipeline receipts use schema version 4 for density/score packing and version
-5 for balanced packing. Their `score_provenance` map contains applied
+Current pipeline receipts use schema version 7 and explicitly retain packing
+ordering, context guidance, and context format. Historical schema versions 4 and
+5 introduced density/score and balanced ordering; version 6 introduced guidance.
+Their `score_provenance` map contains applied
 weights, base features and ordered neural/session adjustments for each returned
 candidate; `ranking_policy` records the actual sorting rule. Python's
 `RetrievalReceipt.model_validate_json(...)` and `replay_ranking()` validate and
 replay this saved ranking without the current graph. Version 1 and 2 receipt JSON
 and checksums remain unchanged and still support labels; version 1 cannot replay scores.
 These snapshots cover returned candidates only, not unseen retrieval candidates.
-Versions 4 and 5 also include `execution.parameters` and `execution.features`, recording
+Versions 3 and later also include `execution.parameters` and `execution.features`, recording
 request filters/adjustments and reported model/environment identity. These fields
 do not establish that a remote model is pinned. The explicit ranking-adjustment
 trial argument is currently available through Python; HTTP reads its saved receipts.

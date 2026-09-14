@@ -215,6 +215,13 @@ improved temporal answers from 31/50 to 34/50. Set
 mode includes experimental personalization and current-state prompts and is not
 the default because personalization produced a real negative-preference failure.
 
+For workloads with many short records, `PackingConfig(context_format="compact")`
+uses token-counted schema-declared arrays and bundle-local references while
+retaining evidence state, provenance, time fields, and complete selected text. Resolve
+references with `response.bundle.resolve_context_ref(...)`. The self-describing
+`"auditable"` JSON-object format remains the default; see the packing guide before
+changing an evaluated workload.
+
 For exports and counts, enumerate the stored records instead of counting search
 results. Iteration reads every matching node in bounded pages:
 

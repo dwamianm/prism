@@ -296,10 +296,25 @@ class MemoryBundle(BaseModel):
             "the selected memory records"
         ),
     )
+    context_format: Literal["auditable", "compact"] = Field(
+        default="auditable",
+        description="Serialization format used by rendered_context",
+    )
+    context_references: dict[str, UUID] = Field(
+        default_factory=dict,
+        description="Bundle-local compact references mapped to full memory node IDs",
+    )
 
     def render(self) -> str:
         """Return the already-budgeted context; do not reconstruct full nodes."""
         return self.rendered_context
+
+    def resolve_context_ref(self, reference: str) -> UUID:
+        """Resolve a compact context reference such as ``m3`` to a node ID."""
+        try:
+            return self.context_references[reference]
+        except KeyError as exc:
+            raise ValueError(f"Unknown context reference: {reference}") from exc
 
     def render_system_instructions(self) -> str:
         """Render system instructions as a formatted prompt block.

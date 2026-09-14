@@ -38,6 +38,24 @@ it can become a reference or be excluded. References do not contain source text.
 Call `response.bundle.render()` for the exact budgeted text; the surrounding
 API response and the application's other prompts consume additional tokens.
 
+For stores with many short records, opt into the compact renderer:
+
+```python
+config = config.model_copy(update={
+    "packing": PackingConfig(token_budget=4096, context_format="compact")
+})
+```
+
+It emits a declared JSON-array schema and short references such as `m3`, while
+retaining type, scope, epistemic state, lifecycle, provenance, representation,
+event/validity times, and complete selected representation text. Resolve a model-returned reference
+with `response.bundle.resolve_context_ref("m3")`; the full mapping is available as
+`response.bundle.context_references`. Embedded delimiters and newlines remain
+JSON-escaped data. The default `"auditable"` format keeps self-describing JSON
+objects and full node IDs in the model context. Exact token accounting applies to
+both formats. Evaluate answer quality before changing a production workload.
+The equivalent environment setting is `PRME_PACKING__CONTEXT_FORMAT=compact`.
+
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously
 examined 381-question regression partition, it increased from 65.04% to 90.55%,
@@ -55,12 +73,13 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Current retrievals produce version 6 receipts with explicit ordering and
-context-guidance policies and the same score-replay and execution requirements.
-Versions 1–5 keep their previous canonical bytes and checksums; they always mean
-context guidance was off. Version 5 remains the historical balanced format, and
-versions 1–4 cannot claim balanced packing. Older readers that lack version 6
-support cannot consume new receipts. Score replay reproduces the returned
+Current retrievals produce version 7 receipts with explicit ordering,
+context-guidance, and context-format policies and the same score-replay and
+execution requirements. Versions 1–6 keep their previous canonical bytes and
+checksums; they always mean auditable rendering. Versions 1–5 also mean context
+guidance was off. Version 5 remains the historical balanced format, and versions
+1–4 cannot claim balanced packing. Older readers that lack version 7 support
+cannot consume new receipts. Score replay reproduces the returned
 candidate ranking; it is not a reconstruction of packing or unseen candidates.
 Relevance feedback remains linked to the saved context exposure.
 

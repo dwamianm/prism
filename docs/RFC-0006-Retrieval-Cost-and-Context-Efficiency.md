@@ -53,8 +53,8 @@ ordering policy; legacy receipts preserve their original bytes and implicit
 density semantics. Balanced ordering reserves the
 highest-scored ordinary multi-path candidate, then orders the remainder by
 score divided by full-entry tokens to the power 0.25. The head still obeys
-ordinary fidelity and budget checks. New pipeline retrievals emit version 6
-receipts with both ordering and context-guidance policy. No legacy receipt bytes
+ordinary fidelity and budget checks. New pipeline retrievals emit version 7
+receipts with ordering, context-guidance, and context-format policy. No legacy receipt bytes
 change. The [packing guide](PACKING.md) describes the completed source-retention
 studies, per-question losses and answer validation. The balanced decision does
 not retroactively change the failed score-only promotion result.
@@ -361,3 +361,19 @@ renaming the key preserved both firm and actually provisional source wording in
 that small diagnostic. This is not a broad answer-accuracy claim. Public
 `MemoryNode.lifecycle_state` and bundle candidate metadata are unchanged. The
 complete rendered output, including metadata keys, remains token-counted.
+
+## Compact rendering extension (2026-09-14)
+
+`PackingConfig.context_format="compact"` is an opt-in serialization for workloads
+where repeated record metadata consumes material context. It declares one field
+schema, then emits each whole record as a JSON array with a short, deterministic
+bundle-local reference. Type, scope, epistemic state, lifecycle, source type,
+representation, event time, validity interval, and selected representation text remain present.
+JSON encoding preserves record boundaries and treats embedded newlines and
+delimiters as data. The default `"auditable"` object format is unchanged.
+
+`MemoryBundle.context_references` maps compact references to full node UUIDs, and
+`resolve_context_ref()` provides checked lookup for citation handling. Token
+accounting covers the schema declaration and complete arrays. Version 7 retrieval
+receipts record the selected format and bind the exact rendered context hash;
+versions 1–6 retain their canonical bytes and always mean `"auditable"`.

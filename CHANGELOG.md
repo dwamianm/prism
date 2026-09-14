@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in compact packed context for short-record workloads. It replaces repeated
+  JSON keys and full in-prompt UUIDs with one declared array schema and deterministic
+  bundle-local references while retaining type, scope, epistemic state,
+  lifecycle, provenance, representation, temporal fields, and complete selected text.
+  `MemoryBundle.context_references` and `resolve_context_ref()` map citations back
+  to full node IDs. Exact token accounting covers the complete output, and receipt
+  schema version 7 records the format while versions 1–6 preserve their canonical
+  bytes and historical auditable semantics. The auditable format remains default.
 - A pinned MemoryAgentBench adapter for the benchmark's four incremental memory
   competencies. It uses the public PRME client with the product-default 4K
   balanced packer, pins the upstream dataset revision, fences completed source

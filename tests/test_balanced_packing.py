@@ -91,3 +91,46 @@ def test_versions_before_six_mean_guidance_was_off():
         claimed["packing"]["context_guidance_mode"] = "temporal"
         with pytest.raises(ValidationError, match="version 6"):
             RetrievalReceipt.model_validate(claimed)
+
+
+def test_version_seven_records_context_format_and_requires_it_explicitly():
+    raw = json.loads((Path(__file__).parent / "fixtures/relevance/receipt-v4.json").read_text())
+    raw["schema_version"] = 7
+    raw["packing"].update({
+        "multipath_ordering": "balanced",
+        "context_guidance_mode": "temporal",
+        "context_format": "compact",
+    })
+    receipt = RetrievalReceipt.model_validate(raw)
+    assert receipt.packing.context_format == "compact"
+    assert RetrievalReceipt.model_validate_json(receipt.model_dump_json()).checksum == receipt.checksum
+    complete = json.loads(receipt.model_dump_json())
+    raw["packing"].pop("context_format")
+    with pytest.raises(ValidationError, match="explicit context format"):
+        RetrievalReceipt.model_validate(raw)
+    for field, message in (
+        ("multipath_ordering", "explicit packing ordering"),
+        ("context_guidance_mode", "explicit context guidance mode"),
+    ):
+        missing = json.loads(json.dumps(complete))
+        missing["packing"].pop(field)
+        with pytest.raises(ValidationError, match=message):
+            RetrievalReceipt.model_validate(missing)
+
+
+def test_versions_before_seven_mean_context_was_auditable():
+    raw = json.loads((Path(__file__).parent / "fixtures/relevance/receipt-v4.json").read_text())
+    for version in (4, 5, 6):
+        raw["schema_version"] = version
+        raw["packing"]["multipath_ordering"] = "balanced" if version >= 5 else "density"
+        if version == 6:
+            raw["packing"]["context_guidance_mode"] = "temporal"
+        else:
+            raw["packing"].pop("context_guidance_mode", None)
+        receipt = RetrievalReceipt.model_validate(raw)
+        assert receipt.packing.context_format == "auditable"
+        assert "context_format" not in receipt.model_dump()["packing"]
+        claimed = json.loads(receipt.model_dump_json())
+        claimed["packing"]["context_format"] = "compact"
+        with pytest.raises(ValidationError, match="version 7"):
+            RetrievalReceipt.model_validate(claimed)

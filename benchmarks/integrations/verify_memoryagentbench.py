@@ -76,6 +76,7 @@ def _verify_manifest(
     *,
     expected_sub_dataset: str,
     expected_budget: int,
+    expected_context_format: str,
 ) -> dict[str, Any]:
     manifest = _load_object(path)
     identity = manifest.get("config")
@@ -89,6 +90,7 @@ def _verify_manifest(
         or identity.get("sub_dataset") != expected_sub_dataset
         or identity.get("token_budget") != expected_budget
         or identity.get("packing_policy") != "balanced"
+        or identity.get("context_format") != expected_context_format
         or manifest.get("config_sha256")
         != hashlib.sha256(_canonical(identity)).hexdigest()
     ):
@@ -244,6 +246,7 @@ def verify(
     model = agent_config.get("model")
     output_dir = agent_config.get("output_dir")
     token_budget = agent_config.get("prme_token_budget")
+    context_format = agent_config.get("prme_context_format", "auditable")
     if not all(
         isinstance(value, str) and value for value in (sub_dataset, model, output_dir)
     ):
@@ -256,6 +259,8 @@ def verify(
         or token_budget <= 0
     ):
         raise ValueError("configuration has an invalid PRME token budget")
+    if context_format not in {"auditable", "compact"}:
+        raise ValueError("configuration has an invalid PRME context format")
 
     registered_contexts = registered_task.get("contexts")
     if (
@@ -405,6 +410,7 @@ def verify(
             != hashlib.sha256(context.encode("utf-8")).hexdigest()
             or capture.get("receipt_persisted") is not True
             or capture.get("token_budget") != token_budget
+            or capture.get("context_format") != context_format
         ):
             raise ValueError(f"query {query_id} retrieval capture is inconsistent")
         try:
@@ -433,6 +439,7 @@ def verify(
                 manifest_path,
                 expected_sub_dataset=sub_dataset,
                 expected_budget=token_budget,
+                expected_context_format=context_format,
             )
             if manifest["source_chunks"] != expected_chunks[context_id]:
                 raise ValueError(

@@ -14,6 +14,7 @@ labels, keypoints, and question metadata do not enter the memory pack.
 - PRME embedding: FastEmbed `BAAI/bge-small-en-v1.5`, 384 dimensions
 - PRME context budget: 4,096 `cl100k_base` tokens
 - PRME packing: `balanced`
+- PRME context format: `auditable` by default; `compact` is an explicit trial arm
 
 The installer patches the upstream dataset loader to use the pinned dataset
 revision. It refuses a different upstream source revision unless the operator
@@ -118,6 +119,13 @@ export PRME_MAB_OPENAI_API_KEY=ollama
 A local-reader result is not directly comparable to a published result using a
 different reader. Run every compared arm with the same model, generation
 parameters, task data, and judging path.
+
+For a registered compact-context trial, set `prme_context_format: compact` in a
+copied agent configuration before registration. The setting is included in the
+adapter manifest, every retrieval capture, and the outcome-free registration's
+configuration hash. Use a distinct agent/output path so no auditable-format pack
+can be reused. Compact output remains bound by the same 4K token budget and
+durable receipt checks.
 
 ## Storage and recovery contract
 

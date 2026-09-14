@@ -31,7 +31,9 @@ class FakeAgent:
     pass
 
 
-def fake_agent(root: Path, *, budget: int = 4096) -> FakeAgent:
+def fake_agent(
+    root: Path, *, budget: int = 4096, context_format: str = "auditable"
+) -> FakeAgent:
     completions = FakeCompletions()
     reader = SimpleNamespace(chat=SimpleNamespace(completions=completions))
     agent = FakeAgent()
@@ -63,6 +65,7 @@ def fake_agent(root: Path, *, budget: int = 4096) -> FakeAgent:
             "prme_token_budget": budget,
             "prme_max_chunk_chars": 512,
             "prme_user_id": "test-owner",
+            "prme_context_format": context_format,
         },
     )
     return agent
@@ -83,14 +86,15 @@ def upstream_modules(monkeypatch):
     monkeypatch.setitem(sys.modules, "utils.templates", templates)
 
 
+@pytest.mark.parametrize("context_format", ["auditable", "compact"])
 def test_adapter_preserves_text_and_round_trips_pack(
-    tmp_path: Path, upstream_modules
+    tmp_path: Path, upstream_modules, context_format: str
 ) -> None:
     source = (
         "A" * 700
         + "\n\nThe checkout page says to click Place Order once because confirmation is delayed.\n"
     )
-    agent = fake_agent(tmp_path)
+    agent = fake_agent(tmp_path, context_format=context_format)
     try:
         assert "".join(adapter._split_units(source, 512)) == source
         assert all(len(chunk) <= 512 for chunk in adapter._split_units(source, 512))
@@ -126,7 +130,8 @@ def test_adapter_preserves_text_and_round_trips_pack(
         )
         assert retrieval["context_sha256"]
         assert retrieval["request_id"]
-        assert retrieval["adapter_schema_version"] == 2
+        assert retrieval["adapter_schema_version"] == 3
+        assert retrieval["context_format"] == context_format
         assert retrieval["sub_dataset"] == "eventqa_65536"
         assert retrieval["query_id"] == 3
         assert retrieval["context_id"] == 7
@@ -146,7 +151,7 @@ def test_adapter_preserves_text_and_round_trips_pack(
     finally:
         adapter._close_client(agent)
 
-    reopened = fake_agent(tmp_path)
+    reopened = fake_agent(tmp_path, context_format=context_format)
     try:
         adapter.load_prme_agent(reopened)
         result = adapter.handle_prme_agent(
@@ -180,3 +185,11 @@ def test_adapter_rejects_incomplete_and_changed_packs(tmp_path: Path) -> None:
     changed = fake_agent(tmp_path, budget=2048)
     with pytest.raises(RuntimeError, match="incompatible or incomplete"):
         adapter.load_prme_agent(changed)
+
+
+def test_adapter_rejects_unknown_context_format(tmp_path: Path) -> None:
+    agent = FakeAgent()
+    agent.sub_dataset = "eventqa_65536"
+    agent.agent_save_to_folder = str(tmp_path / "agent")
+    with pytest.raises(ValueError, match="prme_context_format"):
+        adapter.initialize_prme_agent(agent, {"prme_context_format": "opaque"})
