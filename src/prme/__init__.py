@@ -27,6 +27,14 @@ from prme.models.aggregation import (
     QuantityGroup,
     QuantitySample,
 )
+from prme.models.temporal import (
+    AssertionState,
+    AssertionStateConflict,
+    AssertionStateEntry,
+    AssertionStateHistoricalCoverage,
+    AssertionStateQuery,
+    AssertionStateValue,
+)
 from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
 from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
@@ -95,6 +103,12 @@ __all__ = [
     "AssertionAggregation",
     "AssertionGroup",
     "AssertionQuery",
+    "AssertionState",
+    "AssertionStateConflict",
+    "AssertionStateEntry",
+    "AssertionStateHistoricalCoverage",
+    "AssertionStateQuery",
+    "AssertionStateValue",
     "QuantityAggregation",
     "QuantityAggregationQuery",
     "QuantityGroup",

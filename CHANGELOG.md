@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Exact temporal assertion state across async/sync Python, HTTP, and MCP. A
+  required owner, scope, structured subject/predicate, and timezone aware
+  validity instant produce auditable current candidates plus stored history,
+  supersedence, contradiction, epistemic, lifecycle, clock, and evidence data.
+  The operation preserves differing unresolved values and never selects truth
+  from recency; historical knowledge cutoffs retain an explicit non-replay
+  boundary.
 - Exact decimal quantity aggregation across Python, HTTP, and MCP, with totals,
   minima, maxima, counts, temporal bounds, and source/evidence samples. Every
   group must retain its normalized unit, stored quantities are revalidated at

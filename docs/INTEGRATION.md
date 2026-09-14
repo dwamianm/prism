@@ -1127,6 +1127,39 @@ evidence. HTTP exposes `POST /v1/quantities/aggregate`; MCP exposes
 `memory_aggregate_quantities`. These operations use the same unchanged-store and
 extraction/real-world coverage boundaries as assertion aggregation.
 
+Use the exact temporal state operation when the application already knows an
+assertion's subject and predicate:
+
+```python
+from datetime import datetime, timezone
+from prme import AssertionStateQuery, Scope
+
+state = memory.get_assertion_state(
+    AssertionStateQuery(
+        subject="Alice",
+        predicate="lives_in",
+        scope=Scope.PERSONAL,
+        valid_at=datetime.now(timezone.utc),
+    ),
+    user_id="alice",
+)
+```
+
+This scans all matching FACT, DECISION, and PREFERENCE records for an unchanged
+store. It returns eligible current candidates separately from the bounded
+timeline, along with event time, ingestion time, validity windows, lifecycle,
+supersedence pointers, contradiction edges, and evidence IDs. Status is
+`unknown`, `single`, `consistent`, `multiple`, or `contested`. `multiple` does
+not imply a contradiction, and the operation never treats the latest record as
+truth. Scope and `valid_at` are required to prevent cross-scope state mixing and
+implicit wall-clock results. An optional `knowledge_at` remains an ingestion
+cutoff over current lifecycle state and returns `exact_snapshot=false`.
+
+HTTP exposes `POST /v1/assertions/state`; MCP exposes
+`memory_get_assertion_state`. Subject and predicate matching use the same exact
+normalization contract as assertion aggregation. Source extraction and
+real-world coverage remain explicitly unknown.
+
 ---
 
 ## 8. Multi-User / Multi-Tenant

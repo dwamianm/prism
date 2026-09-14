@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, ContextAblation, ContextPresenceCredit, QuantityAggregation, QuantityAggregationQuery, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, StoreReceipt, ablate_context, assess_context_presence
+from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, QuantityAggregation, QuantityAggregationQuery, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -42,6 +42,18 @@ def consume(client: MemoryClient) -> None:
             QuantityAggregationQuery(predicates=("spent",)), user_id="alice"
         ),
         QuantityAggregation,
+    )
+    assert_type(
+        client.get_assertion_state(
+            AssertionStateQuery(
+                subject="Alice",
+                predicate="lives_in",
+                scope=Scope.PERSONAL,
+                valid_at=datetime.now(timezone.utc),
+            ),
+            user_id="alice",
+        ),
+        AssertionState,
     )
     for node in client.iter_nodes(user_id="alice"):
         assert_type(node, MemoryNode)

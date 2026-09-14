@@ -29,11 +29,13 @@ from prme.models.relevance import (
 )
 from prme.models.learning import LearningEvaluation
 from prme.models.aggregation import AssertionAggregation, QuantityAggregation
+from prme.models.temporal import AssertionState
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
     AcceptedWorkErrorResponse,
     AnswerCitationRequest,
     AssertionAggregationRequest,
+    AssertionStateRequest,
     ConditionEvaluationRequest,
     ContradictionRequest,
     ContradictionResolutionRequest,
@@ -507,6 +509,26 @@ async def aggregate_quantities(
     """Scan all matching grounded decimals without converting units."""
     try:
         return await _get_engine(request).aggregate_quantities(
+            body.query,
+            user_id=_user_id(request, body.user_id, required=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/assertions/state",
+    response_model=AssertionState,
+    summary="Inspect exact temporal assertion state",
+    responses={422: {"model": ErrorResponse}},
+)
+async def get_assertion_state(
+    request: Request,
+    body: AssertionStateRequest,
+) -> AssertionState:
+    """Return eligible current claims and their auditable stored timeline."""
+    try:
+        return await _get_engine(request).get_assertion_state(
             body.query,
             user_id=_user_id(request, body.user_id, required=True),
         )

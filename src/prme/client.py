@@ -60,6 +60,7 @@ if TYPE_CHECKING:
         QuantityAggregation,
         QuantityAggregationQuery,
     )
+    from prme.models.temporal import AssertionState, AssertionStateQuery
 
 logger = logging.getLogger(__name__)
 
@@ -607,6 +608,18 @@ class MemoryClient:
     ) -> "QuantityAggregation":
         """Calculate exact decimal statistics without implicit unit conversion."""
         return self._run(self._engine.aggregate_quantities(
+            query, user_id=user_id, batch_size=batch_size,
+        ))
+
+    def get_assertion_state(
+        self,
+        query: "AssertionStateQuery",
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "AssertionState":
+        """Return auditable exact claim state without choosing by recency."""
+        return self._run(self._engine.get_assertion_state(
             query, user_id=user_id, batch_size=batch_size,
         ))
 

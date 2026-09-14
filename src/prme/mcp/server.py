@@ -20,6 +20,7 @@ from prme import __version__
 from prme.config import PRMEConfig
 from prme.ingestion.errors import MaterializationError, extraction_failure_code
 from prme.models.aggregation import AssertionQuery, QuantityAggregationQuery
+from prme.models.temporal import AssertionStateQuery
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
 from prme.models.learning import LearningConfig, RankingMultipliers
 from prme.types import (
@@ -864,6 +865,56 @@ async def memory_aggregate_quantities(
         return _internal_error("memory_aggregate_quantities", exc)
 
 
+async def memory_get_assertion_state(
+    subject: str,
+    predicate: str,
+    scope: str,
+    valid_at: str,
+    user_id: Optional[str] = None,
+    knowledge_at: Optional[str] = None,
+    node_types: Optional[list[str]] = None,
+    limit: int = 1000,
+    ctx: Context = None,
+) -> str:
+    """Inspect exact current claim candidates and their temporal audit trail.
+
+    This operation does not use semantic retrieval or choose a newer claim as
+    truth. Differing eligible values remain ``multiple`` unless explicit
+    contradiction state makes them ``contested``.
+
+    Args:
+        subject: Exact assertion subject after Unicode/case/whitespace normalization.
+        predicate: Exact predicate; spaces and hyphens normalize to underscores.
+        scope: One memory scope. State is never mixed across scopes.
+        valid_at: Required timezone-aware validity instant.
+        user_id: Owner to inspect; omit when the MCP server binds an owner.
+        knowledge_at: Optional ingestion cutoff over current graph state; not replay.
+        node_types: Assertion node types; defaults to facts, decisions, and preferences.
+        limit: Maximum returned values, candidates, timeline rows, and conflicts.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        raw = {
+            "subject": subject,
+            "predicate": predicate,
+            "scope": scope,
+            "valid_at": valid_at,
+            "knowledge_at": knowledge_at,
+            "node_types": node_types,
+            "limit": limit,
+        }
+        query = AssertionStateQuery.model_validate({
+            key: value for key, value in raw.items() if value is not None
+        })
+        result = await engine.get_assertion_state(query, user_id=owner)
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_assertion_state", exc)
+
+
 async def memory_get_provenance(
     node_id: str,
     operation_cursor: str | None = None,
@@ -1253,7 +1304,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     server.prme_config = config
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
                  memory_get_node, memory_scan_nodes, memory_aggregate_assertions,
-                 memory_aggregate_quantities,
+                 memory_aggregate_quantities, memory_get_assertion_state,
                  memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance, memory_evaluate_learning,

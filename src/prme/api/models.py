@@ -15,6 +15,7 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from prme.models.aggregation import AssertionQuery, QuantityAggregationQuery
+from prme.models.temporal import AssertionStateQuery
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -338,6 +339,14 @@ class QuantityAggregationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     query: QuantityAggregationQuery = Field(default_factory=QuantityAggregationQuery)
+
+
+class AssertionStateRequest(BaseModel):
+    """Exact, owner-scoped current candidates and temporal claim history."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    query: AssertionStateQuery
 
 
 # ---------------------------------------------------------------------------

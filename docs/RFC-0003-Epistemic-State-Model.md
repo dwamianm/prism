@@ -316,6 +316,37 @@ a conflicting retry is rejected.
 
 **Resolution:** Contradiction resolution occurs when a user or trusted agent asserts which claim is correct. The resolution MUST be recorded as an `EPISTEMIC_TRANSITION` (of the incorrect claim to DEPRECATED) with the resolving actor's ID.
 
+### 7.1 Exact temporal assertion state
+
+PRME exposes `get_assertion_state(AssertionStateQuery(...), user_id=...)` on the
+async engine and sync client, `POST /v1/assertions/state` over HTTP, and
+`memory_get_assertion_state` over MCP. The query requires one owner, one scope,
+an exact structured subject and predicate, and a timezone aware `valid_at`
+instant. Requiring the instant prevents a nominally deterministic query from
+silently reading the process clock.
+
+The operation scans every selected FACT, DECISION, and PREFERENCE page for an
+unchanged store. It returns current eligible claim candidates and a stored
+timeline containing event time, ingestion time, validity, lifecycle,
+supersedence, epistemic type, source type, contradiction links, and evidence.
+Matching uses the normalized exact assertion contract; no entity alias,
+predicate paraphrase, or semantic equivalence is inferred.
+
+Candidate eligibility requires the node's current lifecycle to be active, no
+supersedence pointer, a validity window containing `valid_at`, and DEFAULT-mode
+epistemic eligibility. The operation classifies zero candidates as `unknown`,
+one as `single`, repeated equal object/polarity values as `consistent`, differing
+values without explicit conflict as `multiple`, and active contested lifecycle
+or contradiction edges as `contested`. These are stored claim states, not
+verified truth. Recency does not resolve `multiple` or `contested` claims.
+
+An optional `knowledge_at` excludes nodes and edges learned later, but applies
+to current graph state. The response therefore repeats the historical coverage
+boundary with `exact_snapshot=false`; later lifecycle transitions and mutations
+are not replayed. Returned rows and value/candidate/conflict sets are bounded
+with separate truncation fields, while counts are complete for an unchanged
+store. Source extraction and real-world coverage remain unknown.
+
 ---
 
 ## 8. Retrieval Behaviour by Epistemic Type

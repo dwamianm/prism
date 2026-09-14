@@ -13,6 +13,14 @@ from prme.models.aggregation import (
     QuantitySample,
 )
 from prme.models.base import MemoryObject
+from prme.models.temporal import (
+    AssertionState,
+    AssertionStateConflict,
+    AssertionStateEntry,
+    AssertionStateHistoricalCoverage,
+    AssertionStateQuery,
+    AssertionStateValue,
+)
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
 from prme.models.extraction import ExtractionRecord
@@ -26,6 +34,12 @@ __all__ = [
     "AssertionAggregation",
     "AssertionGroup",
     "AssertionQuery",
+    "AssertionState",
+    "AssertionStateConflict",
+    "AssertionStateEntry",
+    "AssertionStateHistoricalCoverage",
+    "AssertionStateQuery",
+    "AssertionStateValue",
     "QuantityAggregation",
     "QuantityAggregationQuery",
     "QuantityGroup",

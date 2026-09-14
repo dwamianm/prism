@@ -163,6 +163,33 @@ Repeating an exact call is safe after an ambiguous timeout. HTTP exposes
 `memory_supersede`, `memory_mark_contradiction`, and
 `memory_resolve_contradiction`.
 
+Current state is available as an exact, auditable operation over structured
+claims. It requires an explicit scope and timezone aware validity instant:
+
+```python
+from datetime import datetime, timezone
+from prme import AssertionStateQuery, Scope
+
+state = client.get_assertion_state(
+    AssertionStateQuery(
+        subject="Alice",
+        predicate="lives_in",
+        scope=Scope.PERSONAL,
+        valid_at=datetime.now(timezone.utc),
+    ),
+    user_id="alice",
+)
+print(state.status, [value.object for value in state.current_values])
+```
+
+The result keeps event, ingestion, and validity times separate and returns the
+complete stored timeline, supersedence pointers, contradiction links, lifecycle,
+epistemic type, and evidence references. A single eligible value is `single`;
+duplicate matching values are `consistent`; differing unresolved values remain
+`multiple`; only explicit contradiction state is `contested`. Recency never
+selects truth. HTTP uses `POST /v1/assertions/state`; MCP uses
+`memory_get_assertion_state`.
+
 `promote()` and `archive()` also accept a caller-generated UUID `request_id`.
 Reuse it for an exact retry; HTTP uses the `Idempotency-Key` header and the MCP
 lifecycle tools expose the same `request_id` field.

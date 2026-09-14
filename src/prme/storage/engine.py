@@ -86,6 +86,7 @@ if TYPE_CHECKING:
         QuantityAggregation,
         QuantityAggregationQuery,
     )
+    from prme.models.temporal import AssertionState, AssertionStateQuery
     from prme.storage.encryption import EncryptionProvider
 
     from prme.ingestion.pipeline import IngestionPipeline
@@ -1924,6 +1925,24 @@ class MemoryEngine:
         return await aggregate_quantities(
             self,
             QuantityAggregationQuery.model_validate(query),
+            user_id=user_id,
+            batch_size=batch_size,
+        )
+
+    async def get_assertion_state(
+        self,
+        query: "AssertionStateQuery",
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "AssertionState":
+        """Return exact current claim candidates and their stored timeline."""
+        from prme.models.temporal import AssertionStateQuery
+        from prme.retrieval.temporal import get_assertion_state
+
+        return await get_assertion_state(
+            self,
+            AssertionStateQuery.model_validate(query),
             user_id=user_id,
             batch_size=batch_size,
         )

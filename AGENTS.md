@@ -39,6 +39,15 @@ decimal addition, and never converts units or infers currencies. Both require an
 owner, are complete only for an unchanged store, and report unknown extraction
 and real-world coverage. HTTP and MCP expose corresponding aggregate tools.
 
+`get_assertion_state` is the exact current-claim/timeline path for a structured
+subject and predicate within one owner and scope. Callers must supply a timezone
+aware `valid_at`. It reports event, ingestion and validity clocks,
+supersedence, contradiction links, eligibility reasons and evidence. Differing
+active claims remain `multiple` unless explicit conflict state makes them
+`contested`; recency never establishes truth. `knowledge_at` retains the same
+current-graph, non-replay limitation. HTTP and MCP expose corresponding state
+operations.
+
 ## Memory Object Lifecycle
 
 New event/direct-node metadata must be finite and JSON-serializable, with no
