@@ -120,6 +120,14 @@ A local-reader result is not directly comparable to a published result using a
 different reader. Run every compared arm with the same model, generation
 parameters, task data, and judging path.
 
+Copied PRME and baseline configs may set `reader_reasoning_effort` and
+`reader_seed`. The pinned installer validates these fields and forwards them to
+the OpenAI-compatible request; the BM25 path also always passes the dataset's
+generation limit. Use the same values in every arm. PRME records them in its pack
+identity and each retrieval capture, while the registration and upstream result
+retain the complete agent configuration. Omitted values preserve the provider
+defaults.
+
 For a registered compact-context trial, set `prme_context_format: compact` in a
 copied agent configuration before registration. The setting is included in the
 adapter manifest, every retrieval capture, and the outcome-free registration's

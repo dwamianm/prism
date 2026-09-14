@@ -13,7 +13,16 @@ def upstream_layout(root: Path) -> None:
     (root / "methods").mkdir(parents=True)
     (root / "utils").mkdir()
     (root / "agent.py").write_text(
-        """        elif self._is_agent_type(\"zep\"):
+        """        self.temperature = agent_config.get('temperature', 0.0)
+
+        response = self._create_oai_client().chat.completions.create(
+            model=self.model,
+            messages=format_message,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens if \"gpt-4\" in self.model else None
+        )
+
+        elif self._is_agent_type(\"zep\"):
             self._initialize_zep_agent(agent_config)
         elif self._is_agent_type(\"knowl\"):
             from methods.knowl import initialize_knowl_agent
@@ -70,6 +79,9 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert agent.count("handle_prme_agent") == 2
     assert agent.count("save_prme_agent") == 2
     assert agent.count("load_prme_agent") == 2
+    assert "reader_reasoning_effort" in agent
+    assert "completion_options['seed']" in agent
+    assert "'max_tokens': self.max_tokens" in agent
     data = (tmp_path / "utils" / "eval_data_utils.py").read_text(encoding="utf-8")
     assert f'revision="{installer.DATASET_REVISION}"' in data
     initialization = (tmp_path / "initialization.py").read_text(encoding="utf-8")

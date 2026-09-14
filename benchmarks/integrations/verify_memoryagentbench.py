@@ -77,6 +77,8 @@ def _verify_manifest(
     expected_sub_dataset: str,
     expected_budget: int,
     expected_context_format: str,
+    expected_reasoning_effort: str | None,
+    expected_reader_seed: int | None,
 ) -> dict[str, Any]:
     manifest = _load_object(path)
     identity = manifest.get("config")
@@ -91,6 +93,8 @@ def _verify_manifest(
         or identity.get("token_budget") != expected_budget
         or identity.get("packing_policy") != "balanced"
         or identity.get("context_format") != expected_context_format
+        or identity.get("reader_reasoning_effort") != expected_reasoning_effort
+        or identity.get("reader_seed") != expected_reader_seed
         or manifest.get("config_sha256")
         != hashlib.sha256(_canonical(identity)).hexdigest()
     ):
@@ -247,6 +251,8 @@ def verify(
     output_dir = agent_config.get("output_dir")
     token_budget = agent_config.get("prme_token_budget")
     context_format = agent_config.get("prme_context_format", "auditable")
+    reasoning_effort = agent_config.get("reader_reasoning_effort")
+    reader_seed = agent_config.get("reader_seed")
     if not all(
         isinstance(value, str) and value for value in (sub_dataset, model, output_dir)
     ):
@@ -261,6 +267,12 @@ def verify(
         raise ValueError("configuration has an invalid PRME token budget")
     if context_format not in {"auditable", "compact"}:
         raise ValueError("configuration has an invalid PRME context format")
+    if reasoning_effort not in {None, "none", "low", "medium", "high"}:
+        raise ValueError("configuration has an invalid reader reasoning effort")
+    if isinstance(reader_seed, bool) or (
+        reader_seed is not None and not isinstance(reader_seed, int)
+    ):
+        raise ValueError("configuration has an invalid reader seed")
 
     registered_contexts = registered_task.get("contexts")
     if (
@@ -411,6 +423,8 @@ def verify(
             or capture.get("receipt_persisted") is not True
             or capture.get("token_budget") != token_budget
             or capture.get("context_format") != context_format
+            or capture.get("reader_reasoning_effort") != reasoning_effort
+            or capture.get("reader_seed") != reader_seed
         ):
             raise ValueError(f"query {query_id} retrieval capture is inconsistent")
         try:
@@ -440,6 +454,8 @@ def verify(
                 expected_sub_dataset=sub_dataset,
                 expected_budget=token_budget,
                 expected_context_format=context_format,
+                expected_reasoning_effort=reasoning_effort,
+                expected_reader_seed=reader_seed,
             )
             if manifest["source_chunks"] != expected_chunks[context_id]:
                 raise ValueError(

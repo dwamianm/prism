@@ -62,6 +62,8 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "model": "reader-model",
         "output_dir": "outputs/prme",
         "prme_token_budget": 4096,
+        "reader_reasoning_effort": "none",
+        "reader_seed": 42,
     }
     dataset_config = {
         "dataset": "Accurate_Retrieval",
@@ -87,6 +89,8 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "embedding_dimension": 384,
         "packing_policy": "balanced",
         "context_format": "auditable",
+        "reader_reasoning_effort": "none",
+        "reader_seed": 42,
     }
     manifest = {
         "schema_version": adapter.ADAPTER_SCHEMA_VERSION,
@@ -122,6 +126,8 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "receipt_persisted": True,
         "token_budget": 4096,
         "context_format": "auditable",
+        "reader_reasoning_effort": "none",
+        "reader_seed": 42,
         "context_token_count": count_tokens(context),
         "included_count": 1,
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),

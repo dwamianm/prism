@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Explicit MemoryAgentBench reader reasoning and seed controls shared by the PRME
+  and pinned BM25 request paths. The installer validates both settings, forwards
+  the task generation limit for non-OpenAI model names, and the PRME adapter binds
+  the values into its pack identity and retrieval captures. This prevents a local
+  common-reader comparison from silently using different thinking or sampling
+  behavior between memory arms.
 - Opt-in compact packed context for short-record workloads. It replaces repeated
   JSON keys and full in-prompt UUIDs with one declared array schema and deterministic
   bundle-local references while retaining type, scope, epistemic state,

@@ -24,6 +24,35 @@ _CONFIG_RELATIVE = Path(
 _PATCHES = {
     "agent.py": (
         (
+            "        self.temperature = agent_config.get('temperature', 0.0)\n",
+            "        self.temperature = agent_config.get('temperature', 0.0)\n"
+            "        self.reader_reasoning_effort = agent_config.get('reader_reasoning_effort')\n"
+            "        if self.reader_reasoning_effort not in (None, 'none', 'low', 'medium', 'high'):\n"
+            "            raise ValueError('reader_reasoning_effort must be none, low, medium, high, or omitted')\n"
+            "        self.reader_seed = agent_config.get('reader_seed')\n"
+            "        if isinstance(self.reader_seed, bool) or (self.reader_seed is not None and not isinstance(self.reader_seed, int)):\n"
+            "            raise ValueError('reader_seed must be an integer or omitted')\n",
+        ),
+        (
+            "        response = self._create_oai_client().chat.completions.create(\n"
+            "            model=self.model,\n"
+            "            messages=format_message,\n"
+            "            temperature=self.temperature,\n"
+            "            max_tokens=self.max_tokens if \"gpt-4\" in self.model else None\n"
+            "        )\n",
+            "        completion_options = {\n"
+            "            'model': self.model,\n"
+            "            'messages': format_message,\n"
+            "            'temperature': self.temperature,\n"
+            "            'max_tokens': self.max_tokens,\n"
+            "        }\n"
+            "        if self.reader_reasoning_effort is not None:\n"
+            "            completion_options['reasoning_effort'] = self.reader_reasoning_effort\n"
+            "        if self.reader_seed is not None:\n"
+            "            completion_options['seed'] = self.reader_seed\n"
+            "        response = self._create_oai_client().chat.completions.create(**completion_options)\n",
+        ),
+        (
             '        elif self._is_agent_type("zep"):\n'
             '            self._initialize_zep_agent(agent_config)\n'
             '        elif self._is_agent_type("knowl"):\n',

@@ -31,7 +31,7 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 3
+ADAPTER_SCHEMA_VERSION = 4
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
@@ -63,6 +63,8 @@ def _config_identity(agent: Any) -> dict[str, object]:
         "embedding_dimension": 384,
         "packing_policy": "balanced",
         "context_format": agent.prme_context_format,
+        "reader_reasoning_effort": agent.reader_reasoning_effort,
+        "reader_seed": agent.reader_seed,
     }
 
 
@@ -158,6 +160,8 @@ def initialize_prme_agent(
     agent.prme_context_format = str(
         config.get("prme_context_format", "auditable")
     ).strip()
+    agent.reader_reasoning_effort = config.get("reader_reasoning_effort")
+    agent.reader_seed = config.get("reader_seed")
     if not agent.prme_user_id:
         raise ValueError("prme_user_id must be non-empty")
     if agent.prme_result_limit <= 0:
@@ -168,6 +172,16 @@ def initialize_prme_agent(
         raise ValueError("prme_max_chunk_chars must be at least 512")
     if agent.prme_context_format not in {"auditable", "compact"}:
         raise ValueError("prme_context_format must be 'auditable' or 'compact'")
+    if agent.reader_reasoning_effort not in {None, "none", "low", "medium", "high"}:
+        raise ValueError(
+            "reader_reasoning_effort must be none, low, medium, high, or omitted"
+        )
+    if (
+        isinstance(agent.reader_seed, bool)
+        or agent.reader_seed is not None
+        and not isinstance(agent.reader_seed, int)
+    ):
+        raise ValueError("reader_seed must be an integer or omitted")
 
     agent.prme_pack_path = Path(agent.agent_save_to_folder) / "prme_pack"
     agent.prme_client = None
@@ -348,6 +362,8 @@ def _save_retrieval(
         "receipt_persisted": receipt_persisted,
         "token_budget": agent.prme_token_budget,
         "context_format": agent.prme_context_format,
+        "reader_reasoning_effort": agent.reader_reasoning_effort,
+        "reader_seed": agent.reader_seed,
         "context_token_count": context_token_count,
         "included_count": included_count,
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
@@ -396,12 +412,17 @@ def handle_prme_agent(
         message=retrieval_context + "\n" + message,
         system_message=system_message,
     )
-    completion = _reader_client(agent).chat.completions.create(
-        model=agent.model,
-        messages=messages,
-        temperature=agent.temperature,
-        max_tokens=agent.max_tokens,
-    )
+    completion_options = {
+        "model": agent.model,
+        "messages": messages,
+        "temperature": agent.temperature,
+        "max_tokens": agent.max_tokens,
+    }
+    if agent.reader_reasoning_effort is not None:
+        completion_options["reasoning_effort"] = agent.reader_reasoning_effort
+    if agent.reader_seed is not None:
+        completion_options["seed"] = agent.reader_seed
+    completion = _reader_client(agent).chat.completions.create(**completion_options)
     query_seconds = time.monotonic() - started - retrieval_seconds
     memory_seconds = agent.prme_ingest_seconds if agent.prme_report_ingest else 0.0
     agent.prme_report_ingest = False
