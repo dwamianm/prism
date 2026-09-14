@@ -356,6 +356,31 @@ class IngestionPipeline:
                 retained = await work.fail(claim, error=reason, retry_after=delay)
                 if retained and delay is not None:
                     self._schedule_retry(event, event_id, attempt=attempt, scope=scope)
+                elif not retained and retry_attempt == 0:
+                    # The event loop can be starved after a provider returns but
+                    # before its heartbeat or fenced publication runs. The old
+                    # generation must not publish, but an expired, uncontested
+                    # lease can be reclaimed immediately. Reuse any durable
+                    # extraction/plan boundary; otherwise the provider is
+                    # invoked again under the new generation. Bound this inline
+                    # recovery to one attempt so persistent failures still
+                    # follow the ordinary retry policy.
+                    recovered = await work.claim(
+                        user_id=event.user_id,
+                        event_id=event_id,
+                        lease_seconds=self._extraction_lease_seconds,
+                        ignore_schedule=True,
+                    )
+                    if recovered is not None:
+                        await self._run_extraction(
+                            event,
+                            event_id,
+                            scope,
+                            retry_attempt=1,
+                            raise_errors=raise_errors,
+                            claim=recovered,
+                        )
+                        return
             else:
                 self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
             if raise_errors:

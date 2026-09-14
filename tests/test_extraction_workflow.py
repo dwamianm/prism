@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 from unittest.mock import AsyncMock
 
 import pytest
@@ -87,6 +88,34 @@ async def test_heartbeat_keeps_long_running_provider_work_owned(config, user):
             release.set()
             await asyncio.gather(*list(pipeline._background_tasks))
         assert (await engine.extraction_status(event_id, user_id=user)).status == "complete"
+
+
+async def test_expired_heartbeat_reclaims_work_after_event_loop_starvation(config, user):
+    async with MemoryEngine.open(config) as engine:
+        pipeline = engine._pipeline
+        pipeline._extraction_lease_seconds = 0.05
+        entered, release = asyncio.Event(), asyncio.Event()
+        calls = 0
+
+        async def slow(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            entered.set()
+            await release.wait()
+            return ExtractionResult()
+
+        pipeline._extraction_provider.extract = slow
+        event_id = await engine.ingest("Hello", user_id=user)
+        await asyncio.wait_for(entered.wait(), 5)
+        # Deliberately block the loop so the heartbeat cannot renew the first
+        # generation. This makes the recovery boundary deterministic.
+        time.sleep(0.12)
+        release.set()
+        await asyncio.gather(*list(pipeline._background_tasks))
+        status = await engine.extraction_status(event_id, user_id=user)
+        assert status.status == "complete"
+        assert status.generation == 2
+        assert calls == 2
 
 
 async def test_cancelled_provider_work_is_left_retryable(config, user):

@@ -228,6 +228,11 @@ timestamps. Raw indexing remains a separate job and status.
 Claims and explicit plan-revision transitions advance the generation. The final graph transaction
 must lock/check the work row and reject an expired or superseded generation.
 Heartbeats extend a live lease; they do not substitute for commit fencing.
+If event-loop starvation expires an uncontested lease after provider return,
+the rejected worker attempts one immediate database reclaim under a new
+generation. It reuses a saved extraction or plan when one reached its durable
+boundary; otherwise the provider may run again. Failure to reclaim falls back
+to the ordinary retry policy, and the expired generation never publishes.
 Failure during provider I/O must not hold graph/database locks.
 
 ### Saved extraction
