@@ -231,7 +231,7 @@ def register(
 
     agent_config = _load_yaml_object(agent_config_path)
     dataset_config = _load_yaml_object(dataset_config_path)
-    if agent_config.get("agent_name") != "Agentic_memory_prme":
+    if agent_config.get("agent_name") != "Agentic_memory_prme_rag":
         raise ValueError("agent configuration does not identify PRME")
     max_chunk_chars = agent_config.get("prme_max_chunk_chars")
     if (

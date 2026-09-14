@@ -23,7 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   common-reader comparison from silently using different thinking or sampling
   behavior between memory arms. Registrations also bind the dataset, NLTK and
   tiktoken versions, the English Punkt data, and the exact tokenizer table so
-  preprocessing dependency drift cannot silently change task chunks.
+  preprocessing dependency drift cannot silently change task chunks. The
+  canonical PRME agent name now selects the same upstream RAG question template
+  as BM25 while still dispatching to the PRME adapter, removing a reader-prompt
+  confound from matched trials.
 - Isolated MemoryAgentBench PRME state through a validated experiment slug.
   `prme_run_id` participates in the saved-agent path, pack identity, retrieval
   capture, and verifier so multiple configurations using one reader cannot reuse

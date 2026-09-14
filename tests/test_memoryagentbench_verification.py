@@ -70,7 +70,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     )
 
     agent_config = {
-        "agent_name": "Agentic_memory_prme",
+        "agent_name": "Agentic_memory_prme_rag",
         "model": "reader-model",
         "output_dir": "outputs/prme",
         "prme_token_budget": 4096,

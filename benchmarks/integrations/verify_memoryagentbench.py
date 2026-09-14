@@ -253,7 +253,7 @@ def verify(
         raise ValueError("result agent configuration differs from the supplied file")
     if result.get("dataset_config") != dataset_config:
         raise ValueError("result dataset configuration differs from the supplied file")
-    if agent_config.get("agent_name") != "Agentic_memory_prme":
+    if agent_config.get("agent_name") != "Agentic_memory_prme_rag":
         raise ValueError("result does not identify the PRME MemoryAgentBench agent")
     sub_dataset = dataset_config.get("sub_dataset")
     model = agent_config.get("model")

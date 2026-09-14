@@ -20,6 +20,12 @@ The installer patches the upstream dataset loader to use the pinned dataset
 revision. It refuses a different upstream source revision unless the operator
 explicitly accepts the unsupported mismatch.
 
+The installed PRME configuration uses `Agentic_memory_prme_rag`. Upstream
+dispatch sees `prme` and invokes the PRME adapter, while template selection sees
+`rag` first and supplies the same formatted question used by
+`Simple_rag_bm25`. Registrations require that exact name so a matched trial
+cannot silently return to the distinct agentic-memory reader prompt.
+
 ## Install
 
 Clone and check out the pinned upstream revision, install its dependencies, and

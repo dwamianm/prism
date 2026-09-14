@@ -40,7 +40,7 @@ def fake_agent(
     reader = SimpleNamespace(chat=SimpleNamespace(completions=completions))
     agent = FakeAgent()
     agent.sub_dataset = "eventqa_65536"
-    agent.agent_name = "Agentic_memory_prme"
+    agent.agent_name = "Agentic_memory_prme_rag"
     agent.agent_save_to_folder = str(root / "agent")
     agent.output_dir = str(root / "outputs")
     agent.model = "gpt-4o-mini"

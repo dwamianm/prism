@@ -1,6 +1,6 @@
 # PRME under the official MemoryAgentBench incremental harness.
 # Shared reader parameters match the upstream gpt-4o-mini memory baselines.
-agent_name: Agentic_memory_prme
+agent_name: Agentic_memory_prme_rag
 model: gpt-4o-mini
 temperature: 0.7
 reader_reasoning_effort: null
