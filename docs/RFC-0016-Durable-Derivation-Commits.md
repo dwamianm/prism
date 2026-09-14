@@ -374,6 +374,17 @@ snapshot, preserving owner isolation and requiring no embedding inference during
 reopening. The source, graph node and work status remain durable independently
 of the derived snapshot's cadence.
 
+### Synchronous-client interpreter shutdown (2026-09-14)
+
+`MemoryClient` tracks live instances with weak references and installs one
+process-wide cleanup hook in Python's pre-thread-shutdown phase. Forgotten
+clients therefore close their engine and flush derived indexes before
+`concurrent.futures` disables the executor used by storage cleanup. Explicit
+`close()` remains authoritative and removes the instance from that registry.
+The fallback on runtimes without the early hook is best effort. This changes
+shutdown ordering only; the event, direct-store journal, and materialization
+completion boundaries above remain unchanged.
+
 
 ## Entity-profile preparation recovery
 

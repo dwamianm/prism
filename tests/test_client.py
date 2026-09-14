@@ -15,6 +15,8 @@ Tests cover:
 from __future__ import annotations
 
 import logging
+import subprocess
+import sys
 import tempfile
 import warnings
 from pathlib import Path
@@ -116,6 +118,26 @@ class TestClientLifecycle:
             assert len(resource_warnings) == 1
             assert "not closed" in str(resource_warnings[0].message)
         client.close()
+
+    def test_implicit_process_shutdown_precedes_executor_shutdown(self, tmp_path):
+        pack = tmp_path / "implicit-close"
+        script = (
+            "from prme import MemoryClient\n"
+            f"client = MemoryClient({str(pack)!r})\n"
+            "client.store('durable implicit shutdown', user_id='alice')\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "cannot schedule new futures after shutdown" not in result.stderr
+        assert "Error closing vector index" not in result.stderr
+        assert "Error closing lexical index" not in result.stderr
+        assert (pack / "vectors.usearch").is_file()
 
     def test_custom_config_overrides_directory(self, tmp_dir):
         lexical_path = str(Path(tmp_dir) / "lexical_index")

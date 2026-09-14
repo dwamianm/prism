@@ -23,6 +23,7 @@ import logging
 import os
 import threading
 import warnings
+import weakref
 from datetime import datetime
 from collections.abc import Coroutine, Iterator
 from typing import Any, Literal, TypeVar
@@ -53,6 +54,41 @@ from prme.retrieval.models import RetrievalResponse
 _Result = TypeVar("_Result")
 
 logger = logging.getLogger(__name__)
+
+_LIVE_CLIENTS: weakref.WeakSet[Any] = weakref.WeakSet()
+_LIVE_CLIENTS_LOCK = threading.Lock()
+_EARLY_SHUTDOWN_REGISTERED = False
+
+
+def _close_live_clients() -> None:
+    """Close clients before Python disables shared thread-pool submission."""
+    with _LIVE_CLIENTS_LOCK:
+        clients = list(_LIVE_CLIENTS)
+    for client in clients:
+        client._atexit_close()
+
+
+def _track_live_client(client: Any) -> None:
+    """Register one process-wide early shutdown hook without retaining clients."""
+    global _EARLY_SHUTDOWN_REGISTERED
+    with _LIVE_CLIENTS_LOCK:
+        if not _EARLY_SHUTDOWN_REGISTERED:
+            # asyncio.to_thread() lazily imports this module. Its private
+            # threading shutdown hook disables executor submission, so ensure
+            # that hook exists before registering our later (LIFO) cleanup.
+            __import__("concurrent.futures.thread")
+            early_register = getattr(threading, "_register_atexit", None)
+            if early_register is not None:
+                early_register(_close_live_clients)
+            else:  # pragma: no cover - Python 3.11+ provides the early hook.
+                atexit.register(_close_live_clients)
+            _EARLY_SHUTDOWN_REGISTERED = True
+        _LIVE_CLIENTS.add(client)
+
+
+def _untrack_live_client(client: Any) -> None:
+    with _LIVE_CLIENTS_LOCK:
+        _LIVE_CLIENTS.discard(client)
 
 
 def config_from_directory(directory: str) -> PRMEConfig:
@@ -140,8 +176,9 @@ class MemoryClient:
             raise
         self._closed = False
 
-        # Register atexit so we clean up if the user forgets close().
-        atexit.register(self._atexit_close)
+        # Close forgotten clients before concurrent.futures disables executor
+        # submission during interpreter shutdown.
+        _track_live_client(self)
 
     def _run_loop(self) -> None:
         """Own and close the worker loop even when engine creation fails."""
@@ -613,11 +650,7 @@ class MemoryClient:
         if self._closed:
             return
         self._closed = True
-
-        try:
-            atexit.unregister(self._atexit_close)
-        except Exception:
-            pass
+        _untrack_live_client(self)
 
         # Close the engine on the background loop. Capture an encryption
         # failure so the pack-is-plaintext signal is not lost, but still

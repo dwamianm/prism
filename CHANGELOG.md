@@ -114,6 +114,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Forgotten synchronous clients now close before Python shuts down its shared
+  thread-pool executor, allowing vector and lexical indexes to flush cleanly at
+  normal interpreter exit without late-executor errors.
 - Historical assistant and system events are now submitted to extraction models
   as input text while retaining their stored source role for provenance and
   epistemic typing. Role-aware admission guidance prevents local chat providers
