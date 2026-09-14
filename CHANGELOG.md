@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ordered state and transition semantics, bounds downstream context items,
   returns source screenshots, fingerprints portable adapter state, and rejects
   changed or interrupted trajectory inserts. A pinned one-question web-small
-  pipeline smoke covers the full 100-trajectory save/load path.
+  pipeline smoke covers the full 100-trajectory save/load path. Its installer
+  verifies the pinned upstream revision, copies the adapter and configuration
+  atomically, registers the backend, and safely handles repeat installation.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,

@@ -15,17 +15,19 @@ retrieval.
 
 ## Install the adapter
 
-Copy `longmemeval_v2.py` into the upstream `memory_modules/` directory as
-`prme.py`, then add this import to upstream `memory_modules/__init__.py`:
+Run the installer from this PRME checkout. It verifies the pinned upstream Git
+revision, installs both files atomically, registers the adapter, and is safe to
+run again when the installed files are unchanged. It refuses revision drift or
+conflicting destination files rather than silently changing the evaluation:
 
-```python
-from .prme import PRMEMemory  # noqa: F401
+```sh
+python -m benchmarks.integrations.install_longmemeval_v2 \
+  /absolute/path/to/LongMemEval-V2
 ```
 
-Copy `longmemeval_v2_config.json` into upstream
-`evaluation/memory_configs/prme.json`. Install this PRME checkout into the
-upstream Python 3.11 environment, prepare the official data, and export its
-root so relative screenshot paths can be resolved:
+Install this PRME checkout into the upstream Python 3.11 environment, prepare
+the official data, and export its root so relative screenshot paths can be
+resolved:
 
 ```sh
 export DATA_ROOT=/absolute/path/to/longmemeval-v2
