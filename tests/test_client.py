@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+from prme import StoreReceipt
 from prme.client import MemoryClient, config_from_directory
 from prme.config import PRMEConfig
 from prme.types import ConditionState, EpistemicType, LifecycleState, NodeType, Scope
@@ -243,6 +244,16 @@ class TestStoreRetrieve:
             event_id = client.store("Alice likes dark mode", user_id="alice")
             assert isinstance(event_id, str)
             assert len(event_id) == 36  # UUID format
+
+    def test_store_with_receipt_returns_a_lifecycle_ready_node(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            receipt = client.store_with_receipt(
+                "Promote this exact memory", user_id="alice", node_type=NodeType.FACT,
+            )
+            assert isinstance(receipt, StoreReceipt)
+            assert receipt.processing_status.status == "complete"
+            client.promote(str(receipt.node_id), user_id="alice")
+            assert client.get_node(str(receipt.node_id), user_id="alice").lifecycle_state == LifecycleState.STABLE
 
     def test_store_and_retrieve_roundtrip(self, tmp_dir):
         from datetime import datetime, timezone

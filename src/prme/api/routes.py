@@ -210,23 +210,17 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONRes
         kwargs["ttl_days"] = body.ttl_days
 
     try:
-        event_id = await engine.store(**kwargs)
+        receipt = await engine.store_with_receipt(**kwargs)
     except MaterializationError as exc:
         return _accepted_work_failure(exc)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    try:
-        nodes = await engine.get_event_nodes(event_id, user_id=kwargs["user_id"])
-        node_id = next((str(n.id) for n in nodes
-                        if n.content == body.content and n.node_type == (body.node_type or NodeType.NOTE)), None)
-        status = await engine.processing_status(event_id, user_id=kwargs["user_id"])
-    except Exception as exc:
-        return _accepted_work_failure(MaterializationError(
-            "Could not read the accepted store receipt", event_id=event_id,
-            reason_code=extraction_failure_code(exc),
-        ))
-    return StoreResponse(event_id=event_id, node_id=node_id, processing_status=status)
+    return StoreResponse(
+        event_id=str(receipt.event_id),
+        node_id=str(receipt.node_id),
+        processing_status=receipt.processing_status,
+    )
 
 
 @router.post(

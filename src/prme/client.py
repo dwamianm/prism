@@ -42,7 +42,7 @@ from prme.models.provenance import NodeProvenance
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.retrieval.config import ScoringWeights
 from prme.retrieval.scope import ScopeInput
-from prme.models.processing import ProcessingResult, ProcessingStatus
+from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -265,6 +265,38 @@ class MemoryClient:
                 ttl_days=ttl_days,
             )
         )
+
+    def store_with_receipt(
+        self,
+        content: str,
+        *,
+        user_id: str,
+        session_id: str | None = None,
+        role: str = "user",
+        node_type: NodeType = NodeType.NOTE,
+        scope: Scope = Scope.PERSONAL,
+        metadata: dict | None = None,
+        confidence: float | None = None,
+        epistemic_type: EpistemicType | None = None,
+        source_type: SourceType | None = None,
+        event_time: datetime | None = None,
+        ttl_days: int | None = ...,
+    ) -> StoreReceipt:
+        """Store a memory and return its event, node, and processing status."""
+        return self._run(self._engine.store_with_receipt(
+            content,
+            user_id=user_id,
+            session_id=session_id,
+            role=role,
+            node_type=node_type,
+            scope=scope,
+            metadata=metadata,
+            confidence=confidence,
+            epistemic_type=epistemic_type,
+            source_type=source_type,
+            event_time=event_time,
+            ttl_days=ttl_days,
+        ))
 
     def retrieve(
         self,

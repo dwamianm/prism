@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from prme import MemoryEngine, PRMEConfig
+from prme import MemoryEngine, PRMEConfig, StoreReceipt
 from prme.models import Event
 from prme.types import Scope
 
@@ -71,6 +71,25 @@ async def test_processing_status_tracks_direct_store_and_rejects_unknown_sources
         assert await engine.processing_status(str(uuid4()), user_id=user) is None
         with pytest.raises(ValueError, match="budget_ms"):
             await engine.process_pending(user_id=user, budget_ms=-1)
+
+
+async def test_structured_store_receipt_resolves_the_exact_direct_node(config, user):
+    async with MemoryEngine.open(config) as engine:
+        first, second = await asyncio.gather(*[
+            engine.store_with_receipt(
+                "The same concurrent memory", user_id=user, session_id="receipt-test",
+            )
+            for _ in range(2)
+        ])
+
+        assert all(isinstance(receipt, StoreReceipt) for receipt in (first, second))
+        assert first.event_id != second.event_id
+        assert first.node_id != second.node_id
+        for receipt in (first, second):
+            assert receipt.processing_status.status == "complete"
+            assert receipt.processing_status.event_id == receipt.event_id
+            assert receipt.node.evidence_refs == [receipt.event_id]
+            assert await engine.get_node(str(receipt.node_id), user_id=user) == receipt.node
 
 
 @pytest.fixture(params=["duckdb", "postgres"])

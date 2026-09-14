@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Structured `store_with_receipt()` results on async and synchronous Python.
+  They expose the durable event, exact created node, and materialization status
+  in one call while preserving the historical `store()` event-ID return. HTTP
+  store responses now use the same provenance-based receipt path.
 - An official LongMemEval-V2 adapter for agent-trajectory memory. It preserves
   ordered state and transition semantics, creates compact hierarchical procedure
   traces alongside raw states, bounds downstream context items, returns source

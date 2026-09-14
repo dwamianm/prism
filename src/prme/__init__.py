@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 from prme.config import PRMEConfig
 from prme.ingestion.errors import ExtractionError, MaterializationError
-from prme.models.processing import ProcessingResult, ProcessingStatus
+from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
 from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.relevance import (
@@ -46,6 +46,7 @@ from prme.types import (
     EpistemicType,
     LifecycleState,
     NodeType,
+    RetrievalMode,
     Scope,
     SourceType,
 )
@@ -122,12 +123,14 @@ __all__ = [
     "RetrievalPipeline",
     "RetrievalResponse",
     "RetrievalReceipt",
+    "RetrievalMode",
     "RankingMultipliers",
     "RelevanceSubmission",
     "RelevanceRecord",
     "Scope",
     "SourceType",
     "StaleProfileError",
+    "StoreReceipt",
     "ablate_context",
     "assess_context_presence",
     "config_from_directory",

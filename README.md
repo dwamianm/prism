@@ -615,13 +615,25 @@ before enabling approximate search on a large corpus.
 
 ## Following source evidence
 
-`store()` returns its durable event ID. Resolve the associated nodes directly:
+`store()` returns its durable event ID. When the application will immediately
+act on the direct node, request a structured receipt instead:
 
 ```python
-event_id = client.store("Use the staging key only for staging.", user_id="alice")
+receipt = client.store_with_receipt(
+    "Use the staging key only for staging.", user_id="alice"
+)
+event_id = str(receipt.event_id)
+node_id = str(receipt.node_id)
+assert receipt.processing_status.status == "complete"
+
 nodes = client.get_event_nodes(event_id, user_id="alice")
 source = client.get_event(event_id, user_id="alice")
 ```
+
+The async engine exposes the same `store_with_receipt()` method. Existing
+`store()` callers keep the event-ID return unchanged. Receipt resolution follows
+the exact source event, so another concurrent write cannot be mistaken for the
+new node.
 
 `get_event_nodes` returns all nodes citing the owned event, including retired
 nodes, in stable ID order. An empty result means there are no visible derivations;

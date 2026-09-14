@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, ContextAblation, ContextPresenceCredit, RelevanceRecord, RelevanceSubmission, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, ablate_context, assess_context_presence
+from prme import AnswerCitationRecord, AnswerCitationSubmission, ContextAblation, ContextPresenceCredit, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, StoreReceipt, ablate_context, assess_context_presence
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -14,10 +14,12 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.ingest("Alice used Rust yesterday", user_id="alice",
                               event_time=datetime(2024, 3, 10, tzinfo=timezone.utc),
                               metadata={"source": "import"}), str)
+    assert_type(client.store_with_receipt("Alice uses Rust", user_id="alice"), StoreReceipt)
     assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)
     assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
-    assert_type(client.retrieve("preferences", user_id="alice"), RetrievalResponse)
+    assert_type(client.retrieve("preferences", user_id="alice",
+                                retrieval_mode=RetrievalMode.EXPLICIT), RetrievalResponse)
     assert_type(client.get_node("node-id"), MemoryNode | None)
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])
     assert_type(client.get_events("alice"), list[Event])

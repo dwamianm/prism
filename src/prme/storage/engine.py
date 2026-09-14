@@ -35,7 +35,7 @@ import duckdb
 
 from prme.config import PRMEConfig
 from prme.ingestion.errors import MaterializationError, extraction_failure_code
-from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus
+from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus, StoreReceipt
 from prme.models.provenance import NodeProvenance
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -894,6 +894,71 @@ class MemoryEngine:
             self._last_session_turn[session_key] = (role, content, node_type, scope)
 
         return event_id
+
+    async def store_with_receipt(
+        self,
+        content: str,
+        *,
+        user_id: str,
+        session_id: str | None = None,
+        role: str = "user",
+        node_type: NodeType = NodeType.NOTE,
+        scope: Scope = Scope.PERSONAL,
+        metadata: dict | None = None,
+        confidence: float | None = None,
+        epistemic_type: EpistemicType | None = None,
+        source_type: SourceType | None = None,
+        event_time: datetime | None = None,
+        ttl_days: int | None = ...,
+    ) -> StoreReceipt:
+        """Store one direct memory and return its source, node, and work status.
+
+        This preserves ``store()`` as the source-of-truth event-ID API while
+        giving callers the node identity accepted by lifecycle methods. The
+        node is resolved through its exact event provenance, so concurrent
+        writes cannot change which result is returned.
+
+        A successful ``store()`` has a durable direct node and processing job.
+        If either cannot be read back, this raises ``MaterializationError``
+        with the accepted event ID, matching the existing recovery contract.
+        """
+        event_id = await self.store(
+            content,
+            user_id=user_id,
+            session_id=session_id,
+            role=role,
+            node_type=node_type,
+            scope=scope,
+            metadata=metadata,
+            confidence=confidence,
+            epistemic_type=epistemic_type,
+            source_type=source_type,
+            event_time=event_time,
+            ttl_days=ttl_days,
+        )
+        try:
+            nodes = await self.get_event_nodes(event_id, user_id=user_id)
+            node = next((
+                candidate for candidate in nodes
+                if candidate.content == content
+                and candidate.node_type == node_type
+                and candidate.scope == scope
+                and candidate.session_id == session_id
+            ), None)
+            status = await self.processing_status(event_id, user_id=user_id)
+        except Exception as exc:
+            raise MaterializationError(
+                "Could not read the accepted store receipt",
+                event_id=event_id,
+                reason_code=extraction_failure_code(exc),
+            ) from exc
+        if node is None or status is None:
+            raise MaterializationError(
+                "Could not read the accepted store receipt",
+                event_id=event_id,
+                reason_code="ReceiptUnavailable",
+            )
+        return StoreReceipt(event_id=UUID(event_id), node=node, processing_status=status)
 
     async def _check_store_supersedence(
         self, content: str, new_node_id: str, user_id: str
