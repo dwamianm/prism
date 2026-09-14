@@ -289,6 +289,7 @@ class NodeResponse(BaseModel):
     salience_base: float | None = Field(default=None, description="Stored base salience before virtual decay")
     reinforcement_boost: float | None = None
     last_reinforced_at: str | None = None
+    decay_profile: str | None = None
     epistemic_type: str | None = None
     source_type: str | None = None
     scope: str
@@ -309,6 +310,17 @@ class NodeListResponse(BaseModel):
 
     nodes: list[NodeResponse] = Field(default_factory=list)
     count: int = 0
+
+
+class NodePageResponse(BaseModel):
+    """One deterministic page of owner-scoped stored records."""
+
+    nodes: list[NodeResponse] = Field(default_factory=list)
+    count: int = 0
+    has_more: bool = False
+    next_cursor: UUID | None = None
+    order: Literal["id"] = "id"
+    consistency: Literal["page"] = "page"
 
 
 # ---------------------------------------------------------------------------

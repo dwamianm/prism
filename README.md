@@ -203,7 +203,10 @@ with MemoryClient("./my_memories") as client:
 include active lifecycle states. This counts stored records, which can contain
 multiple assertions about the same real-world item. Pages are complete for an
 unchanged store; concurrent writes can change matches between pages. Finish
-pending ingestion first when an export needs to include those events.
+pending ingestion first when an export needs to include those events. HTTP
+clients use `GET /v1/nodes/scan`; MCP clients use `memory_scan_nodes`. Both
+return `has_more` and a `next_cursor`, require an owner or bound identity, and
+report UUID ordering with page-level consistency.
 
 <details>
 <summary>Async API (advanced)</summary>

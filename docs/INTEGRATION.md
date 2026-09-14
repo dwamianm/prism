@@ -1057,6 +1057,15 @@ contains a token-counted non-exhaustive warning. Use `scan_nodes()` or
 prove that every real-world item matching a natural-language criterion was
 found or deduplicated.
 
+The same stored-record page is available to remote clients through
+`GET /v1/nodes/scan` and the MCP tool `memory_scan_nodes`. Both require an
+explicit or credential-bound owner, accept scope, node type, lifecycle, UUID
+cursor, and page-size filters, and return `has_more` plus `next_cursor`. Follow
+the cursor until `has_more` is false. The response reports `order="id"` and
+`consistency="page"`: traversal is complete for an unchanged store but is not a
+transaction snapshot across requests. `GET /v1/nodes` remains a bounded query
+convenience and must not be used as an export or counting contract.
+
 ---
 
 ## 8. Multi-User / Multi-Tenant

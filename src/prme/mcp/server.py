@@ -11,6 +11,7 @@ import os
 import secrets
 from contextlib import asynccontextmanager
 from typing import Any, Literal, Optional
+from uuid import UUID
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import AwareDatetime, StrictBool, TypeAdapter
@@ -24,6 +25,7 @@ from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
     EpistemicType,
+    LifecycleState,
     NodeType,
     RepresentationLevel,
     RetrievalMode,
@@ -44,11 +46,17 @@ def _node_to_dict(node: Any) -> dict[str, Any]:
     return {
         "id": str(node.id),
         "user_id": node.user_id,
+        "session_id": node.session_id,
         "node_type": node.node_type.value if hasattr(node.node_type, "value") else str(node.node_type),
         "content": node.content,
         "lifecycle_state": node.lifecycle_state.value if hasattr(node.lifecycle_state, "value") else str(node.lifecycle_state),
         "confidence": node.confidence,
         "salience": node.salience,
+        "confidence_base": node.confidence_base,
+        "salience_base": node.salience_base,
+        "reinforcement_boost": node.reinforcement_boost,
+        "last_reinforced_at": node.last_reinforced_at.isoformat() if node.last_reinforced_at else None,
+        "decay_profile": node.decay_profile.value if node.decay_profile else None,
         "epistemic_type": node.epistemic_type.value if node.epistemic_type and hasattr(node.epistemic_type, "value") else None,
         "source_type": node.source_type.value if node.source_type and hasattr(node.source_type, "value") else None,
         "scope": node.scope.value if hasattr(node.scope, "value") else str(node.scope),
@@ -58,6 +66,7 @@ def _node_to_dict(node: Any) -> dict[str, Any]:
         "event_time": node.event_time.isoformat() if node.event_time else None,
         "valid_from": node.valid_from.isoformat(),
         "valid_to": node.valid_to.isoformat() if node.valid_to else None,
+        "ttl_days": node.ttl_days,
         "superseded_by": str(node.superseded_by) if node.superseded_by else None,
         "evidence_refs": [str(r) for r in node.evidence_refs],
         "pinned": node.pinned,
@@ -600,6 +609,65 @@ async def memory_get_node(
         return _internal_error("memory_get_node", e)
 
 
+async def memory_scan_nodes(
+    user_id: Optional[str] = None,
+    scope: Optional[str] = None,
+    node_type: Optional[str] = None,
+    lifecycle_states: Optional[list[str]] = None,
+    after_id: Optional[str] = None,
+    limit: int = 100,
+    ctx: Context = None,
+) -> str:
+    """Enumerate a deterministic page of owner-scoped stored records.
+
+    Pass ``next_cursor`` as ``after_id`` while ``has_more`` is true. The
+    default lifecycle filter includes active records. Pages are complete for
+    an unchanged store and do not call a model.
+
+    Args:
+        user_id: Owner to scan; omit when the MCP server binds an owner.
+        scope: Optional memory scope filter.
+        node_type: Optional stored node type filter.
+        lifecycle_states: Optional lifecycle filters; an empty list matches none.
+        after_id: UUID cursor returned by the previous page.
+        limit: Page size from 1 through 1000.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 1000:
+            raise ValueError("limit must be an integer from 1 through 1000")
+        parsed_scope = Scope(scope) if scope is not None else None
+        parsed_type = NodeType(node_type) if node_type is not None else None
+        parsed_states = (
+            [LifecycleState(state) for state in lifecycle_states]
+            if lifecycle_states is not None else None
+        )
+        cursor = str(UUID(after_id)) if after_id is not None else None
+        page = await engine.scan_nodes(
+            user_id=owner,
+            scope=parsed_scope,
+            node_type=parsed_type,
+            lifecycle_states=parsed_states,
+            after_id=cursor,
+            limit=limit + 1,
+        )
+        has_more = len(page) > limit
+        nodes = page[:limit]
+        return json.dumps({
+            "nodes": [_node_to_dict(node) for node in nodes],
+            "count": len(nodes),
+            "has_more": has_more,
+            "next_cursor": str(nodes[-1].id) if has_more else None,
+            "order": "id",
+            "consistency": "page",
+        })
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_scan_nodes", exc)
+
+
 async def memory_get_provenance(
     node_id: str,
     operation_cursor: str | None = None,
@@ -988,7 +1056,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     )
     server.prme_config = config
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
-                 memory_get_node, memory_get_event, memory_get_extraction,
+                 memory_get_node, memory_scan_nodes, memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance,
                  memory_record_answer_citations, memory_get_answer_citations,

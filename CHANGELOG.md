@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Owner-required, cursor-based stored-record enumeration over HTTP and MCP.
+  `GET /v1/nodes/scan` and `memory_scan_nodes` expose scope, type, and lifecycle
+  filters, immutable UUID ordering, explicit `has_more`/`next_cursor` fields,
+  and page-level consistency so remote exports and counts do not depend on a
+  bounded top-k query.
 - A pinned BEAM benchmark service with source-only ingestion boundaries, owner
   isolation, source-time query clocks, restart-safe request idempotence, and
   separate raw and durable-extraction profiles. Its fail-closed validator

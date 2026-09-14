@@ -402,6 +402,10 @@ sync clients for complete traversal of matching stored records. `scan_nodes`
 provides explicit pages with an `after_id` cursor. Both backends order by immutable
 UUID and apply tenant, scope, type, and lifecycle filters before each page limit.
 The default lifecycle set is active; an empty lifecycle filter returns no nodes.
+HTTP exposes the same contract at `GET /v1/nodes/scan`; MCP exposes
+`memory_scan_nodes`. Both remote surfaces require an explicit or bound owner and
+return `has_more`, `next_cursor`, immutable-ID ordering, and page-level
+consistency. The older `GET /v1/nodes` route remains a bounded query convenience.
 
 Enumeration is complete for an unchanged store and uses bounded application
 memory. It is not a cross-page transaction snapshot or a count of distinct

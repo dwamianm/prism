@@ -41,6 +41,7 @@ from prme.api.models import (
     IngestResponse,
     MaterializationProcessRequest,
     NodeListResponse,
+    NodePageResponse,
     NodeResponse,
     OrganizeRequest,
     OrganizeResponse,
@@ -54,7 +55,7 @@ from prme.api.models import (
     StoreResponse,
     SupersedenceRequest,
 )
-from prme.types import LifecycleState, NodeType
+from prme.types import LifecycleState, NodeType, Scope
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.models.processing import ProcessingStatus, ProcessingResult
@@ -150,6 +151,7 @@ def _node_to_response(node) -> NodeResponse:
         salience_base=node.salience_base,
         reinforcement_boost=node.reinforcement_boost,
         last_reinforced_at=node.last_reinforced_at.isoformat() if node.last_reinforced_at else None,
+        decay_profile=node.decay_profile.value,
         epistemic_type=node.epistemic_type.value if node.epistemic_type and hasattr(node.epistemic_type, "value") else (str(node.epistemic_type) if node.epistemic_type else None),
         source_type=node.source_type.value if node.source_type and hasattr(node.source_type, "value") else (str(node.source_type) if node.source_type else None),
         scope=node.scope.value if hasattr(node.scope, "value") else str(node.scope),
@@ -465,6 +467,46 @@ async def organize(request: Request, body: OrganizeRequest) -> OrganizeResponse:
 # ---------------------------------------------------------------------------
 # Node Operations
 # ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/nodes/scan",
+    response_model=NodePageResponse,
+    summary="Enumerate stored nodes",
+    responses={422: {"model": ErrorResponse}},
+)
+async def scan_nodes(
+    request: Request,
+    user_id: str | None = None,
+    scope: Scope | None = None,
+    type: NodeType | None = None,
+    state: list[LifecycleState] | None = Query(default=None),
+    after_id: UUID | None = None,
+    limit: int = Query(default=100, ge=1, le=1000),
+) -> NodePageResponse:
+    """Read an owner-scoped page in immutable UUID order.
+
+    Pass ``next_cursor`` as ``after_id`` while ``has_more`` is true. Pages
+    cover an unchanged store; concurrent writes or lifecycle changes can alter
+    matches between requests.
+    """
+    owner = _user_id(request, user_id, required=True)
+    page = await _get_engine(request).scan_nodes(
+        user_id=owner,
+        scope=scope,
+        node_type=type,
+        lifecycle_states=state,
+        after_id=str(after_id) if after_id is not None else None,
+        limit=limit + 1,
+    )
+    has_more = len(page) > limit
+    nodes = page[:limit]
+    return NodePageResponse(
+        nodes=[_node_to_response(node) for node in nodes],
+        count=len(nodes),
+        has_more=has_more,
+        next_cursor=nodes[-1].id if has_more else None,
+    )
 
 
 @router.get(
