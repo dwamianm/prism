@@ -82,26 +82,40 @@ async def test_independent_engines_converge_on_one_daily_summary(config, user): 
         assert len(summaries) == 1
 
 
-async def test_unscoped_daily_run_pages_all_tenants(config, user):  # noqa: F811
+async def test_scoped_daily_run_pages_beyond_one_batch(config, user):  # noqa: F811
     async with MemoryEngine.open(config) as engine:
-        with pytest.raises(ValueError, match="requires user_id"):
-            await engine._graph_store.scan_nodes(user_id=None)
-        other = user + "-other"
-        await _daily_sources(engine, user, count=251)
-        await _daily_sources(engine, other, count=251)
+        await _daily_sources(engine, user, count=501)
 
         result = await generate_daily_summaries(
             engine,
             OrganizerConfig(
-                summarization_daily_min_events=250,
+                summarization_daily_min_events=500,
                 summarization_max_items_per_summary=2,
             ),
             10_000,
+            user_id=user,
         )
 
-        assert result.nodes_processed == 2 and result.nodes_modified == 2
+        assert result.nodes_processed == 1 and result.nodes_modified == 1
         assert len(await _active_daily(engine, user)) == 1
-        assert len(await _active_daily(engine, other)) == 1
+
+
+async def test_operator_scan_is_explicit_and_can_cross_tenants(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        with pytest.raises(ValueError, match="requires user_id"):
+            await engine._graph_store.scan_nodes(user_id=None)
+        other = user + "-other"
+        ours = (await _daily_sources(engine, user, count=1))[0]
+        theirs = (await _daily_sources(engine, other, count=1))[0]
+
+        page = await engine._graph_store.scan_nodes(
+            user_id=None,
+            operator_unscoped=True,
+            limit=10_000,
+        )
+
+        ids = {node.id for node in page}
+        assert ours.id in ids and theirs.id in ids
 
 
 async def test_late_high_salience_source_atomically_replaces_daily_summary(config, user):  # noqa: F811

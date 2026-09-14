@@ -33,16 +33,26 @@ operator scan; the public enumeration API remains owner-required.
 
 ## Verification
 
-Focused DuckDB tests passed **42 tests with 22 PostgreSQL cases skipped**. Ruff
+Focused DuckDB tests passed **43 tests with 23 PostgreSQL cases skipped**. Ruff
 passed all changed source and test files, and focused mypy passed the publication
 model, organizer and storage modules.
+
+The exact source head passed the complete local suite with **2,949 tests passed
+and 745 skipped** in 579.67 seconds. The first live PostgreSQL 3.13 run passed
+3,484 tests before one new suite-global operator test asserted that only its two
+owners existed in the shared database. The operator scan correctly returned
+owners created by earlier tests. The test now proves the 501-source paging
+boundary within its unique owner and checks cross-tenant operator visibility
+read-only, without mutating unrelated namespaces; the replacement matrix run is
+the acceptance result.
 
 The regression selection covers daily, weekly and monthly behavior, full source
 qualifiers and provenance, unchanged reuse, same-engine and independent-engine
 concurrency, late selected-source replacement, legacy migration, injected
-publication failure, durable restart without re-embedding, a 502-source
-cross-tenant operator pagination boundary, public owner-required enumeration,
-and the pre-existing consolidation publication and recovery contracts.
+publication failure, durable restart without re-embedding, a 501-source scoped
+pagination boundary, explicit cross-tenant operator enumeration, public
+owner-required enumeration, and the pre-existing consolidation publication and
+recovery contracts.
 
 These checks establish consistency and recovery behavior. They do not show that
 extractive hierarchical summaries improve reader answers, and the configured
