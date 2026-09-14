@@ -75,6 +75,40 @@ def test_coverage_notice_is_counted_and_never_emits_unqualified_evidence():
     assert too_small.excluded_ids == [source.node.id]
 
 
+def test_context_guidance_never_displaces_a_selected_memory():
+    source = candidate("A complete source record")
+    roomy_config = PackingConfig(
+        token_budget=1000,
+        overhead_tokens=0,
+        min_fidelity=RepresentationLevel.FULL,
+    )
+    baseline = pack_context([source], roomy_config)
+    tight_config = roomy_config.model_copy(update={"token_budget": baseline.tokens_used})
+    tight = pack_context([source], tight_config)
+
+    guided_tight = pack_context(
+        [source],
+        tight_config,
+        context_guidance="TEMPORAL TASK: Subtract dates explicitly.",
+    )
+
+    assert guided_tight.render() == tight.render()
+    assert guided_tight.context_guidance is None
+    assert guided_tight.included_count == tight.included_count == 1
+    assert guided_tight.sections == tight.sections
+
+    guided_roomy = pack_context(
+        [source],
+        roomy_config,
+        context_guidance="TEMPORAL TASK: Subtract dates explicitly.",
+    )
+    assert guided_roomy.context_guidance == "TEMPORAL TASK: Subtract dates explicitly."
+    assert guided_roomy.render().startswith(guided_roomy.context_guidance)
+    assert guided_roomy.included_count == baseline.included_count
+    assert guided_roomy.sections == baseline.sections
+    assert guided_roomy.tokens_used == tokens(guided_roomy.render())
+
+
 def test_pinned_flag_takes_priority_even_with_low_salience():
     pin = candidate("Preserve this pinned note", score=.01, pinned=True)
     other = candidate("A distracting unpinned note", score=1)

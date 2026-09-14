@@ -34,9 +34,10 @@ class TestBuildContextGuidance:
         )
 
         assert guidance is not None
-        assert "REFERENCE TIME: 2024-07-02T15:30:00+00:00" in guidance
-        assert "event_time as the source episode time" in guidance
-        assert "valid_from and valid_to describe claim validity" in guidance
+        assert "QUESTION TIME: 2024-07-02T15:30:00+00:00" in guidance
+        assert "resolve relative dates from that note's event_time" in guidance
+        assert "Subtract dates explicitly" in guidance
+        assert "answer relative to QUESTION TIME" in guidance
         assert "Airbnb" not in guidance
 
     def test_current_state_guidance_preserves_unresolved_conflicts(self):
@@ -44,15 +45,15 @@ class TestBuildContextGuidance:
 
         assert guidance is not None
         assert guidance.startswith("CURRENT-STATE TASK:")
-        assert "recency alone does not resolve contradictions" in guidance
-        assert "Preserve an unresolved conflict" in guidance
+        assert "Recency alone cannot resolve contradictions" in guidance
+        assert "preserve unresolved conflicts" in guidance
 
     def test_recommendation_guidance_uses_personal_history_safely(self):
         guidance = build_context_guidance("What restaurant should I choose?")
 
         assert guidance is not None
         assert guidance.startswith("PERSONALIZATION TASK:")
-        assert "exact new request need not already be stored" in guidance
+        assert "relevant user-specific history" in guidance
         assert "another person's attributes" in guidance
 
     def test_plain_factual_query_needs_no_guidance(self):

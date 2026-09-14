@@ -69,6 +69,14 @@ or exclusion, including for pins. No always-include rule can exceed the budget.
 The separate LLM formatter enforces the same whole-output rule when a budget
 is supplied and supports a caller-provided tokenizer counter.
 
+Optional task guidance follows a non-displacement rule. `pack_context(...,
+context_guidance=...)` first selects and renders the same records it would have
+selected without guidance, then prepends the guidance only if the complete
+output still fits. Guidance is counted in `tokens_used`, is exposed separately
+on `MemoryBundle.context_guidance`, and is omitted at tight boundaries instead
+of evicting or downgrading evidence. Controlled context ablation preserves any
+included guidance byte for byte.
+
 Aware timestamps are rendered in UTC before token counting or date-relative
 annotations. Equivalent instants must produce identical context and token costs
 regardless of their returned timezone offset. Local engine connections select
@@ -174,6 +182,8 @@ Context packing is a greedy bin-packing problem. The following algorithm MUST be
 - `ranked_objects`: List of memory objects sorted by composite score (descending).
 - `context_budget`: Integer token limit for the memory bundle.
 - `overhead_tokens`: Reserved tokens for bundle structure/formatting. Default: 100.
+- `context_guidance`: Optional query-task guidance that may consume otherwise
+  unused bundle space but cannot alter selected objects or representations.
 
 **Algorithm:**
 

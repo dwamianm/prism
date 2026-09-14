@@ -1,10 +1,4 @@
-"""Evaluate task-specific context guidance with a fixed local reader.
-
-This development study selects every previously examined question for which
-``build_context_guidance`` emits text. It changes only the balanced 4K context:
-the guidance is token-counted inside the same bundle budget. Baseline outcomes
-come from the complete balanced study; the guided arm receives no outcome retry.
-"""
+"""Confirm non-displacing context guidance on the 381-question partition."""
 
 from __future__ import annotations
 
@@ -14,8 +8,10 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
-from benchmarks.diagnostics import balanced_packing_answer as base
-from benchmarks.diagnostics import context_ablation_answer as prior
+from benchmarks.diagnostics import balanced_packing_answer as reader_base
+from benchmarks.diagnostics import balanced_packing_answer_regression as baseline
+from benchmarks.diagnostics import context_ablation_answer as reader_run
+from benchmarks.diagnostics import context_guidance_answer as development
 from benchmarks.diagnostics import reader_judge
 from benchmarks.diagnostics.hindsight_capture import digest, write
 from benchmarks.diagnostics.product_packing import measure
@@ -25,63 +21,84 @@ from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context
 
 
-EXPECTED_CASES = 17
+EXPECTED_CASES = 70
 
 
 def source_paths(root: Path) -> dict[str, Path]:
-    return prior.source_paths(root)
+    paths = baseline.source_paths(root)
+    prior = root / "data/benchmarks/balanced-qwen35b-regression-v1"
+    paths.update(
+        {
+            "baseline_registration": (
+                root
+                / "benchmarks/results/research/2026-09-13/"
+                "balanced-qwen35b-regression-registration.json"
+            ),
+            "baseline_results": (
+                root
+                / "benchmarks/results/research/2026-09-13/"
+                "balanced-qwen35b-regression-results.json"
+            ),
+            "baseline_reader": prior / "reader.json",
+            "baseline_reader_state": prior / "reader-state.json",
+            "baseline_judge": prior / "judge.json",
+        }
+    )
+    return paths
 
 
 def source_identity(paths: dict[str, Path]) -> dict[str, str]:
-    return prior.source_identity(paths)
+    return {
+        key: digest(path.read_bytes())
+        for key, path in paths.items()
+        if key not in {"contexts", "snapshots"}
+    }
 
 
-def _guidance_kind(guidance: str) -> str:
-    marker = guidance.split(" TASK:", maxsplit=1)[0].splitlines()[-1]
-    if marker not in {"TEMPORAL", "CURRENT-STATE", "PERSONALIZATION"}:
-        raise ValueError("Unknown context-guidance kind")
-    return marker.lower().replace("-", "_")
+def _question_time(value: str) -> datetime:
+    return datetime.strptime(value, "%Y/%m/%d (%a) %H:%M").replace(
+        tzinfo=timezone.utc
+    )
 
 
 def prepare(root: Path) -> dict:
-    """Reproduce balanced contexts and add guidance without outcome access."""
+    """Select every confirmation context where guidance fits unchanged."""
     paths = source_paths(root)
-    baseline = base.prepare(root)
-    baseline_by_id = {row["case_id"]: row for row in baseline["rows"]}
-    cases = {
-        row["case_id"]: row
-        for row in json.loads(paths["inputs"].read_bytes())["cases"]
-    }
-    references = {
+    prepared_baseline = baseline.prepare(root)
+    baseline_by_id = {row["case_id"]: row for row in prepared_baseline["rows"]}
+    dataset = {
         row["question_id"]: row
-        for row in json.loads(paths["references"].read_bytes())["references"]
+        for row in json.loads(paths["dataset"].read_bytes())
     }
-    composition = json.loads(paths["composition"].read_bytes())
+    source = {
+        row["question_id"]: row
+        for row in json.loads(paths["source"].read_bytes())["details"]
+    }
+    regression = json.loads(paths["regression"].read_bytes())
     rows = []
-    for result in composition["details"]:
-        reference = references[result["question_id"]]
-        case = cases[reference["case_id"]]
-        reference_time = datetime.fromisoformat(case["question_date"])
+    for result in regression["details"]:
+        question_id = result["question_id"]
+        case = dataset[question_id]
         guidance = build_context_guidance(
-            case["question"], reference_time=reference_time
+            case["question"], reference_time=_question_time(case["question_date"])
         )
         if guidance is None:
             continue
 
-        snapshot_ref = result["snapshot"]
+        snapshot_ref = result["candidate_snapshot"]
         snapshot_raw = (paths["snapshots"] / snapshot_ref["filename"]).read_bytes()
         if digest(snapshot_raw) != snapshot_ref["sha256"]:
             raise ValueError("Candidate snapshot checksum mismatch")
         snapshot = json.loads(snapshot_raw)
         candidates = [
             RetrievalCandidate.model_validate(candidate)
-            for candidate in snapshot["candidates"]["parser"]
+            for candidate in snapshot["candidates"]
         ]
-        config = PackingConfig.model_validate(
-            snapshot["arms"]["parser:density:4096"]["packing"]
-        ).model_copy(update={"multipath_ordering": "balanced"})
+        config = PackingConfig.model_validate(snapshot["packing_config"]).model_copy(
+            update={"token_budget": baseline.BUDGET, "multipath_ordering": "balanced"}
+        )
         control = pack_context(candidates, config)
-        expected = baseline_by_id[reference["case_id"]]["contexts"]["balanced"]
+        expected = baseline_by_id[question_id]["contexts"]["balanced"]
         if (
             control.render() != expected["context"]
             or digest(control.render().encode()) != expected["sha256"]
@@ -92,7 +109,13 @@ def prepare(root: Path) -> dict:
         guided = pack_context(candidates, config, context_guidance=guidance)
         if guided.context_guidance is None:
             continue
-        gold = set(reference["evidence_source_ids"])
+        if (
+            guided.sections != control.sections
+            or guided.included_count != control.included_count
+            or guided.excluded_ids != control.excluded_ids
+        ):
+            raise ValueError("Context guidance changed record selection")
+        gold = set(source[question_id]["evidence_source_ids"])
         control_measure = measure(control, gold, config)
         guided_measure = measure(guided, gold, config)
         if (
@@ -100,19 +123,15 @@ def prepare(root: Path) -> dict:
             or control_measure["all_evidence_retained"]
             != guided_measure["all_evidence_retained"]
         ):
-            raise ValueError("Guidance changed annotated-source retention")
+            raise ValueError("Context guidance changed annotated-source retention")
         context = guided.render()
         rows.append(
             {
-                "case_id": result["question_id"],
+                "case_id": question_id,
                 "question": case["question"],
                 "question_date": case["question_date"],
-                "category": (
-                    "abstention"
-                    if result["question_id"].endswith("_abs")
-                    else reference["category"]
-                ),
-                "guidance_kind": _guidance_kind(guidance),
+                "category": result["category"],
+                "guidance_kind": development._guidance_kind(guidance),
                 "guidance": guidance,
                 "baseline_context_sha256": expected["sha256"],
                 "context": context,
@@ -124,16 +143,15 @@ def prepare(root: Path) -> dict:
                 },
             }
         )
-    rows.sort(key=lambda row: row["case_id"])
     if (
         len(rows) != EXPECTED_CASES
         or len({row["case_id"] for row in rows}) != EXPECTED_CASES
     ):
-        raise ValueError(f"Expected exactly {EXPECTED_CASES} guided questions")
+        raise ValueError(f"Expected exactly {EXPECTED_CASES} confirmation questions")
     return {
-        "kind": "balanced-context-guidance-development",
+        "kind": "balanced-context-guidance-confirmation",
         "schema_version": 1,
-        "selection": "all development questions receiving deterministic guidance",
+        "selection": "every 381-partition question whose guidance fits without record changes",
         "source_identity": source_identity(paths),
         "rows": rows,
     }
@@ -144,14 +162,14 @@ def register(root: Path, directory: Path, registration: Path, base_url: str) -> 
         raise ValueError("Fresh registration and study directory required")
     prepared = prepare(root)
     paths = source_paths(root)
-    baseline_registration = json.loads(paths["prior_registration"].read_bytes())
-    reader = base.reader_declaration(base_url)
+    prior_registration = json.loads(paths["baseline_registration"].read_bytes())
+    reader = reader_base.reader_declaration(base_url)
     judge = reader_judge.declaration(
-        base.base.JUDGE_MODEL,
+        reader_base.base.JUDGE_MODEL,
         base_url,
-        baseline_registration["judge"]["controls_sha256"],
+        prior_registration["judge"]["controls_sha256"],
     )
-    if reader != baseline_registration["reader"] or judge != baseline_registration["judge"]:
+    if reader != prior_registration["reader"] or judge != prior_registration["judge"]:
         raise ValueError("Reader or judge differs from the complete baseline study")
     reader_judge.validate_calibration(
         json.loads(paths["controls"].read_bytes()),
@@ -164,13 +182,13 @@ def register(root: Path, directory: Path, registration: Path, base_url: str) -> 
     write(
         registration,
         {
-            "kind": "balanced-context-guidance-development",
+            "kind": "balanced-context-guidance-confirmation",
             "registered_at": datetime.now(timezone.utc).isoformat(),
             "implementation_sha256": digest(Path(__file__).read_bytes()),
             "guidance_implementation_sha256": digest(
                 Path(build_context_guidance.__code__.co_filename).read_bytes()
             ),
-            "reader_implementation_sha256": digest(Path(base.__file__).read_bytes()),
+            "reader_implementation_sha256": digest(Path(reader_base.__file__).read_bytes()),
             "prepared_sha256": digest(prepared_path.read_bytes()),
             "source_identity": prepared["source_identity"],
             "case_ids": [row["case_id"] for row in prepared["rows"]],
@@ -187,12 +205,12 @@ def register(root: Path, directory: Path, registration: Path, base_url: str) -> 
                 "unchanged_annotated_source_recall": True,
             },
             "limits": [
-                "All questions and baseline outcomes were examined previously; this is development evidence.",
-                "Selection is deterministic and outcome-blind; every question receiving guidance is retained.",
-                "Guidance is counted within the same balanced 4K memory budget.",
-                "Annotated-source recall must remain unchanged before any reader call.",
-                "One local reader and one calibrated local judge are used, with no outcome retries.",
-                "A passing development gate requires confirmation on the separate 381-question partition.",
+                "This partition's baseline source retention and answer outcomes were examined previously.",
+                "Selection uses context fit only; baseline correctness and references cannot affect inclusion.",
+                "Every included guidance prefix is token-counted and preserves exact record selection.",
+                "Questions where guidance does not fit are unchanged and excluded from model calls.",
+                "One fixed local reader and one calibrated local judge are used, with no outcome retries.",
+                "This is a confirmation of product behavior, not an independent competitive benchmark.",
             ],
         },
     )
@@ -209,15 +227,16 @@ def verify_registration(
         declared["implementation_sha256"] != digest(Path(__file__).read_bytes())
         or declared["guidance_implementation_sha256"]
         != digest(Path(build_context_guidance.__code__.co_filename).read_bytes())
-        or declared["reader_implementation_sha256"] != digest(Path(base.__file__).read_bytes())
+        or declared["reader_implementation_sha256"]
+        != digest(Path(reader_base.__file__).read_bytes())
         or declared["prepared_sha256"] != digest(prepared_path.read_bytes())
         or declared["source_identity"] != source_identity(paths)
         or prepared != prepare(root)
         or declared["case_ids"] != [row["case_id"] for row in prepared["rows"]]
-        or declared["reader"] != base.reader_declaration(base_url)
+        or declared["reader"] != reader_base.reader_declaration(base_url)
         or declared["judge"]
         != reader_judge.declaration(
-            base.base.JUDGE_MODEL,
+            reader_base.base.JUDGE_MODEL,
             base_url,
             declared["judge"]["controls_sha256"],
         )
@@ -226,78 +245,28 @@ def verify_registration(
     return declared, prepared
 
 
-def _summary(rows: list[dict]) -> dict:
-    gains = sum(not row["baseline_correct"] and row["guided_correct"] for row in rows)
-    losses = sum(row["baseline_correct"] and not row["guided_correct"] for row in rows)
-    return {
-        "questions": len(rows),
-        "baseline_correct": sum(row["baseline_correct"] for row in rows),
-        "guided_correct": sum(row["guided_correct"] for row in rows),
-        "gains": gains,
-        "losses": losses,
-        "ties": len(rows) - gains - losses,
+def baseline_outcomes(paths: dict[str, Path], registration: dict) -> dict[str, bool]:
+    results = json.loads(paths["baseline_results"].read_bytes())
+    reader = json.loads(paths["baseline_reader"].read_bytes())
+    judge = json.loads(paths["baseline_judge"].read_bytes())
+    state = json.loads(paths["baseline_reader_state"].read_bytes())
+    if (
+        not results["complete"]
+        or results["registration_sha256"]
+        != digest(paths["baseline_registration"].read_bytes())
+        or results["reader_report_sha256"] != digest(paths["baseline_reader"].read_bytes())
+        or results["judge_report_sha256"] != digest(paths["baseline_judge"].read_bytes())
+        or reader["identity"]["reader"] != registration["reader"]
+        or judge["identity"]["declaration"] != registration["judge"]
+        or state["complete"] is not True
+    ):
+        raise ValueError("Complete matching baseline outcomes are required")
+    outcomes = {
+        row["case_id"]: row["answers"]["balanced"] for row in results["details"]
     }
-
-
-def summarize(
-    prepared: dict,
-    reader: dict,
-    judge: dict,
-    baseline: dict[str, bool],
-    registration: dict,
-) -> dict:
-    verdicts = {row["id"]: row["correct"] for row in judge["judgments"]}
-    details = [
-        {
-            "case_id": row["case_id"],
-            "category": row["category"],
-            "guidance_kind": row["guidance_kind"],
-            "baseline_correct": baseline[row["case_id"]],
-            "guided_correct": verdicts[row["case_id"]],
-        }
-        for row in prepared["rows"]
-    ]
-    overall = _summary(details)
-    by_kind = {
-        kind: _summary([row for row in details if row["guidance_kind"] == kind])
-        for kind in sorted({row["guidance_kind"] for row in details})
-    }
-    categories = {
-        category: _summary([row for row in details if row["category"] == category])
-        for category in sorted({row["category"] for row in details})
-    }
-    observed_gate = {
-        "overall_gains_exceed_losses": overall["gains"] > overall["losses"],
-        "temporal_gains_exceed_losses": (
-            by_kind["temporal"]["gains"] > by_kind["temporal"]["losses"]
-        ),
-        "no_personalization_accuracy_loss": (
-            by_kind["personalization"]["guided_correct"]
-            >= by_kind["personalization"]["baseline_correct"]
-        ),
-        "no_current_state_accuracy_loss": (
-            by_kind["current_state"]["guided_correct"]
-            >= by_kind["current_state"]["baseline_correct"]
-        ),
-        "unchanged_annotated_source_recall": all(
-            row["source_retention"]["baseline"] == row["source_retention"]["guided"]
-            for row in prepared["rows"]
-        ),
-    }
-    if set(observed_gate) != set(registration["gate"]):
-        raise ValueError("Observed gate differs from registration")
-    return {
-        "complete": True,
-        "quality_gate_passed": all(observed_gate.values()),
-        "gate": observed_gate,
-        "overall": overall,
-        "guidance_kinds": by_kind,
-        "categories": categories,
-        "details": details,
-        "reader_state_sha256": reader["state_sha256"],
-        "judge_unique_calls": judge["unique_calls"],
-        "limits": registration["limits"],
-    }
+    if len(outcomes) != 381 or any(type(value) is not bool for value in outcomes.values()):
+        raise ValueError("Baseline outcome coverage is incomplete")
+    return outcomes
 
 
 def run(root: Path, directory: Path, registration_path: Path, base_url: str) -> dict:
@@ -307,7 +276,7 @@ def run(root: Path, directory: Path, registration_path: Path, base_url: str) -> 
     for name in ("reader.json", "judge.json", "results.json"):
         if (directory / name).exists():
             raise ValueError("Fresh study outcomes required")
-    reader = prior.run_reader(
+    reader = reader_run.run_reader(
         prepared,
         registration["reader"],
         directory / "reader-state.json",
@@ -316,7 +285,7 @@ def run(root: Path, directory: Path, registration_path: Path, base_url: str) -> 
     write(directory / "reader.json", reader)
     references = {
         row["question_id"]: row
-        for row in json.loads(source_paths(root)["references"].read_bytes())["references"]
+        for row in json.loads(source_paths(root)["dataset"].read_bytes())
     }
     answers = {row["case_id"]: row["answer"] for row in reader["rows"]}
     judge_cases = [
@@ -340,11 +309,11 @@ def run(root: Path, directory: Path, registration_path: Path, base_url: str) -> 
     if judge["prior_failed_attempts"]:
         raise ValueError("Judge study contains failed calls")
     write(directory / "judge.json", judge)
-    result = summarize(
+    result = development.summarize(
         prepared,
         reader,
         judge,
-        prior.baseline_outcomes(source_paths(root), registration),
+        baseline_outcomes(source_paths(root), registration),
         registration,
     )
     result.update(

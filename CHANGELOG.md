@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Optional, token-counted context guidance with a non-displacement guarantee.
+  The packer includes guidance only when it fits after record selection, exposes
+  whether it was included, and preserves it through controlled ablation.
 - Exact, nonmutating packed-context ablation and citation-checked presence
   credit. Applications can re-answer after removing one cited memory, preserve
   both context hashes and token accounting, and distinguish load-bearing,

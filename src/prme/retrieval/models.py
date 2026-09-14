@@ -8,7 +8,7 @@ RetrievalResponse, RetrievalMetadata, and ExcludedCandidate.
 from __future__ import annotations
 
 import math
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from datetime import datetime
@@ -50,7 +50,7 @@ class QueryAnalysis(BaseModel):
         default_factory=list,
         description="Extracted entity names from query",
     )
-    temporal_signals: list[dict] = Field(
+    temporal_signals: list[dict[str, Any]] = Field(
         default_factory=list,
         description="Temporal signals (each has type/value/resolved keys)",
     )
@@ -131,7 +131,7 @@ class ScoreAdjustment(BaseModel):
     source_node_id: UUID
 
     @model_validator(mode="after")
-    def validate_operation(self):
+    def validate_operation(self) -> ScoreAdjustment:
         if (self.kind == "neural_blend") != (self.neural_score is not None):
             raise ValueError("Only neural blending requires a neural score")
         if self.kind == "neural_blend" and not 0 <= self.coefficient <= 1:
@@ -155,7 +155,7 @@ class ScoreProvenance(BaseModel):
     adjustments: tuple[ScoreAdjustment, ...] = ()
 
     @model_validator(mode="after")
-    def validate_components(self):
+    def validate_components(self) -> ScoreProvenance:
         values = list(self.trace.model_dump().values())
         values.extend(v for k, v in self.weights.model_dump().items() if k != "node_type_boost")
         values.extend(self.weights.node_type_boost.values())
@@ -288,6 +288,13 @@ class MemoryBundle(BaseModel):
     coverage_notice: str | None = Field(
         default=None,
         description="System-authored coverage boundary included in rendered_context",
+    )
+    context_guidance: str | None = Field(
+        default=None,
+        description=(
+            "Optional task guidance included only when it fits without changing "
+            "the selected memory records"
+        ),
     )
 
     def render(self) -> str:

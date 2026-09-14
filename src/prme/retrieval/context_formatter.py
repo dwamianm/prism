@@ -258,9 +258,9 @@ def build_context_guidance(
     """Build compact, token-countable reasoning guidance for packed records.
 
     The text contains no query or memory content. It clarifies timestamp fields
-    for temporal/current-state questions and discourages generic refusals when a
-    recommendation can use relevant personal history. Callers must count it
-    inside the same context budget as memory records.
+    for temporal/current-state questions and identifies relevant personal
+    history as recommendation evidence. Callers must count it inside the same
+    context budget as memory records.
     """
     if reference_time is not None and reference_time.utcoffset() is None:
         raise ValueError("reference_time must be timezone-aware")
@@ -268,24 +268,22 @@ def build_context_guidance(
     reference = as_utc(reference_time) if reference_time is not None else None
     if context_type == "temporal":
         lines = [
-            "TEMPORAL TASK: Use event_time as the source episode time; valid_from and valid_to describe claim validity, not when the episode happened.",
-            "Compute the requested interval explicitly from event_time, preserve the requested unit, and check the arithmetic before answering.",
+            "TEMPORAL TASK: For note text, resolve relative dates from that note's event_time. Subtract dates explicitly; answer relative to QUESTION TIME.",
         ]
         if reference is not None:
-            lines.insert(0, f"REFERENCE TIME: {reference.isoformat()}")
+            lines.insert(0, f"QUESTION TIME: {reference.isoformat()}")
         return "\n".join(lines)
     if context_type == "knowledge_update":
         lines = [
-            "CURRENT-STATE TASK: Use explicit supported updates to identify the requested current value; recency alone does not resolve contradictions.",
-            "Use event_time for episode order. Preserve an unresolved conflict instead of choosing silently.",
+            "CURRENT-STATE TASK: Prefer explicit supported updates. Recency alone cannot resolve contradictions; preserve unresolved conflicts.",
         ]
         if reference is not None:
-            lines.insert(0, f"REFERENCE TIME: {reference.isoformat()}")
+            lines.insert(0, f"QUESTION TIME: {reference.isoformat()}")
         return "\n".join(lines)
     if _PERSONALIZATION_RE.search(query):
         return (
-            "PERSONALIZATION TASK: Use relevant user-specific history to tailor the answer. "
-            "The exact new request need not already be stored. Do not transfer another person's attributes to the user."
+            "PERSONALIZATION TASK: Tailor the answer with relevant user-specific history. "
+            "Do not transfer another person's attributes to the user."
         )
     return None
 

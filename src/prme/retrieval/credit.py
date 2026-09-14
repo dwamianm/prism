@@ -6,7 +6,7 @@ import hashlib
 from collections.abc import Sequence
 from uuid import UUID
 
-from prme.models.credit import ContextAblation, ContextPresenceCredit
+from prme.models.credit import CreditTier, ContextAblation, ContextPresenceCredit
 from prme.models.relevance import AnswerCitationRecord
 from prme.retrieval.models import MemoryBundle
 from prme.retrieval.packing import _render_sections
@@ -58,7 +58,10 @@ def ablate_context(
     rendered = _render_sections(
         sections,
         coverage_notice=snapshot.coverage_notice,
+        context_guidance=snapshot.context_guidance,
     )
+    if snapshot.tokenizer is None:
+        raise ValueError("Context ablation requires the bundle tokenizer")
     tokens_used = count_tokens(rendered, snapshot.tokenizer)
     available = snapshot.tokens_used + snapshot.budget_remaining
     excluded_ids = list(snapshot.excluded_ids)
@@ -76,6 +79,7 @@ def ablate_context(
         rendered_context=rendered,
         tokenizer=snapshot.tokenizer,
         coverage_notice=snapshot.coverage_notice,
+        context_guidance=snapshot.context_guidance,
     )
     return ContextAblation(
         removed_node_ids=removed,
@@ -109,12 +113,13 @@ def assess_context_presence(
     if citation.context_sha256 != ablation.baseline_context_sha256:
         raise ValueError("Citation and ablation baseline contexts do not match")
     outcomes = (baseline_correct, counterfactual_correct)
-    tier, value = {
+    tiers: dict[tuple[bool, bool], tuple[CreditTier, float]] = {
         (True, False): ("load_bearing", 1.0),
         (True, True): ("cited_non_flipping", 0.6),
         (False, True): ("misleading", -1.0),
         (False, False): ("cited_wrong_noncuring", 0.0),
-    }[outcomes]
+    }
+    tier, value = tiers[outcomes]
     return ContextPresenceCredit(
         request_id=citation.request_id,
         citation_id=citation.citation_id,

@@ -48,6 +48,7 @@ def packed():
         ],
         config,
         coverage_notice="Coverage is intentionally bounded.",
+        context_guidance="Use event times for temporal arithmetic.",
     )
     return bundle, config
 
@@ -79,6 +80,8 @@ def test_ablation_removes_only_requested_entry_and_preserves_baseline():
     assert "observatory" in ablation.counterfactual.render()
     assert "Always answer briefly" in ablation.counterfactual.render()
     assert "Coverage is intentionally bounded" in ablation.counterfactual.render()
+    assert "Use event times for temporal arithmetic" in ablation.counterfactual.render()
+    assert ablation.counterfactual.context_guidance == bundle.context_guidance
     assert ablation.counterfactual.included_count == bundle.included_count - 1
     assert target in ablation.counterfactual.excluded_ids
     assert ablation.counterfactual.tokens_used == count_tokens(
