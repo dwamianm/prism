@@ -294,6 +294,9 @@ class TestDailySummaryGeneration:
         # Summary should contain the 2 highest salience items (0.9, 0.8)
         assert "salience 0.9" in summaries[0].content
         assert "salience 0.8" in summaries[0].content
+        assert summaries[0].content.index("salience 0.9") < summaries[0].content.index(
+            "salience 0.8"
+        )
         assert summaries[0].metadata["source_count"] == 2
 
     @pytest.mark.asyncio

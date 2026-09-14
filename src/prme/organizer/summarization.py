@@ -269,10 +269,11 @@ async def _materialize_summary_node(
     scope = source_nodes[0].scope
     if any(node.user_id != user_id or node.scope != scope for node in source_nodes):
         raise ValueError("Summary sources must share the requested user and scope")
-    source_nodes = sorted(source_nodes, key=lambda node: str(node.id))
-    content = _build_summary_content(level, period_key, source_nodes)
+    selected_nodes = list(source_nodes)
+    source_nodes = sorted(selected_nodes, key=lambda node: str(node.id))
+    content = _build_summary_content(level, period_key, selected_nodes)
     evidence_refs = []
-    for node in source_nodes:
+    for node in selected_nodes:
         evidence_refs.extend(node.evidence_refs)
         evidence_refs.append(node.id)
     # Deduplicate while preserving order
@@ -283,17 +284,18 @@ async def _materialize_summary_node(
             seen.add(ref)
             unique_refs.append(ref)
 
-    salience = _compute_summary_salience(source_nodes)
-    confidence = _compute_summary_confidence(source_nodes)
+    salience = _compute_summary_salience(selected_nodes)
+    confidence = _compute_summary_confidence(selected_nodes)
     key = _summary_publication_key(user_id, scope, level, period_key)
     provider = engine._vector_index._provider
     source_ids = [str(node.id) for node in source_nodes]
+    selected_ids = [str(node.id) for node in selected_nodes]
     request_hash = consolidation_request_hash(
         source_nodes,
         content=content,
         confidence=confidence,
         salience=salience,
-        selected_ids=source_ids,
+        selected_ids=selected_ids,
         embedding_identity=(
             provider.model_name,
             provider.model_version,
@@ -342,7 +344,7 @@ async def _materialize_summary_node(
                 "period_key": period_key,
                 "source_count": len(source_nodes),
                 "source_node_ids": source_ids,
-                "selected_source_node_ids": source_ids,
+                "selected_source_node_ids": selected_ids,
             },
             confidence=confidence,
             confidence_base=confidence,
@@ -354,7 +356,7 @@ async def _materialize_summary_node(
             evidence_refs=unique_refs,
             decay_profile=DecayProfile.SLOW,
             scope=scope,
-            event_time=min(n.event_time or n.created_at for n in source_nodes),
+            event_time=min(n.event_time or n.created_at for n in selected_nodes),
             pinned=False,
         )
         edges = tuple(
@@ -372,7 +374,7 @@ async def _materialize_summary_node(
                 valid_from=summary_node.created_at,
                 created_at=summary_node.created_at,
             )
-            for source_node in source_nodes
+            for source_node in selected_nodes
         )
         vectors = await encode_texts(provider, [content])
         if len(vectors) != 1:
