@@ -128,6 +128,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reader settings, saved pack/config bindings and the baseline's zero-memory
   contract. The result used a mean 43,195 memory-context tokens and remains a
   named-cohort memory-utility result rather than a competitive leadership claim.
+- LongMemEval-V2 registered execution manifests now bind the configuration
+  actually selected for each arm, including its launch-time hash, instead of
+  attesting only the installed default. The installer atomically supplies both
+  the 32K maximum-evidence profile and an explicit 4K product-default compact
+  profile; the comparator requires both per-arm configuration identities for new
+  schema-2 studies.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,

@@ -25,8 +25,20 @@ def test_installer_is_idempotent_and_preserves_registry(tmp_path: Path, monkeypa
     first = installer.install(tmp_path)
     second = installer.install(tmp_path)
 
-    assert first["adapter"] == first["config"] == first["registry_import"] == "installed"
-    assert second["adapter"] == second["config"] == second["registry_import"] == "unchanged"
+    assert (
+        first["adapter"]
+        == first["config"]
+        == first["compact_config"]
+        == first["registry_import"]
+        == "installed"
+    )
+    assert (
+        second["adapter"]
+        == second["config"]
+        == second["compact_config"]
+        == second["registry_import"]
+        == "unchanged"
+    )
     registry = (tmp_path / "memory_modules" / "__init__.py").read_text()
     assert registry.startswith("from .memory import Memory\n")
     assert registry.count(installer._IMPORT_LINE) == 1
@@ -41,3 +53,21 @@ def test_installer_rejects_revision_drift_and_conflicts(tmp_path: Path, monkeypa
     (tmp_path / "memory_modules" / "prme.py").write_text("conflicting adapter\n")
     with pytest.raises(RuntimeError, match="refusing to overwrite"):
         installer.install(tmp_path, allow_revision_mismatch=True)
+
+
+def test_installer_rolls_back_files_created_before_a_config_conflict(
+    tmp_path: Path, monkeypatch
+) -> None:
+    upstream_layout(tmp_path)
+    monkeypatch.setattr(
+        installer, "_checkout_revision", lambda root: installer.UPSTREAM_REVISION
+    )
+    compact = tmp_path / "evaluation" / "memory_configs" / "prme_compact.json"
+    compact.write_text("conflicting compact config\n")
+
+    with pytest.raises(RuntimeError, match="refusing to overwrite"):
+        installer.install(tmp_path)
+
+    assert not (tmp_path / "memory_modules" / "prme.py").exists()
+    assert not (tmp_path / "evaluation" / "memory_configs" / "prme.json").exists()
+    assert compact.read_text() == "conflicting compact config\n"

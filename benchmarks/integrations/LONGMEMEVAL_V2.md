@@ -16,9 +16,10 @@ retrieval.
 ## Install the adapter
 
 Run the installer from this PRME checkout. It verifies the pinned upstream Git
-revision, installs both files atomically, registers the adapter, and is safe to
-run again when the installed files are unchanged. It refuses revision drift or
-conflicting destination files rather than silently changing the evaluation:
+revision, installs the adapter and its full and compact configurations
+atomically, registers the adapter, and is safe to run again when the installed
+files are unchanged. It refuses revision drift or conflicting destination files
+rather than silently changing the evaluation:
 
 ```sh
 python -m benchmarks.integrations.install_longmemeval_v2 \
@@ -63,12 +64,14 @@ requires the registered PRME and upstream commits, rejects PRME worktree changes
 or upstream changes beyond its installed adapter/configuration and registry
 import, and writes an immutable
 `execution_manifest.json`. That manifest hashes the launcher, installer, source
-and installed adapter, source and installed configuration, and upstream harness.
-Resuming under different source fails before generation, and a new launcher
+and installed adapter, both supplied PRME configurations, upstream harness, and
+the actual configuration selected for each arm. The registration must contain
+the selected PRME and baseline configuration hashes. Resuming under a different
+source or selected configuration fails before generation, and a new launcher
 will not claim outputs created before the manifest existed. The paired comparator
-requires matching manifests for schema-2 registrations. Schema-1 registrations
-remain readable for studies that were already running when source manifests were
-introduced.
+requires matching source manifests and the registered per-arm invocation hashes
+for schema-2 registrations. Schema-1 registrations remain readable for studies
+that were already running when source manifests were introduced.
 
 Ollama 0.34 supports reasoning control through its
 [OpenAI-compatible API](https://docs.ollama.com/api/openai-compatibility). For a
@@ -101,7 +104,11 @@ Run the enterprise domain separately with the same reader and context settings.
 The adapter asks PRME for at most 32,768 `cl100k_base` tokens. The larger
 upstream ceiling leaves room for Qwen's independently measured chat-template
 and image tokens; the harness records and enforces the actual final count.
-Use the official combine and leaderboard utilities for aggregate metrics.
+Use `evaluation/memory_configs/prme_compact.json` for the explicit product-default
+4,096-token retrieval arm. A saved-memory run must also use a copied
+`memory_config.json` with the same compact settings; the comparator hashes that
+loaded configuration independently. Use the official combine and leaderboard
+utilities for aggregate metrics.
 
 ## Data and lifecycle contract
 

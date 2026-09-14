@@ -216,14 +216,22 @@ def test_registered_execution_manifest_binds_clean_source_trees(
     upstream = tmp_path / "upstream"
     adapter_source = project / "adapter.py"
     config_source = project / "config.json"
+    compact_config_source = project / "compact-config.json"
     installed_adapter = upstream / "memory_modules" / "prme.py"
     installed_config = upstream / "evaluation" / "memory_configs" / "prme.json"
+    installed_compact_config = (
+        upstream / "evaluation" / "memory_configs" / "prme_compact.json"
+    )
+    baseline_config = upstream / "evaluation" / "memory_configs" / "no_retrieval.json"
     harness = upstream / "evaluation" / "harness.py"
     for path, content in (
         (adapter_source, "adapter\n"),
         (config_source, "{}\n"),
+        (compact_config_source, '{"compact": true}\n'),
         (installed_adapter, "adapter\n"),
         (installed_config, "{}\n"),
+        (installed_compact_config, '{"compact": true}\n'),
+        (baseline_config, '{"memory_type": "no_retrieval"}\n'),
         (harness, "def main(): pass\n"),
     ):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -234,6 +242,9 @@ def test_registered_execution_manifest_binds_clean_source_trees(
     monkeypatch.setattr(runner.installer, "_ADAPTER_SOURCE", adapter_source)
     monkeypatch.setattr(runner.installer, "_CONFIG_SOURCE", config_source)
     monkeypatch.setattr(
+        runner.installer, "_COMPACT_CONFIG_SOURCE", compact_config_source
+    )
+    monkeypatch.setattr(
         runner,
         "_git_identity",
         lambda root: (
@@ -243,6 +254,7 @@ def test_registered_execution_manifest_binds_clean_source_trees(
                 upstream_revision,
                 [
                     "evaluation/memory_configs/prme.json",
+                    "evaluation/memory_configs/prme_compact.json",
                     "memory_modules/__init__.py",
                     "memory_modules/prme.py",
                 ],
@@ -266,14 +278,57 @@ def test_registered_execution_manifest_binds_clean_source_trees(
         upstream,
         {"project_root": str(project), "revision": upstream_revision},
         registration,
+        "evaluation/memory_configs/prme_compact.json",
     )
 
+    assert manifest["schema_version"] == 2
     assert manifest["registration_sha256"] == runner._digest(registration)
     assert manifest["source"]["prme_worktree_changes"] == []
     assert (
         manifest["source"]["adapter_source_sha256"]
         == manifest["source"]["adapter_installed_sha256"]
     )
+    assert manifest["invocation"] == {
+        "memory_config_path": "evaluation/memory_configs/prme_compact.json",
+        "memory_config_sha256": runner._digest(installed_compact_config),
+    }
+
+
+def test_execution_manifest_rejects_missing_selected_config(
+    tmp_path: Path, monkeypatch
+) -> None:
+    project = tmp_path / "project"
+    upstream = tmp_path / "upstream"
+    adapter = project / "adapter.py"
+    config = project / "config.json"
+    compact = project / "compact.json"
+    for path in (adapter, config, compact):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n")
+    for source, destination in (
+        (adapter, upstream / "memory_modules" / "prme.py"),
+        (config, upstream / "evaluation" / "memory_configs" / "prme.json"),
+        (
+            compact,
+            upstream / "evaluation" / "memory_configs" / "prme_compact.json",
+        ),
+    ):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+    harness = upstream / "evaluation" / "harness.py"
+    harness.write_text("pass\n")
+    monkeypatch.setattr(runner.installer, "_ADAPTER_SOURCE", adapter)
+    monkeypatch.setattr(runner.installer, "_CONFIG_SOURCE", config)
+    monkeypatch.setattr(runner.installer, "_COMPACT_CONFIG_SOURCE", compact)
+    monkeypatch.setattr(runner, "_git_identity", lambda root: ("a" * 40, []))
+
+    with pytest.raises(RuntimeError, match="configuration is unavailable"):
+        runner._build_execution_manifest(
+            upstream,
+            {"project_root": str(project), "revision": "a" * 40},
+            None,
+            "evaluation/memory_configs/missing.json",
+        )
 
 
 def test_resume_prompt_requires_same_question_and_haystack() -> None:

@@ -15,6 +15,9 @@ _IMPORT_LINE = "from .prme import PRMEMemory  # noqa: F401"
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _ADAPTER_SOURCE = Path(__file__).with_name("longmemeval_v2.py")
 _CONFIG_SOURCE = Path(__file__).with_name("longmemeval_v2_config.json")
+_COMPACT_CONFIG_SOURCE = Path(__file__).with_name(
+    "longmemeval_v2_compact_config.json"
+)
 
 
 def _checkout_revision(root: Path) -> str:
@@ -31,7 +34,7 @@ def _checkout_revision(root: Path) -> str:
     return result.stdout.strip()
 
 
-def _require_upstream_layout(root: Path) -> tuple[Path, Path, Path]:
+def _require_upstream_layout(root: Path) -> tuple[Path, Path, Path, Path]:
     memory_dir = root / "memory_modules"
     init_path = memory_dir / "__init__.py"
     config_dir = root / "evaluation" / "memory_configs"
@@ -39,7 +42,12 @@ def _require_upstream_layout(root: Path) -> tuple[Path, Path, Path]:
         raise RuntimeError(f"not a LongMemEval-V2 checkout: {root}")
     if not config_dir.is_dir():
         raise RuntimeError(f"missing evaluation/memory_configs in {root}")
-    return memory_dir / "prme.py", config_dir / "prme.json", init_path
+    return (
+        memory_dir / "prme.py",
+        config_dir / "prme.json",
+        config_dir / "prme_compact.json",
+        init_path,
+    )
 
 
 def _copy_exact(source: Path, destination: Path) -> str:
@@ -68,19 +76,31 @@ def _copy_exact(source: Path, destination: Path) -> str:
 def install(upstream_root: Path, *, allow_revision_mismatch: bool = False) -> dict[str, str]:
     """Install once or verify an identical existing installation."""
     root = upstream_root.expanduser().resolve()
-    adapter_path, config_path, init_path = _require_upstream_layout(root)
+    adapter_path, config_path, compact_config_path, init_path = (
+        _require_upstream_layout(root)
+    )
     revision = _checkout_revision(root)
     if revision != UPSTREAM_REVISION and not allow_revision_mismatch:
         raise RuntimeError(
             f"unsupported LongMemEval-V2 revision {revision}; expected {UPSTREAM_REVISION}"
         )
 
-    adapter_status = _copy_exact(_ADAPTER_SOURCE, adapter_path)
+    installed_paths: list[Path] = []
     try:
-        config_status = _copy_exact(_CONFIG_SOURCE, config_path)
-    except BaseException:
+        adapter_status = _copy_exact(_ADAPTER_SOURCE, adapter_path)
         if adapter_status == "installed":
-            adapter_path.unlink(missing_ok=True)
+            installed_paths.append(adapter_path)
+        config_status = _copy_exact(_CONFIG_SOURCE, config_path)
+        if config_status == "installed":
+            installed_paths.append(config_path)
+        compact_config_status = _copy_exact(
+            _COMPACT_CONFIG_SOURCE, compact_config_path
+        )
+        if compact_config_status == "installed":
+            installed_paths.append(compact_config_path)
+    except BaseException:
+        for path in reversed(installed_paths):
+            path.unlink(missing_ok=True)
         raise
 
     init_text = init_path.read_text(encoding="utf-8")
@@ -100,6 +120,7 @@ def install(upstream_root: Path, *, allow_revision_mismatch: bool = False) -> di
         "revision": revision,
         "adapter": adapter_status,
         "config": config_status,
+        "compact_config": compact_config_status,
         "registry_import": import_status,
         "project_root": str(_PROJECT_ROOT),
     }
@@ -126,6 +147,7 @@ def main() -> int:
     print(f"LongMemEval-V2 revision: {statuses['revision']}")
     print(f"Adapter: {statuses['adapter']}")
     print(f"Configuration: {statuses['config']}")
+    print(f"Compact configuration: {statuses['compact_config']}")
     print(f"Registry import: {statuses['registry_import']}")
     print(f"Install PRME from: {statuses['project_root']}")
     return 0

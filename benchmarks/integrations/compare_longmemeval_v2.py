@@ -316,7 +316,7 @@ def _validate_registered_execution(
         raise ValueError("schema-2 registered runs require execution manifests")
     for manifest in (left_manifest, right_manifest):
         if (
-            manifest.get("schema_version") != 1
+            manifest.get("schema_version") != 2
             or manifest.get("kind") != "longmemeval-v2-execution"
             or manifest.get("registration_sha256") != registration_sha256
         ):
@@ -341,6 +341,7 @@ def _validate_registered_execution(
         [],
         [
             "evaluation/memory_configs/prme.json",
+            "evaluation/memory_configs/prme_compact.json",
             "memory_modules/__init__.py",
             "memory_modules/prme.py",
         ],
@@ -354,6 +355,8 @@ def _validate_registered_execution(
         "adapter_installed_sha256",
         "config_source_sha256",
         "config_installed_sha256",
+        "compact_config_source_sha256",
+        "compact_config_installed_sha256",
         "upstream_harness_sha256",
     )
     for field in digest_fields:
@@ -369,9 +372,42 @@ def _validate_registered_execution(
         != left_source["adapter_installed_sha256"]
         or left_source["config_source_sha256"]
         != left_source["config_installed_sha256"]
+        or left_source["compact_config_source_sha256"]
+        != left_source["compact_config_installed_sha256"]
     ):
         raise ValueError("installed benchmark system differs from its registered source")
-    return left_source
+
+    systems = registration.get("systems")
+    if not isinstance(systems, dict):
+        raise ValueError("registration is missing system settings")
+    invocations: dict[str, dict[str, str]] = {}
+    for label, run, manifest, system_name in (
+        ("left", left, left_manifest, "prme"),
+        ("right", right, right_manifest, "baseline"),
+    ):
+        invocation = manifest.get("invocation")
+        system = systems.get(system_name)
+        if not isinstance(invocation, dict) or not isinstance(system, dict):
+            raise ValueError("execution manifest is missing invocation identity")
+        config_path = invocation.get("memory_config_path")
+        config_sha256 = invocation.get("memory_config_sha256")
+        if (
+            config_path != run["args"].get("memory_config_path")
+            or config_path != system.get("memory_config")
+        ):
+            raise ValueError("execution memory configuration path does not match the run")
+        if (
+            not isinstance(config_sha256, str)
+            or len(config_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in config_sha256)
+            or config_sha256 != system.get("memory_config_sha256")
+        ):
+            raise ValueError("execution memory configuration hash does not match registration")
+        invocations[label] = {
+            "memory_config_path": config_path,
+            "memory_config_sha256": config_sha256,
+        }
+    return {**left_source, "invocations": invocations}
 
 
 def compare(

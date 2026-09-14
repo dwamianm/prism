@@ -26,7 +26,7 @@ from benchmarks.integrations import install_longmemeval_v2 as installer
 
 CHECKPOINT_SCHEMA_VERSION = 1
 DEFAULT_CHECKPOINT_FILENAME = "reader_outputs.checkpoint.jsonl"
-EXECUTION_MANIFEST_SCHEMA_VERSION = 1
+EXECUTION_MANIFEST_SCHEMA_VERSION = 2
 EXECUTION_MANIFEST_FILENAME = "execution_manifest.json"
 _LEGACY_OUTPUT_NAMES = (
     "prompt_rows.jsonl",
@@ -102,7 +102,9 @@ def _build_execution_manifest(
     upstream_root: Path,
     install_status: dict[str, str],
     registration_path: Path | None,
+    memory_config_path: str | os.PathLike[str],
 ) -> dict[str, Any]:
+    memory_config_value = os.fspath(memory_config_path)
     project_root = Path(install_status["project_root"]).resolve()
     project_revision, project_changes = _git_identity(project_root)
     upstream_revision, upstream_changes = _git_identity(upstream_root)
@@ -111,9 +113,22 @@ def _build_execution_manifest(
 
     adapter_source = Path(installer._ADAPTER_SOURCE).resolve()
     config_source = Path(installer._CONFIG_SOURCE).resolve()
+    compact_config_source = Path(installer._COMPACT_CONFIG_SOURCE).resolve()
     installed_adapter = upstream_root / "memory_modules" / "prme.py"
     installed_config = upstream_root / "evaluation" / "memory_configs" / "prme.json"
+    installed_compact_config = (
+        upstream_root / "evaluation" / "memory_configs" / "prme_compact.json"
+    )
     upstream_harness = upstream_root / "evaluation" / "harness.py"
+    selected_config = Path(memory_config_value).expanduser()
+    if not selected_config.is_absolute():
+        selected_config = upstream_root / selected_config
+    selected_config = selected_config.resolve()
+    if not selected_config.is_file():
+        raise RuntimeError(
+            f"selected LongMemEval-V2 memory configuration is unavailable: "
+            f"{memory_config_value}"
+        )
     files = {
         "launcher_sha256": _digest(Path(__file__).resolve()),
         "installer_sha256": _digest(Path(installer.__file__).resolve()),
@@ -121,12 +136,21 @@ def _build_execution_manifest(
         "adapter_installed_sha256": _digest(installed_adapter),
         "config_source_sha256": _digest(config_source),
         "config_installed_sha256": _digest(installed_config),
+        "compact_config_source_sha256": _digest(compact_config_source),
+        "compact_config_installed_sha256": _digest(installed_compact_config),
         "upstream_harness_sha256": _digest(upstream_harness),
     }
     if files["adapter_source_sha256"] != files["adapter_installed_sha256"]:
         raise RuntimeError("installed LongMemEval-V2 adapter differs from its source")
     if files["config_source_sha256"] != files["config_installed_sha256"]:
         raise RuntimeError("installed LongMemEval-V2 configuration differs from its source")
+    if (
+        files["compact_config_source_sha256"]
+        != files["compact_config_installed_sha256"]
+    ):
+        raise RuntimeError(
+            "installed compact LongMemEval-V2 configuration differs from its source"
+        )
 
     registration_sha256 = None
     if registration_path is not None:
@@ -147,6 +171,7 @@ def _build_execution_manifest(
             raise RuntimeError("registered launch requires a clean PRME worktree")
         expected_upstream_changes = [
             "evaluation/memory_configs/prme.json",
+            "evaluation/memory_configs/prme_compact.json",
             "memory_modules/__init__.py",
             "memory_modules/prme.py",
         ]
@@ -167,6 +192,10 @@ def _build_execution_manifest(
             "upstream_revision": upstream_revision,
             "upstream_worktree_changes": upstream_changes,
             **files,
+        },
+        "invocation": {
+            "memory_config_path": memory_config_value,
+            "memory_config_sha256": _digest(selected_config),
         },
     }
 
@@ -544,6 +573,7 @@ def run(argv: Sequence[str] | None = None) -> None:
             upstream_root,
             install_status,
             launcher_args.registration,
+            preview_args.memory_config_path,
         )
         _write_or_verify_execution_manifest(
             Path(preview_args.output_dir).resolve(),
