@@ -69,6 +69,33 @@ def _validate_modality(
         raise ValueError("a contingent future action is not a decision without an explicit choice or commitment")
 
 
+def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
+    evidence_quote = canonical_source_quote(fact.evidence_quote or "", source)
+    if evidence_quote is None:
+        raise ValueError("evidence_quote must be copied verbatim from the source")
+    fact.evidence_quote = evidence_quote
+    if not _mentioned(fact.subject, evidence_quote) or not _mentioned(fact.object, evidence_quote):
+        raise ValueError("subject and object must occur in evidence_quote")
+    _validate_condition(fact.epistemic_type, fact.condition, evidence_quote)
+    _validate_modality(fact.fact_type, fact.epistemic_type, evidence_quote)
+
+
+def _validate_relationship_source_support(
+    relationship: ExtractedRelationship, source: str
+) -> None:
+    evidence_quote = canonical_source_quote(relationship.evidence_quote or "", source)
+    if evidence_quote is None:
+        raise ValueError("relationship evidence_quote must be copied verbatim from the source")
+    relationship.evidence_quote = evidence_quote
+    if (
+        not _mentioned(relationship.source_entity, evidence_quote)
+        or not _mentioned(relationship.target_entity, evidence_quote)
+    ):
+        raise ValueError("relationship endpoints must occur in evidence_quote")
+    _validate_condition(relationship.epistemic_type, relationship.condition, evidence_quote)
+    _validate_modality("fact", relationship.epistemic_type, evidence_quote)
+
+
 class _CitedFact(ExtractedFact):
     """Built-in providers must return source support or retry validation."""
 
@@ -82,21 +109,6 @@ class _CitedFact(ExtractedFact):
         description=ExtractedFact.model_fields["evidence_quote"].description,
     )
 
-    @model_validator(mode="after")
-    def source_support(self, info: ValidationInfo) -> _CitedFact:
-        source = (info.context or {}).get("source_text")
-        if source is not None:
-            evidence_quote = canonical_source_quote(self.evidence_quote, source)
-            if evidence_quote is None:
-                raise ValueError("evidence_quote must be copied verbatim from the source")
-            self.evidence_quote = evidence_quote
-            if not _mentioned(self.subject, self.evidence_quote) or not _mentioned(self.object, self.evidence_quote):
-                raise ValueError("subject and object must occur in evidence_quote; use source values without paraphrasing")
-            _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
-            _validate_modality(self.fact_type, self.epistemic_type, self.evidence_quote)
-        return self
-
-
 class _CitedRelationship(ExtractedRelationship):
     polarity: Literal["positive", "negative"] = Field(
         description=ExtractedFact.model_fields["polarity"].description
@@ -104,27 +116,49 @@ class _CitedRelationship(ExtractedRelationship):
     evidence_quote: str = Field(min_length=1, description=ExtractedFact.model_fields["evidence_quote"].description)
     epistemic_type: str = Field(description=ExtractedFact.model_fields["epistemic_type"].description)
 
-    @model_validator(mode="after")
-    def source_support(self, info: ValidationInfo):
-        source = (info.context or {}).get("source_text")
-        if source is not None:
-            evidence_quote = canonical_source_quote(self.evidence_quote, source)
-            if evidence_quote is None:
-                raise ValueError("relationship evidence_quote must be copied verbatim from the source")
-            self.evidence_quote = evidence_quote
-            if not _mentioned(self.source_entity, self.evidence_quote) or not _mentioned(self.target_entity, self.evidence_quote):
-                raise ValueError("relationship endpoints must occur in evidence_quote")
-            _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
-            _validate_modality("fact", self.epistemic_type, self.evidence_quote)
-        return self
-
-
 class _CitedExtractionResult(ExtractionResult):
     facts: list[_CitedFact] = Field(default_factory=list)
     relationships: list[_CitedRelationship] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def closed_entity_references(self):
+    def supported_closed_references(self, info: ValidationInfo):
+        source = (info.context or {}).get("source_text")
+        if source is not None:
+            proposed_claims = len(self.facts) + len(self.relationships)
+            rejection_reasons = []
+            supported_facts = []
+            for index, fact in enumerate(self.facts):
+                try:
+                    _validate_fact_source_support(fact, source)
+                except ValueError as exc:
+                    rejection_reasons.append(f"facts[{index}]: {exc}")
+                    logger.warning(
+                        "extraction_claim_discarded",
+                        path=f"facts[{index}]",
+                        reason=str(exc),
+                    )
+                else:
+                    supported_facts.append(fact)
+            supported_relationships = []
+            for index, relationship in enumerate(self.relationships):
+                try:
+                    _validate_relationship_source_support(relationship, source)
+                except ValueError as exc:
+                    rejection_reasons.append(f"relationships[{index}]: {exc}")
+                    logger.warning(
+                        "extraction_claim_discarded",
+                        path=f"relationships[{index}]",
+                        reason=str(exc),
+                    )
+                else:
+                    supported_relationships.append(relationship)
+            self.facts = supported_facts
+            self.relationships = supported_relationships
+            if proposed_claims and not self.facts and not self.relationships:
+                raise ValueError(
+                    "all proposed claims lack valid source support: "
+                    + "; ".join(rejection_reasons)
+                )
         errors = reference_errors(self)
         if errors:
             raise ValueError("; ".join(errors))
@@ -228,6 +262,38 @@ the text.
 confidence (0.3-0.6) to implied ones.
 """
 
+_ROLE_EXTRACTION_GUIDANCE = {
+    "user": (
+        "Prioritize explicit user state, preferences, decisions, tasks, relationships, "
+        "and project facts. A request for a recommendation does not itself establish a preference."
+    ),
+    "assistant": (
+        "Do not extract generic background knowledge, standalone recommendations, explanations, "
+        "or illustrative examples as durable claims. Extract only durable conversation state: "
+        "explicit assistant commitments or completed actions, and user/project facts the assistant "
+        "explicitly attributes. A restatement is system-inferred evidence, not user corroboration. "
+        "Return empty fact and relationship lists when the message contains no durable state."
+    ),
+    "system": (
+        "Extract only durable policies, constraints, identities, and operating instructions. "
+        "Do not extract examples or schema descriptions as claims."
+    ),
+    "tool": (
+        "Extract source-supported tool results and task state. Do not promote logs, formatting, "
+        "or examples into claims."
+    ),
+}
+
+
+def _extraction_prompt_for_role(role: str) -> str:
+    """Add source-role admission policy without trusting role as prompt text."""
+    normalized = role.strip().casefold()
+    policy = _ROLE_EXTRACTION_GUIDANCE.get(
+        normalized,
+        "Extract only durable, source-supported state; omit examples and presentation text.",
+    )
+    return f"{EXTRACTION_SYSTEM_PROMPT}\nSOURCE MESSAGE ROLE: {normalized or 'unknown'}\n{policy}"
+
 
 @runtime_checkable
 class ExtractionProvider(Protocol):
@@ -291,6 +357,7 @@ class InstructorExtractionProvider:
         max_retries: int = 3,
         timeout: float = 30.0,
         temperature: float = 0.0,
+        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         api_key: SecretStr | None = None,
         base_url: str | None = None,
     ) -> None:
@@ -299,6 +366,10 @@ class InstructorExtractionProvider:
         self._max_retries = max_retries
         self._timeout = timeout
         self._temperature = temperature
+        self._reasoning_effort = (
+            "none" if reasoning_effort is None and self.provider_name == "ollama"
+            else reasoning_effort
+        )
         self._api_key = api_key
         self._base_url = base_url
         self._client: instructor.AsyncInstructor | None = None
@@ -320,6 +391,11 @@ class InstructorExtractionProvider:
                 kwargs["api_key"] = self._api_key.get_secret_value()
             if self._base_url:
                 kwargs["base_url"] = self._base_url
+            if self.provider_name == "ollama":
+                # Ollama's constrained structured-output path returns JSON in
+                # message content. Tool mode can return the same valid JSON
+                # without a tool envelope, which Instructor rejects.
+                kwargs["mode"] = instructor.Mode.JSON
             provider_prefix = {"openai": "OPENAI", "anthropic": "ANTHROPIC"}.get(self.provider_name)
             if provider_prefix:
                 local = dotenv_values(".env")
@@ -380,14 +456,21 @@ class InstructorExtractionProvider:
             client = self._ensure_client()
             create_kwargs: dict = {
                 "response_model": _CitedExtractionResult,
-                "context": {"source_text": content},
+                "context": {"source_text": content, "source_role": role},
                 "messages": [
-                    {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-                    {"role": role, "content": content},
+                    {"role": "system", "content": _extraction_prompt_for_role(role)},
+                    # This is historical text to inspect, regardless of who
+                    # authored the event. Sending an assistant event as an
+                    # assistant chat turn asks the model to continue it and
+                    # can yield an empty response. Event.role remains the
+                    # authoritative source classification downstream.
+                    {"role": "user", "content": content},
                 ],
                 "max_retries": self._max_retries,
                 "temperature": self._temperature,
             }
+            if self._reasoning_effort is not None:
+                create_kwargs["reasoning_effort"] = self._reasoning_effort
             model_id = self._resolve_model_id()
             if model_id:
                 create_kwargs["model"] = model_id
@@ -425,6 +508,7 @@ def create_extraction_provider(
         max_retries=config.max_retries,
         timeout=config.timeout,
         temperature=config.temperature,
+        reasoning_effort=config.reasoning_effort,
         api_key=config.api_key,
         base_url=config.base_url,
     )

@@ -511,8 +511,12 @@ extraction = ExtractionConfig(
 
 Structured extraction uses temperature zero by default to reduce output
 variance. Set `temperature` directly or with `PRME_EXTRACTION_TEMPERATURE` only
-after benchmarking the selected provider. The `/v1` path is required by the
-extraction adapter; omitting `base_url` uses the local default. The 35B-A3B
+after benchmarking the selected provider. Ollama extraction disables reasoning
+by default so thinking tokens cannot consume the structured response window;
+set `reasoning_effort` or `PRME_EXTRACTION_REASONING_EFFORT` to opt into it.
+The adapter uses Ollama's constrained JSON output mode. The `/v1` path is
+required by the extraction adapter; omitting `base_url` uses
+the local default. The 35B-A3B
 profile requires about 23 GB on disk and was observed at about 22 GB loaded;
 use the same 8K profile with `qwen3.5:9b` on lower-memory systems. See the
 [`raw diagnostic evidence`](benchmarks/results/extraction/2026-09-13/README.md)

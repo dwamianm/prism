@@ -6,6 +6,7 @@ environment variables (PRME_ prefix), .env files, and direct arguments.
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -63,6 +64,14 @@ class ExtractionConfig(_ProjectSettings):
             "benchmarking extraction quality for the selected provider."
         ),
     )
+    reasoning_effort: Literal["none", "low", "medium", "high"] | None = Field(
+        default=None,
+        description=(
+            "Optional provider reasoning level for structured extraction. "
+            "Ollama defaults to 'none' so reasoning traces cannot consume the "
+            "schema response budget; other providers keep their own default."
+        ),
+    )
     lease_seconds: float = Field(
         default=300.0, gt=0, allow_inf_nan=False,
         description="Durable extraction lease; active workers renew it and commit rechecks ownership",
@@ -73,6 +82,12 @@ class ExtractionConfig(_ProjectSettings):
     base_url: str | None = Field(
         default=None, description="Optional extraction endpoint; overrides provider environment variables",
     )
+
+    @model_validator(mode="after")
+    def default_ollama_reasoning_effort(self) -> ExtractionConfig:
+        if self.provider.strip().casefold() == "ollama" and self.reasoning_effort is None:
+            self.reasoning_effort = "none"
+        return self
 
     model_config = {
         "env_prefix": "PRME_EXTRACTION_",

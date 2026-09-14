@@ -374,6 +374,7 @@ async def run(args) -> dict:
         extraction_identity = _extraction_identity(
             extraction["provider"], extraction["model"], extraction["base_url"]
         )
+        extraction_identity["reasoning_effort"] = config.extraction.reasoning_effort
         report["extraction"] = extraction_identity
         if extraction_identity["model_digest"] is None:
             report["limitations"].append(
@@ -426,9 +427,11 @@ async def run(args) -> dict:
         _write_report(args.output, report)
         print(f"Evaluated {len(details)}/{len(selected)}; errors={errors}", flush=True)
     if extraction_identity is not None:
-        if _extraction_identity(
+        final_extraction_identity = _extraction_identity(
             extraction["provider"], extraction["model"], extraction["base_url"]
-        ) != extraction_identity:
+        )
+        final_extraction_identity["reasoning_effort"] = config.extraction.reasoning_effort
+        if final_extraction_identity != extraction_identity:
             report["complete"] = False
             report["benchmark_error"] = "Extraction model identity changed during the run"
             _write_report(args.output, report)

@@ -70,6 +70,32 @@ async def test_openai_model_still_passed():
         await provider.extract("hello", role="user")
     assert client.create.await_args.kwargs["model"] == "gpt-4o-mini"
     assert client.create.await_args.kwargs["temperature"] == 0.0
+    assert "reasoning_effort" not in client.create.await_args.kwargs
+
+
+async def test_ollama_disables_reasoning_for_structured_output_by_default():
+    provider = InstructorExtractionProvider("ollama/qwen3.5:9b")
+    client = _mock_client()
+    with patch.object(provider, "_ensure_client", return_value=client):
+        await provider.extract("hello")
+    assert client.create.await_args.kwargs["reasoning_effort"] == "none"
+
+
+@pytest.mark.parametrize("source_role", ["user", "assistant", "system"])
+async def test_historical_source_is_always_submitted_as_extraction_input(source_role):
+    provider = InstructorExtractionProvider("openai/gpt-4o-mini")
+    client = _mock_client()
+    source = "The historical source text."
+    with patch.object(provider, "_ensure_client", return_value=client):
+        await provider.extract(source, role=source_role)
+
+    request = client.create.await_args.kwargs
+    assert request["messages"][-1] == {"role": "user", "content": source}
+    assert request["context"] == {"source_text": source, "source_role": source_role}
+    system_prompt = request["messages"][0]["content"]
+    assert f"SOURCE MESSAGE ROLE: {source_role}" in system_prompt
+    if source_role == "assistant":
+        assert "standalone recommendations" in system_prompt
 
 
 async def test_provider_error_is_not_a_successful_empty_extraction():

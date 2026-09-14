@@ -114,6 +114,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Historical assistant and system events are now submitted to extraction models
+  as input text while retaining their stored source role for provenance and
+  epistemic typing. Role-aware admission guidance prevents local chat providers
+  from returning an empty continuation and avoids promoting generic assistant
+  recommendations, explanations, and examples into durable claims.
+- Mixed-quality structured responses now retain source-supported claims while
+  dropping unsupported proposals. Responses with no supported claims and those
+  with missing or ambiguous named references still enter bounded validation
+  retries, preventing one weak triple from discarding an otherwise valid event.
+- Ollama structured extraction now defaults `reasoning_effort` to `none`, with
+  an environment and typed-config override. This prevents thinking traces from
+  exhausting the same context window needed for the validated response. Ollama
+  also uses constrained JSON output, avoiding rejection of valid JSON that lacks
+  a tool-call envelope.
 - Built-in extraction now accepts source-grounded literal personal references
   such as `I` and `we` without requiring them to be named entities. Each
   unlisted reference receives one provenance-bound identity within its source

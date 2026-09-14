@@ -799,11 +799,16 @@ ExtractionConfig(
     max_retries=3,                       # PRME_EXTRACTION_MAX_RETRIES
     timeout=30.0,                        # PRME_EXTRACTION_TIMEOUT
     temperature=0.0,                     # PRME_EXTRACTION_TEMPERATURE
+    reasoning_effort=None,               # PRME_EXTRACTION_REASONING_EFFORT
 )
 ```
 
 Supported providers: `"openai"`, `"anthropic"`, `"ollama"`. Temperature zero
-favors repeatable schema-constrained extraction. Benchmark before increasing it.
+favors repeatable schema-constrained extraction. Ollama resolves an omitted
+reasoning effort to `"none"`, preventing thinking traces from exhausting the
+structured response window. Ollama also uses its constrained JSON output mode
+instead of requiring a tool-call envelope. Other providers retain their native default.
+Benchmark before increasing either setting.
 
 ### ScoringWeights
 

@@ -49,6 +49,13 @@ def test_extraction_temperature_defaults_to_deterministic_and_loads_from_env(
     assert ExtractionConfig().temperature == pytest.approx(0.25)
 
 
+def test_ollama_disables_reasoning_by_default_and_allows_an_override(project_env, monkeypatch):
+    assert ExtractionConfig(provider="openai").reasoning_effort is None
+    assert ExtractionConfig(provider="ollama").reasoning_effort == "none"
+    monkeypatch.setenv("PRME_EXTRACTION_REASONING_EFFORT", "low")
+    assert ExtractionConfig(provider="ollama").reasoning_effort == "low"
+
+
 @pytest.mark.parametrize("temperature", [-0.01, 2.01, float("nan")])
 def test_extraction_temperature_rejects_invalid_values(project_env, temperature):
     from pydantic import ValidationError
@@ -103,13 +110,19 @@ def test_sdk_environment_overrides_provider_file(project_env, monkeypatch):
 
 
 def test_ollama_accepts_an_explicit_endpoint_without_cloud_credentials(project_env):
+    import instructor
+
     project_env.write_text("OPENAI_API_KEY=unrelated-cloud-fixture\n")
     provider = create_extraction_provider(ExtractionConfig(
         provider="ollama", model="example", base_url="http://localhost:22434/v1",
     ))
     with patch("instructor.from_provider") as factory:
         provider._ensure_client()
-    assert factory.call_args.kwargs == {"async_client": True, "base_url": "http://localhost:22434/v1"}
+    assert factory.call_args.kwargs == {
+        "async_client": True,
+        "base_url": "http://localhost:22434/v1",
+        "mode": instructor.Mode.JSON,
+    }
 
 
 def test_server_credentials_are_redacted_in_config_and_repr(project_env):

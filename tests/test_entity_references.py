@@ -127,6 +127,21 @@ def test_builtin_schema_keeps_source_support_strict_for_personal_references():
         _CitedExtractionResult.model_validate(payload, context={"source_text": "Alice likes tea."})
 
 
+def test_builtin_schema_keeps_supported_claims_when_one_proposal_is_invalid():
+    source = 'I joined "Page Turners", where we discuss novels.'
+    payload = {
+        "entities": [{"name": "Page Turners", "entity_type": "organization"}],
+        "facts": [
+            {"subject": "I", "predicate": "joined", "object": "Page Turners",
+             "polarity": "positive", "evidence_quote": 'I joined "Page Turners"'},
+            {"subject": "Page Turners", "predicate": "discusses", "object": "novels",
+             "polarity": "positive", "evidence_quote": "where we discuss novels"},
+        ],
+    }
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert [(fact.subject, fact.object) for fact in result.facts] == [("I", "Page Turners")]
+
+
 def test_builtin_schema_canonicalizes_quote_marks_to_exact_source_span():
     source = 'I joined "Page Turners" last week.'
     payload = {"facts": [

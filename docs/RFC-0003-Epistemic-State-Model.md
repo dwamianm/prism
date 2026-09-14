@@ -71,7 +71,11 @@ claims (`hypothetical`) from claims with an explicit if/unless condition
 contingent future actions classified as completed decisions unless the source
 contains an explicit choice or commitment. Structured extraction defaults to
 temperature zero; callers may change it, but should first measure the selected
-provider. These controls reduce known category collapses without making model
+provider. Ollama extraction also defaults provider reasoning to `none`, because
+a hidden reasoning trace competes with the schema response for the same context
+window. Ollama uses constrained JSON output rather than requiring a tool-call
+envelope. The setting remains configurable and other providers retain their own
+default when it is omitted. These controls reduce known category collapses without making model
 classification infallible. See the
 [local extraction diagnostics](../benchmarks/results/extraction/2026-09-13/README.md).
 The prompt does not evaluate conditions or automatically reclassify saved records.
@@ -88,7 +92,18 @@ must still supply source-supported subject and object values. This deliberately
 rejects unsupported paraphrased object values.
 The built-in Instructor provider requires citations in its response schema and
 passes the source to local validation, allowing its configured validation retries
-to repair missing citations or unsupported values before materialization.
+to repair responses with no supported claims. When a response mixes supported
+and unsupported claim proposals, validation retains the supported subset and
+drops the rest instead of allowing one weak proposal to erase valid memory or
+inflate retry context. Missing or ambiguous named references still reject the
+response as a structural integrity error.
+Source-role admission guidance limits assistant messages to durable conversation
+state such as commitments, completed actions, and explicitly attributed user or
+project facts. Generic recommendations, explanations, background knowledge, and
+examples are not promoted into derived claims. System messages similarly admit
+durable policies and instructions rather than their examples. The immutable raw
+event remains available even when structured extraction correctly returns no
+claims; source role still determines the claim's source type and confidence.
 
 Built-in providers also require semantic `polarity` (`positive` or `negative`)
 for each fact and relationship. An explicit condition must be reproduced from
