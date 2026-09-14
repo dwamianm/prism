@@ -15,15 +15,25 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 from types import ModuleType
 from typing import Any, Sequence
 
-from benchmarks.integrations.install_longmemeval_v2 import install
+from benchmarks.integrations import install_longmemeval_v2 as installer
 
 
 CHECKPOINT_SCHEMA_VERSION = 1
 DEFAULT_CHECKPOINT_FILENAME = "reader_outputs.checkpoint.jsonl"
+EXECUTION_MANIFEST_SCHEMA_VERSION = 1
+EXECUTION_MANIFEST_FILENAME = "execution_manifest.json"
+_LEGACY_OUTPUT_NAMES = (
+    "prompt_rows.jsonl",
+    DEFAULT_CHECKPOINT_FILENAME,
+    "per_question.jsonl",
+    "aggregated_metrics.json",
+)
 _READER_CONFIG_FIELDS = (
     "model",
     "base_url",
@@ -45,6 +55,147 @@ def _canonical_json(value: Any) -> bytes:
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
+
+
+def _digest(path: Path) -> str:
+    value = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+
+def _git_identity(root: Path) -> tuple[str, list[str]]:
+    try:
+        revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        tracked = subprocess.run(
+            ["git", "diff", "HEAD", "--name-only", "--"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.splitlines()
+        untracked = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.splitlines()
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RuntimeError(f"could not identify the Git source tree at {root}") from error
+    if (
+        len(revision) != 40
+        or any(character not in "0123456789abcdef" for character in revision)
+    ):
+        raise RuntimeError(f"invalid Git revision at {root}: {revision!r}")
+    return revision, sorted(set(tracked) | set(untracked))
+
+
+def _build_execution_manifest(
+    upstream_root: Path,
+    install_status: dict[str, str],
+    registration_path: Path | None,
+) -> dict[str, Any]:
+    project_root = Path(install_status["project_root"]).resolve()
+    project_revision, project_changes = _git_identity(project_root)
+    upstream_revision, upstream_changes = _git_identity(upstream_root)
+    if upstream_revision != install_status["revision"]:
+        raise RuntimeError("installed adapter revision changed during launch")
+
+    adapter_source = Path(installer._ADAPTER_SOURCE).resolve()
+    config_source = Path(installer._CONFIG_SOURCE).resolve()
+    installed_adapter = upstream_root / "memory_modules" / "prme.py"
+    installed_config = upstream_root / "evaluation" / "memory_configs" / "prme.json"
+    upstream_harness = upstream_root / "evaluation" / "harness.py"
+    files = {
+        "launcher_sha256": _digest(Path(__file__).resolve()),
+        "installer_sha256": _digest(Path(installer.__file__).resolve()),
+        "adapter_source_sha256": _digest(adapter_source),
+        "adapter_installed_sha256": _digest(installed_adapter),
+        "config_source_sha256": _digest(config_source),
+        "config_installed_sha256": _digest(installed_config),
+        "upstream_harness_sha256": _digest(upstream_harness),
+    }
+    if files["adapter_source_sha256"] != files["adapter_installed_sha256"]:
+        raise RuntimeError("installed LongMemEval-V2 adapter differs from its source")
+    if files["config_source_sha256"] != files["config_installed_sha256"]:
+        raise RuntimeError("installed LongMemEval-V2 configuration differs from its source")
+
+    registration_sha256 = None
+    if registration_path is not None:
+        registration_path = registration_path.expanduser().resolve()
+        if not registration_path.is_file():
+            raise RuntimeError(f"registration file does not exist: {registration_path}")
+        registration = json.loads(registration_path.read_text(encoding="utf-8"))
+        if not isinstance(registration, dict) or registration.get("schema_version") != 2:
+            raise RuntimeError("registered launches require registration schema version 2")
+        source = registration.get("source")
+        if not isinstance(source, dict):
+            raise RuntimeError("registration is missing source identity")
+        if source.get("prme_revision") != project_revision:
+            raise RuntimeError("PRME revision does not match the registered source")
+        if source.get("upstream_revision") != upstream_revision:
+            raise RuntimeError("LongMemEval-V2 revision does not match the registered source")
+        if project_changes:
+            raise RuntimeError("registered launch requires a clean PRME worktree")
+        expected_upstream_changes = [
+            "evaluation/memory_configs/prme.json",
+            "memory_modules/__init__.py",
+            "memory_modules/prme.py",
+        ]
+        if upstream_changes not in ([], expected_upstream_changes):
+            raise RuntimeError(
+                "registered launch found unexpected LongMemEval-V2 worktree changes: "
+                + ", ".join(upstream_changes)
+            )
+        registration_sha256 = _digest(registration_path)
+
+    return {
+        "schema_version": EXECUTION_MANIFEST_SCHEMA_VERSION,
+        "kind": "longmemeval-v2-execution",
+        "registration_sha256": registration_sha256,
+        "source": {
+            "prme_revision": project_revision,
+            "prme_worktree_changes": project_changes,
+            "upstream_revision": upstream_revision,
+            "upstream_worktree_changes": upstream_changes,
+            **files,
+        },
+    }
+
+
+def _write_or_verify_execution_manifest(output_dir: Path, value: dict[str, Any]) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / EXECUTION_MANIFEST_FILENAME
+    payload = _canonical_json(value) + b"\n"
+    if path.exists():
+        if not path.is_file() or path.read_bytes() != payload:
+            raise RuntimeError(
+                "execution source does not match the existing run; use a new output directory"
+            )
+        return path
+    legacy = [name for name in _LEGACY_OUTPUT_NAMES if (output_dir / name).exists()]
+    if legacy:
+        raise RuntimeError(
+            "cannot attribute existing outputs to this launcher: " + ", ".join(legacy)
+        )
+    with tempfile.NamedTemporaryFile(dir=output_dir, delete=False) as handle:
+        temporary = Path(handle.name)
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    try:
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return path
 
 
 def _request_descriptor(args: argparse.Namespace, row: dict[str, Any]) -> dict[str, Any]:
@@ -317,6 +468,14 @@ def _parse_launcher_args(argv: Sequence[str] | None) -> tuple[argparse.Namespace
         default=DEFAULT_CHECKPOINT_FILENAME,
         help="filename within the official --output-dir",
     )
+    parser.add_argument(
+        "--registration",
+        type=Path,
+        help=(
+            "schema-2 preregistration to bind a clean PRME commit and the pinned "
+            "upstream revision before any output is generated"
+        ),
+    )
     parsed, harness_args = parser.parse_known_args(argv)
     if harness_args and harness_args[0] == "--":
         harness_args = harness_args[1:]
@@ -331,7 +490,7 @@ def _parse_launcher_args(argv: Sequence[str] | None) -> tuple[argparse.Namespace
 def run(argv: Sequence[str] | None = None) -> None:
     launcher_args, harness_args = _parse_launcher_args(argv)
     upstream_root = launcher_args.upstream_root.expanduser().resolve()
-    install(upstream_root)
+    install_status = installer.install(upstream_root)
 
     upstream_path = str(upstream_root)
     sys.path.insert(0, upstream_path)
@@ -381,6 +540,15 @@ def run(argv: Sequence[str] | None = None) -> None:
         harness.generate_all_reader_outputs = checkpointed_generate
 
         preview_args = parse_args_with_overrides()
+        execution_manifest = _build_execution_manifest(
+            upstream_root,
+            install_status,
+            launcher_args.registration,
+        )
+        _write_or_verify_execution_manifest(
+            Path(preview_args.output_dir).resolve(),
+            execution_manifest,
+        )
         checkpoint_path = (
             Path(preview_args.output_dir).resolve() / launcher_args.checkpoint_filename
         )

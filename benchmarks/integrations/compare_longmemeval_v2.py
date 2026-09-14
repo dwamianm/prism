@@ -48,6 +48,7 @@ _ARTIFACT_NAMES = (
     "per_question.jsonl",
     "aggregated_metrics.json",
 )
+_EXECUTION_MANIFEST_FILENAME = "execution_manifest.json"
 
 
 def _digest(path: Path) -> str:
@@ -139,13 +140,22 @@ def _load_run(directory: Path) -> dict[str, Any]:
         raise ValueError(f"prompt build summary does not match final rows: {directory}")
     for name in ("prompt_rows.jsonl", "reader_outputs.checkpoint.jsonl"):
         _require_exact_question_ids(directory / name, expected_ids)
+    artifacts = {name: _digest(directory / name) for name in _ARTIFACT_NAMES}
+    execution_path = directory / _EXECUTION_MANIFEST_FILENAME
+    execution = None
+    if execution_path.exists():
+        if not execution_path.is_file():
+            raise ValueError(f"execution manifest is not a file: {execution_path}")
+        execution = _load_json(execution_path)
+        artifacts[_EXECUTION_MANIFEST_FILENAME] = _digest(execution_path)
     return {
         "directory": directory,
         "args": _load_json(directory / "run_args.json"),
         "aggregated": aggregated,
         "records": records,
         "by_id": {row["question_id"]: row for row in records},
-        "artifacts": {name: _digest(directory / name) for name in _ARTIFACT_NAMES},
+        "artifacts": artifacts,
+        "execution": execution,
     }
 
 
@@ -293,6 +303,77 @@ def _validate_registered_systems(
     }
 
 
+def _validate_registered_execution(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    registration: dict[str, Any],
+    registration_sha256: str,
+) -> dict[str, Any]:
+    """Verify launch-time source proof required by registration schema 2."""
+    left_manifest = left.get("execution")
+    right_manifest = right.get("execution")
+    if not isinstance(left_manifest, dict) or not isinstance(right_manifest, dict):
+        raise ValueError("schema-2 registered runs require execution manifests")
+    for manifest in (left_manifest, right_manifest):
+        if (
+            manifest.get("schema_version") != 1
+            or manifest.get("kind") != "longmemeval-v2-execution"
+            or manifest.get("registration_sha256") != registration_sha256
+        ):
+            raise ValueError("execution manifest does not match the registration")
+    left_source = left_manifest.get("source")
+    right_source = right_manifest.get("source")
+    if not isinstance(left_source, dict) or left_source != right_source:
+        raise ValueError("comparison arms do not share one execution source")
+
+    registered_source = registration.get("source")
+    if not isinstance(registered_source, dict):
+        raise ValueError("registration is missing source identity")
+    if (
+        left_source.get("prme_revision") != registered_source.get("prme_revision")
+        or left_source.get("upstream_revision")
+        != registered_source.get("upstream_revision")
+    ):
+        raise ValueError("execution source revisions do not match registration")
+    if left_source.get("prme_worktree_changes") != []:
+        raise ValueError("registered execution used a modified PRME worktree")
+    if left_source.get("upstream_worktree_changes") not in (
+        [],
+        [
+            "evaluation/memory_configs/prme.json",
+            "memory_modules/__init__.py",
+            "memory_modules/prme.py",
+        ],
+    ):
+        raise ValueError("registered execution used unexpected upstream changes")
+
+    digest_fields = (
+        "launcher_sha256",
+        "installer_sha256",
+        "adapter_source_sha256",
+        "adapter_installed_sha256",
+        "config_source_sha256",
+        "config_installed_sha256",
+        "upstream_harness_sha256",
+    )
+    for field in digest_fields:
+        value = left_source.get(field)
+        if (
+            not isinstance(value, str)
+            or len(value) != 64
+            or any(character not in "0123456789abcdef" for character in value)
+        ):
+            raise ValueError(f"execution source has an invalid {field}")
+    if (
+        left_source["adapter_source_sha256"]
+        != left_source["adapter_installed_sha256"]
+        or left_source["config_source_sha256"]
+        != left_source["config_installed_sha256"]
+    ):
+        raise ValueError("installed benchmark system differs from its registered source")
+    return left_source
+
+
 def compare(
     left_directory: Path,
     right_directory: Path,
@@ -375,6 +456,9 @@ def compare(
         if not registration.is_file():
             raise ValueError("registration file does not exist")
         registered = _load_json(registration)
+        registration_schema = registered.get("schema_version", 1)
+        if type(registration_schema) is not int or registration_schema not in (1, 2):
+            raise ValueError("unsupported registration schema version")
         selection = registered.get("selection")
         reader = registered.get("reader")
         if not isinstance(selection, dict) or not isinstance(reader, dict):
@@ -404,10 +488,19 @@ def compare(
             field: left_settings[field] for field in registered_reader
         }:
             raise ValueError("run reader settings do not match registration")
+        registration_sha256 = _digest(registration)
         report["system_binding"] = _validate_registered_systems(
             left, right, registered
         )
-        report["registration_sha256"] = _digest(registration)
+        if registration_schema == 2:
+            report["execution_source"] = _validate_registered_execution(
+                left,
+                right,
+                registered,
+                registration_sha256,
+            )
+        report["registration_schema_version"] = registration_schema
+        report["registration_sha256"] = registration_sha256
     return report
 
 

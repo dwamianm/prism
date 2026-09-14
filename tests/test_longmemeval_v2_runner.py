@@ -164,6 +164,8 @@ def test_launcher_parses_none_reasoning_and_plain_checkpoint_name() -> None:
             "none",
             "--checkpoint-filename",
             "reader.jsonl",
+            "--registration",
+            "/tmp/registration.json",
             "--",
             "--domain",
             "web",
@@ -172,12 +174,106 @@ def test_launcher_parses_none_reasoning_and_plain_checkpoint_name() -> None:
 
     assert args.reader_reasoning_effort == "none"
     assert args.checkpoint_filename == "reader.jsonl"
+    assert args.registration == Path("/tmp/registration.json")
     assert harness_args == ["--domain", "web"]
 
     with pytest.raises(SystemExit):
         runner._parse_launcher_args(
             ["/tmp/upstream", "--checkpoint-filename", "nested/reader.jsonl", "--", "--domain", "web"]
         )
+
+
+def test_execution_manifest_is_immutable_and_rejects_legacy_outputs(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "run"
+    value = {
+        "schema_version": 1,
+        "kind": "longmemeval-v2-execution",
+        "registration_sha256": None,
+        "source": {"prme_revision": "a" * 40},
+    }
+
+    path = runner._write_or_verify_execution_manifest(output, value)
+    assert json.loads(path.read_text()) == value
+    assert runner._write_or_verify_execution_manifest(output, value) == path
+    with pytest.raises(RuntimeError, match="execution source does not match"):
+        runner._write_or_verify_execution_manifest(
+            output, {**value, "registration_sha256": "b" * 64}
+        )
+
+    legacy = tmp_path / "legacy"
+    legacy.mkdir()
+    (legacy / runner.DEFAULT_CHECKPOINT_FILENAME).write_text("{}\n")
+    with pytest.raises(RuntimeError, match="cannot attribute existing outputs"):
+        runner._write_or_verify_execution_manifest(legacy, value)
+
+
+def test_registered_execution_manifest_binds_clean_source_trees(
+    tmp_path: Path, monkeypatch
+) -> None:
+    project = tmp_path / "project"
+    upstream = tmp_path / "upstream"
+    adapter_source = project / "adapter.py"
+    config_source = project / "config.json"
+    installed_adapter = upstream / "memory_modules" / "prme.py"
+    installed_config = upstream / "evaluation" / "memory_configs" / "prme.json"
+    harness = upstream / "evaluation" / "harness.py"
+    for path, content in (
+        (adapter_source, "adapter\n"),
+        (config_source, "{}\n"),
+        (installed_adapter, "adapter\n"),
+        (installed_config, "{}\n"),
+        (harness, "def main(): pass\n"),
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+
+    prme_revision = "a" * 40
+    upstream_revision = "b" * 40
+    monkeypatch.setattr(runner.installer, "_ADAPTER_SOURCE", adapter_source)
+    monkeypatch.setattr(runner.installer, "_CONFIG_SOURCE", config_source)
+    monkeypatch.setattr(
+        runner,
+        "_git_identity",
+        lambda root: (
+            (prme_revision, [])
+            if root == project
+            else (
+                upstream_revision,
+                [
+                    "evaluation/memory_configs/prme.json",
+                    "memory_modules/__init__.py",
+                    "memory_modules/prme.py",
+                ],
+            )
+        ),
+    )
+    registration = tmp_path / "registration.json"
+    registration.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "source": {
+                    "prme_revision": prme_revision,
+                    "upstream_revision": upstream_revision,
+                },
+            }
+        )
+    )
+
+    manifest = runner._build_execution_manifest(
+        upstream,
+        {"project_root": str(project), "revision": upstream_revision},
+        registration,
+    )
+
+    assert manifest["registration_sha256"] == runner._digest(registration)
+    assert manifest["source"]["prme_worktree_changes"] == []
+    assert (
+        manifest["source"]["adapter_source_sha256"]
+        == manifest["source"]["adapter_installed_sha256"]
+    )
 
 
 def test_resume_prompt_requires_same_question_and_haystack() -> None:

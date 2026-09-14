@@ -94,6 +94,7 @@ def _write_registration(
     *,
     source: dict | None = None,
     systems: dict | None = None,
+    schema_version: int = 1,
 ) -> Path:
     args = json.loads((run / "run_args.json").read_text())
     rows = [json.loads(line) for line in (run / "per_question.jsonl").read_text().splitlines()]
@@ -104,6 +105,7 @@ def _write_registration(
     def digest(value: str) -> str:
         return hashlib.sha256(Path(value).read_bytes()).hexdigest()
     value = {
+        "schema_version": schema_version,
         "selection": {
             "question_count": len(ids),
             "ordered_question_ids_sha256": hashlib.sha256("\n".join(ids).encode()).hexdigest(),
@@ -128,6 +130,40 @@ def _write_registration(
         value["systems"] = systems
     path.write_text(json.dumps(value), encoding="utf-8")
     return path
+
+
+def _write_execution_manifests(
+    left: Path,
+    right: Path,
+    registration: Path,
+    source: dict,
+) -> None:
+    digest = hashlib.sha256(registration.read_bytes()).hexdigest()
+    execution_source = {
+        "prme_revision": source["prme_revision"],
+        "prme_worktree_changes": [],
+        "upstream_revision": source["upstream_revision"],
+        "upstream_worktree_changes": [
+            "evaluation/memory_configs/prme.json",
+            "memory_modules/__init__.py",
+            "memory_modules/prme.py",
+        ],
+        "launcher_sha256": "1" * 64,
+        "installer_sha256": "2" * 64,
+        "adapter_source_sha256": "3" * 64,
+        "adapter_installed_sha256": "3" * 64,
+        "config_source_sha256": "4" * 64,
+        "config_installed_sha256": "4" * 64,
+        "upstream_harness_sha256": "5" * 64,
+    }
+    manifest = {
+        "schema_version": 1,
+        "kind": "longmemeval-v2-execution",
+        "registration_sha256": digest,
+        "source": execution_source,
+    }
+    for directory in (left, right):
+        (directory / "execution_manifest.json").write_text(json.dumps(manifest))
 
 
 def _bind_registered_systems(
@@ -272,6 +308,7 @@ def test_comparison_verifies_registered_cohort_and_reader(tmp_path: Path) -> Non
         registration=registration, samples=10,
     )
     assert result["registration_sha256"] == hashlib.sha256(registration.read_bytes()).hexdigest()
+    assert result["registration_schema_version"] == 1
     assert result["system_binding"]["baseline_memory_context_tokens_zero"] is True
     assert result["system_binding"]["prme_adapter_schema_version"] == 2
 
@@ -281,6 +318,59 @@ def test_comparison_verifies_registered_cohort_and_reader(tmp_path: Path) -> Non
     with pytest.raises(ValueError, match="cohort does not match"):
         compare(left, right, left_label="left", right_label="right",
                 registration=registration, samples=10)
+
+
+def test_schema_two_registration_requires_matching_execution_sources(
+    tmp_path: Path,
+) -> None:
+    left = _write_run(tmp_path / "left", [True, False])
+    right = _write_run(tmp_path / "right", [False, False])
+    source, systems = _bind_registered_systems(left, right, tmp_path)
+    source["prme_revision"] = "a" * 40
+    registration = _write_registration(
+        tmp_path / "registration.json",
+        left,
+        source=source,
+        systems=systems,
+        schema_version=2,
+    )
+
+    with pytest.raises(ValueError, match="require execution manifests"):
+        compare(
+            left,
+            right,
+            left_label="prme",
+            right_label="no_memory",
+            registration=registration,
+            samples=10,
+        )
+
+    _write_execution_manifests(left, right, registration, source)
+    result = compare(
+        left,
+        right,
+        left_label="prme",
+        right_label="no_memory",
+        registration=registration,
+        samples=10,
+    )
+    assert result["registration_schema_version"] == 2
+    assert result["execution_source"]["prme_revision"] == "a" * 40
+    assert "execution_manifest.json" in result["artifacts"]["left"]
+
+    manifest_path = right / "execution_manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["source"]["launcher_sha256"] = "f" * 64
+    manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="do not share one execution source"):
+        compare(
+            left,
+            right,
+            left_label="prme",
+            right_label="no_memory",
+            registration=registration,
+            samples=10,
+        )
 
 
 @pytest.mark.parametrize(

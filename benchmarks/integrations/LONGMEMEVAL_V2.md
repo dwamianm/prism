@@ -37,6 +37,7 @@ from discarding completed reader work:
 ```sh
 python -m benchmarks.integrations.run_longmemeval_v2 \
   /absolute/path/to/LongMemEval-V2 \
+  --registration /absolute/path/to/registration.json \
   -- \
   --domain web \
   --questions-path "$DATA_ROOT/questions.jsonl" \
@@ -55,6 +56,19 @@ resume, repeat the command with the same prompt and reader arguments. If memory
 was saved separately, keep `--load-memory-dir` on both runs. Changed questions,
 haystacks, prompt rows, model names, endpoints, sampling controls, or token caps
 fail explicitly instead of mixing results.
+
+For new preregistered studies, use registration schema 2 and pass the same file
+to both arms with `--registration`. Before prompt construction, the launcher
+requires the registered PRME and upstream commits, rejects PRME worktree changes
+or upstream changes beyond its installed adapter/configuration and registry
+import, and writes an immutable
+`execution_manifest.json`. That manifest hashes the launcher, installer, source
+and installed adapter, source and installed configuration, and upstream harness.
+Resuming under different source fails before generation, and a new launcher
+will not claim outputs created before the manifest existed. The paired comparator
+requires matching manifests for schema-2 registrations. Schema-1 registrations
+remain readable for studies that were already running when source manifests were
+introduced.
 
 Ollama 0.34 supports reasoning control through its
 [OpenAI-compatible API](https://docs.ollama.com/api/openai-compatibility). For a

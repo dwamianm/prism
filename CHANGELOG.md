@@ -75,7 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dates. Registered paired comparisons now bind the PRME and no-memory arms to
   their declared configuration paths, context budgets, frozen saved-memory
   configuration and pack manifest; a baseline that returns memory context fails
-  validation.
+  validation. New schema-2 registered runs also write a launch-time execution
+  manifest that binds both arms to clean PRME and pinned upstream revisions and
+  hashes the exact launcher, installer, adapter, configuration, and harness;
+  changed-source resumes and retroactive attribution fail before generation.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,
