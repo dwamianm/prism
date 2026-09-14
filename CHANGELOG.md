@@ -120,6 +120,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   manifest that binds both arms to clean PRME and pinned upstream revisions and
   hashes the exact launcher, installer, adapter, configuration, and harness;
   changed-source resumes and retroactive attribution fail before generation.
+- The first preregistered held-out LongMemEval-V2 web-small answer comparison
+  completed all 149 deterministic questions for PRME and the official no-memory
+  adapter. With one fixed local Qwen 9B reader, PRME scored 80/149 versus 10/149,
+  with 75 paired wins, 5 losses and a +37.58 to +55.70 point bootstrap interval.
+  The fail-closed comparator verified both arms, official scores, source inputs,
+  reader settings, saved pack/config bindings and the baseline's zero-memory
+  contract. The result used a mean 43,195 memory-context tokens and remains a
+  named-cohort memory-utility result rather than a competitive leadership claim.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,
