@@ -216,6 +216,27 @@ class TestRetrieve:
         assert coverage["candidate_count"] == 0
         assert data["context"].startswith("Aggregation coverage:")
 
+    async def test_retrieve_exposes_knowledge_at_boundary(self, session):
+        result = await session.call_tool("memory_retrieve", {
+            "query": "What was known?",
+            "user_id": "historian",
+            "knowledge_at": "2026-09-13T00:00:00+00:00",
+            "include_context": True,
+        })
+        data = json.loads(result.content[0].text)
+        coverage = data["metrics"]["historical_coverage"]
+        assert coverage["semantics"] == "ingestion_cutoff"
+        assert coverage["exact_snapshot"] is False
+        assert "current_derived_indexes" in coverage["limitations"]
+        assert data["context"].startswith("Historical coverage:")
+
+        invalid = await session.call_tool("memory_retrieve", {
+            "query": "What was known?",
+            "user_id": "historian",
+            "knowledge_at": "2026-09-13T00:00:00",
+        })
+        assert "error" in json.loads(invalid.content[0].text)
+
 
 # ---------------------------------------------------------------------------
 # Get Node

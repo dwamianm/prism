@@ -197,6 +197,23 @@ class TestRetrieve:
         assert coverage["candidate_count"] == 0
         assert data["bundle"]["rendered_context"].startswith("Aggregation coverage:")
 
+    def test_retrieve_exposes_knowledge_at_boundary(self, client):
+        resp = client.post(
+            "/v1/retrieve",
+            json={
+                "query": "What was known?",
+                "user_id": "historian",
+                "filters": {"knowledge_at": "2026-09-13T00:00:00Z"},
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        coverage = data["metrics"]["historical_coverage"]
+        assert coverage["semantics"] == "ingestion_cutoff"
+        assert coverage["exact_snapshot"] is False
+        assert "current_derived_indexes" in coverage["limitations"]
+        assert data["bundle"]["rendered_context"].startswith("Historical coverage:")
+
 
 # ---------------------------------------------------------------------------
 # Organize

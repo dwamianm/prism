@@ -254,6 +254,8 @@ class MemoryClient:
 
         ranking_multipliers is an explicit request-only trial. It does not
         activate a profile or change the next request's scoring configuration.
+        knowledge_at is an ingestion-time cutoff over current indexes; inspect
+        response.metadata.historical_coverage rather than treating it as replay.
         """
         return self._run(
             self._engine.retrieve(

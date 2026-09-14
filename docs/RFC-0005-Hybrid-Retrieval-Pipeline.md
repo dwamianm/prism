@@ -448,6 +448,14 @@ These now forward to the pipeline, with typed scope/time fields and unknown-key
 rejection. Explicit mode relaxes epistemic filtering only inside the generated
 candidate pool; evicted historical indexes are not reconstructed by that flag.
 
+`knowledge_at` is likewise an ingestion-time cutoff over the current candidate
+pool, not historical-state replay. It requires a timezone-aware value. Every such
+response exposes `metadata.historical_coverage` with `exact_snapshot=false` and
+stable limitations for current lifecycle state, current derived indexes, and
+unreplayed mutations. The same boundary is recorded in the retrieval receipt and
+operation log and is included in the measured model context before any memory
+records. If the warning cannot fit, the packer emits no unqualified evidence.
+
 ### Local embedding batch invariance (2026-09-12)
 
 FastEmbed inference now uses one text per numerical batch. With the supported

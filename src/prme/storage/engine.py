@@ -1552,9 +1552,9 @@ class MemoryEngine:
         packing, and operation logging.
 
         Bi-temporal query support (issue #21):
-        - ``knowledge_at``: Point-in-time knowledge snapshot. Only returns
-          nodes whose ingestion time (created_at) <= knowledge_at. Answers
-          "what did the system know as of this datetime?"
+        - ``knowledge_at``: Ingestion-time cutoff over the current candidate
+          indexes. Only returns nodes whose created_at <= knowledge_at; it does
+          not replay historical lifecycle, corrections, or evicted indexes.
         - ``event_time_from``/``event_time_to``: Filter by when events
           actually happened in the real world. Answers "what happened
           during this time period?"
@@ -1569,8 +1569,9 @@ class MemoryEngine:
             reference_time: Timezone-aware clock for relative query dates and
                 scoring decay. Defaults to request time. This does not apply
                 a historical knowledge cutoff; use knowledge_at for that.
-            knowledge_at: Point-in-time knowledge snapshot (bi-temporal).
-                Only includes nodes ingested on or before this datetime.
+            knowledge_at: Timezone-aware ingestion-time cutoff. Only includes
+                current-index candidates ingested on or before this datetime;
+                see ``metadata.historical_coverage`` for explicit limitations.
             event_time_from: Filter by event_time >= this value (bi-temporal).
             event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.

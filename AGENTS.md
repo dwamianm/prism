@@ -25,6 +25,12 @@ Four storage layers behind a unified retrieval API. The default backend is local
 
 Query → intent classification + entity extraction + time detection → candidate generation (graph neighborhood, stable facts, vector similarity, lexical, recent high-salience) → deterministic re-ranking → context packing into memory bundles (entity snapshots, stable facts, recent decisions, active tasks, provenance refs).
 
+`knowledge_at` is a timezone-aware ingestion cutoff over current graph and index
+state. It is not exact historical replay. Responses expose
+`metadata.historical_coverage` and inject the same boundary into packed model
+context; lifecycle transitions, mutations, and evicted index entries are not
+reconstructed.
+
 ## Memory Object Lifecycle
 
 New event/direct-node metadata must be finite and JSON-serializable, with no

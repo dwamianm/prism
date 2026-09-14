@@ -36,6 +36,14 @@ relaxes epistemic filtering within the generated candidate pool; it is not an
 exhaustive historical scan. The MCP `memory_retrieve` tool also accepts score,
 count, and token bounds.
 
+`knowledge_at` is a timezone-aware ingestion-time cutoff over candidates from
+the current graph and search indexes. It does not reconstruct prior lifecycle,
+correction, organizer, or evicted-index state. Requests that use it return
+`response.metadata.historical_coverage` with `exact_snapshot=False`, and the
+token-counted model context carries the same warning. Use retained events and
+operation records for an audit; PRME does not currently offer exact historical
+state replay.
+
 Natural-language count and list queries return
 `response.metadata.aggregation_coverage`. Semantic retrieval always reports
 `exhaustive=False`; it includes candidate, selected, and packed-context counts,
@@ -525,7 +533,7 @@ See [`examples/quickstart.py`](examples/quickstart.py) for a full walkthrough an
 ```
 
 - **Ingestion Pipeline** — stores raw events, optionally extracts entities/facts/relationships via LLM (OpenAI, Anthropic, Ollama). Dual-stream mode atomically records events and deferred work; indexing resumes on retrieve/organize after a restart.
-- **Retrieval Pipeline** — query analysis -> multi-source candidate generation -> deterministic scoring -> context packing. Supports bi-temporal queries with `knowledge_at` for point-in-time snapshots.
+- **Retrieval Pipeline** — query analysis -> multi-source candidate generation -> deterministic scoring -> context packing. Supports event-time ranges and a disclosed `knowledge_at` ingestion cutoff over current indexes.
 - **Epistemic State Model** — tracks confidence, lifecycle transitions (tentative -> stable -> superseded -> archived), contradiction detection, supersedence chains, oscillation dampening, and surprise-gated storage.
 - **Organizer** — twelve registered jobs, including index compaction; `centrality_boost` is currently a stub. Explicit passes run through `prme organize`. Retrieve/ingest can schedule opportunistic in-process maintenance; there is no built-in cron or daemon scheduler.
 - **Storage** — DuckDB (events + graph), usearch (HNSW vectors), Tantivy (full-text). Optional PostgreSQL backend with asyncpg + pgvector.

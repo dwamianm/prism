@@ -42,6 +42,7 @@ from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     AggregationCoverage,
     FilterMetadata,
+    HistoricalCoverage,
     RetrievalCandidate,
     RetrievalMetadata,
     RetrievalResponse,
@@ -65,6 +66,11 @@ logger = logging.getLogger(__name__)
 _AGGREGATION_COVERAGE_NOTICE = (
     "Aggregation coverage: semantic candidates only; this is not an exhaustive "
     "stored-record enumeration. Do not claim a complete count or list from this context."
+)
+_HISTORICAL_COVERAGE_NOTICE = (
+    "Historical coverage: knowledge_at is an ingestion-time cutoff over current "
+    "lifecycle and derived indexes; mutations are not replayed. Do not treat this "
+    "context as an exact historical snapshot."
 )
 
 
@@ -202,8 +208,9 @@ class RetrievalPipeline:
         MemoryBundle, scored results, metadata, and always-on score traces.
 
         Bi-temporal query support (issue #21):
-        - ``knowledge_at``: Point-in-time knowledge snapshot. Post-filters
-          results to include only nodes with created_at <= knowledge_at.
+        - ``knowledge_at``: Ingestion-time cutoff. Post-filters current
+          candidates to include only nodes with created_at <= knowledge_at;
+          it does not replay historical lifecycle or index state.
         - ``event_time_from``/``event_time_to``: Filters results by the
           event_time field (when events actually happened).
 
@@ -219,8 +226,9 @@ class RetrievalPipeline:
                 overrides any temporal signal from query analysis.
             reference_time: Timezone-aware clock for relative dates and
                 scoring decay. Defaults to request time; not a knowledge cutoff.
-            knowledge_at: Point-in-time knowledge snapshot (bi-temporal).
-                Only includes nodes ingested on or before this datetime.
+            knowledge_at: Timezone-aware ingestion-time cutoff. Only includes
+                current-index candidates ingested on or before this datetime;
+                historical lifecycle and index state are not replayed.
             event_time_from: Filter by event_time >= this value (bi-temporal).
             event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
@@ -248,6 +256,8 @@ class RetrievalPipeline:
         start_time = time.monotonic()
         if reference_time is not None and reference_time.utcoffset() is None:
             raise ValueError("reference_time must include a timezone")
+        if knowledge_at is not None and knowledge_at.utcoffset() is None:
+            raise ValueError("knowledge_at must include a timezone")
         scoring_now = (reference_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
 
         normalized_scope = normalize_scope(scope)
@@ -687,11 +697,16 @@ class RetrievalPipeline:
         traces = [c.score_trace for c in scored if c.score_trace is not None]
 
         # --- Stage 6: Context Packing ---
+        coverage_notices = []
+        if analysis.is_aggregation:
+            coverage_notices.append(_AGGREGATION_COVERAGE_NOTICE)
+        if knowledge_at is not None:
+            coverage_notices.append(_HISTORICAL_COVERAGE_NOTICE)
         bundle = await asyncio.to_thread(
             pack_context,
             scored,
             config=effective_packing_config,
-            coverage_notice=_AGGREGATION_COVERAGE_NOTICE if analysis.is_aggregation else None,
+            coverage_notice="\n".join(coverage_notices) or None,
         )
 
         aggregation_coverage: AggregationCoverage | None = None
@@ -724,6 +739,11 @@ class RetrievalPipeline:
                 candidate_limit_paths=tuple(aggregation_candidate_limit_paths),
             )
 
+        historical_coverage = (
+            HistoricalCoverage(knowledge_at=knowledge_at)
+            if knowledge_at is not None else None
+        )
+
         # --- Retrieval Logging ---
         logging_started = time.monotonic()
         receipt_persisted = False
@@ -743,6 +763,8 @@ class RetrievalPipeline:
                 "unverified_confidence_threshold": self._unverified_confidence_threshold,
                 "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
                     if aggregation_coverage is not None else None,
+                "historical_coverage": historical_coverage.model_dump(mode="json")
+                    if historical_coverage is not None else None,
                 "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
                 "reranker_top_k": self._reranker_top_k,
                 "query_reformulation": {"enabled": self._enable_query_reformulation,
@@ -778,6 +800,8 @@ class RetrievalPipeline:
                 "backend_failures": candidate_diagnostics.backend_failures,
                 "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
                     if aggregation_coverage is not None else None,
+                "historical_coverage": historical_coverage.model_dump(mode="json")
+                    if historical_coverage is not None else None,
                 "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
                 "time_from": effective_time_from.isoformat() if effective_time_from else None,
                 "time_to": effective_time_to.isoformat() if effective_time_to else None,
@@ -827,6 +851,7 @@ class RetrievalPipeline:
             embedding_mismatch=embedding_mismatch,
             backend_failures=candidate_diagnostics.backend_failures,
             aggregation_coverage=aggregation_coverage,
+            historical_coverage=historical_coverage,
         )
 
         # Build filter metadata for debugging/explainability.

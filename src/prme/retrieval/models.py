@@ -344,6 +344,33 @@ class AggregationCoverage(BaseModel):
     candidate_limit_paths: tuple[str, ...] = ()
 
 
+HistoricalLimitation = Literal[
+    "current_lifecycle_state",
+    "current_derived_indexes",
+    "mutations_not_replayed",
+]
+
+
+class HistoricalCoverage(BaseModel):
+    """Boundary for ``knowledge_at`` ingestion-time filtering.
+
+    The current engine applies the cutoff to candidates produced by current
+    graph and search-index state. It does not replay lifecycle transitions,
+    corrections, organizer mutations, or evicted index entries.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    knowledge_at: datetime
+    semantics: Literal["ingestion_cutoff"] = "ingestion_cutoff"
+    exact_snapshot: Literal[False] = False
+    limitations: tuple[HistoricalLimitation, ...] = (
+        "current_lifecycle_state",
+        "current_derived_indexes",
+        "mutations_not_replayed",
+    )
+
+
 class RetrievalMetadata(BaseModel):
     """Metadata about a retrieval operation.
 
@@ -390,6 +417,10 @@ class RetrievalMetadata(BaseModel):
     aggregation_coverage: AggregationCoverage | None = Field(
         default=None,
         description="Explicit non-exhaustive coverage for detected count/list queries",
+    )
+    historical_coverage: HistoricalCoverage | None = Field(
+        default=None,
+        description="Explicit non-snapshot boundary when knowledge_at is requested",
     )
 
 

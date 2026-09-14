@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `knowledge_at` now exposes a machine-readable `historical_coverage` boundary
+  in Python, HTTP, MCP, retrieval receipts, and the token-counted model context.
+  It is explicitly an aware ingestion-time cutoff over current indexes; prior
+  lifecycle and index state are not replayed. Naive datetimes fail immediately.
 - Balanced multi-path context packing is now the default. A complete fixed
   119-question answer trial scored 83 correct with balanced contexts versus 67
   with density. A separately registered 381-question answer confirmation scored

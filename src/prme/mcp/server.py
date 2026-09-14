@@ -10,7 +10,6 @@ import logging
 import os
 import secrets
 from contextlib import asynccontextmanager
-from datetime import datetime
 from typing import Any, Literal, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -248,8 +247,9 @@ async def memory_retrieve(
         min_fidelity: Minimum packed representation level.
         mode: Epistemic filtering mode within generated candidates.
         include_context: Include the rendered, token-budgeted context in the response.
-        knowledge_at: Optional ISO datetime for point-in-time retrieval
-            (e.g. "2024-06-15T00:00:00" to see what was known at that time).
+        knowledge_at: Optional timezone-aware ISO datetime used as an ingestion
+            cutoff over current indexes. Returned historical_coverage states
+            why this is not an exact prior-state replay.
     """
     engine = _get_engine(ctx)
     try:
@@ -275,7 +275,9 @@ async def memory_retrieve(
 
     if knowledge_at:
         try:
-            kwargs["knowledge_at"] = datetime.fromisoformat(knowledge_at)
+            kwargs["knowledge_at"] = TypeAdapter(AwareDatetime).validate_python(
+                knowledge_at
+            )
         except ValueError:
             return json.dumps({"error": f"Invalid knowledge_at datetime: {knowledge_at!r}"})
 

@@ -184,7 +184,10 @@ class RetrievalFilters(BaseModel):
     scope: Scope | Annotated[list[Scope], Field(min_length=1)] | None = None
     time_from: AwareDatetime | None = None
     time_to: AwareDatetime | None = None
-    knowledge_at: AwareDatetime | None = None
+    knowledge_at: AwareDatetime | None = Field(
+        default=None,
+        description="Ingestion-time cutoff over current indexes; not historical replay",
+    )
     event_time_from: AwareDatetime | None = None
     event_time_to: AwareDatetime | None = None
     include_cross_scope: bool = True
