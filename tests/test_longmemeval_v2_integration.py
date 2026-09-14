@@ -69,6 +69,13 @@ def test_adapter_round_trips_public_context_and_images(tmp_path: Path) -> None:
         memory.insert(source)
         after = list(memory._client.iter_nodes(user_id="evaluation", batch_size=100))
         assert len(after) == len(before) >= 3
+        manifest = json.loads(
+            (tmp_path / "pack" / "longmemeval_v2_manifest.json").read_text()
+        )
+        record = manifest["trajectories"]["trajectory-1"]
+        assert record["state_count"] == 2
+        assert record["node_count"] == len(after)
+        assert record["status"] == "complete"
 
         context = memory.query("What should I know about submitting the order?")
         text = "\n".join(item["value"] for item in context if item["type"] == "text")

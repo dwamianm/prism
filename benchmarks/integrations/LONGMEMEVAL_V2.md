@@ -64,7 +64,9 @@ Every long state chunk repeats its trajectory, state, step, and URL identity.
 Exact duplicate inserts are idempotent. A changed trajectory or screenshot
 content, or an interrupted partial insert, fails explicitly instead of silently
 reusing stale evidence or duplicating state. The recovery action for an
-interrupted benchmark insert is to rebuild that scratch pack.
+interrupted benchmark insert is to rebuild that scratch pack. The manifest
+records source-state and inserted-node counts, and long trajectories checkpoint
+and print progress every 100 nodes.
 
 `save_memory()` includes the adapter manifest, copied screenshot attachments,
 PRME event and operation logs, graph tables, vector index, and lexical index.
@@ -93,6 +95,14 @@ changed and interrupted input rejection, and save/load. They do not constitute
 a benchmark score. A publishable result still requires both domains, the
 released evaluator, the fixed reader, the supplied no-memory and RAG baselines,
 complete failure accounting, and separate indexing/query latency.
+
+An official one-question pipeline smoke has also completed against the pinned
+web-small data and a locally served Qwen3.5 9B reader. It validates the complete
+100-trajectory indexing, save/load, downstream token counting, evidence-image
+loading, generation, deterministic evaluation, and clean shutdown path. See the
+[run record](../results/research/2026-09-14/LONGMEMEVAL-V2-SMOKE.md). One selected
+question is not an accuracy estimate and must not be compared with leaderboard
+results.
 
 At the pinned dataset revision, trajectories occupy about 1.20 GB and the two
 screenshot archives total about 5.92 GB compressed. Downloading only the small

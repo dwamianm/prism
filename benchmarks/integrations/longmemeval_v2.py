@@ -306,6 +306,16 @@ class PRMEMemory(Memory):
             shutil.copy2(original, destination)
         return relative.as_posix()
 
+    def _record_insert_progress(self, trajectory_id: str, node_count: int) -> None:
+        """Checkpoint and report bounded progress for long trajectories."""
+        self._manifest["trajectories"][trajectory_id]["node_count"] = node_count
+        if node_count % 100 == 0:
+            self._write_manifest()
+            print(
+                f"[prme] trajectory={trajectory_id} indexed_nodes={node_count}",
+                flush=True,
+            )
+
     def insert(self, trajectory: dict[str, object]) -> None:
         payload = _trajectory_payload(trajectory)
         trajectory_id = str(payload["id"])
@@ -341,6 +351,7 @@ class PRMEMemory(Memory):
             self._manifest["trajectories"][trajectory_id] = {
                 "fingerprint": fingerprint,
                 "status": "preparing",
+                "state_count": len(states),
                 "node_count": 0,
             }
             self._write_manifest()
@@ -394,6 +405,7 @@ class PRMEMemory(Memory):
                         },
                     )
                     node_count += 1
+                    self._record_insert_progress(trajectory_id, node_count)
 
                 for position, state in enumerate(states):
                     state_index = int(state["state_index"])
@@ -458,6 +470,7 @@ class PRMEMemory(Memory):
                             },
                         )
                         node_count += 1
+                        self._record_insert_progress(trajectory_id, node_count)
             except BaseException:
                 self._manifest["trajectories"][trajectory_id]["node_count"] = node_count
                 self._write_manifest()
