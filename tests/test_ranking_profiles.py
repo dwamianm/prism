@@ -17,6 +17,7 @@ from prme import (
     RankingMultipliers,
     StaleRankingProfileError,
 )
+from prme.models.learning import QueryLearningResult
 from prme.retrieval.config import ScoringWeights
 from prme.types import Scope
 from tests import test_durable_ingestion
@@ -32,17 +33,34 @@ def _feature_hash(features) -> str:
     ).encode()).hexdigest()
 
 
-def _evidence(engine, multipliers, *, baseline=RankingMultipliers()):
+def _canonical_sha256(value) -> str:
+    return hashlib.sha256(json.dumps(
+        value, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False,
+    ).encode()).hexdigest()
+
+
+def _evidence(engine, multipliers, *, baseline=RankingMultipliers(), owner="owner"):
+    proposal_queries = tuple(QueryLearningResult(
+        group_id=f"group-{index:02d}",
+        split="train" if index < 20 else "validation",
+        request_ids=(UUID(int=100 + index),),
+        baseline_pairwise_accuracy=.5,
+        candidate_pairwise_accuracy=.5,
+        baseline_judged_ndcg=.4,
+        candidate_judged_ndcg=.6,
+    ) for index in range(40))
     proposal = LearningEvaluation(
-        user_id="owner", scopes=(Scope.PROJECT,), surface="results",
+        user_id=owner, scopes=(Scope.PROJECT,), surface="results",
         config=LearningConfig(bootstrap_samples=100), input_checksum="a" * 64,
-        feedback_ids=(UUID(int=1),), receipt_checksums={UUID(int=2): "b" * 64},
+        feedback_ids=tuple(UUID(int=200 + index) for index in range(40)),
+        receipt_checksums={UUID(int=100 + index): "b" * 64 for index in range(40)},
         multipliers=multipliers, decision="improved_on_observed_candidates",
         training_loss_before=1, training_loss_after=.5, validation_ndcg_gain=.2,
-        validation_pairwise_gain=0, validation_gain_interval=(.1, .3),
-        coverage={"feedback_records": 1, "requests_with_pairs": 1,
+        validation_pairwise_gain=0, validation_gain_interval=(.2, .2),
+        coverage={"feedback_records": 40, "requests_with_pairs": 40,
                   "training_queries": 20, "validation_queries": 20, "explicit_pairs": 40},
-        exclusions={}, queries=(),
+        exclusions={}, queries=proposal_queries,
     )
     trials = (
         FullRetrievalTrial(group_id="one", baseline_request_id=UUID(int=10),
@@ -59,14 +77,31 @@ def _evidence(engine, multipliers, *, baseline=RankingMultipliers()):
         baseline_mrr=0, candidate_mrr=1,
     ) for trial in trials)
     features = engine._retrieval_pipeline.execution_features()
+    holdout_config = FullRetrievalEvaluationConfig(
+        min_query_groups=2, bootstrap_samples=100,
+    )
+    receipt_checksums = {UUID(int=value): "e" * 64 for value in (10, 11, 12, 13)}
+    input_checksum = _canonical_sha256({
+        "user_id": owner,
+        "scopes": [Scope.PROJECT.value],
+        "proposal_input_checksum": proposal.input_checksum,
+        "memory_artifact_sha256": "c" * 64,
+        "baseline_multipliers": baseline.model_dump(mode="json"),
+        "candidate_multipliers": multipliers.model_dump(mode="json"),
+        "base_scoring": engine._config.scoring.model_dump(mode="json"),
+        "config": holdout_config.model_dump(mode="json"),
+        "trials": [trial.model_dump(mode="json") for trial in trials],
+        "receipt_checksums": {
+            str(key): value for key, value in sorted(
+                receipt_checksums.items(), key=lambda item: str(item[0]),
+            )
+        },
+    })
     holdout = FullRetrievalEvaluation(
-        user_id="owner", scopes=(Scope.PROJECT,),
-        config=FullRetrievalEvaluationConfig(
-            min_query_groups=2, bootstrap_samples=100,
-        ),
+        user_id=owner, scopes=(Scope.PROJECT,), config=holdout_config,
         proposal_input_checksum=proposal.input_checksum,
-        memory_artifact_sha256="c" * 64, input_checksum="d" * 64,
-        receipt_checksums={UUID(int=value): "e" * 64 for value in (10, 11, 12, 13)},
+        memory_artifact_sha256="c" * 64, input_checksum=input_checksum,
+        receipt_checksums=receipt_checksums,
         feature_identity=features, feature_identity_sha256=_feature_hash(features),
         base_scoring=engine._config.scoring,
         baseline_multipliers=baseline, candidate_multipliers=multipliers,
@@ -88,9 +123,7 @@ async def test_profile_is_persisted_before_use_and_applied_to_exact_scope(config
     multipliers = RankingMultipliers(lexical=2)
     async with MemoryEngine.open(config) as engine:
         await engine.store("blue telescope", user_id=user, scope=Scope.PROJECT)
-        proposal, holdout = _evidence(engine, multipliers)
-        proposal = proposal.model_copy(update={"user_id": user})
-        holdout = holdout.model_copy(update={"user_id": user})
+        proposal, holdout = _evidence(engine, multipliers, owner=user)
         profile = await engine.create_ranking_profile(
             proposal, holdout, user_id=user, profile_id=profile_id,
         )
@@ -160,17 +193,15 @@ async def test_versioned_activation_deactivation_and_rollback(config, user):
     first_multipliers = RankingMultipliers(lexical=2)
     second_multipliers = RankingMultipliers(lexical=3)
     async with MemoryEngine.open(config) as engine:
-        proposal, holdout = _evidence(engine, first_multipliers)
-        proposal = proposal.model_copy(update={"user_id": user})
-        holdout = holdout.model_copy(update={"user_id": user})
+        proposal, holdout = _evidence(engine, first_multipliers, owner=user)
         await engine.create_ranking_profile(
             proposal, holdout, user_id=user, profile_id=first_id,
         )
         await engine.activate_ranking_profile(str(first_id), user_id=user)
 
-        stale_proposal, stale_holdout = _evidence(engine, RankingMultipliers(graph=2))
-        stale_proposal = stale_proposal.model_copy(update={"user_id": user})
-        stale_holdout = stale_holdout.model_copy(update={"user_id": user})
+        stale_proposal, stale_holdout = _evidence(
+            engine, RankingMultipliers(graph=2), owner=user,
+        )
         await engine.create_ranking_profile(
             stale_proposal, stale_holdout, user_id=user, profile_id=stale_id,
         )
@@ -178,10 +209,8 @@ async def test_versioned_activation_deactivation_and_rollback(config, user):
             await engine.activate_ranking_profile(str(stale_id), user_id=user)
 
         proposal, holdout = _evidence(
-            engine, second_multipliers, baseline=first_multipliers,
+            engine, second_multipliers, baseline=first_multipliers, owner=user,
         )
-        proposal = proposal.model_copy(update={"user_id": user})
-        holdout = holdout.model_copy(update={"user_id": user})
         await engine.create_ranking_profile(
             proposal, holdout, user_id=user, profile_id=second_id,
             baseline_profile_id=first_id,
@@ -221,18 +250,16 @@ async def test_versioned_activation_deactivation_and_rollback(config, user):
 
 async def test_profile_evidence_and_retry_conflicts_fail_closed(config, user):
     async with MemoryEngine.open(config) as engine:
-        proposal, holdout = _evidence(engine, RankingMultipliers(lexical=2))
-        proposal = proposal.model_copy(update={"user_id": user})
-        holdout = holdout.model_copy(update={"user_id": user})
+        proposal, holdout = _evidence(
+            engine, RankingMultipliers(lexical=2), owner=user,
+        )
         profile_id = uuid4()
         await engine.create_ranking_profile(
             proposal, holdout, user_id=user, profile_id=profile_id,
         )
         changed_proposal, changed_holdout = _evidence(
-            engine, RankingMultipliers(graph=2),
+            engine, RankingMultipliers(graph=2), owner=user,
         )
-        changed_proposal = changed_proposal.model_copy(update={"user_id": user})
-        changed_holdout = changed_holdout.model_copy(update={"user_id": user})
         with pytest.raises(ValueError, match="different ranking profile"):
             await engine.create_ranking_profile(
                 changed_proposal, changed_holdout,
@@ -248,7 +275,7 @@ async def test_profile_evidence_and_retry_conflicts_fail_closed(config, user):
             )
 
         for update, message in (
-            ({"decision": "no_improvement"}, "positive proposal"),
+            ({"decision": "no_improvement"}, "decision does not match"),
             ({"input_checksum": "f" * 64}, "identify its proposal"),
         ):
             bad_proposal = proposal.model_copy(update=update)
@@ -262,9 +289,9 @@ async def test_concurrent_activations_serialize_from_the_evaluated_baseline(conf
     async with MemoryEngine.open(config) as engine:
         profiles = []
         for value in (2, 3):
-            proposal, holdout = _evidence(engine, RankingMultipliers(lexical=value))
-            proposal = proposal.model_copy(update={"user_id": user})
-            holdout = holdout.model_copy(update={"user_id": user})
+            proposal, holdout = _evidence(
+                engine, RankingMultipliers(lexical=value), owner=user,
+            )
             profiles.append(await engine.create_ranking_profile(
                 proposal, holdout, user_id=user,
             ))
@@ -287,8 +314,9 @@ async def test_concurrent_activations_serialize_from_the_evaluated_baseline(conf
 
 async def test_activation_rejects_changed_runtime_feature_identity(config, user):
     async with MemoryEngine.open(config) as engine:
-        proposal, holdout = _evidence(engine, RankingMultipliers(lexical=2))
-        proposal = proposal.model_copy(update={"user_id": user})
+        proposal, holdout = _evidence(
+            engine, RankingMultipliers(lexical=2), owner=user,
+        )
         value = holdout.model_dump(mode="json")
         value["user_id"] = user
         value["feature_identity"] = {**value["feature_identity"], "runtime": "changed"}
@@ -299,3 +327,25 @@ async def test_activation_rejects_changed_runtime_feature_identity(config, user)
         )
         with pytest.raises(ValueError, match="feature_identity_mismatch"):
             await engine.activate_ranking_profile(str(profile.profile_id), user_id=user)
+
+
+async def test_retrieval_reads_compact_active_pointer_without_loading_evidence(
+    config, user, monkeypatch,
+):
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("compact active profile", user_id=user, scope=Scope.PROJECT)
+        proposal, holdout = _evidence(
+            engine, RankingMultipliers(lexical=2), owner=user,
+        )
+        profile = await engine.create_ranking_profile(proposal, holdout, user_id=user)
+        await engine.activate_ranking_profile(str(profile.profile_id), user_id=user)
+
+        async def evidence_load_forbidden(*args, **kwargs):
+            raise AssertionError("retrieval must not load full profile evidence")
+
+        monkeypatch.setattr(engine._ranking_profiles, "get", evidence_load_forbidden)
+        response = await engine.retrieve(
+            "compact", user_id=user, scope=Scope.PROJECT,
+        )
+        assert response.metadata.ranking_profile_id == profile.profile_id
+        assert response.metadata.ranking_profile_status == "applied"

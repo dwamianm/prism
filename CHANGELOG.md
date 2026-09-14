@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   status in metadata and receipts, and safely falls back on feature or base-score
   drift. Append-only, retry-safe activation, deactivation and rollback work
   across DuckDB and PostgreSQL and are exposed through Python, HTTP and MCP.
+  Serialized evaluations revalidate their coverage, aggregates, decisions and
+  full-retrieval input identity; the query path reads a compact checksummed
+  activation record rather than reparsing the complete evidence report.
 - A conservative full-pipeline retrieval holdout evaluator for learned ranking
   proposals. It compares separately executed baseline and candidate receipts,
   requires complete caller-supplied relevant-node sets, verifies identical

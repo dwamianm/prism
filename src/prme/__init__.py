@@ -55,6 +55,7 @@ from prme.models.learning import (
     LearningEvaluation,
     RankingMultipliers,
     RankingProfile,
+    RankingProfileApplication,
     RankingProfileState,
     RankingProfileStatus,
 )
@@ -173,6 +174,7 @@ __all__ = [
     "RetrievalMode",
     "RankingMultipliers",
     "RankingProfile",
+    "RankingProfileApplication",
     "RankingProfileState",
     "RankingProfileStatus",
     "RelevanceSubmission",

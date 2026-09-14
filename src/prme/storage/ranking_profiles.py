@@ -6,7 +6,11 @@ import hashlib
 import json
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from prme.models.learning import RankingProfile, RankingProfileState
+from prme.models.learning import (
+    RankingProfile,
+    RankingProfileApplication,
+    RankingProfileState,
+)
 from prme.storage._threading import run_to_completion
 from prme.storage.relevance import RelevanceRepository
 from prme.types import Scope
@@ -147,6 +151,19 @@ class RankingProfileRepository(RelevanceRepository):
             raise ValueError("Active ranking profile is missing or has different scopes")
         return profile
 
+    async def active_application(
+        self, *, user_id: str, scopes: tuple[Scope, ...] | None,
+    ) -> RankingProfileApplication | None:
+        state = await self.latest_state(user_id=user_id, scopes=scopes)
+        if state is None or state.active_profile_id is None:
+            return None
+        if state.application is not None:
+            return state.application
+        profile = await self.get(str(state.active_profile_id), user_id=user_id)
+        if profile is None or profile.scopes != scopes:
+            raise ValueError("Active ranking profile is missing or has different scopes")
+        return profile.application
+
     async def history(self, *, user_id: str, scopes: tuple[Scope, ...] | None,
                       limit: int = 100) -> list[RankingProfileState]:
         self._owner(user_id)
@@ -164,23 +181,24 @@ class RankingProfileRepository(RelevanceRepository):
 
     async def change(
         self, *, user_id: str, scopes: tuple[Scope, ...] | None,
-        active_profile_id: UUID | None, expected_profile_id: UUID | None,
+        application: RankingProfileApplication | None, expected_profile_id: UUID | None,
         action: str, change_id: UUID,
     ) -> RankingProfileState:
         self._owner(user_id)
         if self.pool is not None:
             return await self._change_pg(
-                user_id=user_id, scopes=scopes, active_profile_id=active_profile_id,
+                user_id=user_id, scopes=scopes, application=application,
                 expected_profile_id=expected_profile_id, action=action, change_id=change_id,
             )
         async with self.lock:
             return await run_to_completion(
                 self._change_duck,
-                user_id, scopes, active_profile_id, expected_profile_id, action, change_id,
+                user_id, scopes, application, expected_profile_id, action, change_id,
             )
 
-    def _change_duck(self, user_id, scopes, active_profile_id, expected_profile_id,
+    def _change_duck(self, user_id, scopes, application, expected_profile_id,
                      action, change_id):
+        active_profile_id = application.profile_id if application is not None else None
         operation_id = state_operation_id(user_id, change_id)
         self.conn.execute("BEGIN TRANSACTION")
         try:
@@ -207,6 +225,7 @@ class RankingProfileRepository(RelevanceRepository):
             state = RankingProfileState(
                 change_id=change_id, user_id=user_id, scopes=scopes, action=action,
                 previous_profile_id=previous, active_profile_id=active_profile_id,
+                application=application,
                 changed_at=_changed_at_after(previous_state),
             )
             self.conn.execute(
@@ -221,8 +240,9 @@ class RankingProfileRepository(RelevanceRepository):
             self.conn.execute("ROLLBACK")
             raise
 
-    async def _change_pg(self, *, user_id, scopes, active_profile_id,
+    async def _change_pg(self, *, user_id, scopes, application,
                          expected_profile_id, action, change_id):
+        active_profile_id = application.profile_id if application is not None else None
         operation_id = state_operation_id(user_id, change_id)
         lock_value = int.from_bytes(hashlib.sha256(
             f"{user_id}:{scope_key(scopes)}".encode()
@@ -252,6 +272,7 @@ class RankingProfileRepository(RelevanceRepository):
             state = RankingProfileState(
                 change_id=change_id, user_id=user_id, scopes=scopes, action=action,
                 previous_profile_id=previous, active_profile_id=active_profile_id,
+                application=application,
                 changed_at=_changed_at_after(previous_state),
             )
             await conn.execute(

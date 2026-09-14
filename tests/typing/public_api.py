@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
+from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -120,6 +120,7 @@ def manage_ranking_profile(
     assert_type(client.activate_ranking_profile(
         str(profile.profile_id), user_id="alice",
     ), RankingProfileState)
+    assert_type(profile.application, RankingProfileApplication)
     assert_type(client.list_ranking_profile_history(
         user_id="alice",
     ), list[RankingProfileState])

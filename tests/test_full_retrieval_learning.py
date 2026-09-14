@@ -5,6 +5,7 @@ from uuid import UUID
 import pytest
 
 from prme import (
+    FullRetrievalEvaluation,
     FullRetrievalEvaluationConfig,
     FullRetrievalTrial,
     RankingMultipliers,
@@ -101,6 +102,20 @@ def test_fresh_candidate_membership_passes_conservative_holdout_gate():
     assert result.feature_identity == FEATURES
     assert len(result.receipt_checksums) == 80
     assert [receipt.model_dump_json() for receipt in receipts] == before
+
+
+@pytest.mark.parametrize("field,value,message", [
+    ("decision", "no_improvement", "decision does not match"),
+    ("candidate_ndcg", .5, "aggregate metrics"),
+    ("input_checksum", "f" * 64, "input checksum"),
+])
+def test_serialized_full_retrieval_evidence_rejects_tampering(field, value, message):
+    receipts, trials = _evidence()
+    result = _evaluate(receipts, trials)
+    payload = result.model_dump(mode="json")
+    payload[field] = value
+    with pytest.raises(ValueError, match=message):
+        FullRetrievalEvaluation.model_validate(payload)
 
 
 def test_input_order_and_trial_retries_are_stable_but_duplicate_receipts_fail():

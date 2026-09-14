@@ -23,6 +23,8 @@ from __future__ import annotations
 import asyncio
 import atexit
 from contextlib import AsyncExitStack
+import hashlib
+import json
 import logging
 import warnings
 from collections.abc import AsyncIterator, Sequence
@@ -55,6 +57,7 @@ from prme.models.learning import (
     LearningEvaluation,
     RankingMultipliers,
     RankingProfile,
+    RankingProfileApplication,
     RankingProfileState,
     RankingProfileStatus,
 )
@@ -1714,7 +1717,7 @@ class MemoryEngine:
             }
         else:
             profile_scopes = self._learning_scope_key(scope)
-            profile = await self._ranking_profiles.active(
+            profile = await self._ranking_profiles.active_application(
                 user_id=user_id, scopes=profile_scopes,
             )
             if profile is None:
@@ -2656,12 +2659,26 @@ class MemoryEngine:
         return tuple(sorted(set(scopes), key=lambda scope: scope.value)) if scopes is not None else None
 
     def _ranking_profile_inapplicability(
-        self, profile: RankingProfile, base_scoring: ScoringWeights,
+        self, profile: RankingProfile | RankingProfileApplication,
+        base_scoring: ScoringWeights,
     ) -> str | None:
         assert self._retrieval_pipeline is not None
-        if profile.holdout.feature_identity != self._retrieval_pipeline.execution_features():
+        expected_feature_hash = (
+            profile.holdout.feature_identity_sha256
+            if isinstance(profile, RankingProfile) else profile.feature_identity_sha256
+        )
+        current_features = self._retrieval_pipeline.execution_features()
+        current_feature_hash = hashlib.sha256(json.dumps(
+            current_features, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=False, allow_nan=False,
+        ).encode()).hexdigest()
+        if expected_feature_hash != current_feature_hash:
             return "feature_identity_mismatch"
-        if profile.holdout.base_scoring != base_scoring:
+        expected_scoring = (
+            profile.holdout.base_scoring
+            if isinstance(profile, RankingProfile) else profile.base_scoring
+        )
+        if expected_scoring != base_scoring:
             return "base_scoring_mismatch"
         return None
 
@@ -2761,7 +2778,7 @@ class MemoryEngine:
                 "Active ranking profile differs from the evaluated baseline"
             )
         return await self._ranking_profiles.change(
-            user_id=user_id, scopes=profile.scopes, active_profile_id=profile.profile_id,
+            user_id=user_id, scopes=profile.scopes, application=profile.application,
             expected_profile_id=current_id, action="activate",
             change_id=transition_id,
         )
@@ -2783,7 +2800,7 @@ class MemoryEngine:
         if current is None:
             return None
         return await self._ranking_profiles.change(
-            user_id=user_id, scopes=scope_key, active_profile_id=None,
+            user_id=user_id, scopes=scope_key, application=None,
             expected_profile_id=current.profile_id, action="deactivate",
             change_id=transition_id,
         )
@@ -2821,7 +2838,8 @@ class MemoryEngine:
         if current_id == target_id:
             raise ValueError("Ranking profile rollback cannot be a no-op")
         return await self._ranking_profiles.change(
-            user_id=user_id, scopes=scope_key, active_profile_id=target_id,
+            user_id=user_id, scopes=scope_key,
+            application=target.application if target is not None else None,
             expected_profile_id=current_id, action="rollback",
             change_id=transition_id,
         )

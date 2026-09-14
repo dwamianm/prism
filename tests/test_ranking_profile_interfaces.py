@@ -18,11 +18,7 @@ user = test_durable_ingestion.user
 
 
 def _owned_evidence(engine, owner):
-    proposal, holdout = _evidence(engine, RankingMultipliers(lexical=2))
-    return (
-        proposal.model_copy(update={"user_id": owner}),
-        holdout.model_copy(update={"user_id": owner}),
-    )
+    return _evidence(engine, RankingMultipliers(lexical=2), owner=owner)
 
 
 async def test_http_full_retrieval_and_profile_lifecycle(config, user):
