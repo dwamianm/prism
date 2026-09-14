@@ -328,9 +328,15 @@ class TestLifecycle:
         if node_id:
             result = await session.call_tool("memory_promote_node", {
                 "node_id": node_id,
+                "request_id": "1bd30f33-dae6-4378-809d-8739e4a0f194",
             })
             data = json.loads(result.content[0].text)
             assert data.get("lifecycle_state") == "stable"
+            replay = await session.call_tool("memory_promote_node", {
+                "node_id": node_id,
+                "request_id": "1bd30f33-dae6-4378-809d-8739e4a0f194",
+            })
+            assert json.loads(replay.content[0].text)["lifecycle_state"] == "stable"
 
     async def test_archive_node(self, session):
         store_result = await session.call_tool("memory_store", {
@@ -342,9 +348,15 @@ class TestLifecycle:
         if node_id:
             result = await session.call_tool("memory_archive_node", {
                 "node_id": node_id,
+                "request_id": "fca23648-e2e0-4501-bcf8-ec5b2daf5aaa",
             })
             data = json.loads(result.content[0].text)
             assert data.get("lifecycle_state") == "archived"
+            replay = await session.call_tool("memory_archive_node", {
+                "node_id": node_id,
+                "request_id": "fca23648-e2e0-4501-bcf8-ec5b2daf5aaa",
+            })
+            assert json.loads(replay.content[0].text)["lifecycle_state"] == "archived"
 
     async def test_promote_nonexistent(self, session):
         result = await session.call_tool("memory_promote_node", {

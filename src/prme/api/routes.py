@@ -18,6 +18,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from prme import __version__
 from prme.storage.reinforcement import ReinforcementConflict
 from prme.storage.condition_evaluation import ConditionEvaluationConflict
+from prme.storage.lifecycle import LifecycleConflict
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
@@ -549,10 +550,15 @@ async def query_nodes(
 @router.put(
     "/nodes/{node_id}/promote",
     summary="Promote node to stable",
-    responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse},
+               422: {"model": ErrorResponse}},
 )
-async def promote_node(request: Request, node_id: UUID) -> NodeResponse:
-    """Promote a tentative node to stable."""
+async def promote_node(
+    request: Request,
+    node_id: UUID,
+    idempotency_key: UUID | None = Header(default=None, alias="Idempotency-Key"),
+) -> NodeResponse:
+    """Promote a tentative node to stable; an idempotency key makes retries safe."""
     node_key = str(node_id)
     engine = _get_engine(request)
 
@@ -562,9 +568,16 @@ async def promote_node(request: Request, node_id: UUID) -> NodeResponse:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
     try:
-        await engine.promote(node_key, user_id=_user_id(request))
+        await engine.promote(
+            node_key,
+            user_id=_user_id(request),
+            request_id=str(idempotency_key) if idempotency_key else None,
+            actor_id=_user_id(request) or "api-operator",
+        )
+    except LifecycleConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # Re-fetch to get updated state
     updated = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
@@ -576,10 +589,15 @@ async def promote_node(request: Request, node_id: UUID) -> NodeResponse:
 @router.put(
     "/nodes/{node_id}/archive",
     summary="Archive a node",
-    responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse},
+               422: {"model": ErrorResponse}},
 )
-async def archive_node(request: Request, node_id: UUID) -> NodeResponse:
-    """Archive a node (terminal state)."""
+async def archive_node(
+    request: Request,
+    node_id: UUID,
+    idempotency_key: UUID | None = Header(default=None, alias="Idempotency-Key"),
+) -> NodeResponse:
+    """Archive a node; an idempotency key makes retries safe."""
     node_key = str(node_id)
     engine = _get_engine(request)
 
@@ -588,9 +606,16 @@ async def archive_node(request: Request, node_id: UUID) -> NodeResponse:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
     try:
-        await engine.archive(node_key, user_id=_user_id(request))
+        await engine.archive(
+            node_key,
+            user_id=_user_id(request),
+            request_id=str(idempotency_key) if idempotency_key else None,
+            actor_id=_user_id(request) or "api-operator",
+        )
+    except LifecycleConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     updated = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
     if updated is None:

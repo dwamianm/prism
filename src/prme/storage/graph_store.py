@@ -368,7 +368,10 @@ class GraphStore(Protocol):
 
     # --- Lifecycle Transitions ---
 
-    async def promote(self, node_id: str) -> None:
+    async def promote(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Promote a tentative node to stable.
 
         Args:
@@ -455,11 +458,17 @@ class GraphStore(Protocol):
         """
         ...
 
-    async def deprecate(self, node_id: str) -> None:
+    async def deprecate(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Atomically transition a contested node to deprecated and journal it."""
         ...
 
-    async def archive(self, node_id: str) -> None:
+    async def archive(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Archive a node (terminal state).
 
         Args:

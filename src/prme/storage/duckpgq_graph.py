@@ -326,7 +326,10 @@ class DuckPGQGraphStore:
 
     # --- Lifecycle Transitions ---
 
-    async def promote(self, node_id: str) -> None:
+    async def promote(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Promote a tentative node to stable.
 
         Args:
@@ -336,7 +339,9 @@ class DuckPGQGraphStore:
             ValueError: If the node doesn't exist or the transition is invalid.
         """
         from prme.storage.lifecycle import transition_duckdb
-        await transition_duckdb(self, node_id, "promote")
+        await transition_duckdb(
+            self, node_id, "promote", request_id=request_id, actor_id=actor_id,
+        )
 
     async def supersede(
         self,
@@ -487,7 +492,10 @@ class DuckPGQGraphStore:
                 evidence_id,
             )
 
-    async def archive(self, node_id: str) -> None:
+    async def archive(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Archive a node (terminal state).
 
         Any non-archived node can be archived. Archived is terminal --
@@ -500,9 +508,14 @@ class DuckPGQGraphStore:
             ValueError: If the node doesn't exist or is already archived.
         """
         from prme.storage.lifecycle import transition_duckdb
-        await transition_duckdb(self, node_id, "archive")
+        await transition_duckdb(
+            self, node_id, "archive", request_id=request_id, actor_id=actor_id,
+        )
 
-    async def deprecate(self, node_id: str) -> None:
+    async def deprecate(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Deprecate a node (mark as confirmed incorrect).
 
         Valid transitions to DEPRECATED: CONTESTED -> DEPRECATED.
@@ -517,7 +530,9 @@ class DuckPGQGraphStore:
                 is invalid.
         """
         from prme.storage.lifecycle import transition_duckdb
-        await transition_duckdb(self, node_id, "deprecate")
+        await transition_duckdb(
+            self, node_id, "deprecate", request_id=request_id, actor_id=actor_id,
+        )
 
     # --- Graph Traversal ---
 

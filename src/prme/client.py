@@ -310,13 +310,23 @@ class MemoryClient:
             )
         )
 
-    def promote(self, node_id: str, *, user_id: str | None = None) -> None:
-        """Promote a tentative node; supply user_id to enforce ownership."""
-        self._run(self._engine.promote(node_id, user_id=user_id))
+    def promote(
+        self, node_id: str, *, user_id: str | None = None,
+        request_id: str | UUID | None = None, actor_id: str | None = None,
+    ) -> None:
+        """Promote a tentative node; reuse request_id for an exact retry."""
+        self._run(self._engine.promote(
+            node_id, user_id=user_id, request_id=request_id, actor_id=actor_id,
+        ))
 
-    def archive(self, node_id: str, *, user_id: str | None = None) -> None:
-        """Retire a node from retrieval while retaining its durable source."""
-        self._run(self._engine.archive(node_id, user_id=user_id))
+    def archive(
+        self, node_id: str, *, user_id: str | None = None,
+        request_id: str | UUID | None = None, actor_id: str | None = None,
+    ) -> None:
+        """Archive a node; reuse request_id for an exact retry."""
+        self._run(self._engine.archive(
+            node_id, user_id=user_id, request_id=request_id, actor_id=actor_id,
+        ))
 
     def evaluate_condition(
         self,

@@ -119,6 +119,12 @@ scope. The state, edge, and checksummed audit record commit atomically. Sending
 the exact body again is safe after a timeout or restart; changing its evidence
 after publication returns 422.
 
+`PUT /v1/nodes/{node_id}/promote` and
+`PUT /v1/nodes/{node_id}/archive` accept a UUID `Idempotency-Key` header. Reuse
+the same key after an ambiguous response; a matching retry returns the current
+node and a key reused for different lifecycle inputs returns 409. Without the
+header, repeated transitions keep the strict state-machine error behavior.
+
 ## Save relevance judgments for future evaluated learning
 
 Retrieval `metrics` include `request_id` and `receipt_persisted`. If the latter is

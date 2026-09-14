@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Durable retry IDs for promotion and archival across sync/async Python, HTTP,
+  and MCP. HTTP uses `Idempotency-Key`; conflicting key reuse returns 409.
 - Atomic, checksummed explicit corrections across sync/async Python, HTTP, MCP,
   DuckDB, and PostgreSQL. State, deterministic edge, and complete before/after
   audit record commit together; exact retries remain safe after restart.
@@ -66,6 +68,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   behavior with explicit `organize(jobs=["feedback_apply"])` and no user scope.
 
 ### Fixed
+
+- Recreate a loaded empty USearch index before its first new insertion, avoiding
+  a reproducible native crash after deleting the last vector, closing, reopening,
+  and storing another memory.
 
 - Make greedy consolidation clustering and source selection stable across
   equivalent histories with different generated UUIDs. Singular relational

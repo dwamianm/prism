@@ -308,10 +308,14 @@ class TestPromote:
 
         if node_id:
             # Promote it
-            resp = client.put(f"/v1/nodes/{node_id}/promote")
+            headers = {"Idempotency-Key": "16d38ee9-c035-4410-8a32-fd625c83cd02"}
+            resp = client.put(f"/v1/nodes/{node_id}/promote", headers=headers)
             assert resp.status_code == 200
             data = resp.json()
             assert data["lifecycle_state"] == "stable"
+            assert client.put(
+                f"/v1/nodes/{node_id}/promote", headers=headers
+            ).status_code == 200
 
     def test_promote_nonexistent_returns_404(self, client):
         resp = client.put("/v1/nodes/00000000-0000-0000-0000-000000000000/promote")
@@ -477,10 +481,14 @@ class TestArchive:
         node_id = store_resp.json().get("node_id")
 
         if node_id:
-            resp = client.put(f"/v1/nodes/{node_id}/archive")
+            headers = {"Idempotency-Key": "d5655e7a-ec2e-4d40-9e9d-908cfc3ca98c"}
+            resp = client.put(f"/v1/nodes/{node_id}/archive", headers=headers)
             assert resp.status_code == 200
             data = resp.json()
             assert data["lifecycle_state"] == "archived"
+            assert client.put(
+                f"/v1/nodes/{node_id}/archive", headers=headers
+            ).status_code == 200
 
 
 # ---------------------------------------------------------------------------

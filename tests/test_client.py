@@ -136,6 +136,23 @@ class TestClientLifecycle:
 
 
 class TestStoreRetrieve:
+    def test_lifecycle_retries_with_request_ids(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_id = client.store(
+                "Lifecycle claim", user_id="alice", node_type=NodeType.FACT,
+            )
+            node = client.get_event_nodes(event_id, user_id="alice")[0]
+            promote_id = "8a41eede-58ad-4f09-9983-76cb75f57c16"
+            client.promote(str(node.id), user_id="alice", request_id=promote_id)
+            client.promote(str(node.id), user_id="alice", request_id=promote_id)
+            archive_id = "ba064fb7-a2d7-4832-802b-b810b1d9e098"
+            client.archive(str(node.id), user_id="alice", request_id=archive_id)
+            client.archive(str(node.id), user_id="alice", request_id=archive_id)
+            saved = client.get_node(
+                str(node.id), user_id="alice", include_superseded=True,
+            )
+            assert saved.lifecycle_state == LifecycleState.ARCHIVED
+
     def test_contradiction_roundtrip_is_retry_safe(self, tmp_dir):
         with MemoryClient(tmp_dir) as client:
             first_event = client.store(

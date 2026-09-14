@@ -1931,13 +1931,22 @@ class MemoryEngine:
 
     # --- Lifecycle Transitions (delegated to GraphStore) ---
 
-    async def promote(self, node_id: str, *, user_id: str | None = None) -> None:
+    async def promote(
+        self,
+        node_id: str,
+        *,
+        user_id: str | None = None,
+        request_id: str | UUID | None = None,
+        actor_id: str | None = None,
+    ) -> None:
         """Promote a tentative node to stable.
 
         Args:
             node_id: Node to promote.
             user_id: When given, the promotion only applies to a node this
                 user owns; anyone else's node raises as if it did not exist.
+            request_id: Optional UUID that makes an exact retry a no-op.
+            actor_id: Actor responsible for the promotion.
 
         Raises:
             ValueError: If the transition is invalid, or the node is missing
@@ -1945,7 +1954,14 @@ class MemoryEngine:
         """
         if user_id is not None:
             await self._require_owned(node_id, user_id)
-        await self._graph_store.promote(node_id)
+        actor = actor_id.strip() if isinstance(actor_id, str) else actor_id
+        if actor_id is not None and not actor:
+            raise ValueError("actor_id must be a non-empty string")
+        await self._graph_store.promote(
+            node_id,
+            request_id=request_id,
+            actor_id=actor or user_id or "system",
+        )
 
     async def evaluate_condition(
         self,
@@ -2086,13 +2102,22 @@ class MemoryEngine:
         by_id = {str(node.id): node for node in nodes}
         return by_id[str(UUID(winner_id))], by_id[str(UUID(loser_id))]
 
-    async def archive(self, node_id: str, *, user_id: str | None = None) -> None:
+    async def archive(
+        self,
+        node_id: str,
+        *,
+        user_id: str | None = None,
+        request_id: str | UUID | None = None,
+        actor_id: str | None = None,
+    ) -> None:
         """Archive a node (terminal state).
 
         Args:
             node_id: Node to archive.
             user_id: When given, the archival only applies to a node this
                 user owns; anyone else's node raises as if it did not exist.
+            request_id: Optional UUID that makes an exact retry a no-op.
+            actor_id: Actor responsible for the archival.
 
         Raises:
             ValueError: If the transition is invalid, or the node is missing
@@ -2100,7 +2125,14 @@ class MemoryEngine:
         """
         if user_id is not None:
             await self._require_owned(node_id, user_id)
-        await self._graph_store.archive(node_id)
+        actor = actor_id.strip() if isinstance(actor_id, str) else actor_id
+        if actor_id is not None and not actor:
+            raise ValueError("actor_id must be a non-empty string")
+        await self._graph_store.archive(
+            node_id,
+            request_id=request_id,
+            actor_id=actor or user_id or "system",
+        )
         # Archived content is not retrievable, so drop it from the indexes.
         await self._evict_from_indexes(node_id)
 

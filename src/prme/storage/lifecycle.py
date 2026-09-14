@@ -23,6 +23,10 @@ TARGETS = {
 }
 
 
+class LifecycleConflict(ValueError):
+    """An idempotency key was already used for different lifecycle inputs."""
+
+
 class LifecycleRecord(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     version: Literal[1] = 1
@@ -81,15 +85,63 @@ def _checkpoint(stage):
     """Native transaction fault-injection boundary; no external work."""
 
 
-async def transition_duckdb(store, node_id, action):
+def _request(node_id, action, request_id, actor_id):
+    node_id = str(UUID(node_id))
+    if action not in TARGETS:
+        raise ValueError("Unsupported lifecycle action")
+    if not isinstance(actor_id, str) or not actor_id.strip():
+        raise ValueError("actor_id must be a non-empty string")
+    operation_id = UUID(str(request_id)) if request_id is not None else uuid4()
+    return node_id, action, operation_id, actor_id.strip()
+
+
+def _replay(row, *, node_id, action, operation_id, actor_id):
+    if row is None:
+        return False
+    op_type, target_id, payload, saved_actor = row
+    try:
+        record = read_record(payload)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise LifecycleConflict(
+            "Lifecycle idempotency key is already used by another operation"
+        ) from exc
+    if (
+        op_type != "LIFECYCLE_CHANGED"
+        or str(record.operation_id) != str(operation_id)
+        or str(target_id) != node_id
+        or str(record.before.id) != node_id
+        or record.action != action
+        or saved_actor != actor_id
+    ):
+        raise LifecycleConflict(
+            "Lifecycle idempotency key is already used with different inputs"
+        )
+    return True
+
+
+async def transition_duckdb(
+    store, node_id, action, *, request_id=None, actor_id="system",
+):
+    request = _request(node_id, action, request_id, actor_id)
     async with store._conn_lock:
-        await run_to_completion(_transition_duckdb, store, node_id, action)
+        await run_to_completion(_transition_duckdb, store, request)
 
 
-def _transition_duckdb(store, node_id, action):
+def _transition_duckdb(store, request):
+    node_id, action, operation_id, actor_id = request
     conn = store._conn
     conn.execute("BEGIN TRANSACTION")
     try:
+        saved = conn.execute(
+            "SELECT op_type,target_id,payload,actor_id FROM operations WHERE id=?",
+            [str(operation_id)],
+        ).fetchone()
+        if _replay(
+            saved, node_id=node_id, action=action,
+            operation_id=operation_id, actor_id=actor_id,
+        ):
+            conn.execute("COMMIT")
+            return
         before = store._get_node_sync(node_id, True)
         target = _validate(before, node_id, action)
         _checkpoint("validated")
@@ -101,7 +153,7 @@ def _transition_duckdb(store, node_id, action):
         _checkpoint("updated")
         after = store._get_node_sync(node_id, True)
         record = LifecycleRecord(
-            operation_id=uuid4(), action=action, before=before, after=after
+            operation_id=operation_id, action=action, before=before, after=after
         )
         conn.execute(
             """INSERT INTO operations
@@ -111,7 +163,7 @@ def _transition_duckdb(store, node_id, action):
                 str(record.operation_id),
                 node_id,
                 _payload(record),
-                before.user_id,
+                actor_id,
                 before.scope.value,
                 now,
             ],
@@ -123,13 +175,28 @@ def _transition_duckdb(store, node_id, action):
         raise
 
 
-async def transition_postgres(store, node_id, action):
+async def transition_postgres(
+    store, node_id, action, *, request_id=None, actor_id="system",
+):
     from prme.storage.pg.graph_store import _NODE_COLUMNS
 
+    node_id, action, operation_id, actor_id = _request(
+        node_id, action, request_id, actor_id,
+    )
     async with store._pool.acquire() as conn, conn.transaction():
         row = await conn.fetchrow(
             f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id=$1 FOR UPDATE", node_id
         )
+        saved = await conn.fetchrow(
+            "SELECT op_type,target_id,payload,actor_id FROM operations WHERE id=$1",
+            str(operation_id),
+        )
+        if _replay(
+            tuple(saved) if saved is not None else None,
+            node_id=node_id, action=action,
+            operation_id=operation_id, actor_id=actor_id,
+        ):
+            return
         before = store._record_to_node(row) if row is not None else None
         target = _validate(before, node_id, action)
         _checkpoint("validated")
@@ -144,17 +211,22 @@ async def transition_postgres(store, node_id, action):
         _checkpoint("updated")
         after = store._record_to_node(row)
         record = LifecycleRecord(
-            operation_id=uuid4(), action=action, before=before, after=after
+            operation_id=operation_id, action=action, before=before, after=after
         )
-        await conn.execute(
+        inserted = await conn.fetchval(
             """INSERT INTO operations
             (id,op_type,target_id,payload,actor_id,namespace_id,created_at)
-            VALUES ($1,'LIFECYCLE_CHANGED',$2,$3::jsonb,$4,$5,$6)""",
+            VALUES ($1,'LIFECYCLE_CHANGED',$2,$3::jsonb,$4,$5,$6)
+            ON CONFLICT (id) DO NOTHING RETURNING id""",
             str(record.operation_id),
             node_id,
             _payload(record),
-            before.user_id,
+            actor_id,
             before.scope.value,
             now,
         )
+        if inserted is None:
+            raise LifecycleConflict(
+                "Lifecycle idempotency key is already used with different inputs"
+            )
         _checkpoint("journal")

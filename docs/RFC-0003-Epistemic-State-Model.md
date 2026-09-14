@@ -156,6 +156,12 @@ checks provenance membership, not entailment. The
 [correction guide](MEMORY-CORRECTIONS.md) covers the public sync/async replacement
 workflow, including retained sources and ambiguous completion outcomes.
 
+Single-node promotion and archival accept an optional caller-generated request
+UUID. The operation record binds that key to the node, action, and actor, making
+an exact retry durable while rejecting reuse for different inputs. Omitting the
+key preserves strict transition errors. This applies to Python, the HTTP
+`Idempotency-Key` header, and MCP's `request_id` argument.
+
 ---
 
 ## 4. Source Types and Epistemic Interaction

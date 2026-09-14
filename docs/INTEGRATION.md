@@ -366,7 +366,10 @@ See the [entity profile guide](ENTITY-PROFILES.md) for requirements and recovery
 #### Lifecycle Transitions
 
 ```python
-async def promote(self, node_id: str) -> None        # TENTATIVE → STABLE
+async def promote(
+    self, node_id: str, *, user_id: str | None = None,
+    request_id: str | UUID | None = None,
+) -> None                                           # TENTATIVE → STABLE
 async def supersede(
     self,
     old_node_id: str,
@@ -376,7 +379,10 @@ async def supersede(
     user_id: str | None = None,
     actor_id: str | None = None,
 ) -> None                                              # → SUPERSEDED
-async def archive(self, node_id: str) -> None          # → ARCHIVED (terminal)
+async def archive(
+    self, node_id: str, *, user_id: str | None = None,
+    request_id: str | UUID | None = None,
+) -> None                                           # → ARCHIVED (terminal)
 ```
 
 All raise `ValueError` if the transition is invalid per the lifecycle state
@@ -384,6 +390,11 @@ machine. Supersedence commits a deterministic edge and checksummed before/after
 record with the state change. Repeating the same ordered nodes, evidence, and
 actor is safe across restarts; changing an input after publication is rejected.
 HTTP exposes `POST /v1/supersedences`, and MCP exposes `memory_supersede`.
+Promotion and archival accept an optional UUID `request_id`; reuse it with the
+same node, action, and actor after an ambiguous response. HTTP accepts that UUID
+as `Idempotency-Key`, and the MCP lifecycle tools accept `request_id`. Reusing a
+key with different inputs raises a conflict. Calls without a request ID retain
+strict lifecycle errors and reject a repeated transition.
 
 #### `engine.evaluate_condition()`
 

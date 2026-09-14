@@ -154,6 +154,10 @@ Repeating an exact call is safe after an ambiguous timeout. HTTP exposes
 `memory_supersede`, `memory_mark_contradiction`, and
 `memory_resolve_contradiction`.
 
+`promote()` and `archive()` also accept a caller-generated UUID `request_id`.
+Reuse it for an exact retry; HTTP uses the `Idempotency-Key` header and the MCP
+lifecycle tools expose the same `request_id` field.
+
 The [packing guide](docs/PACKING.md) explains exact context budgets and the
 experimental `balanced` policy. It improved source retention in completed
 studies, with individual losses; density remains the default pending broader

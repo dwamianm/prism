@@ -175,6 +175,35 @@ async def test_archive_stays_committed_when_index_eviction_fails(
 
 
 @pytest.mark.parametrize("action", ["promote", "archive"])
+async def test_public_lifecycle_request_is_retry_safe_across_restart(
+    config, user, action
+):
+    from uuid import uuid4
+    from prme.storage.lifecycle import LifecycleConflict
+
+    request_id = str(uuid4())
+    async with MemoryEngine.open(config) as engine:
+        source = await engine.store("Retry-safe lifecycle", user_id=user)
+        node = (await engine.get_event_nodes(source, user_id=user))[0]
+        await getattr(engine, action)(
+            str(node.id), user_id=user, request_id=request_id, actor_id="reviewer"
+        )
+    async with MemoryEngine.open(config) as engine:
+        await getattr(engine, action)(
+            str(node.id).upper(), user_id=user,
+            request_id=request_id, actor_id="reviewer",
+        )
+        assert len(await journal_records(engine, str(node.id))) == 1
+        second_source = await engine.store("Different memory", user_id=user)
+        second = (await engine.get_event_nodes(second_source, user_id=user))[0]
+        with pytest.raises(LifecycleConflict, match="different inputs"):
+            await getattr(engine, action)(
+                str(second.id), user_id=user,
+                request_id=request_id, actor_id="reviewer",
+            )
+
+
+@pytest.mark.parametrize("action", ["promote", "archive"])
 async def test_foreign_owner_cannot_transition_or_journal_node(config, user, action):
     async with MemoryEngine.open(config) as engine:
         source = await engine.store("Owned memory", user_id=user)

@@ -637,6 +637,7 @@ async def memory_process_extractions(limit: int = 100, budget_ms: float = 5000, 
 
 async def memory_promote_node(
     node_id: str,
+    request_id: str | None = None,
     ctx: Context = None,
 ) -> str:
     """Promote a memory node's lifecycle state.
@@ -646,6 +647,7 @@ async def memory_promote_node(
 
     Args:
         node_id: The UUID of the node to promote.
+        request_id: Optional UUID to reuse after an ambiguous response.
     """
     engine = _get_engine(ctx)
     try:
@@ -658,7 +660,10 @@ async def memory_promote_node(
         if node is None:
             return json.dumps({"error": f"Node {node_id!r} not found"})
 
-        await engine.promote(node_id, user_id=user_id)
+        await engine.promote(
+            node_id, user_id=user_id, request_id=request_id,
+            actor_id=user_id or "mcp-operator",
+        )
 
         updated = await engine.get_node(node_id, include_superseded=True, user_id=user_id)
         if updated is None:
@@ -673,6 +678,7 @@ async def memory_promote_node(
 
 async def memory_archive_node(
     node_id: str,
+    request_id: str | None = None,
     ctx: Context = None,
 ) -> str:
     """Archive a memory node.
@@ -682,6 +688,7 @@ async def memory_archive_node(
 
     Args:
         node_id: The UUID of the node to archive.
+        request_id: Optional UUID to reuse after an ambiguous response.
     """
     engine = _get_engine(ctx)
     try:
@@ -694,7 +701,10 @@ async def memory_archive_node(
         if node is None:
             return json.dumps({"error": f"Node {node_id!r} not found"})
 
-        await engine.archive(node_id, user_id=user_id)
+        await engine.archive(
+            node_id, user_id=user_id, request_id=request_id,
+            actor_id=user_id or "mcp-operator",
+        )
 
         updated = await engine.get_node(node_id, include_superseded=True, user_id=user_id)
         if updated is None:

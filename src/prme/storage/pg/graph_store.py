@@ -599,10 +599,15 @@ class PgGraphStore:
 
     # --- Lifecycle Transitions ---
 
-    async def promote(self, node_id: str) -> None:
+    async def promote(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Atomically validate, apply and journal the promote transition."""
         from prme.storage.lifecycle import transition_postgres
-        await transition_postgres(self, node_id, "promote")
+        await transition_postgres(
+            self, node_id, "promote", request_id=request_id, actor_id=actor_id,
+        )
 
     async def supersede(
         self,
@@ -938,15 +943,25 @@ class PgGraphStore:
                 resolver_actor_id,
             )
 
-    async def deprecate(self, node_id: str) -> None:
+    async def deprecate(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Atomically deprecate a contested node, preserving transition provenance."""
         from prme.storage.lifecycle import transition_postgres
-        await transition_postgres(self, node_id, "deprecate")
+        await transition_postgres(
+            self, node_id, "deprecate", request_id=request_id, actor_id=actor_id,
+        )
 
-    async def archive(self, node_id: str) -> None:
+    async def archive(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Atomically validate, apply and journal the archive transition."""
         from prme.storage.lifecycle import transition_postgres
-        await transition_postgres(self, node_id, "archive")
+        await transition_postgres(
+            self, node_id, "archive", request_id=request_id, actor_id=actor_id,
+        )
 
     # --- Graph Traversal ---
 
