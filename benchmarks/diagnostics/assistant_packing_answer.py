@@ -224,7 +224,9 @@ def register(root: Path, directory: Path, registration: Path, base_url: str) -> 
     controls_sha = digest(paths["controls"].read_bytes())
     prior = json.loads(paths["prior_reader_registration"].read_bytes())
     judge = prior["judge_declaration"]
-    current_judge = reader_judge.declaration(JUDGE_MODEL, base_url, controls_sha)
+    current_judge = reader_judge.declaration(
+        JUDGE_MODEL, base_url, judge["controls_sha256"],
+    )
     controls = json.loads(paths["controls"].read_bytes())
     calibration = json.loads(paths["calibration"].read_bytes())
     if current_judge != judge:
@@ -273,7 +275,7 @@ def verify_registration(root: Path, directory: Path, registration: Path,
         or declared["arms"] != list(ARMS)
         or declared["reader"] != reader_declaration(base_url)
         or declared["judge"] != reader_judge.declaration(
-            JUDGE_MODEL, base_url, declared["controls_sha256"]
+            JUDGE_MODEL, base_url, declared["judge"]["controls_sha256"]
         )
         or declared["calibration_sha256"] != digest(paths["calibration"].read_bytes())
         or prepared != prepare(root)
