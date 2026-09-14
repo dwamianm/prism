@@ -152,7 +152,48 @@ async def test_real_ingest_profile_tracks_source_lineage(tmp_path, monkeypatch):
     assert result["ingestion"]["source_events"] == 2
     assert result["ingestion"]["materialized_sources"] == 2
     assert result["ingestion"]["sources_without_nodes"] == []
+    assert result["ingestion"]["raw_source_nodes"] == 2
+    assert result["ingestion"]["derived_sources"] == 2
+    assert result["ingestion"]["sources_without_derived_nodes"] == []
+    assert result["ingestion"]["source_processing_passes"] == 1
+    assert result["ingestion"]["node_types"]["note"] == 2
     assert result["ingestion"]["node_types"]["fact"] == 2
+    assert result["methods"]["prme"]["metrics"]["recall@5"] == 1
+
+
+async def test_extracted_profile_keeps_empty_extractions_retrievable(tmp_path, monkeypatch):
+    from benchmarks.retrieval_eval import evaluate_question
+    from prme import PRMEConfig
+    from prme.ingestion.schema import ExtractionResult
+    from tests.test_durable_ingestion import MockEmbeddingProvider
+
+    class EmptyExtractor:
+        provider_name = "test"
+        model_name = "empty-test"
+
+        async def extract(self, content, *, role="user"):
+            return ExtractionResult()
+
+    monkeypatch.setattr(
+        "prme.storage.engine.create_embedding_provider", lambda _: MockEmbeddingProvider()
+    )
+    monkeypatch.setattr(
+        "prme.ingestion.extraction.create_extraction_provider", lambda _: EmptyExtractor()
+    )
+    result = await evaluate_question(
+        question(),
+        PRMEConfig(
+            enable_qa_pairing=False,
+            organizer={"opportunistic_enabled": False},
+        ),
+        budgets=[1000],
+        count_tokens=len,
+        k=10,
+        ingestion_profile="extracted",
+    )
+    assert result["ingestion"]["raw_source_nodes"] == 2
+    assert result["ingestion"]["derived_sources"] == 0
+    assert result["ingestion"]["sources_without_derived_nodes"] == ["s0:t0", "s1:t0"]
     assert result["methods"]["prme"]["metrics"]["recall@5"] == 1
 
 

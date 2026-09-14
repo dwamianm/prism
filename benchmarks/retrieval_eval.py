@@ -100,8 +100,28 @@ async def _ingest_turns(engine, turns, *, user_id: str, profile: str) -> tuple[d
             event_id = await engine.store(turn.content, node_type=NodeType.NOTE, **kwargs)
         event_sources[event_id] = turn.id
 
+    source_processing_passes = 0
+    if profile == "extracted":
+        # ingest() has two independent durable completion boundaries: raw NOTE
+        # indexing and LLM extraction. Complete the source path explicitly
+        # before building lineage; otherwise source notes materialized by the
+        # later retrieve() call cannot be mapped back to evaluator turn IDs.
+        while True:
+            processing = await engine.process_pending(
+                user_id=user_id, budget_ms=5000
+            )
+            source_processing_passes += 1
+            if processing.pending == 0:
+                break
+            if processing.failed or processing.processed == 0:
+                raise RuntimeError(
+                    "Raw source indexing did not reach its durable completion boundary"
+                )
+
     node_sources: dict[str, list[str]] = {}
     materialized_sources: set[str] = set()
+    derived_sources: set[str] = set()
+    raw_source_nodes = 0
     node_types: Counter[str] = Counter()
     for event_id, source_id in event_sources.items():
         nodes = await engine.get_event_nodes(event_id, user_id=user_id)
@@ -110,6 +130,10 @@ async def _ingest_turns(engine, turns, *, user_id: str, profile: str) -> tuple[d
         for node in nodes:
             node_types[node.node_type.value] += 1
             node_sources.setdefault(str(node.id), []).append(source_id)
+            if str(node.id) == event_id:
+                raw_source_nodes += 1
+            else:
+                derived_sources.add(source_id)
     for sources in node_sources.values():
         sources.sort(key=source_order.__getitem__)
     if profile == "raw" and len(materialized_sources) != len(turns):
@@ -119,6 +143,10 @@ async def _ingest_turns(engine, turns, *, user_id: str, profile: str) -> tuple[d
         "source_events": len(turns),
         "materialized_sources": len(materialized_sources),
         "sources_without_nodes": sorted(set(source_order) - materialized_sources),
+        "raw_source_nodes": raw_source_nodes,
+        "derived_sources": len(derived_sources),
+        "sources_without_derived_nodes": sorted(set(source_order) - derived_sources),
+        "source_processing_passes": source_processing_passes,
         "materialized_nodes": sum(node_types.values()),
         "node_types": dict(sorted(node_types.items())),
         "duration_ms": (time.perf_counter() - started) * 1000,
@@ -361,8 +389,9 @@ async def run(args) -> dict:
             (
                 "Raw NOTE ingestion with QA pairing and opportunistic maintenance disabled."
                 if ingestion_profile == "raw"
-                else "Public ingest() with synchronous LLM extraction; source metrics expand "
-                     "retrieved node provenance and do not prove the extracted text answers the question."
+                else "Public ingest() with synchronous LLM extraction and completed durable raw-source "
+                     "NOTE indexing; source metrics expand retrieved node provenance and do not prove "
+                     "the extracted text answers the question."
             ),
             "Each question uses an isolated temporary local memory pack; configured storage paths are overridden.",
             "Query clock is explicitly selected; question time is not a knowledge-at cutoff.",

@@ -119,6 +119,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   epistemic typing. Role-aware admission guidance prevents local chat providers
   from returning an empty continuation and avoids promoting generic assistant
   recommendations, explanations, and examples into durable claims.
+- Extracted source-lineage benchmarks now complete and map the durable raw NOTE
+  path before retrieval. Reports distinguish raw source nodes from derived
+  semantic coverage, so an intentionally empty extraction remains retrievable
+  as episodic evidence instead of disappearing from evaluation accounting.
 - Mixed-quality structured responses now retain source-supported claims while
   dropping malformed or unsupported proposals. A response with no admitted
   claims completes with an empty claim set while preserving the raw event and any
