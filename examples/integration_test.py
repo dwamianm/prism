@@ -33,8 +33,15 @@ from uuid import UUID
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 warnings.filterwarnings("ignore")
 
-from prme import EdgeType, LifecycleState, MemoryEngine, NodeType, PRMEConfig, Scope
-from prme.models.edges import MemoryEdge
+from prme import (  # noqa: E402
+    EdgeType,
+    LifecycleState,
+    MemoryEngine,
+    NodeType,
+    PRMEConfig,
+    Scope,
+)
+from prme.models.edges import MemoryEdge  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

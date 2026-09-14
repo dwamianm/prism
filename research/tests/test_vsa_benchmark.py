@@ -8,7 +8,6 @@ Runs the full scenario and measures retrieval quality metrics:
 - Supersedence accuracy: correct lifecycle state assignments
 """
 
-import pytest
 from research.vsa.memory import VSAMemory
 
 
@@ -149,8 +148,6 @@ def _check_keywords(content: str, keywords: list[str]) -> tuple[list[str], list[
 
 def test_benchmark_accuracy():
     """Run all benchmarks and compute aggregate metrics."""
-    mem = _build_scenario()
-
     total = len(BENCHMARKS)
     top1_hits = 0
     top5_hits = 0
@@ -225,7 +222,7 @@ def test_benchmark_accuracy():
     print(f"  Recall@5:       {recall_at_5:.1%} ({top5_hits}/{total})")
     print(f"  Exclusion rate: {exclusion_rate:.1%} ({exclusion_passes}/{total})")
     print(f"  MRR:            {mrr:.3f}")
-    print(f"  Overall grade:  ", end="")
+    print("  Overall grade:  ", end="")
 
     # Grade
     composite = (precision_at_1 * 0.3 + recall_at_5 * 0.3 + exclusion_rate * 0.2 + mrr * 0.2)
@@ -295,7 +292,7 @@ def test_supersedence_accuracy():
     supersedence_precision = superseded_correct / superseded_total if superseded_total else 1.0
     active_precision = active_correct / active_total if active_total else 1.0
 
-    print(f"\n  Supersedence accuracy:")
+    print("\n  Supersedence accuracy:")
     print(f"    Correctly superseded: {superseded_correct}/{superseded_total} ({supersedence_precision:.0%})")
     print(f"    Correctly active:     {active_correct}/{active_total} ({active_precision:.0%})")
     print(f"    Combined:             {(supersedence_precision + active_precision) / 2:.0%}")

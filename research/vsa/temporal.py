@@ -13,8 +13,7 @@ than distant moments, creating a natural temporal gradient for retrieval.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from functools import lru_cache
+from datetime import datetime
 
 import numpy as np
 
