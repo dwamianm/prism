@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A fail-closed operational benchmark for p50/p95/p99 retrieval latency at
+  declared pack sizes, exact fixed-clock repeatability, and 10,000-query owner
+  isolation through public store/retrieve paths, with runtime and execution
+  provenance in its artifact.
 - HTTP and MCP access to the existing bounded, owner-scoped offline learning
   evaluator. Both remote surfaces return the complete validation, uncertainty,
   coverage, exclusion, and input-identity report without activating weights.

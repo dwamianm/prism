@@ -392,6 +392,14 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 - Determinism test: identical results across 100 repeated identical queries on the same index state.
 - Comparison baseline: retrieval quality compared to a vector-only baseline (no graph or lexical path). `[HYPOTHESIS — hybrid retrieval outperforms vector-only for long-horizon queries]`
 
+`benchmarks.operational_eval` implements the latency-size, 100-repeat
+determinism, and 10,000-query owner-isolation measurement contract through
+public store/retrieve operations. Its default isolation corpus has five owner
+partitions, meeting RFC-0004's minimum partition count at the implementation's
+current owner/scope boundary. It records an incomplete artifact before work and
+fails closed on any mismatch. A concrete host result must still be published;
+the harness alone is not benchmark evidence.
+
 ---
 
 ## Stored-record enumeration

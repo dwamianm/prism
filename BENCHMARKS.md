@@ -58,6 +58,27 @@ exit for a nonempty benchmark with a zero score.
 
 ## Available commands
 
+For host-specific retrieval latency, exact repeatability, and tenant isolation
+through the public product path, run:
+
+```bash
+uv run python -m benchmarks.operational_eval \
+  --sizes 10 50 200 \
+  --latency-samples 100 \
+  --determinism-samples 100 \
+  --isolation-samples 10000 \
+  --owners 5 \
+  --output /tmp/prme-operational.json
+```
+
+The runner fixes the retrieval clock, uses exact vector search, disables
+maintenance, records implementation/runtime/feature provenance, writes an
+incomplete artifact before measurement, and exits nonzero on any repeatability
+or owner-isolation failure. Sizes are eligible objects per owner; the default
+five-owner corpus therefore holds 50, 250, and 1,000 total objects. Its latency
+is specific to the measured host and its synthetic corpus; it is neither a
+relevance score nor an answer-quality result.
+
 For chronological conflict-memory replay with a local model, see the
 [MemConflict adapter](benchmarks/integrations/MEMCONFLICT.md). It separates source
 dialogues from evaluation labels, reports malformed-message omissions, and
