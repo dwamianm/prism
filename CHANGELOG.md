@@ -72,7 +72,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `reasoning_effort: none` for Ollama development runs. Schema 3 packs persist a
   stable retrieval reference clock; schema 2 packs derive it without mutation
   and remain read-only, preventing saved-run ranking drift across wall-clock
-  dates.
+  dates. Registered paired comparisons now bind the PRME and no-memory arms to
+  their declared configuration paths, context budgets, frozen saved-memory
+  configuration and pack manifest; a baseline that returns memory context fails
+  validation.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,

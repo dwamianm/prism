@@ -208,6 +208,91 @@ def _efficiency(run: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _validate_registered_systems(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    registration: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind each comparison arm to the system registered before generation."""
+    source = registration.get("source")
+    systems = registration.get("systems")
+    if not isinstance(source, dict) or not isinstance(systems, dict):
+        raise ValueError("registration is missing source or system settings")
+    prme = systems.get("prme")
+    baseline = systems.get("baseline")
+    if not isinstance(prme, dict) or not isinstance(baseline, dict):
+        raise ValueError("registration is missing PRME or baseline settings")
+
+    left_args = left["args"]
+    right_args = right["args"]
+    if left_args.get("memory_config_path") != prme.get("memory_config"):
+        raise ValueError("left arm does not use the registered PRME memory configuration")
+    if right_args.get("memory_config_path") != baseline.get("memory_config"):
+        raise ValueError("right arm does not use the registered baseline memory configuration")
+    upstream_budget = prme.get("upstream_context_budget_tokens")
+    if (
+        type(upstream_budget) is not int
+        or upstream_budget < 1
+        or left_args.get("memory_context_max_tokens") != upstream_budget
+        or right_args.get("memory_context_max_tokens") != upstream_budget
+    ):
+        raise ValueError("run context budget does not match the registered systems")
+    if any(
+        args.get("save_memory") is not False
+        or args.get("skip_evaluation") is not False
+        for args in (left_args, right_args)
+    ):
+        raise ValueError("registered comparison arms must load memory and complete evaluation")
+
+    load_memory = left_args.get("load_memory_dir")
+    if not isinstance(load_memory, str) or not load_memory:
+        raise ValueError("registered PRME arm must load its frozen memory artifact")
+    if right_args.get("load_memory_dir") is not None:
+        raise ValueError("registered no-memory baseline cannot load a memory artifact")
+    load_root = Path(load_memory)
+    if not load_root.is_absolute():
+        raise ValueError("registered PRME memory artifact path must be absolute")
+    saved_config_path = load_root / "memory_config.json"
+    pack_manifest_path = load_root / "prme_pack" / "longmemeval_v2_manifest.json"
+    if not saved_config_path.is_file() or not pack_manifest_path.is_file():
+        raise ValueError("registered PRME memory artifact is incomplete")
+
+    saved_config_sha256 = _digest(saved_config_path)
+    pack_manifest_sha256 = _digest(pack_manifest_path)
+    if saved_config_sha256 != source.get("prme_memory_config_sha256"):
+        raise ValueError("loaded PRME memory configuration does not match registration")
+    if pack_manifest_sha256 != source.get("prme_pack_manifest_sha256"):
+        raise ValueError("loaded PRME pack manifest does not match registration")
+    saved_config = _load_json(saved_config_path)
+    memory_params = saved_config.get("memory_params")
+    if (
+        saved_config.get("memory_type") != "prme"
+        or not isinstance(memory_params, dict)
+        or memory_params.get("token_budget")
+        != prme.get("internal_context_budget_cl100k_tokens")
+        or memory_params.get("image_limit") != prme.get("max_source_screenshots")
+    ):
+        raise ValueError("loaded PRME adapter settings do not match registration")
+    pack_manifest = _load_json(pack_manifest_path)
+    if (
+        pack_manifest.get("schema_version")
+        != source.get("prme_adapter_schema_version")
+        or pack_manifest.get("upstream_revision") != source.get("upstream_revision")
+    ):
+        raise ValueError("loaded PRME pack identity does not match registration")
+    if any(row["memory_context_token_count"] != 0 for row in right["records"]):
+        raise ValueError("registered no-memory baseline returned memory context")
+    return {
+        "left_memory_config": left_args["memory_config_path"],
+        "right_memory_config": right_args["memory_config_path"],
+        "prme_memory_config_sha256": saved_config_sha256,
+        "prme_pack_manifest_sha256": pack_manifest_sha256,
+        "prme_adapter_schema_version": pack_manifest["schema_version"],
+        "upstream_revision": pack_manifest["upstream_revision"],
+        "baseline_memory_context_tokens_zero": True,
+    }
+
+
 def compare(
     left_directory: Path,
     right_directory: Path,
@@ -319,6 +404,9 @@ def compare(
             field: left_settings[field] for field in registered_reader
         }:
             raise ValueError("run reader settings do not match registration")
+        report["system_binding"] = _validate_registered_systems(
+            left, right, registered
+        )
         report["registration_sha256"] = _digest(registration)
     return report
 

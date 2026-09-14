@@ -88,7 +88,13 @@ def _write_run(root: Path, scores: list[bool], *, model: str = "reader") -> Path
     return root
 
 
-def _write_registration(path: Path, run: Path) -> Path:
+def _write_registration(
+    path: Path,
+    run: Path,
+    *,
+    source: dict | None = None,
+    systems: dict | None = None,
+) -> Path:
     args = json.loads((run / "run_args.json").read_text())
     rows = [json.loads(line) for line in (run / "per_question.jsonl").read_text().splitlines()]
     ids = [row["question_id"] for row in rows]
@@ -116,8 +122,77 @@ def _write_registration(path: Path, run: Path) -> Path:
             "max_concurrent_requests": args["reader_max_concurrent_requests"],
         },
     }
+    if source is not None:
+        value["source"] = source
+    if systems is not None:
+        value["systems"] = systems
     path.write_text(json.dumps(value), encoding="utf-8")
     return path
+
+
+def _bind_registered_systems(
+    left: Path, right: Path, root: Path
+) -> tuple[dict, dict]:
+    memory = root / "saved-memory"
+    pack = memory / "prme_pack"
+    pack.mkdir(parents=True)
+    saved_config = {
+        "memory_type": "prme",
+        "memory_params": {"token_budget": 32_768, "image_limit": 8},
+    }
+    manifest = {"schema_version": 2, "upstream_revision": "upstream-revision"}
+    config_path = memory / "memory_config.json"
+    manifest_path = pack / "longmemeval_v2_manifest.json"
+    config_path.write_text(json.dumps(saved_config), encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    def update_args(directory: Path, *, prme: bool) -> None:
+        path = directory / "run_args.json"
+        args = json.loads(path.read_text())
+        args.update(
+            memory_config_path=(
+                "evaluation/memory_configs/prme.json"
+                if prme
+                else "evaluation/memory_configs/no_retrieval.json"
+            ),
+            memory_context_max_tokens=65_536,
+            load_memory_dir=str(memory) if prme else None,
+            save_memory=False,
+            skip_evaluation=False,
+        )
+        path.write_text(json.dumps(args), encoding="utf-8")
+
+    update_args(left, prme=True)
+    update_args(right, prme=False)
+    rows_path = right / "per_question.jsonl"
+    rows = [json.loads(line) for line in rows_path.read_text().splitlines()]
+    for row in rows:
+        row["memory_context_token_count"] = 0
+    rows_path.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    source = {
+        "upstream_revision": manifest["upstream_revision"],
+        "prme_adapter_schema_version": manifest["schema_version"],
+        "prme_pack_manifest_sha256": digest(manifest_path),
+        "prme_memory_config_sha256": digest(config_path),
+    }
+    systems = {
+        "prme": {
+            "memory_config": "evaluation/memory_configs/prme.json",
+            "internal_context_budget_cl100k_tokens": 32_768,
+            "upstream_context_budget_tokens": 65_536,
+            "max_source_screenshots": 8,
+        },
+        "baseline": {
+            "memory_config": "evaluation/memory_configs/no_retrieval.json"
+        },
+    }
+    return source, systems
 
 
 def test_comparison_preserves_paired_direction_and_efficiency(tmp_path: Path) -> None:
@@ -188,12 +263,17 @@ def test_comparison_rejects_aggregate_score_drift(tmp_path: Path) -> None:
 def test_comparison_verifies_registered_cohort_and_reader(tmp_path: Path) -> None:
     left = _write_run(tmp_path / "left", [True, False])
     right = _write_run(tmp_path / "right", [True, False])
-    registration = _write_registration(tmp_path / "registration.json", left)
+    source, systems = _bind_registered_systems(left, right, tmp_path)
+    registration = _write_registration(
+        tmp_path / "registration.json", left, source=source, systems=systems
+    )
     result = compare(
         left, right, left_label="left", right_label="right",
         registration=registration, samples=10,
     )
     assert result["registration_sha256"] == hashlib.sha256(registration.read_bytes()).hexdigest()
+    assert result["system_binding"]["baseline_memory_context_tokens_zero"] is True
+    assert result["system_binding"]["prme_adapter_schema_version"] == 2
 
     registered = json.loads(registration.read_text())
     registered["selection"]["question_count"] = 1
@@ -201,3 +281,50 @@ def test_comparison_verifies_registered_cohort_and_reader(tmp_path: Path) -> Non
     with pytest.raises(ValueError, match="cohort does not match"):
         compare(left, right, left_label="left", right_label="right",
                 registration=registration, samples=10)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "error"),
+    [
+        ("left_config", "left arm does not use the registered"),
+        ("right_config", "right arm does not use the registered"),
+        ("loaded_config", "loaded PRME memory configuration"),
+        ("pack_manifest", "loaded PRME pack manifest"),
+        ("baseline_context", "no-memory baseline returned memory context"),
+    ],
+)
+def test_comparison_rejects_registered_system_drift(
+    tmp_path: Path, mutation: str, error: str
+) -> None:
+    left = _write_run(tmp_path / "left", [True])
+    right = _write_run(tmp_path / "right", [False])
+    source, systems = _bind_registered_systems(left, right, tmp_path)
+    registration = _write_registration(
+        tmp_path / "registration.json", left, source=source, systems=systems
+    )
+
+    if mutation in {"left_config", "right_config"}:
+        directory = left if mutation == "left_config" else right
+        path = directory / "run_args.json"
+        args = json.loads(path.read_text())
+        args["memory_config_path"] = "evaluation/memory_configs/changed.json"
+        path.write_text(json.dumps(args))
+    elif mutation == "loaded_config":
+        (tmp_path / "saved-memory" / "memory_config.json").write_text("{}")
+    elif mutation == "pack_manifest":
+        (tmp_path / "saved-memory" / "prme_pack" / "longmemeval_v2_manifest.json").write_text("{}")
+    else:
+        path = right / "per_question.jsonl"
+        row = json.loads(path.read_text())
+        row["memory_context_token_count"] = 1
+        path.write_text(json.dumps(row) + "\n")
+
+    with pytest.raises(ValueError, match=error):
+        compare(
+            left,
+            right,
+            left_label="prme",
+            right_label="no_memory",
+            registration=registration,
+            samples=10,
+        )
