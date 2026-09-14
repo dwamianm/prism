@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 from prme.config import PRMEConfig
 from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.models.processing import ProcessingResult, ProcessingStatus
+from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.relevance import (
     AnswerCitationRecord,
@@ -34,6 +35,7 @@ from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingRe
 from prme.storage.engine import MemoryEngine
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.embedding import CachedEmbeddingProvider, EmbeddingProvider, QueryEmbeddingProvider
+from prme.retrieval.credit import ablate_context, assess_context_presence
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -82,6 +84,8 @@ __all__ = [
     "AnswerCitationSubmission",
     "ConditionEvaluationMethod",
     "ConditionState",
+    "ContextAblation",
+    "ContextPresenceCredit",
     "DECAY_LAMBDAS",
     "DEFAULT_DECAY_PROFILE_MAPPING",
     "DecayProfile",
@@ -124,5 +128,7 @@ __all__ = [
     "Scope",
     "SourceType",
     "StaleProfileError",
+    "ablate_context",
+    "assess_context_presence",
     "config_from_directory",
 ]

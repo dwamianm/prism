@@ -695,6 +695,15 @@ These records survive graph changes and restart, and remain readable with
 is usage telemetry. It is not verified answer correctness or causal evidence
 that uncited memories were unnecessary.
 
+For a controlled re-answer test, `ablate_context(response.bundle, [node_id])`
+removes one cited entry without mutating the pack, repacking, or changing any
+other context byte. `assess_context_presence(...)` verifies the citation and
+baseline context hash, then records whether the entry was load-bearing,
+redundant for that answer, misleading, or noncuring under a named fixed
+evaluation protocol. It returns an inspectable model and never changes ranking
+or retention. See the [memory credit guide](docs/MEMORY-CREDIT.md) for the full
+workflow and its limits.
+
 Evaluate a proposed adjustment after collecting explicit positive and negative
 judgments across enough distinct queries:
 

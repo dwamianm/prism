@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, RelevanceRecord, RelevanceSubmission, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse
+from prme import AnswerCitationRecord, AnswerCitationSubmission, ContextAblation, ContextPresenceCredit, RelevanceRecord, RelevanceSubmission, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, ablate_context, assess_context_presence
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -41,6 +41,16 @@ def submit_citations(client: MemoryClient, submission: AnswerCitationSubmission)
     assert_type(client.record_answer_citations(submission, user_id="alice"), AnswerCitationRecord)
     assert_type(client.get_answer_citations(str(submission.citation_id), user_id="alice"), AnswerCitationRecord | None)
     assert_type(client.list_answer_citations(user_id="alice"), list[AnswerCitationRecord])
+
+
+def assess_citation(record: AnswerCitationRecord, response: RetrievalResponse) -> None:
+    ablation = ablate_context(response.bundle, [record.cited_node_ids[0]])
+    assert_type(ablation, ContextAblation)
+    assert_type(assess_context_presence(
+        ablation, record, node_id=record.cited_node_ids[0],
+        baseline_correct=True, counterfactual_correct=False,
+        evaluation_id="fixed-reader-and-judge-v1",
+    ), ContextPresenceCredit)
 
 
 async def postgres_workspace_consumer() -> None:

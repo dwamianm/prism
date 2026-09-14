@@ -1,6 +1,6 @@
 # RFC-0017: Scoped retrieval feedback and evaluated learning
 
-**Status:** Receipts, relevance collection and offline proposal evaluation implemented; profile activation pending
+**Status:** Receipts, relevance collection, context ablation, and offline proposal evaluation implemented; profile activation pending
 **Date:** 2026-09-12
 **Depends on:** RFC-0002, RFC-0004, RFC-0005, RFC-0009
 
@@ -172,6 +172,30 @@ human-verified. It does not prove answer correctness. Missing citations are not
 negative relevance labels, and uncited exposure is not causal proof that a memory
 was unnecessary. No current organizer or scorer consumes these records.
 
+## Controlled context ablation
+
+`ablate_context(bundle, [node_id])` removes included records from the exact
+packed bundle without mutating the input, rerunning retrieval, filling the freed
+budget, or changing any retained entry or representation. Its frozen result
+binds the removed IDs, both context hashes, the counterfactual bundle, and exact
+token accounting. Empty, duplicate, or absent targets fail closed.
+
+`assess_context_presence` accepts one target and a saved answer citation. The
+target must be cited and the citation's context hash must match the ablation's
+baseline. A caller supplies baseline and counterfactual correctness under a
+named fixed reader/evaluator protocol. The result follows four observable tiers:
+correct-to-wrong is load-bearing (`1.0`), correct-to-correct is cited but
+non-flipping (`0.6`), wrong-to-correct is misleading (`-1.0`), and
+wrong-to-wrong is noncuring (`0.0`). The result is inspectable but is not
+persisted or consumed by ranking and retention.
+
+This is an exact context-entry intervention, not the memory-bank deletion in
+Hindsight Memory-PRM. Bank deletion can change graph traversal, candidate cutoffs,
+session expansion, and the record that fills a freed budget. Context ablation is
+useful causal evidence for a fixed rendered prompt, while a full reproduction of
+bank-level presence credit still requires the retrieval-invariant experiment
+described below.
+
 ## Offline proposal evaluation
 
 `MemoryEngine.evaluate_learning` and `MemoryClient.evaluate_learning` capture an
@@ -276,10 +300,9 @@ ordinary `HAS_FACT` or similarity edges would not implement the reported method.
 
 [Hindsight Memory-PRM](https://arxiv.org/abs/2608.29605) reports entry-level
 presence credit derived from retrieval traces, answer citations and controlled
-deletion-and-reanswer interventions, propagated across memory versions. The new
-answer citation record supplies one missing observation while preserving the
-retrieval exposure and version-chain evidence PRME already records. It does not
-implement intervention credit. A future experiment must reproduce deletion and
-reanswer under a fixed reader and retrieval invariant, preserve failed and
-changed answers, and pass held-out task and schema-transfer gates before any
-credit changes retention or ranking.
+deletion-and-reanswer interventions, propagated across memory versions. PRME now
+implements the narrower exact packed-context intervention above. A future
+experiment must still reproduce bank deletion and re-retrieval under a fixed
+reader and retrieval invariant, preserve failed and changed answers, and pass
+held-out task and schema-transfer gates before any credit changes retention or
+ranking.

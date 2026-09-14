@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Exact, nonmutating packed-context ablation and citation-checked presence
+  credit. Applications can re-answer after removing one cited memory, preserve
+  both context hashes and token accounting, and distinguish load-bearing,
+  redundant, misleading, and noncuring outcomes without changing retrieval,
+  ranking, or retention.
 - Immutable, owner-scoped answer citation records across async/sync Python,
   HTTP, MCP, DuckDB, and PostgreSQL. Citations bind to saved content-bearing
   context, preserve optional answer digests, and use caller UUIDs for exact

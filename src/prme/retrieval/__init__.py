@@ -13,6 +13,7 @@ from prme.retrieval.config import (
     ScoringWeights,
 )
 from prme.retrieval.context_formatter import format_for_llm
+from prme.retrieval.credit import ablate_context, assess_context_presence
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     AggregationCoverage,
@@ -24,6 +25,7 @@ from prme.retrieval.models import (
     RetrievalResponse,
     ScoreTrace,
 )
+from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.retrieval.packing import pack_context
 from prme.retrieval.pipeline import RetrievalPipeline
 from prme.retrieval.reformulation import reformulate_query
@@ -37,6 +39,8 @@ from prme.retrieval.snapshots import (
 
 __all__ = [
     "AggregationCoverage",
+    "ContextAblation",
+    "ContextPresenceCredit",
     "DEFAULT_PACKING_CONFIG",
     "DEFAULT_SCORING_WEIGHTS",
     "EntitySnapshot",
@@ -52,6 +56,8 @@ __all__ = [
     "ScoreTrace",
     "ScoringWeights",
     "compute_composite_score",
+    "ablate_context",
+    "assess_context_presence",
     "filter_epistemic",
     "generate_all_entity_snapshots",
     "generate_entity_snapshot",
