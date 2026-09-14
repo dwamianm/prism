@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A pinned MemoryAgentBench adapter for the benchmark's four incremental memory
+  competencies. It uses the public PRME client with the product-default 4K
+  balanced packer, pins the upstream dataset revision, fences completed source
+  ingestion for restart, and saves exact retrieved contexts and request
+  identities. The installer is idempotent and rolls back partial changes. This
+  is an evaluation path; no MemoryAgentBench task score is claimed yet.
 - Durable, atomic hierarchical summary publication. Daily, weekly and monthly
   excerpts use stable owner/scope/level/period lineages, deterministic request
   generations, checksummed preparation, fenced index staging and transactional

@@ -4,7 +4,9 @@ For the separate chronological dialogue replay, see the
 [MemConflict adapter](MEMCONFLICT.md). The
 [LongMemEval-V2 adapter](LONGMEMEVAL_V2.md) connects PRME to the official
 agent-trajectory memory harness, including source screenshot return and portable
-adapter state. The [MELT bridge](MELT.md) exercises corrections, conflicts,
+adapter state. The [MemoryAgentBench adapter](MEMORYAGENTBENCH.md) covers its
+four incremental competency families with durable packs and exact context
+capture. The [MELT bridge](MELT.md) exercises corrections, conflicts,
 consolidation, temporal lineage, and retrieval through an independent lifecycle
 harness. The [BEAM adapter](BEAM.md) exposes the two-call OSS boundary used by
 the pinned official 100K-to-10M conversation benchmark, with separate raw and

@@ -1,0 +1,14 @@
+# PRME under the official MemoryAgentBench incremental harness.
+# Shared reader parameters match the upstream gpt-4o-mini memory baselines.
+agent_name: Agentic_memory_prme
+model: gpt-4o-mini
+temperature: 0.7
+input_length_limit: 10000000
+buffer_length: 200
+output_dir: ./outputs/prme-gpt-4o-mini
+
+retrieve_num: 100
+prme_result_limit: 100
+prme_token_budget: 4096
+prme_max_chunk_chars: 6000
+prme_user_id: memoryagentbench
