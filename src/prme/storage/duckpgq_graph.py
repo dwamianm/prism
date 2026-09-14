@@ -418,6 +418,7 @@ class DuckPGQGraphStore:
         node_b_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark two nodes as contradicting each other.
 
@@ -433,9 +434,11 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If either node is not found or not in an active state.
         """
+        node_a_id, node_b_id = str(UUID(node_a_id)), str(UUID(node_b_id))
         async with self._conn_lock:
             await run_to_completion(
-                self._atomic_sync, self._contradict_sync, node_a_id, node_b_id, evidence_id
+                self._atomic_sync, self._contradict_sync, node_a_id, node_b_id,
+                evidence_id, actor_id,
             )
 
     async def resolve_contradiction(
@@ -462,6 +465,7 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If nodes are not CONTESTED or no CONTRADICTS edge exists.
         """
+        winner_id, loser_id = str(UUID(winner_id)), str(UUID(loser_id))
         async with self._conn_lock:
             await run_to_completion(
                 self._atomic_sync,
@@ -1135,6 +1139,7 @@ class DuckPGQGraphStore:
         node_a_id: str,
         node_b_id: str,
         evidence_id: str | None,
+        actor_id: str,
     ) -> None:
         """Mark two nodes as contradicting each other (sync).
 
@@ -1167,6 +1172,45 @@ class DuckPGQGraphStore:
         state_a = LifecycleState(row_a[0])
         state_b = LifecycleState(row_b[0])
 
+        from prme.storage.transition_evidence import validate_duckdb
+        provenance_uuid = validate_duckdb(self._conn, evidence_id, row_a[1], row_a[2])
+        evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
+        existing_edge = self._conn.execute(
+            """SELECT provenance_event_id FROM edges WHERE edge_type='contradicts'
+            AND ((source_id=CAST(? AS UUID) AND target_id=CAST(? AS UUID))
+              OR (source_id=CAST(? AS UUID) AND target_id=CAST(? AS UUID)))
+            LIMIT 1""",
+            [node_a_id, node_b_id, node_b_id, node_a_id],
+        ).fetchone()
+        if (
+            state_a == LifecycleState.CONTESTED
+            and state_b == LifecycleState.CONTESTED
+            and existing_edge is not None
+        ):
+            existing_evidence = (
+                str(existing_edge[0]) if existing_edge[0] is not None else None
+            )
+            prior = self._conn.execute(
+                """SELECT payload,actor_id FROM operations
+                WHERE op_type='CONTRADICTION_NOTED' AND target_id=?
+                ORDER BY created_at DESC,id DESC LIMIT 1""",
+                [node_a_id],
+            ).fetchone()
+            payload = json.loads(prior[0]) if prior and isinstance(prior[0], str) else (
+                prior[0] if prior else None
+            )
+            if (
+                existing_evidence == evidence_id
+                and payload
+                and payload.get("node_a_id") == node_a_id
+                and payload.get("node_b_id") == node_b_id
+                and prior[1] == actor_id
+            ):
+                return
+            raise ValueError("Contradiction already exists with different inputs")
+        if existing_edge is not None:
+            raise ValueError("Contradiction edge exists without matching contested state")
+
         if not validate_transition(state_a, LifecycleState.CONTESTED):
             raise ValueError(
                 f"Cannot contest node {node_a_id}: current state "
@@ -1177,10 +1221,6 @@ class DuckPGQGraphStore:
                 f"Cannot contest node {node_b_id}: current state "
                 f"'{state_b.value}' does not allow transition to CONTESTED"
             )
-
-        from prme.storage.transition_evidence import validate_duckdb
-        provenance_uuid = validate_duckdb(self._conn, evidence_id, row_a[1], row_a[2])
-        evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
 
         # Transition both nodes to CONTESTED
         self._conn.execute(
@@ -1220,9 +1260,9 @@ class DuckPGQGraphStore:
         self._conn.execute(
             """
             INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at)
-            VALUES (?, 'CONTRADICTION_NOTED', ?, ?, 'system', now())
+            VALUES (?, 'CONTRADICTION_NOTED', ?, ?, ?, now())
             """,
-            [op_id, node_a_id, payload],
+            [op_id, node_a_id, payload, actor_id],
         )
 
     def _resolve_contradiction_sync(
@@ -1264,18 +1304,6 @@ class DuckPGQGraphStore:
         winner_state = LifecycleState(winner_row[0])
         loser_state = LifecycleState(loser_row[0])
 
-        if winner_state != LifecycleState.CONTESTED:
-            raise ValueError(
-                f"Winner node {winner_id} is not CONTESTED "
-                f"(current: {winner_state.value})"
-            )
-        if loser_state != LifecycleState.CONTESTED:
-            raise ValueError(
-                f"Loser node {loser_id} is not CONTESTED "
-                f"(current: {loser_state.value})"
-            )
-
-        # Validate a CONTRADICTS edge exists between them (either direction)
         edge_row = self._conn.execute(
             """
             SELECT id FROM edges
@@ -1289,14 +1317,49 @@ class DuckPGQGraphStore:
             """,
             [winner_id, loser_id, loser_id, winner_id],
         ).fetchone()
-        if edge_row is None:
-            raise ValueError(
-                f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
-            )
 
         from prme.storage.transition_evidence import validate_duckdb
         evidence = validate_duckdb(self._conn, evidence_id, winner_row[1], winner_row[2])
         evidence_id = str(evidence) if evidence is not None else None
+        if (
+            winner_state == LifecycleState.STABLE
+            and loser_state == LifecycleState.DEPRECATED
+            and edge_row is not None
+        ):
+            prior = self._conn.execute(
+                """SELECT payload,actor_id FROM operations
+                WHERE op_type='CONTRADICTION_RESOLVED' AND target_id=?
+                ORDER BY created_at DESC,id DESC LIMIT 1""",
+                [winner_id],
+            ).fetchone()
+            payload = json.loads(prior[0]) if prior and isinstance(prior[0], str) else (
+                prior[0] if prior else None
+            )
+            if (
+                payload
+                and payload.get("winner_id") == winner_id
+                and payload.get("loser_id") == loser_id
+                and payload.get("evidence_event_id") == evidence_id
+                and prior[1] == resolver_actor_id
+            ):
+                return
+            raise ValueError("Contradiction was already resolved with different inputs")
+
+        if winner_state != LifecycleState.CONTESTED:
+            raise ValueError(
+                f"Winner node {winner_id} is not CONTESTED "
+                f"(current: {winner_state.value})"
+            )
+        if loser_state != LifecycleState.CONTESTED:
+            raise ValueError(
+                f"Loser node {loser_id} is not CONTESTED "
+                f"(current: {loser_state.value})"
+            )
+
+        if edge_row is None:
+            raise ValueError(
+                f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
+            )
 
         # Transition winner to STABLE
         self._conn.execute(

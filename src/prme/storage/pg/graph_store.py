@@ -674,8 +674,10 @@ class PgGraphStore:
         node_b_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark two nodes as contradicting each other."""
+        node_a_id, node_b_id = str(UUID(node_a_id)), str(UUID(node_b_id))
         async with self._pool.acquire() as conn, conn.transaction():
             await conn.fetch(
                 "SELECT id FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
@@ -703,6 +705,50 @@ class PgGraphStore:
             state_a = LifecycleState(row_a["lifecycle_state"])
             state_b = LifecycleState(row_b["lifecycle_state"])
 
+            from prme.storage.transition_evidence import validate_postgres
+            provenance_uuid = await validate_postgres(
+                conn, evidence_id, row_a["user_id"], row_a["scope"]
+            )
+            evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
+            existing_edge = await conn.fetchrow(
+                """SELECT provenance_event_id FROM edges
+                WHERE edge_type='contradicts'
+                AND ((source_id=$1::uuid AND target_id=$2::uuid)
+                  OR (source_id=$2::uuid AND target_id=$1::uuid)) LIMIT 1""",
+                node_a_id, node_b_id,
+            )
+            if (
+                state_a == LifecycleState.CONTESTED
+                and state_b == LifecycleState.CONTESTED
+                and existing_edge is not None
+            ):
+                existing_evidence = (
+                    str(existing_edge["provenance_event_id"])
+                    if existing_edge["provenance_event_id"] is not None else None
+                )
+                prior = await conn.fetchrow(
+                    """SELECT payload,actor_id FROM operations
+                    WHERE op_type='CONTRADICTION_NOTED' AND target_id=$1
+                    ORDER BY created_at DESC,id DESC LIMIT 1""",
+                    node_a_id,
+                )
+                payload = prior["payload"] if prior else None
+                if isinstance(payload, str):
+                    payload = json.loads(payload)
+                if (
+                    existing_evidence == evidence_id
+                    and payload
+                    and payload.get("node_a_id") == node_a_id
+                    and payload.get("node_b_id") == node_b_id
+                    and prior["actor_id"] == actor_id
+                ):
+                    return
+                raise ValueError("Contradiction already exists with different inputs")
+            if existing_edge is not None:
+                raise ValueError(
+                    "Contradiction edge exists without matching contested state"
+                )
+
             if not validate_transition(state_a, LifecycleState.CONTESTED):
                 raise ValueError(
                     f"Cannot contest node {node_a_id}: current state "
@@ -713,10 +759,6 @@ class PgGraphStore:
                     f"Cannot contest node {node_b_id}: current state "
                     f"'{state_b.value}' does not allow transition to CONTESTED"
                 )
-
-            from prme.storage.transition_evidence import validate_postgres
-            provenance_uuid = await validate_postgres(conn, evidence_id, row_a["user_id"], row_a["scope"])
-            evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
 
             # Transition both to CONTESTED
             await conn.execute(
@@ -768,10 +810,11 @@ class PgGraphStore:
             })
             await conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
-                "VALUES ($1, 'CONTRADICTION_NOTED', $2, $3::jsonb, 'system', now())",
+                "VALUES ($1, 'CONTRADICTION_NOTED', $2, $3::jsonb, $4, now())",
                 op_id,
                 node_a_id,
                 payload,
+                actor_id,
             )
 
     async def resolve_contradiction(
@@ -783,6 +826,7 @@ class PgGraphStore:
         evidence_id: str | None = None,
     ) -> None:
         """Resolve a contradiction by declaring a winner and loser."""
+        winner_id, loser_id = str(UUID(winner_id)), str(UUID(loser_id))
         async with self._pool.acquire() as conn, conn.transaction():
             await conn.fetch(
                 "SELECT id FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
@@ -808,18 +852,6 @@ class PgGraphStore:
             winner_state = LifecycleState(winner_row["lifecycle_state"])
             loser_state = LifecycleState(loser_row["lifecycle_state"])
 
-            if winner_state != LifecycleState.CONTESTED:
-                raise ValueError(
-                    f"Winner node {winner_id} is not CONTESTED "
-                    f"(current: {winner_state.value})"
-                )
-            if loser_state != LifecycleState.CONTESTED:
-                raise ValueError(
-                    f"Loser node {loser_id} is not CONTESTED "
-                    f"(current: {loser_state.value})"
-                )
-
-            # Validate CONTRADICTS edge exists
             edge_row = await conn.fetchrow(
                 """
                 SELECT id FROM edges
@@ -834,14 +866,52 @@ class PgGraphStore:
                 winner_id,
                 loser_id,
             )
+            from prme.storage.transition_evidence import validate_postgres
+            evidence = await validate_postgres(
+                conn, evidence_id, winner_row["user_id"], winner_row["scope"]
+            )
+            evidence_id = str(evidence) if evidence is not None else None
+            if (
+                winner_state == LifecycleState.STABLE
+                and loser_state == LifecycleState.DEPRECATED
+                and edge_row is not None
+            ):
+                prior = await conn.fetchrow(
+                    """SELECT payload,actor_id FROM operations
+                    WHERE op_type='CONTRADICTION_RESOLVED' AND target_id=$1
+                    ORDER BY created_at DESC,id DESC LIMIT 1""",
+                    winner_id,
+                )
+                payload = prior["payload"] if prior else None
+                if isinstance(payload, str):
+                    payload = json.loads(payload)
+                if (
+                    payload
+                    and payload.get("winner_id") == winner_id
+                    and payload.get("loser_id") == loser_id
+                    and payload.get("evidence_event_id") == evidence_id
+                    and prior["actor_id"] == resolver_actor_id
+                ):
+                    return
+                raise ValueError(
+                    "Contradiction was already resolved with different inputs"
+                )
+
+            if winner_state != LifecycleState.CONTESTED:
+                raise ValueError(
+                    f"Winner node {winner_id} is not CONTESTED "
+                    f"(current: {winner_state.value})"
+                )
+            if loser_state != LifecycleState.CONTESTED:
+                raise ValueError(
+                    f"Loser node {loser_id} is not CONTESTED "
+                    f"(current: {loser_state.value})"
+                )
+
             if edge_row is None:
                 raise ValueError(
                     f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
                 )
-
-            from prme.storage.transition_evidence import validate_postgres
-            evidence = await validate_postgres(conn, evidence_id, winner_row["user_id"], winner_row["scope"])
-            evidence_id = str(evidence) if evidence is not None else None
 
             # Transition winner to STABLE
             await conn.execute(

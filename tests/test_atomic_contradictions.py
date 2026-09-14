@@ -135,3 +135,23 @@ async def test_concurrent_opposite_resolutions_have_only_one_winner(config, user
         states = [(await graph.get_node(nid, include_superseded=True)).lifecycle_state for nid in ids]
         assert set(states) == {LifecycleState.STABLE, LifecycleState.DEPRECATED}
         assert await operation_count(graph, list(ids)) == 4
+
+
+async def test_exact_contradiction_and_resolution_retries_are_noops(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        graph = engine._graph_store
+        ids = await create_pair(graph, user)
+        await graph.contradict(*ids, actor_id="reviewer")
+        await graph.contradict(ids[0].upper(), ids[1].upper(), actor_id="reviewer")
+        assert len(await graph.get_edges(node_ids=list(ids), edge_type=EdgeType.CONTRADICTS)) == 1
+        assert await operation_count(graph, list(ids)) == 1
+        with pytest.raises(ValueError, match="different inputs"):
+            await graph.contradict(*ids, actor_id="another-reviewer")
+
+        await graph.resolve_contradiction(*ids, resolver_actor_id="reviewer")
+        await graph.resolve_contradiction(
+            ids[0].upper(), ids[1].upper(), resolver_actor_id="reviewer"
+        )
+        assert await operation_count(graph, list(ids)) == 4
+        with pytest.raises(ValueError, match="different inputs"):
+            await graph.resolve_contradiction(*ids, resolver_actor_id="another-reviewer")

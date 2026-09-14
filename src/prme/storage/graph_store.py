@@ -401,6 +401,7 @@ class GraphStore(Protocol):
         node_b_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark two nodes as contradicting each other.
 
@@ -414,6 +415,7 @@ class GraphStore(Protocol):
             node_a_id: First conflicting node (typically the existing/older node).
             node_b_id: Second conflicting node (typically the new/incoming node).
             evidence_id: Optional event ID providing evidence.
+            actor_id: Actor that identified the contradiction.
 
         Raises:
             ValueError: If either node is not found or not in an active state.

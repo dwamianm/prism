@@ -74,6 +74,8 @@ class TestToolDiscovery:
             "memory_archive_node",
             "memory_evaluate_condition",
             "memory_get_provenance",
+            "memory_mark_contradiction",
+            "memory_resolve_contradiction",
         }
         assert expected.issubset(names), f"Missing tools: {expected - names}"
 
@@ -270,6 +272,22 @@ class TestOrganize:
 
 
 class TestLifecycle:
+    async def test_contradiction_roundtrip(self, session):
+        node_ids = []
+        for content in ("Atlas uses east.", "Atlas uses west."):
+            stored = await session.call_tool("memory_store", {
+                "content": content, "user_id": "conflict-user", "node_type": "fact",
+            })
+            node_ids.append(json.loads(stored.content[0].text)["node_id"])
+        marked = await session.call_tool("memory_mark_contradiction", {
+            "node_a_id": node_ids[0], "node_b_id": node_ids[1],
+        })
+        assert {node["lifecycle_state"] for node in json.loads(marked.content[0].text)["nodes"]} == {"contested"}
+        resolved = await session.call_tool("memory_resolve_contradiction", {
+            "winner_id": node_ids[1], "loser_id": node_ids[0],
+        })
+        assert [node["lifecycle_state"] for node in json.loads(resolved.content[0].text)["nodes"]] == ["stable", "deprecated"]
+
     async def test_new_condition_must_start_unresolved(self, session):
         result = await session.call_tool("memory_store", {
             "content": "If approved, deploy Atlas.",

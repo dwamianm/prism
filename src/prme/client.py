@@ -386,6 +386,26 @@ class MemoryClient:
         self._run(self._engine.supersede(old_node_id, new_node_id,
                                         evidence_id=evidence_id, user_id=user_id))
 
+    def contradict(
+        self, node_a_id: str, node_b_id: str, *, evidence_id: str | None = None,
+        user_id: str | None = None, actor_id: str | None = None,
+    ) -> tuple[MemoryNode, MemoryNode]:
+        """Mark two claims contested; exact retries are safe."""
+        return self._run(self._engine.contradict(
+            node_a_id, node_b_id, evidence_id=evidence_id,
+            user_id=user_id, actor_id=actor_id,
+        ))
+
+    def resolve_contradiction(
+        self, winner_id: str, loser_id: str, *, evidence_id: str | None = None,
+        user_id: str | None = None, resolver_actor_id: str | None = None,
+    ) -> tuple[MemoryNode, MemoryNode]:
+        """Resolve a conflict and return winner then deprecated loser."""
+        return self._run(self._engine.resolve_contradiction(
+            winner_id, loser_id, evidence_id=evidence_id,
+            user_id=user_id, resolver_actor_id=resolver_actor_id,
+        ))
+
     def ingest_fast(
         self, content: str, *, user_id: str, role: str = "user",
         session_id: str | None = None, metadata: dict | None = None,

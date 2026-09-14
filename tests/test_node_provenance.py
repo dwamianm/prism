@@ -77,7 +77,7 @@ async def test_provenance_reports_missing_evidence_and_hides_foreign_edges(confi
         foreign_event = await engine.store("Foreign", user_id=user + "-other")
         a, b = await _node(engine, event_a, user), await _node(engine, event_b, user)
         foreign = await _node(engine, foreign_event, user + "-other")
-        await engine._graph_store.contradict(str(a.id), str(b.id))
+        await engine.contradict(str(a.id), str(b.id), user_id=user)
         await engine._graph_store.create_edge(MemoryEdge(
             source_id=a.id, target_id=foreign.id, edge_type=EdgeType.CONTRADICTS,
             user_id=user,

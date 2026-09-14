@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A complete tenant-scoped contradiction lifecycle on sync/async Python, HTTP,
+  and MCP. Marking and resolution atomically update claims, edges, and audit
+  records; exact retries are idempotent across restarts and resolution evicts
+  the deprecated claim from derived search indexes.
 - Atomic, evidence-aware condition evaluation across Python, HTTP, MCP, DuckDB,
   and PostgreSQL. Retry IDs are durable, state changes retain checksummed
   before/after records, and confirmed conditions receive asserted retrieval

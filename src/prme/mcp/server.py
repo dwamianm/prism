@@ -747,6 +747,54 @@ async def memory_evaluate_condition(
         return _internal_error("memory_evaluate_condition", exc)
 
 
+async def memory_mark_contradiction(
+    node_a_id: str,
+    node_b_id: str,
+    evidence_id: str | None = None,
+    ctx: Context = None,
+) -> str:
+    """Mark two owned claims as contested; exact retries are safe."""
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    try:
+        nodes = await engine.contradict(
+            node_a_id, node_b_id, evidence_id=evidence_id, user_id=user_id,
+            actor_id=user_id or "mcp-operator",
+        )
+        return json.dumps({"nodes": [_node_to_dict(node) for node in nodes], "count": 2})
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_mark_contradiction", exc)
+
+
+async def memory_resolve_contradiction(
+    winner_id: str,
+    loser_id: str,
+    evidence_id: str | None = None,
+    ctx: Context = None,
+) -> str:
+    """Choose the accepted claim and deprecate its contradicted alternative."""
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    try:
+        nodes = await engine.resolve_contradiction(
+            winner_id, loser_id, evidence_id=evidence_id, user_id=user_id,
+            resolver_actor_id=user_id or "mcp-operator",
+        )
+        return json.dumps({"nodes": [_node_to_dict(node) for node in nodes], "count": 2})
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_resolve_contradiction", exc)
+
+
 # ---------------------------------------------------------------------------
 # Resources
 # ---------------------------------------------------------------------------
@@ -815,7 +863,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_get_relevance, memory_list_relevance,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
                  memory_promote_node, memory_archive_node, memory_evaluate_condition,
-                 memory_get_provenance):
+                 memory_get_provenance, memory_mark_contradiction,
+                 memory_resolve_contradiction):
         server.tool()(tool)
     server.resource("memory://health")(resource_health)
     @server.resource("memory://stats")

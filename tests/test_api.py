@@ -399,6 +399,32 @@ class TestConditionEvaluation:
         ).status_code == 422
 
 
+class TestContradictions:
+    def test_mark_resolve_and_retry(self, client):
+        ids = []
+        for content in ("Atlas uses east.", "Atlas uses west."):
+            response = client.post("/v1/store", json={
+                "content": content, "user_id": "conflict-user", "node_type": "fact",
+            })
+            ids.append(response.json()["node_id"])
+        body = {"node_a_id": ids[0], "node_b_id": ids[1]}
+        marked = client.post("/v1/contradictions", json=body)
+        assert marked.status_code == 200
+        assert {node["lifecycle_state"] for node in marked.json()["nodes"]} == {"contested"}
+        assert client.post("/v1/contradictions", json=body).status_code == 200
+
+        resolution = {"winner_id": ids[1], "loser_id": ids[0]}
+        resolved = client.post("/v1/contradictions/resolve", json=resolution)
+        assert resolved.status_code == 200
+        assert [node["lifecycle_state"] for node in resolved.json()["nodes"]] == ["stable", "deprecated"]
+        assert client.post("/v1/contradictions/resolve", json=resolution).status_code == 200
+
+    def test_conflict_body_ids_are_validated(self, client):
+        assert client.post("/v1/contradictions", json={
+            "node_a_id": "bad", "node_b_id": "also-bad",
+        }).status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Archive
 # ---------------------------------------------------------------------------

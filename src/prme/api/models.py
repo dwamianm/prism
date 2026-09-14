@@ -50,6 +50,24 @@ class ConditionEvaluationRequest(BaseModel):
     evaluated_at: AwareDatetime | None = None
 
 
+class ContradictionRequest(BaseModel):
+    """Two claims that cannot both be accepted as current."""
+
+    model_config = ConfigDict(extra="forbid")
+    node_a_id: UUID
+    node_b_id: UUID
+    evidence_id: UUID | None = None
+
+
+class ContradictionResolutionRequest(BaseModel):
+    """Explicit winner and loser for an existing contradiction."""
+
+    model_config = ConfigDict(extra="forbid")
+    winner_id: UUID
+    loser_id: UUID
+    evidence_id: UUID | None = None
+
+
 class StoreRequest(BaseModel):
     """Request body for POST /v1/store."""
 

@@ -23,6 +23,8 @@ from prme.models.provenance import NodeProvenance
 from prme.api.models import (
     AcceptedWorkErrorResponse,
     ConditionEvaluationRequest,
+    ContradictionRequest,
+    ContradictionResolutionRequest,
     ErrorResponse,
     ExtractionProcessRequest,
     HealthResponse,
@@ -664,6 +666,56 @@ async def evaluate_condition(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _node_to_response(updated)
+
+
+@router.post(
+    "/contradictions",
+    response_model=NodeListResponse,
+    summary="Mark two memory claims as contradictory",
+    responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+)
+async def contradict(request: Request, body: ContradictionRequest) -> NodeListResponse:
+    """Contest two claims; an exact retry returns the existing result."""
+    engine = _get_engine(request)
+    owner = _user_id(request)
+    ids = [str(body.node_a_id), str(body.node_b_id)]
+    for node_id in ids:
+        if await engine.get_node(node_id, include_superseded=True, user_id=owner) is None:
+            raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+    try:
+        nodes = await engine.contradict(
+            *ids, evidence_id=str(body.evidence_id) if body.evidence_id else None,
+            user_id=owner, actor_id=owner or "api-operator",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return NodeListResponse(nodes=[_node_to_response(node) for node in nodes], count=2)
+
+
+@router.post(
+    "/contradictions/resolve",
+    response_model=NodeListResponse,
+    summary="Resolve a memory contradiction",
+    responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+)
+async def resolve_contradiction(
+    request: Request, body: ContradictionResolutionRequest,
+) -> NodeListResponse:
+    """Choose a winner and deprecate the loser; exact retries are safe."""
+    engine = _get_engine(request)
+    owner = _user_id(request)
+    ids = [str(body.winner_id), str(body.loser_id)]
+    for node_id in ids:
+        if await engine.get_node(node_id, include_superseded=True, user_id=owner) is None:
+            raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+    try:
+        nodes = await engine.resolve_contradiction(
+            *ids, evidence_id=str(body.evidence_id) if body.evidence_id else None,
+            user_id=owner, resolver_actor_id=owner or "api-operator",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return NodeListResponse(nodes=[_node_to_response(node) for node in nodes], count=2)
 
 
 # ---------------------------------------------------------------------------

@@ -423,6 +423,36 @@ foreign nodes return `None`. `MemoryClient.get_provenance()` is the synchronous
 equivalent. HTTP exposes `GET /v1/nodes/{node_id}/provenance`; MCP exposes
 `memory_get_provenance`.
 
+#### `engine.contradict()` and `engine.resolve_contradiction()`
+
+```python
+first, second = await engine.contradict(
+    first_claim_id,
+    second_claim_id,
+    user_id="alice",
+    actor_id="reviewer",
+    evidence_id=review_event_id,
+)
+winner, loser = await engine.resolve_contradiction(
+    second_claim_id,
+    first_claim_id,
+    user_id="alice",
+    resolver_actor_id="reviewer",
+    evidence_id=review_event_id,
+)
+```
+
+Each operation commits claim states, the contradiction edge, and its audit
+record atomically. Claims and optional evidence must share one owner and scope.
+An exact retry with the same ordered claims, actor, and evidence is a no-op;
+changing those inputs after the operation raises `ValueError` instead of
+silently accepting a different decision. Resolution returns the stable winner
+followed by the deprecated loser and removes the loser from derived search
+indexes after the durable transaction. `MemoryClient` provides synchronous
+methods with the same names. HTTP uses `POST /v1/contradictions` and
+`POST /v1/contradictions/resolve`; MCP uses `memory_mark_contradiction` and
+`memory_resolve_contradiction`.
+
 ---
 
 #### `engine.close()`

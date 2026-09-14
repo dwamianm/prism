@@ -55,6 +55,8 @@ async def test_stdio_binding_protects_tools_and_resources(config, user):  # noqa
             ("memory_promote_node", {"node_id": foreign}),
             ("memory_archive_node", {"node_id": foreign}),
             ("memory_evaluate_condition", {"node_id": foreign, "state": "true"}),
+            ("memory_mark_contradiction", {"node_a_id": own, "node_b_id": foreign}),
+            ("memory_resolve_contradiction", {"winner_id": own, "loser_id": foreign}),
         ):
             result = await session.call_tool(name, arguments)
             assert "error" in json.loads(result.content[0].text)

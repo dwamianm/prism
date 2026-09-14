@@ -23,7 +23,7 @@ import pytest
 
 from prme.client import MemoryClient, config_from_directory
 from prme.config import PRMEConfig
-from prme.types import ConditionState, EpistemicType, NodeType, Scope
+from prme.types import ConditionState, EpistemicType, LifecycleState, NodeType, Scope
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +136,39 @@ class TestClientLifecycle:
 
 
 class TestStoreRetrieve:
+    def test_contradiction_roundtrip_is_retry_safe(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            first_event = client.store(
+                "Atlas uses east.", user_id="alice", node_type=NodeType.FACT,
+            )
+            second_event = client.store(
+                "Atlas uses west.", user_id="alice", node_type=NodeType.FACT,
+            )
+            first = client.get_event_nodes(first_event, user_id="alice")[0]
+            second = client.get_event_nodes(second_event, user_id="alice")[0]
+
+            contested = client.contradict(
+                str(first.id), str(second.id), user_id="alice", actor_id="reviewer",
+            )
+            assert [node.lifecycle_state for node in contested] == [
+                LifecycleState.CONTESTED,
+                LifecycleState.CONTESTED,
+            ]
+            assert client.contradict(
+                str(first.id), str(second.id), user_id="alice", actor_id="reviewer",
+            ) == contested
+
+            winner, loser = client.resolve_contradiction(
+                str(second.id), str(first.id), user_id="alice",
+                resolver_actor_id="reviewer",
+            )
+            assert winner.lifecycle_state == LifecycleState.STABLE
+            assert loser.lifecycle_state == LifecycleState.DEPRECATED
+            assert client.resolve_contradiction(
+                str(second.id), str(first.id), user_id="alice",
+                resolver_actor_id="reviewer",
+            ) == (winner, loser)
+
     def test_condition_evaluation_roundtrip(self, tmp_dir):
         with MemoryClient(tmp_dir) as client:
             event_id = client.store(

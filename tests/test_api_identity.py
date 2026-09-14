@@ -62,6 +62,11 @@ async def test_bound_http_operations_isolate_two_users(config, user, monkeypatch
                 f"/v1/nodes/{b.id}/provenance", headers=auth("first-token")
             )
             assert provenance.status_code == 404
+            for path, body in (
+                ("/v1/contradictions", {"node_a_id": str(a.id), "node_b_id": str(b.id)}),
+                ("/v1/contradictions/resolve", {"winner_id": str(a.id), "loser_id": str(b.id)}),
+            ):
+                assert (await client.post(path, json=body, headers=auth("first-token"))).status_code == 404
             for operation, body in (
                 ("promote", None), ("archive", None), ("reinforce", None),
                 ("condition", {"state": "true"}),

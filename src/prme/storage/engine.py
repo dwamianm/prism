@@ -2013,6 +2013,70 @@ class MemoryEngine:
         # event log remains the source of truth, so this is reconstructable.
         await self._evict_from_indexes(old_node_id)
 
+    async def contradict(
+        self,
+        node_a_id: str,
+        node_b_id: str,
+        *,
+        evidence_id: str | None = None,
+        user_id: str | None = None,
+        actor_id: str | None = None,
+    ) -> tuple[MemoryNode, MemoryNode]:
+        """Mark two owned claims contested and return their updated states.
+
+        Repeating the exact node order, evidence, and actor is a durable no-op,
+        which makes retries safe after an ambiguous response.
+        """
+        if user_id is not None:
+            await self._require_owned(node_a_id, user_id)
+            await self._require_owned(node_b_id, user_id)
+        actor = actor_id.strip() if isinstance(actor_id, str) else actor_id
+        if actor_id is not None and not actor:
+            raise ValueError("actor_id must be a non-empty string")
+        await self._graph_store.contradict(
+            node_a_id, node_b_id, evidence_id=evidence_id,
+            actor_id=actor or user_id or "system",
+        )
+        nodes = await self._graph_store.get_nodes(
+            [str(UUID(node_a_id)), str(UUID(node_b_id))], include_superseded=True
+        )
+        by_id = {str(node.id): node for node in nodes}
+        return by_id[str(UUID(node_a_id))], by_id[str(UUID(node_b_id))]
+
+    async def resolve_contradiction(
+        self,
+        winner_id: str,
+        loser_id: str,
+        *,
+        evidence_id: str | None = None,
+        user_id: str | None = None,
+        resolver_actor_id: str | None = None,
+    ) -> tuple[MemoryNode, MemoryNode]:
+        """Resolve an owned conflict and return winner then loser.
+
+        An exact retry is a no-op. The losing node is evicted from derived
+        indexes after the durable graph transaction commits.
+        """
+        if user_id is not None:
+            await self._require_owned(winner_id, user_id)
+            await self._require_owned(loser_id, user_id)
+        actor = (
+            resolver_actor_id.strip()
+            if isinstance(resolver_actor_id, str) else resolver_actor_id
+        )
+        if resolver_actor_id is not None and not actor:
+            raise ValueError("resolver_actor_id must be a non-empty string")
+        await self._graph_store.resolve_contradiction(
+            winner_id, loser_id, evidence_id=evidence_id,
+            resolver_actor_id=actor or user_id or "system",
+        )
+        await self._evict_from_indexes(str(UUID(loser_id)))
+        nodes = await self._graph_store.get_nodes(
+            [str(UUID(winner_id)), str(UUID(loser_id))], include_superseded=True
+        )
+        by_id = {str(node.id): node for node in nodes}
+        return by_id[str(UUID(winner_id))], by_id[str(UUID(loser_id))]
+
     async def archive(self, node_id: str, *, user_id: str | None = None) -> None:
         """Archive a node (terminal state).
 

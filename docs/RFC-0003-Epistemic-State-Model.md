@@ -277,7 +277,12 @@ In PRME, marking a contradiction and resolving one each commit the node states,
 edge writes, and audit records in one database transaction. A failed write rolls
 back the whole operation. Endpoints must be distinct and share the same user and
 scope, including when resolving legacy edges. PostgreSQL locks both endpoints in
-UUID order before validation to serialize competing resolutions.
+UUID order before validation to serialize competing resolutions. Applications
+use `contradict()` and `resolve_contradiction()` through the async or synchronous
+Python API, `POST /v1/contradictions` and `/v1/contradictions/resolve` over HTTP,
+or `memory_mark_contradiction` and `memory_resolve_contradiction` over MCP. An
+exact retry with the same ordered endpoints, actor and evidence is idempotent;
+a conflicting retry is rejected.
 
 **Resolution:** Contradiction resolution occurs when a user or trusted agent asserts which claim is correct. The resolution MUST be recorded as an `EPISTEMIC_TRANSITION` (of the incorrect claim to DEPRECATED) with the resolving actor's ID.
 
