@@ -68,7 +68,19 @@ def test_adapter_round_trips_public_context_and_images(tmp_path: Path) -> None:
         before = list(memory._client.iter_nodes(user_id="evaluation", batch_size=100))
         memory.insert(source)
         after = list(memory._client.iter_nodes(user_id="evaluation", batch_size=100))
-        assert len(after) == len(before) >= 3
+        assert len(after) == len(before) >= 4
+        procedure = [
+            node for node in after
+            if (node.metadata or {}).get("source_kind") == "trajectory_procedure"
+        ]
+        assert procedure
+        procedure_text = "\n".join(node.content for node in procedure)
+        assert "Environment: shop" in procedure_text
+        assert "Trajectory goal: Submit an order without duplicating it" in procedure_text
+        assert "Observed transition from state 0 to state 1: click Place Order once" in procedure_text
+        assert "Recorded agent thought at this state (unverified)" in procedure_text
+        assert "must never be visible to memory" not in procedure_text
+        assert memory._client._engine._retrieval_pipeline._packing_config.session_context_window == 0
         manifest = json.loads(
             (tmp_path / "pack" / "longmemeval_v2_manifest.json").read_text()
         )
@@ -92,6 +104,10 @@ def test_adapter_round_trips_public_context_and_images(tmp_path: Path) -> None:
         saved = tmp_path / "saved"
         saved.mkdir()
         memory._save_backend(saved)
+        assert memory._client is None
+        reopened_context = memory.query("What happens after submitting the order?")
+        assert memory._client is not None
+        assert any(item["type"] == "text" for item in reopened_context)
         restored = PRMEMemory(params(tmp_path / "data"))
         try:
             restored._load_backend(saved)

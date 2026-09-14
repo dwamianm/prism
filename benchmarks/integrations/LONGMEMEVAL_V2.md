@@ -51,18 +51,27 @@ Use the official combine and leaderboard utilities for aggregate metrics.
 
 ## Data and lifecycle contract
 
-The adapter allowlists the released trajectory ID, goal, outcome, start URL,
-and ordered state fields. It does not read question IDs, categories, answers,
-evaluation functions, or construction metadata. State indices must be unique,
-contiguous, and ordered. An agent thought is labelled as a thought in the stored
-text; it is evidence of the recorded trajectory, not proof that the thought was
-correct.
+The adapter allowlists the released trajectory ID, domain, environment, goal,
+outcome, start URL, and ordered state fields. It does not read question IDs,
+categories, answers, evaluation functions, or construction metadata. State
+indices must be unique, contiguous, and ordered. An agent thought is labelled
+as unverified in every derived trace; it is evidence of the recorded trajectory,
+not proof that the thought was correct.
 
-Each trajectory creates an observed summary plus bounded chunks of every state.
-These preserve the URL, action, thought, accessibility tree, state identity,
-and source screenshot. The adapter explicitly labels each action as the incoming
-transition to its destination state, matching the released dataset semantics.
-Every long state chunk repeats its trajectory, state, step, and URL identity.
+Each trajectory creates an observed overview, compact ordered procedure traces,
+and bounded chunks of every raw state. Procedure traces retain goals, page URLs,
+unverified thoughts, and observed transition actions without repeating the
+large accessibility tree at every step. Raw state chunks preserve the full URL,
+action, thought, accessibility tree, state identity, and source screenshot.
+Every chunk repeats the domain, environment, trajectory goal, and source
+identity. The adapter explicitly labels each action as the incoming transition
+to its destination state, matching the released dataset semantics.
+
+PRME's generic adjacent-session expansion is disabled for this adapter because
+the compact procedure trace already supplies ordered session context. Expanding
+arbitrary neighboring raw chunks duplicates large accessibility trees and can
+displace independently relevant evidence from a bounded result set.
+
 Exact duplicate inserts are idempotent. A changed trajectory or screenshot
 content, or an interrupted partial insert, fails explicitly instead of silently
 reusing stale evidence or duplicating state. The recovery action for an
@@ -73,7 +82,10 @@ and print progress every 100 nodes.
 `save_memory()` includes the adapter manifest, copied screenshot attachments,
 PRME event and operation logs, graph tables, vector index, and lexical index.
 The manifest pins the adapter schema and upstream code revision. This is an
-adapter-level extension to PRME's standard text memory pack.
+adapter-level extension to PRME's standard text memory pack. Saving closes the
+source client and reopens it lazily only if the upstream harness makes another
+query, so a completed save cannot leave a client writing into a discarded
+temporary directory during process shutdown.
 
 ## Query and budget boundary
 

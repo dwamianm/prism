@@ -53,7 +53,7 @@ except ImportError:  # Imported from PRME's own benchmark/test environment.
 
 
 UPSTREAM_REVISION = "2cc8c540bdb87fe6761629b585e727e1c4704520"
-ADAPTER_SCHEMA_VERSION = 1
+ADAPTER_SCHEMA_VERSION = 2
 _MANIFEST_NAME = "longmemeval_v2_manifest.json"
 _PACK_NAME = "prme_pack"
 _ALLOWED_PARAMS = {
@@ -82,11 +82,15 @@ def _canonical(value: object) -> bytes:
 def _trajectory_payload(trajectory: dict[str, object]) -> dict[str, object]:
     """Allowlist and validate the public trajectory fields used by memory."""
     trajectory_id = trajectory.get("id")
+    domain = trajectory.get("domain")
+    environment = trajectory.get("environment")
     goal = trajectory.get("goal")
     outcome = trajectory.get("outcome")
     start_url = trajectory.get("start_url")
     states = trajectory.get("states")
     require(isinstance(trajectory_id, str) and bool(trajectory_id.strip()), "trajectory id must be non-empty")
+    require(isinstance(domain, str) and bool(domain.strip()), f"trajectory domain must be non-empty for {trajectory_id}")
+    require(isinstance(environment, str) and bool(environment.strip()), f"trajectory environment must be non-empty for {trajectory_id}")
     require(isinstance(goal, str), f"trajectory goal must be a string for {trajectory_id}")
     require(outcome is None or isinstance(outcome, str), f"trajectory outcome must be a string or null for {trajectory_id}")
     require(isinstance(start_url, str) and bool(start_url.strip()), f"trajectory start_url must be non-empty for {trajectory_id}")
@@ -123,6 +127,8 @@ def _trajectory_payload(trajectory: dict[str, object]) -> dict[str, object]:
         )
     return {
         "id": trajectory_id,
+        "domain": domain,
+        "environment": environment,
         "goal": goal,
         "outcome": outcome,
         "start_url": start_url,
@@ -229,7 +235,14 @@ class PRMEMemory(Memory):
                 model_name="BAAI/bge-small-en-v1.5",
                 dimension=384,
             ),
-            packing=PackingConfig(token_budget=self.token_budget),
+            packing=PackingConfig(
+                token_budget=self.token_budget,
+                # Each inserted trajectory already has a compact, ordered
+                # procedure trace. Expanding arbitrary adjacent raw state
+                # chunks duplicates long accessibility trees and can crowd
+                # independently relevant candidates out of the result limit.
+                session_context_window=0,
+            ),
             enable_qa_pairing=False,
             enable_query_reformulation=False,
             enable_store_supersedence=False,
@@ -261,6 +274,11 @@ class PRMEMemory(Memory):
             self._write_manifest()
         self._root = root
         self._client = MemoryClient(config=self._config(root))
+
+    def _ensure_client(self) -> MemoryClient:
+        if self._client is None:
+            self._client = MemoryClient(config=self._config(self._root))
+        return self._client
 
     def _write_manifest(self) -> None:
         path = self._root / _MANIFEST_NAME
@@ -355,7 +373,7 @@ class PRMEMemory(Memory):
                 "node_count": 0,
             }
             self._write_manifest()
-            assert self._client is not None
+            client = self._ensure_client()
             node_count = 0
             try:
                 action_lines: list[str] = []
@@ -374,6 +392,8 @@ class PRMEMemory(Memory):
                         )
                 summary_body = "\n".join(
                     [
+                        f"Domain: {payload['domain']}",
+                        f"Environment: {payload['environment']}",
                         f"Goal: {payload['goal']}",
                         f"Outcome: {payload['outcome'] or 'unknown'}",
                         f"Start URL: {payload['start_url']}",
@@ -387,7 +407,7 @@ class PRMEMemory(Memory):
                     self.max_chunk_chars,
                 )
                 for chunk_index, content in enumerate(summary_chunks):
-                    self._client.store(
+                    client.store(
                         content,
                         user_id=self.user_id,
                         session_id=trajectory_id,
@@ -402,6 +422,56 @@ class PRMEMemory(Memory):
                             "trajectory_id": trajectory_id,
                             "chunk_index": chunk_index,
                             "chunk_count": len(summary_chunks),
+                        },
+                    )
+                    node_count += 1
+                    self._record_insert_progress(trajectory_id, node_count)
+
+                procedure_lines: list[str] = []
+                for position, state in enumerate(states):
+                    procedure_lines.extend(
+                        [
+                            f"State {state['state_index']} URL: {state['url']}",
+                            "Recorded agent thought at this state (unverified): "
+                            f"{state['thought'] or 'none'}",
+                        ]
+                    )
+                    if position + 1 < len(states):
+                        destination = states[position + 1]
+                        procedure_lines.append(
+                            f"Observed transition from state {state['state_index']} "
+                            f"to state {destination['state_index']}: "
+                            f"{destination['action'] or 'none recorded'}"
+                        )
+                procedure_chunks = _prefixed_chunks(
+                    [
+                        "Agent trajectory procedure trace",
+                        f"Trajectory: {trajectory_id}",
+                        f"Domain: {payload['domain']}",
+                        f"Environment: {payload['environment']}",
+                        f"Trajectory goal: {payload['goal']}",
+                        f"Outcome: {payload['outcome'] or 'unknown'}",
+                        "Actions are observed transitions into their destination states.",
+                    ],
+                    "\n".join(procedure_lines),
+                    self.max_chunk_chars,
+                )
+                for chunk_index, content in enumerate(procedure_chunks):
+                    client.store(
+                        content,
+                        user_id=self.user_id,
+                        session_id=trajectory_id,
+                        role="tool",
+                        node_type=NodeType.SUMMARY,
+                        scope=Scope.PROJECT,
+                        epistemic_type=EpistemicType.OBSERVED,
+                        source_type=SourceType.TOOL_OUTPUT,
+                        metadata={
+                            "benchmark": "longmemeval-v2",
+                            "source_kind": "trajectory_procedure",
+                            "trajectory_id": trajectory_id,
+                            "chunk_index": chunk_index,
+                            "chunk_count": len(procedure_chunks),
                         },
                     )
                     node_count += 1
@@ -441,6 +511,9 @@ class PRMEMemory(Memory):
                         [
                             "Agent trajectory state",
                             f"Trajectory: {trajectory_id}",
+                            f"Domain: {payload['domain']}",
+                            f"Environment: {payload['environment']}",
+                            f"Trajectory goal: {payload['goal']}",
                             f"State index: {state_index}",
                             f"Step: {state['step']}",
                             f"URL: {state['url']}",
@@ -449,7 +522,7 @@ class PRMEMemory(Memory):
                         self.max_chunk_chars,
                     )
                     for chunk_index, content in enumerate(chunks):
-                        self._client.store(
+                        client.store(
                             content,
                             user_id=self.user_id,
                             session_id=trajectory_id,
@@ -483,8 +556,7 @@ class PRMEMemory(Memory):
     def query(self, query: str, query_image: str | None = None) -> list[MemoryContextItem]:
         require(isinstance(query, str) and bool(query.strip()), "prme query must be non-empty")
         with self._lock:
-            assert self._client is not None
-            response = self._client.retrieve(
+            response = self._ensure_client().retrieve(
                 query,
                 user_id=self.user_id,
                 scope=Scope.PROJECT,
@@ -546,13 +618,14 @@ class PRMEMemory(Memory):
         with self._lock:
             destination = output_dir / _PACK_NAME
             require(not destination.exists(), f"refusing to overwrite saved PRME pack: {destination}")
-            assert self._client is not None
-            self._client.close()
+            client = self._ensure_client()
+            client.close()
             self._client = None
             try:
                 shutil.copytree(self._root, destination)
-            finally:
+            except BaseException:
                 self._client = MemoryClient(config=self._config(self._root))
+                raise
 
     def _load_backend(self, input_dir: Path) -> None:
         with self._lock:
