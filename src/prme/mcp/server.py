@@ -656,7 +656,9 @@ async def memory_promote_node(
         return json.dumps({"error": str(exc)})
 
     try:
-        node = await engine.get_node(node_id, user_id=user_id)
+        node = await engine.get_node(
+            node_id, include_superseded=True, user_id=user_id
+        )
         if node is None:
             return json.dumps({"error": f"Node {node_id!r} not found"})
 

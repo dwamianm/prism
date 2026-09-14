@@ -563,7 +563,9 @@ async def promote_node(
     engine = _get_engine(request)
 
     # Verify node exists
-    node = await engine.get_node(node_key, user_id=_user_id(request))
+    node = await engine.get_node(
+        node_key, include_superseded=True, user_id=_user_id(request)
+    )
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
