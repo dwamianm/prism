@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A registered, fail-closed MemoryAgentBench BM25 control for matched-reader
+  trials. It binds the exact prepared sources, formatted BM25 documents,
+  questions, answers, harness code, configuration, NumPy and `rank-bm25`
+  versions, and ranking source hash before inference. The verifier reconstructs
+  every BM25 ranking and rejects missing, stale, reordered, or altered captures.
+  Explicit retrieval run IDs isolate scratch outputs, while a fixed registered
+  memory timestamp removes wall-clock text from otherwise reproducible indexes.
 - Explicit MemoryAgentBench reader reasoning and seed controls shared by the PRME
   and pinned BM25 request paths. The installer validates both settings, forwards
   the task generation limit for non-OpenAI model names, and the PRME adapter binds

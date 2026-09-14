@@ -141,6 +141,62 @@ configuration hash. Use a distinct agent/output path so no auditable-format pack
 can be reused. Compact output remains bound by the same 4K token budget and
 durable receipt checks.
 
+## Matched BM25 control
+
+For a common-reader comparison, copy the pinned upstream BM25 configuration and
+set the same `model`, `temperature`, `reader_reasoning_effort`, and `reader_seed`
+as the PRME arm. Also add a unique `retrieval_run_id` and a fixed
+`memory_timestamp`:
+
+```yaml
+agent_name: Simple_rag_bm25
+model: qwen3.5:9b
+temperature: 0.0
+reader_reasoning_effort: none
+reader_seed: 42
+retrieval_run_id: bm25-dev20-v1
+memory_timestamp: "2000-01-01 00:00:00"
+input_length_limit: 10000000
+buffer_length: 200
+output_dir: ./outputs/bm25-qwen35-9b-dev20
+retrieve_num: 10
+```
+
+Register the BM25 arm before its first reader request:
+
+```sh
+python -m benchmarks.integrations.register_memoryagentbench_bm25 \
+  --prme-root /absolute/path/to/prme \
+  --upstream-root /absolute/path/to/MemoryAgentBench \
+  --agent-config /absolute/path/to/BM25_qwen35-9b-dev20.yaml \
+  --dataset-config /absolute/path/to/Eventqa_64k-dev20.yaml \
+  --expected-prme-revision "$PRME_REVISION" \
+  --output /absolute/path/to/run/eventqa-bm25-registration.json
+```
+
+After the upstream run completes, verify it before inspecting its aggregate
+score:
+
+```sh
+python -m benchmarks.integrations.verify_memoryagentbench_bm25 \
+  --prme-root /absolute/path/to/prme \
+  --upstream-root /absolute/path/to/MemoryAgentBench \
+  --registration /absolute/path/to/run/eventqa-bm25-registration.json \
+  --result /absolute/path/to/MemoryAgentBench/outputs/bm25-qwen35-9b-dev20/Accurate_Retrieval/RESULT_FILE.json \
+  --agent-config /absolute/path/to/BM25_qwen35-9b-dev20.yaml \
+  --dataset-config /absolute/path/to/Eventqa_64k-dev20.yaml \
+  --output /absolute/path/to/run/eventqa-bm25-verification.json
+```
+
+The fixed timestamp replaces the upstream wall-clock string inside each BM25
+document. It is constant across all documents and is recorded in the hashed
+configuration. The verifier reloads the pinned official inputs, recreates the
+formatted documents, repeats query extraction and `rank-bm25` ordering, and
+requires every isolated context capture to match exactly. It also binds the
+installed NumPy and `rank-bm25` versions and hashes the latter's ranking source.
+These checks establish a reproducible matched lexical control; they do not make
+it a product-equivalent memory system or a published-reader comparison.
+
 ## Storage and recovery contract
 
 The upstream harness chunks each source before it reaches a memory method. PRME
@@ -166,7 +222,9 @@ the common system message.
 MemoryAgentBench reuses saved agent directories even with its `--force` option.
 A genuinely fresh arm therefore needs an absent agent directory and output
 file. Preserve the old artifacts, then select a new experiment path or remove
-the scratch state before launch.
+the scratch state before launch. The patched RAG capture path includes
+`retrieval_run_id`, so separate BM25 trials do not silently read or overwrite
+one another's retrieved contexts.
 
 The installer also fixes the pinned upstream resume path so list-valued
 reference answers remain lists. Without that patch, resuming converts them to a

@@ -34,6 +34,16 @@ def upstream_layout(root: Path) -> None:
             from methods.knowl import handle_knowl_agent
             return handle_knowl_agent(self, message, memorizing, query_id, context_id)
 
+            memorize_template = get_template(self.sub_dataset, 'memorize', self.agent_name)
+            formatted_message = memorize_template.format(context=message, **({'time_stamp': time.strftime(\"%Y-%m-%d %H:%M:%S\")} if '{time_stamp}' in memorize_template else {}))
+            self.context += \"\\n\" + formatted_message
+            self.context = self.context.strip()
+            self.chunks.append(formatted_message)
+            self.context_len = self.context_len + self.chunk_size
+
+        if output.get(\"retrieval_context\"):
+            save_dir = f\"./outputs/rag_retrieved/{self.agent_name}/k_{self.retrieve_num}/{self.sub_dataset}/chunksize_{self.chunk_size}/query_{query_id}_context_{context_id}.json\"
+
         # Currently only implemented for Letta agents
         if not self._is_agent_type(\"letta\") and not self._is_agent_type(\"zep\"):
             return
@@ -82,6 +92,9 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert "reader_reasoning_effort" in agent
     assert "completion_options['seed']" in agent
     assert "'max_tokens': self.max_tokens" in agent
+    assert "retrieval_run_id" in agent
+    assert "memory_timestamp" in agent
+    assert "/run_{self.retrieval_run_id}/" in agent
     data = (tmp_path / "utils" / "eval_data_utils.py").read_text(encoding="utf-8")
     assert f'revision="{installer.DATASET_REVISION}"' in data
     initialization = (tmp_path / "initialization.py").read_text(encoding="utf-8")

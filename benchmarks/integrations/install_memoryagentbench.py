@@ -31,7 +31,14 @@ _PATCHES = {
             "            raise ValueError('reader_reasoning_effort must be none, low, medium, high, or omitted')\n"
             "        self.reader_seed = agent_config.get('reader_seed')\n"
             "        if isinstance(self.reader_seed, bool) or (self.reader_seed is not None and not isinstance(self.reader_seed, int)):\n"
-            "            raise ValueError('reader_seed must be an integer or omitted')\n",
+            "            raise ValueError('reader_seed must be an integer or omitted')\n"
+            "        self.retrieval_run_id = str(agent_config.get('retrieval_run_id', 'default'))\n"
+            "        if (not self.retrieval_run_id or len(self.retrieval_run_id) > 64 or\n"
+            "                any(not char.isalnum() and char not in '._-' for char in self.retrieval_run_id)):\n"
+            "            raise ValueError('invalid retrieval_run_id')\n"
+            "        self.memory_timestamp = agent_config.get('memory_timestamp')\n"
+            "        if self.memory_timestamp is not None and (not isinstance(self.memory_timestamp, str) or not self.memory_timestamp):\n"
+            "            raise ValueError('memory_timestamp must be a non-empty string or omitted')\n",
         ),
         (
             "        response = self._create_oai_client().chat.completions.create(\n"
@@ -75,6 +82,27 @@ _PATCHES = {
             '            return handle_prme_agent(self, message, memorizing, query_id, context_id)\n'
             '        elif self._is_agent_type("knowl"):\n'
             '            from methods.knowl import handle_knowl_agent\n',
+        ),
+        (
+            "            memorize_template = get_template(self.sub_dataset, 'memorize', self.agent_name)\n"
+            "            formatted_message = memorize_template.format(context=message, **({'time_stamp': time.strftime(\"%Y-%m-%d %H:%M:%S\")} if '{time_stamp}' in memorize_template else {}))\n"
+            "            self.context += \"\\n\" + formatted_message\n"
+            "            self.context = self.context.strip()\n"
+            "            self.chunks.append(formatted_message)\n"
+            "            self.context_len = self.context_len + self.chunk_size\n",
+            "            memorize_template = get_template(self.sub_dataset, 'memorize', self.agent_name)\n"
+            "            timestamp = self.memory_timestamp or time.strftime(\"%Y-%m-%d %H:%M:%S\")\n"
+            "            formatted_message = memorize_template.format(context=message, **({'time_stamp': timestamp} if '{time_stamp}' in memorize_template else {}))\n"
+            "            self.context += \"\\n\" + formatted_message\n"
+            "            self.context = self.context.strip()\n"
+            "            self.chunks.append(formatted_message)\n"
+            "            self.context_len = self.context_len + self.chunk_size\n",
+        ),
+        (
+            '        if output.get("retrieval_context"):\n'
+            '            save_dir = f"./outputs/rag_retrieved/{self.agent_name}/k_{self.retrieve_num}/{self.sub_dataset}/chunksize_{self.chunk_size}/query_{query_id}_context_{context_id}.json"\n',
+            '        if output.get("retrieval_context"):\n'
+            '            save_dir = f"./outputs/rag_retrieved/{self.agent_name}/run_{self.retrieval_run_id}/k_{self.retrieve_num}/{self.sub_dataset}/chunksize_{self.chunk_size}/query_{query_id}_context_{context_id}.json"\n',
         ),
         (
             '        # Currently only implemented for Letta agents\n'
