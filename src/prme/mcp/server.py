@@ -20,7 +20,7 @@ from prme import __version__
 from prme.config import PRMEConfig
 from prme.ingestion.errors import MaterializationError, extraction_failure_code
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
-from prme.models.learning import RankingMultipliers
+from prme.models.learning import LearningConfig, RankingMultipliers
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -460,6 +460,50 @@ async def memory_list_relevance(user_id: Optional[str] = None, limit: int = 100,
         return json.dumps({"error": str(exc)})
     except Exception as exc:
         return _internal_error("memory_list_relevance", exc)
+
+
+async def memory_evaluate_learning(
+    user_id: Optional[str] = None,
+    scopes: Optional[list[str]] = None,
+    surface: Literal["results", "context"] = "results",
+    config: Optional[LearningConfig] = None,
+    query_groups: Optional[dict[str, str]] = None,
+    max_records: int = 10000,
+    ctx: Context = None,
+) -> str:
+    """Evaluate an owner-scoped offline ranking proposal without activating it.
+
+    The report retains its feedback and receipt identities, train/validation
+    coverage, uncertainty, exclusions, and proposed bounded multipliers. It
+    never changes active weights.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if scopes is not None and not scopes:
+            raise ValueError("scopes must be omitted or contain at least one scope")
+        parsed_scopes = [Scope(scope) for scope in scopes] if scopes is not None else None
+        parsed_groups: dict[UUID, str] | None = None
+        if query_groups is not None:
+            parsed_groups = {}
+            for request_id, group in query_groups.items():
+                identity = UUID(request_id)
+                if identity in parsed_groups:
+                    raise ValueError("query_groups contains duplicate UUID identities")
+                parsed_groups[identity] = group
+        result = await engine.evaluate_learning(
+            user_id=owner,
+            scopes=parsed_scopes,
+            surface=surface,
+            config=config,
+            query_groups=parsed_groups,
+            max_records=max_records,
+        )
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_evaluate_learning", exc)
 
 
 async def memory_record_answer_citations(
@@ -1058,7 +1102,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
                  memory_get_node, memory_scan_nodes, memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
-                 memory_get_relevance, memory_list_relevance,
+                 memory_get_relevance, memory_list_relevance, memory_evaluate_learning,
                  memory_record_answer_citations, memory_get_answer_citations,
                  memory_list_answer_citations,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,

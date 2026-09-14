@@ -75,6 +75,7 @@ class TestToolDiscovery:
             "memory_archive_node",
             "memory_evaluate_condition",
             "memory_get_provenance",
+            "memory_evaluate_learning",
             "memory_supersede",
             "memory_mark_contradiction",
             "memory_resolve_contradiction",

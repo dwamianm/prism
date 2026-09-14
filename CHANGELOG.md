@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- HTTP and MCP access to the existing bounded, owner-scoped offline learning
+  evaluator. Both remote surfaces return the complete validation, uncertainty,
+  coverage, exclusion, and input-identity report without activating weights.
 - Owner-required, cursor-based stored-record enumeration over HTTP and MCP.
   `GET /v1/nodes/scan` and `memory_scan_nodes` expose scope, type, and lifecycle
   filters, immutable UUID ordering, explicit `has_more`/`next_cursor` fields,

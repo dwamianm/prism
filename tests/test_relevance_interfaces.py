@@ -34,6 +34,16 @@ async def test_http_records_owned_relevance_and_retry_identity(config, user):
             assert (await client.post("/v1/relevance", json=body)).json() == first.json()
             assert (await client.get(f"/v1/relevance/{fid}")).json() == first.json()
             assert (await client.get("/v1/relevance")).json() == [first.json()]
+            evaluation = await client.post("/v1/learning/evaluate", json={})
+            assert evaluation.status_code == 200, evaluation.text
+            assert evaluation.json()["decision"] == "insufficient_data"
+            assert evaluation.json()["feedback_ids"] == [fid]
+            assert (await client.post(
+                "/v1/learning/evaluate", json={"user_id": user + "-other"},
+            )).status_code == 403
+            assert (await client.post(
+                "/v1/learning/evaluate", json={"max_records": 0},
+            )).status_code == 422
             citation_id = str(uuid4())
             citation_body = {
                 "citation_id": citation_id,
@@ -129,6 +139,9 @@ async def test_mcp_relevance_tool_workflow_preserves_binding(config, user):
             assert await call("memory_record_relevance", arguments) == record
             assert await call("memory_get_relevance", {"feedback_id": record["feedback_id"]}) == record
             assert await call("memory_list_relevance", {}) == [record]
+            evaluation = await call("memory_evaluate_learning", {})
+            assert evaluation["decision"] == "insufficient_data"
+            assert evaluation["feedback_ids"] == [record["feedback_id"]]
             citation_arguments = {
                 "request_id": rid,
                 "answer_id": "mcp-answer",
@@ -143,5 +156,10 @@ async def test_mcp_relevance_tool_workflow_preserves_binding(config, user):
             }) == citations
             assert await call("memory_list_answer_citations", {}) == [citations]
             assert "error" in await call("memory_record_relevance", {**arguments, "user_id": user + "-other"})
+            assert "error" in await call("memory_evaluate_learning", {"user_id": user + "-other"})
+            assert "error" in await call("memory_evaluate_learning", {"scopes": []})
+            assert "error" in await call("memory_evaluate_learning", {
+                "query_groups": {str(uuid4()): "unknown request"},
+            })
             invalid = await session.call_tool("memory_record_relevance", {**arguments, "labels": {nid: "true"}})
             assert invalid.isError

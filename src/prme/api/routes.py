@@ -27,6 +27,7 @@ from prme.models.relevance import (
     RelevanceSubmission,
     RetrievalReceipt,
 )
+from prme.models.learning import LearningEvaluation
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
     AcceptedWorkErrorResponse,
@@ -39,6 +40,7 @@ from prme.api.models import (
     HealthResponse,
     IngestRequest,
     IngestResponse,
+    LearningEvaluationRequest,
     MaterializationProcessRequest,
     NodeListResponse,
     NodePageResponse,
@@ -980,6 +982,29 @@ async def get_relevance(request: Request, feedback_id: UUID, user_id: str | None
     if result is None:
         raise HTTPException(status_code=404, detail="Relevance record not found")
     return result
+
+
+@router.post(
+    "/learning/evaluate",
+    response_model=LearningEvaluation,
+    summary="Evaluate a scoped ranking proposal",
+    responses={422: {"model": ErrorResponse}},
+)
+async def evaluate_learning(
+    request: Request, body: LearningEvaluationRequest,
+) -> LearningEvaluation:
+    """Fit and validate an offline proposal without activating any weights."""
+    try:
+        return await _get_engine(request).evaluate_learning(
+            user_id=_user_id(request, body.user_id, required=True),
+            scopes=body.scopes,
+            surface=body.surface,
+            config=body.config,
+            query_groups=body.query_groups,
+            max_records=body.max_records,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/answer-citations", response_model=AnswerCitationRecord,

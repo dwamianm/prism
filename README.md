@@ -695,6 +695,8 @@ user_id=...)` and `archive(node_id, user_id=...)`; archiving removes a node from
 retrieval while preserving its source and prior receipts. HTTP provides `/v1/retrievals/{request_id}` and
 `/v1/relevance`; MCP provides `memory_get_retrieval_receipt`,
 `memory_record_relevance`, `memory_get_relevance` and `memory_list_relevance`.
+Remote clients can evaluate the same bounded offline proposal with
+`POST /v1/learning/evaluate` or `memory_evaluate_learning`.
 Receipts add per-candidate metadata to the existing retrieval operation log;
 they do not duplicate candidate text or prove an application used the context.
 Labels preserve the original exposure when graph state changes. They do not
@@ -757,6 +759,11 @@ with MemoryClient("./memories") as memory:
     print(report.decision, report.coverage)
     # Save report.model_dump_json(indent=2) with your evaluation artifacts.
 ```
+
+HTTP and MCP return this same report from `POST /v1/learning/evaluate` and
+`memory_evaluate_learning`. Owner identity remains credential-bound, and each
+surface accepts the same scopes, relevance surface, learning configuration,
+query groups, and fail-closed record bound.
 
 Pass `scopes=[Scope.PROJECT]` when judging retrievals made with that same scope
 filter. The evaluator separates query groups, reports conflicting labels, fits

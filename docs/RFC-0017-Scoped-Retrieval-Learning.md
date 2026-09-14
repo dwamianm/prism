@@ -229,6 +229,9 @@ receipts in batches. Admissions after that first query do not enter the cut.
 Exceeding `max_records` fails explicitly. Missing, ambiguous or corrupt receipts
 also fail; snapshotting does not use mutable graph features or live providers.
 The standalone `prme.retrieval.learning.evaluate_learning` accepts exported models.
+HTTP `POST /v1/learning/evaluate` and MCP `memory_evaluate_learning` expose the
+same evaluator through a credential-bound owner, typed scope/surface/configuration
+inputs, explicit query groups, and the same fail-closed record bound.
 
 The first implemented candidate multiplies each of the six applied additive
 weights by a bounded positive factor and renormalizes the sum. Unity reproduces

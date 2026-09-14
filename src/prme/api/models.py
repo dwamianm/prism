@@ -7,7 +7,7 @@ These are thin DTOs — no business logic belongs here.
 from __future__ import annotations
 
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
-from prme.models.learning import RankingMultipliers
+from prme.models.learning import LearningConfig, RankingMultipliers
 
 from typing import Annotated, Any, Literal
 from uuid import UUID
@@ -360,6 +360,18 @@ class ErrorResponse(BaseModel):
 
 class RelevanceRequest(RelevanceSubmission):
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+
+
+class LearningEvaluationRequest(BaseModel):
+    """Bounded inputs for an offline, owner-scoped ranking proposal."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    scopes: Annotated[list[Scope], Field(min_length=1)] | None = None
+    surface: Literal["results", "context"] = "results"
+    config: LearningConfig | None = None
+    query_groups: dict[UUID, str] | None = None
+    max_records: int = Field(default=10000, ge=1, le=100000, strict=True)
 
 
 class AnswerCitationRequest(AnswerCitationSubmission):
