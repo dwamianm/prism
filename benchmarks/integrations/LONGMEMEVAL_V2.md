@@ -118,6 +118,15 @@ loading, generation, deterministic evaluation, and clean shutdown path. See the
 question is not an accuracy estimate and must not be compared with leaderboard
 results.
 
+A frozen seven-question web-small development cohort subsequently exposed raw
+BM25 leakage in supplementary retrieval, weak procedure packing, and excessive
+local-reader completion lengths. The scoring and hierarchy repairs recovered
+both failed deterministic questions in a targeted 2/2 confirmation. See the
+[development record](../results/research/2026-09-14/LONGMEMEVAL-V2-WEB-DEVELOPMENT.md).
+The four judge-dependent questions remain unofficial because the configured
+OpenAI account returned HTTP 429 `insufficient_quota`; a local 35B substitute is
+reported separately and is not leaderboard compatible.
+
 At the pinned dataset revision, trajectories occupy about 1.20 GB and the two
 screenshot archives total about 5.92 GB compressed. Downloading only the small
 haystack map does not provide its source trajectories or screenshots. Preserve
