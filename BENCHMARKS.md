@@ -64,6 +64,12 @@ dialogues from evaluation labels, reports malformed-message omissions, and
 compares PRME context, BM25 context and empty memory. Its raw answers are unjudged
 diagnostics; it does not report official accuracy.
 
+For 100K-to-10M conversation histories across ten memory abilities, see the
+[BEAM integration](benchmarks/integrations/BEAM.md). It runs behind the pinned
+official harness without exposing rubrics or answers to PRME and provides raw
+source and full product-extraction profiles. The adapter contract is tested; no
+BEAM quality result has been completed yet.
+
 For controlled evidence retrieval without a generation or judge API, use:
 
 ```bash

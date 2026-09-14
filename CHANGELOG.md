@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A pinned BEAM benchmark service with source-only ingestion boundaries, owner
+  isolation, source-time query clocks, restart-safe request idempotence, and
+  separate raw and durable-extraction profiles. Its fail-closed validator
+  rejects the upstream runner's otherwise silent failed-chunk and empty-model
+  completion paths and hashes every accepted artifact.
 - Structured `store_with_receipt()` results on async and synchronous Python.
   They expose the durable event, exact created node, and materialization status
   in one call while preserving the historical `store()` event-ID return. HTTP
@@ -137,6 +142,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Extraction workers now immediately reclaim an expired, uncontested lease once
+  before falling back to scheduled retry. Event-loop starvation after a provider
+  response can no longer leave durable work indefinitely in `running` state;
+  generation fencing still prevents the expired worker from publishing.
 - Forgotten synchronous clients now close before Python shuts down its shared
   thread-pool executor, allowing vector and lexical indexes to flush cleanly at
   normal interpreter exit without late-executor errors.

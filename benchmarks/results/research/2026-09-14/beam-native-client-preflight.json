@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-14",
+  "kind": "authored_native_client_preflight",
+  "upstream": {
+    "repository": "https://github.com/mem0ai/memory-benchmarks",
+    "commit": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "client_file": "benchmarks/common/mem0_client.py",
+    "client_sha256": "a3047e4113978c3b04c2635d53e85e0ac5e7a5d43aef530beccedf591df29b99"
+  },
+  "adapter": {
+    "module": "benchmarks.integrations.beam_service",
+    "profile": "raw",
+    "source_sha256": "115813504c5329d67274daa3a9bd5d10e777b7e3cfee2a79e751e009cbd2e00d"
+  },
+  "input": {
+    "authored": true,
+    "messages": 2,
+    "owners": 2,
+    "timestamp": 1735689600,
+    "contains_beam_dataset_content": false,
+    "contains_question_rubric_or_answer": false
+  },
+  "checks": {
+    "official_add_response_count": 2,
+    "exact_retry_returned_same_ids": true,
+    "official_search_found_authored_source": true,
+    "cross_owner_search_was_empty": true,
+    "service_shutdown_completed": true
+  },
+  "native_client_exit_code": 0,
+  "quality_result": false,
+  "limitations": [
+    "This verifies the pinned official HTTP client against a real loopback PRME service.",
+    "The authored two-message probe is not a BEAM dataset run or quality measurement.",
+    "The extracted profile and upstream answer/judge pipeline were not exercised by this preflight."
+  ]
+}

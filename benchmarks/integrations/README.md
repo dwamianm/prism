@@ -6,7 +6,9 @@ For the separate chronological dialogue replay, see the
 agent-trajectory memory harness, including source screenshot return and portable
 adapter state. The [MELT bridge](MELT.md) exercises corrections, conflicts,
 consolidation, temporal lineage, and retrieval through an independent lifecycle
-harness.
+harness. The [BEAM adapter](BEAM.md) exposes the two-call OSS boundary used by
+the pinned official 100K-to-10M conversation benchmark, with separate raw and
+product-extraction profiles and restart-safe source retries.
 
 ## PrecisionMemBench diagnostic adapter
 

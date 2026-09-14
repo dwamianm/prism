@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-14",
+  "upstream": {
+    "repository": "https://github.com/mem0ai/memory-benchmarks",
+    "commit": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "commit_date": "2026-05-13T13:26:23-07:00"
+  },
+  "inspected_files": {
+    "README.md": "sha256:ed4ee055be417ca6896aab00b2ad62d4b3c67205ed32f496544803492faffae2",
+    "benchmarks/beam/prompts.py": "sha256:a1c2a4822898411f90ab2915a72d2b2031f97437bdcc1b3ac2008fe93653267b",
+    "benchmarks/beam/run.py": "sha256:c13ed8464d28f0b09c1f6f3d1b703cb2be92dbc51dbdb3e91834e355ad5aad0c",
+    "benchmarks/common/mem0_client.py": "sha256:a3047e4113978c3b04c2635d53e85e0ac5e7a5d43aef530beccedf591df29b99"
+  },
+  "observed_protocol": {
+    "ingestion_endpoint": "POST /memories",
+    "ingestion_visible_fields": [
+      "ordered user/assistant source messages",
+      "owner ID",
+      "source timestamp"
+    ],
+    "retrieval_endpoint": "POST /search",
+    "retrieval_visible_fields": ["neutral probing question", "owner ID", "top-k limit"],
+    "not_sent_to_memory_service": [
+      "question rubric nuggets",
+      "ground-truth answer",
+      "question type",
+      "source_chat_ids",
+      "generated answer",
+      "judge verdict"
+    ],
+    "ingestion_chunk_size_turns": 2,
+    "question_count_per_conversation": 20,
+    "question_types": 10,
+    "failure_semantics": [
+      "An add failure is counted, but its chunk key is still added to completed progress.",
+      "The run continues after an ingestion checkpoint reports failed chunks.",
+      "The model client returns an empty string after exhausted generation retries."
+    ]
+  },
+  "adapter": {
+    "module": "benchmarks.integrations.beam_service",
+    "profiles": ["raw", "extracted"],
+    "rejected_inputs": ["non-empty metadata", "non-empty custom_instructions"],
+    "query_clock": "latest ingested source event time per owner, otherwise saved admission time",
+    "retry_identity": "sha256(source timestamp and ordered messages)",
+    "tested": [
+      "raw add/search contract",
+      "owner isolation",
+      "source-time return",
+      "same-process idempotence",
+      "restart idempotence",
+      "pending raw materialization repair before success",
+      "credential-free configuration manifest",
+      "product extraction path",
+      "unsupported reranker rejection",
+      "fail-closed ingestion, retrieval, generation, and judge artifact validation"
+    ]
+  },
+  "execution": {
+    "upstream_benchmark_run": false,
+    "pinned_native_client_preflight": true,
+    "quality_result": false,
+    "preflight_record": "beam-native-client-preflight.json",
+    "note": "This is a source audit and authored client-contract record, not a BEAM score."
+  }
+}
