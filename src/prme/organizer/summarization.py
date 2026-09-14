@@ -230,6 +230,32 @@ async def _hierarchical_lineage_summaries(
     return active, retired
 
 
+async def _scan_summary_inputs(
+    engine: MemoryEngine,
+    *,
+    user_id: str | None,
+    node_type: NodeType | None = None,
+    lifecycle_states: list[LifecycleState],
+) -> list[MemoryNode]:
+    """Read every organizer input through stable pages, including operator runs."""
+    nodes: list[MemoryNode] = []
+    after_id: str | None = None
+    while True:
+        page = await engine._graph_store.scan_nodes(
+            user_id=user_id,
+            node_type=node_type,
+            lifecycle_states=lifecycle_states,
+            after_id=after_id,
+            limit=500,
+            operator_unscoped=user_id is None,
+        )
+        if not page:
+            break
+        nodes.extend(page)
+        after_id = str(page[-1].id)
+    return nodes
+
+
 async def _materialize_summary_node(
     engine: MemoryEngine,
     level: SummarizationLevel,
@@ -417,10 +443,10 @@ async def generate_daily_summaries(
         LifecycleState.STABLE,
         LifecycleState.CONTESTED,
     ]
-    all_nodes = await engine._graph_store.query_nodes(
+    all_nodes = await _scan_summary_inputs(
+        engine,
         lifecycle_states=active_states,
         user_id=user_id,
-        limit=5000,
     )
 
     # Filter out existing summary nodes
@@ -500,11 +526,11 @@ async def roll_up_weekly(
     errors = 0
 
     # Fetch existing daily summary nodes
-    daily_summaries = await engine._graph_store.query_nodes(
+    daily_summaries = await _scan_summary_inputs(
+        engine,
         node_type=NodeType.SUMMARY,
         lifecycle_states=[LifecycleState.STABLE, LifecycleState.TENTATIVE],
         user_id=user_id,
-        limit=1000,
     )
     daily_summaries = [
         n for n in daily_summaries
@@ -582,11 +608,11 @@ async def roll_up_monthly(
     errors = 0
 
     # Fetch existing weekly summary nodes
-    weekly_summaries = await engine._graph_store.query_nodes(
+    weekly_summaries = await _scan_summary_inputs(
+        engine,
         node_type=NodeType.SUMMARY,
         lifecycle_states=[LifecycleState.STABLE, LifecycleState.TENTATIVE],
         user_id=user_id,
-        limit=1000,
     )
     weekly_summaries = [
         n for n in weekly_summaries

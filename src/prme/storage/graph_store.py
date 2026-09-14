@@ -188,12 +188,13 @@ class GraphStore(Protocol):
     # --- Node Update ---
 
     async def scan_nodes(
-        self, *, user_id: str, scope: Scope | None = None,
+        self, *, user_id: str | None, scope: Scope | None = None,
         node_type: NodeType | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
         after_id: str | None = None, limit: int = 100,
+        operator_unscoped: bool = False,
     ) -> list[MemoryNode]:
-        """Read one scoped page ordered by immutable ID, without rank truncation."""
+        """Read an owner page, or an explicit operator page, in immutable ID order."""
         ...
 
     async def update_node(self, node_id: str, **updates: Any) -> None:

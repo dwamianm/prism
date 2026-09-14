@@ -26,19 +26,23 @@ the next run publishes a new generation and archives the previous one atomically
 Concurrent calls and independent engine instances converge on the same identity.
 The first managed publication treats an active legacy `source-excerpts-v1`
 summary for the same bucket as a predecessor, preventing an upgrade from leaving
-two active period summaries.
+two active period summaries. Organizer discovery now pages through every active
+input in immutable-ID order, removing the previous 5,000-node daily and
+1,000-summary weekly/monthly caps. Unscoped maintenance opts into an internal
+operator scan; the public enumeration API remains owner-required.
 
 ## Verification
 
-Focused DuckDB tests passed **35 tests with 15 PostgreSQL cases skipped**. Ruff
+Focused DuckDB tests passed **42 tests with 22 PostgreSQL cases skipped**. Ruff
 passed all changed source and test files, and focused mypy passed the publication
 model, organizer and storage modules.
 
 The regression selection covers daily, weekly and monthly behavior, full source
 qualifiers and provenance, unchanged reuse, same-engine and independent-engine
 concurrency, late selected-source replacement, legacy migration, injected
-publication failure, durable restart without re-embedding, and the pre-existing
-consolidation publication and recovery contracts.
+publication failure, durable restart without re-embedding, a 502-source
+cross-tenant operator pagination boundary, public owner-required enumeration,
+and the pre-existing consolidation publication and recovery contracts.
 
 These checks establish consistency and recovery behavior. They do not show that
 extractive hierarchical summaries improve reader answers, and the configured

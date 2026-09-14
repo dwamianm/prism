@@ -6,6 +6,8 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
+import pytest
+
 from prme import MemoryEngine
 from prme.config import OrganizerConfig
 from prme.models import MemoryNode
@@ -18,13 +20,14 @@ async def _daily_sources(engine, owner, *, count=3, salience=0.4):
     day = datetime(2026, 7, 14, 9, tzinfo=timezone.utc)
     nodes = []
     for index in range(count):
+        node_salience = min(salience + index * 0.0001, 1.0)
         node = MemoryNode(
             user_id=owner,
             node_type=NodeType.FACT,
             content=f"Daily source {index}",
-            salience=salience + index * 0.01,
-            salience_base=salience + index * 0.01,
-            event_time=day + timedelta(hours=index),
+            salience=node_salience,
+            salience_base=node_salience,
+            event_time=day + timedelta(seconds=index),
         )
         await engine._graph_store.create_node(node)
         nodes.append(node)
@@ -77,6 +80,28 @@ async def test_independent_engines_converge_on_one_daily_summary(config, user): 
 
         summaries = await _active_daily(first, user)
         assert len(summaries) == 1
+
+
+async def test_unscoped_daily_run_pages_all_tenants(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        with pytest.raises(ValueError, match="requires user_id"):
+            await engine._graph_store.scan_nodes(user_id=None)
+        other = user + "-other"
+        await _daily_sources(engine, user, count=251)
+        await _daily_sources(engine, other, count=251)
+
+        result = await generate_daily_summaries(
+            engine,
+            OrganizerConfig(
+                summarization_daily_min_events=250,
+                summarization_max_items_per_summary=2,
+            ),
+            10_000,
+        )
+
+        assert result.nodes_processed == 2 and result.nodes_modified == 2
+        assert len(await _active_daily(engine, user)) == 1
+        assert len(await _active_daily(engine, other)) == 1
 
 
 async def test_late_high_salience_source_atomically_replaces_daily_summary(config, user):  # noqa: F811

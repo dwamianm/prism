@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   graph publication. Unchanged runs reuse one active identity; late selected
   sources atomically replace and archive the prior generation; interrupted runs
   recover without re-embedding; concurrent engines converge; and the first
-  managed run atomically retires legacy excerpts for the same period.
+  managed run atomically retires legacy excerpts for the same period. Stable-ID
+  paging removes the prior 5,000-node daily and 1,000-summary rollup caps while
+  keeping unscoped scans an explicit internal operator action.
 - Immutable owner/exact-scope ranking profiles with a two-stage activation gate.
   A profile must bind a positive explicit-feedback proposal to a separately
   positive full-retrieval holdout before it can be persisted and activated.

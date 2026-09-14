@@ -372,19 +372,27 @@ class DuckPGQGraphStore:
         )
 
     async def scan_nodes(
-        self, *, user_id: str, scope: Scope | None = None,
+        self, *, user_id: str | None, scope: Scope | None = None,
         node_type: NodeType | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
         after_id: str | None = None, limit: int = 100,
+        operator_unscoped: bool = False,
     ) -> list[MemoryNode]:
-        """Read a stable-ID page within the requested tenant and filters."""
-        if not user_id or limit < 1:
+        """Read a stable-ID page within a tenant or explicit operator scope."""
+        if (
+            limit < 1
+            or user_id == ""
+            or (user_id is None and not operator_unscoped)
+        ):
             raise ValueError("scan_nodes requires user_id and a positive limit")
         states = list(ACTIVE_LIFECYCLE_STATES) if lifecycle_states is None else lifecycle_states
         if not states:
             return []
-        conditions = ["user_id = ?", "lifecycle_state IN (" + ",".join("?" for _ in states) + ")"]
-        params: list = [user_id, *[state.value for state in states]]
+        conditions = ["lifecycle_state IN (" + ",".join("?" for _ in states) + ")"]
+        params: list = [state.value for state in states]
+        if user_id:
+            conditions.append("user_id = ?")
+            params.append(user_id)
         for field, value in (("scope", scope), ("node_type", node_type)):
             if value is not None:
                 conditions.append(f"{field} = ?")

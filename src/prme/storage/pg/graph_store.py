@@ -13,7 +13,7 @@ import uuid as _uuid
 from datetime import datetime, timezone
 from uuid import UUID
 
-import asyncpg
+import asyncpg  # type: ignore[import-untyped]
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
@@ -370,19 +370,27 @@ class PgGraphStore:
     # --- Node Update ---
 
     async def scan_nodes(
-        self, *, user_id: str, scope: Scope | None = None,
+        self, *, user_id: str | None, scope: Scope | None = None,
         node_type: NodeType | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
         after_id: str | None = None, limit: int = 100,
+        operator_unscoped: bool = False,
     ) -> list[MemoryNode]:
-        """Read one tenant-scoped page in immutable UUID order."""
-        if not user_id or limit < 1:
+        """Read one tenant or explicit operator page in immutable UUID order."""
+        if (
+            limit < 1
+            or user_id == ""
+            or (user_id is None and not operator_unscoped)
+        ):
             raise ValueError("scan_nodes requires user_id and a positive limit")
         states = list(ACTIVE_LIFECYCLE_STATES) if lifecycle_states is None else lifecycle_states
         if not states:
             return []
-        params: list = [user_id, [state.value for state in states]]
-        conditions = ["user_id = $1", "lifecycle_state = ANY($2::text[])"]
+        params: list = [[state.value for state in states]]
+        conditions = ["lifecycle_state = ANY($1::text[])"]
+        if user_id:
+            params.append(user_id)
+            conditions.append(f"user_id = ${len(params)}")
         for field, value in (("scope", scope), ("node_type", node_type)):
             if value is not None:
                 params.append(value.value)

@@ -127,6 +127,9 @@ new generation and archive the predecessor, and the first managed run atomically
 retires legacy `source-excerpts-v1` summaries for that bucket. DuckDB stages
 indexes after durable preparation; PostgreSQL publishes pgvector inside the graph
 transaction. Do not restore separate summary, edge and index writes.
+Organizer source discovery pages through the complete active store. Unscoped
+maintenance uses an explicit internal operator scan; public node enumeration
+still requires an owner.
 
 Single-node `promote`, `archive` and `deprecate` validate the current lifecycle
 inside the same backend transaction as the update and a checksummed

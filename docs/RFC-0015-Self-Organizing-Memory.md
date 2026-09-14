@@ -743,7 +743,9 @@ user, scope, level, and period; summaries retain that namespace. The immutable
 request hash covers every selected source snapshot, rendered content, scores,
 policy, and embedding identity. Calendar windows use UTC event time (falling
 back to creation time), including when rolling historical daily summaries into
-weeks and months.
+weeks and months. Source collection uses stable-ID pages over the complete active
+owner store. An unscoped organizer run must opt into the internal operator scan;
+the public enumeration API continues to require an owner.
 
 These are selected excerpts, not exhaustive or semantically compressed accounts.
 Sources omitted by the per-summary item limit remain intact. Nested excerpts can
