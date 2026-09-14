@@ -273,12 +273,17 @@ def test_registered_execution_manifest_binds_clean_source_trees(
             }
         )
     )
+    saved_memory = tmp_path / "saved-memory"
+    (saved_memory / "nested").mkdir(parents=True)
+    (saved_memory / "memory_config.json").write_text("{}\n")
+    (saved_memory / "nested" / "index.bin").write_bytes(b"index")
 
     manifest = runner._build_execution_manifest(
         upstream,
         {"project_root": str(project), "revision": upstream_revision},
         registration,
         "evaluation/memory_configs/prme_compact.json",
+        saved_memory,
     )
 
     assert manifest["schema_version"] == 2
@@ -291,6 +296,8 @@ def test_registered_execution_manifest_binds_clean_source_trees(
     assert manifest["invocation"] == {
         "memory_config_path": "evaluation/memory_configs/prme_compact.json",
         "memory_config_sha256": runner._digest(installed_compact_config),
+        "load_memory_dir": str(saved_memory),
+        "memory_artifact": runner._directory_identity(saved_memory),
     }
 
 
@@ -328,7 +335,26 @@ def test_execution_manifest_rejects_missing_selected_config(
             {"project_root": str(project), "revision": "a" * 40},
             None,
             "evaluation/memory_configs/missing.json",
+            None,
         )
+
+
+def test_directory_identity_rejects_symlinks_and_changes_with_content(
+    tmp_path: Path,
+) -> None:
+    memory = tmp_path / "memory"
+    memory.mkdir()
+    first = memory / "a"
+    first.write_text("one")
+    identity = runner._directory_identity(memory)
+    assert identity["file_count"] == 1
+    assert identity["bytes"] == 3
+
+    first.write_text("two")
+    assert runner._directory_identity(memory)["sha256"] != identity["sha256"]
+    (memory / "link").symlink_to(first)
+    with pytest.raises(RuntimeError, match="contains a symlink"):
+        runner._directory_identity(memory)
 
 
 def test_resume_prompt_requires_same_question_and_haystack() -> None:

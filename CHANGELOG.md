@@ -132,8 +132,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actually selected for each arm, including its launch-time hash, instead of
   attesting only the installed default. The installer atomically supplies both
   the 32K maximum-evidence profile and an explicit 4K product-default compact
-  profile; the comparator requires both per-arm configuration identities for new
-  schema-2 studies.
+  profile. Before opening loaded memory, the launcher also hashes every regular
+  file by relative path, size and content and rejects symlinks; the comparator
+  requires the complete initial artifact and both per-arm configuration
+  identities for new schema-2 studies.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,

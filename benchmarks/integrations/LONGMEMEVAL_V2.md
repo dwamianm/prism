@@ -65,13 +65,17 @@ or upstream changes beyond its installed adapter/configuration and registry
 import, and writes an immutable
 `execution_manifest.json`. That manifest hashes the launcher, installer, source
 and installed adapter, both supplied PRME configurations, upstream harness, and
-the actual configuration selected for each arm. The registration must contain
-the selected PRME and baseline configuration hashes. Resuming under a different
-source or selected configuration fails before generation, and a new launcher
-will not claim outputs created before the manifest existed. The paired comparator
-requires matching source manifests and the registered per-arm invocation hashes
-for schema-2 registrations. Schema-1 registrations remain readable for studies
-that were already running when source manifests were introduced.
+the actual configuration selected for each arm. For a loaded PRME arm it also
+streams every regular file in the saved-memory directory into one deterministic
+path, size and content identity before the memory is opened; symlinks and special
+entries fail closed. The registration must contain the selected PRME and baseline
+configuration hashes plus the complete initial memory-artifact identity. Resuming
+under a different source, selected configuration or memory artifact fails before
+generation, and a new launcher will not claim outputs created before the manifest
+existed. The paired comparator requires matching source manifests and the
+registered per-arm invocation hashes for schema-2 registrations. Schema-1
+registrations remain readable for studies that were already running when source
+manifests were introduced.
 
 Ollama 0.34 supports reasoning control through its
 [OpenAI-compatible API](https://docs.ollama.com/api/openai-compatibility). For a

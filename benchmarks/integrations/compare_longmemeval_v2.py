@@ -380,7 +380,7 @@ def _validate_registered_execution(
     systems = registration.get("systems")
     if not isinstance(systems, dict):
         raise ValueError("registration is missing system settings")
-    invocations: dict[str, dict[str, str]] = {}
+    invocations: dict[str, dict[str, Any]] = {}
     for label, run, manifest, system_name in (
         ("left", left, left_manifest, "prme"),
         ("right", right, right_manifest, "baseline"),
@@ -403,9 +403,31 @@ def _validate_registered_execution(
             or config_sha256 != system.get("memory_config_sha256")
         ):
             raise ValueError("execution memory configuration hash does not match registration")
+        load_memory_dir = invocation.get("load_memory_dir")
+        memory_artifact = invocation.get("memory_artifact")
+        if load_memory_dir != run["args"].get("load_memory_dir"):
+            raise ValueError("execution saved-memory path does not match the run")
+        if system_name == "prme":
+            if not isinstance(memory_artifact, dict):
+                raise ValueError("PRME execution is missing saved-memory identity")
+            if (
+                memory_artifact.get("sha256")
+                != system.get("memory_artifact_sha256")
+                or memory_artifact.get("file_count")
+                != system.get("memory_artifact_file_count")
+                or memory_artifact.get("bytes")
+                != system.get("memory_artifact_bytes")
+            ):
+                raise ValueError("execution saved-memory identity does not match registration")
+        elif load_memory_dir is not None or memory_artifact is not None:
+            raise ValueError("baseline execution unexpectedly loaded saved memory")
         invocations[label] = {
             "memory_config_path": config_path,
             "memory_config_sha256": config_sha256,
+            "load_memory_dir": load_memory_dir,
+            "memory_artifact_sha256": (
+                memory_artifact["sha256"] if memory_artifact is not None else None
+            ),
         }
     return {**left_source, "invocations": invocations}
 

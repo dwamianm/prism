@@ -170,6 +170,18 @@ def _write_execution_manifests(
             "invocation": {
                 "memory_config_path": system["memory_config"],
                 "memory_config_sha256": system["memory_config_sha256"],
+                "load_memory_dir": json.loads(
+                    (directory / "run_args.json").read_text()
+                )["load_memory_dir"],
+                "memory_artifact": (
+                    {
+                        "sha256": system["memory_artifact_sha256"],
+                        "file_count": system["memory_artifact_file_count"],
+                        "bytes": system["memory_artifact_bytes"],
+                    }
+                    if system_name == "prme"
+                    else None
+                ),
             },
         }
         (directory / "execution_manifest.json").write_text(json.dumps(manifest))
@@ -230,6 +242,9 @@ def _bind_registered_systems(
         "prme": {
             "memory_config": "evaluation/memory_configs/prme.json",
             "memory_config_sha256": digest(config_path),
+            "memory_artifact_sha256": "c" * 64,
+            "memory_artifact_file_count": 3,
+            "memory_artifact_bytes": 123,
             "internal_context_budget_cl100k_tokens": 32_768,
             "upstream_context_budget_tokens": 65_536,
             "max_source_screenshots": 8,
@@ -370,6 +385,8 @@ def test_schema_two_registration_requires_matching_execution_sources(
     assert result["execution_source"]["invocations"]["left"] == {
         "memory_config_path": systems["prme"]["memory_config"],
         "memory_config_sha256": systems["prme"]["memory_config_sha256"],
+        "load_memory_dir": str(tmp_path / "saved-memory"),
+        "memory_artifact_sha256": systems["prme"]["memory_artifact_sha256"],
     }
     assert "execution_manifest.json" in result["artifacts"]["left"]
 
@@ -378,6 +395,21 @@ def test_schema_two_registration_requires_matching_execution_sources(
     manifest["invocation"]["memory_config_sha256"] = "f" * 64
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="configuration hash does not match"):
+        compare(
+            left,
+            right,
+            left_label="prme",
+            right_label="no_memory",
+            registration=registration,
+            samples=10,
+        )
+
+    _write_execution_manifests(left, right, registration, source, systems)
+    memory_manifest_path = left / "execution_manifest.json"
+    manifest = json.loads(memory_manifest_path.read_text())
+    manifest["invocation"]["memory_artifact"]["bytes"] += 1
+    memory_manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="saved-memory identity does not match"):
         compare(
             left,
             right,

@@ -65,6 +65,41 @@ def _digest(path: Path) -> str:
     return value.hexdigest()
 
 
+def _directory_identity(path: Path) -> dict[str, Any]:
+    """Hash one immutable directory snapshot without following symlinks."""
+    root = path.expanduser().resolve()
+    if not root.is_dir():
+        raise RuntimeError(f"saved memory directory is unavailable: {path}")
+    entries: list[dict[str, Any]] = []
+    for candidate in sorted(root.rglob("*")):
+        if candidate.is_symlink():
+            raise RuntimeError(
+                f"saved memory directory contains a symlink: "
+                f"{candidate.relative_to(root)}"
+            )
+        if candidate.is_dir():
+            continue
+        if not candidate.is_file():
+            raise RuntimeError(
+                f"saved memory directory contains an unsupported entry: "
+                f"{candidate.relative_to(root)}"
+            )
+        entries.append(
+            {
+                "path": candidate.relative_to(root).as_posix(),
+                "bytes": candidate.stat().st_size,
+                "sha256": _digest(candidate),
+            }
+        )
+    if not entries:
+        raise RuntimeError(f"saved memory directory is empty: {path}")
+    return {
+        "sha256": hashlib.sha256(_canonical_json(entries)).hexdigest(),
+        "file_count": len(entries),
+        "bytes": sum(entry["bytes"] for entry in entries),
+    }
+
+
 def _git_identity(root: Path) -> tuple[str, list[str]]:
     try:
         revision = subprocess.run(
@@ -103,6 +138,7 @@ def _build_execution_manifest(
     install_status: dict[str, str],
     registration_path: Path | None,
     memory_config_path: str | os.PathLike[str],
+    load_memory_dir: str | os.PathLike[str] | None,
 ) -> dict[str, Any]:
     memory_config_value = os.fspath(memory_config_path)
     project_root = Path(install_status["project_root"]).resolve()
@@ -152,6 +188,11 @@ def _build_execution_manifest(
             "installed compact LongMemEval-V2 configuration differs from its source"
         )
 
+    load_memory_value = os.fspath(load_memory_dir) if load_memory_dir else None
+    memory_artifact = (
+        _directory_identity(Path(load_memory_value)) if load_memory_value else None
+    )
+
     registration_sha256 = None
     if registration_path is not None:
         registration_path = registration_path.expanduser().resolve()
@@ -196,6 +237,8 @@ def _build_execution_manifest(
         "invocation": {
             "memory_config_path": memory_config_value,
             "memory_config_sha256": _digest(selected_config),
+            "load_memory_dir": load_memory_value,
+            "memory_artifact": memory_artifact,
         },
     }
 
@@ -574,6 +617,7 @@ def run(argv: Sequence[str] | None = None) -> None:
             install_status,
             launcher_args.registration,
             preview_args.memory_config_path,
+            preview_args.load_memory_dir,
         )
         _write_or_verify_execution_manifest(
             Path(preview_args.output_dir).resolve(),
