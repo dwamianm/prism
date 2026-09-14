@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, QuantityAggregation, QuantityAggregationQuery, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence
+from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FullRetrievalEvaluation, FullRetrievalTrial, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -82,6 +82,18 @@ def assess_citation(record: AnswerCitationRecord, response: RetrievalResponse) -
         baseline_correct=True, counterfactual_correct=False,
         evaluation_id="fixed-reader-and-judge-v1",
     ), ContextPresenceCredit)
+
+
+def assess_full_retrieval(receipts: list[RetrievalReceipt], trials: list[FullRetrievalTrial]) -> None:
+    assert_type(evaluate_full_retrieval(
+        receipts,
+        trials,
+        user_id="alice",
+        scopes=[Scope.PROJECT],
+        proposal_input_checksum="a" * 64,
+        memory_artifact_sha256="b" * 64,
+        candidate_multipliers=RankingMultipliers(lexical=2),
+    ), FullRetrievalEvaluation)
 
 
 async def postgres_workspace_consumer() -> None:

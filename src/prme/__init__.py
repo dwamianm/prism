@@ -46,13 +46,22 @@ from prme.models.relevance import (
     RetrievalReceipt,
 )
 from prme.models.provenance import NodeProvenance, OperationAuditRecord
-from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
+from prme.models.learning import (
+    FullRetrievalEvaluation,
+    FullRetrievalEvaluationConfig,
+    FullRetrievalQueryResult,
+    FullRetrievalTrial,
+    LearningConfig,
+    LearningEvaluation,
+    RankingMultipliers,
+)
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.storage.engine import MemoryEngine
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.embedding import CachedEmbeddingProvider, EmbeddingProvider, QueryEmbeddingProvider
 from prme.retrieval.credit import ablate_context, assess_context_presence
+from prme.retrieval.full_learning import evaluate_full_retrieval
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -133,6 +142,10 @@ __all__ = [
     "LifecycleState",
     "LearningConfig",
     "LearningEvaluation",
+    "FullRetrievalEvaluation",
+    "FullRetrievalEvaluationConfig",
+    "FullRetrievalQueryResult",
+    "FullRetrievalTrial",
     "MaterializationError",
     "MemoryClient",
     "MemoryEngine",
@@ -163,5 +176,6 @@ __all__ = [
     "StoreReceipt",
     "ablate_context",
     "assess_context_presence",
+    "evaluate_full_retrieval",
     "config_from_directory",
 ]

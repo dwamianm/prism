@@ -1,9 +1,10 @@
-"""Versioned inputs and inspectable results for offline relevance learning."""
+"""Versioned inputs and inspectable results for scoped retrieval learning."""
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
+from prme.retrieval.config import ScoringWeights
 from prme.types import Scope
 
 
@@ -74,4 +75,89 @@ class LearningEvaluation(BaseModel):
         "Only explicitly judged candidates enter metrics; missing labels are not negatives.",
         "Repeated normalized queries form one group; paraphrases need caller-supplied group identities.",
         "Offline improvement is not authorization or sufficient evidence for profile activation.",
+    )
+
+
+class FullRetrievalTrial(BaseModel):
+    """One paired baseline/candidate retrieval with complete positive labels."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    group_id: str = Field(min_length=1, max_length=512)
+    baseline_request_id: UUID
+    candidate_request_id: UUID
+    relevant_node_ids: tuple[UUID, ...] = Field(min_length=1, max_length=10000)
+
+    @model_validator(mode="after")
+    def valid_identity(self):
+        if not self.group_id.strip():
+            raise ValueError("group_id cannot be blank")
+        if self.baseline_request_id == self.candidate_request_id:
+            raise ValueError("A full-retrieval trial requires two different requests")
+        if len(self.relevant_node_ids) != len(set(self.relevant_node_ids)):
+            raise ValueError("relevant_node_ids must be unique")
+        return self
+
+
+class FullRetrievalEvaluationConfig(BaseModel):
+    """Conservative acceptance gates for a final full-pipeline holdout."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    seed: int = 42
+    k: int = Field(default=10, ge=1, le=1000)
+    min_query_groups: int = Field(default=20, ge=2, le=100000)
+    bootstrap_samples: int = Field(default=2000, ge=100, le=10000)
+    min_ndcg_gain: float = Field(default=.01, ge=0, le=1, allow_inf_nan=False)
+    max_regression_fraction: float = Field(default=.1, ge=0, le=1, allow_inf_nan=False)
+
+
+class FullRetrievalQueryResult(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    group_id: str
+    baseline_request_ids: tuple[UUID, ...]
+    candidate_request_ids: tuple[UUID, ...]
+    baseline_recall: float
+    candidate_recall: float
+    baseline_ndcg: float
+    candidate_ndcg: float
+    baseline_mrr: float
+    candidate_mrr: float
+
+
+class FullRetrievalEvaluation(BaseModel):
+    """Auditable final holdout over separately executed retrieval pipelines."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    schema_version: Literal[1] = 1
+    algorithm: Literal["paired_full_retrieval_v1"] = "paired_full_retrieval_v1"
+    user_id: str = Field(min_length=1)
+    scopes: tuple[Scope, ...] | None
+    surface: Literal["results"] = "results"
+    config: FullRetrievalEvaluationConfig
+    proposal_input_checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
+    memory_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    input_checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
+    receipt_checksums: dict[UUID, str]
+    feature_identity: dict[str, JsonValue]
+    feature_identity_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    base_scoring: ScoringWeights
+    baseline_multipliers: RankingMultipliers
+    candidate_multipliers: RankingMultipliers
+    decision: Literal["insufficient_data", "no_improvement", "improved_full_retrieval"]
+    baseline_recall: float
+    candidate_recall: float
+    recall_gain: float
+    baseline_ndcg: float
+    candidate_ndcg: float
+    ndcg_gain: float
+    ndcg_gain_interval: tuple[float, float] | None = None
+    baseline_mrr: float
+    candidate_mrr: float
+    mrr_gain: float
+    regression_fraction: float
+    coverage: dict[str, int]
+    queries: tuple[FullRetrievalQueryResult, ...]
+    limitations: tuple[str, ...] = (
+        "Relevant node identities are supplied by the evaluator and are not inferred from exposure.",
+        "The memory artifact digest and fixed-request checks bind the trial; callers must prevent writes and maintenance during paired execution.",
+        "A positive retrieval holdout does not establish answer quality or transfer to another feature identity.",
     )

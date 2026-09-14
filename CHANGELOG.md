@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A conservative full-pipeline retrieval holdout evaluator for learned ranking
+  proposals. It compares separately executed baseline and candidate receipts,
+  requires complete caller-supplied relevant-node sets, verifies identical
+  owner, scope, clock, filters, limits, scoring, packing, execution parameters,
+  and feature identity outside the declared multipliers, and reports grouped
+  recall, NDCG, MRR, bootstrap uncertainty, regressions, and immutable input
+  identities. Positive observed-candidate learning alone still cannot activate
+  a profile.
 - A preregistered MELT lifecycle launcher and fail-closed report validator. The
   launcher pins the held-out final profile, five-seed schedule, source commits,
   adapter and upstream file hashes before execution. Validation uses MELT's own

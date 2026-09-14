@@ -1,6 +1,6 @@
 # RFC-0017: Scoped retrieval feedback and evaluated learning
 
-**Status:** Receipts, relevance collection, context ablation, and offline proposal evaluation implemented; profile activation pending
+**Status:** Receipts, relevance collection, context ablation, offline proposal evaluation, and full-retrieval holdout evaluation implemented; profile activation pending
 **Date:** 2026-09-12
 **Depends on:** RFC-0002, RFC-0004, RFC-0005, RFC-0009
 
@@ -275,8 +275,29 @@ Even a positive offline result holds observed candidate membership, neural prefi
 membership and session lineage fixed. It does not establish better candidate
 generation, context selection, answers, unseen tasks or complete retrieval under
 changed weights. Reusing validation results for later manual tuning also requires
-a separate final holdout. Persisted profiles, complete-retrieval validation,
-activation, deactivation and rollback remain required before production learning.
+a separate final holdout. Persisted profiles, activation, deactivation and
+rollback remain required before production learning.
+
+`evaluate_full_retrieval` provides that separate retrieval holdout primitive.
+Each input pairs two freshly executed schema-3-or-later receipts and supplies the
+complete set of relevant node identities, including relevant memories omitted
+from either response. The evaluator verifies exact owner, scope, normalized
+query, reference clock, temporal filters, result limits, base scoring, packing,
+feature identity, and execution parameters outside the declared multiplier
+change. Every pair in one holdout must share the same base scoring configuration
+and feature identity. It rejects reused receipts and repeated normalized queries
+assigned to different groups. A caller-supplied memory-artifact digest binds the fixed
+experiment state; the caller remains responsible for excluding writes and
+maintenance while producing each pair.
+
+The final gate macro-averages repeats within an explicit query group, then
+compares recall@k, NDCG@k and MRR across groups. Acceptance requires the minimum
+number of independent groups, the configured mean NDCG gain, a positive paired
+query-bootstrap lower endpoint, no mean recall loss, and a bounded fraction of
+group regressions. Reports retain both receipt checksums, feature and memory
+identity, proposal input checksum, per-group metrics, coverage, and uncertainty.
+This evaluates new candidate generation and selection, but it does not establish
+answer quality or authorize profile activation by itself.
 
 ## Remaining profile activation requirements
 
