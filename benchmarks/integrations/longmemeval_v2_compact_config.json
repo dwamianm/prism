@@ -5,6 +5,7 @@
     "trajectories_root_dir": null,
     "user_id": "evaluation",
     "token_budget": 4096,
+    "context_format": "compact",
     "result_limit": 100,
     "include_images": true,
     "image_limit": 8,

@@ -44,8 +44,8 @@ The efficiency gain did not preserve answer quality. On the same question IDs,
 the 4K arm scored 49 versus 80 for the earlier auditable 32K arm. The 4K arm won
 5 pairs, lost 36 and tied 108, a 20.81-point accuracy regression. The loss was
 largest on static questions: 17 correct versus 35. Inspection confirms that both
-arms use auditable rendering; the installed configuration named `prme_compact`
-is a 4K budget preset. The PRME revision, downstream reader cap and generation
+arms use auditable rendering; the registered configuration named `prme_compact`
+was a 4K budget preset. The PRME revision, downstream reader cap and generation
 time also differ, so the result is not a strict single-variable budget ablation.
 
 | Same-cohort arm | Correct | Accuracy | Mean reader memory context |

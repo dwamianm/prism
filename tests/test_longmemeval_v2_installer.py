@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -42,6 +43,14 @@ def test_installer_is_idempotent_and_preserves_registry(tmp_path: Path, monkeypa
     registry = (tmp_path / "memory_modules" / "__init__.py").read_text()
     assert registry.startswith("from .memory import Memory\n")
     assert registry.count(installer._IMPORT_LINE) == 1
+    full = json.loads(
+        (tmp_path / "evaluation" / "memory_configs" / "prme.json").read_text()
+    )
+    compact = json.loads(
+        (tmp_path / "evaluation" / "memory_configs" / "prme_compact.json").read_text()
+    )
+    assert full["memory_params"]["context_format"] == "auditable"
+    assert compact["memory_params"]["context_format"] == "compact"
 
 
 def test_installer_rejects_revision_drift_and_conflicts(tmp_path: Path, monkeypatch) -> None:

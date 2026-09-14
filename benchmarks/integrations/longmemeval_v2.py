@@ -16,7 +16,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import threading
-from typing import Any
+from typing import Any, Literal, cast
 
 from prme import (
     EpistemicType,
@@ -71,6 +71,7 @@ _ALLOWED_PARAMS = {
     "trajectories_root_dir",
     "user_id",
     "token_budget",
+    "context_format",
     "result_limit",
     "include_images",
     "image_limit",
@@ -187,6 +188,7 @@ class PRMEMemory(Memory):
 
         self.user_id = str(memory_params.get("user_id", "evaluation")).strip()
         self.token_budget = int(memory_params.get("token_budget", 32768))
+        context_format = memory_params.get("context_format", "auditable")
         self.result_limit = int(memory_params.get("result_limit", 100))
         self.include_images = memory_params.get("include_images", True)
         self.image_limit = int(memory_params.get("image_limit", 8))
@@ -196,6 +198,12 @@ class PRMEMemory(Memory):
         )
         require(bool(self.user_id), "prme user_id must be non-empty")
         require(self.token_budget > 0, "prme token_budget must be positive")
+        require(
+            isinstance(context_format, str)
+            and context_format in {"auditable", "compact"},
+            "prme context_format must be 'auditable' or 'compact'",
+        )
+        self.context_format = cast(Literal["auditable", "compact"], context_format)
         require(self.result_limit > 0, "prme result_limit must be positive")
         require(type(self.include_images) is bool, "prme include_images must be a boolean")
         require(self.image_limit >= 0, "prme image_limit must be non-negative")
@@ -249,6 +257,7 @@ class PRMEMemory(Memory):
             ),
             packing=PackingConfig(
                 token_budget=self.token_budget,
+                context_format=self.context_format,
                 # Each inserted trajectory already has a compact, ordered
                 # procedure trace. Expanding arbitrary adjacent raw state
                 # chunks duplicates long accessibility trees and can crowd
@@ -690,6 +699,7 @@ class PRMEMemory(Memory):
                 else None
             ),
             "query_clock_source": self._query_clock_source,
+            "context_format": self.context_format,
             "query_image_used_for_retrieval": False,
             "returned_text_items": sum(item["type"] == "text" for item in memory_context),
             "returned_image_items": sum(item["type"] == "image" for item in memory_context),

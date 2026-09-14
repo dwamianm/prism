@@ -47,12 +47,18 @@ def trajectory(root: Path) -> dict:
     }
 
 
-def params(root: Path, pack: Path | None = None) -> dict[str, object]:
+def params(
+    root: Path,
+    pack: Path | None = None,
+    *,
+    context_format: str = "auditable",
+) -> dict[str, object]:
     return {
         "storage_path": str(pack) if pack is not None else None,
         "trajectories_root_dir": str(root),
         "user_id": "evaluation",
         "token_budget": 4096,
+        "context_format": context_format,
         "result_limit": 20,
         "include_images": True,
         "image_limit": 2,
@@ -84,6 +90,7 @@ def test_adapter_round_trips_public_context_and_images(
         assert "Recorded agent thought at this state (unverified)" in procedure_text
         assert "must never be visible to memory" not in procedure_text
         assert memory._client._engine._retrieval_pipeline._packing_config.session_context_window == 0
+        assert memory._client._engine._retrieval_pipeline._packing_config.context_format == "auditable"
         manifest = json.loads(
             (tmp_path / "pack" / "longmemeval_v2_manifest.json").read_text()
         )
@@ -114,6 +121,7 @@ def test_adapter_round_trips_public_context_and_images(
             query="order", query_image="question.png", memory_context=context
         )
         assert hook["query_image_used_for_retrieval"] is False
+        assert hook["context_format"] == "auditable"
         assert hook["query_clock_source"] == "manifest"
         assert datetime.fromisoformat(hook["query_reference_time"]) == query_reference_time
         assert retrieval_clocks == [query_reference_time]
@@ -145,7 +153,6 @@ def test_adapter_round_trips_public_context_and_images(
     finally:
         memory.close()
 
-
 def test_schema_two_pack_derives_a_read_only_stable_clock(tmp_path: Path) -> None:
     root = tmp_path / "data"
     pack = tmp_path / "pack"
@@ -176,6 +183,51 @@ def test_schema_two_pack_derives_a_read_only_stable_clock(tmp_path: Path) -> Non
     finally:
         legacy.close()
     assert manifest_path.read_bytes() == legacy_bytes
+
+
+def test_adapter_supports_explicit_compact_context(tmp_path: Path) -> None:
+    source = trajectory(tmp_path / "data")
+    memory = PRMEMemory(params(
+        tmp_path / "data",
+        tmp_path / "pack",
+        context_format="compact",
+    ))
+    try:
+        memory.insert(source)
+        context = memory.query("Why should Place Order be clicked once?")
+        rendered = "\n".join(
+            item["value"] for item in context if item["type"] == "text"
+        )
+        node_ids = {
+            str(node.id)
+            for node in memory._client.iter_nodes(
+                user_id="evaluation",
+                batch_size=100,
+            )
+        }
+
+        assert "Memory record fields: [ref,type,scope" in rendered
+        assert '"m1"' in rendered
+        assert all(node_id not in rendered for node_id in node_ids)
+        hook = memory.post_query_hook(
+            query="order",
+            query_image=None,
+            memory_context=context,
+        )
+        assert hook["context_format"] == "compact"
+    finally:
+        memory.close()
+
+
+def test_adapter_defaults_older_configs_to_auditable_context(tmp_path: Path) -> None:
+    memory_params = params(tmp_path / "data", tmp_path / "pack")
+    memory_params.pop("context_format")
+    memory = PRMEMemory(memory_params)
+    try:
+        assert memory.context_format == "auditable"
+        assert memory._client._engine._retrieval_pipeline._packing_config.context_format == "auditable"
+    finally:
+        memory.close()
 
 
 def test_adapter_rejects_changed_or_interrupted_trajectory(tmp_path: Path) -> None:
@@ -211,6 +263,9 @@ def test_adapter_rejects_changed_or_interrupted_trajectory(tmp_path: Path) -> No
 def test_adapter_validates_configuration_and_public_schema(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="unexpected keys"):
         PRMEMemory({"hidden_answer": True})
+
+    with pytest.raises(RuntimeError, match="context_format"):
+        PRMEMemory({"context_format": "opaque"})
 
     root = tmp_path / "data"
     source = trajectory(root)
