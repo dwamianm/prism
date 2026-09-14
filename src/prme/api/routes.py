@@ -20,6 +20,7 @@ from prme.storage.reinforcement import ReinforcementConflict
 from prme.storage.condition_evaluation import ConditionEvaluationConflict
 from prme.storage.lifecycle import LifecycleConflict
 from prme.storage.citations import CitationConflict
+from prme.storage.ranking_profiles import StaleRankingProfileError
 from prme.models.relevance import (
     AnswerCitationRecord,
     AnswerCitationSubmission,
@@ -27,7 +28,13 @@ from prme.models.relevance import (
     RelevanceSubmission,
     RetrievalReceipt,
 )
-from prme.models.learning import LearningEvaluation
+from prme.models.learning import (
+    FullRetrievalEvaluation,
+    LearningEvaluation,
+    RankingProfile,
+    RankingProfileState,
+    RankingProfileStatus,
+)
 from prme.models.aggregation import AssertionAggregation, QuantityAggregation
 from prme.models.temporal import AssertionState
 from prme.models.provenance import NodeProvenance
@@ -45,6 +52,7 @@ from prme.api.models import (
     IngestRequest,
     IngestResponse,
     LearningEvaluationRequest,
+    FullRetrievalEvaluationRequest,
     MaterializationProcessRequest,
     NodeListResponse,
     NodePageResponse,
@@ -52,6 +60,10 @@ from prme.api.models import (
     OrganizeRequest,
     OrganizeResponse,
     QuantityAggregationRequest,
+    RankingProfileChangeRequest,
+    RankingProfileCreateRequest,
+    RankingProfileRollbackRequest,
+    RankingProfileScopeChangeRequest,
     RelevanceRequest,
     ReinforceRequest,
     RetrieveRequest,
@@ -1068,6 +1080,137 @@ async def evaluate_learning(
             query_groups=body.query_groups,
             max_records=body.max_records,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/learning/evaluate-full-retrieval",
+    response_model=FullRetrievalEvaluation,
+    summary="Evaluate a full-pipeline retrieval holdout",
+    responses={422: {"model": ErrorResponse}},
+)
+async def evaluate_full_retrieval(
+    request: Request, body: FullRetrievalEvaluationRequest,
+) -> FullRetrievalEvaluation:
+    try:
+        return await _get_engine(request).evaluate_full_retrieval(
+            body.trials,
+            user_id=_user_id(request, body.user_id, required=True),
+            scopes=body.scopes,
+            proposal_input_checksum=body.proposal_input_checksum,
+            memory_artifact_sha256=body.memory_artifact_sha256,
+            candidate_multipliers=body.candidate_multipliers,
+            baseline_multipliers=body.baseline_multipliers,
+            config=body.config,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/learning/profiles/active", response_model=RankingProfile | None)
+async def get_active_ranking_profile(
+    request: Request, user_id: str | None = None,
+    scopes: list[Scope] | None = Query(default=None),
+):
+    return await _get_engine(request).get_active_ranking_profile(
+        user_id=_user_id(request, user_id, required=True), scopes=scopes,
+    )
+
+
+@router.get("/learning/profiles/history", response_model=list[RankingProfileState])
+async def list_ranking_profile_history(
+    request: Request, user_id: str | None = None,
+    scopes: list[Scope] | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=1000),
+):
+    return await _get_engine(request).list_ranking_profile_history(
+        user_id=_user_id(request, user_id, required=True), scopes=scopes, limit=limit,
+    )
+
+
+@router.get("/learning/profiles", response_model=list[RankingProfile])
+async def list_ranking_profiles(
+    request: Request, user_id: str | None = None,
+    limit: int = Query(default=100, ge=1, le=1000), after_id: UUID | None = None,
+):
+    return await _get_engine(request).list_ranking_profiles(
+        user_id=_user_id(request, user_id, required=True), limit=limit,
+        after_id=str(after_id) if after_id is not None else None,
+    )
+
+
+@router.post("/learning/profiles", response_model=RankingProfile,
+             responses={422: {"model": ErrorResponse}})
+async def create_ranking_profile(request: Request, body: RankingProfileCreateRequest):
+    try:
+        return await _get_engine(request).create_ranking_profile(
+            body.proposal, body.holdout,
+            user_id=_user_id(request, body.user_id, required=True),
+            profile_id=body.profile_id, baseline_profile_id=body.baseline_profile_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/learning/profiles/deactivate", response_model=RankingProfileState | None,
+             responses={409: {"model": ErrorResponse}, 422: {"model": ErrorResponse}})
+async def deactivate_ranking_profile(
+    request: Request, body: RankingProfileScopeChangeRequest,
+):
+    try:
+        return await _get_engine(request).deactivate_ranking_profile(
+            user_id=_user_id(request, body.user_id, required=True),
+            scopes=body.scopes, change_id=body.change_id,
+        )
+    except StaleRankingProfileError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/learning/profiles/rollback", response_model=RankingProfileState,
+             responses={409: {"model": ErrorResponse}, 422: {"model": ErrorResponse}})
+async def rollback_ranking_profile(
+    request: Request, body: RankingProfileRollbackRequest,
+):
+    try:
+        return await _get_engine(request).rollback_ranking_profile(
+            str(body.profile_id) if body.profile_id is not None else None,
+            user_id=_user_id(request, body.user_id, required=True),
+            scopes=body.scopes, change_id=body.change_id,
+        )
+    except StaleRankingProfileError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/learning/profiles/{profile_id}", response_model=RankingProfileStatus,
+            responses={404: {"model": ErrorResponse}})
+async def get_ranking_profile_status(
+    request: Request, profile_id: UUID, user_id: str | None = None,
+):
+    result = await _get_engine(request).get_ranking_profile_status(
+        str(profile_id), user_id=_user_id(request, user_id, required=True),
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Ranking profile not found")
+    return result
+
+
+@router.post("/learning/profiles/{profile_id}/activate", response_model=RankingProfileState,
+             responses={409: {"model": ErrorResponse}, 422: {"model": ErrorResponse}})
+async def activate_ranking_profile(
+    request: Request, profile_id: UUID, body: RankingProfileChangeRequest,
+):
+    try:
+        return await _get_engine(request).activate_ranking_profile(
+            str(profile_id), user_id=_user_id(request, body.user_id, required=True),
+            change_id=body.change_id,
+        )
+    except StaleRankingProfileError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

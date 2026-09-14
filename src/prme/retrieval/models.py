@@ -406,6 +406,13 @@ class RetrievalMetadata(BaseModel):
         description="Configured base ScoringWeights version; applied weights are recorded in score provenance"
     )
     ranking_multipliers: RankingMultipliers | None = None
+    ranking_profile_id: UUID | None = None
+    ranking_profile_status: Literal[
+        "none", "applied", "inapplicable", "request_override"
+    ] = "none"
+    ranking_profile_reason: Literal[
+        "feature_identity_mismatch", "base_scoring_mismatch", "explicit_multipliers"
+    ] | None = None
     timing_ms: float = Field(
         default=0.0, description="Pipeline time including receipt logging; excludes engine startup and queue draining"
     )

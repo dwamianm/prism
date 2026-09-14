@@ -268,5 +268,8 @@ def evaluate_full_retrieval(
         coverage={"trials": len(trials), "query_groups": count, "relevant_nodes": sum(
             len(trial.relevant_node_ids) for trial in trials
         )},
+        trials=tuple(sorted(
+            trials, key=lambda item: (item.group_id, str(item.baseline_request_id))
+        )),
         queries=tuple(query_results),
     )

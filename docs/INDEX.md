@@ -32,6 +32,9 @@ Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
 Python and CLI contracts separately from draft RFC requirements.
 
+[Scoped retrieval learning](LEARNING.md) documents the two-stage evidence gate,
+immutable owner/scope profiles, automatic application, and rollback workflow.
+
 [Explicit memory corrections](MEMORY-CORRECTIONS.md) documents source retention,
 node/event identities, scoped evidence and the sync/async replacement workflow.
 
@@ -73,7 +76,7 @@ ordering, exact token budgets, evidence limits and receipt compatibility.
 | RFC-0007 | Decay and Forgetting Model | Draft | [RFC-0007-Decay-and-Forgetting.md](RFC-0007-Decay-and-Forgetting.md) |
 | RFC-0008 | Confidence Evolution and Reinforcement | Draft | [RFC-0008-Confidence-Evolution.md](RFC-0008-Confidence-Evolution.md) |
 | RFC-0009 | Memory Usage Feedback Loop | Draft | [RFC-0009-Memory-Usage-Feedback-Loop.md](RFC-0009-Memory-Usage-Feedback-Loop.md) |
-| RFC-0017 | Scoped Retrieval Feedback and Evaluated Learning | Receipts and relevance records implemented; learned profiles pending | [RFC-0017-Scoped-Retrieval-Learning.md](RFC-0017-Scoped-Retrieval-Learning.md) |
+| RFC-0017 | Scoped Retrieval Feedback and Evaluated Learning | Implemented with two-stage evaluation and scoped profile rollback | [RFC-0017-Scoped-Retrieval-Learning.md](RFC-0017-Scoped-Retrieval-Learning.md) |
 | RFC-0015 | Self-Organizing Memory Execution Model | Draft | [RFC-0015-Self-Organizing-Memory.md](RFC-0015-Self-Organizing-Memory.md) |
 
 ### Tier 4 — Advanced Capabilities

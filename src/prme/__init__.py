@@ -54,11 +54,15 @@ from prme.models.learning import (
     LearningConfig,
     LearningEvaluation,
     RankingMultipliers,
+    RankingProfile,
+    RankingProfileState,
+    RankingProfileStatus,
 )
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.storage.engine import MemoryEngine
 from prme.storage.namespace_identity import NamespaceIdentityError
+from prme.storage.ranking_profiles import StaleRankingProfileError
 from prme.storage.embedding import CachedEmbeddingProvider, EmbeddingProvider, QueryEmbeddingProvider
 from prme.retrieval.credit import ablate_context, assess_context_presence
 from prme.retrieval.full_learning import evaluate_full_retrieval
@@ -168,11 +172,15 @@ __all__ = [
     "RetrievalReceipt",
     "RetrievalMode",
     "RankingMultipliers",
+    "RankingProfile",
+    "RankingProfileState",
+    "RankingProfileStatus",
     "RelevanceSubmission",
     "RelevanceRecord",
     "Scope",
     "SourceType",
     "StaleProfileError",
+    "StaleRankingProfileError",
     "StoreReceipt",
     "ablate_context",
     "assess_context_presence",

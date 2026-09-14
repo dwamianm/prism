@@ -7,7 +7,14 @@ These are thin DTOs — no business logic belongs here.
 from __future__ import annotations
 
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
-from prme.models.learning import LearningConfig, RankingMultipliers
+from prme.models.learning import (
+    FullRetrievalEvaluation,
+    FullRetrievalEvaluationConfig,
+    FullRetrievalTrial,
+    LearningConfig,
+    LearningEvaluation,
+    RankingMultipliers,
+)
 
 from typing import Annotated, Any, Literal
 from uuid import UUID
@@ -404,6 +411,43 @@ class LearningEvaluationRequest(BaseModel):
     config: LearningConfig | None = None
     query_groups: dict[UUID, str] | None = None
     max_records: int = Field(default=10000, ge=1, le=100000, strict=True)
+
+
+class FullRetrievalEvaluationRequest(BaseModel):
+    """Saved paired requests and complete relevance for a final holdout."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    scopes: Annotated[list[Scope], Field(min_length=1)] | None = None
+    proposal_input_checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
+    memory_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    candidate_multipliers: RankingMultipliers
+    baseline_multipliers: RankingMultipliers | None = None
+    config: FullRetrievalEvaluationConfig | None = None
+    trials: Annotated[list[FullRetrievalTrial], Field(min_length=1, max_length=10000)]
+
+
+class RankingProfileCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    profile_id: UUID | None = None
+    baseline_profile_id: UUID | None = None
+    proposal: LearningEvaluation
+    holdout: FullRetrievalEvaluation
+
+
+class RankingProfileChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    change_id: UUID | None = None
+
+
+class RankingProfileScopeChangeRequest(RankingProfileChangeRequest):
+    scopes: Annotated[list[Scope], Field(min_length=1)] | None = None
+
+
+class RankingProfileRollbackRequest(RankingProfileScopeChangeRequest):
+    profile_id: UUID | None = None
 
 
 class AnswerCitationRequest(AnswerCitationSubmission):

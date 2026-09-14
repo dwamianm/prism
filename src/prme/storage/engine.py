@@ -25,11 +25,11 @@ import atexit
 from contextlib import AsyncExitStack
 import logging
 import warnings
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import duckdb
 
@@ -47,10 +47,21 @@ from prme.models.relevance import (
     RelevanceSubmission,
     RetrievalReceipt,
 )
-from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
+from prme.models.learning import (
+    FullRetrievalEvaluation,
+    FullRetrievalEvaluationConfig,
+    FullRetrievalTrial,
+    LearningConfig,
+    LearningEvaluation,
+    RankingMultipliers,
+    RankingProfile,
+    RankingProfileState,
+    RankingProfileStatus,
+)
 from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfileProcessingResult, profile_key, ProfileCollectionResult
 from prme.models.derivation import PreparedEmbedding
 from prme.storage.relevance import RelevanceRepository
+from prme.storage.ranking_profiles import RankingProfileRepository, StaleRankingProfileError
 from prme.storage.citations import CitationRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -157,6 +168,9 @@ class MemoryEngine:
 
         # Quality assessment and auto-tuning (issue #24)
         self._relevance = RelevanceRepository(conn=conn, pool=pool, conn_lock=getattr(event_store, "_conn_lock", None))
+        self._ranking_profiles = RankingProfileRepository(
+            conn=conn, pool=pool, conn_lock=getattr(event_store, "_conn_lock", None),
+        )
         self._citations = CitationRepository(conn=conn, pool=pool, conn_lock=getattr(event_store, "_conn_lock", None))
         self._feedback_tracker = FeedbackTracker()
         self._weight_tuner = WeightTuner(
@@ -1692,6 +1706,32 @@ class MemoryEngine:
                 "to the constructor."
             )
 
+        profile_application: dict[str, str | None]
+        if ranking_multipliers is not None:
+            profile_application = {
+                "status": "request_override", "profile_id": None,
+                "reason": "explicit_multipliers",
+            }
+        else:
+            profile_scopes = self._learning_scope_key(scope)
+            profile = await self._ranking_profiles.active(
+                user_id=user_id, scopes=profile_scopes,
+            )
+            if profile is None:
+                profile_application = {
+                    "status": "none", "profile_id": None, "reason": None,
+                }
+            else:
+                reason = self._ranking_profile_inapplicability(
+                    profile, weights or self._config.scoring,
+                )
+                profile_application = {
+                    "status": "inapplicable" if reason else "applied",
+                    "profile_id": str(profile.profile_id), "reason": reason,
+                }
+                if reason is None:
+                    ranking_multipliers = profile.multipliers
+
         # Drain materialization queue before retrieval (issue #25)
         if await self._materialization_queue.debt() > 0:
             try:
@@ -1722,6 +1762,7 @@ class MemoryEngine:
             min_score=min_score, limit=limit,
             weights=weights,
             ranking_multipliers=ranking_multipliers,
+            ranking_profile=profile_application,
             min_fidelity=min_fidelity,
             include_cross_scope=include_cross_scope,
             retrieval_mode=retrieval_mode,
@@ -2583,6 +2624,207 @@ class MemoryEngine:
         receipts, records = await self._relevance.learning_snapshot(user_id=user_id, max_records=max_records)
         return await asyncio.to_thread(evaluate_learning, receipts, records, user_id=user_id,
                                        scopes=scope_copy, surface=surface, config=config, query_groups=group_copy)
+
+    async def evaluate_full_retrieval(
+        self, trials: Sequence[FullRetrievalTrial], *, user_id: str,
+        scopes: list[Scope] | None, proposal_input_checksum: str,
+        memory_artifact_sha256: str, candidate_multipliers: RankingMultipliers,
+        baseline_multipliers: RankingMultipliers | None = None,
+        config: FullRetrievalEvaluationConfig | None = None,
+    ) -> FullRetrievalEvaluation:
+        """Resolve saved paired receipts and evaluate a fixed final holdout."""
+        if not 1 <= len(trials) <= 10000:
+            raise ValueError("trials must contain from 1 to 10000 pairs")
+        trials = [FullRetrievalTrial.model_validate_json(trial.model_dump_json()) for trial in trials]
+        request_ids = [
+            request_id for trial in trials
+            for request_id in (trial.baseline_request_id, trial.candidate_request_id)
+        ]
+        receipts = await self._relevance.get_receipts(request_ids, user_id=user_id)
+        from prme.retrieval.full_learning import evaluate_full_retrieval
+        return await asyncio.to_thread(
+            evaluate_full_retrieval, receipts, trials, user_id=user_id,
+            scopes=list(scopes) if scopes is not None else None,
+            proposal_input_checksum=proposal_input_checksum,
+            memory_artifact_sha256=memory_artifact_sha256,
+            candidate_multipliers=candidate_multipliers,
+            baseline_multipliers=baseline_multipliers, config=config,
+        )
+
+    @staticmethod
+    def _learning_scope_key(scopes: list[Scope] | None) -> tuple[Scope, ...] | None:
+        return tuple(sorted(set(scopes), key=lambda scope: scope.value)) if scopes is not None else None
+
+    def _ranking_profile_inapplicability(
+        self, profile: RankingProfile, base_scoring: ScoringWeights,
+    ) -> str | None:
+        assert self._retrieval_pipeline is not None
+        if profile.holdout.feature_identity != self._retrieval_pipeline.execution_features():
+            return "feature_identity_mismatch"
+        if profile.holdout.base_scoring != base_scoring:
+            return "base_scoring_mismatch"
+        return None
+
+    async def create_ranking_profile(
+        self, proposal: LearningEvaluation, holdout: FullRetrievalEvaluation, *,
+        user_id: str, profile_id: str | UUID | None = None,
+        baseline_profile_id: str | UUID | None = None,
+    ) -> RankingProfile:
+        """Persist a gated scoped profile without activating it."""
+        proposal = LearningEvaluation.model_validate_json(proposal.model_dump_json())
+        holdout = FullRetrievalEvaluation.model_validate_json(holdout.model_dump_json())
+        identity = UUID(str(profile_id)) if profile_id is not None else uuid4()
+        baseline_id = UUID(str(baseline_profile_id)) if baseline_profile_id is not None else None
+        if baseline_id is not None:
+            baseline = await self._ranking_profiles.get(str(baseline_id), user_id=user_id)
+            if baseline is None or baseline.scopes != holdout.scopes:
+                raise ValueError("Ranking profile holdout baseline is unavailable")
+            if baseline.multipliers != holdout.baseline_multipliers:
+                raise ValueError("Ranking profile holdout baseline multipliers differ")
+        profile = RankingProfile(
+            profile_id=identity,
+            user_id=user_id, scopes=holdout.scopes, created_at=datetime.now(timezone.utc),
+            baseline_profile_id=baseline_id, multipliers=holdout.candidate_multipliers,
+            proposal=proposal, holdout=holdout,
+        )
+        return await self._ranking_profiles.create(profile)
+
+    async def get_ranking_profile(
+        self, profile_id: str, *, user_id: str,
+    ) -> RankingProfile | None:
+        return await self._ranking_profiles.get(profile_id, user_id=user_id)
+
+    async def list_ranking_profiles(
+        self, *, user_id: str, limit: int = 100, after_id: str | None = None,
+    ) -> list[RankingProfile]:
+        return await self._ranking_profiles.list(
+            user_id=user_id, limit=limit, after_id=after_id,
+        )
+
+    async def get_active_ranking_profile(
+        self, *, user_id: str, scopes: list[Scope] | None = None,
+    ) -> RankingProfile | None:
+        scope_key = self._learning_scope_key(normalize_scope(scopes))
+        return await self._ranking_profiles.active(user_id=user_id, scopes=scope_key)
+
+    async def get_ranking_profile_status(
+        self, profile_id: str, *, user_id: str,
+    ) -> RankingProfileStatus | None:
+        profile = await self._ranking_profiles.get(profile_id, user_id=user_id)
+        if profile is None:
+            return None
+        latest = await self._ranking_profiles.latest_state(
+            user_id=user_id, scopes=profile.scopes,
+        )
+        return RankingProfileStatus(
+            profile=profile,
+            active=bool(latest and latest.active_profile_id == profile.profile_id),
+            latest_change=latest,
+        )
+
+    async def list_ranking_profile_history(
+        self, *, user_id: str, scopes: list[Scope] | None = None, limit: int = 100,
+    ) -> list[RankingProfileState]:
+        scope_key = self._learning_scope_key(normalize_scope(scopes))
+        return await self._ranking_profiles.history(
+            user_id=user_id, scopes=scope_key, limit=limit,
+        )
+
+    async def activate_ranking_profile(
+        self, profile_id: str, *, user_id: str, change_id: str | UUID | None = None,
+    ) -> RankingProfileState:
+        """Activate a profile only from the baseline used by its final holdout."""
+        profile = await self._ranking_profiles.get(profile_id, user_id=user_id)
+        if profile is None:
+            raise ValueError("Ranking profile not found")
+        transition_id = UUID(str(change_id)) if change_id is not None else uuid4()
+        existing = await self._ranking_profiles.get_change(
+            str(transition_id), user_id=user_id,
+        ) if change_id is not None else None
+        if existing is not None:
+            if (
+                existing.action != "activate"
+                or existing.active_profile_id != profile.profile_id
+                or existing.scopes != profile.scopes
+            ):
+                raise ValueError("change_id already identifies a different ranking profile transition")
+            return existing
+        if self._retrieval_pipeline is None:
+            raise NotImplementedError("RetrievalPipeline not configured")
+        reason = self._ranking_profile_inapplicability(profile, self._config.scoring)
+        if reason is not None:
+            raise ValueError(f"Ranking profile is inapplicable: {reason}")
+        current = await self._ranking_profiles.active(user_id=user_id, scopes=profile.scopes)
+        current_id = current.profile_id if current else None
+        if current_id != profile.baseline_profile_id:
+            raise StaleRankingProfileError(
+                "Active ranking profile differs from the evaluated baseline"
+            )
+        return await self._ranking_profiles.change(
+            user_id=user_id, scopes=profile.scopes, active_profile_id=profile.profile_id,
+            expected_profile_id=current_id, action="activate",
+            change_id=transition_id,
+        )
+
+    async def deactivate_ranking_profile(
+        self, *, user_id: str, scopes: list[Scope] | None = None,
+        change_id: str | UUID | None = None,
+    ) -> RankingProfileState | None:
+        scope_key = self._learning_scope_key(normalize_scope(scopes))
+        transition_id = UUID(str(change_id)) if change_id is not None else uuid4()
+        existing = await self._ranking_profiles.get_change(
+            str(transition_id), user_id=user_id,
+        ) if change_id is not None else None
+        if existing is not None:
+            if existing.action != "deactivate" or existing.scopes != scope_key:
+                raise ValueError("change_id already identifies a different ranking profile transition")
+            return existing
+        current = await self._ranking_profiles.active(user_id=user_id, scopes=scope_key)
+        if current is None:
+            return None
+        return await self._ranking_profiles.change(
+            user_id=user_id, scopes=scope_key, active_profile_id=None,
+            expected_profile_id=current.profile_id, action="deactivate",
+            change_id=transition_id,
+        )
+
+    async def rollback_ranking_profile(
+        self, profile_id: str | None, *, user_id: str,
+        scopes: list[Scope] | None = None, change_id: str | UUID | None = None,
+    ) -> RankingProfileState:
+        """Restore an earlier persisted profile, or baseline when profile_id is None."""
+        scope_key = self._learning_scope_key(normalize_scope(scopes))
+        transition_id = UUID(str(change_id)) if change_id is not None else uuid4()
+        requested_target = UUID(str(profile_id)) if profile_id is not None else None
+        existing = await self._ranking_profiles.get_change(
+            str(transition_id), user_id=user_id,
+        ) if change_id is not None else None
+        if existing is not None:
+            if (
+                existing.action != "rollback"
+                or existing.active_profile_id != requested_target
+                or existing.scopes != scope_key
+            ):
+                raise ValueError("change_id already identifies a different ranking profile transition")
+            return existing
+        current = await self._ranking_profiles.active(user_id=user_id, scopes=scope_key)
+        current_id = current.profile_id if current else None
+        target = None
+        if profile_id is not None:
+            target = await self._ranking_profiles.get(profile_id, user_id=user_id)
+            if target is None or target.scopes != scope_key:
+                raise ValueError("Rollback ranking profile is unavailable for these scopes")
+            reason = self._ranking_profile_inapplicability(target, self._config.scoring)
+            if reason is not None:
+                raise ValueError(f"Rollback ranking profile is inapplicable: {reason}")
+        target_id = target.profile_id if target else None
+        if current_id == target_id:
+            raise ValueError("Ranking profile rollback cannot be a no-op")
+        return await self._ranking_profiles.change(
+            user_id=user_id, scopes=scope_key, active_profile_id=target_id,
+            expected_profile_id=current_id, action="rollback",
+            change_id=transition_id,
+        )
 
     # --- Quality Feedback (Issue #24) ---
 

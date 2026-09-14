@@ -1,6 +1,6 @@
 # RFC-0017: Scoped retrieval feedback and evaluated learning
 
-**Status:** Receipts, relevance collection, context ablation, offline proposal evaluation, and full-retrieval holdout evaluation implemented; profile activation pending
+**Status:** Implemented, including two-stage evaluation and scoped profile activation/rollback
 **Date:** 2026-09-12
 **Depends on:** RFC-0002, RFC-0004, RFC-0005, RFC-0009
 
@@ -275,8 +275,7 @@ Even a positive offline result holds observed candidate membership, neural prefi
 membership and session lineage fixed. It does not establish better candidate
 generation, context selection, answers, unseen tasks or complete retrieval under
 changed weights. Reusing validation results for later manual tuning also requires
-a separate final holdout. Persisted profiles, activation, deactivation and
-rollback remain required before production learning.
+a separate final holdout.
 
 `evaluate_full_retrieval` provides that separate retrieval holdout primitive.
 Each input pairs two freshly executed schema-3-or-later receipts and supplies the
@@ -299,27 +298,37 @@ identity, proposal input checksum, per-group metrics, coverage, and uncertainty.
 This evaluates new candidate generation and selection, but it does not establish
 answer quality or authorize profile activation by itself.
 
-## Remaining profile activation requirements
+## Scoped profile activation
 
-Before a learned profile can be activated, the implementation must:
+An immutable `RankingProfile` can be created only when its offline proposal and
+separate full-retrieval holdout both have positive decisions. Model validation
+also binds the evidence to the same owner, exact normalized scope set, result
+surface, proposal input checksum and candidate multipliers. A non-unity holdout
+baseline must identify the immutable `baseline_profile_id` that supplied it.
 
-- retain enough recorded features/configuration to reproduce baseline ranking;
-- separate training and validation by retrieval/query group, avoiding duplicate
-  query leakage and documenting exposure/selection bias;
-- use explicitly labelled comparisons, never infer negatives from missing labels;
-- report coverage, baseline/candidate metrics and rejected proposals;
-- require an improvement gate on separate observations and retain uncertainty;
-- keep owner/scope boundaries during collection, fitting, activation and replay;
-- persist the selected profile and input identities before using it;
-- load the correct immutable profile per request without mutating shared weights;
-- bind profile applicability to the feature/scorer/embedding/reranker versions
-  actually evaluated, rather than assuming numeric features from different models
-  are interchangeable;
-- support inspection, deactivation and rollback with reproducible receipts.
+Profile creation persists the complete proposal and holdout before use. Activation
+requires the exact profile that served as the holdout baseline to be current and
+rechecks the recorded feature identity and base scoring against the running
+pipeline. This prevents a profile from being promoted over a concurrent change or
+silently transferred to different scorer, storage, embedding or reranker features.
+
+Retrieval resolves one active pointer for the owner and exact scope set without
+mutating shared configuration. A matching profile supplies request-local
+multipliers. Missing profiles retain base scoring. Runtime incompatibility also
+retains base scoring and is reported as `inapplicable`; explicit request
+multipliers take precedence and are reported as `request_override`. New receipts
+and response metadata retain the profile identity, application status and reason.
+
+Profiles and pointer changes use append-only checksummed operation records on
+DuckDB and PostgreSQL. Activation, deactivation and rollback serialize changes
+per owner/scope and reject stale expected state. Caller-supplied change UUIDs make
+exact retries idempotent across restart. Inspection APIs expose immutable profiles,
+the active pointer and transition history. See [the learning guide](LEARNING.md)
+for Python, HTTP and MCP workflows.
 
 Collection tests alone do not prove these requirements, learned quality, or
 superiority to another memory system. Algorithm choice and gates require current
-primary-source research and development-set evaluation before activation.
+primary-source research and task-level evaluation before product-quality claims.
 
 ## Current technique comparison (reviewed 2026-09-12)
 

@@ -22,7 +22,14 @@ from prme.ingestion.errors import MaterializationError, extraction_failure_code
 from prme.models.aggregation import AssertionQuery, QuantityAggregationQuery
 from prme.models.temporal import AssertionStateQuery
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
-from prme.models.learning import LearningConfig, RankingMultipliers
+from prme.models.learning import (
+    FullRetrievalEvaluation,
+    FullRetrievalEvaluationConfig,
+    FullRetrievalTrial,
+    LearningConfig,
+    LearningEvaluation,
+    RankingMultipliers,
+)
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -512,6 +519,200 @@ async def memory_evaluate_learning(
         return json.dumps({"error": str(exc)})
     except Exception as exc:
         return _internal_error("memory_evaluate_learning", exc)
+
+
+async def memory_evaluate_full_retrieval(
+    trials: list[FullRetrievalTrial],
+    proposal_input_checksum: str,
+    memory_artifact_sha256: str,
+    candidate_multipliers: RankingMultipliers,
+    user_id: Optional[str] = None,
+    scopes: Optional[list[str]] = None,
+    baseline_multipliers: Optional[RankingMultipliers] = None,
+    config: Optional[FullRetrievalEvaluationConfig] = None,
+    ctx: Context = None,
+) -> str:
+    """Evaluate fresh paired retrievals before creating a ranking profile."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if scopes is not None and not scopes:
+            raise ValueError("scopes must be omitted or contain at least one scope")
+        result = await engine.evaluate_full_retrieval(
+            trials, user_id=owner,
+            scopes=[Scope(scope) for scope in scopes] if scopes is not None else None,
+            proposal_input_checksum=proposal_input_checksum,
+            memory_artifact_sha256=memory_artifact_sha256,
+            candidate_multipliers=candidate_multipliers,
+            baseline_multipliers=baseline_multipliers, config=config,
+        )
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_evaluate_full_retrieval", exc)
+
+
+async def memory_create_ranking_profile(
+    proposal: LearningEvaluation,
+    holdout: FullRetrievalEvaluation,
+    user_id: Optional[str] = None,
+    profile_id: Optional[str] = None,
+    baseline_profile_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Persist two-stage evaluated ranking evidence without activating it."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        profile = await engine.create_ranking_profile(
+            proposal, holdout, user_id=owner, profile_id=profile_id,
+            baseline_profile_id=baseline_profile_id,
+        )
+        return profile.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_create_ranking_profile", exc)
+
+
+async def memory_get_ranking_profile(
+    profile_id: str, user_id: Optional[str] = None, ctx: Context = None,
+) -> str:
+    """Inspect an owned immutable ranking profile and its active status."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        status = await engine.get_ranking_profile_status(profile_id, user_id=owner)
+        return status.model_dump_json() if status else json.dumps({"error": "Ranking profile not found"})
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_ranking_profile", exc)
+
+
+async def memory_list_ranking_profiles(
+    user_id: Optional[str] = None, limit: int = 100,
+    after_id: Optional[str] = None, ctx: Context = None,
+) -> str:
+    """Page owned immutable ranking profiles by profile UUID."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        profiles = await engine.list_ranking_profiles(
+            user_id=owner, limit=limit, after_id=after_id,
+        )
+        return json.dumps([profile.model_dump(mode="json") for profile in profiles])
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_list_ranking_profiles", exc)
+
+
+async def memory_get_active_ranking_profile(
+    user_id: Optional[str] = None, scopes: Optional[list[str]] = None,
+    ctx: Context = None,
+) -> str:
+    """Inspect the profile active for one exact scope set."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if scopes is not None and not scopes:
+            raise ValueError("scopes must be omitted or contain at least one scope")
+        profile = await engine.get_active_ranking_profile(
+            user_id=owner,
+            scopes=[Scope(scope) for scope in scopes] if scopes is not None else None,
+        )
+        return profile.model_dump_json() if profile else "null"
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_active_ranking_profile", exc)
+
+
+async def memory_list_ranking_profile_history(
+    user_id: Optional[str] = None, scopes: Optional[list[str]] = None,
+    limit: int = 100, ctx: Context = None,
+) -> str:
+    """Inspect recent activation, deactivation, and rollback records."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if scopes is not None and not scopes:
+            raise ValueError("scopes must be omitted or contain at least one scope")
+        history = await engine.list_ranking_profile_history(
+            user_id=owner,
+            scopes=[Scope(scope) for scope in scopes] if scopes is not None else None,
+            limit=limit,
+        )
+        return json.dumps([state.model_dump(mode="json") for state in history])
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_list_ranking_profile_history", exc)
+
+
+async def memory_activate_ranking_profile(
+    profile_id: str, user_id: Optional[str] = None,
+    change_id: Optional[str] = None, ctx: Context = None,
+) -> str:
+    """Activate an applicable profile from its evaluated baseline."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        state = await engine.activate_ranking_profile(
+            profile_id, user_id=owner, change_id=change_id,
+        )
+        return state.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_activate_ranking_profile", exc)
+
+
+async def memory_deactivate_ranking_profile(
+    user_id: Optional[str] = None, scopes: Optional[list[str]] = None,
+    change_id: Optional[str] = None, ctx: Context = None,
+) -> str:
+    """Restore base scoring for one exact scope set."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if scopes is not None and not scopes:
+            raise ValueError("scopes must be omitted or contain at least one scope")
+        state = await engine.deactivate_ranking_profile(
+            user_id=owner,
+            scopes=[Scope(scope) for scope in scopes] if scopes is not None else None,
+            change_id=change_id,
+        )
+        return state.model_dump_json() if state else "null"
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_deactivate_ranking_profile", exc)
+
+
+async def memory_rollback_ranking_profile(
+    profile_id: Optional[str] = None, user_id: Optional[str] = None,
+    scopes: Optional[list[str]] = None, change_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Restore an earlier profile or base scoring through an append-only record."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if scopes is not None and not scopes:
+            raise ValueError("scopes must be omitted or contain at least one scope")
+        state = await engine.rollback_ranking_profile(
+            profile_id, user_id=owner,
+            scopes=[Scope(scope) for scope in scopes] if scopes is not None else None,
+            change_id=change_id,
+        )
+        return state.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_rollback_ranking_profile", exc)
 
 
 async def memory_record_answer_citations(
@@ -1314,6 +1515,11 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance, memory_evaluate_learning,
+                 memory_evaluate_full_retrieval, memory_create_ranking_profile,
+                 memory_get_ranking_profile, memory_list_ranking_profiles,
+                 memory_get_active_ranking_profile, memory_list_ranking_profile_history,
+                 memory_activate_ranking_profile, memory_deactivate_ranking_profile,
+                 memory_rollback_ranking_profile,
                  memory_record_answer_citations, memory_get_answer_citations,
                  memory_list_answer_citations,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,

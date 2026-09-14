@@ -9,14 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Immutable owner/exact-scope ranking profiles with a two-stage activation gate.
+  A profile must bind a positive explicit-feedback proposal to a separately
+  positive full-retrieval holdout before it can be persisted and activated.
+  Retrieval applies compatible profiles per request, records their identity and
+  status in metadata and receipts, and safely falls back on feature or base-score
+  drift. Append-only, retry-safe activation, deactivation and rollback work
+  across DuckDB and PostgreSQL and are exposed through Python, HTTP and MCP.
 - A conservative full-pipeline retrieval holdout evaluator for learned ranking
   proposals. It compares separately executed baseline and candidate receipts,
   requires complete caller-supplied relevant-node sets, verifies identical
   owner, scope, clock, filters, limits, scoring, packing, execution parameters,
   and feature identity outside the declared multipliers, and reports grouped
   recall, NDCG, MRR, bootstrap uncertainty, regressions, and immutable input
-  identities. Positive observed-candidate learning alone still cannot activate
-  a profile.
+  identities. Positive observed-candidate learning alone cannot activate a
+  profile.
 - A preregistered MELT lifecycle launcher and fail-closed report validator. The
   launcher pins the held-out final profile, five-seed schedule, source commits,
   adapter and upstream file hashes before execution. Validation uses MELT's own

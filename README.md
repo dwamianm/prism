@@ -868,8 +868,9 @@ bounded snapshot; `max_records` overflow fails instead of truncating silently.
 Insufficient evidence yields `insufficient_data`, and a failed validation gate
 yields `no_improvement`. It leaves active weights unchanged. An offline success
 covers the observed candidates, not full retrieval or generated answers.
-[Scoped profile activation and rollback](docs/RFC-0017-Scoped-Retrieval-Learning.md)
-remain pending.
+Activation requires a positive result on a separate fixed full-retrieval
+holdout. The [scoped learning guide](docs/LEARNING.md) covers paired trials,
+immutable profiles, automatic application, inspection and rollback.
 
 Retrieval accepts `scope=Scope.PROJECT`, `scope="project"`, or a nonempty sequence
 of scope enums/names. Only `scope=None` is unfiltered. Empty lists and invalid

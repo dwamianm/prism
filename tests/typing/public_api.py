@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FullRetrievalEvaluation, FullRetrievalTrial, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
+from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -94,6 +94,41 @@ def assess_full_retrieval(receipts: list[RetrievalReceipt], trials: list[FullRet
         memory_artifact_sha256="b" * 64,
         candidate_multipliers=RankingMultipliers(lexical=2),
     ), FullRetrievalEvaluation)
+
+
+def manage_ranking_profile(
+    client: MemoryClient,
+    proposal: LearningEvaluation,
+    holdout: FullRetrievalEvaluation,
+) -> None:
+    assert_type(client.evaluate_full_retrieval(
+        holdout.trials,
+        user_id="alice",
+        scopes=[Scope.PROJECT],
+        proposal_input_checksum=proposal.input_checksum,
+        memory_artifact_sha256="b" * 64,
+        candidate_multipliers=proposal.multipliers,
+    ), FullRetrievalEvaluation)
+    profile = client.create_ranking_profile(proposal, holdout, user_id="alice")
+    assert_type(profile, RankingProfile)
+    assert_type(client.get_ranking_profile(str(profile.profile_id), user_id="alice"), RankingProfile | None)
+    assert_type(client.list_ranking_profiles(user_id="alice"), list[RankingProfile])
+    assert_type(client.get_active_ranking_profile(user_id="alice"), RankingProfile | None)
+    assert_type(client.get_ranking_profile_status(
+        str(profile.profile_id), user_id="alice",
+    ), RankingProfileStatus | None)
+    assert_type(client.activate_ranking_profile(
+        str(profile.profile_id), user_id="alice",
+    ), RankingProfileState)
+    assert_type(client.list_ranking_profile_history(
+        user_id="alice",
+    ), list[RankingProfileState])
+    assert_type(client.deactivate_ranking_profile(
+        user_id="alice",
+    ), RankingProfileState | None)
+    assert_type(client.rollback_ranking_profile(
+        str(profile.profile_id), user_id="alice",
+    ), RankingProfileState)
 
 
 async def postgres_workspace_consumer() -> None:

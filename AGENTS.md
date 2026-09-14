@@ -191,9 +191,15 @@ Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
 for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a
 bounded feedback snapshot with stable query splits, explicit pairs, coverage and
-validation metrics. It does not activate weights. Complete-retrieval evaluation,
-persisted per-owner/scope profiles and rollback remain pending under RFC-0017.
-Receipt collection and authored fitting tests are not evidence of product learning quality.
+validation metrics. It does not activate weights. `evaluate_full_retrieval`
+checks fresh paired baseline/candidate receipts against complete relevant-node
+sets on a fixed holdout. Immutable owner/exact-scope ranking profiles require
+positive results at both stages before activation. Activation, deactivation and
+rollback are append-only, retry-safe and serialized per owner/scope; retrieval
+applies a compatible active profile per request and reports explicit overrides
+or feature/base-scoring incompatibility. See `docs/LEARNING.md` and RFC-0017.
+These evaluations are retrieval evidence, not answer-quality or universal
+superiority evidence.
 
 ## Configuration Surface
 

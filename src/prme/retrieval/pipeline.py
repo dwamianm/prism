@@ -185,6 +185,10 @@ class RetrievalPipeline:
 
         self._feature_identity = feature_identity(vector_index, lexical_index, self._reranker)
 
+    def execution_features(self) -> dict:
+        """Return the exact feature identity used for a new receipt."""
+        return {**self._feature_identity, "reranker": reranker_identity(self._reranker)}
+
     async def retrieve(
         self,
         query: str,
@@ -202,6 +206,7 @@ class RetrievalPipeline:
         limit: int | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
+        ranking_profile: dict | None = None,
         min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
@@ -257,7 +262,7 @@ class RetrievalPipeline:
         validate_selection(min_score, limit)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
-        execution_features = {**self._feature_identity, "reranker": reranker_identity(self._reranker)}
+        execution_features = self.execution_features()
         start_time = time.monotonic()
         if reference_time is not None and reference_time.utcoffset() is None:
             raise ValueError("reference_time must include a timezone")
@@ -765,6 +770,7 @@ class RetrievalPipeline:
 
             execution = RetrievalExecution(features=execution_features, parameters={
                 "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
+                "ranking_profile": ranking_profile,
                 "time_from": time_from.isoformat() if time_from else None,
                 "time_to": time_to.isoformat() if time_to else None,
                 "knowledge_at": knowledge_at.isoformat() if knowledge_at else None,
@@ -858,6 +864,16 @@ class RetrievalPipeline:
             candidates_included=bundle.included_count,
             scoring_config_version=effective_weights.version_id,
             ranking_multipliers=ranking_multipliers,
+            ranking_profile_id=(
+                uuid.UUID(ranking_profile["profile_id"])
+                if ranking_profile and ranking_profile.get("profile_id") else None
+            ),
+            ranking_profile_status=(
+                ranking_profile["status"] if ranking_profile else "none"
+            ),
+            ranking_profile_reason=(
+                ranking_profile.get("reason") if ranking_profile else None
+            ),
             timing_ms=round((completed_at - start_time) * 1000, 2),
             receipt_logging_ms=round((completed_at - logging_started) * 1000, 2),
             backends_used=list(candidate_counts.keys()),

@@ -25,7 +25,7 @@ import threading
 import warnings
 import weakref
 from datetime import datetime
-from collections.abc import Coroutine, Iterator
+from collections.abc import Coroutine, Iterator, Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 from uuid import UUID
 
@@ -39,7 +39,17 @@ from prme.models.relevance import (
     RetrievalReceipt,
 )
 from prme.models.provenance import NodeProvenance
-from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
+from prme.models.learning import (
+    FullRetrievalEvaluation,
+    FullRetrievalEvaluationConfig,
+    FullRetrievalTrial,
+    LearningConfig,
+    LearningEvaluation,
+    RankingMultipliers,
+    RankingProfile,
+    RankingProfileState,
+    RankingProfileStatus,
+)
 from prme.retrieval.config import ScoringWeights
 from prme.retrieval.scope import ScopeInput
 from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
@@ -481,6 +491,90 @@ class MemoryClient:
         """Fit and evaluate a scoped offline proposal; leave active weights unchanged."""
         return self._run(self._engine.evaluate_learning(user_id=user_id, scopes=scopes,
             surface=surface, config=config, query_groups=query_groups, max_records=max_records))
+
+    def create_ranking_profile(
+        self, proposal: LearningEvaluation, holdout: FullRetrievalEvaluation, *,
+        user_id: str, profile_id: str | UUID | None = None,
+        baseline_profile_id: str | UUID | None = None,
+    ) -> RankingProfile:
+        """Persist a fully gated profile without activating it."""
+        return self._run(self._engine.create_ranking_profile(
+            proposal, holdout, user_id=user_id, profile_id=profile_id,
+            baseline_profile_id=baseline_profile_id,
+        ))
+
+    def evaluate_full_retrieval(
+        self, trials: Sequence[FullRetrievalTrial], *, user_id: str,
+        scopes: list[Scope] | None, proposal_input_checksum: str,
+        memory_artifact_sha256: str, candidate_multipliers: RankingMultipliers,
+        baseline_multipliers: RankingMultipliers | None = None,
+        config: FullRetrievalEvaluationConfig | None = None,
+    ) -> FullRetrievalEvaluation:
+        """Evaluate fresh saved retrieval pairs on a fixed final holdout."""
+        return self._run(self._engine.evaluate_full_retrieval(
+            trials, user_id=user_id, scopes=scopes,
+            proposal_input_checksum=proposal_input_checksum,
+            memory_artifact_sha256=memory_artifact_sha256,
+            candidate_multipliers=candidate_multipliers,
+            baseline_multipliers=baseline_multipliers, config=config,
+        ))
+
+    def get_ranking_profile(
+        self, profile_id: str, *, user_id: str,
+    ) -> RankingProfile | None:
+        return self._run(self._engine.get_ranking_profile(profile_id, user_id=user_id))
+
+    def list_ranking_profiles(
+        self, *, user_id: str, limit: int = 100, after_id: str | None = None,
+    ) -> list[RankingProfile]:
+        return self._run(self._engine.list_ranking_profiles(
+            user_id=user_id, limit=limit, after_id=after_id,
+        ))
+
+    def get_active_ranking_profile(
+        self, *, user_id: str, scopes: list[Scope] | None = None,
+    ) -> RankingProfile | None:
+        return self._run(self._engine.get_active_ranking_profile(
+            user_id=user_id, scopes=scopes,
+        ))
+
+    def get_ranking_profile_status(
+        self, profile_id: str, *, user_id: str,
+    ) -> RankingProfileStatus | None:
+        return self._run(self._engine.get_ranking_profile_status(
+            profile_id, user_id=user_id,
+        ))
+
+    def list_ranking_profile_history(
+        self, *, user_id: str, scopes: list[Scope] | None = None, limit: int = 100,
+    ) -> list[RankingProfileState]:
+        return self._run(self._engine.list_ranking_profile_history(
+            user_id=user_id, scopes=scopes, limit=limit,
+        ))
+
+    def activate_ranking_profile(
+        self, profile_id: str, *, user_id: str,
+        change_id: str | UUID | None = None,
+    ) -> RankingProfileState:
+        return self._run(self._engine.activate_ranking_profile(
+            profile_id, user_id=user_id, change_id=change_id,
+        ))
+
+    def deactivate_ranking_profile(
+        self, *, user_id: str, scopes: list[Scope] | None = None,
+        change_id: str | UUID | None = None,
+    ) -> RankingProfileState | None:
+        return self._run(self._engine.deactivate_ranking_profile(
+            user_id=user_id, scopes=scopes, change_id=change_id,
+        ))
+
+    def rollback_ranking_profile(
+        self, profile_id: str | None, *, user_id: str,
+        scopes: list[Scope] | None = None, change_id: str | UUID | None = None,
+    ) -> RankingProfileState:
+        return self._run(self._engine.rollback_ranking_profile(
+            profile_id, user_id=user_id, scopes=scopes, change_id=change_id,
+        ))
 
     def reinforce(self, node_id: str, evidence_id: str | None = None, *,
                   user_id: str | None = None, request_id: str | UUID | None = None) -> None:

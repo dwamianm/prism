@@ -49,6 +49,39 @@ class RelevanceRepository:
             raise ValueError("Ambiguous retrieval receipt")
         return self._read_receipt(rows[0]["payload"], request_id=request_id, user_id=user_id)
 
+    async def get_receipts(
+        self, request_ids: list[UUID], *, user_id: str,
+    ) -> list[RetrievalReceipt]:
+        """Resolve a bounded receipt set in batches without silent omissions."""
+        self._owner(user_id)
+        if not request_ids or len(request_ids) > 20000:
+            raise ValueError("request_ids must contain from 1 to 20000 UUIDs")
+        identities = [str(UUID(str(request_id))) for request_id in request_ids]
+        if len(identities) != len(set(identities)):
+            raise ValueError("request_ids must be unique")
+        receipts = {}
+        for offset in range(0, len(identities), 200):
+            chunk = identities[offset:offset + 200]
+            placeholders = ",".join(f"${index + 2}" for index in range(len(chunk)))
+            rows = await self._query(
+                "SELECT target_id,payload FROM operations WHERE op_type='RETRIEVAL_REQUEST' "
+                f"AND actor_id=$1 AND target_id IN ({placeholders})",
+                user_id, *chunk,
+            )
+            for row in rows:
+                request_id = str(row["target_id"])
+                if request_id in receipts:
+                    raise ValueError("Ambiguous retrieval receipt")
+                receipt = self._read_receipt(
+                    row["payload"], request_id=request_id, user_id=user_id,
+                )
+                if receipt is None:
+                    raise ValueError("Full retrieval trial references a legacy operation")
+                receipts[request_id] = receipt
+        if set(receipts) != set(identities):
+            raise ValueError("Full retrieval trial references a missing receipt")
+        return [receipts[request_id] for request_id in identities]
+
     @staticmethod
     def _read_receipt(payload, *, request_id, user_id):
         payload = json.loads(payload) if isinstance(payload, str) else payload
