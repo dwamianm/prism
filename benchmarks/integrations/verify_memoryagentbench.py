@@ -261,6 +261,7 @@ def verify(
     if (
         registered_task.get("dataset") != dataset_config.get("dataset")
         or registered_task.get("sub_dataset") != sub_dataset
+        or registered_task.get("query_limit") != dataset_config.get("max_test_queries")
         or not isinstance(registered_contexts, list)
         or registered_task.get("context_count") != len(registered_contexts)
     ):

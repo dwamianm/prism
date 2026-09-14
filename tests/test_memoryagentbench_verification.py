@@ -194,6 +194,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
             "sub_dataset": dataset_config["sub_dataset"],
             "context_count": 1,
             "query_count": 1,
+            "query_limit": None,
             "contexts": [
                 {
                     "context_id": 0,
@@ -273,6 +274,13 @@ def test_registrar_hashes_every_prepared_input() -> None:
         contexts[1]["queries"][0]["answer_sha256"]
         == hashlib.sha256(registrar._canonical(["two"])).hexdigest()
     )
+
+    limited, limited_count = registrar._registered_contexts(
+        chunks, queries, max_chunk_chars=512, max_queries=1
+    )
+    assert limited_count == 1
+    assert len(limited) == 1
+    assert limited[0]["queries"][0]["query_id"] == 0
 
 
 @pytest.mark.parametrize(

@@ -58,6 +58,12 @@ for every prepared source chunk, query, answer, query-to-context assignment,
 configuration file, adapter file, and upstream harness file. It contains no
 model outputs or scores and refuses uncommitted benchmark source code.
 
+For a registered development subset, copy the upstream dataset configuration,
+add a positive `max_test_queries`, register that copied file, and pass the same
+value to upstream `--max_test_queries_ablation`. The registration includes only
+the source contexts the harness reaches before that query limit. Do not apply an
+unregistered command-line cap to a full-task registration.
+
 Then use the upstream entry point with the registered configuration. These
 four commands exercise one representative configuration per competency:
 

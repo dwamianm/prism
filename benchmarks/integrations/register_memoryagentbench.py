@@ -68,12 +68,21 @@ def _registered_contexts(
     query_groups: list[list[tuple[object, ...]]],
     *,
     max_chunk_chars: int,
+    max_queries: int | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     if len(chunks) != len(query_groups) or not chunks:
         raise ValueError("upstream contexts and query groups are empty or misaligned")
+    if max_queries is not None and (
+        isinstance(max_queries, bool)
+        or not isinstance(max_queries, int)
+        or max_queries <= 0
+    ):
+        raise ValueError("max_queries must be a positive integer when provided")
     contexts: list[dict[str, Any]] = []
     query_id = 0
     for context_id, (source_chunks, queries) in enumerate(zip(chunks, query_groups)):
+        if max_queries is not None and query_id >= max_queries:
+            break
         if not source_chunks or not all(
             isinstance(chunk, str) and chunk for chunk in source_chunks
         ):
@@ -82,6 +91,8 @@ def _registered_contexts(
             raise ValueError(f"context {context_id} has no queries")
         registered_queries: list[dict[str, Any]] = []
         for query_data in queries:
+            if max_queries is not None and query_id >= max_queries:
+                break
             if not isinstance(query_data, (list, tuple)) or len(query_data) not in (
                 2,
                 3,
@@ -174,6 +185,13 @@ def register(
         or max_chunk_chars < 512
     ):
         raise ValueError("agent configuration has an invalid PRME chunk limit")
+    max_queries = dataset_config.get("max_test_queries")
+    if max_queries is not None and (
+        isinstance(max_queries, bool)
+        or not isinstance(max_queries, int)
+        or max_queries <= 0
+    ):
+        raise ValueError("dataset configuration has an invalid max_test_queries")
     if chunks is None or query_groups is None:
         with _upstream_imports(upstream_root):
             from conversation_creator import ConversationCreator
@@ -185,6 +203,7 @@ def register(
         chunks,
         query_groups,
         max_chunk_chars=max_chunk_chars,
+        max_queries=max_queries,
     )
 
     upstream_sources = {
@@ -223,6 +242,7 @@ def register(
             "sub_dataset": dataset_config.get("sub_dataset"),
             "context_count": len(contexts),
             "query_count": query_count,
+            "query_limit": max_queries,
             "contexts": contexts,
         },
     }
