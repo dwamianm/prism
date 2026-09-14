@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A matched raw-store versus real `ingest()` evaluation profile for
+  LongMemEval source evidence. Extracted runs freeze the local model digest and
+  full configuration before generation, require durable extraction completion,
+  report source/node materialization coverage, and support an explicit paired
+  profile comparison without presenting source lineage as answer accuracy.
 - Optional, token-counted context guidance with a non-displacement guarantee.
   The packer includes guidance only when it fits after record selection, exposes
   whether it was included, and preserves it through controlled ablation.
@@ -109,6 +114,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Built-in extraction now accepts source-grounded literal personal references
+  such as `I` and `we` without requiring them to be named entities. Each
+  unlisted reference receives one provenance-bound identity within its source
+  event and cannot merge across messages; missing named entities and unsupported
+  citations remain validation errors. Provider citations that differ only in
+  straight or curly quote marks are canonicalized back to the exact source span.
 - Recreate a loaded empty USearch index before its first new insertion, avoiding
   a reproducible native crash after deleting the last vector, closing, reopening,
   and storing another memory.

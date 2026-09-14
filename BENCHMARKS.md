@@ -128,6 +128,38 @@ Shared histories can make queries dependent, so these intervals are descriptive
 and do not establish population-wide superiority. Development results still
 need a frozen held-out confirmation. Timing is deliberately not compared.
 
+To measure the real structured-extraction path, run the same source-only
+selection once with raw notes and once with synchronous `ingest()`. The worker
+writes the selected IDs, source/configuration provenance, and immutable Ollama
+model digest before its first extraction call. Every extraction job must reach
+its durable completion boundary; the report also records source materialization
+coverage and node types. Use the oracle dataset for a bounded extraction study
+and label it accordingly: it does not test retrieval through long-history
+distractors.
+
+```bash
+uv run python -m benchmarks.retrieval_eval \
+  --dataset data/benchmarks/longmemeval/longmemeval_oracle.json \
+  --variant oracle --split dev --limit 12 --seed prme-ingestion-v1 \
+  --ingestion-profile raw --output /tmp/prme-ingestion-raw.json
+uv run python -m benchmarks.retrieval_eval \
+  --dataset data/benchmarks/longmemeval/longmemeval_oracle.json \
+  --variant oracle --split dev --limit 12 --seed prme-ingestion-v1 \
+  --ingestion-profile extracted --extraction-provider ollama \
+  --extraction-model prme-qwen3.5:9b-8k \
+  --extraction-base-url http://127.0.0.1:11434/v1 \
+  --output /tmp/prme-ingestion-extracted.json
+uv run python -m benchmarks.compare_evidence \
+  /tmp/prme-ingestion-raw.json /tmp/prme-ingestion-extracted.json \
+  --allow-profile-change --output /tmp/prme-ingestion-comparison.json
+```
+
+This comparison expands retrieved node provenance back to neutral source-turn
+IDs and then applies the shared source packer. It measures whether extraction
+preserves retrievable source lineage. It does not prove that an extracted node's
+rendered text contains the answer; that requires the separate generated-answer
+and judge layer.
+
 ```bash
 uv sync --dev
 uv run pytest tests/ -q
@@ -156,7 +188,8 @@ of retry-only results and a baseline as a single run.
 Tracked in [#64](https://github.com/dwamianm/prism/issues/64):
 
 - Extend the evidence evaluator's provenance contract to generated-answer runs.
-- Measure `ingest()` extraction independently from `store()` of supplied text.
+- Run and publish a registered `ingest()` versus raw-store source-lineage study,
+  then add generated-answer scoring over the extracted product contexts.
 - Standardize context budgets and preparation across adapters. LoCoMo still uses
   supplied image captions, omits short turns, and builds knowledge profiles only
   in its keyword path. Document or ablate these before claiming a raw-conversation baseline.

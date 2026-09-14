@@ -53,6 +53,18 @@ def test_clock_change_is_explicit_and_not_an_isolated_algorithm_claim():
     assert any("not an isolated algorithm comparison" in item for item in result["limitations"])
 
 
+def test_profile_change_requires_explicit_opt_in_and_is_recorded():
+    before, after = report(), report()
+    after["profile"] = "llm-extracted-source-lineage"
+    with pytest.raises(ValueError, match="profile"):
+        compare(before, after, samples=100)
+    result = compare(before, after, samples=100, allow_profile_change=True)
+    assert result["protocol_changes"]["profile"] == {
+        "before": "raw-turns-static",
+        "after": "llm-extracted-source-lineage",
+    }
+
+
 @pytest.mark.parametrize("failure", ["incomplete", "duplicate", "missing", "dataset", "budget", "labels"])
 def test_comparison_rejects_partial_or_different_measurements(failure):
     before, after = report(), report()

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from collections import Counter
 import hashlib
 import importlib.metadata
 import json
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -33,6 +35,94 @@ from benchmarks.longmemeval import _parse_haystack_date
 
 
 METHODS = ("prme", "bm25", "vector", "rrf", "recent", "none")
+
+
+def _extraction_identity(provider: str, model: str, base_url: str) -> dict:
+    """Resolve immutable local model identity before any extraction calls."""
+    identity = {"provider": provider, "model": model, "base_url": base_url}
+    if provider != "ollama":
+        return {**identity, "model_digest": None}
+    native_url = base_url.rstrip("/")
+    if native_url.endswith("/v1"):
+        native_url = native_url[:-3]
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(native_url + "/api/tags", timeout=10) as response:
+        inventory = json.load(response)
+    matches = [
+        item["digest"] for item in inventory.get("models", ())
+        if item.get("name") == model
+    ]
+    if len(matches) != 1:
+        raise ValueError("Extraction model must resolve to exactly one Ollama tag")
+    return {**identity, "model_digest": matches[0]}
+
+
+def _write_report(path: Path, report: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(report, indent=2, allow_nan=False))
+    temporary.replace(path)
+
+
+def _sources_for_nodes(
+    node_ids: list[str], node_sources: dict[str, list[str]], *, limit: int
+) -> list[str]:
+    """Expand ranked nodes to unique source turns through durable provenance."""
+    ranked: list[str] = []
+    for node_id in node_ids:
+        ranked.extend(node_sources.get(node_id, []))
+    return list(dict.fromkeys(ranked))[:limit]
+
+
+async def _ingest_turns(engine, turns, *, user_id: str, profile: str) -> tuple[dict, dict[str, list[str]]]:
+    """Ingest source-only turns and return extraction coverage plus node lineage."""
+    if profile not in {"raw", "extracted"}:
+        raise ValueError("ingestion profile must be raw or extracted")
+    source_order = {turn.id: position for position, turn in enumerate(turns)}
+    event_sources: dict[str, str] = {}
+    started = time.perf_counter()
+    for turn in turns:
+        kwargs = {
+            "user_id": user_id,
+            "role": turn.role,
+            "session_id": turn.session_id,
+            "metadata": {"source_turn": turn.id},
+            "event_time": _parse_haystack_date(turn.date) if turn.date else None,
+        }
+        if profile == "extracted":
+            event_id = await engine.ingest(
+                turn.content, wait_for_extraction=True, **kwargs
+            )
+            status = await engine.extraction_status(event_id, user_id=user_id)
+            if status is None or status.status != "complete":
+                raise RuntimeError("Extraction did not reach its durable completion boundary")
+        else:
+            event_id = await engine.store(turn.content, node_type=NodeType.NOTE, **kwargs)
+        event_sources[event_id] = turn.id
+
+    node_sources: dict[str, list[str]] = {}
+    materialized_sources: set[str] = set()
+    node_types: Counter[str] = Counter()
+    for event_id, source_id in event_sources.items():
+        nodes = await engine.get_event_nodes(event_id, user_id=user_id)
+        if nodes:
+            materialized_sources.add(source_id)
+        for node in nodes:
+            node_types[node.node_type.value] += 1
+            node_sources.setdefault(str(node.id), []).append(source_id)
+    for sources in node_sources.values():
+        sources.sort(key=source_order.__getitem__)
+    if profile == "raw" and len(materialized_sources) != len(turns):
+        raise RuntimeError("Raw-turn ingestion did not preserve every source")
+    return {
+        "profile": profile,
+        "source_events": len(turns),
+        "materialized_sources": len(materialized_sources),
+        "sources_without_nodes": sorted(set(source_order) - materialized_sources),
+        "materialized_nodes": sum(node_types.values()),
+        "node_types": dict(sorted(node_types.items())),
+        "duration_ms": (time.perf_counter() - started) * 1000,
+    }, node_sources
 
 
 def provenance(config: PRMEConfig) -> dict:
@@ -74,6 +164,7 @@ async def evaluate_question(
     question: dict, config: PRMEConfig, *, budgets, count_tokens, k: int,
     reference_time: datetime | None = None,
     capture_candidates: Path | None = None,
+    ingestion_profile: str = "raw",
 ) -> dict:
     turns, gold = longmemeval_sources(question)
     by_id = {turn.id: turn for turn in turns}
@@ -87,22 +178,9 @@ async def evaluate_question(
             "lexical_path": str(root / "lexical"),
         })
         async with MemoryEngine.open(local) as engine:
-            start = time.perf_counter()
-            for turn in turns:
-                await engine.store(
-                    turn.content, user_id=user_id, role=turn.role,
-                    session_id=turn.session_id, node_type=NodeType.NOTE,
-                    metadata={"source_turn": turn.id},
-                    event_time=_parse_haystack_date(turn.date) if turn.date else None,
-                )
-            ingestion_ms = (time.perf_counter() - start) * 1000
-            nodes = await engine.query_nodes(user_id=user_id, limit=len(turns) + 1)
-            node_sources = {
-                str(n.id): n.metadata["source_turn"] for n in nodes
-                if n.metadata and "source_turn" in n.metadata
-            }
-            if len(node_sources) != len(turns):
-                raise RuntimeError("Raw-turn ingestion did not preserve every source")
+            ingestion, node_sources = await _ingest_turns(
+                engine, turns, user_id=user_id, profile=ingestion_profile
+            )
 
             ranked = {}
             latencies = {}
@@ -127,10 +205,9 @@ async def evaluate_question(
                 capture_candidates.mkdir(parents=True, exist_ok=True)
                 (capture_candidates / filename).write_bytes(raw_snapshot)
                 snapshot_ref = {"filename": filename, "sha256": hashlib.sha256(raw_snapshot).hexdigest()}
-            ranked["prme"] = [
-                node_sources[str(c.node.id)] for c in response.results
-                if str(c.node.id) in node_sources
-            ][:k]
+            ranked["prme"] = _sources_for_nodes(
+                [str(c.node.id) for c in response.results], node_sources, limit=k
+            )
             for method, index in (("bm25", engine._lexical_index), ("vector", engine._vector_index)):
                 start = time.perf_counter()
                 if method == "bm25":
@@ -138,7 +215,9 @@ async def evaluate_question(
                 else:
                     hits = await index.search(question["question"], user_id, k=k)
                 latencies[method] = (time.perf_counter() - start) * 1000
-                ranked[method] = [node_sources[h["node_id"]] for h in hits if h["node_id"] in node_sources]
+                ranked[method] = _sources_for_nodes(
+                    [h["node_id"] for h in hits], node_sources, limit=k
+                )
             ranked["rrf"] = reciprocal_rank_fusion([ranked["bm25"], ranked["vector"]])[:k]
             latencies["rrf"] = latencies["bm25"] + latencies["vector"]
             ranked["recent"] = [t.id for t in sorted(
@@ -171,7 +250,8 @@ async def evaluate_question(
         "question_id": question["question_id"], "category": question["question_type"],
         "abstention": question["question_id"].endswith("_abs"),
         "source_count": len(turns), "evidence_source_ids": sorted(gold),
-        "ingestion_ms": ingestion_ms, "methods": methods,
+        "ingestion_ms": ingestion["duration_ms"], "ingestion": ingestion,
+        "methods": methods,
         "reference_time": response.metadata.reference_time.isoformat(),
         **({"candidate_snapshot": snapshot_ref} if snapshot_ref is not None else {}),
     }
@@ -236,19 +316,33 @@ async def run(args) -> dict:
     if not selected:
         raise ValueError("No questions selected")
     encoding = tiktoken.get_encoding(args.tokenizer)
-    # A named, disclosed raw-turn profile: no inferred QA composites or
-    # asynchronous maintenance. Config variants can be added as ablations.
+    # Both profiles disable inferred QA composites and asynchronous
+    # maintenance so the declared ingestion path is the measured intervention.
+    ingestion_profile = getattr(args, "ingestion_profile", "raw")
+    extraction = {
+        "provider": getattr(args, "extraction_provider", "ollama"),
+        "model": getattr(args, "extraction_model", "qwen3.5:4b"),
+        "base_url": getattr(args, "extraction_base_url", "http://127.0.0.1:11434/v1"),
+        "timeout": getattr(args, "extraction_timeout", 120.0),
+        "max_retries": getattr(args, "extraction_max_retries", 2),
+        "temperature": 0,
+    }
     config = PRMEConfig(
         database_url=None, enable_qa_pairing=False,
         enable_query_reformulation=False, enable_store_supersedence=False,
         enable_surprise_gating=False, enable_reranker=False,
         organizer={"opportunistic_enabled": False},
+        extraction=extraction,
     )
     details = []
     report = {
         "schema_version": 1, "run_id": getattr(args, "run_id", None) or str(uuid4()),
         "started_at": datetime.now(timezone.utc).isoformat(),
-        "kind": "source-evidence-retrieval", "profile": "raw-turns-static",
+        "kind": "source-evidence-retrieval",
+        "profile": (
+            "raw-turns-static" if ingestion_profile == "raw"
+            else "llm-extracted-source-lineage"
+        ),
         "provenance": provenance(config),
         "dataset": {"name": args.dataset.name, "sha256": hashlib.sha256(raw).hexdigest(),
                     "variant": args.variant, "total_questions": len(questions),
@@ -264,12 +358,39 @@ async def run(args) -> dict:
             "Shared whole-turn evaluation packer, not the PRME product packer.",
             "Methods use sequential warm shared indexes within each question; RRF latency sums its components.",
             "Concurrent questions and other machine workloads affect timing; these are not standalone latency SLO measurements.",
-            "Raw NOTE ingestion with QA pairing and opportunistic maintenance disabled.",
+            (
+                "Raw NOTE ingestion with QA pairing and opportunistic maintenance disabled."
+                if ingestion_profile == "raw"
+                else "Public ingest() with synchronous LLM extraction; source metrics expand "
+                     "retrieved node provenance and do not prove the extracted text answers the question."
+            ),
             "Each question uses an isolated temporary local memory pack; configured storage paths are overridden.",
             "Query clock is explicitly selected; question time is not a knowledge-at cutoff.",
         ],
         "details": details,
     }
+    extraction_identity = None
+    if ingestion_profile == "extracted":
+        extraction_identity = _extraction_identity(
+            extraction["provider"], extraction["model"], extraction["base_url"]
+        )
+        report["extraction"] = extraction_identity
+        if extraction_identity["model_digest"] is None:
+            report["limitations"].append(
+                "The configured extraction provider does not expose an immutable model digest."
+            )
+    report.update(
+        registered_at=datetime.now(timezone.utc).isoformat(),
+        elapsed_seconds=0,
+        complete=False,
+        errors=0,
+        coverage=0,
+        summary={},
+        categories={},
+    )
+    # Persist the full source/model/config declaration before any evaluation
+    # task can make an extraction call or observe an outcome.
+    _write_report(args.output, report)
     start = time.perf_counter()
     semaphore = asyncio.Semaphore(args.concurrency)
 
@@ -281,6 +402,7 @@ async def run(args) -> dict:
                     count_tokens=lambda text: len(encoding.encode(text, disallowed_special=())),
                     reference_time=_parse_haystack_date(question["question_date"]) if args.clock == "question" else None,
                     capture_candidates=getattr(args, "capture_candidates", None),
+                    ingestion_profile=ingestion_profile,
                 )
             except Exception as exc:
                 return {"question_id": question["question_id"],
@@ -300,12 +422,16 @@ async def run(args) -> dict:
             categories=category_summary(details, selected, args.budgets),
             updated_at=datetime.now(timezone.utc).isoformat(),
         )
-        args.output.parent.mkdir(parents=True, exist_ok=True)
         # Preserve a reviewable partial report if evaluation is interrupted.
-        temp = args.output.with_suffix(args.output.suffix + ".tmp")
-        temp.write_text(json.dumps(report, indent=2, allow_nan=False))
-        temp.replace(args.output)
+        _write_report(args.output, report)
         print(f"Evaluated {len(details)}/{len(selected)}; errors={errors}", flush=True)
+    if extraction_identity is not None:
+        if _extraction_identity(
+            extraction["provider"], extraction["model"], extraction["base_url"]
+        ) != extraction_identity:
+            report["complete"] = False
+            report["benchmark_error"] = "Extraction model identity changed during the run"
+            _write_report(args.output, report)
     return report
 
 
@@ -321,10 +447,7 @@ def supervise(output: Path, command: list[str], run_id: str) -> dict:
                   "benchmark_error": "Worker did not produce a report for this run"}
     report["process_exit_code"] = completed.returncode
     report["complete"] = bool(report.get("complete") and completed.returncode == 0)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temp = output.with_suffix(output.suffix + ".tmp")
-    temp.write_text(json.dumps(report, indent=2, allow_nan=False))
-    temp.replace(output)
+    _write_report(output, report)
     return report
 
 
@@ -342,6 +465,12 @@ def main():
     parser.add_argument("--budgets", nargs="+", type=int, default=[2048, 4096, 8192])
     parser.add_argument("--tokenizer", default="cl100k_base")
     parser.add_argument("--clock", choices=["question", "wall"], default="question")
+    parser.add_argument("--ingestion-profile", choices=["raw", "extracted"], default="raw")
+    parser.add_argument("--extraction-provider", default="ollama")
+    parser.add_argument("--extraction-model", default="qwen3.5:4b")
+    parser.add_argument("--extraction-base-url", default="http://127.0.0.1:11434/v1")
+    parser.add_argument("--extraction-timeout", type=float, default=120.0)
+    parser.add_argument("--extraction-max-retries", type=int, default=2)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--capture-candidates", type=Path,
                         help="Save source-bearing public response snapshots for offline product-packing replay")
@@ -350,6 +479,10 @@ def main():
     args = parser.parse_args()
     if args.k < 1 or args.concurrency < 1 or args.limit < 0 or any(b < 1 for b in args.budgets):
         parser.error("k, concurrency, and budgets must be positive; limit must be nonnegative")
+    if args.extraction_timeout <= 0 or args.extraction_max_retries < 0:
+        parser.error("extraction timeout must be positive and retries nonnegative")
+    if args.ingestion_profile == "extracted" and args.capture_candidates is not None:
+        parser.error("candidate snapshot replay currently supports raw source nodes only")
     if args.worker:
         report = asyncio.run(run(args))
     else:

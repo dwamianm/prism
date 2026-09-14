@@ -31,7 +31,13 @@ def paired_statistics(pairs: list[tuple[float, float]], *, samples: int = 2000, 
     }
 
 
-def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
+def compare(
+    before: dict,
+    after: dict,
+    *,
+    samples: int = 2000,
+    allow_profile_change: bool = False,
+) -> dict:
     for report in (before, after):
         if not report.get("complete") or report.get("errors"):
             raise ValueError("Comparison requires two complete runs without errors")
@@ -40,9 +46,11 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         ids = [d["question_id"] for d in details]
         if len(ids) != len(set(ids)) or set(ids) != set(selected) or any("error" in d for d in details):
             raise ValueError("Every selected question must have exactly one successful result")
-    for field in ("kind", "profile", "tokenizer", "budgets", "candidate_limit"):
+    for field in ("kind", "tokenizer", "budgets", "candidate_limit"):
         if before[field] != after[field]:
             raise ValueError(f"Cannot compare different {field}")
+    if before["profile"] != after["profile"] and not allow_profile_change:
+        raise ValueError("Cannot compare different profile without explicit opt-in")
     for field in ("sha256", "variant", "split", "split_seed", "selected_question_ids"):
         if before["dataset"][field] != after["dataset"][field]:
             raise ValueError(f"Cannot compare different dataset {field}")
@@ -78,6 +86,10 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
     if any(old[q][field] != new[q][field] for q in ids for field in ("source_count", "evidence_source_ids")):
         raise ValueError("Source corpus or evidence labels differ between runs")
     protocol_changes = {}
+    if before["profile"] != after["profile"]:
+        protocol_changes["profile"] = {
+            "before": before["profile"], "after": after["profile"]
+        }
     for field, default in (("query_clock", "wall"), ("concurrency", 1)):
         before_value, after_value = before.get(field, default), after.get(field, default)
         if before_value != after_value:
@@ -92,6 +104,11 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         limitations.append(
             "Query clocks differ: this delta combines software and evaluation-clock changes; "
             "it is not an isolated algorithm comparison."
+        )
+    if "profile" in protocol_changes:
+        limitations.append(
+            "The declared ingestion profile is the measured intervention; source-lineage "
+            "metrics do not establish that extracted context can answer the question."
         )
     return {
         "kind": "paired-source-evidence-comparison", "selected_queries": len(ids),
@@ -115,8 +132,16 @@ def main():
     parser.add_argument("before", type=Path)
     parser.add_argument("after", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--allow-profile-change", action="store_true",
+        help="Compare matched runs whose declared ingestion profiles differ",
+    )
     args = parser.parse_args()
-    result = compare(json.loads(args.before.read_text()), json.loads(args.after.read_text()))
+    result = compare(
+        json.loads(args.before.read_text()),
+        json.loads(args.after.read_text()),
+        allow_profile_change=args.allow_profile_change,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False))
 

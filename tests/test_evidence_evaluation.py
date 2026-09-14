@@ -113,6 +113,49 @@ async def test_real_engine_evidence_comparison(tmp_path, monkeypatch):
     assert category["methods"]["bm25"]["metrics"]["recall@5"] == 1
 
 
+async def test_real_ingest_profile_tracks_source_lineage(tmp_path, monkeypatch):
+    from benchmarks.retrieval_eval import evaluate_question
+    from prme import PRMEConfig
+    from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
+    from tests.test_durable_ingestion import MockEmbeddingProvider
+
+    class Extractor:
+        provider_name = "test"
+        model_name = "source-citing-test"
+
+        async def extract(self, content, *, role="user"):
+            obj = "Dobsonian telescope" if "telescope" in content else "oatmeal"
+            return ExtractionResult(
+                entities=[
+                    ExtractedEntity(name="I", entity_type="person"),
+                    ExtractedEntity(name=obj, entity_type="concept"),
+                ],
+                facts=[ExtractedFact(
+                    subject="I", predicate="mentioned", object=obj,
+                    evidence_quote=content, confidence=1,
+                    epistemic_type="observed", fact_type="fact",
+                )],
+            )
+
+    monkeypatch.setattr(
+        "prme.storage.engine.create_embedding_provider", lambda _: MockEmbeddingProvider()
+    )
+    monkeypatch.setattr(
+        "prme.ingestion.extraction.create_extraction_provider", lambda _: Extractor()
+    )
+    result = await evaluate_question(
+        question(),
+        PRMEConfig(enable_qa_pairing=False, organizer={"opportunistic_enabled": False}),
+        budgets=[1000], count_tokens=len, k=10, ingestion_profile="extracted",
+    )
+    assert result["ingestion"]["profile"] == "extracted"
+    assert result["ingestion"]["source_events"] == 2
+    assert result["ingestion"]["materialized_sources"] == 2
+    assert result["ingestion"]["sources_without_nodes"] == []
+    assert result["ingestion"]["node_types"]["fact"] == 2
+    assert result["methods"]["prme"]["metrics"]["recall@5"] == 1
+
+
 async def test_concurrent_evaluation_preserves_coverage_and_selection_order(tmp_path, monkeypatch):
     import asyncio
     import json
