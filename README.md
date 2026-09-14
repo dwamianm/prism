@@ -10,11 +10,16 @@ PRME gives AI agents and chatbots stable long-term memory by combining an append
 
 ## Retrieval quality and evaluation
 
-PRME includes synthetic regression scenarios and LoCoMo/LongMemEval adapters.
-There is **no validated current-release accuracy headline yet**. Historical runs
-in `benchmarks/results/` used different configurations, including dataset-provided
-observations and benchmark-only retrieval expansion. They are research artifacts,
-not a reproducible measurement of the current product.
+PRME includes synthetic regression scenarios and pinned LongMemEval-V2 and
+MemoryAgentBench adapters. In the first registered held-out current-product
+answer comparison, PRME scored 80/149 (53.69%) versus 10/149 (6.71%) for the
+same local Qwen 9B reader without memory on deterministic web-small
+LongMemEval-V2 questions. The complete [report and claim boundary](benchmarks/results/research/2026-09-14/LONGMEMEVAL-V2-WEB-UNSEEN-DETERMINISTIC-V1.md)
+include all rows, paired uncertainty, source/configuration hashes, and the
+principal limitation: the PRME arm used a mean 43,195 memory-context tokens.
+This establishes memory utility on that named cohort. It is not a cross-product
+leadership result. Older runs with other configurations remain research
+artifacts unless their own reports establish a complete reproducible protocol.
 
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:

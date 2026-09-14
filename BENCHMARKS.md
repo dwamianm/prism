@@ -1,9 +1,19 @@
 # Measuring retrieval quality
 
-There is no validated v0.11.0 end-to-end accuracy headline. Historical JSON
-files in `benchmarks/results/` remain research artifacts; they are not directly
-comparable with the current harness. The old README table was also internally
-inconsistent. See the [August audit](memory_bank/AUDIT-2026-08-04.md).
+The first registered held-out current-product answer comparison is complete.
+On 149 deterministically scored LongMemEval-V2 web-small questions, PRME scored
+80/149 (53.69%) versus 10/149 (6.71%) for the same local Qwen 9B reader without
+memory. The paired difference was +46.98 points with a question-bootstrap 95%
+interval of +37.58 to +55.70 points. The fail-closed comparator accepted every
+row, official score, source/configuration binding, saved pack identity, and the
+zero-memory contract. See the [complete report](benchmarks/results/research/2026-09-14/LONGMEMEVAL-V2-WEB-UNSEEN-DETERMINISTIC-V1.md).
+
+That run used one reader, one saved memory artifact, no competing memory system,
+and a mean 43,195 PRME memory-context tokens. It establishes memory utility for
+the named cohort, not market leadership. Historical JSON files without a
+complete report and artifact chain remain research artifacts and are not
+directly comparable with the current harness. See the [August audit](memory_bank/AUDIT-2026-08-04.md)
+for the older README table correction.
 
 The September cleanup removes LoCoMo `observation` ingestion, copied answer
 examples, and harness-only query reformulation/entity fan-out. Both LLM adapters
@@ -308,8 +318,12 @@ offline process.
 The [product packing development report](benchmarks/results/packing/2026-09-12/README.md)
 retains the initial capture/replay check and clearly separates it from the broader
 run. The [LongMemEval-V2 assessment](benchmarks/integrations/LONGMEMEVAL_V2.md)
-records the additional agent-trajectory and multimodal evaluation work required;
-V1 source recall is not a substitute for that coverage.
+documents the pinned official adapter, registered runner, and remaining
+multimodal and comparative work. The [MemoryAgentBench integration](benchmarks/integrations/MEMORYAGENTBENCH.md)
+adds outcome-free input registration and fail-closed result verification across
+accurate retrieval, test-time learning, long-range understanding, and conflict
+resolution. Its real-data ingress path passes, but it has no promoted task score
+yet. V1 source recall is not a substitute for either benchmark's task coverage.
 
 Use repeatable `--question-id ID` to reproduce a specific evidence-evaluation
 failure within its original split. It cannot be combined with `--limit`; unknown
