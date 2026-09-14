@@ -120,11 +120,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from returning an empty continuation and avoids promoting generic assistant
   recommendations, explanations, and examples into durable claims.
 - Mixed-quality structured responses now retain source-supported claims while
-  dropping unsupported proposals. A response with no admitted claims completes
-  with an empty claim set while preserving the raw event and any grounded named
-  mentions; missing or ambiguous named references on admitted claims still enter
-  bounded validation retries. Model overreach therefore reduces derived recall
-  instead of failing ingestion availability.
+  dropping malformed or unsupported proposals. A response with no admitted
+  claims completes with an empty claim set while preserving the raw event and any
+  grounded named mentions; missing or ambiguous named references on admitted
+  claims still enter bounded validation retries. Condition and uncertainty
+  validation is scoped to the cited source sentence and directly following
+  qualifiers, preventing unrelated language elsewhere in a paragraph and
+  indirect questions such as “see if” from contaminating the claim. Model
+  overreach therefore reduces derived recall instead of failing ingestion
+  availability.
 - Ollama structured extraction now defaults `reasoning_effort` to `none`, with
   an environment and typed-config override. This prevents thinking traces from
   exhausting the same context window needed for the validated response. Ollama

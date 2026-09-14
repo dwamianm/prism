@@ -62,6 +62,75 @@ def _supporting_passage(quote: str, source: str) -> str | None:
     return source[left:right]
 
 
+_QUALIFYING_CONTINUATION_RE = re.compile(
+    r"(?i)^(?:but\s+)?(?:only\s+if|unless|provided\s+that|as\s+long\s+as|"
+    r"never|except(?:\s+if|\s+when|\s+for)?|however\b)"
+)
+
+
+def _supporting_claim_passage(quote: str, source: str) -> str | None:
+    """Return the source sentence(s) that semantically qualify one claim.
+
+    Stored evidence remains paragraph-complete via :func:`_supporting_passage`.
+    Claim classification needs a narrower span so an unrelated question or
+    hypothetical elsewhere in the paragraph cannot contaminate the claim. A
+    following sentence that begins with a condition or exception remains part
+    of the span so a shortened citation cannot erase a trailing qualifier.
+    """
+    quote = canonical_source_quote(quote, source)
+    if quote is None:
+        return None
+    start = source.find(quote)
+    if source.find(quote, start + 1) != -1:
+        return source
+    end = start + len(quote)
+
+    paragraph_breaks = list(re.finditer(r"\n\s*\n", source))
+    paragraph_start = max(
+        (match.end() for match in paragraph_breaks if match.end() <= start),
+        default=0,
+    )
+    paragraph_end = min(
+        (match.start() for match in paragraph_breaks if match.start() >= end),
+        default=len(source),
+    )
+    paragraph = source[paragraph_start:paragraph_end]
+    relative_start = start - paragraph_start
+    relative_end = end - paragraph_start
+    boundaries = list(re.finditer(r"[.!?](?:[\"')\]]*)?(?=\s+|$)", paragraph))
+
+    sentence_start = max(
+        (match.end() for match in boundaries if match.end() <= relative_start),
+        default=0,
+    )
+    while sentence_start < len(paragraph) and paragraph[sentence_start].isspace():
+        sentence_start += 1
+    sentence_end = next(
+        (match.end() for match in boundaries if match.end() >= relative_end),
+        len(paragraph),
+    )
+
+    while sentence_end < len(paragraph):
+        continuation_start = sentence_end
+        while (
+            continuation_start < len(paragraph)
+            and paragraph[continuation_start].isspace()
+        ):
+            continuation_start += 1
+        if not _QUALIFYING_CONTINUATION_RE.match(paragraph[continuation_start:]):
+            break
+        sentence_end = next(
+            (
+                match.end()
+                for match in boundaries
+                if match.end() > continuation_start
+            ),
+            len(paragraph),
+        )
+
+    return paragraph[sentence_start:sentence_end].strip()
+
+
 def validate_grounding(
     result: ExtractionResult, source_text: str
 ) -> ExtractionResult:

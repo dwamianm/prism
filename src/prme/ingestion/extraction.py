@@ -11,13 +11,17 @@ from __future__ import annotations
 import asyncio
 import os
 import re
-from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 import structlog
-from pydantic import Field, SecretStr, ValidationInfo, model_validator
+from pydantic import Field, SecretStr, ValidationError, ValidationInfo, model_validator
 
 from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
-from prme.ingestion.grounding import _mentioned, _supporting_passage
+from prme.ingestion.grounding import (
+    _mentioned,
+    _supporting_claim_passage,
+    _supporting_passage,
+)
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
 from prme.ingestion.entity_references import reference_errors
 
@@ -32,6 +36,11 @@ _EXPLICIT_CONDITION_RE = re.compile(
     r"\b(?:if|unless|provided\s+that|as\s+long\s+as|only\s+if)\b",
     re.IGNORECASE,
 )
+_INDIRECT_QUESTION_IF_RE = re.compile(
+    r"\b(?:ask(?:ed|ing)?|check(?:ed|ing)?|curious|determin(?:e|ed|ing)|"
+    r"find(?:ing)?\s+out|know|see|wonder(?:ed|ing)?)\s+if\b",
+    re.IGNORECASE,
+)
 _UNCERTAINTY_RE = re.compile(
     r"(?i:\b(?:might|could|possibly|perhaps|maybe)\b)|\bmay\b"
 )
@@ -42,9 +51,15 @@ _EXPLICIT_DECISION_RE = re.compile(
 )
 
 
+def _has_explicit_condition(evidence_quote: str) -> bool:
+    """Recognize contingent clauses without treating indirect questions as conditions."""
+    without_indirect_questions = _INDIRECT_QUESTION_IF_RE.sub("", evidence_quote)
+    return _EXPLICIT_CONDITION_RE.search(without_indirect_questions) is not None
+
+
 def _validate_condition(epistemic_type: str, condition: str | None, evidence_quote: str) -> None:
     """Require explicit conditional syntax to remain typed and auditable."""
-    has_explicit_condition = _EXPLICIT_CONDITION_RE.search(evidence_quote) is not None
+    has_explicit_condition = _has_explicit_condition(evidence_quote)
     if has_explicit_condition and epistemic_type != "conditional":
         raise ValueError("an explicit if/unless condition requires epistemic_type conditional")
     if epistemic_type == "conditional":
@@ -63,37 +78,45 @@ def _validate_modality(
         raise ValueError("might/may/could claims require hypothetical or conditional epistemic_type")
     if (
         fact_type == "decision"
-        and (uncertain or _EXPLICIT_CONDITION_RE.search(evidence_quote))
+        and (uncertain or _has_explicit_condition(evidence_quote))
         and _EXPLICIT_DECISION_RE.search(evidence_quote) is None
     ):
         raise ValueError("a contingent future action is not a decision without an explicit choice or commitment")
 
 
 def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
-    evidence_quote = _supporting_passage(fact.evidence_quote or "", source)
-    if evidence_quote is None:
+    claim_passage = _supporting_claim_passage(fact.evidence_quote or "", source)
+    evidence_passage = _supporting_passage(fact.evidence_quote or "", source)
+    if claim_passage is None or evidence_passage is None:
         raise ValueError("evidence_quote must be copied verbatim from the source")
-    fact.evidence_quote = evidence_quote
-    if not _mentioned(fact.subject, evidence_quote) or not _mentioned(fact.object, evidence_quote):
+    if not _mentioned(fact.subject, claim_passage) or not _mentioned(fact.object, claim_passage):
         raise ValueError("subject and object must occur in evidence_quote")
-    _validate_condition(fact.epistemic_type, fact.condition, evidence_quote)
-    _validate_modality(fact.fact_type, fact.epistemic_type, evidence_quote)
+    _validate_condition(fact.epistemic_type, fact.condition, claim_passage)
+    _validate_modality(fact.fact_type, fact.epistemic_type, claim_passage)
+    fact.evidence_quote = evidence_passage
 
 
 def _validate_relationship_source_support(
     relationship: ExtractedRelationship, source: str
 ) -> None:
-    evidence_quote = _supporting_passage(relationship.evidence_quote or "", source)
-    if evidence_quote is None:
+    claim_passage = _supporting_claim_passage(
+        relationship.evidence_quote or "", source
+    )
+    evidence_passage = _supporting_passage(
+        relationship.evidence_quote or "", source
+    )
+    if claim_passage is None or evidence_passage is None:
         raise ValueError("relationship evidence_quote must be copied verbatim from the source")
-    relationship.evidence_quote = evidence_quote
     if (
-        not _mentioned(relationship.source_entity, evidence_quote)
-        or not _mentioned(relationship.target_entity, evidence_quote)
+        not _mentioned(relationship.source_entity, claim_passage)
+        or not _mentioned(relationship.target_entity, claim_passage)
     ):
         raise ValueError("relationship endpoints must occur in evidence_quote")
-    _validate_condition(relationship.epistemic_type, relationship.condition, evidence_quote)
-    _validate_modality("fact", relationship.epistemic_type, evidence_quote)
+    _validate_condition(
+        relationship.epistemic_type, relationship.condition, claim_passage
+    )
+    _validate_modality("fact", relationship.epistemic_type, claim_passage)
+    relationship.evidence_quote = evidence_passage
 
 
 class _CitedFact(ExtractedFact):
@@ -119,6 +142,35 @@ class _CitedRelationship(ExtractedRelationship):
 class _CitedExtractionResult(ExtractionResult):
     facts: list[_CitedFact] = Field(default_factory=list)
     relationships: list[_CitedRelationship] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def discard_malformed_claims(cls, value: Any) -> Any:
+        """Keep one malformed claim from invalidating supported siblings."""
+        if not isinstance(value, dict):
+            return value
+        cleaned = dict(value)
+        for field_name, model in (
+            ("facts", _CitedFact),
+            ("relationships", _CitedRelationship),
+        ):
+            items = value.get(field_name)
+            if not isinstance(items, list):
+                continue
+            admitted = []
+            for index, item in enumerate(items):
+                try:
+                    model.model_validate(item)
+                except (ValidationError, TypeError):
+                    logger.warning(
+                        "extraction_claim_discarded",
+                        path=f"{field_name}[{index}]",
+                        reason="malformed claim fields",
+                    )
+                else:
+                    admitted.append(item)
+            cleaned[field_name] = admitted
+        return cleaned
 
     @model_validator(mode="after")
     def supported_closed_references(self, info: ValidationInfo):

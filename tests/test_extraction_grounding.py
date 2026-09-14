@@ -51,7 +51,7 @@ def test_repeated_quote_keeps_both_distinct_qualifications():
     assert result.facts[0].evidence_quote == source
 
 
-def test_builtin_fact_requires_explicit_polarity():
+def test_builtin_drops_fact_without_explicit_polarity():
     payload = {
         "entities": [{"name": "Alice", "entity_type": "person"}],
         "facts": [{
@@ -61,10 +61,120 @@ def test_builtin_fact_requires_explicit_polarity():
             "evidence_quote": "Alice likes tea.",
         }],
     }
-    with pytest.raises(ValidationError, match="polarity"):
-        _CitedExtractionResult.model_validate(
-            payload, context={"source_text": "Alice likes tea."}
-        )
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": "Alice likes tea."}
+    )
+    assert result.facts == []
+
+
+def test_builtin_keeps_valid_sibling_when_another_fact_is_malformed():
+    source = "Alice uses email and likes tea."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [
+            {
+                "subject": "Alice",
+                "predicate": "uses",
+                "object": "email",
+                "polarity": "positive",
+                "evidence_quote": source,
+            },
+            {
+                "subject": "Alice",
+                "predicate": "likes",
+                "object": None,
+                "polarity": "positive",
+                "evidence_quote": source,
+            },
+        ],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert [(item.predicate, item.object) for item in result.facts] == [
+        ("uses", "email")
+    ]
+
+
+def test_builtin_still_rejects_a_malformed_claim_envelope():
+    with pytest.raises(ValidationError, match="facts"):
+        _CitedExtractionResult.model_validate({"facts": {"object": None}})
+
+
+def test_unrelated_condition_in_same_paragraph_does_not_contaminate_claim():
+    source = "Alice uses email. Can you help if you have time?"
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": "Alice uses email.",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+    assert result.facts[0].evidence_quote == source
+
+
+def test_following_condition_sentence_still_qualifies_claim():
+    source = "Alice uses email. Only if her manager approves."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": "Alice uses email.",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+    payload["facts"][0].update({
+        "epistemic_type": "conditional",
+        "condition": "her manager approves",
+    })
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].condition == "her manager approves"
+
+
+def test_indirect_question_if_is_not_a_claim_condition():
+    source = "I will visit local antique dealers to see if they have information."
+    payload = {
+        "entities": [
+            {"name": "local antique dealers", "entity_type": "organization"}
+        ],
+        "facts": [{
+            "subject": "I",
+            "predicate": "will visit",
+            "object": "local antique dealers",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+
+    source = "I will visit local antique dealers if they have information."
+    payload["facts"][0]["evidence_quote"] = source
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
 
 
 @pytest.mark.parametrize("condition", [None, "manager approval"])

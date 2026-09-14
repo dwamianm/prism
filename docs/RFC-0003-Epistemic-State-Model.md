@@ -84,21 +84,26 @@ The prompt does not evaluate conditions or automatically reclassify saved record
 
 Extraction requests an exact `evidence_quote` for each fact and relationship. Validation requires
 a real source passage and complete subject/object mentions, avoiding matches such
-as “Ann” inside “Marianne”. A citation expands to its surrounding paragraphs so
-a genuine substring cannot silently omit a trailing condition. Fact content is
-that source passage; the model's subject/predicate/object stays in metadata.
+as “Ann” inside “Marianne”. Stored evidence expands to its surrounding paragraph
+so a genuine substring cannot silently omit a trailing qualification. Condition
+and uncertainty classification uses the cited source sentence plus any following
+condition or exception sentence. This prevents an unrelated hypothetical or
+request elsewhere in the paragraph from changing the claim's epistemic type.
+Indirect questions such as “see if” and “wondering if” are not treated as
+logical preconditions.
+Fact content is the paragraph-complete source passage; the model's
+subject/predicate/object stays in metadata.
 Custom providers that omit citations use the complete message as support and
 must still supply source-supported subject and object values. This deliberately
 rejects unsupported paraphrased object values.
 The built-in Instructor provider requires citations in its response schema and
-passes the source to local validation, allowing its configured validation retries
-to repair structural schema and admitted-reference failures. Claim proposals
-that overstate certainty, omit source support, or otherwise fail semantic
-admission are dropped independently. This applies even when every proposed claim
-is rejected: the immutable raw event remains successful and searchable instead
-of becoming failed extraction work. Missing or ambiguous named references on a
-claim that otherwise passes admission still reject the response as a structural
-integrity error.
+passes the source to local validation. Malformed fact and relationship items are
+dropped independently, as are claim proposals that overstate certainty, omit
+source support, or otherwise fail semantic admission. A malformed list envelope
+or a missing or ambiguous named reference on a claim that otherwise passes
+admission still enters bounded validation retries. This applies even when every
+proposed claim is rejected: the immutable raw event remains successful and
+searchable instead of becoming failed extraction work.
 Source-role admission guidance limits assistant messages to durable conversation
 state such as commitments, completed actions, and explicitly attributed user or
 project facts. Generic recommendations, explanations, background knowledge, and

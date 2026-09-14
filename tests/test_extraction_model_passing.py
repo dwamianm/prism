@@ -132,16 +132,16 @@ async def test_configured_timeout_cancels_a_stalled_provider():
     {"subject": "Alice", "predicate": "uses", "object": "email"},
     {"subject": "Alice", "predicate": "uses", "object": "email", "evidence_quote": "Alice always uses email"},
 ])
-async def test_provider_schema_requests_retry_for_missing_required_support(fact):
-    from pydantic import ValidationError
-
+async def test_provider_schema_drops_claims_missing_required_support(fact):
     provider = InstructorExtractionProvider("openai/gpt-4o-mini")
     client = _mock_client()
     with patch.object(provider, "_ensure_client", return_value=client):
         await provider.extract("Alice uses email")
     args = client.create.await_args.kwargs
-    with pytest.raises(ValidationError):
-        args["response_model"].model_validate({"facts": [fact]}, context=args["context"])
+    result = args["response_model"].model_validate(
+        {"facts": [fact]}, context=args["context"]
+    )
+    assert result.facts == []
 
 
 async def test_provider_schema_drops_a_fabricated_claim_without_failing_the_event():

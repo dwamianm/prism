@@ -367,6 +367,15 @@ provider's bounded schema retries. When the same name has different types, use
 `target_entity_type` to select the
 intended entity. PRME does not guess aliases from substring similarity.
 
+A malformed individual fact or relationship cannot invalidate valid siblings or
+the immutable source event; PRME drops that item and continues. Malformed list
+envelopes and unresolved named references still use bounded provider retries.
+Stored evidence remains paragraph-complete, while condition and uncertainty
+checks use only the claim's cited sentence and an immediately following
+qualification. This keeps unrelated questions and hypotheticals in the same
+message from contaminating an otherwise factual claim; indirect questions such
+as “see if” do not become logical conditions.
+
 Custom-provider and historical facts with unresolved subjects remain searchable.
 Their node metadata reports `subject_link_status` as `missing` or `ambiguous`,
 and no guessed graph link is created. Resolved subjects report `resolved`.

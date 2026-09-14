@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from pydantic import ValidationError
 
 from prme import MemoryEngine
 from prme.ingestion.extraction import _CitedExtractionResult
@@ -27,15 +26,19 @@ def extraction(source, *, epistemic="hypothetical"):
 
 @pytest.mark.parametrize("field,value", [("evidence_quote", None),
                                           ("epistemic_type", None), ("epistemic_type", "deprecated")])
-def test_builtin_relationships_require_supported_citations_and_epistemic_types(field, value):
+def test_builtin_drops_relationships_missing_required_citations_or_epistemic_types(
+    field, value
+):
     source = "Alice might work at Acme."
     payload = extraction(source).model_dump()
     if value is None:
         del payload["relationships"][0][field]
     else:
         payload["relationships"][0][field] = value
-    with pytest.raises(ValidationError):
-        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.relationships == []
 
 
 def test_builtin_drops_relationship_with_unsupported_citation():
