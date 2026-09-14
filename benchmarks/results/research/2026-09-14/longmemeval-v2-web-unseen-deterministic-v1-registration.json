@@ -60,6 +60,7 @@
     "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
     "model_modelfile_sha256": "f9faf665e9a9e2435765e8d343635db296e8d11ac5bb1b028434bec11dff8f10",
     "reasoning_effort": "none",
+    "reader_enable_thinking": false,
     "temperature": 0.6,
     "top_p": 0.95,
     "top_k": 20,
