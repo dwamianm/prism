@@ -245,9 +245,13 @@ judge-dependent categories before generalizing answer quality.
 A pinned [MemoryAgentBench integration](../benchmarks/integrations/MEMORYAGENTBENCH.md)
 now supports the benchmark's four incremental competency families using the 4K
 product packer, complete source manifests, stable query clocks, and exact context
-capture. Its contract tests, pinned-tree installation, and one-context real-data
-ingress smoke across all four families pass, but no task score has been promoted.
-Run a registered common-reader matrix next. Treat its
+capture. The fail-closed workflow preregisters every prepared source, query,
+reference and context assignment, then verifies complete result metrics against
+bounded recounted contexts, durable receipts and the exact source manifests. Its
+contract tests, pinned-tree installation, a real-data 500-query EventQA
+registration dry run, and one-context real-data ingress smoke across all four
+families pass, but no task score has been promoted. Run the registered
+common-reader matrix next. Treat its
 test-time-learning arm as retrieved in-context demonstrations and its conflict
 arm as numbered-source resolution; separate experiments are still required for
 scoped ranking-profile learning and transactional graph supersedence.

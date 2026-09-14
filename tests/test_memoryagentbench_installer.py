@@ -42,10 +42,12 @@ def upstream_layout(root: Path) -> None:
         encoding="utf-8",
     )
     (root / "initialization.py").write_text(
-        """    if any(agent_type in agent_name for agent_type in ["mem0", "cognee", "letta", "zep"]):
-        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)
-        return f"{base_path}/exp_{current_context_index}"
-""",
+        "        answer = (saved_data_entry['answer'][0] \n"
+        "                 if isinstance(saved_data_entry['answer'], list) \n"
+        "                 else saved_data_entry['answer'])\n\n"
+        '    if any(agent_type in agent_name for agent_type in ["mem0", "cognee", "letta", "zep"]):\n'
+        "        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)\n"
+        '        return f"{base_path}/exp_{current_context_index}"\n',
         encoding="utf-8",
     )
 
@@ -72,6 +74,8 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert f'revision="{installer.DATASET_REVISION}"' in data
     initialization = (tmp_path / "initialization.py").read_text(encoding="utf-8")
     assert "prme_{dataset_config['sub_dataset']}" in initialization
+    assert "answer = saved_data_entry['answer']" in initialization
+    assert "saved_data_entry['answer'][0]" not in initialization
 
 
 def test_installer_rejects_revision_drift_and_rolls_back(

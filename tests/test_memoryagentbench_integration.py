@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -19,7 +20,9 @@ class FakeCompletions:
     def create(self, **kwargs):
         self.messages = kwargs["messages"]
         return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content="Place Order once"))],
+            choices=[
+                SimpleNamespace(message=SimpleNamespace(content="Place Order once"))
+            ],
             usage=SimpleNamespace(prompt_tokens=321, completion_tokens=4),
         )
 
@@ -43,13 +46,15 @@ def fake_agent(root: Path, *, budget: int = 4096) -> FakeAgent:
     agent._reader_completions = completions
     agent._create_oai_client = lambda: reader
     agent._extract_retrieval_query = lambda message: message.rsplit("Question:", 1)[-1]
-    agent._create_standard_response = lambda output, input_tokens, output_tokens, memory_time, query_time: {
-        "output": output,
-        "input_len": input_tokens,
-        "output_len": output_tokens,
-        "memory_construction_time": memory_time,
-        "query_time_len": query_time,
-    }
+    agent._create_standard_response = (
+        lambda output, input_tokens, output_tokens, memory_time, query_time: {
+            "output": output,
+            "input_len": input_tokens,
+            "output_len": output_tokens,
+            "memory_construction_time": memory_time,
+            "query_time_len": query_time,
+        }
+    )
     adapter.initialize_prme_agent(
         agent,
         {
@@ -121,6 +126,23 @@ def test_adapter_preserves_text_and_round_trips_pack(
         )
         assert retrieval["context_sha256"]
         assert retrieval["request_id"]
+        assert retrieval["adapter_schema_version"] == 2
+        assert retrieval["sub_dataset"] == "eventqa_65536"
+        assert retrieval["query_id"] == 3
+        assert retrieval["context_id"] == 7
+        assert retrieval["receipt_persisted"] is True
+        assert 0 < retrieval["context_token_count"] <= retrieval["token_budget"]
+        assert retrieval["included_count"] > 0
+        assert (
+            retrieval["query_sha256"]
+            == hashlib.sha256(
+                b"Question: What should be clicked only once?"
+            ).hexdigest()
+        )
+        assert (
+            retrieval["manifest_sha256"]
+            == hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        )
     finally:
         adapter._close_client(agent)
 

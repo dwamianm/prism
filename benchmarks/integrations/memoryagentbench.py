@@ -31,7 +31,7 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 1
+ADAPTER_SCHEMA_VERSION = 2
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
@@ -139,13 +139,13 @@ def _split_units(text: str, limit: int) -> list[str]:
     return chunks or [text]
 
 
-def initialize_prme_agent(agent: Any, agent_config: dict[str, object] | None = None) -> None:
+def initialize_prme_agent(
+    agent: Any, agent_config: dict[str, object] | None = None
+) -> None:
     """Initialize a lazy, persistent PRME pack for one upstream context."""
     config = agent_config or {}
     agent.retrieve_num = int(config.get("retrieve_num", _DEFAULT_RESULT_LIMIT))
-    agent.prme_result_limit = int(
-        config.get("prme_result_limit", agent.retrieve_num)
-    )
+    agent.prme_result_limit = int(config.get("prme_result_limit", agent.retrieve_num))
     agent.prme_token_budget = int(
         config.get("prme_token_budget", _DEFAULT_TOKEN_BUDGET)
     )
@@ -170,7 +170,6 @@ def initialize_prme_agent(agent: Any, agent_config: dict[str, object] | None = N
     agent.prme_ingest_started = None
     agent.prme_ingest_seconds = 0.0
     agent.prme_report_ingest = False
-    agent.prme_closed = False
 
 
 def _begin_ingestion(agent: Any) -> None:
@@ -286,7 +285,9 @@ def load_prme_agent(agent: Any) -> None:
         != hashlib.sha256(_canonical(identity)).hexdigest()
         or manifest.get("status") != "complete"
     ):
-        raise RuntimeError("saved PRME MemoryAgentBench pack is incompatible or incomplete")
+        raise RuntimeError(
+            "saved PRME MemoryAgentBench pack is incompatible or incomplete"
+        )
     raw_time = manifest.get("query_reference_time")
     if not isinstance(raw_time, str):
         raise RuntimeError("saved PRME MemoryAgentBench pack has no query clock")
@@ -317,20 +318,32 @@ def _save_retrieval(
     *,
     query_id: int | None,
     context_id: int | None,
+    query: str,
     retrieval_context: str,
     request_id: str,
+    context_token_count: int,
+    included_count: int,
+    receipt_persisted: bool,
 ) -> None:
     root = Path(agent.output_dir) / "prme_retrievals" / agent.sub_dataset
     root.mkdir(parents=True, exist_ok=True)
     path = root / f"query_{query_id}_context_{context_id}.json"
+    manifest_path = agent.prme_pack_path / _MANIFEST_NAME
     payload = {
         "adapter_schema_version": ADAPTER_SCHEMA_VERSION,
         "upstream_revision": UPSTREAM_REVISION,
         "dataset_revision": DATASET_REVISION,
+        "sub_dataset": agent.sub_dataset,
+        "query_id": query_id,
+        "context_id": context_id,
+        "query_sha256": hashlib.sha256(query.encode("utf-8")).hexdigest(),
         "request_id": request_id,
-        "context_sha256": hashlib.sha256(
-            retrieval_context.encode("utf-8")
-        ).hexdigest(),
+        "receipt_persisted": receipt_persisted,
+        "token_budget": agent.prme_token_budget,
+        "context_token_count": context_token_count,
+        "included_count": included_count,
+        "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+        "context_sha256": hashlib.sha256(retrieval_context.encode("utf-8")).hexdigest(),
         "context": retrieval_context,
     }
     path.write_bytes(_canonical(payload) + b"\n")
@@ -388,8 +401,12 @@ def handle_prme_agent(
         agent,
         query_id=query_id,
         context_id=context_id,
+        query=message,
         retrieval_context=retrieval_context,
         request_id=str(response.metadata.request_id),
+        context_token_count=response.bundle.tokens_used,
+        included_count=response.bundle.included_count,
+        receipt_persisted=response.metadata.receipt_persisted,
     )
     return agent._create_standard_response(
         completion.choices[0].message.content,

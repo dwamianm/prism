@@ -14,8 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   balanced packer, pins the upstream dataset revision, fences completed source
   ingestion for restart, and saves exact retrieved contexts and request
   identities. Task-qualified state paths prevent cross-suite pack reuse. The
-  installer is idempotent and rolls back partial changes. This is an evaluation
-  path; no MemoryAgentBench task score is claimed yet.
+  installer is idempotent, rolls back partial changes, and preserves list-valued
+  references across upstream resume. Outcome-free registration hashes every
+  prepared source, query, answer, context assignment, configuration and harness
+  file; post-run verification requires exact registered inputs, complete metrics,
+  bounded recounted contexts, durable receipts, and completed source manifests.
+  This is an evaluation path; no MemoryAgentBench task score is claimed yet.
 - Durable, atomic hierarchical summary publication. Daily, weekly and monthly
   excerpts use stable owner/scope/level/period lineages, deterministic request
   generations, checksummed preparation, fenced index staging and transactional

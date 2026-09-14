@@ -91,6 +91,12 @@ _PATCHES = {
             '        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)\n'
             '        return f"{base_path}/exp_{current_context_index}"\n',
         ),
+        (
+            "        answer = (saved_data_entry['answer'][0] \n"
+            "                 if isinstance(saved_data_entry['answer'], list) \n"
+            "                 else saved_data_entry['answer'])\n",
+            "        answer = saved_data_entry['answer']\n",
+        ),
     ),
 }
 

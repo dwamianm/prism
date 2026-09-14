@@ -38,8 +38,28 @@ install.
 
 ## Run
 
-Use the upstream entry point with any released data configuration. These four
-commands exercise one representative configuration per competency:
+Create a registration before the first reader call. Run this from a clean,
+frozen PRME worktree and write the registration outside that worktree so adding
+the artifact cannot change the evaluated commit:
+
+```sh
+PRME_REVISION=$(git -C /absolute/path/to/prme rev-parse HEAD)
+python -m benchmarks.integrations.register_memoryagentbench \
+  --prme-root /absolute/path/to/prme \
+  --upstream-root /absolute/path/to/MemoryAgentBench \
+  --agent-config /absolute/path/to/MemoryAgentBench/configs/agent_conf/RAG_Agents/gpt-4o-mini/PRME_gpt-4o-mini.yaml \
+  --dataset-config /absolute/path/to/MemoryAgentBench/configs/data_conf/Accurate_Retrieval/EventQA/Eventqa_64k.yaml \
+  --expected-prme-revision "$PRME_REVISION" \
+  --output /absolute/path/to/run/eventqa-registration.json
+```
+
+The registrar uses the pinned upstream preprocessing path. It records hashes
+for every prepared source chunk, query, answer, query-to-context assignment,
+configuration file, adapter file, and upstream harness file. It contains no
+model outputs or scores and refuses uncommitted benchmark source code.
+
+Then use the upstream entry point with the registered configuration. These
+four commands exercise one representative configuration per competency:
 
 ```sh
 python main.py \
@@ -58,6 +78,26 @@ python main.py \
   --agent_config configs/agent_conf/RAG_Agents/gpt-4o-mini/PRME_gpt-4o-mini.yaml \
   --dataset_config configs/data_conf/Conflict_Resolution/Factconsolidation_mh_6k.yaml
 ```
+
+After a task completes, verify the result before reading or publishing its
+aggregate score:
+
+```sh
+python -m benchmarks.integrations.verify_memoryagentbench \
+  --prme-root /absolute/path/to/prme \
+  --upstream-root /absolute/path/to/MemoryAgentBench \
+  --registration /absolute/path/to/run/eventqa-registration.json \
+  --result /absolute/path/to/MemoryAgentBench/outputs/prme-gpt-4o-mini/Accurate_Retrieval/RESULT_FILE.json \
+  --agent-config /absolute/path/to/MemoryAgentBench/configs/agent_conf/RAG_Agents/gpt-4o-mini/PRME_gpt-4o-mini.yaml \
+  --dataset-config /absolute/path/to/MemoryAgentBench/configs/data_conf/Accurate_Retrieval/EventQA/Eventqa_64k.yaml \
+  --output /absolute/path/to/run/eventqa-verification.json
+```
+
+Verification requires complete, ordered result rows and metrics, exact
+registered inputs, one context capture per query, valid PRME request IDs,
+durable retrieval receipts, exact token recounts within the registered budget,
+and completed memory manifests with every registered source chunk. A mismatch
+stops verification instead of producing a partial report.
 
 The checked-in configuration uses the same `gpt-4o-mini` temperature and
 reader family as the upstream memory baselines. For an explicitly labelled
@@ -89,15 +129,23 @@ packs fail closed. A completed pack reuses its stored UTC query clock, so
 retrieval ranking does not drift when a run resumes later.
 
 Every query writes the complete rendered context, its SHA-256 digest, the PRME
-retrieval request ID, and both pinned revisions under the configured output
-directory. The reader layout matches the upstream BM25 baseline: retrieved
-memory precedes the unchanged formatted question under the common system
-message.
+retrieval request ID, query and context identity, measured token and entry
+counts, receipt durability, completed-manifest hash, and both pinned revisions
+under the configured output directory. The reader layout matches the upstream
+BM25 baseline: retrieved memory precedes the unchanged formatted question under
+the common system message.
 
 MemoryAgentBench reuses saved agent directories even with its `--force` option.
 A genuinely fresh arm therefore needs an absent agent directory and output
 file. Preserve the old artifacts, then select a new experiment path or remove
 the scratch state before launch.
+
+The installer also fixes the pinned upstream resume path so list-valued
+reference answers remain lists. Without that patch, resuming converts them to a
+single scalar and can change evaluation inputs. Timing checkpoint arrays in the
+upstream output cover only the current process after a resume; the verifier
+accepts that narrow timing limitation while still requiring every result,
+metric, retrieval capture, and registered input.
 
 ## Interpretation boundary
 
