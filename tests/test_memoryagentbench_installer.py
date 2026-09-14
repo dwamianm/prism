@@ -41,6 +41,13 @@ def upstream_layout(root: Path) -> None:
         'raw_data = load_dataset(dataset_name, split=split_name, revision="main")\n',
         encoding="utf-8",
     )
+    (root / "initialization.py").write_text(
+        """    if any(agent_type in agent_name for agent_type in ["mem0", "cognee", "letta", "zep"]):
+        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)
+        return f"{base_path}/exp_{current_context_index}"
+""",
+        encoding="utf-8",
+    )
 
 
 def test_installer_is_idempotent_and_pins_dataset(
@@ -63,6 +70,8 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert agent.count("load_prme_agent") == 2
     data = (tmp_path / "utils" / "eval_data_utils.py").read_text(encoding="utf-8")
     assert f'revision="{installer.DATASET_REVISION}"' in data
+    initialization = (tmp_path / "initialization.py").read_text(encoding="utf-8")
+    assert "prme_{dataset_config['sub_dataset']}" in initialization
 
 
 def test_installer_rejects_revision_drift_and_rolls_back(

@@ -78,6 +78,20 @@ _PATCHES = {
             + '")',
         ),
     ),
+    "initialization.py": (
+        (
+            '    if any(agent_type in agent_name for agent_type in ["mem0", "cognee", "letta", "zep"]):\n'
+            '        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)\n'
+            '        return f"{base_path}/exp_{current_context_index}"\n',
+            '    if "prme" in agent_name:\n'
+            '        base_path = (f"./agents/prme_{dataset_config[\'sub_dataset\']}"\n'
+            '                     f"_model{agent_config[\'model\']}")\n'
+            '        return f"{base_path}/exp_{current_context_index}"\n'
+            '    elif any(agent_type in agent_name for agent_type in ["mem0", "cognee", "letta", "zep"]):\n'
+            '        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)\n'
+            '        return f"{base_path}/exp_{current_context_index}"\n',
+        ),
+    ),
 }
 
 
@@ -98,7 +112,13 @@ def _checkout_revision(root: Path) -> str:
 def _require_upstream_layout(root: Path) -> tuple[Path, Path]:
     agent = root / "agent.py"
     data = root / "utils" / "eval_data_utils.py"
-    if not agent.is_file() or not data.is_file() or not (root / "methods").is_dir():
+    initialization = root / "initialization.py"
+    if (
+        not agent.is_file()
+        or not data.is_file()
+        or not initialization.is_file()
+        or not (root / "methods").is_dir()
+    ):
         raise RuntimeError(f"not a MemoryAgentBench checkout: {root}")
     return root / "methods" / "prme.py", root / _CONFIG_RELATIVE
 

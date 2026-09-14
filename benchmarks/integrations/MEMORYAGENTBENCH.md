@@ -31,8 +31,10 @@ python -m benchmarks.integrations.install_memoryagentbench \
 
 The operation is idempotent. It copies `methods/prme.py` and the PRME agent
 configuration, adds the narrow dispatch hooks to `agent.py`, and pins the
-dataset loader. Existing conflicting files or ambiguous source anchors fail
-without leaving a partial install.
+dataset loader. It also gives PRME saved-state paths the sub-dataset identity so
+sequential competency runs cannot silently reuse another task's pack. Existing
+conflicting files or ambiguous source anchors fail without leaving a partial
+install.
 
 ## Run
 
