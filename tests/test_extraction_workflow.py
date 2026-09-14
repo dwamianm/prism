@@ -1,6 +1,7 @@
 """Developer-facing durable extraction recovery through MemoryEngine."""
 
 import asyncio
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 import subprocess
@@ -71,7 +72,7 @@ async def test_processing_completed_empty_extraction_has_a_receipt(config, user)
 async def test_heartbeat_keeps_long_running_provider_work_owned(config, user):
     async with MemoryEngine.open(config) as engine:
         pipeline = engine._pipeline
-        pipeline._extraction_lease_seconds = 0.15
+        pipeline._extraction_lease_seconds = 0.5
         entered, release = asyncio.Event(), asyncio.Event()
         async def slow(*args, **kwargs):
             entered.set()
@@ -81,7 +82,22 @@ async def test_heartbeat_keeps_long_running_provider_work_owned(config, user):
         event_id = await engine.ingest("Hello", user_id=user)
         try:
             await asyncio.wait_for(entered.wait(), 5)
-            await asyncio.sleep(0.35)
+            initial = await engine.extraction_status(event_id, user_id=user)
+            deadline = asyncio.get_running_loop().time() + 5
+            while True:
+                renewed = await engine.extraction_status(event_id, user_id=user)
+                if renewed.lease_expires_at > initial.lease_expires_at:
+                    break
+                if asyncio.get_running_loop().time() >= deadline:
+                    pytest.fail("Extraction heartbeat did not renew its lease")
+                await asyncio.sleep(0.02)
+            # Cross the original expiry only after observing a renewal. This
+            # proves ownership beyond the first lease without depending on a
+            # 50 ms scheduler deadline on a loaded CI runner.
+            await asyncio.sleep(max(
+                0,
+                (initial.lease_expires_at - datetime.now(timezone.utc)).total_seconds(),
+            ) + 0.05)
             assert await engine._event_store.extraction_work.claim(user_id=user) is None
             assert (await engine.extraction_status(event_id, user_id=user)).generation == 1
         finally:
@@ -110,6 +126,10 @@ async def test_expired_heartbeat_reclaims_work_after_event_loop_starvation(confi
         # Deliberately block the loop so the heartbeat cannot renew the first
         # generation. This makes the recovery boundary deterministic.
         time.sleep(0.12)
+        # The replacement claim still has to perform local durable writes. Give
+        # that distinct boundary a realistic lease instead of asking a loaded
+        # runner to commit within the original 50 ms starvation probe.
+        pipeline._extraction_lease_seconds = 1.0
         release.set()
         await asyncio.gather(*list(pipeline._background_tasks))
         status = await engine.extraction_status(event_id, user_id=user)

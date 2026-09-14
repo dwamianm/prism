@@ -157,7 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extraction workers now immediately reclaim an expired, uncontested lease once
   before falling back to scheduled retry. Event-loop starvation after a provider
   response can no longer leave durable work indefinitely in `running` state;
-  generation fencing still prevents the expired worker from publishing.
+  a lost reclaim race or expired inline recovery also schedules the ordinary
+  durable retry, while generation fencing prevents stale publication.
 - Forgotten synchronous clients now close before Python shuts down its shared
   thread-pool executor, allowing vector and lexical indexes to flush cleanly at
   normal interpreter exit without late-executor errors.
