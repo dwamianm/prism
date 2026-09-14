@@ -17,6 +17,7 @@ from pydantic import AwareDatetime, StrictBool, TypeAdapter
 
 from prme import __version__
 from prme.config import PRMEConfig
+from prme.ingestion.errors import MaterializationError, extraction_failure_code
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
 from prme.models.learning import RankingMultipliers
 from prme.types import (
@@ -180,7 +181,7 @@ async def memory_store(
         return json.dumps({"error": f"Invalid scope: {scope!r}. Valid: {[e.value for e in Scope]}"})
 
     try:
-        event_id = await engine.store(
+        receipt = await engine.store_with_receipt(
             content,
             user_id=user_id,
             node_type=nt,
@@ -194,10 +195,18 @@ async def memory_store(
             event_time=event_time,
         )
 
-        nodes = await engine.get_event_nodes(event_id, user_id=user_id)
-        node_id = next((str(n.id) for n in nodes if n.content == content and n.node_type == nt), None)
-
-        return json.dumps({"event_id": event_id, "node_id": node_id})
+        return json.dumps({
+            "event_id": str(receipt.event_id),
+            "node_id": str(receipt.node_id),
+            "processing_status": receipt.processing_status.model_dump(mode="json"),
+        })
+    except MaterializationError as exc:
+        return json.dumps({
+            "error": "Stored source needs recovery",
+            "accepted": exc.event_id is not None,
+            "event_id": exc.event_id,
+            "reason_code": exc.reason_code or extraction_failure_code(exc),
+        })
     except ValueError as e:
         return json.dumps({"error": str(e)})
     except Exception as e:

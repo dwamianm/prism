@@ -130,6 +130,9 @@ class TestStore:
         data = json.loads(result.content[0].text)
         assert "event_id" in data
         assert data["event_id"]
+        assert data["node_id"]
+        assert data["processing_status"]["status"] == "complete"
+        assert data["processing_status"]["event_id"] == data["event_id"]
         assert "error" not in data
 
     async def test_store_with_type_and_scope(self, session):
