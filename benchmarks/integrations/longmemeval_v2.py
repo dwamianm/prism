@@ -1,0 +1,563 @@
+"""PRME backend for the official LongMemEval-V2 memory interface.
+
+This file is also copyable into the upstream ``memory_modules`` package.  It
+uses only the public PRME client and the trajectory fields released by the
+benchmark; question IDs, categories, answers, and evaluator configuration never
+enter the memory pack.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import tempfile
+import threading
+from typing import Any
+
+from prme import EpistemicType, MemoryClient, NodeType, PRMEConfig, Scope, SourceType
+from prme.config import EmbeddingConfig
+from prme.retrieval.config import PackingConfig
+
+try:  # Copied into the official upstream ``memory_modules`` package.
+    from .memory import Memory, MemoryConfig, MemoryContextItem, register_memory, require
+except ImportError:  # Imported from PRME's own benchmark/test environment.
+    try:
+        from memory_modules.memory import (  # type: ignore[no-redef]
+            Memory,
+            MemoryConfig,
+            MemoryContextItem,
+            register_memory,
+            require,
+        )
+    except ImportError:
+        MemoryConfig = dict[str, Any]  # type: ignore[misc,assignment]
+        MemoryContextItem = dict[str, str]  # type: ignore[misc,assignment]
+
+        class Memory:  # type: ignore[no-redef]
+            """Minimal local stand-in for integration tests without upstream."""
+
+            memory_type = ""
+
+            def __init__(self, memory_params: dict[str, object]) -> None:
+                self.memory_params = dict(memory_params)
+
+        def register_memory(cls):  # type: ignore[no-redef]
+            return cls
+
+        def require(condition: bool, message: str) -> None:  # type: ignore[no-redef]
+            if not condition:
+                raise RuntimeError(message)
+
+
+UPSTREAM_REVISION = "2cc8c540bdb87fe6761629b585e727e1c4704520"
+ADAPTER_SCHEMA_VERSION = 1
+_MANIFEST_NAME = "longmemeval_v2_manifest.json"
+_PACK_NAME = "prme_pack"
+_ALLOWED_PARAMS = {
+    "storage_path",
+    "trajectories_root_dir",
+    "user_id",
+    "token_budget",
+    "result_limit",
+    "include_images",
+    "image_limit",
+    "max_chunk_chars",
+    "context_item_max_chars",
+}
+
+
+def _canonical(value: object) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _trajectory_payload(trajectory: dict[str, object]) -> dict[str, object]:
+    """Allowlist and validate the public trajectory fields used by memory."""
+    trajectory_id = trajectory.get("id")
+    goal = trajectory.get("goal")
+    outcome = trajectory.get("outcome")
+    start_url = trajectory.get("start_url")
+    states = trajectory.get("states")
+    require(isinstance(trajectory_id, str) and bool(trajectory_id.strip()), "trajectory id must be non-empty")
+    require(isinstance(goal, str), f"trajectory goal must be a string for {trajectory_id}")
+    require(outcome is None or isinstance(outcome, str), f"trajectory outcome must be a string or null for {trajectory_id}")
+    require(isinstance(start_url, str) and bool(start_url.strip()), f"trajectory start_url must be non-empty for {trajectory_id}")
+    require(isinstance(states, list) and bool(states), f"trajectory states must be non-empty for {trajectory_id}")
+
+    normalized_states: list[dict[str, object]] = []
+    for position, raw in enumerate(states):
+        require(isinstance(raw, dict), f"trajectory state {position} must be an object for {trajectory_id}")
+        state_index = raw.get("state_index", position)
+        step = raw.get("step", state_index)
+        url = raw.get("url")
+        action = raw.get("action")
+        thought = raw.get("thought", raw.get("thoughts"))
+        text = raw.get("accessibility_tree", raw.get("text"))
+        screenshot = raw.get("screenshot")
+        require(type(state_index) is int and state_index >= 0, f"invalid state_index for {trajectory_id}:{position}")
+        require(state_index == position, f"state_index must be contiguous and ordered for {trajectory_id}:{position}")
+        require(type(step) is int and step >= 0, f"invalid step for {trajectory_id}:{position}")
+        require(isinstance(url, str) and bool(url.strip()), f"state URL must be non-empty for {trajectory_id}:{position}")
+        require(action is None or isinstance(action, str), f"state action must be a string or null for {trajectory_id}:{position}")
+        require(thought is None or isinstance(thought, str), f"state thought must be a string or null for {trajectory_id}:{position}")
+        require(isinstance(text, str), f"state accessibility text must be a string for {trajectory_id}:{position}")
+        require(isinstance(screenshot, str) and bool(screenshot.strip()), f"state screenshot must be non-empty for {trajectory_id}:{position}")
+        normalized_states.append(
+            {
+                "state_index": state_index,
+                "step": step,
+                "url": url,
+                "action": action,
+                "thought": thought,
+                "text": text,
+                "screenshot": screenshot,
+            }
+        )
+    return {
+        "id": trajectory_id,
+        "goal": goal,
+        "outcome": outcome,
+        "start_url": start_url,
+        "states": normalized_states,
+    }
+
+
+def _chunks(text: str, limit: int) -> list[str]:
+    """Split without dropping text, preferring accessibility-tree line boundaries."""
+    require(limit > 0, "chunk limit must be positive")
+    pieces: list[str] = []
+    current = ""
+    for line in text.splitlines(keepends=True) or [text]:
+        while len(line) > limit:
+            if current:
+                pieces.append(current)
+                current = ""
+            pieces.append(line[:limit])
+            line = line[limit:]
+        if current and len(current) + len(line) > limit:
+            pieces.append(current)
+            current = ""
+        current += line
+    if current or not pieces:
+        pieces.append(current)
+    return pieces
+
+
+def _prefixed_chunks(prefix_lines: list[str], body: str, limit: int) -> list[str]:
+    """Split a long body while repeating the source identity on every chunk."""
+    prefix = "\n".join(prefix_lines) + "\n"
+    require(len(prefix) < limit, "trajectory identity exceeds max_chunk_chars")
+    return [prefix + chunk for chunk in _chunks(body, limit - len(prefix))]
+
+
+@register_memory
+class PRMEMemory(Memory):
+    """Text-first PRME trajectory memory with source screenshot returns."""
+
+    memory_type = "prme"
+
+    def __init__(self, memory_params: dict[str, object]) -> None:
+        super().__init__(memory_params)
+        unexpected = sorted(set(memory_params) - _ALLOWED_PARAMS)
+        require(not unexpected, f"prme memory_params contains unexpected keys: {unexpected}")
+
+        self.user_id = str(memory_params.get("user_id", "evaluation")).strip()
+        self.token_budget = int(memory_params.get("token_budget", 32768))
+        self.result_limit = int(memory_params.get("result_limit", 100))
+        self.include_images = memory_params.get("include_images", True)
+        self.image_limit = int(memory_params.get("image_limit", 8))
+        self.max_chunk_chars = int(memory_params.get("max_chunk_chars", 8000))
+        self.context_item_max_chars = int(
+            memory_params.get("context_item_max_chars", 12000)
+        )
+        require(bool(self.user_id), "prme user_id must be non-empty")
+        require(self.token_budget > 0, "prme token_budget must be positive")
+        require(self.result_limit > 0, "prme result_limit must be positive")
+        require(type(self.include_images) is bool, "prme include_images must be a boolean")
+        require(self.image_limit >= 0, "prme image_limit must be non-negative")
+        require(self.max_chunk_chars >= 512, "prme max_chunk_chars must be at least 512")
+        require(
+            self.context_item_max_chars >= 512,
+            "prme context_item_max_chars must be at least 512",
+        )
+
+        root_value = memory_params.get("trajectories_root_dir")
+        if root_value is None:
+            root_value = os.environ.get("DATA_ROOT")
+        self.trajectories_root_dir = (
+            Path(str(root_value)).expanduser().resolve() if root_value else None
+        )
+
+        storage_value = memory_params.get("storage_path")
+        self._temporary: tempfile.TemporaryDirectory[str] | None = None
+        if storage_value:
+            self._root = Path(str(storage_value)).expanduser().resolve()
+            self._root.mkdir(parents=True, exist_ok=True)
+        else:
+            self._temporary = tempfile.TemporaryDirectory(prefix="prme-lme-v2-")
+            self._root = Path(self._temporary.name).resolve()
+        self._lock = threading.RLock()
+        self._client: MemoryClient | None = None
+        self._manifest: dict[str, Any] = {}
+        self._open(self._root)
+
+    @property
+    def memory_config(self) -> MemoryConfig:
+        return {
+            "memory_type": self.memory_type,
+            "memory_params": dict(self.memory_params),
+        }
+
+    def _config(self, root: Path) -> PRMEConfig:
+        lexical = root / "lexical_index"
+        lexical.mkdir(parents=True, exist_ok=True)
+        return PRMEConfig(
+            database_url=None,
+            db_path=str(root / "memory.duckdb"),
+            vector_path=str(root / "vectors.usearch"),
+            lexical_path=str(lexical),
+            embedding=EmbeddingConfig(
+                provider="fastembed",
+                model_name="BAAI/bge-small-en-v1.5",
+                dimension=384,
+            ),
+            packing=PackingConfig(token_budget=self.token_budget),
+            enable_qa_pairing=False,
+            enable_query_reformulation=False,
+            enable_store_supersedence=False,
+            enable_surprise_gating=False,
+            enable_reranker=False,
+            organizer={"opportunistic_enabled": False},
+            _env_file=None,
+        )
+
+    def _open(self, root: Path) -> None:
+        root.mkdir(parents=True, exist_ok=True)
+        manifest_path = root / _MANIFEST_NAME
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            require(
+                manifest.get("schema_version") == ADAPTER_SCHEMA_VERSION
+                and manifest.get("upstream_revision") == UPSTREAM_REVISION
+                and isinstance(manifest.get("trajectories"), dict),
+                "incompatible LongMemEval-V2 adapter manifest",
+            )
+            self._manifest = manifest
+        else:
+            require(not (root / "memory.duckdb").exists(), "PRME pack is missing its LongMemEval-V2 manifest")
+            self._manifest = {
+                "schema_version": ADAPTER_SCHEMA_VERSION,
+                "upstream_revision": UPSTREAM_REVISION,
+                "trajectories": {},
+            }
+            self._write_manifest()
+        self._root = root
+        self._client = MemoryClient(config=self._config(root))
+
+    def _write_manifest(self) -> None:
+        path = self._root / _MANIFEST_NAME
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_bytes(_canonical(self._manifest) + b"\n")
+        temporary.replace(path)
+
+    def _resolve_screenshot(self, value: str) -> Path:
+        supplied = Path(value).expanduser()
+        candidates = [supplied]
+        if self.trajectories_root_dir is not None and not supplied.is_absolute():
+            candidates.extend(
+                [
+                    self.trajectories_root_dir / supplied,
+                    self.trajectories_root_dir / "screenshots" / supplied,
+                ]
+            )
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate.resolve()
+        raise RuntimeError(f"could not resolve trajectory screenshot: {value}")
+
+    def _copy_screenshot(
+        self,
+        trajectory_id: str,
+        state_index: int,
+        original: Path,
+    ) -> str | None:
+        if not self.include_images:
+            return None
+        trajectory_dir = hashlib.sha256(trajectory_id.encode("utf-8")).hexdigest()[:24]
+        suffix = original.suffix.lower() or ".png"
+        relative = Path("attachments") / trajectory_dir / f"{state_index:06d}{suffix}"
+        destination = self._root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.exists():
+            require(
+                hashlib.sha256(destination.read_bytes()).digest()
+                == hashlib.sha256(original.read_bytes()).digest(),
+                f"screenshot identity changed for {trajectory_id}:{state_index}",
+            )
+        else:
+            shutil.copy2(original, destination)
+        return relative.as_posix()
+
+    def insert(self, trajectory: dict[str, object]) -> None:
+        payload = _trajectory_payload(trajectory)
+        trajectory_id = str(payload["id"])
+        states = list(payload["states"])
+        screenshot_sources: dict[int, Path] = {}
+        screenshot_digests: list[dict[str, object]] = []
+        if self.include_images:
+            for state in states:
+                state_index = int(state["state_index"])
+                source = self._resolve_screenshot(str(state["screenshot"]))
+                screenshot_sources[state_index] = source
+                screenshot_digests.append(
+                    {
+                        "state_index": state_index,
+                        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                    }
+                )
+        fingerprint = hashlib.sha256(
+            _canonical(
+                {
+                    "trajectory": payload,
+                    "screenshot_digests": screenshot_digests,
+                }
+            )
+        ).hexdigest()
+        with self._lock:
+            saved = self._manifest["trajectories"].get(trajectory_id)
+            if saved is not None:
+                require(saved.get("fingerprint") == fingerprint, f"trajectory identity changed: {trajectory_id}")
+                require(saved.get("status") == "complete", f"trajectory insert was interrupted: {trajectory_id}")
+                return
+
+            self._manifest["trajectories"][trajectory_id] = {
+                "fingerprint": fingerprint,
+                "status": "preparing",
+                "node_count": 0,
+            }
+            self._write_manifest()
+            assert self._client is not None
+            node_count = 0
+            try:
+                action_lines: list[str] = []
+                for position, state in enumerate(states):
+                    action = str(state["action"] or "").strip()
+                    if not action:
+                        continue
+                    if position == 0:
+                        action_lines.append(
+                            f"Initial state {state['state_index']} recorded action: {action}"
+                        )
+                    else:
+                        action_lines.append(
+                            f"State {states[position - 1]['state_index']} -> "
+                            f"state {state['state_index']}: {action}"
+                        )
+                summary_body = "\n".join(
+                    [
+                        f"Goal: {payload['goal']}",
+                        f"Outcome: {payload['outcome'] or 'unknown'}",
+                        f"Start URL: {payload['start_url']}",
+                        "Transition actions (the dataset attaches actions to destination states):",
+                        *action_lines,
+                    ]
+                )
+                summary_chunks = _prefixed_chunks(
+                    ["Agent trajectory summary", f"Trajectory: {trajectory_id}"],
+                    summary_body,
+                    self.max_chunk_chars,
+                )
+                for chunk_index, content in enumerate(summary_chunks):
+                    self._client.store(
+                        content,
+                        user_id=self.user_id,
+                        session_id=trajectory_id,
+                        role="tool",
+                        node_type=NodeType.SUMMARY,
+                        scope=Scope.PROJECT,
+                        epistemic_type=EpistemicType.OBSERVED,
+                        source_type=SourceType.TOOL_OUTPUT,
+                        metadata={
+                            "benchmark": "longmemeval-v2",
+                            "source_kind": "trajectory_summary",
+                            "trajectory_id": trajectory_id,
+                            "chunk_index": chunk_index,
+                            "chunk_count": len(summary_chunks),
+                        },
+                    )
+                    node_count += 1
+
+                for position, state in enumerate(states):
+                    state_index = int(state["state_index"])
+                    screenshot = (
+                        self._copy_screenshot(
+                            trajectory_id,
+                            state_index,
+                            screenshot_sources[state_index],
+                        )
+                        if self.include_images
+                        else None
+                    )
+                    if position == 0:
+                        incoming_action = (
+                            f"Initial-state action field: {state['action']}"
+                            if state["action"]
+                            else "Incoming action: none (initial state)"
+                        )
+                    else:
+                        incoming_action = (
+                            f"Incoming action from state {states[position - 1]['state_index']} "
+                            f"to this state: {state['action'] or 'none recorded'}"
+                        )
+                    state_body = "\n".join(
+                        [
+                            incoming_action,
+                            f"Recorded thought at this state: {state['thought'] or 'none'}",
+                            "Accessibility tree:",
+                            str(state["text"]),
+                        ]
+                    )
+                    chunks = _prefixed_chunks(
+                        [
+                            "Agent trajectory state",
+                            f"Trajectory: {trajectory_id}",
+                            f"State index: {state_index}",
+                            f"Step: {state['step']}",
+                            f"URL: {state['url']}",
+                        ],
+                        state_body,
+                        self.max_chunk_chars,
+                    )
+                    for chunk_index, content in enumerate(chunks):
+                        self._client.store(
+                            content,
+                            user_id=self.user_id,
+                            session_id=trajectory_id,
+                            role="tool",
+                            node_type=NodeType.NOTE,
+                            scope=Scope.PROJECT,
+                            epistemic_type=EpistemicType.OBSERVED,
+                            source_type=SourceType.TOOL_OUTPUT,
+                            metadata={
+                                "benchmark": "longmemeval-v2",
+                                "source_kind": "trajectory_state",
+                                "trajectory_id": trajectory_id,
+                                "state_index": state_index,
+                                "step": state["step"],
+                                "chunk_index": chunk_index,
+                                "chunk_count": len(chunks),
+                                "screenshot": screenshot,
+                            },
+                        )
+                        node_count += 1
+            except BaseException:
+                self._manifest["trajectories"][trajectory_id]["node_count"] = node_count
+                self._write_manifest()
+                raise
+            self._manifest["trajectories"][trajectory_id].update(
+                status="complete", node_count=node_count
+            )
+            self._write_manifest()
+
+    def query(self, query: str, query_image: str | None = None) -> list[MemoryContextItem]:
+        require(isinstance(query, str) and bool(query.strip()), "prme query must be non-empty")
+        with self._lock:
+            assert self._client is not None
+            response = self._client.retrieve(
+                query,
+                user_id=self.user_id,
+                scope=Scope.PROJECT,
+                token_budget=self.token_budget,
+                limit=self.result_limit,
+                include_cross_scope=False,
+            )
+            items: list[MemoryContextItem] = []
+            rendered = response.bundle.render()
+            if rendered.strip():
+                # The upstream harness independently measures the final prompt
+                # with the reader processor and truncates only at item
+                # boundaries. Bounded items prevent a small tokenizer mismatch
+                # from dropping one monolithic memory payload.
+                items.extend(
+                    {"type": "text", "value": chunk}
+                    for chunk in _chunks(rendered, self.context_item_max_chars)
+                    if chunk
+                )
+            if self.include_images and self.image_limit:
+                included_ids = {
+                    str(candidate.node.id)
+                    for candidates in response.bundle.sections.values()
+                    for candidate in candidates
+                }
+                seen: set[str] = set()
+                for candidate in response.results:
+                    if str(candidate.node.id) not in included_ids:
+                        continue
+                    metadata = candidate.node.metadata or {}
+                    relative = metadata.get("screenshot")
+                    if not isinstance(relative, str) or not relative or relative in seen:
+                        continue
+                    image = (self._root / relative).resolve()
+                    require(image.is_file() and self._root in image.parents, "saved screenshot path escaped the PRME pack")
+                    items.append({"type": "image", "value": str(image)})
+                    seen.add(relative)
+                    if len(seen) >= self.image_limit:
+                        break
+            return items
+
+    def post_query_hook(
+        self,
+        *,
+        query: str,
+        query_image: str | None,
+        memory_context: list[MemoryContextItem],
+    ) -> dict[str, object]:
+        return {
+            "adapter": "prme",
+            "adapter_schema_version": ADAPTER_SCHEMA_VERSION,
+            "upstream_revision": UPSTREAM_REVISION,
+            "query_image_used_for_retrieval": False,
+            "returned_text_items": sum(item["type"] == "text" for item in memory_context),
+            "returned_image_items": sum(item["type"] == "image" for item in memory_context),
+        }
+
+    def _save_backend(self, output_dir: Path) -> None:
+        with self._lock:
+            destination = output_dir / _PACK_NAME
+            require(not destination.exists(), f"refusing to overwrite saved PRME pack: {destination}")
+            assert self._client is not None
+            self._client.close()
+            self._client = None
+            try:
+                shutil.copytree(self._root, destination)
+            finally:
+                self._client = MemoryClient(config=self._config(self._root))
+
+    def _load_backend(self, input_dir: Path) -> None:
+        with self._lock:
+            source = input_dir / _PACK_NAME
+            require(source.is_dir(), f"missing saved PRME pack: {source}")
+            if self._client is not None:
+                self._client.close()
+                self._client = None
+            if self._temporary is not None:
+                self._temporary.cleanup()
+                self._temporary = None
+            self._open(source.resolve())
+
+    def close(self) -> None:
+        with self._lock:
+            if self._client is not None:
+                self._client.close()
+                self._client = None
+            if self._temporary is not None:
+                self._temporary.cleanup()
+                self._temporary = None

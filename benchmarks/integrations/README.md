@@ -1,7 +1,12 @@
-# PrecisionMemBench diagnostic adapter
+# Benchmark integrations
 
 For the separate chronological dialogue replay, see the
-[MemConflict adapter](MEMCONFLICT.md).
+[MemConflict adapter](MEMCONFLICT.md). The
+[LongMemEval-V2 adapter](LONGMEMEVAL_V2.md) connects PRME to the official
+agent-trajectory memory harness, including source screenshot return and portable
+adapter state.
+
+## PrecisionMemBench diagnostic adapter
 
 `precision_service.py` implements the upstream generic HTTP contract using
 PRME's default local FastEmbed retrieval. It owns temporary memory packs and
