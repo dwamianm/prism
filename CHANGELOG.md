@@ -63,7 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   isolation, source-time query clocks, restart-safe request idempotence, and
   separate raw and durable-extraction profiles. Its fail-closed validator
   rejects the upstream runner's otherwise silent failed-chunk and empty-model
-  completion paths and hashes every accepted artifact.
+  completion paths and hashes every accepted artifact. A registered raw
+  retrieval launcher additionally binds the clean PRME and upstream revisions,
+  exact source files, normalized dataset cache, run identity, profile, and
+  complete question selection before ingestion; validation checks the same
+  registration, execution, dataset, and adapter identities.
 - Structured `store_with_receipt()` results on async and synchronous Python.
   They expose the durable event, exact created node, and materialization status
   in one call while preserving the historical `store()` event-ID return. HTTP

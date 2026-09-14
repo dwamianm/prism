@@ -27,6 +27,124 @@ QUESTION_TYPES = (
 CHAT_SIZES = ("100K", "500K", "1M", "10M")
 
 
+def _registered_validation(
+    report: dict[str, Any],
+    *,
+    registration_path: Path,
+    execution_root: Path,
+    chat_sizes: tuple[str, ...],
+    conversations: tuple[int, ...],
+    question_types: tuple[str, ...],
+    scored: bool,
+    cutoffs: tuple[int, ...],
+) -> None:
+    from benchmarks.integrations.run_beam import (
+        DATASET_FILENAME,
+        MANIFEST_FILENAME,
+        _expected_protocol,
+    )
+
+    errors = report["errors"]
+    registration = _read(registration_path, errors)
+    manifest_path = execution_root / MANIFEST_FILENAME
+    manifest = _read(manifest_path, errors)
+    adapter_manifest_path = execution_root / "prme-pack" / "beam_adapter_manifest.json"
+    adapter_manifest = _read(adapter_manifest_path, errors)
+    dataset_path = execution_root / "dataset" / DATASET_FILENAME
+    if registration is None or manifest is None:
+        return
+    if registration.get("schema_version") != 1:
+        errors.append("unsupported BEAM registration schema")
+    if registration.get("kind") != "beam-raw-predict-only-registration":
+        errors.append("unexpected BEAM registration kind")
+    registered_protocol = registration.get("protocol")
+    if registered_protocol != _expected_protocol():
+        errors.append("registration does not describe the raw predict-only protocol")
+    if not isinstance(registered_protocol, dict):
+        registered_protocol = {}
+    expected_selection = {
+        "chat_sizes": list(chat_sizes),
+        "conversations": list(conversations),
+        "question_types": list(question_types),
+        "scored": scored,
+        "cutoffs": list(cutoffs) if scored else [],
+    }
+    if expected_selection != {
+        "chat_sizes": registered_protocol.get("chat_sizes"),
+        "conversations": registered_protocol.get("conversations"),
+        "question_types": registered_protocol.get("question_types"),
+        "scored": not registered_protocol.get("predict_only", False),
+        "cutoffs": (
+            registered_protocol.get("top_k_cutoffs", []) if scored else []
+        ),
+    }:
+        errors.append("validation selection differs from registration")
+    if manifest.get("kind") != "beam-raw-predict-only-execution":
+        errors.append("unexpected BEAM execution manifest kind")
+    if manifest.get("schema_version") != 1:
+        errors.append("unsupported BEAM execution manifest schema")
+    if manifest.get("registration_sha256") != _hash(registration_path):
+        errors.append("BEAM execution manifest does not match registration")
+    source = manifest.get("source")
+    registered_source = registration.get("source")
+    registered_files: dict[str, Any] = {}
+    if not isinstance(source, dict) or not isinstance(registered_source, dict):
+        errors.append("BEAM source identity is missing")
+    else:
+        registered_files = registered_source.get("files", {})
+        if source.get("prme_revision") != registered_source.get("prme_revision"):
+            errors.append("executed PRME revision differs from registration")
+        if source.get("upstream_revision") != UPSTREAM_COMMIT:
+            errors.append("executed BEAM revision differs from the supported pin")
+        if source.get("upstream_revision") != registered_source.get("upstream_revision"):
+            errors.append("executed BEAM revision differs from registration")
+        if source.get("files") != registered_source.get("files"):
+            errors.append("executed BEAM source hashes differ from registration")
+        if source.get("prme_worktree_changes") != []:
+            errors.append("registered BEAM used a modified PRME worktree")
+        if source.get("upstream_worktree_changes") != []:
+            errors.append("registered BEAM used a modified upstream worktree")
+    if not dataset_path.is_file():
+        errors.append("frozen BEAM dataset cache is missing")
+    else:
+        dataset_hash = _hash(dataset_path)
+        if manifest.get("dataset_sha256") != dataset_hash:
+            errors.append("executed BEAM dataset hash differs")
+        registered_dataset = registration.get("dataset")
+        if (
+            not isinstance(registered_dataset, dict)
+            or registered_dataset.get("cache_sha256") != dataset_hash
+        ):
+            errors.append("BEAM dataset differs from registration")
+        report["artifact_sha256"][str(dataset_path.relative_to(execution_root))] = dataset_hash
+    if adapter_manifest is None:
+        return
+    system = registration.get("system")
+    if not isinstance(system, dict):
+        errors.append("registered BEAM system identity is missing")
+    else:
+        if adapter_manifest.get("profile") != "raw":
+            errors.append("BEAM adapter did not use the raw profile")
+        if adapter_manifest.get("upstream_commit") != UPSTREAM_COMMIT:
+            errors.append("BEAM adapter upstream revision differs")
+        if adapter_manifest.get("extraction") is not None:
+            errors.append("raw BEAM adapter unexpectedly configured extraction")
+        if adapter_manifest.get("prme_version") != system.get("version"):
+            errors.append("BEAM adapter PRME version differs from registration")
+        if adapter_manifest.get("adapter_source_sha256") != registered_files.get(
+            "service_sha256"
+        ):
+            errors.append("BEAM adapter source differs from registration")
+        embedding = adapter_manifest.get("embedding")
+        if embedding != system.get("embedding"):
+            errors.append("BEAM embedding configuration differs from registration")
+    for path in (manifest_path, adapter_manifest_path):
+        if path.is_file():
+            report["artifact_sha256"][str(path.relative_to(execution_root))] = _hash(path)
+    report["registration_sha256"] = _hash(registration_path)
+    report["execution_root"] = str(execution_root.resolve())
+
+
 def parse_indices(spec: str) -> tuple[int, ...]:
     indices: set[int] = set()
     for part in spec.split(","):
@@ -301,6 +419,8 @@ def main() -> None:
     parser.add_argument("--scored", action="store_true")
     parser.add_argument("--cutoffs", default="100")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--registration", type=Path)
+    parser.add_argument("--execution-root", type=Path)
     args = parser.parse_args()
     report = validate_run(
         args.prediction_dir,
@@ -312,6 +432,22 @@ def main() -> None:
         scored=args.scored,
         cutoffs=tuple(int(value) for value in args.cutoffs.split(",")),
     )
+    if (args.registration is None) != (args.execution_root is None):
+        raise ValueError("--registration and --execution-root must be provided together")
+    if args.registration is not None and args.execution_root is not None:
+        _registered_validation(
+            report,
+            registration_path=args.registration.resolve(),
+            execution_root=args.execution_root.resolve(),
+            chat_sizes=_csv(args.chat_sizes, allowed=CHAT_SIZES, name="chat sizes"),
+            conversations=parse_indices(args.conversations),
+            question_types=_csv(
+                args.question_types, allowed=QUESTION_TYPES, name="question types"
+            ),
+            scored=args.scored,
+            cutoffs=tuple(int(value) for value in args.cutoffs.split(",")),
+        )
+        report["complete"] = not report["errors"]
     rendered = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

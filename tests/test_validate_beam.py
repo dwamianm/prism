@@ -2,10 +2,13 @@
 
 import json
 
+from benchmarks.integrations import run_beam
 from benchmarks.integrations.validate_beam import validate_run
+from benchmarks.integrations import validate_beam
 
 
 def _write(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value))
 
 
@@ -109,3 +112,154 @@ def test_validate_beam_rejects_failed_ingestion_and_empty_generation(tmp_path):
     assert any("failed chunks" in error for error in report["errors"])
     assert any("generated answer is empty" in error for error in report["errors"])
     assert any("invalid nugget verdict" in error for error in report["errors"])
+
+
+def _registered_protocol():
+    return {
+        "profile": "raw",
+        "chat_sizes": ["100K"],
+        "conversations": [0],
+        "question_types": list(validate_beam.QUESTION_TYPES),
+        "top_k": 50,
+        "top_k_cutoffs": [50],
+        "predict_only": True,
+        "project_name": run_beam.PROJECT_NAME,
+        "run_id": run_beam.RUN_ID,
+        "chunk_size": 2,
+    }
+
+
+def test_registered_beam_validation_binds_source_dataset_and_adapter(tmp_path):
+    execution_root = tmp_path / "execution"
+    prediction_dir = execution_root / "predictions"
+    prediction_dir.mkdir(parents=True)
+    owner = f"beam_100K_0_{run_beam.RUN_ID}"
+    _write(
+        prediction_dir / "_ingestion_100K_0.json",
+        {
+            "chat_size": "100K",
+            "conversation_idx": 0,
+            "user_id": owner,
+            "run_id": run_beam.RUN_ID,
+            "chunk_size": 2,
+            "total_chunks_processed": 10,
+            "total_chunks_failed": 0,
+        },
+    )
+    question_index = 0
+    for question_type in validate_beam.QUESTION_TYPES:
+        for _ in range(2):
+            question_id = f"100K_0_q{question_index}_{question_type}"
+            question = f"Question {question_index}?"
+            _write(
+                prediction_dir / f"{question_id}.json",
+                {
+                    "question_id": question_id,
+                    "chat_size": "100K",
+                    "conversation_idx": 0,
+                    "question_type": question_type,
+                    "question": question,
+                    "user_id": owner,
+                    "retrieval": {
+                        "search_query": question,
+                        "search_results": [
+                            {"id": "node", "memory": "memory", "score": 0.5}
+                        ],
+                        "search_latency_ms": 1.0,
+                        "total_results": 1,
+                    },
+                },
+            )
+            question_index += 1
+
+    dataset = execution_root / "dataset" / run_beam.DATASET_FILENAME
+    dataset.parent.mkdir(parents=True)
+    dataset.write_text("[]")
+    files = {"service_sha256": "a" * 64}
+    registration = {
+        "schema_version": 1,
+        "kind": "beam-raw-predict-only-registration",
+        "source": {
+            "prme_revision": "1" * 40,
+            "upstream_revision": run_beam.UPSTREAM_COMMIT,
+            "files": files,
+        },
+        "dataset": {
+            "revision": run_beam.DATASET_REVISION,
+            "cache_sha256": validate_beam._hash(dataset),
+        },
+        "protocol": _registered_protocol(),
+        "system": {
+            "id": "prme",
+            "version": "0.11.0",
+            "profile": "raw",
+            "embedding": {
+                "provider": "fastembed",
+                "model": "BAAI/bge-small-en-v1.5",
+                "dimension": 384,
+            },
+        },
+    }
+    registration_path = tmp_path / "registration.json"
+    _write(registration_path, registration)
+    manifest = {
+        "schema_version": 1,
+        "kind": "beam-raw-predict-only-execution",
+        "registration_sha256": validate_beam._hash(registration_path),
+        "dataset_sha256": validate_beam._hash(dataset),
+        "source": {
+            "prme_revision": "1" * 40,
+            "prme_worktree_changes": [],
+            "upstream_revision": run_beam.UPSTREAM_COMMIT,
+            "upstream_worktree_changes": [],
+            "files": files,
+        },
+    }
+    _write(execution_root / run_beam.MANIFEST_FILENAME, manifest)
+    _write(
+        execution_root / "prme-pack" / "beam_adapter_manifest.json",
+        {
+            "profile": "raw",
+            "extraction": None,
+            "upstream_commit": run_beam.UPSTREAM_COMMIT,
+            "prme_version": "0.11.0",
+            "adapter_source_sha256": "a" * 64,
+            "embedding": registration["system"]["embedding"],
+        },
+    )
+
+    report = validate_run(
+        prediction_dir,
+        chat_sizes=("100K",),
+        conversations=(0,),
+    )
+    validate_beam._registered_validation(
+        report,
+        registration_path=registration_path,
+        execution_root=execution_root,
+        chat_sizes=("100K",),
+        conversations=(0,),
+        question_types=validate_beam.QUESTION_TYPES,
+        scored=False,
+        cutoffs=(50,),
+    )
+    assert report["errors"] == []
+    assert report["registration_sha256"] == validate_beam._hash(registration_path)
+
+    dataset.write_text("changed")
+    changed = validate_run(
+        prediction_dir,
+        chat_sizes=("100K",),
+        conversations=(0,),
+    )
+    validate_beam._registered_validation(
+        changed,
+        registration_path=registration_path,
+        execution_root=execution_root,
+        chat_sizes=("100K",),
+        conversations=(0,),
+        question_types=validate_beam.QUESTION_TYPES,
+        scored=False,
+        cutoffs=(50,),
+    )
+    assert "executed BEAM dataset hash differs" in changed["errors"]

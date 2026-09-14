@@ -57,6 +57,24 @@ no chunk identity.
 
 ## Run the pinned upstream harness
 
+For the registered one-conversation raw retrieval workflow, use the launcher
+from a clean PRME worktree at the registration's revision. It starts the raw
+adapter, invokes the pinned upstream client, fixes the run identity and complete
+question selection, and writes source and dataset attestation before ingestion:
+
+```shell
+uv run python -m benchmarks.integrations.run_beam \
+  /absolute/path/to/memory-benchmarks \
+  /absolute/path/to/new-beam-execution \
+  --registration benchmarks/results/research/2026-09-14/beam-100k-raw-v1-registration.json \
+  --dataset /absolute/path/to/frozen/beam_100K.json
+```
+
+The dataset cache must use the upstream runner's normalized JSON format. The
+registration pins its SHA-256 digest and the Hugging Face dataset revision. Use
+`--resume` with the same output directory and registration after an interrupted
+run; both PRME and upstream checkpoints must already exist.
+
 In a checkout of the pinned upstream commit, start with one retrieval-only
 conversation. This downloads only the selected public BEAM split and preserves
 the upstream ingestion and prediction checkpoints:
@@ -80,10 +98,12 @@ retries. Validate the output before reading aggregate quality:
 
 ```sh
 uv run python -m benchmarks.integrations.validate_beam \
-  /absolute/path/to/results/beam/predicted_prme-beam-100k-smoke \
+  /absolute/path/to/new-beam-execution/upstream-results/predicted_prme-beam-100k-raw-v1 \
   --chat-sizes 100K \
   --conversations 0 \
   --question-types abstention,contradiction_resolution,event_ordering,information_extraction,instruction_following,knowledge_update,multi_session_reasoning,preference_following,summarization,temporal_reasoning \
+  --registration benchmarks/results/research/2026-09-14/beam-100k-raw-v1-registration.json \
+  --execution-root /absolute/path/to/new-beam-execution \
   --output /tmp/prme-beam-100k-smoke-validation.json
 ```
 
