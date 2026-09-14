@@ -294,7 +294,9 @@ Hybrid retrieval through the 6-stage pipeline.
 
 **Returns:** `RetrievalResponse` with bundle, scored results, metadata, score traces.
 
-> **Note:** The underlying `RetrievalPipeline` supports a `retrieval_mode` parameter (`DEFAULT` or `EXPLICIT`) that controls epistemic filtering. This is not currently exposed through `MemoryEngine.retrieve()` — it always uses `DEFAULT` mode (excludes HYPOTHETICAL and DEPRECATED). Access the pipeline directly if you need `EXPLICIT` mode.
+`retrieval_mode` accepts `DEFAULT` or `EXPLICIT` across the async engine, sync
+client, HTTP API, and MCP tool. `DEFAULT` excludes hypothetical and deprecated
+claims; `EXPLICIT` includes them within the generated candidate pool.
 
 ---
 
@@ -876,15 +878,19 @@ PackingConfig(
     token_budget=4096,               # Context budget in tokens
     min_fidelity=RepresentationLevel.REFERENCE,  # Minimum fidelity
     overhead_tokens=100,             # Additional caller reserve beyond measured context
-    chars_per_token=4.2,             # Token estimation ratio
     graph_max_candidates=50,         # Max from graph traversal
     vector_k=50,                     # Max from vector search
     lexical_k=50,                    # Max from lexical search
     graph_max_hops=3,                # Max graph hops (1-3)
     cross_scope_top_n=5,             # Top-N cross-scope hints
-    cross_scope_token_budget=512,    # Separate budget for hints
 )
 ```
+
+Context packing counts the complete rendered output with the configured
+`tokenizer`. The legacy `chars_per_token` and `cross_scope_token_budget` names
+remain accepted for configuration and receipt compatibility, but non-default
+values are ignored with a warning. Cross-scope hints live outside the packed
+context and are bounded by `cross_scope_top_n`.
 
 ---
 
@@ -991,7 +997,7 @@ When `scope` is filtered and `include_cross_scope=True`, a secondary vector+lexi
 **Output:** `MemoryBundle`.
 
 Greedy bin-packing within the token budget:
-1. Estimate token cost per candidate using `chars_per_token` ratio
+1. Count each serialized candidate with the configured tokenizer
 2. Reserve `overhead_tokens` for JSON envelope
 3. Pack candidates in score order, assigning representation levels:
    - High-budget: `FULL` or `PROSE`

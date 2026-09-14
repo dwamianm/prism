@@ -68,3 +68,30 @@ def test_valid_configurations_keep_roundtrip_versions_and_values():
         aggregation_k_multiplier=2, session_context_score_decay=0.75
     )
     assert PackingConfig.model_validate_json(packing.model_dump_json()) == packing
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("chars_per_token", 3.5), ("cross_scope_token_budget", 128)],
+)
+def test_ignored_legacy_packing_fields_warn_on_nondefault_use(field, value):
+    with pytest.warns(FutureWarning, match=field):
+        packing = PackingConfig(**{field: value})
+    assert getattr(packing, field) == value
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("graph_max_candidates", -1),
+        ("vector_k", -1),
+        ("lexical_k", -1),
+        ("graph_max_hops", 0),
+        ("graph_max_hops", 4),
+        ("cross_scope_top_n", -1),
+    ],
+)
+def test_candidate_generation_limits_reject_impossible_values(field, value):
+    with pytest.raises(ValidationError) as exc:
+        PackingConfig(**{field: value})
+    assert exc.value.errors()[0]["loc"] == (field,)

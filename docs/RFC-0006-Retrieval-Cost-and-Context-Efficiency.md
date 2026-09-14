@@ -143,7 +143,7 @@ Token cost estimation is `[BEST-EFFORT]`. The following methods are listed in or
 | Chinese, Japanese, Korean | 1.5 |
 | Arabic, Hebrew | 2.0 |
 
-These values are `[HYPOTHESIS]`. The correct value is tokeniser and language dependent. Implementations MUST allow per-namespace override of these defaults and SHOULD validate against the actual tokeniser output for any production deployment.
+These values are `[HYPOTHESIS]`. The correct value is tokeniser and language dependent. Implementations that use Method 2 MUST allow an appropriate override and SHOULD validate it against the actual tokeniser output for any production deployment. PRME's product context packer uses Method 1 over the complete rendered context; its legacy `chars_per_token` configuration name is accepted only for receipt and configuration compatibility and non-default values are ignored with a warning.
 
 **Method 3 — Pre-computed stored estimate:** Store `token_cost_estimate` on the memory object at creation time using Method 2. Use this as a fast approximation. Update it during organiser passes.
 

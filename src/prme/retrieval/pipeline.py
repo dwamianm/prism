@@ -627,7 +627,12 @@ class RetrievalPipeline:
         # per research Pattern 3) to surface highly relevant results from
         # other scopes. Hints are separate from primary results.
         cross_scope_hints: list[RetrievalCandidate] = []
-        if normalized_scope is not None and include_cross_scope and candidates:
+        if (
+            normalized_scope is not None
+            and include_cross_scope
+            and candidates
+            and effective_packing_config.cross_scope_top_n > 0
+        ):
             try:
                 # Build hint config with reduced k for performance.
                 hint_config = effective_packing_config.model_copy(

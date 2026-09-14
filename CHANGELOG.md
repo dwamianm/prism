@@ -61,6 +61,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Packing configuration now rejects negative candidate limits and graph depths
+  outside the RFC's 1-3 range. The legacy no-op `chars_per_token` and
+  `cross_scope_token_budget` fields remain parseable for receipt compatibility,
+  but non-default use warns that exact context tokenization and
+  `cross_scope_top_n` are the active controls. Setting `cross_scope_top_n=0`
+  now skips the secondary hint search entirely.
 - The organizer registry now contains only implemented jobs. The unimplemented,
   unvalidated `centrality_boost` no-op is no longer advertised or run during
   default maintenance; explicit requests fail as an unknown job instead of

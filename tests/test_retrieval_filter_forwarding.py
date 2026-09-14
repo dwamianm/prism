@@ -22,6 +22,7 @@ import pytest_asyncio
 
 from prme.models.nodes import MemoryNode
 from prme.retrieval.candidates import generate_candidates
+from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import QueryAnalysis
 from prme.retrieval.pipeline import RetrievalPipeline
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
@@ -533,3 +534,38 @@ async def test_cross_scope_hints_disabled(backends):
     # filter_metadata should show cross_scope_enabled=False
     assert response.filter_metadata is not None
     assert response.filter_metadata.cross_scope_enabled is False
+
+
+@pytest.mark.asyncio
+async def test_zero_cross_scope_limit_returns_no_hints(backends):
+    """A zero hint limit disables the secondary result surface."""
+    conn, graph_store, vector_index, lexical_index = backends
+
+    project_node = _make_node(
+        scope=Scope.PROJECT,
+        content="Project architecture review meeting summary",
+    )
+    personal_node = _make_node(
+        scope=Scope.PERSONAL,
+        content="Personal architecture review notes",
+    )
+    await _store_node(project_node, graph_store, vector_index, lexical_index)
+    await _store_node(personal_node, graph_store, vector_index, lexical_index)
+
+    pipeline = RetrievalPipeline(
+        graph_store=graph_store,
+        vector_index=vector_index,
+        lexical_index=lexical_index,
+        conn=conn,
+        packing_config=PackingConfig(cross_scope_top_n=0),
+    )
+    response = await pipeline.retrieve(
+        "architecture review",
+        user_id="test-user",
+        scope=[Scope.PROJECT],
+    )
+
+    assert response.results
+    assert response.cross_scope_hints == []
+    assert response.filter_metadata is not None
+    assert response.filter_metadata.cross_scope_enabled is True

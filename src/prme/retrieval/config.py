@@ -8,7 +8,9 @@ are exported as module-level constants.
 from __future__ import annotations
 
 import hashlib
-from typing import Literal
+import math
+import warnings
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -181,28 +183,39 @@ class PackingConfig(BaseModel):
     )
     chars_per_token: float = Field(
         default=4.2,
-        description="Character-based token estimation default [HYPOTHESIS]",
+        gt=0,
+        description=(
+            "Deprecated compatibility field. Context budgets use the configured "
+            "tiktoken tokenizer over the complete rendered output; changing this "
+            "value has no effect."
+        ),
     )
     graph_max_candidates: int = Field(
-        default=150,
+        default=150, ge=0,
         description="Max candidates from graph traversal",
     )
     vector_k: int = Field(
-        default=500, description="Max candidates from vector search"
+        default=500, ge=0, description="Max candidates from vector search"
     )
     lexical_k: int = Field(
-        default=500, description="Max candidates from lexical search"
+        default=500, ge=0, description="Max candidates from lexical search"
     )
     graph_max_hops: int = Field(
-        default=3, description="Max hops for graph neighborhood (1-3 per RFC)"
+        default=3, ge=1, le=3,
+        description="Max hops for graph neighborhood (1-3 per RFC)",
     )
     cross_scope_top_n: int = Field(
-        default=5,
+        default=5, ge=0,
         description="Top-N threshold for cross-scope hints [HYPOTHESIS]",
     )
     cross_scope_token_budget: int = Field(
         default=512,
-        description="Separate token budget for cross-scope hints [HYPOTHESIS]",
+        ge=0,
+        description=(
+            "Deprecated compatibility field. Cross-scope hints are separate "
+            "scored response records capped by cross_scope_top_n; changing this "
+            "value has no effect."
+        ),
     )
     session_context_window: int = Field(
         default=3,
@@ -236,6 +249,37 @@ class PackingConfig(BaseModel):
         default=2000,
         description="Hard cap on candidate k values after aggregation multiplier",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def warn_ignored_compatibility_fields(cls, value: Any) -> Any:
+        """Expose legacy settings that no longer affect packing behavior."""
+        if isinstance(value, dict):
+            ignored = []
+            chars_per_token = value.get("chars_per_token", 4.2)
+            if (
+                isinstance(chars_per_token, (int, float))
+                and math.isfinite(chars_per_token)
+                and chars_per_token > 0
+                and chars_per_token != 4.2
+            ):
+                ignored.append("chars_per_token")
+            cross_scope_token_budget = value.get("cross_scope_token_budget", 512)
+            if (
+                isinstance(cross_scope_token_budget, int)
+                and cross_scope_token_budget >= 0
+                and cross_scope_token_budget != 512
+            ):
+                ignored.append("cross_scope_token_budget")
+            if ignored:
+                warnings.warn(
+                    f"PackingConfig {', '.join(ignored)} is deprecated and ignored; "
+                    "context uses exact tokenizer counts and cross-scope hints use "
+                    "cross_scope_top_n.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+        return value
 
 
 # Module-level default instances.
