@@ -657,6 +657,32 @@ The legacy anonymous-feedback tuner requires an explicit unscoped operator call,
 `ValueError` before any work. It affects every user of the engine and does not
 activate an evaluated learning profile.
 
+Record the memories an answer actually cites separately from relevance labels:
+
+```python
+from hashlib import sha256
+from prme import AnswerCitationSubmission
+
+citations = AnswerCitationSubmission(
+    request_id=response.metadata.request_id,
+    answer_id="assistant-message-42",
+    cited_node_ids=(node_id,),
+    answer_sha256=sha256(answer_text.encode()).hexdigest(),  # optional
+    method="application_verified",
+)
+saved = memory.record_answer_citations(citations, user_id="alice")
+```
+
+Every cited node must have appeared as content in the saved context, rather than
+only in results or as a reference. Pass an empty tuple to record that an answer
+reported no memory citations. Keep `citations.citation_id` for retry safety.
+These records survive graph changes and restart, and remain readable with
+`get_answer_citations` and `list_answer_citations`. HTTP provides
+`/v1/answer-citations`; MCP provides `memory_record_answer_citations`,
+`memory_get_answer_citations`, and `memory_list_answer_citations`. A model report
+is usage telemetry. It is not verified answer correctness or causal evidence
+that uncited memories were unnecessary.
+
 Evaluate a proposed adjustment after collecting explicit positive and negative
 judgments across enough distinct queries:
 

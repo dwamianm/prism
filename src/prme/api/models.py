@@ -6,7 +6,7 @@ These are thin DTOs — no business logic belongs here.
 
 from __future__ import annotations
 
-from prme.models.relevance import RelevanceSubmission
+from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
 from prme.models.learning import RankingMultipliers
 
 from typing import Annotated, Any, Literal
@@ -344,4 +344,8 @@ class ErrorResponse(BaseModel):
 
 
 class RelevanceRequest(RelevanceSubmission):
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+
+
+class AnswerCitationRequest(AnswerCitationSubmission):
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")

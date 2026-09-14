@@ -18,7 +18,7 @@ from pydantic import AwareDatetime, StrictBool, TypeAdapter
 
 from prme import __version__
 from prme.config import PRMEConfig
-from prme.models.relevance import RelevanceSubmission
+from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
 from prme.models.learning import RankingMultipliers
 from prme.types import (
     ConditionEvaluationMethod,
@@ -440,6 +440,79 @@ async def memory_list_relevance(user_id: Optional[str] = None, limit: int = 100,
         return json.dumps({"error": str(exc)})
     except Exception as exc:
         return _internal_error("memory_list_relevance", exc)
+
+
+async def memory_record_answer_citations(
+    request_id: str,
+    answer_id: str,
+    cited_node_ids: list[str],
+    citation_id: Optional[str] = None,
+    answer_sha256: Optional[str] = None,
+    method: Literal["model_reported", "application_verified", "human_verified"] = "model_reported",
+    user_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Record which packed memories supported an answer; reuse citation_id on retry.
+
+    Pass an empty cited_node_ids list to explicitly report an answer with no
+    memory citations. Every nonempty citation must identify content that was
+    actually included in the saved retrieval context.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        data = {
+            "request_id": request_id,
+            "answer_id": answer_id,
+            "cited_node_ids": cited_node_ids,
+            "answer_sha256": answer_sha256,
+            "method": method,
+        }
+        if citation_id is not None:
+            data["citation_id"] = citation_id
+        submission = AnswerCitationSubmission.model_validate(data)
+        return (
+            await engine.record_answer_citations(submission, user_id=owner)
+        ).model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_record_answer_citations", exc)
+
+
+async def memory_get_answer_citations(
+    citation_id: str, user_id: Optional[str] = None, ctx: Context = None,
+) -> str:
+    """Read one owned answer citation record by its retry identity."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.get_answer_citations(citation_id, user_id=owner)
+        return result.model_dump_json() if result else json.dumps({
+            "error": "Answer citation record not found",
+        })
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_get_answer_citations", exc)
+
+
+async def memory_list_answer_citations(
+    user_id: Optional[str] = None, limit: int = 100,
+    after_id: Optional[str] = None, ctx: Context = None,
+) -> str:
+    """Page owned answer citation records by citation UUID."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        records = await engine.list_answer_citations(
+            user_id=owner, limit=limit, after_id=after_id,
+        )
+        return json.dumps([record.model_dump(mode="json") for record in records])
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_list_answer_citations", exc)
 
 
 async def memory_organize(
@@ -907,6 +980,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_get_node, memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance,
+                 memory_record_answer_citations, memory_get_answer_citations,
+                 memory_list_answer_citations,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
                  memory_promote_node, memory_archive_node, memory_evaluate_condition,
                  memory_get_provenance, memory_supersede, memory_mark_contradiction,

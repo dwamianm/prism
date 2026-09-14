@@ -133,14 +133,15 @@ content hashes, configuration and context membership through the authenticated
 owner. A logging failure does not fail retrieval; it sets the flag to false.
 Legacy requests without a receipt return 404.
 
-New pipeline receipts use `schema_version: 3`. Their `score_provenance` map contains applied
+New pipeline receipts use schema version 4 for density/score packing and version
+5 for balanced packing. Their `score_provenance` map contains applied
 weights, base features and ordered neural/session adjustments for each returned
 candidate; `ranking_policy` records the actual sorting rule. Python's
 `RetrievalReceipt.model_validate_json(...)` and `replay_ranking()` validate and
 replay this saved ranking without the current graph. Version 1 and 2 receipt JSON
 and checksums remain unchanged and still support labels; version 1 cannot replay scores.
 These snapshots cover returned candidates only, not unseen retrieval candidates.
-Version 3 also includes `execution.parameters` and `execution.features`, recording
+Versions 4 and 5 also include `execution.parameters` and `execution.features`, recording
 request filters/adjustments and reported model/environment identity. These fields
 do not establish that a remote model is pinned. The explicit ranking-adjustment
 trial argument is currently available through Python; HTTP reads its saved receipts.
@@ -175,6 +176,41 @@ time; a concurrent insert can precede the cursor. Records retain the original
 exposure even after graph changes. Collection does not modify facts, change
 weights, or establish learned quality. The legacy global feedback tuner does not
 consume these records; evaluated scoped learning remains pending in RFC-0017.
+
+## Record answer-time memory citations
+
+`POST /v1/answer-citations` records which content-bearing entries from one saved
+retrieval context supported an application answer:
+
+```json
+{
+  "citation_id": "44444444-4444-4444-8444-444444444444",
+  "request_id": "22222222-2222-4222-8222-222222222222",
+  "answer_id": "assistant-message-42",
+  "cited_node_ids": ["33333333-3333-4333-8333-333333333333"],
+  "answer_sha256": "1f3c2b1a00000000000000000000000000000000000000000000000000000000",
+  "method": "application_verified"
+}
+```
+
+`answer_id` is the caller's stable answer reference. The optional digest binds
+the record to answer bytes without storing answer text. `method` is
+`model_reported`, `application_verified`, or `human_verified`. These names report
+how the citation set was obtained; the service does not independently inspect the
+answer. An empty `cited_node_ids` list explicitly records an answer with no memory
+citations and remains distinct from missing telemetry.
+
+Every cited node must be a content-bearing entry in the saved context. A result
+that was omitted during packing, a reference-only entry, an unknown candidate,
+or a foreign receipt is rejected. Reusing `citation_id` with identical input
+returns the original record and timestamp; changed input returns 409. Missing or
+foreign receipts return 404, and owner mismatches return 403.
+
+Read one record with `GET /v1/answer-citations/{citation_id}` or page owned
+records with `GET /v1/answer-citations?limit=100&after_id=...`. Records bind to
+the receipt and rendered-context checksums, and remain valid if a cited memory is
+later changed or archived. Citation telemetry does not mutate memories or ranking
+and does not establish that an uncited memory has zero causal value.
 
 ## Confirming a memory
 

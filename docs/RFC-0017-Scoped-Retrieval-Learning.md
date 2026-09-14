@@ -147,6 +147,27 @@ both storage backends. A failed validation writes nothing. Different feedback ID
 can preserve conflicting judgments; later training must state how it handles
 repeated/contradictory judgments and must not count retries as independent votes.
 
+## Answer citation records
+
+An application can append one owner-scoped citation set for an answer generated
+from a saved retrieval. The record binds a caller answer ID, optional answer
+digest, collection method, receipt checksum, rendered-context checksum and the
+memory node IDs cited by the answer. Every nonempty citation must identify a
+content-bearing entry actually included in that receipt's context. Current graph
+state is irrelevant, so a citation remains auditable after graph changes or
+archival. Empty citation sets explicitly distinguish “reported no citations”
+from absent telemetry.
+
+A caller-generated citation UUID makes exact retries idempotent across restart.
+Conflicting reuse fails without overwriting the first record. Reads and pages
+retain owner isolation on both storage backends. The public async/sync Python,
+HTTP and MCP surfaces share this contract.
+
+Citation method records whether use was model-reported, application-verified or
+human-verified. It does not prove answer correctness. Missing citations are not
+negative relevance labels, and uncited exposure is not causal proof that a memory
+was unnecessary. No current organizer or scorer consumes these records.
+
 ## Offline proposal evaluation
 
 `MemoryEngine.evaluate_learning` and `MemoryClient.evaluate_learning` capture an
@@ -248,3 +269,13 @@ utility. PRME's typed factual relationships are not that experience-creation
 DAG. Adapting this technique would require explicit trajectory/outcome lineage,
 credit-assignment tests, and a controlled task benchmark. Copying its update onto
 ordinary `HAS_FACT` or similarity edges would not implement the reported method.
+
+[Hindsight Memory-PRM](https://arxiv.org/abs/2608.29605) reports entry-level
+presence credit derived from retrieval traces, answer citations and controlled
+deletion-and-reanswer interventions, propagated across memory versions. The new
+answer citation record supplies one missing observation while preserving the
+retrieval exposure and version-chain evidence PRME already records. It does not
+implement intervention credit. A future experiment must reproduce deletion and
+reanswer under a fixed reader and retrieval invariant, preserve failed and
+changed answers, and pass held-out task and schema-transfer gates before any
+credit changes retention or ranking.

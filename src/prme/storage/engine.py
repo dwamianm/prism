@@ -40,11 +40,18 @@ from prme.models.provenance import NodeProvenance
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
-from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.relevance import (
+    AnswerCitationRecord,
+    AnswerCitationSubmission,
+    RelevanceRecord,
+    RelevanceSubmission,
+    RetrievalReceipt,
+)
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfileProcessingResult, profile_key, ProfileCollectionResult
 from prme.models.derivation import PreparedEmbedding
 from prme.storage.relevance import RelevanceRepository
+from prme.storage.citations import CitationRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
 from prme.storage._threading import run_to_completion
@@ -143,6 +150,7 @@ class MemoryEngine:
 
         # Quality assessment and auto-tuning (issue #24)
         self._relevance = RelevanceRepository(conn=conn, pool=pool, conn_lock=getattr(event_store, "_conn_lock", None))
+        self._citations = CitationRepository(conn=conn, pool=pool, conn_lock=getattr(event_store, "_conn_lock", None))
         self._feedback_tracker = FeedbackTracker()
         self._weight_tuner = WeightTuner(
             self._config.scoring, learning_rate=0.01,
@@ -2385,6 +2393,30 @@ class MemoryEngine:
                              after_id: str | None = None) -> list[RelevanceRecord]:
         """Page by feedback UUID; concurrent inserts may precede the cursor."""
         return await self._relevance.list(user_id=user_id, limit=limit, after_id=after_id)
+
+    async def record_answer_citations(
+        self, submission: AnswerCitationSubmission, *, user_id: str,
+    ) -> AnswerCitationRecord:
+        """Record which packed memories supported one answer.
+
+        The record binds to a saved retrieval context. It does not change
+        memory state or ranking, and model-reported citations are not treated
+        as independently verified causal credit.
+        """
+        return await self._citations.record(submission, user_id=user_id)
+
+    async def get_answer_citations(
+        self, citation_id: str, *, user_id: str,
+    ) -> AnswerCitationRecord | None:
+        return await self._citations.get(citation_id, user_id=user_id)
+
+    async def list_answer_citations(
+        self, *, user_id: str, limit: int = 100, after_id: str | None = None,
+    ) -> list[AnswerCitationRecord]:
+        """Page answer citation sets by citation UUID."""
+        return await self._citations.list(
+            user_id=user_id, limit=limit, after_id=after_id,
+        )
 
     async def evaluate_learning(self, *, user_id: str, scopes: list[Scope] | None = None,
                                 surface: Literal["results", "context"] = "results", config: LearningConfig | None = None,

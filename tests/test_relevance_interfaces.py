@@ -7,7 +7,7 @@ import pytest
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from prme import MemoryClient, MemoryEngine, RelevanceSubmission
+from prme import AnswerCitationSubmission, MemoryClient, MemoryEngine, RelevanceSubmission
 from prme.config import MCPConfig
 from prme.mcp.server import create_mcp_server
 from tests import test_durable_ingestion
@@ -34,9 +34,27 @@ async def test_http_records_owned_relevance_and_retry_identity(config, user):
             assert (await client.post("/v1/relevance", json=body)).json() == first.json()
             assert (await client.get(f"/v1/relevance/{fid}")).json() == first.json()
             assert (await client.get("/v1/relevance")).json() == [first.json()]
+            citation_id = str(uuid4())
+            citation_body = {
+                "citation_id": citation_id,
+                "request_id": rid,
+                "answer_id": "http-answer",
+                "cited_node_ids": [nid],
+                "method": "application_verified",
+            }
+            citation = await client.post("/v1/answer-citations", json=citation_body)
+            assert citation.status_code == 200, citation.text
+            assert (await client.post("/v1/answer-citations", json=citation_body)).json() == citation.json()
+            assert (await client.get(f"/v1/answer-citations/{citation_id}")).json() == citation.json()
+            assert (await client.get("/v1/answer-citations")).json() == [citation.json()]
+            conflict = await client.post(
+                "/v1/answer-citations", json={**citation_body, "answer_id": "changed"},
+            )
+            assert conflict.status_code == 409
             foreign = {"Authorization": "Bearer other-token"}
             assert (await client.get(f"/v1/retrievals/{rid}", headers=foreign)).status_code == 404
             assert (await client.get(f"/v1/relevance/{fid}", headers=foreign)).status_code == 404
+            assert (await client.get(f"/v1/answer-citations/{citation_id}", headers=foreign)).status_code == 404
             assert (await client.post("/v1/relevance", json=body, headers=foreign)).status_code == 404
             assert (await client.post("/v1/relevance", json={**body, "user_id": user + "-other"})).status_code == 403
             assert (await client.post("/v1/relevance", json={**body, "labels": {nid: "true"}})).status_code == 422
@@ -54,11 +72,18 @@ def test_sync_client_records_and_reads_relevance(config, user):
         receipt = client.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
         submission = RelevanceSubmission(request_id=receipt.request_id, labels={receipt.candidates[0].node_id: True})
         record = client.record_relevance(submission, user_id=user)
+        citations = client.record_answer_citations(AnswerCitationSubmission(
+            request_id=receipt.request_id,
+            answer_id="sync-answer",
+            cited_node_ids=(receipt.candidates[0].node_id,),
+        ), user_id=user)
         learning = client.evaluate_learning(user_id=user)
         assert learning.decision == "insufficient_data"
         assert learning.feedback_ids == (record.feedback_id,)
         assert client.get_relevance(str(record.feedback_id), user_id=user) == record
         assert client.list_relevance(user_id=user) == [record]
+        assert client.get_answer_citations(str(citations.citation_id), user_id=user) == citations
+        assert client.list_answer_citations(user_id=user) == [citations]
         nid = str(receipt.candidates[0].node_id)
         original = client.get_node(nid, user_id=user)
         for action in (client.promote, client.archive):
@@ -74,6 +99,7 @@ def test_sync_client_records_and_reads_relevance(config, user):
         assert client.evaluate_learning(user_id=user) == learning
         assert client.get_node(nid, user_id=user, include_superseded=True).lifecycle_state.value == "archived"
         assert client.get_relevance(str(record.feedback_id), user_id=user) == record
+        assert client.get_answer_citations(str(citations.citation_id), user_id=user) == citations
         assert client.get_event(str(original.evidence_refs[0]), user_id=user) is not None
 
 
@@ -103,6 +129,19 @@ async def test_mcp_relevance_tool_workflow_preserves_binding(config, user):
             assert await call("memory_record_relevance", arguments) == record
             assert await call("memory_get_relevance", {"feedback_id": record["feedback_id"]}) == record
             assert await call("memory_list_relevance", {}) == [record]
+            citation_arguments = {
+                "request_id": rid,
+                "answer_id": "mcp-answer",
+                "citation_id": str(uuid4()),
+                "cited_node_ids": [nid],
+            }
+            citations = await call("memory_record_answer_citations", citation_arguments)
+            assert "error" not in citations, citations
+            assert await call("memory_record_answer_citations", citation_arguments) == citations
+            assert await call("memory_get_answer_citations", {
+                "citation_id": citations["citation_id"],
+            }) == citations
+            assert await call("memory_list_answer_citations", {}) == [citations]
             assert "error" in await call("memory_record_relevance", {**arguments, "user_id": user + "-other"})
             invalid = await session.call_tool("memory_record_relevance", {**arguments, "labels": {nid: "true"}})
             assert invalid.isError

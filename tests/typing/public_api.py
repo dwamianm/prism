@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import RelevanceRecord, RelevanceSubmission, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse
+from prme import AnswerCitationRecord, AnswerCitationSubmission, RelevanceRecord, RelevanceSubmission, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -35,6 +35,12 @@ def consume(client: MemoryClient) -> None:
 
 def submit_relevance(client: MemoryClient, submission: RelevanceSubmission) -> None:
     assert_type(client.record_relevance(submission, user_id="alice"), RelevanceRecord)
+
+
+def submit_citations(client: MemoryClient, submission: AnswerCitationSubmission) -> None:
+    assert_type(client.record_answer_citations(submission, user_id="alice"), AnswerCitationRecord)
+    assert_type(client.get_answer_citations(str(submission.citation_id), user_id="alice"), AnswerCitationRecord | None)
+    assert_type(client.list_answer_citations(user_id="alice"), list[AnswerCitationRecord])
 
 
 async def postgres_workspace_consumer() -> None:

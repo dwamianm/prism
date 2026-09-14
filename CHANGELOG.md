@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Immutable, owner-scoped answer citation records across async/sync Python,
+  HTTP, MCP, DuckDB, and PostgreSQL. Citations bind to saved content-bearing
+  context, preserve optional answer digests, and use caller UUIDs for exact
+  retry safety without changing memories or ranking.
 - Durable retry IDs for promotion and archival across sync/async Python, HTTP,
   and MCP. HTTP uses `Idempotency-Key`; conflicting key reuse returns 409.
 - Atomic, checksummed explicit corrections across sync/async Python, HTTP, MCP,

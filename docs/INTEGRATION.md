@@ -298,6 +298,30 @@ Hybrid retrieval through the 6-stage pipeline.
 
 ---
 
+#### `engine.record_answer_citations()`
+
+```python
+async def record_answer_citations(
+    self,
+    submission: AnswerCitationSubmission,
+    *,
+    user_id: str,
+) -> AnswerCitationRecord
+```
+
+Append the memory citations for an answer created from a saved retrieval. The
+submission includes the retrieval `request_id`, a caller answer reference,
+zero or more cited node IDs, an optional answer SHA-256 digest, a collection
+method, and a caller-generated citation UUID used for safe retries. Every cited
+node must be content-bearing and included in the receipt's rendered context.
+
+An empty citation tuple explicitly records that the answer reported no memory
+citations. The record remains valid after graph changes or archival. It is
+telemetry and does not modify memory state or ranking. Use
+`get_answer_citations()` and `list_answer_citations()` to read owned records.
+
+---
+
 #### `engine.get_node()`
 
 ```python

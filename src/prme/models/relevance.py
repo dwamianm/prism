@@ -162,6 +162,43 @@ class RelevanceRecord(RelevanceSubmission):
                    for field in RelevanceSubmission.model_fields)
 
 
+class AnswerCitationSubmission(BaseModel):
+    """Memory citations reported for one answer built from a saved context.
+
+    An empty ``cited_node_ids`` tuple explicitly records that the answer cited
+    no memory. It is distinct from missing answer telemetry and must not be
+    interpreted as causal evidence that every exposed memory was unnecessary.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    citation_id: UUID = Field(default_factory=uuid4)
+    request_id: UUID
+    answer_id: str = Field(min_length=1, max_length=512)
+    cited_node_ids: tuple[UUID, ...] = Field(default=(), max_length=1000)
+    answer_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    method: Literal["model_reported", "application_verified", "human_verified"] = "model_reported"
+
+    @model_validator(mode="after")
+    def valid_answer_and_citations(self):
+        if not self.answer_id.strip():
+            raise ValueError("answer_id cannot be blank")
+        if len(self.cited_node_ids) != len(set(self.cited_node_ids)):
+            raise ValueError("cited_node_ids must be unique")
+        return self
+
+
+class AnswerCitationRecord(AnswerCitationSubmission):
+    schema_version: Literal[1] = 1
+    user_id: str = Field(min_length=1)
+    recorded_at: AwareDatetime
+    receipt_checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
+    context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    def matches(self, submission: AnswerCitationSubmission) -> bool:
+        return all(getattr(self, field) == getattr(submission, field)
+                   for field in AnswerCitationSubmission.model_fields)
+
+
 def make_receipt(*, request_id: UUID, user_id: str, query: str,
                  reference_time: datetime, scopes, scoring, packing, candidates, bundle,
                  min_score=None, result_limit=None, retrieval_mode=RetrievalMode.DEFAULT,

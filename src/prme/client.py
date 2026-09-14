@@ -30,7 +30,13 @@ from uuid import UUID
 
 from prme.config import PRMEConfig
 from prme.storage.embedding import EmbeddingProvider
-from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.relevance import (
+    AnswerCitationRecord,
+    AnswerCitationSubmission,
+    RelevanceRecord,
+    RelevanceSubmission,
+    RetrievalReceipt,
+)
 from prme.models.provenance import NodeProvenance
 from prme.models.learning import LearningConfig, LearningEvaluation, RankingMultipliers
 from prme.retrieval.config import ScoringWeights
@@ -361,6 +367,24 @@ class MemoryClient:
     def list_relevance(self, *, user_id: str, limit: int = 100,
                        after_id: str | None = None) -> list[RelevanceRecord]:
         return self._run(self._engine.list_relevance(user_id=user_id, limit=limit, after_id=after_id))
+
+    def record_answer_citations(
+        self, submission: AnswerCitationSubmission, *, user_id: str,
+    ) -> AnswerCitationRecord:
+        """Save an answer's memory citations; reuse citation_id when retrying."""
+        return self._run(self._engine.record_answer_citations(submission, user_id=user_id))
+
+    def get_answer_citations(
+        self, citation_id: str, *, user_id: str,
+    ) -> AnswerCitationRecord | None:
+        return self._run(self._engine.get_answer_citations(citation_id, user_id=user_id))
+
+    def list_answer_citations(
+        self, *, user_id: str, limit: int = 100, after_id: str | None = None,
+    ) -> list[AnswerCitationRecord]:
+        return self._run(self._engine.list_answer_citations(
+            user_id=user_id, limit=limit, after_id=after_id,
+        ))
 
     def evaluate_learning(self, *, user_id: str, scopes: list[Scope] | None = None,
                           surface: Literal["results", "context"] = "results", config: LearningConfig | None = None,
