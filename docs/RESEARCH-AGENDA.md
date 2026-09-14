@@ -22,6 +22,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 | Matched raw retrieval | All 119 development questions completed against pinned Mem0 OSS. At 4K shared whole-turn packing, PRME source recall was 96.49% versus 93.27%; Mem0 led preferences. | Raw mode, frozen older PRME reference, shared evaluator packer and no answer generation. The 4K interval touches zero; no end-to-end leadership claim. |
 | Matched raw-context answers | [Complete PRME–Hindsight comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-RESULTS.md): Qwen 53/119 versus 52/119, Gemma 71/119 versus 56/119. All 714 logical judgments and native artifact chains verified. | Qwen's paired group interval includes zero. Both readers answer only 1/9 assistant questions correctly with PRME. Development cohort, custom local judge, raw profiles; no consistent overall leadership or default-promotion claim. |
 | Held-out agent-trajectory answers | [Registered LongMemEval-V2 web-small comparison](../benchmarks/results/research/2026-09-14/LONGMEMEVAL-V2-WEB-UNSEEN-DETERMINISTIC-V1.md): PRME scored 80/149 (53.69%) versus 10/149 (6.71%) without memory, with 75 paired wins, 5 losses and a +37.58 to +55.70 point question-bootstrap interval. All rows, official deterministic scores, inputs, reader settings, pack/config bindings and zero-memory baseline behavior passed the fail-closed comparator. | One local Qwen 9B reader and one saved PRME artifact versus no memory. The filtered web-small cohort excludes judge-dependent categories, enterprise and eight previously inspected questions. Mean PRME context was 43,195 tokens. This establishes memory utility on the named cohort, not competitive leadership. |
+| Agent-trajectory context efficiency | [Registered compact 4K development study](../benchmarks/results/research/2026-09-14/LONGMEMEVAL-V2-WEB-COMPACT4K-DEVELOPMENT.md): PRME scored 49/149 versus 10/149 without memory, with 45 paired wins and 6 losses, while mean reader memory context fell 83.05% from the 32K reference. | The same 149 questions and earlier outcomes were known. Compact 4K lost 31 correct answers versus the earlier arm, and the study changes both format and budget. Keep compact explicit and measure an intermediate budget curve before changing defaults. |
 | PersonaMem-v2 pilot | All 96 questions completed and independently verified. Alpha .25 packing answered 42 correctly, density 36, score 41 and no memory 33. | Primary cluster interval includes zero; losses on other-person and health questions. Custom persona-hidden variant, one local reader, no default promotion. |
 | Scoped retrieval learning | Explicit labels feed a deterministic observed-candidate proposal gate; fresh paired receipts with complete gold identities feed a separate full-retrieval gate. Immutable owner/exact-scope profiles persist and apply across restart with inspected activation, deactivation and rollback on both backends. | Authored functional and concurrency validation proves the gate and lifecycle contracts. No learned profile has yet passed a representative task holdout or established answer-quality improvement. |
 | External lifecycle and scale workflows | The registered MELT run completed five seeds and all 20 lifecycle checkpoints at recall@12 and NDCG@12 of 1.000. The registered BEAM raw workflow ingested all 94 public 100K chunks and returned all 50 requested memories for 20 questions across ten abilities. | MELT uses four held-out lifecycle cases and a deterministic embedding profile. BEAM is predict-only and does not measure relevance or answer correctness. |
@@ -237,21 +238,27 @@ authored probes still require held-out and provider-diverse validation.
 
 The first registered held-out LongMemEval-V2 answer comparison is complete. Its
 large gain over no memory clears the memory-utility gate for this cohort, while
-its 43K-token mean context makes context compression the immediate product and
-evaluation priority. Add matched current memory baselines before changing any
-retrieval default from this result; add a second reader family and the excluded
-judge-dependent categories before generalizing answer quality.
+its 43K-token mean context makes context compression an immediate product and
+evaluation priority. A registered same-cohort compact 4K development arm scored
+49/149 versus 10/149 without memory and reduced mean memory context from 43,195
+to 7,321 tokens, but lost 31 correct answers against the 32K arm. Measure
+intermediate budgets and selection policies before changing either retrieval
+default. Add matched current memory baselines, a second reader family and the
+excluded judge-dependent categories before generalizing answer quality.
 
 A pinned [MemoryAgentBench integration](../benchmarks/integrations/MEMORYAGENTBENCH.md)
 now supports the benchmark's four incremental competency families using the 4K
 product packer, complete source manifests, stable query clocks, and exact context
 capture. The fail-closed workflow preregisters every prepared source, query,
 reference and context assignment, then verifies complete result metrics against
-bounded recounted contexts, durable receipts and the exact source manifests. Its
-contract tests, pinned-tree installation, a real-data 500-query EventQA
-registration dry run, and one-context real-data ingress smoke across all four
-families pass, but no task score has been promoted. Run the registered
-common-reader matrix next. Treat its
+bounded recounted contexts, durable receipts and the exact source manifests.
+Final 20-question paired registrations for all four families bind identical
+source chunks, questions, reader prompts and model settings across PRME and BM25,
+as well as exact preprocessing dependencies. The BM25 verifier independently
+reconstructs every ranking and captured source list. Contract tests, pinned-tree
+installation, a real-data 500-query EventQA registration dry run, and one-context
+real-data ingress smoke across all four families pass, but no task score has been
+promoted. Run and verify this registered common-reader matrix next. Treat its
 test-time-learning arm as retrieved in-context demonstrations and its conflict
 arm as numbered-source resolution; separate experiments are still required for
 scoped ranking-profile learning and transactional graph supersedence.

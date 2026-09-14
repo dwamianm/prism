@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-v2-same-cohort-budget-diagnostic",
+  "cohort": {
+    "questions": 149,
+    "question_identity_sets_equal": true,
+    "outcomes_known_before_compact_run": true
+  },
+  "arms": {
+    "compact_4k": {
+      "correct": 49,
+      "memory_context_tokens_mean": 7320.5302013422815,
+      "per_question_sha256": "70fb945b6f3beecd5328f1f2cba71a54be3631317fa768ce648ab3babcb11ca9"
+    },
+    "auditable_32k": {
+      "correct": 80,
+      "memory_context_tokens_mean": 43195.281879194634,
+      "per_question_sha256": "caeb1f18124733bf3f2dec289e39da7df8271d01ec8d1638fc81c794b17a664f"
+    }
+  },
+  "paired_compact_4k_minus_auditable_32k": {
+    "correct_difference": -31,
+    "accuracy_difference": -0.20805369127516776,
+    "wins": 5,
+    "losses": 36,
+    "ties": 108,
+    "context_reduction_fraction": 0.8305247730107237
+  },
+  "categories": {
+    "dynamic": {
+      "questions": 49,
+      "compact_4k_correct": 11,
+      "auditable_32k_correct": 20,
+      "wins": 1,
+      "losses": 10,
+      "ties": 38
+    },
+    "procedure": {
+      "questions": 41,
+      "compact_4k_correct": 21,
+      "auditable_32k_correct": 25,
+      "wins": 2,
+      "losses": 6,
+      "ties": 33
+    },
+    "static": {
+      "questions": 59,
+      "compact_4k_correct": 17,
+      "auditable_32k_correct": 35,
+      "wins": 2,
+      "losses": 20,
+      "ties": 37
+    }
+  },
+  "limitations": [
+    "This is a post-result comparison on the same cohort; it is not a new holdout.",
+    "The arms change both PRME context budget and rendering format, so the score difference cannot be assigned to either factor alone.",
+    "The reader used nonzero temperature and the arms ran at different times; paired differences include generation variance."
+  ]
+}

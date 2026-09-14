@@ -1,0 +1,218 @@
+{
+  "artifacts": {
+    "left": {
+      "aggregated_metrics.json": "e08bd55ba53a91b2d874d5624a45b779cb52adb0beeb5e09f0584eb03d365a52",
+      "execution_manifest.json": "77eece2d19588e5fee2682f5fda11d56baa870c569b2094415ccbace6b69c011",
+      "per_question.jsonl": "70fb945b6f3beecd5328f1f2cba71a54be3631317fa768ce648ab3babcb11ca9",
+      "prompt_build_summary.json": "99d7f918e94aee2ff3ec93c3e65d06128c35ee8dbda224815c716b1c9aff31b0",
+      "prompt_rows.jsonl": "d6346b74887920f867e2b7fc57550822fdc120e06ab1a6af8dc8a5784b10b906",
+      "reader_outputs.checkpoint.jsonl": "b4e537d02da7055a619248ebc0dbac4c4b1be981751ad9c2e654f8ac0c62062a",
+      "run_args.json": "dbd2f2987fb5568b878844f02eee1d50f17835e4d8b33c9efb339f3a0554d66e"
+    },
+    "right": {
+      "aggregated_metrics.json": "360eaad887af7d52d4457345fa4a2f01414c57a8254e5ccd7b971a632e0839af",
+      "execution_manifest.json": "2c3b2358e6b4b406693c43f7215bd9b79a45af99fd5220ab7d5233c304aff608",
+      "per_question.jsonl": "6449f73e03cf973518c0601acba8b7ad61baf9ffe344f22039e6db8cd2f4cbdd",
+      "prompt_build_summary.json": "b0e6f3eba3f4fd1587a856134354cbebba7ca5308b4cdf834870b9ddd1076e8c",
+      "prompt_rows.jsonl": "7f0dfa0359698f4b365a09d717c4007ed1cac5b4f13ee2075e7d70bdf44c5c30",
+      "reader_outputs.checkpoint.jsonl": "ee425703965658189aade6d838e723687c69fb23bf37bcc9ec242ee183e759b5",
+      "run_args.json": "5deb1fd11a0c1dfd64409c18cc8eb2e381909c5f652fc15049e6730c9843ac7f"
+    }
+  },
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 42,
+    "unit": "question"
+  },
+  "categories": {
+    "dynamic": {
+      "left_correct": 11,
+      "left_empty_responses": 0,
+      "left_unknown": 13,
+      "paired_left_minus_right": {
+        "after": 0.22448979591836735,
+        "before": 0.02040816326530612,
+        "delta": 0.20408163265306123,
+        "exact_mcnemar_p_two_sided": 0.00634765625,
+        "interval_95": [
+          0.08163265306122448,
+          0.32653061224489793
+        ],
+        "losses": 1,
+        "queries": 49,
+        "ties": 37,
+        "wins": 11
+      },
+      "questions": 49,
+      "right_correct": 1,
+      "right_empty_responses": 0,
+      "right_unknown": 30
+    },
+    "procedure": {
+      "left_correct": 21,
+      "left_empty_responses": 0,
+      "left_unknown": 2,
+      "paired_left_minus_right": {
+        "after": 0.5121951219512195,
+        "before": 0.07317073170731707,
+        "delta": 0.43902439024390244,
+        "exact_mcnemar_p_two_sided": 0.00012111663818359375,
+        "interval_95": [
+          0.24390243902439024,
+          0.6097560975609756
+        ],
+        "losses": 2,
+        "queries": 41,
+        "ties": 19,
+        "wins": 20
+      },
+      "questions": 41,
+      "right_correct": 3,
+      "right_empty_responses": 0,
+      "right_unknown": 11
+    },
+    "static": {
+      "left_correct": 17,
+      "left_empty_responses": 0,
+      "left_unknown": 20,
+      "paired_left_minus_right": {
+        "after": 0.288135593220339,
+        "before": 0.1016949152542373,
+        "delta": 0.1864406779661017,
+        "exact_mcnemar_p_two_sided": 0.012725830078125,
+        "interval_95": [
+          0.06779661016949153,
+          0.3220338983050847
+        ],
+        "losses": 3,
+        "queries": 59,
+        "ties": 42,
+        "wins": 14
+      },
+      "questions": 59,
+      "right_correct": 6,
+      "right_empty_responses": 0,
+      "right_unknown": 22
+    }
+  },
+  "efficiency": {
+    "left": {
+      "completion_tokens": 129199,
+      "memory_context_tokens_mean": 7320.5302013422815,
+      "memory_query_seconds_max": 1.0516228749766015,
+      "memory_query_seconds_mean": 0.4355816722065429,
+      "prompt_tokens": 1146080,
+      "total_tokens": 1275279,
+      "wall_seconds": 4612.790659
+    },
+    "right": {
+      "completion_tokens": 108140,
+      "memory_context_tokens_mean": 0.0,
+      "memory_query_seconds_max": 1.3666984159499407e-05,
+      "memory_query_seconds_mean": 7.527719420574656e-07,
+      "prompt_tokens": 33751,
+      "total_tokens": 141891,
+      "wall_seconds": 2488.710231
+    }
+  },
+  "execution_source": {
+    "adapter_installed_sha256": "562b006328280d13cf69b010884edf21485dbba245e964a0524171657810f592",
+    "adapter_source_sha256": "562b006328280d13cf69b010884edf21485dbba245e964a0524171657810f592",
+    "compact_config_installed_sha256": "26772bec5367d2014d29dd6332b3d87d29f5f48c61417c7560fbb60086dbf85b",
+    "compact_config_source_sha256": "26772bec5367d2014d29dd6332b3d87d29f5f48c61417c7560fbb60086dbf85b",
+    "config_installed_sha256": "6df1b58baf8401ffeeedc463091e40a786b88cee819f6bb20c46046d38801db3",
+    "config_source_sha256": "6df1b58baf8401ffeeedc463091e40a786b88cee819f6bb20c46046d38801db3",
+    "installer_sha256": "99024c29858611060124abc0cf3a0200ed8e48959ffbb008bc0bfd811998affd",
+    "invocations": {
+      "left": {
+        "load_memory_dir": "/Users/dwamianm/.cache/prme/benchmarks/longmemeval-v2-runs/web-compact4k-deterministic-dev-v1/compact_memory_state",
+        "memory_artifact_sha256": "30215abdc27ddeaeb99f0aa42c11c1808bcd3f0621d55e82227d080b9740cb65",
+        "memory_config_path": "evaluation/memory_configs/prme_compact.json",
+        "memory_config_sha256": "26772bec5367d2014d29dd6332b3d87d29f5f48c61417c7560fbb60086dbf85b"
+      },
+      "right": {
+        "load_memory_dir": null,
+        "memory_artifact_sha256": null,
+        "memory_config_path": "evaluation/memory_configs/no_retrieval.json",
+        "memory_config_sha256": "aa6cf5ecb311a74b3861828989952c73873f9ff245af1fb02e1d09c933d8cae0"
+      }
+    },
+    "launcher_sha256": "7ed67a1f8aa7cf4cb3f65050f9e7ba74512327fdc2425c9b0e105c03b2670ee6",
+    "prme_revision": "08311ac384d55d4b97fea5d6a31b3af2e21092f7",
+    "prme_worktree_changes": [],
+    "upstream_harness_sha256": "93fe5855a74ad46d7e8b489cebac24de38a9b30ba7ec1de2dd8708bd4aeebdb6",
+    "upstream_revision": "2cc8c540bdb87fe6761629b585e727e1c4704520",
+    "upstream_worktree_changes": [
+      "evaluation/memory_configs/prme.json",
+      "evaluation/memory_configs/prme_compact.json",
+      "memory_modules/__init__.py",
+      "memory_modules/prme.py"
+    ]
+  },
+  "input_sha256": {
+    "haystack_path": "d7466326ea7dbd705fbe657259d29fc2bf945b3bb23ec8c671cbfb6b0a1f2cf0",
+    "questions_path": "848f46be62bbc15525e89148cbac4bdee9dd92458138b8c3a4f46fca2f70f10e",
+    "trajectories_path": "363cec9a8e87aa8d9101ce4e600aadbf7031d674056ebe4f969e8424abc5f3c6"
+  },
+  "kind": "longmemeval-v2-paired-comparison",
+  "labels": {
+    "left": "prme_compact_4k",
+    "right": "no_memory"
+  },
+  "limitations": [
+    "Question bootstrap intervals condition on this selected cohort; shared haystacks can make questions dependent.",
+    "Results compare the recorded reader and execution settings only and do not establish universal system leadership."
+  ],
+  "overall": {
+    "left_correct": 49,
+    "left_empty_responses": 0,
+    "left_unknown": 35,
+    "paired_left_minus_right": {
+      "after": 0.3288590604026846,
+      "before": 0.06711409395973154,
+      "delta": 0.26174496644295303,
+      "exact_mcnemar_p_two_sided": 1.8323628836469652e-08,
+      "interval_95": [
+        0.174496644295302,
+        0.348993288590604
+      ],
+      "losses": 6,
+      "queries": 149,
+      "ties": 98,
+      "wins": 45
+    },
+    "questions": 149,
+    "right_correct": 10,
+    "right_empty_responses": 0,
+    "right_unknown": 63
+  },
+  "reader_settings": {
+    "base_url": "http://127.0.0.1:11434/v1",
+    "domain": "web",
+    "max_completion_tokens": 4096,
+    "memory_context_max_tokens": 16384,
+    "model": "qwen3.5:9b",
+    "presence_penalty": null,
+    "prompt_build_max_workers": 1,
+    "reader_enable_thinking": false,
+    "reader_max_concurrent_requests": 1,
+    "reasoning_effort": "none",
+    "repetition_penalty": null,
+    "shuffle_questions_seed": null,
+    "temperature": 0.6,
+    "top_k": 20,
+    "top_p": 0.95
+  },
+  "registration_schema_version": 2,
+  "registration_sha256": "aebc832d4a5ff0549818f631e910290dd04af33424948f35c10ed19a5e78ae93",
+  "schema_version": 1,
+  "system_binding": {
+    "baseline_memory_context_tokens_zero": true,
+    "left_memory_config": "evaluation/memory_configs/prme_compact.json",
+    "prme_adapter_schema_version": 2,
+    "prme_memory_config_sha256": "26772bec5367d2014d29dd6332b3d87d29f5f48c61417c7560fbb60086dbf85b",
+    "prme_pack_manifest_sha256": "14046b5a6310aaac30f974b3c4b2408b6ce4e588593a5559153ccfe997560644",
+    "right_memory_config": "evaluation/memory_configs/no_retrieval.json",
+    "upstream_revision": "2cc8c540bdb87fe6761629b585e727e1c4704520"
+  }
+}

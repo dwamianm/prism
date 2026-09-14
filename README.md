@@ -18,7 +18,10 @@ LongMemEval-V2 questions. The complete [report and claim boundary](benchmarks/re
 include all rows, paired uncertainty, source/configuration hashes, and the
 principal limitation: the PRME arm used a mean 43,195 memory-context tokens.
 This establishes memory utility on that named cohort. It is not a cross-product
-leadership result. Older runs with other configurations remain research
+leadership result. A later [same-cohort compact 4K study](benchmarks/results/research/2026-09-14/LONGMEMEVAL-V2-WEB-COMPACT4K-DEVELOPMENT.md)
+cut mean context 83.05% but scored 49/149, so it documents a material
+efficiency/quality tradeoff rather than replacing the 32K quality reference.
+Older runs with other configurations remain research
 artifacts unless their own reports establish a complete reproducible protocol.
 
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and

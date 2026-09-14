@@ -114,6 +114,11 @@ Use `evaluation/memory_configs/prme_compact.json` for the explicit product-defau
 loaded configuration independently. Use the official combine and leaderboard
 utilities for aggregate metrics.
 
+The completed [compact 4K development study](../results/research/2026-09-14/LONGMEMEVAL-V2-WEB-COMPACT4K-DEVELOPMENT.md)
+reduced mean reader memory context by 83.05% but scored 49/149 versus 80/149 for
+the earlier 32K arm on the same known cohort. It documents a budget tradeoff and
+does not support replacing the larger quality reference.
+
 ## Data and lifecycle contract
 
 The adapter allowlists the released trajectory ID, domain, environment, goal,
