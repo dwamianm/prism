@@ -25,6 +25,46 @@ python -m benchmarks.integrations.install_longmemeval_v2 \
   /absolute/path/to/LongMemEval-V2
 ```
 
+## Run with durable reader checkpoints
+
+For long evaluations, use PRME's launcher around the pinned official harness.
+It appends and fsyncs each completed reader output before scoring begins. On an
+exact rerun it preserves the original prompt rows, validates every prompt and
+reader-setting hash, resumes only missing generations, and then invokes the
+unchanged upstream scorer. This prevents a late judge quota or network failure
+from discarding completed reader work:
+
+```sh
+python -m benchmarks.integrations.run_longmemeval_v2 \
+  /absolute/path/to/LongMemEval-V2 \
+  -- \
+  --domain web \
+  --questions-path "$DATA_ROOT/questions.jsonl" \
+  --haystack-path "$DATA_ROOT/haystacks/lme_v2_small.json" \
+  --trajectories-path "$DATA_ROOT/trajectories.jsonl" \
+  --memory-config-path evaluation/memory_configs/prme.json \
+  --output-dir runs/prme_web_small \
+  --model Qwen/Qwen3.5-9B \
+  --base-url http://localhost:8023/v1 \
+  --memory-context-max-tokens 65536
+```
+
+The launcher installs or verifies the adapter before each run. Its checkpoint
+is `reader_outputs.checkpoint.jsonl` inside the official output directory. To
+resume, repeat the command with the same prompt and reader arguments. If memory
+was saved separately, keep `--load-memory-dir` on both runs. Changed questions,
+haystacks, prompt rows, model names, endpoints, sampling controls, or token caps
+fail explicitly instead of mixing results.
+
+Ollama 0.34 supports reasoning control through its
+[OpenAI-compatible API](https://docs.ollama.com/api/openai-compatibility). For a
+faster development reader profile, use the local model name and add
+`--reader-reasoning-effort none` before the `--` separator. This is an explicit
+reader-configuration change and must be reported with results. The upstream
+`--reader-disable-thinking` special case only targets the exact
+`Qwen/Qwen3.5-9B` model string; it does not disable reasoning for an Ollama model
+named `qwen3.5:9b`.
+
 Install this PRME checkout into the upstream Python 3.11 environment, prepare
 the official data, and export its root so relative screenshot paths can be
 resolved:

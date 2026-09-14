@@ -87,6 +87,32 @@ The dynamic answer changed from wrong to correct, and the procedure answer
 changed from `one` to the correct `three` after the ordered trace entered
 context.
 
+## Reader development profile and resumability
+
+A separate Ollama development profile sent the documented OpenAI-compatible
+`reasoning_effort: none` setting through PRME's checkpointed launcher. Merely
+passing the upstream `--reader-disable-thinking` flag did not affect the local
+model because the upstream special case checks for the exact
+`Qwen/Qwen3.5-9B` model string. This profile is a development-speed result on the
+same two seen failures, not a leaderboard reader result.
+
+| Measurement | Thinking profile | Ollama no-reasoning profile |
+|---|---:|---:|
+| Official deterministic score | 2/2 | 2/2 |
+| Reader prompt tokens | 84,946 | 84,950 |
+| Reader completion tokens | 25,038 | 1,253 |
+| Reader generation wall time | 14m37s | 1m48s |
+| Completion reduction | — | 95.0% |
+| Wall-time reduction | — | 87.7% |
+
+The dynamic answer remained `Message is added to queue` and the procedure
+answer remained `three`. Neither context was truncated. The checkpointed
+launcher fsynced each response before scoring and retained the original prompt
+rows. An exact replay made no reader calls, preserved both scores, and completed
+prompt reuse plus scoring in 5.06 seconds. This closes the failure mode that
+discarded the original seven completed generations after the external judge
+returned HTTP 429.
+
 ## Pack cost and lifecycle
 
 | Measurement | Schema 1 | Schema 2 | Delta |
@@ -102,11 +128,12 @@ reopened an unused source client. The final implementation leaves it closed and
 reopens lazily. A separate one-trajectory official save run then exited without
 late vector writes or missing-directory errors.
 
-The two short correct answers consumed 13,773 and 11,265 completion tokens. The
-20k thinking profile is therefore too slow for routine 451-question iteration;
-a capped reader trial remains separate work. A publishable LongMemEval-V2 result
-still requires the full web and enterprise sets, matched baselines, complete
-failure accounting, and access to the released LLM judge where specified.
+The two short correct answers consumed 13,773 and 11,265 completion tokens under
+the original thinking profile. The no-reasoning development profile establishes
+a practical local iteration path, while a publishable LongMemEval-V2 result
+still requires the prescribed reader settings, full web and enterprise sets,
+matched baselines, complete failure accounting, and access to the released LLM
+judge where specified.
 
 Machine-readable protocol and results are in
 `longmemeval-v2-web-development-v1-registration.json` and

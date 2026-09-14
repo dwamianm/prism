@@ -16,7 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   interrupted trajectory inserts. A pinned one-question web-small pipeline
   smoke covers the full 100-trajectory save/load path. Its installer verifies
   the pinned upstream revision, copies the adapter and configuration atomically,
-  registers the backend, and safely handles repeat installation.
+  registers the backend, and safely handles repeat installation. A companion
+  launcher durably checkpoints each reader response, preserves exact prompt
+  rows across retries, rejects configuration drift, and supports explicit
+  `reasoning_effort: none` for Ollama development runs.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,
