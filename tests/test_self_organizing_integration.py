@@ -840,6 +840,16 @@ class TestDeterministicRebuild:
     @pytest.mark.asyncio
     async def test_same_timestamp_same_scores_after_restart(self, config):
         """Store, close, reopen, retrieve -- same node order and near-identical scores."""
+        # Isolate retrieval determinism from the independently tested background
+        # maintenance path.  The first retrieve may otherwise schedule promotion
+        # before the second retrieve and legitimately change lifecycle scores.
+        config = config.model_copy(
+            update={
+                "organizer": config.organizer.model_copy(
+                    update={"opportunistic_enabled": False}
+                )
+            }
+        )
         # Phase 1: create engine, store nodes, and age them
         engine = await create_engine(config)
         try:
@@ -869,17 +879,20 @@ class TestDeterministicRebuild:
             await engine.close()
 
         # Phase 2: reopen and retrieve twice in quick succession
-        # The two calls should produce near-identical scores since they
-        # happen within milliseconds of each other.
+        # Use the same explicit scoring clock so elapsed wall time is not part
+        # of the assertion.
         engine2 = await create_engine(config)
         try:
+            reference_time = datetime.now(timezone.utc)
             response1 = await engine2.retrieve(
                 "deterministic rebuild",
                 user_id="test-user",
+                reference_time=reference_time,
             )
             response2 = await engine2.retrieve(
                 "deterministic rebuild",
                 user_id="test-user",
+                reference_time=reference_time,
             )
 
             scores1 = sorted(
@@ -896,10 +909,10 @@ class TestDeterministicRebuild:
             ids2 = [s[0] for s in scores2]
             assert ids1 == ids2, "Same nodes should be returned"
 
-            # Scores should be nearly identical (sub-millisecond time difference)
+            # Scores should be identical for a fixed clock and unchanged state.
             for (id1, score1), (id2, score2) in zip(scores1, scores2):
-                assert score1 == pytest.approx(score2, abs=0.01), (
-                    f"Scores should be nearly identical for node {id1}: "
+                assert score1 == score2, (
+                    f"Scores should be identical for node {id1}: "
                     f"{score1} vs {score2}"
                 )
         finally:
