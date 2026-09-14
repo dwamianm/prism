@@ -23,14 +23,19 @@ from collections import defaultdict
 from datetime import timezone
 from enum import Enum
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from prme.config import OrganizerConfig
-from prme.ingestion.graph_writer import WriteQueueGraphWriter
-from prme.storage.write_queue import WriteTracker
+from prme.models.consolidation import (
+    ConsolidationPublication,
+    consolidation_request_hash,
+)
+from prme.models.derivation import PreparedEmbedding
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
+from prme.organizer.consolidation import publish_consolidation_plan
 from prme.organizer.models import JobResult
+from prme.storage.embedding import encode_texts
 from prme.types import (
     DecayProfile,
     EdgeType,
@@ -156,22 +161,89 @@ def _compute_summary_confidence(source_nodes: list[MemoryNode]) -> float:
     return max(0.0, min(1.0, avg))
 
 
-async def _create_summary_node(
+def _summary_publication_key(
+    user_id: str,
+    scope: Scope,
+    level: SummarizationLevel,
+    period_key: str,
+) -> str:
+    """Return the stable lineage identity for one hierarchical time bucket."""
+    if not user_id or not period_key:
+        raise ValueError("A summary publication key requires an owner and period")
+    return str(
+        uuid5(
+            NAMESPACE_URL,
+            json.dumps(
+                [
+                    "prme-hierarchical-summary-v2",
+                    user_id,
+                    scope.value,
+                    level.value,
+                    period_key,
+                ],
+                separators=(",", ":"),
+            ),
+        )
+    )
+
+
+async def _hierarchical_lineage_summaries(
+    engine: MemoryEngine,
+    *,
+    user_id: str,
+    scope: Scope,
+    level: SummarizationLevel,
+    period_key: str,
+    key: str,
+) -> tuple[list[MemoryNode], list[MemoryNode]]:
+    """Load current and retired summaries, including the pre-journal format."""
+    active_states = {LifecycleState.TENTATIVE, LifecycleState.STABLE}
+    active: list[MemoryNode] = []
+    retired: list[MemoryNode] = []
+    after_id: str | None = None
+    while True:
+        page = await engine._graph_store.scan_nodes(
+            user_id=user_id,
+            scope=scope,
+            node_type=NodeType.SUMMARY,
+            lifecycle_states=list(LifecycleState),
+            after_id=after_id,
+            limit=500,
+        )
+        if not page:
+            break
+        for node in page:
+            metadata = node.metadata or {}
+            managed = (
+                metadata.get("consolidation_summary") is True
+                and metadata.get("consolidation_key") == key
+            )
+            legacy = (
+                metadata.get("consolidation_key") is None
+                and metadata.get("summarization_level") == level.value
+                and metadata.get("period_key") == period_key
+                and metadata.get("summary_format") == "source-excerpts-v1"
+            )
+            if managed or legacy:
+                (active if node.lifecycle_state in active_states else retired).append(node)
+        after_id = str(page[-1].id)
+    return active, retired
+
+
+async def _materialize_summary_node(
     engine: MemoryEngine,
     level: SummarizationLevel,
     period_key: str,
     source_nodes: list[MemoryNode],
     user_id: str,
-) -> MemoryNode | None:
-    """Create a summary node and DERIVED_FROM edges for its sources.
-
-    Returns the created MemoryNode, or None if creation failed.
-    """
+) -> tuple[MemoryNode | None, bool]:
+    """Prepare and atomically publish or reuse one hierarchical summary."""
     if not source_nodes:
-        return None
+        return None, False
     scope = source_nodes[0].scope
     if any(node.user_id != user_id or node.scope != scope for node in source_nodes):
         raise ValueError("Summary sources must share the requested user and scope")
+    source_nodes = sorted(source_nodes, key=lambda node: str(node.id))
     content = _build_summary_content(level, period_key, source_nodes)
     evidence_refs = []
     for node in source_nodes:
@@ -187,86 +259,131 @@ async def _create_summary_node(
 
     salience = _compute_summary_salience(source_nodes)
     confidence = _compute_summary_confidence(source_nodes)
-
-    summary_node = MemoryNode(
-        user_id=user_id,
-        node_type=NodeType.SUMMARY,
+    key = _summary_publication_key(user_id, scope, level, period_key)
+    provider = engine._vector_index._provider
+    source_ids = [str(node.id) for node in source_nodes]
+    request_hash = consolidation_request_hash(
+        source_nodes,
         content=content,
-        metadata={
-            "summarization_level": level.value,
-            "summary_format": "source-excerpts-v1",
-            "period_key": period_key,
-            "source_count": len(source_nodes),
-            "source_node_ids": [str(n.id) for n in source_nodes],
-        },
         confidence=confidence,
-        confidence_base=confidence,
         salience=salience,
-        salience_base=salience,
-        epistemic_type=EpistemicType.INFERRED,
-        source_type=SourceType.SYSTEM_INFERRED,
-        lifecycle_state=LifecycleState.STABLE,
-        evidence_refs=unique_refs,
-        decay_profile=DecayProfile.SLOW,
-        scope=scope,
-        event_time=min(n.event_time or n.created_at for n in source_nodes),
-        pinned=False,
+        selected_ids=source_ids,
+        embedding_identity=(
+            provider.model_name,
+            provider.model_version,
+            provider.dimension,
+        ),
+        policy="hierarchical_source_excerpts_v2",
     )
+    previous, retired = await _hierarchical_lineage_summaries(
+        engine,
+        user_id=user_id,
+        scope=scope,
+        level=level,
+        period_key=period_key,
+        key=key,
+    )
+    matching = [
+        node
+        for node in previous
+        if (node.metadata or {}).get("consolidation_request_hash") == request_hash
+    ]
+    if len(previous) == 1 and len(matching) == 1:
+        for stale in retired:
+            await engine._evict_from_indexes(str(stale.id))
+        return matching[0], False
 
-    tracker = WriteTracker()
-    writer = WriteQueueGraphWriter(engine._graph_store, engine._write_queue, tracker)
-    try:
-        await writer.create_node(summary_node)
-        for source_node in source_nodes:
-            await writer.create_edge(MemoryEdge(
-                source_id=summary_node.id, target_id=source_node.id,
-                edge_type=EdgeType.DERIVED_FROM, user_id=user_id, confidence=1.0,
-                metadata={"summarization_level": level.value, "period_key": period_key},
-            ))
-        await engine._write_queue.submit(
-            lambda: engine._vector_index.index(str(summary_node.id), content, user_id),
-            label=f"vector.summary:{summary_node.id}",
+    generation = await engine._graph_store.consolidation_generation(key)
+    summary_id = uuid5(UUID(key), f"{request_hash}:{generation}")
+    plan = await engine._graph_store.get_prepared_consolidation(
+        str(summary_id), user_id=user_id
+    )
+    if plan is None:
+        summary_node = MemoryNode(
+            id=summary_id,
+            user_id=user_id,
+            node_type=NodeType.SUMMARY,
+            content=content,
+            metadata={
+                "consolidation_summary": True,
+                "summary_publication_kind": "hierarchical_source_excerpts_v2",
+                "summary_publication_key": key,
+                "consolidation_key": key,
+                "consolidation_request_hash": request_hash,
+                "consolidation_generation": generation,
+                "summarization_level": level.value,
+                "summary_format": "source-excerpts-v1",
+                "period_key": period_key,
+                "source_count": len(source_nodes),
+                "source_node_ids": source_ids,
+                "selected_source_node_ids": source_ids,
+            },
+            confidence=confidence,
+            confidence_base=confidence,
+            salience=salience,
+            salience_base=salience,
+            epistemic_type=EpistemicType.INFERRED,
+            source_type=SourceType.SYSTEM_INFERRED,
+            lifecycle_state=LifecycleState.STABLE,
+            evidence_refs=unique_refs,
+            decay_profile=DecayProfile.SLOW,
+            scope=scope,
+            event_time=min(n.event_time or n.created_at for n in source_nodes),
+            pinned=False,
         )
-        await engine._write_queue.submit(
-            lambda: engine._lexical_index.index(
-                str(summary_node.id), content, user_id, NodeType.SUMMARY.value, scope.value,
+        edges = tuple(
+            MemoryEdge(
+                id=uuid5(summary_id, f"derived-from:{source_node.id}"),
+                source_id=summary_id,
+                target_id=source_node.id,
+                edge_type=EdgeType.DERIVED_FROM,
+                user_id=user_id,
+                confidence=1.0,
+                metadata={
+                    "summarization_level": level.value,
+                    "period_key": period_key,
+                },
+                valid_from=summary_node.created_at,
+                created_at=summary_node.created_at,
+            )
+            for source_node in source_nodes
+        )
+        vectors = await encode_texts(provider, [content])
+        if len(vectors) != 1:
+            raise ValueError("Summary embedding provider must return exactly one vector")
+        plan = ConsolidationPublication(
+            node=summary_node,
+            sources=tuple(source_nodes),
+            previous=tuple(sorted(previous, key=lambda node: str(node.id))),
+            edges=edges,
+            embedding=PreparedEmbedding(
+                node_id=summary_id,
+                content=content,
+                model=provider.model_name,
+                version=provider.model_version,
+                dimension=provider.dimension,
+                values=tuple(vectors[0]),
             ),
-            label=f"lexical.summary:{summary_node.id}",
+            generation=generation,
+            request_hash=request_hash,
         )
-    except Exception as exc:
-        await tracker.rollback(
-            engine._graph_store, engine._write_queue,
-            vector_index=engine._vector_index, lexical_index=engine._lexical_index,
-        )
-        logger.warning("Failed to materialize %s summary for %s (%s)",
-                       level.value, period_key, type(exc).__name__)
-        return None
+        plan = await engine._graph_store.prepare_consolidation(plan)
 
-    return summary_node
+    return await publish_consolidation_plan(engine, plan, retired=retired), True
 
 
-async def _get_existing_summary_periods(
+async def _create_summary_node(
     engine: MemoryEngine,
     level: SummarizationLevel,
-    user_id: str | None = None,
-) -> set[tuple[str, Scope, str]]:
-    """Get set of period_keys for which summaries already exist.
-
-    Queries SUMMARY nodes with matching summarization_level in metadata.
-    """
-    existing_summaries = await engine._graph_store.query_nodes(
-        node_type=NodeType.SUMMARY,
-        user_id=user_id,
-        lifecycle_states=[LifecycleState.STABLE, LifecycleState.TENTATIVE],
-        limit=1000,
+    period_key: str,
+    source_nodes: list[MemoryNode],
+    user_id: str,
+) -> MemoryNode | None:
+    """Create or reuse a summary; retained as a testable compatibility helper."""
+    node, _created = await _materialize_summary_node(
+        engine, level, period_key, source_nodes, user_id
     )
-    period_keys: set[tuple[str, Scope, str]] = set()
-    for node in existing_summaries:
-        if node.metadata and node.metadata.get("summarization_level") == level.value:
-            pk = node.metadata.get("period_key")
-            if pk:
-                period_keys.add((node.user_id, node.scope, pk))
-    return period_keys
+    return node
 
 
 async def generate_daily_summaries(
@@ -277,9 +394,8 @@ async def generate_daily_summaries(
 ) -> JobResult:
     """Generate daily summaries from events/nodes.
 
-    Groups non-summary active nodes by calendar day and creates a summary
-    for each day that has at least summarization_daily_min_events items.
-    Skips days that already have a daily summary.
+    Groups non-summary active nodes by calendar day and creates or refreshes a
+    summary for each day that has at least summarization_daily_min_events items.
 
     Args:
         engine: The MemoryEngine for storage operations.
@@ -310,11 +426,6 @@ async def generate_daily_summaries(
     # Filter out existing summary nodes
     source_nodes = [n for n in all_nodes if n.node_type != NodeType.SUMMARY]
 
-    # Get existing daily summary period keys
-    existing_periods = await _get_existing_summary_periods(
-        engine, SummarizationLevel.DAILY, user_id
-    )
-
     # Group by day
     day_groups = _group_scoped(source_nodes, _group_nodes_by_day)
 
@@ -325,10 +436,6 @@ async def generate_daily_summaries(
         if elapsed_ms >= budget_ms:
             break
 
-        # Skip if already summarized
-        if namespace_period in existing_periods:
-            continue
-
         # Skip if not enough events
         if len(nodes) < config.summarization_daily_min_events:
             continue
@@ -337,16 +444,22 @@ async def generate_daily_summaries(
         top_nodes = _select_top_salient(nodes, config.summarization_max_items_per_summary)
 
         # Use first node's user_id for the summary
-        result = await _create_summary_node(
-            engine,
-            SummarizationLevel.DAILY,
-            day_key,
-            top_nodes,
-            summary_user_id,
-        )
-        if result is not None:
-            modified += 1
-        else:
+        try:
+            result, created = await _materialize_summary_node(
+                engine,
+                SummarizationLevel.DAILY,
+                day_key,
+                top_nodes,
+                summary_user_id,
+            )
+            if result is not None and created:
+                modified += 1
+        except Exception as exc:
+            logger.warning(
+                "Failed to materialize daily summary for %s (%s)",
+                day_key,
+                type(exc).__name__,
+            )
             errors += 1
 
     duration_ms = (time.monotonic() - start) * 1000.0
@@ -398,11 +511,6 @@ async def roll_up_weekly(
         if n.metadata and n.metadata.get("summarization_level") == SummarizationLevel.DAILY.value
     ]
 
-    # Get existing weekly summary period keys
-    existing_periods = await _get_existing_summary_periods(
-        engine, SummarizationLevel.WEEKLY, user_id
-    )
-
     # Group daily summaries by week
     week_groups = _group_scoped(daily_summaries, _group_nodes_by_week)
 
@@ -412,25 +520,28 @@ async def roll_up_weekly(
         if elapsed_ms >= budget_ms:
             break
 
-        if namespace_period in existing_periods:
-            continue
-
         if len(nodes) < config.summarization_weekly_min_summaries:
             continue
 
         processed += 1
         top_nodes = _select_top_salient(nodes, config.summarization_max_items_per_summary)
 
-        result = await _create_summary_node(
-            engine,
-            SummarizationLevel.WEEKLY,
-            week_key,
-            top_nodes,
-            summary_user_id,
-        )
-        if result is not None:
-            modified += 1
-        else:
+        try:
+            result, created = await _materialize_summary_node(
+                engine,
+                SummarizationLevel.WEEKLY,
+                week_key,
+                top_nodes,
+                summary_user_id,
+            )
+            if result is not None and created:
+                modified += 1
+        except Exception as exc:
+            logger.warning(
+                "Failed to materialize weekly summary for %s (%s)",
+                week_key,
+                type(exc).__name__,
+            )
             errors += 1
 
     duration_ms = (time.monotonic() - start) * 1000.0
@@ -482,11 +593,6 @@ async def roll_up_monthly(
         if n.metadata and n.metadata.get("summarization_level") == SummarizationLevel.WEEKLY.value
     ]
 
-    # Get existing monthly summary period keys
-    existing_periods = await _get_existing_summary_periods(
-        engine, SummarizationLevel.MONTHLY, user_id
-    )
-
     # Group weekly summaries by month
     month_groups = _group_scoped(weekly_summaries, _group_nodes_by_month)
 
@@ -496,25 +602,28 @@ async def roll_up_monthly(
         if elapsed_ms >= budget_ms:
             break
 
-        if namespace_period in existing_periods:
-            continue
-
         if len(nodes) < config.summarization_monthly_min_summaries:
             continue
 
         processed += 1
         top_nodes = _select_top_salient(nodes, config.summarization_max_items_per_summary)
 
-        result = await _create_summary_node(
-            engine,
-            SummarizationLevel.MONTHLY,
-            month_key,
-            top_nodes,
-            summary_user_id,
-        )
-        if result is not None:
-            modified += 1
-        else:
+        try:
+            result, created = await _materialize_summary_node(
+                engine,
+                SummarizationLevel.MONTHLY,
+                month_key,
+                top_nodes,
+                summary_user_id,
+            )
+            if result is not None and created:
+                modified += 1
+        except Exception as exc:
+            logger.warning(
+                "Failed to materialize monthly summary for %s (%s)",
+                month_key,
+                type(exc).__name__,
+            )
             errors += 1
 
     duration_ms = (time.monotonic() - start) * 1000.0

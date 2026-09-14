@@ -565,13 +565,33 @@ def _commit_duckdb(store, plan):
                 actual = store._get_node_sync(str(dependency.id), True)
                 if actual is not None:
                     current[str(actual.id)] = actual
-            prior_rows = conn.execute(
-                "SELECT id FROM nodes WHERE user_id=? AND scope=? AND node_type='summary' "
-                "AND lifecycle_state IN ('tentative','stable') "
-                "AND json_extract_string(metadata,'$.consolidation_summary')='true' "
-                "AND json_extract_string(metadata,'$.consolidation_key')=?",
-                [node.user_id, node.scope.value, plan.key],
-            ).fetchall()
+            metadata = node.metadata or {}
+            if metadata.get("summary_publication_kind") == "hierarchical_source_excerpts_v2":
+                prior_rows = conn.execute(
+                    "SELECT id FROM nodes WHERE user_id=? AND scope=? AND node_type='summary' "
+                    "AND lifecycle_state IN ('tentative','stable') AND ("
+                    "(json_extract_string(metadata,'$.consolidation_summary')='true' "
+                    "AND json_extract_string(metadata,'$.consolidation_key')=?) OR ("
+                    "json_extract_string(metadata,'$.consolidation_key') IS NULL "
+                    "AND json_extract_string(metadata,'$.summarization_level')=? "
+                    "AND json_extract_string(metadata,'$.period_key')=? "
+                    "AND json_extract_string(metadata,'$.summary_format')='source-excerpts-v1'))",
+                    [
+                        node.user_id,
+                        node.scope.value,
+                        plan.key,
+                        metadata["summarization_level"],
+                        metadata["period_key"],
+                    ],
+                ).fetchall()
+            else:
+                prior_rows = conn.execute(
+                    "SELECT id FROM nodes WHERE user_id=? AND scope=? AND node_type='summary' "
+                    "AND lifecycle_state IN ('tentative','stable') "
+                    "AND json_extract_string(metadata,'$.consolidation_summary')='true' "
+                    "AND json_extract_string(metadata,'$.consolidation_key')=?",
+                    [node.user_id, node.scope.value, plan.key],
+                ).fetchall()
             _validate_dependencies(plan, current, [str(value[0]) for value in prior_rows])
             # Validate the original snapshots first, then make a real write to
             # every dependency. A writer that committed after this transaction's
@@ -676,15 +696,33 @@ async def commit_postgres(store: PgGraphStore, plan: ConsolidationPublication) -
             ids,
         )
         current = {str(row["id"]): store._record_to_node(row) for row in rows}
-        prior_rows = await conn.fetch(
-            "SELECT id FROM nodes WHERE user_id=$1 AND scope=$2 AND node_type='summary' "
-            "AND lifecycle_state IN ('tentative','stable') "
-            "AND metadata->>'consolidation_summary'='true' "
-            "AND metadata->>'consolidation_key'=$3 FOR UPDATE",
-            node.user_id,
-            node.scope.value,
-            plan.key,
-        )
+        metadata = node.metadata or {}
+        if metadata.get("summary_publication_kind") == "hierarchical_source_excerpts_v2":
+            prior_rows = await conn.fetch(
+                "SELECT id FROM nodes WHERE user_id=$1 AND scope=$2 AND node_type='summary' "
+                "AND lifecycle_state IN ('tentative','stable') AND ("
+                "(metadata->>'consolidation_summary'='true' "
+                "AND metadata->>'consolidation_key'=$3) OR ("
+                "metadata->>'consolidation_key' IS NULL "
+                "AND metadata->>'summarization_level'=$4 "
+                "AND metadata->>'period_key'=$5 "
+                "AND metadata->>'summary_format'='source-excerpts-v1')) FOR UPDATE",
+                node.user_id,
+                node.scope.value,
+                plan.key,
+                metadata["summarization_level"],
+                metadata["period_key"],
+            )
+        else:
+            prior_rows = await conn.fetch(
+                "SELECT id FROM nodes WHERE user_id=$1 AND scope=$2 AND node_type='summary' "
+                "AND lifecycle_state IN ('tentative','stable') "
+                "AND metadata->>'consolidation_summary'='true' "
+                "AND metadata->>'consolidation_key'=$3 FOR UPDATE",
+                node.user_id,
+                node.scope.value,
+                plan.key,
+            )
         _validate_dependencies(plan, current, [str(row["id"]) for row in prior_rows])
         await store._create_node_on_connection(conn, node)
         vector_sql = await resolve_vector_sql(conn)

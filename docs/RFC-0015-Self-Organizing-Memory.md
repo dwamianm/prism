@@ -738,16 +738,27 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 
 Daily, weekly, and monthly summaries retain full selected source content with
 source IDs, epistemic/source labels, and temporal qualifiers. They are marked
-INFERRED, not promoted to newly observed facts. Groups and duplicate-period
-checks are keyed by user, scope, and period; summaries retain that namespace.
-Calendar windows use UTC event time (falling back to creation time), including
-when rolling historical daily summaries into weeks and months.
+INFERRED, not promoted to newly observed facts. Their stable lineage is keyed by
+user, scope, level, and period; summaries retain that namespace. The immutable
+request hash covers every selected source snapshot, rendered content, scores,
+policy, and embedding identity. Calendar windows use UTC event time (falling
+back to creation time), including when rolling historical daily summaries into
+weeks and months.
 
 These are selected excerpts, not exhaustive or semantically compressed accounts.
 Sources omitted by the per-summary item limit remain intact. Nested excerpts can
 be large; the context packer must skip oversized entries rather than truncate
-their qualifications. Summary nodes and provenance edges are indexed, with
-partial new artifacts removed if indexing fails. Legacy summaries are not
-retroactively reconstructed by this change.
+their qualifications. Unchanged requests reuse one summary identity. A changed
+selected source publishes a deterministic new generation while archiving the
+active predecessor in the same graph transaction. Summary creation, provenance
+edges, generation advancement, predecessor archival, and the complete
+`CONSOLIDATION_PUBLISHED` record commit together. DuckDB first persists
+`CONSOLIDATION_PREPARED`, then stages the exact vector and lexical document under
+the consolidation fence; PostgreSQL writes pgvector inside publication. A retry
+reuses saved embedding work, and concurrent engines converge on one active
+identity. The first managed publication includes active legacy
+`source-excerpts-v1` nodes for the same bucket in its atomic predecessor set.
+Retired external-index entries are evicted after commit and remain repairable by
+compaction.
 
 *End of RFC-0015*

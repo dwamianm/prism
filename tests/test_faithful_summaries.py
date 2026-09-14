@@ -70,11 +70,15 @@ async def test_summary_creation_rejects_mixed_scope_before_any_write(config, use
         assert await engine.query_nodes(user_id=user, node_type=NodeType.SUMMARY) == []
 
 
-async def test_failed_summary_indexing_leaves_original_sources_and_no_partial_summary(config, user, monkeypatch):  # noqa: F811
+async def test_failed_summary_publication_leaves_original_sources_and_no_partial_summary(config, user, monkeypatch):  # noqa: F811
     async with MemoryEngine.open(config) as engine:
         source = MemoryNode(user_id=user, node_type=NodeType.FACT, content="A complete original source")
         await engine._graph_store.create_node(source)
-        monkeypatch.setattr(engine._vector_index, "index", AsyncMock(side_effect=RuntimeError("injected")))
+        monkeypatch.setattr(
+            engine._graph_store,
+            "publish_consolidation",
+            AsyncMock(side_effect=RuntimeError("injected")),
+        )
         result = await generate_daily_summaries(engine, OrganizerConfig(summarization_daily_min_events=1),
                                                 10000, user_id=user)
         assert result.errors == 1 and result.nodes_modified == 0

@@ -49,6 +49,7 @@ def consolidation_request_hash(
     salience: float,
     selected_ids,
     embedding_identity,
+    policy: str = "source_labelled_extractive_v2",
 ) -> str:
     """Fingerprint all source-dependent inputs without fresh object identities."""
     ordered = sorted(sources, key=lambda node: str(node.id))
@@ -56,7 +57,7 @@ def consolidation_request_hash(
         raise ValueError("A consolidation request requires sources")
     return canonical_hash(
         {
-            "policy": "source_labelled_extractive_v2",
+            "policy": policy,
             "owner": ordered[0].user_id,
             "scope": ordered[0].scope.value,
             "sources": [node_checksum(node) for node in ordered],
@@ -85,6 +86,9 @@ class ConsolidationPublication(BaseModel):
 
     @property
     def key(self) -> str:
+        explicit = (self.node.metadata or {}).get("summary_publication_key")
+        if explicit is not None:
+            return str(UUID(str(explicit)))
         return consolidation_key(
             self.node.user_id, self.node.scope, (node.id for node in self.sources)
         )
@@ -105,7 +109,11 @@ class ConsolidationPublication(BaseModel):
     def validate_publication(self):
         node = self.node
         meta = node.metadata or {}
+        hierarchical = meta.get("summary_publication_kind") == "hierarchical_source_excerpts_v2"
         active = (LifecycleState.TENTATIVE, LifecycleState.STABLE)
+        source_active = (
+            (*active, LifecycleState.CONTESTED) if hierarchical else active
+        )
         dependencies = self.sources + self.previous
         if (
             node.node_type != NodeType.SUMMARY
@@ -115,6 +123,7 @@ class ConsolidationPublication(BaseModel):
             or meta.get("consolidation_summary") is not True
             or meta.get("consolidation_key") != self.key
             or meta.get("consolidation_request_hash") != self.request_hash
+            or hierarchical != (meta.get("summary_publication_key") is not None)
         ):
             raise ValueError("Publication requires an active inferred consolidation summary")
         if not self.sources or len({item.id for item in dependencies}) != len(dependencies):
@@ -125,8 +134,11 @@ class ConsolidationPublication(BaseModel):
             if (
                 source.user_id != node.user_id
                 or source.scope != node.scope
-                or source.lifecycle_state not in active
-                or source.node_type not in (NodeType.FACT, NodeType.EVENT, NodeType.NOTE)
+                or source.lifecycle_state not in source_active
+                or (
+                    not hierarchical
+                    and source.node_type not in (NodeType.FACT, NodeType.EVENT, NodeType.NOTE)
+                )
             ):
                 raise ValueError("Consolidation sources must be active episodic memories in one namespace")
         for old in self.previous:
@@ -136,8 +148,20 @@ class ConsolidationPublication(BaseModel):
                 or old.scope != node.scope
                 or old.lifecycle_state not in active
                 or old.node_type != NodeType.SUMMARY
-                or old_meta.get("consolidation_summary") is not True
-                or old_meta.get("consolidation_key") != self.key
+                or (
+                    (
+                        old_meta.get("consolidation_summary") is not True
+                        or old_meta.get("consolidation_key") != self.key
+                    )
+                    and not (
+                        hierarchical
+                        and old_meta.get("summarization_level")
+                        == meta.get("summarization_level")
+                        and old_meta.get("period_key") == meta.get("period_key")
+                        and old_meta.get("summary_format") == "source-excerpts-v1"
+                        and old_meta.get("consolidation_key") is None
+                    )
+                )
             ):
                 raise ValueError("Only active summaries from this consolidation lineage can be replaced")
 
@@ -180,6 +204,10 @@ class ConsolidationPublication(BaseModel):
                 self.embedding.model,
                 self.embedding.version,
                 self.embedding.dimension,
+            ),
+            policy=(
+                "hierarchical_source_excerpts_v2"
+                if hierarchical else "source_labelled_extractive_v2"
             ),
         )
         if expected_hash != self.request_hash:

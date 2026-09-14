@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Durable, atomic hierarchical summary publication. Daily, weekly and monthly
+  excerpts use stable owner/scope/level/period lineages, deterministic request
+  generations, checksummed preparation, fenced index staging and transactional
+  graph publication. Unchanged runs reuse one active identity; late selected
+  sources atomically replace and archive the prior generation; interrupted runs
+  recover without re-embedding; concurrent engines converge; and the first
+  managed run atomically retires legacy excerpts for the same period.
 - Immutable owner/exact-scope ranking profiles with a two-stage activation gate.
   A profile must bind a positive explicit-feedback proposal to a separately
   positive full-retrieval holdout before it can be persisted and activated.

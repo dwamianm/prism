@@ -270,6 +270,53 @@ async def _lineage_summaries(
     return active, retired
 
 
+async def publish_consolidation_plan(
+    engine: MemoryEngine,
+    plan: ConsolidationPublication,
+    *,
+    retired: tuple[MemoryNode, ...] | list[MemoryNode] = (),
+) -> MemoryNode:
+    """Stage and atomically publish a prepared extractive summary plan."""
+    owner = plan.node.user_id
+    if engine._pool is None:
+        import asyncio
+        import duckdb
+
+        from prme.models.consolidation import StaleConsolidationError
+        from prme.storage.consolidation_publication import ConsolidationStageFence
+
+        fence = ConsolidationStageFence(
+            engine._conn, engine._event_store._conn_lock, plan
+        )
+        for attempt in range(10):
+            try:
+                await engine._vector_index.stage(
+                    plan.embedding, user_id=owner, fence=fence
+                )
+                await engine._lexical_index.stage_consolidation(plan, fence=fence)
+                break
+            except (duckdb.ConstraintException, duckdb.TransactionException) as exc:
+                if attempt == 9:
+                    raise StaleConsolidationError(
+                        "Concurrent consolidation staging did not settle; retry"
+                    ) from exc
+                await asyncio.sleep(0.01 * (attempt + 1))
+            except ValueError as exc:
+                if "LockBusy" not in str(exc) or attempt == 9:
+                    raise
+                await asyncio.sleep(0.01 * (attempt + 1))
+    node_id = await engine._write_queue.submit(
+        lambda: engine._graph_store.publish_consolidation(plan),
+        label=f"consolidation.publish:{plan.node.id}",
+    )
+    for stale in (*plan.previous, *retired):
+        await engine._evict_from_indexes(str(stale.id))
+    published = await engine.get_node(node_id)
+    if published is None:
+        raise RuntimeError("Consolidation publication did not produce an active summary")
+    return published
+
+
 async def _consolidate_cluster(
     engine: MemoryEngine,
     cluster: MemoryCluster,
@@ -404,43 +451,7 @@ async def _consolidate_cluster(
         )
         plan = await engine._graph_store.prepare_consolidation(plan)
 
-    if engine._pool is None:
-        import asyncio
-        import duckdb
-
-        from prme.models.consolidation import StaleConsolidationError
-        from prme.storage.consolidation_publication import ConsolidationStageFence
-
-        fence = ConsolidationStageFence(
-            engine._conn, engine._event_store._conn_lock, plan
-        )
-        for attempt in range(10):
-            try:
-                await engine._vector_index.stage(
-                    plan.embedding, user_id=owner, fence=fence
-                )
-                await engine._lexical_index.stage_consolidation(plan, fence=fence)
-                break
-            except (duckdb.ConstraintException, duckdb.TransactionException) as exc:
-                if attempt == 9:
-                    raise StaleConsolidationError(
-                        "Concurrent consolidation staging did not settle; retry"
-                    ) from exc
-                await asyncio.sleep(0.01 * (attempt + 1))
-            except ValueError as exc:
-                if "LockBusy" not in str(exc) or attempt == 9:
-                    raise
-                await asyncio.sleep(0.01 * (attempt + 1))
-    node_id = await engine._write_queue.submit(
-        lambda: engine._graph_store.publish_consolidation(plan),
-        label=f"consolidation.publish:{plan.node.id}",
-    )
-    for stale in (*plan.previous, *retired):
-        await engine._evict_from_indexes(str(stale.id))
-    published = await engine.get_node(node_id)
-    if published is None:
-        raise RuntimeError("Consolidation publication did not produce an active summary")
-    return published, True
+    return await publish_consolidation_plan(engine, plan, retired=retired), True
 
 
 async def forget_consolidated(

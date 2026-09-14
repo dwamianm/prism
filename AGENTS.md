@@ -120,7 +120,13 @@ inside one transaction, then commits the supersedence edge and a checksummed
 supersedence failure. Local initialization removes `idx_nodes_lifecycle` because
 indexed lifecycle replacement can bypass DuckDB column update claims. Do not
 reintroduce mutable-column ART indexes without proving concurrent validation.
-Summary creation/reuse remains separate and is not yet atomic or idempotent.
+Hierarchical daily, weekly and monthly excerpts reuse the same prepared
+publication machinery. Their lineage is owner, scope, level and UTC period;
+unchanged inputs reuse one identity, changed selected inputs atomically publish a
+new generation and archive the predecessor, and the first managed run atomically
+retires legacy `source-excerpts-v1` summaries for that bucket. DuckDB stages
+indexes after durable preparation; PostgreSQL publishes pgvector inside the graph
+transaction. Do not restore separate summary, edge and index writes.
 
 Single-node `promote`, `archive` and `deprecate` validate the current lifecycle
 inside the same backend transaction as the update and a checksummed
