@@ -22,6 +22,19 @@ from prme.retrieval.packing import pack_context
 from prme.retrieval.tokenization import count_tokens
 
 
+READER_OPTIONS = {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 8192,
+    "num_predict": 1024,
+}
+READER_SYSTEM_PROMPT = base.GENERATION_SYSTEM_PROMPT + """
+
+Return only the direct answer, using at most two sentences and 80 words. Do not
+quote, enumerate, or cite memory entries, identifiers, or supporting evidence.
+"""
+
+
 def prepare(root: Path) -> dict:
     """Reproduce all density/balanced contexts without exposing references."""
     paths = base.source_paths(root)
@@ -106,6 +119,129 @@ def prepare(root: Path) -> dict:
     }
 
 
+def reader_declaration(base_url: str) -> dict:
+    return {
+        "model": base.READER_MODEL,
+        "model_digest": base.runtime.model_digest(base_url, base.READER_MODEL),
+        "ollama_version": base.runtime.request(base_url, "/api/version")["version"],
+        "options": READER_OPTIONS,
+        "request_timeout_seconds": base.REQUEST_TIMEOUT_SECONDS,
+        "system_prompt": READER_SYSTEM_PROMPT,
+        "runner_sha256": digest(Path(__file__).read_bytes()),
+    }
+
+
+def reader_payload(row: dict, arm: str, declaration: dict) -> dict:
+    context = row["contexts"][arm]
+    if digest(context["context"].encode()) != context["sha256"]:
+        raise ValueError("Prepared context checksum mismatch")
+    messages = [
+        {"role": "system", "content": READER_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": (
+                f"QUESTION DATE:\n{row['question_date']}\n\n"
+                f"MEMORY:\n{context['context']}\n\nQUESTION:\n{row['question']}"
+            ),
+        },
+    ]
+    if sum(len(message["content"].encode()) for message in messages) > 28500:
+        raise ValueError("Reader prompt exceeds the registered byte bound")
+    return {
+        "model": declaration["model"],
+        "messages": messages,
+        "stream": False,
+        "think": False,
+        "options": dict(READER_OPTIONS),
+    }
+
+
+def run_reader(prepared: dict, declared: dict, state_path: Path,
+               base_url: str) -> dict:
+    jobs = []
+    for row in prepared["rows"]:
+        for arm in sorted(
+            base.ARMS,
+            key=lambda value: digest(canonical([row["case_id"], value])),
+        ):
+            body = reader_payload(row, arm, declared)
+            jobs.append((row, arm, body, digest(canonical(body))))
+    identity = {
+        "prepared_sha256": digest(canonical(prepared)),
+        "reader": declared,
+    }
+    with base.runtime.exclusive_state(state_path):
+        state = json.loads(state_path.read_bytes()) if state_path.exists() else {
+            "identity": identity,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "generations": {},
+            "failed_attempts": [],
+            "complete": False,
+        }
+        if state["identity"] != identity or state["failed_attempts"]:
+            raise ValueError("Reader study cannot resume after changed input or a failed call")
+        wanted = {key for _, _, _, key in jobs}
+        if not set(state["generations"]) <= wanted:
+            raise ValueError("Reader state contains unrelated responses")
+        for saved in state["generations"].values():
+            if digest(canonical(saved["response"])) != saved["response_sha256"]:
+                raise ValueError("Saved reader response changed")
+            base._answer(saved["response"], declared["model"])
+        write(state_path, state)
+        for index, (_, _, body, key) in enumerate(jobs):
+            if key not in state["generations"]:
+                response = None
+                try:
+                    if (
+                        base.runtime.model_digest(base_url, declared["model"])
+                        != declared["model_digest"]
+                    ):
+                        raise ValueError("Reader model changed before generation")
+                    response = base._request(base_url, body)
+                    base._answer(response, declared["model"])
+                    if (
+                        base.runtime.model_digest(base_url, declared["model"])
+                        != declared["model_digest"]
+                    ):
+                        raise ValueError("Reader model changed during generation")
+                    state["generations"][key] = {
+                        "response": response,
+                        "response_sha256": digest(canonical(response)),
+                    }
+                except Exception as exc:
+                    state["failed_attempts"].append({
+                        "prompt_sha256": key,
+                        "error_type": type(exc).__name__,
+                        "at": datetime.now(timezone.utc).isoformat(),
+                        "response_sha256": (
+                            digest(canonical(response)) if response is not None else None
+                        ),
+                    })
+                    write(state_path, state)
+                    raise
+                write(state_path, state)
+            print(f"Reader {index + 1}/{len(jobs)}", flush=True)
+        state["complete"] = True
+        write(state_path, state)
+    return {
+        "complete": True,
+        "identity": identity,
+        "state_sha256": digest(state_path.read_bytes()),
+        "rows": [
+            {
+                "case_id": row["case_id"],
+                "arm": arm,
+                "prompt_sha256": key,
+                "context_sha256": row["contexts"][arm]["sha256"],
+                "answer": base._answer(
+                    state["generations"][key]["response"], declared["model"]
+                ),
+            }
+            for row, arm, _, key in jobs
+        ],
+    }
+
+
 def register(root: Path, directory: Path, registration: Path, base_url: str) -> None:
     if directory.exists() or registration.exists():
         raise ValueError("Fresh registration and study directory required")
@@ -123,7 +259,7 @@ def register(root: Path, directory: Path, registration: Path, base_url: str) -> 
         json.loads(paths["calibration"].read_bytes()),
         judge,
     )
-    reader = base.reader_declaration(base_url)
+    reader = reader_declaration(base_url)
     if reader["model_digest"] == judge["model_digest"]:
         raise ValueError("Reader and judge models must differ")
 
@@ -167,7 +303,7 @@ def verify_registration(root: Path, directory: Path, registration: Path,
         or declared["source_identity"] != prepared["source_identity"]
         or declared["case_ids"] != [row["case_id"] for row in prepared["rows"]]
         or declared["arms"] != list(base.ARMS)
-        or declared["reader"] != base.reader_declaration(base_url)
+        or declared["reader"] != reader_declaration(base_url)
         or declared["judge"] != reader_judge.declaration(
             base.JUDGE_MODEL, base_url, declared["judge"]["controls_sha256"]
         )
@@ -227,7 +363,7 @@ def run(root: Path, directory: Path, registration_path: Path,
     for name in ("reader.json", "judge.json", "results.json"):
         if (directory / name).exists():
             raise ValueError("Fresh study outcomes required")
-    reader = base.run_reader(
+    reader = run_reader(
         prepared, registration["reader"], directory / "reader-state.json", base_url,
     )
     write(directory / "reader.json", reader)
