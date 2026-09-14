@@ -275,12 +275,22 @@ def _validate_registered_systems(
         raise ValueError("loaded PRME pack manifest does not match registration")
     saved_config = _load_json(saved_config_path)
     memory_params = saved_config.get("memory_params")
+    effective_context_format = (
+        memory_params.get("context_format", "auditable")
+        if isinstance(memory_params, dict)
+        else None
+    )
     if (
         saved_config.get("memory_type") != "prme"
         or not isinstance(memory_params, dict)
         or memory_params.get("token_budget")
         != prme.get("internal_context_budget_cl100k_tokens")
         or memory_params.get("image_limit") != prme.get("max_source_screenshots")
+        or effective_context_format not in {"auditable", "compact"}
+        or (
+            prme.get("context_format") is not None
+            and effective_context_format != prme.get("context_format")
+        )
     ):
         raise ValueError("loaded PRME adapter settings do not match registration")
     pack_manifest = _load_json(pack_manifest_path)
@@ -298,6 +308,7 @@ def _validate_registered_systems(
         "prme_memory_config_sha256": saved_config_sha256,
         "prme_pack_manifest_sha256": pack_manifest_sha256,
         "prme_adapter_schema_version": pack_manifest["schema_version"],
+        "prme_context_format": effective_context_format,
         "upstream_revision": pack_manifest["upstream_revision"],
         "baseline_memory_context_tokens_zero": True,
     }

@@ -248,6 +248,7 @@ def _bind_registered_systems(
             "internal_context_budget_cl100k_tokens": 32_768,
             "upstream_context_budget_tokens": 65_536,
             "max_source_screenshots": 8,
+            "context_format": "auditable",
         },
         "baseline": {
             "memory_config": "evaluation/memory_configs/no_retrieval.json",
@@ -337,6 +338,7 @@ def test_comparison_verifies_registered_cohort_and_reader(tmp_path: Path) -> Non
     assert result["registration_schema_version"] == 1
     assert result["system_binding"]["baseline_memory_context_tokens_zero"] is True
     assert result["system_binding"]["prme_adapter_schema_version"] == 2
+    assert result["system_binding"]["prme_context_format"] == "auditable"
 
     registered = json.loads(registration.read_text())
     registered["selection"]["question_count"] = 1
@@ -424,6 +426,26 @@ def test_schema_two_registration_requires_matching_execution_sources(
     manifest["source"]["launcher_sha256"] = "f" * 64
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="do not share one execution source"):
+        compare(
+            left,
+            right,
+            left_label="prme",
+            right_label="no_memory",
+            registration=registration,
+            samples=10,
+        )
+
+
+def test_comparison_rejects_registered_context_format_drift(tmp_path: Path) -> None:
+    left = _write_run(tmp_path / "left", [True])
+    right = _write_run(tmp_path / "right", [False])
+    source, systems = _bind_registered_systems(left, right, tmp_path)
+    systems["prme"]["context_format"] = "compact"
+    registration = _write_registration(
+        tmp_path / "registration.json", left, source=source, systems=systems
+    )
+
+    with pytest.raises(ValueError, match="adapter settings do not match"):
         compare(
             left,
             right,

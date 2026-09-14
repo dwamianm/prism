@@ -112,8 +112,10 @@ Use `evaluation/memory_configs/prme_compact.json` for an explicit 4,096-token
 compact-renderer arm. The full preset explicitly uses the auditable renderer.
 A saved-memory run must also use a copied `memory_config.json` with the same
 budget and format settings; the comparator hashes that loaded configuration
-independently. Use the official combine and leaderboard utilities for aggregate
-metrics.
+independently, reports the effective format, and enforces an explicit registered
+`context_format` when present. Historical configurations without the field retain
+their auditable meaning. Use the official combine and leaderboard utilities for
+aggregate metrics.
 
 The completed [4K-budget development study](../results/research/2026-09-14/LONGMEMEVAL-V2-WEB-COMPACT4K-DEVELOPMENT.md)
 reduced mean reader memory context by 83.05% but scored 49/149 versus 80/149 for

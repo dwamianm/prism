@@ -48,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explicit LongMemEval-V2 renderer selection. The adapter accepts and reports
   `context_format`, the full preset declares `auditable`, and the compact preset
   now declares `compact` so future runs cannot confuse a 4K budget with compact
-  serialization.
+  serialization. The registered comparator reports the effective format and
+  rejects a declared format that differs from the saved configuration.
 - A pinned MemoryAgentBench adapter for the benchmark's four incremental memory
   competencies. It uses the public PRME client with the product-default 4K
   balanced packer, pins the upstream dataset revision, fences completed source
