@@ -174,7 +174,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
                 "query_time_len": 0.25,
             }
         ],
-        "metrics": {"accuracy": [1.0], "input_len": [25], "query_time_len": [0.25]},
+        "metrics": {"accuracy": [True], "input_len": [25], "query_time_len": [0.25]},
         "averaged_metrics": {
             "accuracy": 100.0,
             "input_len": 25.0,

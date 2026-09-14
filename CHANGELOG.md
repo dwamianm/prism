@@ -57,7 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bounded recounted contexts, durable receipts, and completed source manifests.
   Matched BM25 registrations bind preprocessing, ranking, and LangChain wrapper
   dependencies; the installer updates the pinned harness to the current
-  `BM25Retriever.invoke()` API.
+  `BM25Retriever.invoke()` API. A paired comparator accepts only exact
+  registrations, verified-complete arms and result hashes, applies each task's
+  official accuracy metric, and reports paired uncertainty without raw answers.
+  Both arm verifiers accept the harness's native boolean match metrics while
+  retaining finite numeric validation for graded metrics.
   This is an evaluation path; no MemoryAgentBench task score is claimed yet.
 - Durable, atomic hierarchical summary publication. Daily, weekly and monthly
   excerpts use stable owner/scope/level/period lineages, deterministic request

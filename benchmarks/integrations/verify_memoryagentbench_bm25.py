@@ -18,6 +18,7 @@ from benchmarks.integrations.verify_memoryagentbench import (
     _git,
     _load_object,
     _load_yaml_object,
+    _require_metric_number,
     _require_number,
 )
 from prme.retrieval.tokenization import count_tokens
@@ -93,7 +94,7 @@ def _validate_result(
             or len(values) != expected_queries
         ):
             raise ValueError(f"metric {name!r} does not cover every query")
-        numbers = [_require_number(value, f"metric {name}") for value in values]
+        numbers = [_require_metric_number(value, f"metric {name}") for value in values]
         expected_average = math.fsum(numbers) / expected_queries
         if "_len" not in name and "_time" not in name:
             expected_average *= 100

@@ -72,6 +72,13 @@ def _require_number(value: object, label: str, *, positive: bool = False) -> flo
     return number
 
 
+def _require_metric_number(value: object, label: str) -> float:
+    """Accept upstream boolean match metrics while retaining finite-number checks."""
+    if isinstance(value, bool):
+        return float(value)
+    return _require_number(value, label)
+
+
 def _verify_manifest(
     path: Path,
     *,
@@ -373,7 +380,7 @@ def verify(
             or len(values) != expected_queries
         ):
             raise ValueError(f"metric {name!r} does not cover every query")
-        numbers = [_require_number(value, f"metric {name}") for value in values]
+        numbers = [_require_metric_number(value, f"metric {name}") for value in values]
         expected_average = math.fsum(numbers) / expected_queries
         if "_len" not in name and "_time" not in name:
             expected_average *= 100

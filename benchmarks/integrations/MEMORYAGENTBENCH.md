@@ -209,6 +209,44 @@ The same preprocessing identity used by the PRME arm is required here as well.
 These checks establish a reproducible matched lexical control; they do not make
 it a product-equivalent memory system or a published-reader comparison.
 
+## Paired comparison
+
+After both arms verify, create a JSON manifest with one entry per task:
+
+```json
+{
+  "schema_version": 1,
+  "kind": "memoryagentbench-paired-manifest",
+  "tasks": [
+    {
+      "label": "eventqa",
+      "prme_registration": "eventqa-prme-registration.json",
+      "bm25_registration": "eventqa-bm25-registration.json",
+      "prme_verification": "eventqa-prme-verification.json",
+      "bm25_verification": "eventqa-bm25-verification.json",
+      "prme_result": "/absolute/path/to/prme-result.json",
+      "bm25_result": "/absolute/path/to/bm25-result.json"
+    }
+  ]
+}
+```
+
+Relative paths resolve from the manifest directory. Compare the complete matrix:
+
+```bash
+python -m benchmarks.integrations.compare_memoryagentbench \
+  --manifest /absolute/path/to/paired-manifest.json \
+  --output /absolute/path/to/paired-comparison.json
+```
+
+The comparator requires each result hash to match a complete independent
+verification, rechecks identical source, question, answer, reader and
+preprocessing identities, and applies the upstream task-to-accuracy mapping:
+`substring_exact_match` for accurate retrieval and conflict resolution, and
+`exact_match` for test-time learning and long-range understanding. Its report
+contains per-task and aggregate paired intervals, exact McNemar tests and context
+sizes without copying raw questions, references or model answers.
+
 ## Storage and recovery contract
 
 The upstream harness chunks each source before it reaches a memory method. PRME
