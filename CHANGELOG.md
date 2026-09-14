@@ -21,7 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the task generation limit for non-OpenAI model names, and the PRME adapter binds
   the values into its pack identity and retrieval captures. This prevents a local
   common-reader comparison from silently using different thinking or sampling
-  behavior between memory arms.
+  behavior between memory arms. Registrations also bind the dataset, NLTK and
+  tiktoken versions, the English Punkt data, and the exact tokenizer table so
+  preprocessing dependency drift cannot silently change task chunks.
 - Isolated MemoryAgentBench PRME state through a validated experiment slug.
   `prme_run_id` participates in the saved-agent path, pack identity, retrieval
   capture, and verifier so multiple configurations using one reader cannot reuse

@@ -17,6 +17,7 @@ from benchmarks.integrations.register_memoryagentbench import (
     _digest,
     _git,
     _load_yaml_object,
+    _preprocessing_identity,
     _upstream_imports,
 )
 
@@ -46,15 +47,19 @@ def _dependency_identity() -> dict[str, dict[str, str]]:
     import rank_bm25
 
     rank_source = Path(rank_bm25.__file__).resolve()
-    return {
-        "numpy": {
-            "version": importlib.metadata.version("numpy"),
-        },
-        "rank-bm25": {
-            "version": importlib.metadata.version("rank-bm25"),
-            "source_sha256": _digest(rank_source),
-        },
-    }
+    identity = _preprocessing_identity()
+    identity.update(
+        {
+            "numpy": {
+                "version": importlib.metadata.version("numpy"),
+            },
+            "rank-bm25": {
+                "version": importlib.metadata.version("rank-bm25"),
+                "source_sha256": _digest(rank_source),
+            },
+        }
+    )
+    return identity
 
 
 def _extract_retrieval_query(message: str) -> str:

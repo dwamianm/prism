@@ -15,8 +15,15 @@ from benchmarks.integrations import verify_memoryagentbench_bm25 as verifier
 
 PRME_REVISION = "2" * 40
 DEPENDENCIES = {
+    "datasets": {"version": "test"},
+    "nltk": {"version": "test", "punkt_tab_english_sha256": "b" * 64},
     "numpy": {"version": "test"},
     "rank-bm25": {"version": "test", "source_sha256": "a" * 64},
+    "tiktoken": {
+        "version": "test",
+        "encoding": "o200k_base",
+        "encoding_sha256": "c" * 64,
+    },
 }
 
 

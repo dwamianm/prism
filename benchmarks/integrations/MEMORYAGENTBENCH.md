@@ -56,8 +56,11 @@ python -m benchmarks.integrations.register_memoryagentbench \
 
 The registrar uses the pinned upstream preprocessing path. It records hashes
 for every prepared source chunk, query, answer, query-to-context assignment,
-configuration file, adapter file, and upstream harness file. It contains no
-model outputs or scores and refuses uncommitted benchmark source code.
+configuration file, adapter file, and upstream harness file. It also binds the
+installed dataset, NLTK and tiktoken versions, the English Punkt resource tree,
+and the exact `gpt-4o-mini` tokenizer table used by upstream sentence chunking.
+It contains no model outputs or scores and refuses uncommitted benchmark source
+code.
 
 Set a distinct path-safe `prme_run_id` for each PRME arm. The installer includes
 it in the saved-agent directory, and the adapter binds it into manifests and
@@ -194,6 +197,7 @@ configuration. The verifier reloads the pinned official inputs, recreates the
 formatted documents, repeats query extraction and `rank-bm25` ordering, and
 requires every isolated context capture to match exactly. It also binds the
 installed NumPy and `rank-bm25` versions and hashes the latter's ranking source.
+The same preprocessing identity used by the PRME arm is required here as well.
 These checks establish a reproducible matched lexical control; they do not make
 it a product-equivalent memory system or a published-reader comparison.
 

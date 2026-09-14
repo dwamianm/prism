@@ -15,6 +15,15 @@ from prme.retrieval.tokenization import count_tokens
 
 
 PRME_REVISION = "1" * 40
+PREPROCESSING = {
+    "datasets": {"version": "test"},
+    "nltk": {"version": "test", "punkt_tab_english_sha256": "a" * 64},
+    "tiktoken": {
+        "version": "test",
+        "encoding": "o200k_base",
+        "encoding_sha256": "b" * 64,
+    },
+}
 
 
 def write_json(path: Path, value: object) -> None:
@@ -56,6 +65,9 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         return PRME_REVISION if root == prme_root else adapter.UPSTREAM_REVISION
 
     monkeypatch.setattr(verifier, "_git", fake_git)
+    monkeypatch.setattr(
+        verifier.registrar, "_preprocessing_identity", lambda: PREPROCESSING
+    )
 
     agent_config = {
         "agent_name": "Agentic_memory_prme",
@@ -186,6 +198,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
             "prme_revision": PRME_REVISION,
             "upstream_revision": adapter.UPSTREAM_REVISION,
             "dataset_revision": adapter.DATASET_REVISION,
+            "preprocessing": PREPROCESSING,
             "prme_files_sha256": {
                 name: verifier._digest(source_root / name) for name in source_names
             },
@@ -311,4 +324,17 @@ def test_verifier_rejects_unbound_retrievals(
     capture[field] = value
     write_json(paths["capture"], capture)
     with pytest.raises(ValueError, match=message):
+        run_verification(paths)
+
+
+def test_verifier_rejects_preprocessing_dependency_drift(
+    tmp_path: Path, monkeypatch
+) -> None:
+    paths = fixture_run(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        verifier.registrar,
+        "_preprocessing_identity",
+        lambda: {**PREPROCESSING, "nltk": {"version": "changed"}},
+    )
+    with pytest.raises(ValueError, match="preprocessing dependencies differ"):
         run_verification(paths)

@@ -6,6 +6,7 @@ import argparse
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
+import importlib.metadata
 import json
 import os
 from pathlib import Path
@@ -31,6 +32,60 @@ def _canonical(value: object) -> bytes:
 
 def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _tree_digest(root: Path) -> str:
+    hasher = hashlib.sha256()
+    files = sorted(path for path in root.rglob("*") if path.is_file())
+    if not files:
+        raise ValueError(f"preprocessing resource is empty: {root}")
+    for path in files:
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        content = path.read_bytes()
+        hasher.update(len(relative).to_bytes(4, "big"))
+        hasher.update(relative)
+        hasher.update(len(content).to_bytes(8, "big"))
+        hasher.update(content)
+    return hasher.hexdigest()
+
+
+def _preprocessing_identity() -> dict[str, dict[str, str]]:
+    """Bind packages and data that define official prepared input chunks."""
+    import nltk
+    import tiktoken
+
+    punkt_root = Path(str(nltk.data.find("tokenizers/punkt_tab/english/")))
+    if not punkt_root.is_dir():
+        raise ValueError("NLTK punkt_tab English data is not a filesystem directory")
+    encoding = tiktoken.encoding_for_model("gpt-4o-mini")
+    mergeable_ranks = getattr(encoding, "_mergeable_ranks", None)
+    special_tokens = getattr(encoding, "_special_tokens", None)
+    if not isinstance(mergeable_ranks, dict) or not isinstance(special_tokens, dict):
+        raise ValueError("tiktoken encoding does not expose auditable token tables")
+    encoding_hasher = hashlib.sha256()
+    for token, rank in sorted(mergeable_ranks.items(), key=lambda item: item[1]):
+        if not isinstance(token, bytes) or not isinstance(rank, int):
+            raise ValueError("tiktoken mergeable ranks are malformed")
+        encoding_hasher.update(rank.to_bytes(4, "big"))
+        encoding_hasher.update(len(token).to_bytes(4, "big"))
+        encoding_hasher.update(token)
+    for token, rank in sorted(special_tokens.items()):
+        token_bytes = token.encode("utf-8")
+        encoding_hasher.update(rank.to_bytes(4, "big"))
+        encoding_hasher.update(len(token_bytes).to_bytes(4, "big"))
+        encoding_hasher.update(token_bytes)
+    return {
+        "datasets": {"version": importlib.metadata.version("datasets")},
+        "nltk": {
+            "version": importlib.metadata.version("nltk"),
+            "punkt_tab_english_sha256": _tree_digest(punkt_root),
+        },
+        "tiktoken": {
+            "version": importlib.metadata.version("tiktoken"),
+            "encoding": encoding.name,
+            "encoding_sha256": encoding_hasher.hexdigest(),
+        },
+    }
 
 
 def _git(root: Path, *args: str) -> str:
@@ -225,6 +280,7 @@ def register(
             "prme_revision": expected_prme_revision,
             "upstream_revision": upstream_revision,
             "dataset_revision": adapter.DATASET_REVISION,
+            "preprocessing": _preprocessing_identity(),
             "prme_files_sha256": {
                 name: _digest(source_root / name) for name in source_names
             },

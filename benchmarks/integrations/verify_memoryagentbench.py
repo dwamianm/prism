@@ -15,6 +15,7 @@ from uuid import UUID
 import yaml
 
 from benchmarks.integrations import memoryagentbench as adapter
+from benchmarks.integrations import register_memoryagentbench as registrar
 from prme.retrieval.tokenization import count_tokens
 
 
@@ -137,6 +138,7 @@ def verify(
     result_path: Path,
     agent_config_path: Path,
     dataset_config_path: Path,
+    preprocessing_identity: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Verify and summarize one completed official-harness result."""
     registration = _load_object(registration_path)
@@ -230,6 +232,11 @@ def verify(
         != _digest(installed_adapter)
     ):
         raise ValueError("installed benchmark source differs from the registration")
+    actual_preprocessing = preprocessing_identity or registrar._preprocessing_identity()
+    if registered_source.get("preprocessing") != actual_preprocessing:
+        raise ValueError(
+            "MemoryAgentBench preprocessing dependencies differ from the registration"
+        )
 
     agent_config = _load_yaml_object(agent_config_path)
     dataset_config = _load_yaml_object(dataset_config_path)
@@ -498,6 +505,7 @@ def verify(
             "prme_revision": actual_prme_revision,
             "upstream_revision": actual_upstream_revision,
             "dataset_revision": adapter.DATASET_REVISION,
+            "preprocessing": actual_preprocessing,
             "registration_sha256": _digest(registration_path),
             "adapter_sha256": _digest(source_adapter),
             "installer_sha256": _digest(prme_root / source_paths[1]),
