@@ -245,8 +245,9 @@ judge-dependent categories before generalizing answer quality.
 A pinned [MemoryAgentBench integration](../benchmarks/integrations/MEMORYAGENTBENCH.md)
 now supports the benchmark's four incremental competency families using the 4K
 product packer, complete source manifests, stable query clocks, and exact context
-capture. Its contract tests and pinned-tree installation pass, but no task score
-has been promoted. Run a registered common-reader matrix next. Treat its
+capture. Its contract tests, pinned-tree installation, and one-context real-data
+ingress smoke across all four families pass, but no task score has been promoted.
+Run a registered common-reader matrix next. Treat its
 test-time-learning arm as retrieved in-context demonstrations and its conflict
 arm as numbered-source resolution; separate experiments are still required for
 scoped ranking-profile learning and transactional graph supersedence.

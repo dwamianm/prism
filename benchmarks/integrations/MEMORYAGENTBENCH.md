@@ -117,3 +117,7 @@ The integration tests prove adapter registration, exact source preservation,
 manifest fencing, restart behavior, retrieval-context capture, and pinned-tree
 installation. They are not task-quality evidence. A scored claim requires the
 complete registered upstream tasks under a fixed common reader.
+
+The [four-suite real-data ingress smoke](../results/research/2026-09-14/MEMORYAGENTBENCH-INGRESS-SMOKE.md)
+also passed one source and retrieval from each competency family with no reader
+or answer scoring. It is a transport, persistence, budget, and receipt check.
