@@ -63,7 +63,7 @@ def prepare(root: Path) -> dict:
         case = cases[reference["case_id"]]
         reference_time = datetime.fromisoformat(case["question_date"])
         guidance = build_context_guidance(
-            case["question"], reference_time=reference_time
+            case["question"], reference_time=reference_time, mode="all"
         )
         if guidance is None:
             continue

@@ -175,6 +175,13 @@ retention, so this confirms the product default without constituting an independ
 competitive benchmark. Use explicit `density` or `score` ordering when a
 workload-specific evaluation supports it.
 
+Temporal questions also receive compact question-time and date-arithmetic
+guidance when it fits without displacing a memory. A registered confirmation
+improved temporal answers from 31/50 to 34/50. Set
+`packing=PackingConfig(context_guidance_mode="off")` to disable it. The `"all"`
+mode includes experimental personalization and current-state prompts and is not
+the default because personalization produced a real negative-preference failure.
+
 For exports and counts, enumerate the stored records instead of counting search
 results. Iteration reads every matching node in bounded pages:
 
@@ -891,6 +898,9 @@ PRME_EXTRACTION_MODEL=gpt-4o-mini
 # Embedding
 PRME_EMBEDDING_PROVIDER=fastembed      # fastembed (local, default) or openai
 PRME_EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5
+
+# Context packing
+PRME_PACKING__CONTEXT_GUIDANCE_MODE=temporal  # temporal (default) | off | all
 
 # Encryption at rest
 PRME_ENCRYPTION_ENABLED=true           # Master toggle (default false)

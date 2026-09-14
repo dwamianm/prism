@@ -63,3 +63,31 @@ def test_version_five_requires_policy_and_execution_and_replays_scores():
     raw.pop("execution")
     with pytest.raises(ValidationError, match="execution descriptor"):
         RetrievalReceipt.model_validate(raw)
+
+
+def test_version_six_records_guidance_and_requires_an_explicit_mode():
+    raw = json.loads((Path(__file__).parent / "fixtures/relevance/receipt-v4.json").read_text())
+    raw["schema_version"] = 6
+    raw["packing"]["multipath_ordering"] = "balanced"
+    raw["packing"]["context_guidance_mode"] = "temporal"
+    receipt = RetrievalReceipt.model_validate(raw)
+    assert receipt.packing.context_guidance_mode == "temporal"
+    assert "context_guidance_mode" in receipt.model_dump()["packing"]
+    assert RetrievalReceipt.model_validate_json(receipt.model_dump_json()).checksum == receipt.checksum
+    raw["packing"].pop("context_guidance_mode")
+    with pytest.raises(ValidationError, match="explicit context guidance mode"):
+        RetrievalReceipt.model_validate(raw)
+
+
+def test_versions_before_six_mean_guidance_was_off():
+    raw = json.loads((Path(__file__).parent / "fixtures/relevance/receipt-v4.json").read_text())
+    for version in (4, 5):
+        raw["schema_version"] = version
+        raw["packing"]["multipath_ordering"] = "balanced" if version == 5 else "density"
+        receipt = RetrievalReceipt.model_validate(raw)
+        assert receipt.packing.context_guidance_mode == "off"
+        assert "context_guidance_mode" not in receipt.model_dump()["packing"]
+        claimed = json.loads(receipt.model_dump_json())
+        claimed["packing"]["context_guidance_mode"] = "temporal"
+        with pytest.raises(ValidationError, match="version 6"):
+            RetrievalReceipt.model_validate(claimed)

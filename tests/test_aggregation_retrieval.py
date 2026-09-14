@@ -100,6 +100,22 @@ async def test_temporal_query_not_aggregation():
     assert result.is_aggregation is False
 
 
+@pytest.mark.parametrize("unit", ["hours", "days", "weeks", "months", "years"])
+async def test_elapsed_time_quantity_not_aggregation(unit):
+    result = await analyze_query(f"How many {unit} ago did the trip end?")
+    assert result.is_aggregation is False
+
+
+async def test_how_many_times_remains_aggregation():
+    result = await analyze_query("How many times did I visit the museum?")
+    assert result.is_aggregation is True
+
+
+async def test_time_units_summed_across_records_remain_aggregation():
+    result = await analyze_query("How many hours do I work across both jobs?")
+    assert result.is_aggregation is True
+
+
 @pytest.mark.asyncio
 async def test_factual_query_not_aggregation():
     result = await analyze_query("What is my favorite color?")

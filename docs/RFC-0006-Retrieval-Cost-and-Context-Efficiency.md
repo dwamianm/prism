@@ -48,13 +48,13 @@ still use node ID and all representations obey the same measured budget. The
 public implementation reproduces all 714 frozen development contexts and source
 measurements across both arms and three budgets. This is implementation parity,
 not additional quality evidence. The completed score-only confirmation failed its
-preference-category guard. New retrieval
-receipts record this policy in schema version 4; legacy receipts preserve their
-original bytes and implicit density semantics. Balanced ordering reserves the
+preference-category guard. Historical version 4 and 5 receipts record the
+ordering policy; legacy receipts preserve their original bytes and implicit
+density semantics. Balanced ordering reserves the
 highest-scored ordinary multi-path candidate, then orders the remainder by
 score divided by full-entry tokens to the power 0.25. The head still obeys
-ordinary fidelity and budget checks. Balanced emits version 5 receipts; explicit
-density and score continue to emit version 4. No legacy receipt bytes
+ordinary fidelity and budget checks. New pipeline retrievals emit version 6
+receipts with both ordering and context-guidance policy. No legacy receipt bytes
 change. The [packing guide](PACKING.md) describes the completed source-retention
 studies, per-question losses and answer validation. The balanced decision does
 not retroactively change the failed score-only promotion result.
@@ -75,7 +75,13 @@ selected without guidance, then prepends the guidance only if the complete
 output still fits. Guidance is counted in `tokens_used`, is exposed separately
 on `MemoryBundle.context_guidance`, and is omitted at tight boundaries instead
 of evicting or downgrading evidence. Controlled context ablation preserves any
-included guidance byte for byte.
+included guidance byte for byte. `PackingConfig.context_guidance_mode` accepts
+`"off"`, `"temporal"` (default), and `"all"`. The default emits only explicit
+date-arithmetic and temporal-ordering guidance. In a registered 70-context
+confirmation it improved temporal answers from 31/50 to 34/50, with four gains
+and one judge-variance loss on semantically equivalent refusals. Personalization
+was tied at 9/16 and caused one real negative-preference violation, so
+current-state and personalization guidance remain experimental behind `"all"`.
 
 Aware timestamps are rendered in UTC before token counting or date-relative
 annotations. Equivalent instants must produce identical context and token costs

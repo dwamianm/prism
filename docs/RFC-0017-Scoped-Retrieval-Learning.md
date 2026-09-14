@@ -125,13 +125,28 @@ losses and no lower category total. The source partitions had already been
 inspected and the custom local judge does not establish universal superiority or
 authorize a learned profile. Density and score ordering remain explicit alternatives.
 
-Only balanced pipeline retrievals need the new version 5 receipt. They require
-an explicit ordering and execution descriptor and retain the existing score
-replay and exposure checks. Density/score pipeline receipts still use version 4.
+At introduction, only balanced pipeline retrievals needed the version 5
+receipt. They require an explicit ordering and execution descriptor and retain
+the existing score replay and exposure checks. Density/score pipeline receipts
+still use version 4.
 Versions 1–4 reject a balanced claim and preserve their canonical bytes and
 feedback checksum references. The pre-change version 4 fixture bytes cover both
 existing policies. Consumers must support version 5 before accepting balanced
 receipts; no new packing replay guarantee is introduced.
+
+### Context guidance and receipt version 6
+
+All current pipeline retrievals use version 6 and record
+`packing.context_guidance_mode` as `"off"`, `"temporal"`, or `"all"`. The field
+affects the exact context exposed to an answering model, even when a particular
+query receives no prefix, so it is part of the durable packing configuration.
+Version 6 requires the existing execution descriptor and an explicit ordering
+and guidance mode. Its execution identity also hashes the context formatter.
+
+Versions 1–5 always mean guidance was off. Their serializers omit the later
+field, retain canonical bytes and feedback checksums, and reject claims that
+guidance was enabled. Version 5 remains valid for historical balanced receipts;
+versions 4 and 5 are no longer emitted by the current pipeline.
 
 ## Explicit relevance records
 

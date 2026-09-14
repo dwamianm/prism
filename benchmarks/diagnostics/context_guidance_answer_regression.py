@@ -80,7 +80,9 @@ def prepare(root: Path) -> dict:
         question_id = result["question_id"]
         case = dataset[question_id]
         guidance = build_context_guidance(
-            case["question"], reference_time=_question_time(case["question_date"])
+            case["question"],
+            reference_time=_question_time(case["question_date"]),
+            mode="all",
         )
         if guidance is None:
             continue

@@ -421,6 +421,11 @@ operation and versioned execution descriptor. HTTP and MCP return it under
 they do not turn semantic matching into corpus enumeration or deduplicate
 multiple assertions about one real-world item.
 
+Elapsed-time quantities such as “how many days ago” and “how many weeks passed”
+are temporal arithmetic, not set aggregation. They must not widen the candidate
+pool or emit incomplete-enumeration warnings. “How many times” remains an
+aggregation query because it asks for event cardinality.
+
 *End of RFC-0005*
 
 

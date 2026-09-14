@@ -859,10 +859,12 @@ and lexical paths together. Set typed options before opening the client. Passing
 a `config` to `MemoryClient` uses its paths as-is; its separate `directory` argument
 is ignored. The equivalent environment setting is
 `PRME_PACKING__MULTIPATH_ORDERING=density`.
-Balanced retrieval receipts use schema version 5. Density and score retrievals
-use schema version 4. Every receipt retains the chosen policy in
-`receipt.packing.multipath_ordering`. Versions 1–3 retain their original canonical
-JSON and feedback checksums and always mean density ordering.
+Temporal context guidance is enabled by default; disable it with
+`PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
+experimental current-state and personalization prompts. Every current retrieval
+receipt uses schema version 6 and retains both policies in `receipt.packing`.
+Versions 1–5 retain their original canonical JSON and feedback checksums and
+always mean context guidance was off.
 
 This example chooses smaller candidate limits explicitly; it is not a list of defaults.
 

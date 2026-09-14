@@ -9,7 +9,7 @@ from pathlib import Path
 import platform
 
 from pydantic import BaseModel, ConfigDict, JsonValue
-from typing import Literal
+from typing import Any, Literal
 
 
 class RetrievalExecution(BaseModel):
@@ -24,21 +24,25 @@ class RetrievalExecution(BaseModel):
     features: dict[str, JsonValue]
 
 
-def _name(value) -> str:
+def _name(value: Any) -> str:
     cls = type(value)
     return f"{cls.__module__}.{cls.__qualname__}"
 
 
-def _reported(value) -> JsonValue:
+def _reported(value: Any) -> JsonValue:
     return value if isinstance(value, (str, int, float, bool)) or value is None else None
 
 
-def reranker_identity(reranker) -> dict[str, JsonValue]:
+def reranker_identity(reranker: Any) -> dict[str, JsonValue]:
     return {"enabled": reranker is not None, "provider": _name(reranker),
             "model": _reported(getattr(reranker, "_model_name", None))}
 
 
-def feature_identity(vector_index, lexical_index, reranker) -> dict[str, JsonValue]:
+def feature_identity(
+    vector_index: Any,
+    lexical_index: Any,
+    reranker: Any,
+) -> dict[str, JsonValue]:
     """Capture non-secret implementation/model observations at pipeline creation."""
     provider = getattr(vector_index, "_provider", None)
     from prme.storage.embedding import has_query_encoder
@@ -51,7 +55,7 @@ def feature_identity(vector_index, lexical_index, reranker) -> dict[str, JsonVal
             packages[package] = None
     sources: dict[str, JsonValue] = {}
     for name in ("scoring", "ranking_adjustments", "query_analysis", "scope", "candidates", "filtering",
-                 "session_context", "reranker", "packing"):
+                 "session_context", "reranker", "packing", "context_formatter"):
         try:
             sources[name] = hashlib.sha256(Path(__file__).with_name(name + ".py").read_bytes()).hexdigest()
         except OSError:

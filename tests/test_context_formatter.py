@@ -41,7 +41,10 @@ class TestBuildContextGuidance:
         assert "Airbnb" not in guidance
 
     def test_current_state_guidance_preserves_unresolved_conflicts(self):
-        guidance = build_context_guidance("Which guitar do I own right now?")
+        guidance = build_context_guidance(
+            "Which guitar do I own right now?",
+            mode="all",
+        )
 
         assert guidance is not None
         assert guidance.startswith("CURRENT-STATE TASK:")
@@ -49,7 +52,10 @@ class TestBuildContextGuidance:
         assert "preserve unresolved conflicts" in guidance
 
     def test_recommendation_guidance_uses_personal_history_safely(self):
-        guidance = build_context_guidance("What restaurant should I choose?")
+        guidance = build_context_guidance(
+            "What restaurant should I choose?",
+            mode="all",
+        )
 
         assert guidance is not None
         assert guidance.startswith("PERSONALIZATION TASK:")
@@ -58,6 +64,13 @@ class TestBuildContextGuidance:
 
     def test_plain_factual_query_needs_no_guidance(self):
         assert build_context_guidance("What is my passport number?") is None
+
+    def test_safe_default_excludes_unproven_guidance_categories(self):
+        assert build_context_guidance("Which guitar do I own right now?") is None
+        assert build_context_guidance("What restaurant should I choose?") is None
+
+    def test_off_mode_disables_temporal_guidance(self):
+        assert build_context_guidance("How many days ago was the trip?", mode="off") is None
 
     def test_reference_time_must_identify_an_instant(self):
         with pytest.raises(ValueError, match="timezone-aware"):

@@ -38,6 +38,7 @@ from prme.retrieval.config import (
     PackingConfig,
     ScoringWeights,
 )
+from prme.retrieval.context_formatter import build_context_guidance
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     AggregationCoverage,
@@ -707,6 +708,12 @@ class RetrievalPipeline:
             scored,
             config=effective_packing_config,
             coverage_notice="\n".join(coverage_notices) or None,
+            context_guidance=build_context_guidance(
+                query,
+                query_analysis=analysis,
+                reference_time=scoring_now,
+                mode=effective_packing_config.context_guidance_mode,
+            ),
         )
 
         aggregation_coverage: AggregationCoverage | None = None

@@ -36,7 +36,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 from prme.retrieval.packing import estimate_token_cost
@@ -254,16 +254,21 @@ def build_context_guidance(
     *,
     query_analysis: QueryAnalysis | None = None,
     reference_time: datetime | None = None,
+    mode: Literal["off", "temporal", "all"] = "temporal",
 ) -> str | None:
     """Build compact, token-countable reasoning guidance for packed records.
 
     The text contains no query or memory content. It clarifies timestamp fields
-    for temporal/current-state questions and identifies relevant personal
-    history as recommendation evidence. Callers must count it inside the same
-    context budget as memory records.
+    for temporal questions. ``mode="all"`` additionally enables experimental
+    current-state and personalization guidance. Callers must count the result
+    inside the same context budget as memory records.
     """
     if reference_time is not None and reference_time.utcoffset() is None:
         raise ValueError("reference_time must be timezone-aware")
+    if mode not in {"off", "temporal", "all"}:
+        raise ValueError(f"Unsupported context guidance mode: {mode}")
+    if mode == "off":
+        return None
     context_type = _detect_context_type(query, query_analysis)
     reference = as_utc(reference_time) if reference_time is not None else None
     if context_type == "temporal":
@@ -273,14 +278,14 @@ def build_context_guidance(
         if reference is not None:
             lines.insert(0, f"QUESTION TIME: {reference.isoformat()}")
         return "\n".join(lines)
-    if context_type == "knowledge_update":
+    if mode == "all" and context_type == "knowledge_update":
         lines = [
             "CURRENT-STATE TASK: Prefer explicit supported updates. Recency alone cannot resolve contradictions; preserve unresolved conflicts.",
         ]
         if reference is not None:
             lines.insert(0, f"QUESTION TIME: {reference.isoformat()}")
         return "\n".join(lines)
-    if _PERSONALIZATION_RE.search(query):
+    if mode == "all" and _PERSONALIZATION_RE.search(query):
         return (
             "PERSONALIZATION TASK: Tailor the answer with relevant user-specific history. "
             "Do not transfer another person's attributes to the user."

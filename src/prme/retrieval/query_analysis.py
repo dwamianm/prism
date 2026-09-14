@@ -53,6 +53,16 @@ _AGGREGATION_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
+# ``how many`` introduces both set cardinality and elapsed-time questions.
+# Explicit interval language needs temporal ranking and arithmetic, not
+# exhaustive-set coverage warnings or broader count scans. A time unit alone is
+# insufficient: "hours across both jobs" is still a sum over multiple records.
+_TEMPORAL_QUANTITY_RE = re.compile(
+    r"\bhow\s+(?:many\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)"
+    r"|much\s+time)\b[^?.!]{0,50}\b(?:ago|passed|elapsed|before|between|since|until)\b",
+    re.IGNORECASE,
+)
+
 # Heuristic for proper nouns: 1+ consecutive capitalized words not at
 # sentence start. We anchor on "not after sentence-start" by checking
 # that the match is not preceded by nothing or a sentence-ending punctuation.
@@ -298,8 +308,12 @@ async def analyze_query(
             resolved_time_from = min(resolved_dates)
             resolved_time_to = max(resolved_dates)
 
-    # Detect aggregation intent (count/total/list-all queries).
-    is_aggregation = bool(_AGGREGATION_KEYWORDS.search(query))
+    # Detect aggregation intent (count/total/list-all queries) without treating
+    # elapsed-time quantities as set cardinality.
+    is_aggregation = bool(
+        _AGGREGATION_KEYWORDS.search(query)
+        and not _TEMPORAL_QUANTITY_RE.search(query)
+    )
 
     return QueryAnalysis(
         query=query,

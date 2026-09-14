@@ -61,6 +61,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Temporal reasoning guidance is now enabled by default when it fits after
+  evidence selection. A registered 70-context confirmation improved temporal
+  answers from 31/50 to 34/50. Personalization and current-state guidance remain
+  experimental behind `packing.context_guidance_mode="all"`; `"off"` restores
+  pre-guidance behavior. Receipt schema version 6 records the chosen mode while
+  versions 1–5 preserve their canonical bytes and mean guidance was off.
+  Elapsed-time questions no longer receive aggregation coverage warnings;
+  time totals across records remain aggregation queries.
 - `knowledge_at` now exposes a machine-readable `historical_coverage` boundary
   in Python, HTTP, MCP, retrieval receipts, and the token-counted model context.
   It is explicitly an aware ingestion-time cutoff over current indexes; prior

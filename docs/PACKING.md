@@ -55,10 +55,19 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Balanced retrievals produce version 5 receipts with an explicit policy and the
-same score-replay and execution requirements. Density/score retrievals continue
-to produce version 4 receipts. Versions 1–4 keep their previous canonical bytes
-and checksums, and cannot claim the new balanced policy. Older readers that lack
-version 5 support cannot consume balanced receipts. Score replay reproduces the
-returned candidate ranking; it is not a reconstruction of packing or unseen
-candidates. Relevance feedback remains linked to the saved context exposure.
+Current retrievals produce version 6 receipts with explicit ordering and
+context-guidance policies and the same score-replay and execution requirements.
+Versions 1–5 keep their previous canonical bytes and checksums; they always mean
+context guidance was off. Version 5 remains the historical balanced format, and
+versions 1–4 cannot claim balanced packing. Older readers that lack version 6
+support cannot consume new receipts. Score replay reproduces the returned
+candidate ranking; it is not a reconstruction of packing or unseen candidates.
+Relevance feedback remains linked to the saved context exposure.
+
+Temporal guidance is enabled by default. It adds the question time and explicit
+record-relative date instructions only after selection, and only when the whole
+output still fits. Set `PackingConfig(context_guidance_mode="off")` for exact
+pre-guidance behavior. `"all"` also enables experimental current-state and
+personalization guidance; confirmation evidence did not support those prompts
+as defaults. The [confirmation report](../benchmarks/results/research/2026-09-14/CONTEXT-GUIDANCE-CONFIRMATION.md)
+records all transitions and limitations.

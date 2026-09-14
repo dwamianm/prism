@@ -1,6 +1,7 @@
 """Scoped learning inputs describe actual saved retrievals across restart."""
 import asyncio
 import hashlib
+from datetime import datetime, timezone
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -25,6 +26,83 @@ async def capture(engine, user):
     return response, receipt
 
 
+async def test_pipeline_adds_only_evidence_backed_guidance_by_default(config, user):
+    reference_time = datetime(2026, 9, 14, tzinfo=timezone.utc)
+    async with MemoryEngine.open(config) as engine:
+        await engine.store(
+            "I returned from the trip one week ago.",
+            user_id=user,
+            event_time=reference_time,
+        )
+        temporal = await engine.retrieve(
+            "How many days ago did I return from the trip?",
+            user_id=user,
+            min_score=0,
+            reference_time=reference_time,
+            include_cross_scope=False,
+        )
+        assert temporal.bundle.context_guidance is not None
+        assert temporal.bundle.render().startswith("QUESTION TIME: 2026-09-14T00:00:00+00:00")
+        assert temporal.metadata.aggregation_coverage is None
+        saved = await engine.get_retrieval_receipt(
+            str(temporal.metadata.request_id), user_id=user
+        )
+        assert saved.schema_version == 6
+        assert saved.packing.context_guidance_mode == "temporal"
+        assert saved.context_sha256 == hashlib.sha256(temporal.bundle.render().encode()).hexdigest()
+
+        current = await engine.retrieve(
+            "Which trip do I remember right now?",
+            user_id=user,
+            min_score=0,
+            reference_time=reference_time,
+            include_cross_scope=False,
+        )
+        assert current.bundle.context_guidance is None
+
+
+async def test_pipeline_context_guidance_can_be_disabled(config, user):
+    config = config.model_copy(update={
+        "packing": config.packing.model_copy(update={"context_guidance_mode": "off"})
+    })
+    reference_time = datetime(2026, 9, 14, tzinfo=timezone.utc)
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("The trip ended yesterday.", user_id=user, event_time=reference_time)
+        response = await engine.retrieve(
+            "How many days ago did the trip end?",
+            user_id=user,
+            min_score=0,
+            reference_time=reference_time,
+            include_cross_scope=False,
+        )
+        assert response.bundle.context_guidance is None
+        saved = await engine.get_retrieval_receipt(
+            str(response.metadata.request_id), user_id=user
+        )
+        assert saved.schema_version == 6
+        assert saved.packing.context_guidance_mode == "off"
+
+
+async def test_pipeline_experimental_guidance_requires_explicit_opt_in(config, user):
+    config = config.model_copy(update={
+        "packing": config.packing.model_copy(update={"context_guidance_mode": "all"})
+    })
+    async with MemoryEngine.open(config) as engine:
+        await engine.store("I enjoy quiet neighborhood restaurants.", user_id=user)
+        response = await engine.retrieve(
+            "What restaurant should I choose?",
+            user_id=user,
+            min_score=0,
+            include_cross_scope=False,
+        )
+        assert response.bundle.context_guidance is not None
+        assert response.bundle.context_guidance.startswith("PERSONALIZATION TASK:")
+        saved = await engine.get_retrieval_receipt(
+            str(response.metadata.request_id), user_id=user
+        )
+        assert saved.packing.context_guidance_mode == "all"
+
+
 @pytest.mark.parametrize("ordering", ["density", "score", "balanced"])
 async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config, user, ordering):
     config = config.model_copy(update={"packing": config.packing.model_copy(update={"multipath_ordering": ordering})})
@@ -34,7 +112,7 @@ async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config,
         assert receipt.scoring.version_id == response.metadata.scoring_config_version
         assert receipt.reference_time == response.metadata.reference_time
         assert receipt.scopes == (Scope.PROJECT,)
-        assert receipt.schema_version == (5 if ordering == "balanced" else 4)
+        assert receipt.schema_version == 6
         assert receipt.packing.multipath_ordering == ordering
         assert receipt.replay_ranking() == tuple(r.node.id for r in response.results)
         assert [(c.node_id, c.score, c.trace) for c in receipt.candidates] == [

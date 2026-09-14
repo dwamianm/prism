@@ -154,6 +154,16 @@ class PackingConfig(BaseModel):
             "Other priority tiers and whole-output token limits are unchanged."
         ),
     )
+    context_guidance_mode: Literal["off", "temporal", "all"] = Field(
+        default="temporal",
+        description=(
+            "Add token-counted task guidance after memory selection. 'temporal' "
+            "is the evidence-backed default and guides only date arithmetic and "
+            "ordering queries; 'off' disables guidance; 'all' also enables "
+            "experimental current-state and personalization guidance. Guidance "
+            "is omitted when it cannot fit without displacing a memory record."
+        ),
+    )
     token_budget: int = Field(
         default=4096, ge=0, description="Default context budget in tokens"
     )
