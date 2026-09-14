@@ -1021,6 +1021,13 @@ from the project directory. It warns when a process environment variable
 overrides a different file value, without displaying either value or contacting
 the provider. Update or unset the named shell variable, then recreate the client.
 For an IDE or service, update its launch environment and restart the process.
+Add `--verify-extraction` to make a read-only request to the configured model
+endpoint. This checks endpoint reachability, credential acceptance for hosted
+providers, and model availability without generating text or storing memory.
+Provider response bodies and configured URLs are never printed. Use
+`--provider-timeout SECONDS` to change the 10-second limit. Hosted model metadata
+can remain available when generation credits are exhausted, so this check does
+not claim that completion quota is available.
 
 ```bash
 # Extraction provider

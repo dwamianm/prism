@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in `prme doctor --verify-extraction` provider diagnostics. It verifies
+  endpoint reachability, hosted credentials, and the configured model through
+  read-only model metadata APIs without generating or storing content, and
+  reports sanitized status categories without response bodies or URLs. It
+  explicitly leaves generation quota unverified.
 - Explicit half-open validity intervals for direct writes across async/sync
   Python, HTTP, and MCP. New extracted facts start validity at their resolved
   source-effective time, and a source-grounded replacement closes the prior

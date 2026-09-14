@@ -34,6 +34,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
 from uuid import UUID
 
 from prme.config import PRMEConfig
@@ -776,6 +777,77 @@ async def cmd_init(args: argparse.Namespace) -> None:
     print()
 
 
+async def _verify_extraction_provider(
+    extraction: Any,
+    local: dict[str, str | None],
+    *,
+    timeout: float,
+    transport: Any = None,
+) -> tuple[bool, str]:
+    """Verify provider reachability, credential, and model without generation."""
+    import httpx
+
+    provider = extraction.provider.strip().casefold()
+    prefix = {"openai": "OPENAI", "anthropic": "ANTHROPIC"}.get(provider)
+    key = extraction.api_key.get_secret_value() if extraction.api_key else None
+    if prefix and not key:
+        key_name = f"{prefix}_API_KEY"
+        key = os.environ.get(key_name, local.get(key_name))
+    if prefix and not key:
+        return False, f"{provider} extraction credential is missing"
+
+    provider_url_name = f"{prefix}_BASE_URL" if prefix else None
+    configured_url = extraction.base_url
+    if not configured_url and provider_url_name:
+        configured_url = os.environ.get(
+            provider_url_name, local.get(provider_url_name)
+        )
+    if provider == "openai":
+        base_url = (configured_url or "https://api.openai.com/v1").rstrip("/")
+        url = f"{base_url}/models/{quote(extraction.model, safe='')}"
+        method = "GET"
+        headers = {"Authorization": f"Bearer {key}"}
+        body = None
+    elif provider == "anthropic":
+        base_url = (configured_url or "https://api.anthropic.com/v1").rstrip("/")
+        url = f"{base_url}/models/{quote(extraction.model, safe='')}"
+        method = "GET"
+        headers = {"x-api-key": key, "anthropic-version": "2023-06-01"}
+        body = None
+    elif provider == "ollama":
+        base_url = (configured_url or "http://127.0.0.1:11434").rstrip("/")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        url = f"{base_url}/api/show"
+        method = "POST"
+        headers = {}
+        body = {"model": extraction.model}
+    else:
+        return False, f"provider verification is unavailable for {provider}"
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout, transport=transport) as client:
+            response = await client.request(method, url, headers=headers, json=body)
+    except httpx.TimeoutException:
+        return False, f"{provider} verification timed out after {timeout:g}s"
+    except httpx.HTTPError as error:
+        return False, f"{provider} connection failed ({type(error).__name__})"
+
+    if response.status_code == 200:
+        if provider == "ollama":
+            return True, "ollama endpoint and model metadata verified"
+        return (
+            True,
+            f"{provider} credential and model metadata verified "
+            "(generation quota not checked)",
+        )
+    if response.status_code in (401, 403):
+        return False, f"{provider} credential rejected (HTTP {response.status_code})"
+    if response.status_code == 404:
+        return False, f"{provider} model is unavailable at the configured endpoint (HTTP 404)"
+    return False, f"{provider} verification failed (HTTP {response.status_code})"
+
+
 async def cmd_doctor(args: argparse.Namespace) -> None:
     """Check memory pack health."""
     import duckdb as _duckdb
@@ -854,7 +926,12 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
     if key_name:
         configured = configured or bool(os.environ.get(key_name, local.get(key_name)))
     if extraction.provider == "ollama":
-        ok("Local Ollama extraction selected (server availability not checked)")
+        suffix = (
+            ""
+            if getattr(args, "verify_extraction", False)
+            else " (server availability not checked)"
+        )
+        ok(f"Local Ollama extraction selected{suffix}")
     elif configured:
         ok(f"{extraction.provider} extraction credential configured (not verified)")
     else:
@@ -887,6 +964,17 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
             f"{name} in the process environment overrides a different value in .env; "
             f"update or unset {name} before recreating the client"
         )
+
+    if getattr(args, "verify_extraction", False):
+        verified, message = await _verify_extraction_provider(
+            extraction,
+            local,
+            timeout=args.provider_timeout,
+        )
+        if verified:
+            ok(message)
+        else:
+            fail(message)
 
     # Summary
     print()
@@ -934,6 +1022,12 @@ def build_parser() -> argparse.ArgumentParser:
         number = float(value)
         if not math.isfinite(number) or number < 0:
             raise argparse.ArgumentTypeError("Budget must be finite and nonnegative")
+        return number
+
+    def positive_timeout(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number) or number <= 0:
+            raise argparse.ArgumentTypeError("Timeout must be finite and positive")
         return number
 
     def profile_uuid(value: str) -> str:
@@ -1087,6 +1181,17 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="?",
         default=".",
         help="Memory directory to check (default: current directory)",
+    )
+    p_doctor.add_argument(
+        "--verify-extraction",
+        action="store_true",
+        help="Contact the configured model endpoint without generating or storing content",
+    )
+    p_doctor.add_argument(
+        "--provider-timeout",
+        type=positive_timeout,
+        default=10.0,
+        help="Seconds to wait for --verify-extraction (default: 10)",
     )
     p_doctor.set_defaults(func=cmd_doctor)
 
