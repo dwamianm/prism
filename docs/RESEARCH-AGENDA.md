@@ -10,7 +10,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 
 | Area | Verified result | Boundary |
 |---|---|---|
-| Product context packing | Two fixed local readers improved by 20 judged-correct answers each on the same 119 development questions when multi-path candidates used score ordering. | Custom local rubric, shared histories, one judge; second reader shares its model family. Not an independent test set or competitor result. |
+| Product context packing | The default balanced policy improved a fixed 35B reader from 67/119 to 83/119 on the development cohort and from 185/381 to 250/381 on a separately registered answer confirmation. It improved every category or tied. | Both source partitions had already been inspected; one local reader and one custom calibrated local judge. This is not an independent test set or competitor result. |
 | Profile fidelity and publication | Complete qualified source excerpts, explicit inference/provenance, exact token budgets, atomic publication and complete scoped source scans. | Profiles are source collections; this does not prove semantic synthesis, exhaustive facts or automatic freshness. |
 | Storage and developer workflow | [Latest PostgreSQL workspace validation](../benchmarks/results/recovery/2026-09-12/PG-WORKSPACES.md) at `b7521bc`: full regression passed 2,877 tests with 81 skips, including live PostgreSQL, research and examples. The installed selection passed 143 tests with 13 skips. The real-BGE 100-project concurrent retrieval and native backup/restore workflow completed; a separate verifier checked all source and merged-entity evidence in both retained dumps. | Separate overlapping invocations at recorded commits. Authored recovery, eligibility and namespace contracts do not establish answer quality, hosted project grants or all deployment environments. Client resource samples exclude database-server memory. |
 | Identity and maintenance | Unresolved personal references stay event-local; merging preserves type/provenance/validity, including copied relationships. Default maintenance no longer consumes anonymous feedback to change global weights. New merges atomically journal evidence, relationships and supersedence. | These are reproduced storage contracts. Coreference, equal-name disambiguation, full historical organizer replay and scoped learning activation remain incomplete. |
@@ -31,12 +31,13 @@ These records preserve commit identities, raw-output hashes, failures and limits
 
 ## Immediate decisions and their gates
 
-1. **Honor the failed packing confirmation gate.** All 381 frozen questions and
-   controls completed. At 4K, labelled-source recall rose 65.04% → 85.77%, but
-   preference recall fell 78.26% → 68.12%, violating the preregistered category
-   guard. Density remains the default; score is opt-in. Diagnose preference
-   coverage and test any new selection policy as a new exploratory hypothesis;
-   do not rewrite the gate or call a tuned rerun independent confirmation. The
+1. **Preserve the failed score-only gate and use the separately tested balanced
+   policy.** All 381 frozen score-ordering questions and controls completed. At
+   4K, labelled-source recall rose 65.04% → 85.77%, but preference recall fell
+   78.26% → 68.12%, violating the preregistered category guard. Score remains
+   opt-in. The later balanced policy is a distinct algorithm with its own complete
+   source and answer evidence and is now the default; it does not rewrite the
+   failed score-only gate. The
    [complete record](../benchmarks/results/packing/2026-09-12/CONFIRMATION.md)
    preserves both gains and regressions. This is source retention, not test-set
    answer accuracy.
@@ -175,6 +176,17 @@ provider failure. This answer evidence, together with the two source-retention
 studies, promotes balanced to the default while preserving explicit density and
 score options. The examined cohort and custom local judge still require an
 independent answer holdout before any competitive leadership claim.
+
+The [381-question answer confirmation](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-REGRESSION.md)
+then used different questions with the same registered reader and judge controls.
+Balanced scored 250/381 versus density at 185/381, with 88 paired wins, 23 losses,
+and no lower category total. All 762 reader calls and 762 judged outcomes
+completed without a failed call. The source partition had already been examined,
+so this is an out-of-development answer confirmation rather than an independent
+benchmark holdout. Auditing all losses found one clear source omission, six clear judge
+inconsistencies, and a concentration of remaining errors in reader temporal
+arithmetic and conflict interpretation. Future packing changes should use new
+questions rather than tune to these outcomes.
 
 The [simulation clock correction](../benchmarks/results/recovery/2026-09-12/SIMULATION-CLOCK.md)
 fixed real-time leakage into maintenance age checks and native mutation

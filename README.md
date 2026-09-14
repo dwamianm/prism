@@ -161,8 +161,11 @@ lifecycle tools expose the same `request_id` field.
 The [packing guide](docs/PACKING.md) explains exact context budgets and the
 default `balanced` policy. It improved 4K source retention from 74.85% to 95.91%
 and answer accuracy from 67/119 to 83/119 on the complete development cohort.
-Use explicit `density` or `score` ordering when a workload-specific evaluation
-supports it.
+On a separately registered 381-question answer confirmation, it scored 250/381
+versus density at 185/381. That partition had already been inspected for source
+retention, so this confirms the product default without constituting an independent
+competitive benchmark. Use explicit `density` or `score` ordering when a
+workload-specific evaluation supports it.
 
 For exports and counts, enumerate the stored records instead of counting search
 results. Iteration reads every matching node in bounded pages:

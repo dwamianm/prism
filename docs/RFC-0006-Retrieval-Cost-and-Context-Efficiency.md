@@ -33,10 +33,14 @@ top-score candidate with a quarter-length penalty. At 4K it retained 95.91% of
 labelled sources versus density at 74.85% on all 119 development questions, and
 90.55% versus 65.04% on the frozen 381-question regression partition. A fixed
 answer trial then scored 83/119 for balanced and 67/119 for density, with 26
-paired wins, 10 losses and no lower category total. Balanced is now the default;
-the examined cohort and custom local judge do not establish universal superiority.
-The [answer report](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
-retains the protocol, failures, category results and audit.
+paired wins and 10 losses. A separately registered answer confirmation on the
+different 381-question partition scored 250/381 versus 185/381, with 88 paired
+wins, 23 losses and no lower category total. Balanced is now the default. Both
+partitions had been inspected for source retention, and the custom local judge
+does not establish universal superiority. The
+[development answer report](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
+and [answer confirmation](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-REGRESSION.md)
+retain the protocols, failures, category results and audits.
 
 **Configurable policy:** `PackingConfig.multipath_ordering` accepts `"balanced"`
 (default), `"density"` or `"score"`. It changes only the ordering of the multi-path tier; ties

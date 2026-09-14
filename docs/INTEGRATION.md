@@ -836,8 +836,10 @@ priority tier. The default is `"balanced"`: it reserves the highest-scored ordin
 multi-path candidate, then uses a quarter-length penalty. Pins, instructions,
 active tasks, other tiers and measured whole-output budgets keep their existing
 rules. The default change follows a complete 119-question answer trial at 4K:
-balanced scored 83 versus density at 67, with 26 wins and 10 losses. This examined
-cohort does not establish superior results for every workload.
+balanced scored 83 versus density at 67, with 26 wins and 10 losses. A separately
+registered 381-question answer confirmation scored 250 versus 185, with 88 wins
+and 23 losses. Both source partitions had already been inspected, so these results
+do not establish superior behavior for every workload.
 
 ```python
 from prme import MemoryClient, config_from_directory

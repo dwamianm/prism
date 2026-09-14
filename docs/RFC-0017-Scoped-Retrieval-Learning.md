@@ -119,9 +119,11 @@ Balanced packing reserves the highest-scored ordinary multi-path candidate and
 then applies the fixed quarter-length penalty. It uses the same priority tiers,
 whole-source rendering and measured budget. It is the application default after
 a complete 119-question answer trial improved correctness from 67 to 83, with
-26 paired wins, 10 losses and no lower category total. The examined development
-cohort and custom local judge do not establish universal superiority or authorize
-a learned profile. Density and score ordering remain explicit alternatives.
+26 paired wins and 10 losses. A separately registered 381-question answer
+confirmation improved correctness from 185 to 250, with 88 paired wins, 23
+losses and no lower category total. The source partitions had already been
+inspected and the custom local judge does not establish universal superiority or
+authorize a learned profile. Density and score ordering remain explicit alternatives.
 
 Only balanced pipeline retrievals need the new version 5 receipt. They require
 an explicit ordering and execution descriptor and retain the existing score

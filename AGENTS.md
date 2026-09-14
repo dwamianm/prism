@@ -151,9 +151,10 @@ ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
 It emits version 5 receipts with explicit ordering and execution; versions 1–4
 cannot claim balanced and retain their canonical bytes. See `docs/PACKING.md`.
 Explicit density and score policies remain available. The default follows a
-complete 119-question answer trial where balanced scored 83 versus density at
-67, plus source-retention gains on 119- and 381-question cohorts. These examined
-cohorts do not establish universal superiority.
+complete 119-question development answer trial where balanced scored 83 versus
+density at 67 and a separately registered 381-question answer confirmation where
+balanced scored 250 versus 185, plus source-retention gains on both cohorts.
+These examined cohorts do not establish universal superiority.
 Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
 for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a

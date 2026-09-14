@@ -2,7 +2,7 @@
 
 `PackingConfig.multipath_ordering` controls which ordinary multi-path memories
 get space first. The default is `"balanced"`, selected after completed source
-retention studies and a full-cohort answer trial. Use `"density"` or `"score"`
+retention studies and two complete answer trials. Use `"density"` or `"score"`
 explicitly when your workload evaluation favors one of those policies.
 
 ```python
@@ -43,13 +43,17 @@ recall increased from 74.85% to 95.91%. On the separately captured, previously
 examined 381-question regression partition, it increased from 65.04% to 90.55%,
 with two question-level losses and positive category mean changes. Preference
 recall improved on average, but one preference question regressed. In a fixed
-119-question answer trial, balanced scored 83/119 versus density at 67/119,
-with 26 paired wins, 10 losses and no lower category total. The
+119-question development answer trial, balanced scored 83/119 versus density at
+67/119, with 26 paired wins and 10 losses. A separately registered answer
+confirmation on the different 381-question partition scored 250/381 versus
+185/381, with 88 paired wins, 23 losses and no lower category total. The
 [full regression report](../benchmarks/results/research/2026-09-12/PACKING-REGRESSION-STUDY.md)
-and [answer report](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
-retain all losses and limitations. The answer cohort had been examined and used
-one local reader and one calibrated local judge; it supports the default change,
-not a competitive leadership claim. Evaluate high-stakes workloads directly.
+[development answer report](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md),
+and [answer confirmation](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-REGRESSION.md)
+retain all losses and limitations. Both source partitions had been examined and
+the trials used one local reader and one calibrated local judge. They support the
+default change, but they are not an independent competitive benchmark. Evaluate
+high-stakes workloads directly.
 
 Balanced retrievals produce version 5 receipts with an explicit policy and the
 same score-replay and execution requirements. Density/score retrievals continue
