@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "kind": "extracted-source-lineage-development-cohort",
+  "registered_at": "2026-09-14T08:38:20Z",
+  "implementation_commit": "fc8c04a5c6afbff2732a1d248e5a96a3bd5d28db",
+  "dataset": {
+    "path": "data/benchmarks/longmemeval/longmemeval_oracle.json",
+    "sha256": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+    "variant": "oracle",
+    "split": "dev",
+    "split_seed": "prme-ingestion-v1"
+  },
+  "selection": {
+    "rule": "For each of the six represented dev categories, choose the question with the fewest source turns; break ties by question_id.",
+    "outcome_independent": true,
+    "total_source_turns": 80,
+    "questions": [
+      {"category": "knowledge-update", "question_id": "603deb26", "source_turns": 22},
+      {"category": "multi-session", "question_id": "55241a1f", "source_turns": 20},
+      {"category": "single-session-assistant", "question_id": "41275add", "source_turns": 2},
+      {"category": "single-session-preference", "question_id": "d24813b1", "source_turns": 14},
+      {"category": "single-session-user", "question_id": "577d4d32", "source_turns": 10},
+      {"category": "temporal-reasoning", "question_id": "71017276", "source_turns": 12}
+    ]
+  },
+  "protocol": {
+    "profiles": ["raw", "extracted"],
+    "candidate_limit": 100,
+    "budgets": [2048, 4096, 8192],
+    "query_clock": "question",
+    "concurrency": 1,
+    "extraction": {
+      "provider": "ollama",
+      "model": "prme-qwen3.5:9b-8k",
+      "model_digest": "1805492e55c52f46b37bbf5f4f5a8db62081b6b7c4b97c05b569d7871c7c95d8",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "reasoning_effort": "none",
+      "temperature": 0.0,
+      "timeout_seconds": 180.0,
+      "max_retries": 3
+    }
+  },
+  "primary_measures": [
+    "PRME MRR",
+    "PRME recall@5",
+    "PRME NDCG@5",
+    "PRME packed evidence recall at 2048 tokens",
+    "source materialization coverage",
+    "ingestion errors"
+  ],
+  "interpretation": "This bounded development cohort checks category coverage and end-to-end source lineage. It is not a held-out competitive benchmark or an answer-accuracy evaluation.",
+  "planned_artifacts": [
+    "source-lineage-cohort-raw.json",
+    "source-lineage-cohort-extracted.json",
+    "source-lineage-cohort-comparison.json"
+  ]
+}
