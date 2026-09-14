@@ -12,7 +12,7 @@ from prme.retrieval.config import (
     PackingConfig,
     ScoringWeights,
 )
-from prme.retrieval.context_formatter import format_for_llm
+from prme.retrieval.context_formatter import build_context_guidance, format_for_llm
 from prme.retrieval.credit import ablate_context, assess_context_presence
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
@@ -56,6 +56,7 @@ __all__ = [
     "ScoreTrace",
     "ScoringWeights",
     "compute_composite_score",
+    "build_context_guidance",
     "ablate_context",
     "assess_context_presence",
     "filter_epistemic",

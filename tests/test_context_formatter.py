@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from prme.models.nodes import MemoryNode
 from prme.retrieval.context_formatter import (
+    build_context_guidance,
     _record_key,
     _sanitize_content,
     _select_entries,
@@ -19,6 +22,48 @@ from prme.types import EpistemicType, LifecycleState, NodeType, Scope
 
 # Zero-width space the sanitizer inserts to break forged reserved markers.
 _ZW = "​"
+
+
+class TestBuildContextGuidance:
+    def test_temporal_guidance_distinguishes_episode_and_validity_times(self):
+        reference = datetime(2024, 7, 2, 15, 30, tzinfo=timezone.utc)
+
+        guidance = build_context_guidance(
+            "How many months ago did I book the Airbnb?",
+            reference_time=reference,
+        )
+
+        assert guidance is not None
+        assert "REFERENCE TIME: 2024-07-02T15:30:00+00:00" in guidance
+        assert "event_time as the source episode time" in guidance
+        assert "valid_from and valid_to describe claim validity" in guidance
+        assert "Airbnb" not in guidance
+
+    def test_current_state_guidance_preserves_unresolved_conflicts(self):
+        guidance = build_context_guidance("Which guitar do I own right now?")
+
+        assert guidance is not None
+        assert guidance.startswith("CURRENT-STATE TASK:")
+        assert "recency alone does not resolve contradictions" in guidance
+        assert "Preserve an unresolved conflict" in guidance
+
+    def test_recommendation_guidance_uses_personal_history_safely(self):
+        guidance = build_context_guidance("What restaurant should I choose?")
+
+        assert guidance is not None
+        assert guidance.startswith("PERSONALIZATION TASK:")
+        assert "exact new request need not already be stored" in guidance
+        assert "another person's attributes" in guidance
+
+    def test_plain_factual_query_needs_no_guidance(self):
+        assert build_context_guidance("What is my passport number?") is None
+
+    def test_reference_time_must_identify_an_instant(self):
+        with pytest.raises(ValueError, match="timezone-aware"):
+            build_context_guidance(
+                "When did I book the Airbnb?",
+                reference_time=datetime(2024, 7, 2),
+            )
 
 
 def _make_candidate(

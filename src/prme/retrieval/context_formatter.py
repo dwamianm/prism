@@ -37,6 +37,7 @@ import re
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from prme.retrieval.packing import estimate_token_cost
 from prme.retrieval.time import as_utc
@@ -64,7 +65,7 @@ _DAY_NAMES: dict[str, int] = {
 # Time offset parsing
 # ---------------------------------------------------------------------------
 
-_OFFSET_PATTERNS: list[tuple[re.Pattern, str]] = [
+_OFFSET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(
         r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a|an)"
         r"\s+weeks?\s+ago", re.IGNORECASE,
@@ -206,6 +207,24 @@ def _sanitize_content(content: str) -> str:
 
 _PER_ENTRY_PREFIX_TOKENS = 8
 
+_PERSONALIZATION_RE = re.compile(
+    r"\b(recommend|recommendation|suggest|suggestion|tips?\b|ideas?\b|what should i"
+    r"|what\b[^?.!]{0,60}\bshould i|what (?:could|can) i"
+    r"|help me (?:choose|pick|plan))",
+    re.IGNORECASE,
+)
+
+_TEMPORAL_REASONING_RE = re.compile(
+    r"(?:"
+    r"\bhow\s+many\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\s+"
+    r"(?:ago\b|(?:had\s+|have\s+)?passed\b|before\b|between\b|since\b)"
+    r"|\bhow\s+long\b"
+    r"|\b(?:which|what|who)\b[^?.!]{0,100}\b(?:first|earliest|latest|most\s+recently)\b"
+    r"|\b(?:order|sequence)\b[^?.!]{0,100}\b(?:first|last|earliest|latest)\b"
+    r")",
+    re.IGNORECASE,
+)
+
 
 def _record_key(candidate: RetrievalCandidate) -> str:
     return str(candidate.node.id)
@@ -228,6 +247,47 @@ def _provenance_label(candidate: RetrievalCandidate) -> str:
             state = "unknown"
         fields.append(f"condition_state={state}")
     return "[" + "; ".join(fields) + "]"
+
+
+def build_context_guidance(
+    query: str,
+    *,
+    query_analysis: QueryAnalysis | None = None,
+    reference_time: datetime | None = None,
+) -> str | None:
+    """Build compact, token-countable reasoning guidance for packed records.
+
+    The text contains no query or memory content. It clarifies timestamp fields
+    for temporal/current-state questions and discourages generic refusals when a
+    recommendation can use relevant personal history. Callers must count it
+    inside the same context budget as memory records.
+    """
+    if reference_time is not None and reference_time.utcoffset() is None:
+        raise ValueError("reference_time must be timezone-aware")
+    context_type = _detect_context_type(query, query_analysis)
+    reference = as_utc(reference_time) if reference_time is not None else None
+    if context_type == "temporal":
+        lines = [
+            "TEMPORAL TASK: Use event_time as the source episode time; valid_from and valid_to describe claim validity, not when the episode happened.",
+            "Compute the requested interval explicitly from event_time, preserve the requested unit, and check the arithmetic before answering.",
+        ]
+        if reference is not None:
+            lines.insert(0, f"REFERENCE TIME: {reference.isoformat()}")
+        return "\n".join(lines)
+    if context_type == "knowledge_update":
+        lines = [
+            "CURRENT-STATE TASK: Use explicit supported updates to identify the requested current value; recency alone does not resolve contradictions.",
+            "Use event_time for episode order. Preserve an unresolved conflict instead of choosing silently.",
+        ]
+        if reference is not None:
+            lines.insert(0, f"REFERENCE TIME: {reference.isoformat()}")
+        return "\n".join(lines)
+    if _PERSONALIZATION_RE.search(query):
+        return (
+            "PERSONALIZATION TASK: Use relevant user-specific history to tailor the answer. "
+            "The exact new request need not already be stored. Do not transfer another person's attributes to the user."
+        )
+    return None
 
 
 def compute_time_offsets(query: str, question_dt: datetime) -> str:
@@ -360,16 +420,22 @@ def _detect_context_type(
 
     Detection order:
 
-    0. **aggregation** — count/total/list-all queries. Needs all entries
-       visible with dedup guidance. Checked first because aggregation
-       keywords co-occur with temporal keywords.
-    1. **knowledge_update** — current-state queries that are NOT aggregation.
-    2. **temporal** — explicit TEMPORAL intent or time-oriented keywords.
-    3. **default** — relevance-ranked with date annotations.
+    0. **temporal** — explicit interval/order reasoning, even when phrased as
+       ``how many``.
+    1. **aggregation** — remaining count/total/list-all queries. Needs all
+       entries visible with dedup guidance.
+    2. **knowledge_update** — current-state queries that are NOT aggregation.
+    3. **temporal** — explicit TEMPORAL intent or other time-oriented keywords.
+    4. **default** — relevance-ranked with date annotations.
     """
     from prme.types import QueryIntent
 
     q = query.lower()
+
+    # Duration arithmetic and sequence questions often begin with "how many"
+    # but need episode timestamps, not count aggregation formatting.
+    if _TEMPORAL_REASONING_RE.search(q):
+        return "temporal"
 
     # Aggregation: count/total/list-all queries need a broad candidate display.
     if query_analysis and query_analysis.is_aggregation:
@@ -541,13 +607,14 @@ def _build_conflict_annotations(
         "Explain the disagreement; recency or confidence alone does not establish which claim is correct."
     )
 
-    seen: set = set()
+    seen: set[UUID] = set()
     for r in conflicts:
         if r.node.id in seen:
             continue
         seen.add(r.node.id)
 
-        counterpart = node_lookup.get(r.contradicts_id)
+        contradicts_id = r.contradicts_id
+        counterpart = node_lookup.get(contradicts_id) if contradicts_id is not None else None
         if counterpart:
             seen.add(counterpart.node.id)
             # Determine which is newer
@@ -707,7 +774,7 @@ def format_for_llm(
 # ---------------------------------------------------------------------------
 
 
-def _get_event_dt(candidate) -> datetime:
+def _get_event_dt(candidate: RetrievalCandidate) -> datetime:
     """Extract the best available datetime from a candidate."""
     return as_utc(candidate.node.event_time or candidate.node.created_at)
 
