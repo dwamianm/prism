@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
 import json
 from pathlib import Path
 
@@ -39,7 +40,6 @@ def _write_run(root: Path, scores: list[bool], *, model: str = "reader") -> Path
         "started_at_utc": "2026-09-14T00:00:00+00:00",
     }
     (root / "run_args.json").write_text(json.dumps(args), encoding="utf-8")
-    (root / "prompt_build_summary.json").write_text("{}\n", encoding="utf-8")
     rows = []
     for index, score in enumerate(scores):
         rows.append(
@@ -69,6 +69,10 @@ def _write_run(root: Path, scores: list[bool], *, model: str = "reader") -> Path
     question_rows = "".join(
         json.dumps({"question_id": row["question_id"]}) + "\n" for row in rows
     )
+    (root / "prompt_build_summary.json").write_text(json.dumps({
+        "prompt_row_count": len(rows),
+        "question_ids": [row["question_id"] for row in rows],
+    }), encoding="utf-8")
     for name in ("prompt_rows.jsonl", "reader_outputs.checkpoint.jsonl"):
         (root / name).write_text(question_rows, encoding="utf-8")
     aggregate = {
@@ -82,6 +86,38 @@ def _write_run(root: Path, scores: list[bool], *, model: str = "reader") -> Path
         json.dumps(aggregate), encoding="utf-8"
     )
     return root
+
+
+def _write_registration(path: Path, run: Path) -> Path:
+    args = json.loads((run / "run_args.json").read_text())
+    rows = [json.loads(line) for line in (run / "per_question.jsonl").read_text().splitlines()]
+    ids = [row["question_id"] for row in rows]
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row["question_type"]] = counts.get(row["question_type"], 0) + 1
+    def digest(value: str) -> str:
+        return hashlib.sha256(Path(value).read_bytes()).hexdigest()
+    value = {
+        "selection": {
+            "question_count": len(ids),
+            "ordered_question_ids_sha256": hashlib.sha256("\n".join(ids).encode()).hexdigest(),
+            "counts_by_type": counts,
+            "questions_file_sha256": digest(args["questions_path"]),
+            "haystack_file_sha256": digest(args["haystack_path"]),
+        },
+        "reader": {
+            "model": args["model"],
+            "reasoning_effort": args["reasoning_effort"],
+            "reader_enable_thinking": args["reader_enable_thinking"],
+            "temperature": args["temperature"],
+            "top_p": args["top_p"],
+            "top_k": args["top_k"],
+            "max_completion_tokens": args["max_completion_tokens"],
+            "max_concurrent_requests": args["reader_max_concurrent_requests"],
+        },
+    }
+    path.write_text(json.dumps(value), encoding="utf-8")
+    return path
 
 
 def test_comparison_preserves_paired_direction_and_efficiency(tmp_path: Path) -> None:
@@ -147,3 +183,21 @@ def test_comparison_rejects_aggregate_score_drift(tmp_path: Path) -> None:
     aggregate_path.write_text(json.dumps(aggregate))
     with pytest.raises(ValueError, match="aggregate score does not match rows"):
         compare(left, right, left_label="left", right_label="right")
+
+
+def test_comparison_verifies_registered_cohort_and_reader(tmp_path: Path) -> None:
+    left = _write_run(tmp_path / "left", [True, False])
+    right = _write_run(tmp_path / "right", [True, False])
+    registration = _write_registration(tmp_path / "registration.json", left)
+    result = compare(
+        left, right, left_label="left", right_label="right",
+        registration=registration, samples=10,
+    )
+    assert result["registration_sha256"] == hashlib.sha256(registration.read_bytes()).hexdigest()
+
+    registered = json.loads(registration.read_text())
+    registered["selection"]["question_count"] = 1
+    registration.write_text(json.dumps(registered))
+    with pytest.raises(ValueError, match="cohort does not match"):
+        compare(left, right, left_label="left", right_label="right",
+                registration=registration, samples=10)

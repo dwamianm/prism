@@ -65,24 +65,32 @@ def _load_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def _load_jsonl(path: Path) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
-    for line_number, line in enumerate(
-        path.read_text(encoding="utf-8").splitlines(), start=1
-    ):
-        if not line.strip():
-            continue
-        value = json.loads(line)
-        if not isinstance(value, dict):
-            raise ValueError(f"JSONL row {line_number} is not an object: {path}")
-        records.append(value)
+def _iter_jsonl(path: Path):
+    """Parse one JSONL row at a time so prompt artifacts stay bounded in memory."""
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            value = json.loads(line)
+            if not isinstance(value, dict):
+                raise ValueError(f"JSONL row {line_number} is not an object: {path}")
+            yield value
+
+
+def _load_result_rows(path: Path) -> list[dict[str, Any]]:
+    """Retain comparison fields without holding repeated prompts and contexts."""
+    fields = (*_QUESTION_FIELDS, "score_bool", "is_unknown", "usage",
+              "memory_context_token_count", "memory_query_duration_seconds")
+    records = []
+    for value in _iter_jsonl(path):
+        record = {field: value.get(field) for field in fields}
+        record["response_empty"] = not str(value.get("response_raw") or "").strip()
+        records.append(record)
     return records
 
 
-def _require_exact_question_ids(
-    records: list[dict[str, Any]], expected: set[str], *, path: Path
-) -> None:
-    ids = [row.get("question_id") for row in records]
+def _require_exact_question_ids(path: Path, expected: set[str]) -> None:
+    ids = [row.get("question_id") for row in _iter_jsonl(path)]
     if any(not isinstance(value, str) or not value for value in ids):
         raise ValueError(f"artifact has invalid question identities: {path}")
     if len(ids) != len(set(ids)):
@@ -97,7 +105,7 @@ def _load_run(directory: Path) -> dict[str, Any]:
     if missing:
         raise ValueError(f"incomplete LongMemEval-V2 run {directory}: missing {missing}")
 
-    records = _load_jsonl(directory / "per_question.jsonl")
+    records = _load_result_rows(directory / "per_question.jsonl")
     ids = [row.get("question_id") for row in records]
     if not records or any(not isinstance(value, str) or not value for value in ids):
         raise ValueError(f"run has invalid question identities: {directory}")
@@ -125,10 +133,12 @@ def _load_run(directory: Path) -> dict[str, Any]:
     ):
         raise ValueError(f"aggregate score does not match rows: {directory}")
     expected_ids = set(ids)
+    summary = _load_json(directory / "prompt_build_summary.json")
+    if (summary.get("prompt_row_count") != len(records)
+            or summary.get("question_ids") != ids):
+        raise ValueError(f"prompt build summary does not match final rows: {directory}")
     for name in ("prompt_rows.jsonl", "reader_outputs.checkpoint.jsonl"):
-        _require_exact_question_ids(
-            _load_jsonl(directory / name), expected_ids, path=directory / name
-        )
+        _require_exact_question_ids(directory / name, expected_ids)
     return {
         "directory": directory,
         "args": _load_json(directory / "run_args.json"),
@@ -169,14 +179,8 @@ def _outcomes(
         "right_correct": sum(right[question_id]["score_bool"] for question_id in ids),
         "left_unknown": sum(left[question_id]["is_unknown"] for question_id in ids),
         "right_unknown": sum(right[question_id]["is_unknown"] for question_id in ids),
-        "left_empty_responses": sum(
-            not str(left[question_id].get("response_raw") or "").strip()
-            for question_id in ids
-        ),
-        "right_empty_responses": sum(
-            not str(right[question_id].get("response_raw") or "").strip()
-            for question_id in ids
-        ),
+        "left_empty_responses": sum(left[question_id]["response_empty"] for question_id in ids),
+        "right_empty_responses": sum(right[question_id]["response_empty"] for question_id in ids),
         "paired_left_minus_right": paired,
     }
 
@@ -285,6 +289,36 @@ def compare(
     if registration is not None:
         if not registration.is_file():
             raise ValueError("registration file does not exist")
+        registered = _load_json(registration)
+        selection = registered.get("selection")
+        reader = registered.get("reader")
+        if not isinstance(selection, dict) or not isinstance(reader, dict):
+            raise ValueError("registration is missing selection or reader settings")
+        ordered_hash = hashlib.sha256("\n".join(left_ids).encode()).hexdigest()
+        counts_by_type: dict[str, int] = {}
+        for row in left["records"]:
+            question_type = str(row["question_type"])
+            counts_by_type[question_type] = counts_by_type.get(question_type, 0) + 1
+        if (selection.get("question_count") != len(left_ids)
+                or selection.get("ordered_question_ids_sha256") != ordered_hash
+                or selection.get("counts_by_type") != counts_by_type
+                or selection.get("questions_file_sha256") != input_hashes["questions_path"]
+                or selection.get("haystack_file_sha256") != input_hashes["haystack_path"]):
+            raise ValueError("run cohort does not match registration")
+        registered_reader = {
+            "model": reader.get("model"),
+            "reasoning_effort": reader.get("reasoning_effort"),
+            "reader_enable_thinking": reader.get("reader_enable_thinking"),
+            "temperature": reader.get("temperature"),
+            "top_p": reader.get("top_p"),
+            "top_k": reader.get("top_k"),
+            "max_completion_tokens": reader.get("max_completion_tokens"),
+            "reader_max_concurrent_requests": reader.get("max_concurrent_requests"),
+        }
+        if registered_reader != {
+            field: left_settings[field] for field in registered_reader
+        }:
+            raise ValueError("run reader settings do not match registration")
         report["registration_sha256"] = _digest(registration)
     return report
 
