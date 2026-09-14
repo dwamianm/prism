@@ -51,8 +51,9 @@ stable limitation codes, and the backend paths that reached a candidate cap.
 The packed context contains the same non-exhaustive boundary within its measured
 token budget, so a downstream model cannot silently treat retrieved candidates
 as a complete corpus. HTTP and MCP expose the structure under
-`metrics.aggregation_coverage`. Use `iter_nodes()` or `scan_nodes()` when the
-task is complete stored-record enumeration.
+`metrics.aggregation_coverage`. Use `aggregate_assertions()` for exact counts
+and distinct groups over structured claim fields, or `iter_nodes()` /
+`scan_nodes()` for complete stored-record enumeration.
 
 ## Why PRME?
 
@@ -207,6 +208,36 @@ pending ingestion first when an export needs to include those events. HTTP
 clients use `GET /v1/nodes/scan`; MCP clients use `memory_scan_nodes`. Both
 return `has_more` and a `next_cursor`, require an owner or bound identity, and
 report UUID ordering with page-level consistency.
+
+When ingestion has produced structured `subject`, `predicate`, `object`, and
+`polarity` metadata, PRME can count and deduplicate those assertions without a
+semantic top-k boundary:
+
+```python
+from prme import AssertionQuery, MemoryClient
+
+with MemoryClient("./my_memories") as client:
+    cuisines = client.aggregate_assertions(
+        AssertionQuery(
+            subjects=["I"],
+            predicates=["tried"],
+            group_by=["object"],
+        ),
+        user_id="alice",
+    )
+    print(cuisines.matched_records, cuisines.distinct_count)
+    for group in cuisines.groups:
+        print(group.values["object"], group.occurrence_count)
+```
+
+Selectors match exactly after Unicode, case, and whitespace normalization;
+predicate separators also normalize to underscores. Results include sampled
+node and evidence IDs, time/lifecycle/epistemic filters, and explicit group
+truncation. They are complete over matching structured records in an unchanged
+store. Separate coverage fields report unknown source-extraction and real-world
+coverage plus normalized-exact-only semantic equivalence. HTTP clients use
+`POST /v1/assertions/aggregate`; MCP clients use
+`memory_aggregate_assertions`. Both require an owner or bound identity.
 
 <details>
 <summary>Async API (advanced)</summary>
@@ -1003,7 +1034,9 @@ See [ROADMAP.md](ROADMAP.md) for the full development plan.
 
 **Current (v0.11.0)** — hybrid retrieval, synchronous and async clients, MCP/REST, framework adapters, deterministic vector search, and index rebuilds.
 
-**Next** — a trustworthy retrieval baseline, complete aggregation results, temporal state, and measured improvements to context packing. See the roadmap for acceptance criteria and GitHub issue links.
+**Next** — a trustworthy comparative retrieval baseline, broader temporal state
+operations, typed numeric aggregation, and measured improvements to context
+packing. See the roadmap for acceptance criteria and GitHub issue links.
 
 ## Contributing
 

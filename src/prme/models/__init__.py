@@ -3,6 +3,7 @@
 Re-exports all core model classes for convenient importing.
 """
 
+from prme.models.aggregation import AssertionAggregation, AssertionGroup, AssertionQuery
 from prme.models.base import MemoryObject
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
@@ -14,6 +15,9 @@ from prme.models.provenance import NodeProvenance, OperationAuditRecord
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 
 __all__ = [
+    "AssertionAggregation",
+    "AssertionGroup",
+    "AssertionQuery",
     "Event",
     "ExtractionRecord",
     "ExtractionStatus",

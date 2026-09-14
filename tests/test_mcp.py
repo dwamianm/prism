@@ -70,6 +70,7 @@ class TestToolDiscovery:
             "memory_organize",
             "memory_get_node",
             "memory_scan_nodes",
+            "memory_aggregate_assertions",
             "memory_get_extraction",
             "memory_promote_node",
             "memory_archive_node",

@@ -422,6 +422,38 @@ the matching set. Audited exports should use an unchanged pack and complete
 pending ingestion first. Semantic aggregation still requires deciding which
 stored assertions describe the same item and what evidence is missing.
 
+### Structured assertion aggregation
+
+`aggregate_assertions(AssertionQuery(...), user_id=...)` scans all selected
+FACT, DECISION, and PREFERENCE pages and groups structured `subject`,
+`predicate`, `object`, and `polarity` claim metadata. The sync client exposes the
+same method. HTTP uses `POST /v1/assertions/aggregate`; MCP uses
+`memory_aggregate_assertions`. Each remote call requires an explicit or bound
+owner. This is the exact counting primitive for already structured claims; it
+does not use vector, lexical, graph-neighborhood, or model-generated candidate
+selection.
+
+Selectors are ANDed across fields and ORed within a field. Values use NFKC,
+case-fold, trim, and whitespace normalization; predicates additionally map
+spaces and hyphens to underscores. Matching remains exact after normalization
+and does not infer aliases or semantic equivalence. The query supports scope,
+node-type, lifecycle, epistemic retrieval mode, inclusive event-time bounds,
+`valid_at`, and the current-state `knowledge_at` cutoff. Explicit lifecycle
+states are authoritative for this exact API and are not discarded by default
+retrieval lifecycle rules. The default polarity is positive. An explicitly
+empty selector matches all values for that field.
+
+The response separates occurrence count from distinct-group count, returns
+bounded node/evidence samples, and reports group/sample truncation and exclusion
+reasons. `stored_set_exhaustive=true` means every selected structured record was
+visited while the store remained unchanged. The independent coverage fields
+report `source_extraction_coverage="unknown"`,
+`semantic_equivalence="normalized_exact_only"`, and
+`real_world_coverage="unknown"`. The application scan is not a multi-page
+transaction snapshot; callers requiring an audited count must prevent concurrent
+mutation and finish pending ingestion first. Numeric parsing and sums are
+outside this contract.
+
 Natural-language count and list retrievals expose this boundary directly as
 `RetrievalMetadata.aggregation_coverage`. It reports unique candidates before
 explicit selection, returned candidates, context-included candidates, stable

@@ -1066,6 +1066,42 @@ the cursor until `has_more` is false. The response reports `order="id"` and
 transaction snapshot across requests. `GET /v1/nodes` remains a bounded query
 convenience and must not be used as an export or counting contract.
 
+Structured assertion counts use the same complete scan without exposing page
+bookkeeping to the caller:
+
+```python
+from datetime import datetime, timezone
+
+from prme import AssertionQuery
+
+result = memory.aggregate_assertions(
+    AssertionQuery(
+        subjects=["I"],
+        predicates=["tried"],
+        group_by=["object"],
+        event_time_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+    ),
+    user_id="alice",
+)
+```
+
+`matched_records` counts assertion occurrences and `distinct_count` counts the
+normalized `group_by` keys. Each group carries occurrence/evidence counts,
+bounded provenance samples, and its earliest/latest event time. Selectors use
+exact NFKC/case/whitespace-normalized matching, with predicate spaces and
+hyphens normalized to underscores. Use `retrieval_mode="explicit"` to include
+all epistemic and lifecycle states, or pass explicit lifecycle states to narrow
+the exact state set independently.
+
+HTTP exposes this at `POST /v1/assertions/aggregate` with
+`{"user_id": "alice", "query": {...}}`; MCP exposes
+`memory_aggregate_assertions`. Both bind the result to the authenticated owner.
+`stored_set_exhaustive=true` covers matching structured records for an unchanged
+store. Separate fields report unknown source-extraction and real-world coverage,
+with semantic equivalence limited to normalized exact values. Finish pending
+ingestion and prevent concurrent mutation for audited counts. This API
+counts and groups text values; it does not parse or sum numeric quantities.
+
 ---
 
 ## 8. Multi-User / Multi-Tenant

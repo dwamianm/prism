@@ -30,6 +30,8 @@ def filter_epistemic(
     candidates: list[RetrievalCandidate],
     mode: RetrievalMode = RetrievalMode.DEFAULT,
     unverified_threshold: float | None = None,
+    *,
+    filter_lifecycle: bool = True,
 ) -> tuple[list[RetrievalCandidate], list[ExcludedCandidate]]:
     """Filter candidates by epistemic type and lifecycle state.
 
@@ -51,6 +53,8 @@ def filter_epistemic(
               EXPLICIT keeps all.
         unverified_threshold: Optional override for the UNVERIFIED confidence
             threshold. If None, uses module-level UNVERIFIED_CONFIDENCE_THRESHOLD.
+        filter_lifecycle: Apply the retrieval lifecycle exclusions. Exact APIs
+            that already select lifecycle states can disable this independently.
 
     Returns:
         Tuple of (kept candidates, excluded candidate records).
@@ -71,7 +75,7 @@ def filter_epistemic(
         node = candidate.node
 
         # Lifecycle filter: exclude superseded/archived nodes.
-        if node.lifecycle_state in DEFAULT_EXCLUDED_LIFECYCLE:
+        if filter_lifecycle and node.lifecycle_state in DEFAULT_EXCLUDED_LIFECYCLE:
             excluded.append(
                 ExcludedCandidate(
                     node_id=node.id,

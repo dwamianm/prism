@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 from prme.config import PRMEConfig
 from prme.ingestion.errors import ExtractionError, MaterializationError
+from prme.models.aggregation import AssertionAggregation, AssertionGroup, AssertionQuery
 from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
 from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
@@ -83,6 +84,9 @@ def __getattr__(name: str):
 __all__ = [
     "AnswerCitationRecord",
     "AnswerCitationSubmission",
+    "AssertionAggregation",
+    "AssertionGroup",
+    "AssertionQuery",
     "ConditionEvaluationMethod",
     "ConditionState",
     "ContextAblation",

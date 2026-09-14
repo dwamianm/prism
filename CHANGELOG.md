@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Exact owner-scoped assertion aggregation across Python, HTTP, and MCP. It
+  counts every matching structured claim for an unchanged store, groups
+  normalized subject/predicate/object/polarity values, retains bounded evidence
+  samples and time/epistemic filters, and distinguishes stored-set completeness
+  from extraction, semantic, and real-world completeness.
 - A fail-closed operational benchmark for p50/p95/p99 retrieval latency at
   declared pack sizes, exact fixed-clock repeatability, and 10,000-query owner
   isolation through public store/retrieve paths, with runtime and execution

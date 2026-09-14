@@ -26,7 +26,7 @@ import warnings
 import weakref
 from datetime import datetime
 from collections.abc import Coroutine, Iterator
-from typing import Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 from uuid import UUID
 
 from prme.config import PRMEConfig
@@ -52,6 +52,9 @@ from prme.organizer.models import OrganizeResult
 from prme.retrieval.models import RetrievalResponse
 
 _Result = TypeVar("_Result")
+
+if TYPE_CHECKING:
+    from prme.models.aggregation import AssertionAggregation, AssertionQuery
 
 logger = logging.getLogger(__name__)
 
@@ -577,6 +580,18 @@ class MemoryClient:
             if len(page) < batch_size:
                 break
             cursor = str(page[-1].id)
+
+    def aggregate_assertions(
+        self,
+        query: "AssertionQuery",
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "AssertionAggregation":
+        """Count and group exact stored assertions without top-k retrieval."""
+        return self._run(self._engine.aggregate_assertions(
+            query, user_id=user_id, batch_size=batch_size,
+        ))
 
     def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
         """Read original source content, optionally enforcing owner identity."""

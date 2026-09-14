@@ -28,10 +28,12 @@ from prme.models.relevance import (
     RetrievalReceipt,
 )
 from prme.models.learning import LearningEvaluation
+from prme.models.aggregation import AssertionAggregation
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
     AcceptedWorkErrorResponse,
     AnswerCitationRequest,
+    AssertionAggregationRequest,
     ConditionEvaluationRequest,
     ContradictionRequest,
     ContradictionResolutionRequest,
@@ -469,6 +471,26 @@ async def organize(request: Request, body: OrganizeRequest) -> OrganizeResponse:
 # ---------------------------------------------------------------------------
 # Node Operations
 # ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/assertions/aggregate",
+    response_model=AssertionAggregation,
+    summary="Count and group exact stored assertions",
+    responses={422: {"model": ErrorResponse}},
+)
+async def aggregate_assertions(
+    request: Request,
+    body: AssertionAggregationRequest,
+) -> AssertionAggregation:
+    """Scan all matching structured assertions for an unchanged store."""
+    try:
+        return await _get_engine(request).aggregate_assertions(
+            body.query,
+            user_id=_user_id(request, body.user_id, required=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get(

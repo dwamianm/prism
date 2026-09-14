@@ -14,6 +14,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from prme.models.aggregation import AssertionQuery
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -321,6 +322,14 @@ class NodePageResponse(BaseModel):
     next_cursor: UUID | None = None
     order: Literal["id"] = "id"
     consistency: Literal["page"] = "page"
+
+
+class AssertionAggregationRequest(BaseModel):
+    """Exact, owner-scoped aggregation over stored structured assertions."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    query: AssertionQuery = Field(default_factory=AssertionQuery)
 
 
 # ---------------------------------------------------------------------------

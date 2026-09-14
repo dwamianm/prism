@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, ContextAblation, ContextPresenceCredit, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, StoreReceipt, ablate_context, assess_context_presence
+from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, ContextAblation, ContextPresenceCredit, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, StoreReceipt, ablate_context, assess_context_presence
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
@@ -31,6 +31,12 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.retry_extraction("event-id", user_id="alice", replan=True), ExtractionStatus | None)
     assert_type(client.process_extractions(user_id="alice"), ExtractionProcessingResult)
     assert_type(client.organize(user_id="alice"), OrganizeResult)
+    assert_type(
+        client.aggregate_assertions(
+            AssertionQuery(predicates=("likes",)), user_id="alice"
+        ),
+        AssertionAggregation,
+    )
     for node in client.iter_nodes(user_id="alice"):
         assert_type(node, MemoryNode)
 

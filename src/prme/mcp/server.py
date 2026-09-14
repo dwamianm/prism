@@ -19,6 +19,7 @@ from pydantic import AwareDatetime, StrictBool, TypeAdapter
 from prme import __version__
 from prme.config import PRMEConfig
 from prme.ingestion.errors import MaterializationError, extraction_failure_code
+from prme.models.aggregation import AssertionQuery
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
 from prme.models.learning import LearningConfig, RankingMultipliers
 from prme.types import (
@@ -712,6 +713,79 @@ async def memory_scan_nodes(
         return _internal_error("memory_scan_nodes", exc)
 
 
+async def memory_aggregate_assertions(
+    user_id: Optional[str] = None,
+    subjects: Optional[list[str]] = None,
+    predicates: Optional[list[str]] = None,
+    objects: Optional[list[str]] = None,
+    polarities: Optional[list[str]] = None,
+    group_by: Optional[list[Literal["subject", "predicate", "object", "polarity"]]] = None,
+    scopes: Optional[list[str]] = None,
+    node_types: Optional[list[str]] = None,
+    lifecycle_states: Optional[list[str]] = None,
+    retrieval_mode: str = "default",
+    event_time_from: Optional[str] = None,
+    event_time_to: Optional[str] = None,
+    valid_at: Optional[str] = None,
+    knowledge_at: Optional[str] = None,
+    group_limit: int = 1000,
+    sample_limit: int = 10,
+    ctx: Context = None,
+) -> str:
+    """Count and group exact structured assertions across an owner's stored set.
+
+    Selectors use exact Unicode/case/whitespace-normalized matching; predicates
+    also treat spaces and hyphens as underscores. The result scans every page
+    for an unchanged store and does not call a model. Stored-set completeness
+    does not imply complete extraction or real-world truth.
+
+    Args:
+        user_id: Owner to aggregate; omit when the MCP server binds an owner.
+        subjects: Optional exact subject selectors.
+        predicates: Optional exact predicate selectors.
+        objects: Optional exact object selectors.
+        polarities: Optional exact polarity selectors; defaults to positive.
+        group_by: Structured fields that define a distinct result group.
+        scopes: Optional memory scopes; omission scans every scope.
+        node_types: Assertion node types; defaults to facts, decisions, and preferences.
+        lifecycle_states: Optional lifecycle filters; an empty list matches none.
+        retrieval_mode: ``default`` applies ordinary epistemic filters; ``explicit`` retains all.
+        event_time_from: Inclusive timezone-aware event-time lower bound.
+        event_time_to: Inclusive timezone-aware event-time upper bound.
+        valid_at: Timezone-aware validity snapshot.
+        knowledge_at: Timezone-aware ingestion cutoff over current graph state.
+        group_limit: Maximum groups returned, from 0 through 10000.
+        sample_limit: Maximum node and evidence samples per group, from 0 through 100.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        raw = {
+            "subjects": subjects,
+            "predicates": predicates,
+            "objects": objects,
+            "polarities": polarities,
+            "group_by": group_by,
+            "scopes": scopes,
+            "node_types": node_types,
+            "lifecycle_states": lifecycle_states,
+            "retrieval_mode": retrieval_mode,
+            "event_time_from": event_time_from,
+            "event_time_to": event_time_to,
+            "valid_at": valid_at,
+            "knowledge_at": knowledge_at,
+            "group_limit": group_limit,
+            "sample_limit": sample_limit,
+        }
+        query = AssertionQuery.model_validate({key: value for key, value in raw.items() if value is not None})
+        result = await engine.aggregate_assertions(query, user_id=owner)
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_aggregate_assertions", exc)
+
+
 async def memory_get_provenance(
     node_id: str,
     operation_cursor: str | None = None,
@@ -1100,7 +1174,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     )
     server.prme_config = config
     for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
-                 memory_get_node, memory_scan_nodes, memory_get_event, memory_get_extraction,
+                 memory_get_node, memory_scan_nodes, memory_aggregate_assertions,
+                 memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance, memory_evaluate_learning,
                  memory_record_answer_citations, memory_get_answer_citations,

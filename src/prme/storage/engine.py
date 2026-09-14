@@ -80,6 +80,7 @@ from prme.types import (
 
 if TYPE_CHECKING:
     import asyncpg
+    from prme.models.aggregation import AssertionAggregation, AssertionQuery
     from prme.storage.encryption import EncryptionProvider
 
     from prme.ingestion.pipeline import IngestionPipeline
@@ -1880,6 +1881,29 @@ class MemoryEngine:
             if len(page) < batch_size:
                 break
             cursor = str(page[-1].id)
+
+    async def aggregate_assertions(
+        self,
+        query: "AssertionQuery",
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "AssertionAggregation":
+        """Count and group exact structured assertions across the stored set.
+
+        This scans every matching page for an unchanged store and never uses
+        semantic top-k retrieval. The result distinguishes stored-set coverage
+        from extraction or real-world completeness.
+        """
+        from prme.models.aggregation import AssertionQuery
+        from prme.retrieval.aggregation import aggregate_assertions
+
+        return await aggregate_assertions(
+            self,
+            AssertionQuery.model_validate(query),
+            user_id=user_id,
+            batch_size=batch_size,
+        )
 
     # --- Event Operations (delegated to EventStore) ---
 
