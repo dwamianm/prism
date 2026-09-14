@@ -1986,6 +1986,7 @@ class MemoryEngine:
         *,
         evidence_id: str | None = None,
         user_id: str | None = None,
+        actor_id: str | None = None,
     ) -> None:
         """Mark a node as superseded by another.
 
@@ -1997,6 +1998,8 @@ class MemoryEngine:
             user_id: When given, both nodes must belong to this user. A
                 supersedence edge that crosses users is never legitimate: it
                 would let one user's memory retire another's.
+            actor_id: Actor recording the correction. Defaults to the scoped
+                user, or ``system`` for an unscoped operator call.
 
         Raises:
             ValueError: If the transition is invalid, or either node is
@@ -2005,8 +2008,14 @@ class MemoryEngine:
         if user_id is not None:
             await self._require_owned(old_node_id, user_id)
             await self._require_owned(new_node_id, user_id)
+        actor = actor_id.strip() if isinstance(actor_id, str) else actor_id
+        if actor_id is not None and not actor:
+            raise ValueError("actor_id must be a non-empty string")
         await self._graph_store.supersede(
-            old_node_id, new_node_id, evidence_id=evidence_id
+            old_node_id,
+            new_node_id,
+            evidence_id=evidence_id,
+            actor_id=actor or user_id or "system",
         )
         # Evict the superseded node from the search indexes so its content
         # stops surfacing and the indexes do not grow without bound. The

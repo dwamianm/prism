@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Atomic, checksummed explicit corrections across sync/async Python, HTTP, MCP,
+  DuckDB, and PostgreSQL. State, deterministic edge, and complete before/after
+  audit record commit together; exact retries remain safe after restart.
 - A complete tenant-scoped contradiction lifecycle on sync/async Python, HTTP,
   and MCP. Marking and resolution atomically update claims, edges, and audit
   records; exact retries are idempotent across restarts and resolution evicts

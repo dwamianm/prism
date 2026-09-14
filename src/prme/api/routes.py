@@ -43,6 +43,7 @@ from prme.api.models import (
     StatsResponse,
     StoreRequest,
     StoreResponse,
+    SupersedenceRequest,
 )
 from prme.types import LifecycleState, NodeType
 from prme.models.extraction import ExtractionRecord
@@ -666,6 +667,39 @@ async def evaluate_condition(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _node_to_response(updated)
+
+
+@router.post(
+    "/supersedences",
+    response_model=NodeListResponse,
+    summary="Replace an outdated memory claim",
+    responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+)
+async def supersede(request: Request, body: SupersedenceRequest) -> NodeListResponse:
+    """Retire an old claim in favor of a replacement; exact retries are safe."""
+    engine = _get_engine(request)
+    owner = _user_id(request)
+    ids = [str(body.old_node_id), str(body.new_node_id)]
+    for node_id in ids:
+        if await engine.get_node(node_id, include_superseded=True, user_id=owner) is None:
+            raise HTTPException(status_code=404, detail=f"Node {node_id!r} not found")
+    try:
+        await engine.supersede(
+            *ids,
+            evidence_id=str(body.evidence_id) if body.evidence_id else None,
+            user_id=owner,
+            actor_id=owner or "api-operator",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    nodes = [
+        await engine.get_node(node_id, include_superseded=True, user_id=owner)
+        for node_id in ids
+    ]
+    return NodeListResponse(
+        nodes=[_node_to_response(node) for node in nodes if node is not None],
+        count=len(nodes),
+    )
 
 
 @router.post(

@@ -50,6 +50,15 @@ class ConditionEvaluationRequest(BaseModel):
     evaluated_at: AwareDatetime | None = None
 
 
+class SupersedenceRequest(BaseModel):
+    """Explicit correction that replaces one claim with another."""
+
+    model_config = ConfigDict(extra="forbid")
+    old_node_id: UUID
+    new_node_id: UUID
+    evidence_id: UUID | None = None
+
+
 class ContradictionRequest(BaseModel):
     """Two claims that cannot both be accepted as current."""
 

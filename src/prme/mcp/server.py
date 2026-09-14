@@ -771,6 +771,40 @@ async def memory_mark_contradiction(
         return _internal_error("memory_mark_contradiction", exc)
 
 
+async def memory_supersede(
+    old_node_id: str,
+    new_node_id: str,
+    evidence_id: str | None = None,
+    ctx: Context = None,
+) -> str:
+    """Replace an outdated owned claim; an exact retry is safe."""
+    engine = _get_engine(ctx)
+    try:
+        user_id = _get_user_id(engine)
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    try:
+        await engine.supersede(
+            old_node_id,
+            new_node_id,
+            evidence_id=evidence_id,
+            user_id=user_id,
+            actor_id=user_id or "mcp-operator",
+        )
+        nodes = [
+            await engine.get_node(node_id, include_superseded=True, user_id=user_id)
+            for node_id in (old_node_id, new_node_id)
+        ]
+        return json.dumps({
+            "nodes": [_node_to_dict(node) for node in nodes if node is not None],
+            "count": len(nodes),
+        })
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_supersede", exc)
+
+
 async def memory_resolve_contradiction(
     winner_id: str,
     loser_id: str,
@@ -863,7 +897,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_get_relevance, memory_list_relevance,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
                  memory_promote_node, memory_archive_node, memory_evaluate_condition,
-                 memory_get_provenance, memory_mark_contradiction,
+                 memory_get_provenance, memory_supersede, memory_mark_contradiction,
                  memory_resolve_contradiction):
         server.tool()(tool)
     server.resource("memory://health")(resource_health)

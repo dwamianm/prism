@@ -188,6 +188,9 @@ def test_sync_correction_preserves_sources_and_rejects_foreign_evidence(
             str(old.id), str(new.id), evidence_id=new_event, user_id="alice"
         )
     with MemoryClient(config=config) as memory:
+        memory.supersede(
+            str(old.id), str(new.id), evidence_id=new_event, user_id="alice"
+        )
         assert memory.get_node(str(old.id), user_id="alice") is None
         retired = memory.get_node(str(old.id), user_id="alice", include_superseded=True)
         assert retired.superseded_by == new.id
@@ -197,3 +200,7 @@ def test_sync_correction_preserves_sources_and_rejects_foreign_evidence(
         )
         assert memory.get_node(str(new.id), user_id="alice") == new
         assert memory.get_event(old_event, user_id="alice").content == old.content
+        history = memory.get_provenance(str(old.id), user_id="alice")
+        assert [item.op_type for item in history.operations] == [
+            "SUPERSEDENCE_APPLIED"
+        ]

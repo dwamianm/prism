@@ -63,6 +63,7 @@ async def test_bound_http_operations_isolate_two_users(config, user, monkeypatch
             )
             assert provenance.status_code == 404
             for path, body in (
+                ("/v1/supersedences", {"old_node_id": str(a.id), "new_node_id": str(b.id)}),
                 ("/v1/contradictions", {"node_a_id": str(a.id), "node_b_id": str(b.id)}),
                 ("/v1/contradictions/resolve", {"winner_id": str(a.id), "loser_id": str(b.id)}),
             ):

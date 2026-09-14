@@ -344,6 +344,7 @@ class DuckPGQGraphStore:
         new_node_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark a node as superseded by another.
 
@@ -361,7 +362,9 @@ class DuckPGQGraphStore:
             ValueError: If either node doesn't exist or the transition
                 is invalid.
         """
-        await self.supersede_many([(old_node_id, new_node_id, evidence_id)])
+        await self.supersede_many(
+            [(old_node_id, new_node_id, evidence_id)], actor_id=actor_id,
+        )
 
     async def scan_nodes(
         self, *, user_id: str, scope: Scope | None = None,
@@ -395,22 +398,30 @@ class DuckPGQGraphStore:
         from prme.storage.consolidation_retirement import retire_duckdb
         return await retire_duckdb(self, source_id, summary_id, **policy)
 
-    async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
-        """Commit all replacement states and edges together."""
+    async def supersede_many(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        *,
+        actor_id: str = "system",
+    ) -> None:
+        """Commit all replacement states, edges and journals together."""
         if not replacements:
             return
         async with self._conn_lock:
-            await run_to_completion(self._supersede_many_sync, replacements)
+            await run_to_completion(self._supersede_many_sync, replacements, actor_id)
 
-    def _supersede_many_sync(self, replacements: list[tuple[str, str, str | None]]) -> None:
-        self._conn.execute("BEGIN TRANSACTION")
-        try:
-            for old_id, new_id, evidence_id in replacements:
-                self._supersede_sync(old_id, new_id, evidence_id)
-            self._conn.execute("COMMIT")
-        except BaseException:
-            self._conn.execute("ROLLBACK")
-            raise
+    def _supersede_many_sync(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        actor_id: str = "system",
+    ) -> None:
+        from prme.storage.supersedence import _request, _supersede_many_duckdb
+
+        requests = [
+            _request(old, new, evidence, actor_id)
+            for old, new, evidence in replacements
+        ]
+        _supersede_many_duckdb(self, requests)
 
     async def contradict(
         self,
@@ -1061,68 +1072,6 @@ class DuckPGQGraphStore:
         return [self._row_to_edge(row) for row in rows]
 
     # --- Lifecycle sync methods ---
-
-    def _supersede_sync(
-        self,
-        old_node_id: str,
-        new_node_id: str,
-        evidence_id: str | None,
-    ) -> None:
-        """Mark a node as superseded by another (sync)."""
-        # Validate both nodes exist
-        old_row = self._conn.execute(
-            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
-            [old_node_id],
-        ).fetchone()
-        if old_row is None:
-            raise ValueError(f"Old node {old_node_id} not found")
-
-        new_row = self._conn.execute(
-            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?", [new_node_id]
-        ).fetchone()
-        if new_row is None:
-            raise ValueError(f"New node {new_node_id} not found")
-        if UUID(old_node_id) == UUID(new_node_id):
-            raise ValueError("A node cannot supersede itself")
-        if old_row[1:] != new_row[1:]:
-            raise ValueError("Replacement nodes must have the same user and scope")
-        if LifecycleState(new_row[0]) not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
-            raise ValueError("Replacement node must be active")
-
-        # Validate transition
-        current_state = LifecycleState(old_row[0])
-        target_state = LifecycleState.SUPERSEDED
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot supersede: node is {current_state.value}, "
-                f"only Tentative or Stable nodes can be superseded"
-            )
-
-        from prme.storage.transition_evidence import validate_duckdb
-        provenance_uuid = validate_duckdb(self._conn, evidence_id, old_row[1], old_row[2])
-
-        # Update old node
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?,
-                superseded_by = ?,
-                updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, new_node_id, old_node_id],
-        )
-
-        edge = MemoryEdge(
-            source_id=UUID(new_node_id),
-            target_id=UUID(old_node_id),
-            edge_type=EdgeType.SUPERSEDES,
-            user_id=old_row[1],  # Use the old node's user_id
-            confidence=1.0,
-            provenance_event_id=provenance_uuid,
-        )
-        self._create_edge_sync(edge)
 
     def _atomic_sync(self, operation: Callable[..., None], *args: Any) -> None:
         """Keep a multi-write lifecycle operation and its audit trail inseparable."""

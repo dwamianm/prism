@@ -24,8 +24,11 @@ Implementations MUST use a storage backend that provides:
 - ACID transaction semantics for individual write operations.
 
 PRME graph replacements use a transaction covering lifecycle state, replacement
-pointer, and provenance edge. `supersede_many` applies a batch atomically and
-rejects self-replacement, retired replacements, or pairs across users/scopes.
+pointer, provenance edge, and a checksummed `SUPERSEDENCE_APPLIED` operation with
+complete before/after snapshots. Its deterministic pair identity makes exact
+actor/evidence retries durable and rejects conflicting retries. `supersede_many`
+applies a batch atomically and rejects self-replacement, retired replacements,
+or pairs across users/scopes.
 New LLM ingestion uses the journaled derivation protocol in RFC-0016: saved
 extraction and prepared inputs, idempotent index staging, and fenced atomic
 graph publication. New duplicate/alias merges atomically append a checksummed

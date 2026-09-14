@@ -74,6 +74,7 @@ class TestToolDiscovery:
             "memory_archive_node",
             "memory_evaluate_condition",
             "memory_get_provenance",
+            "memory_supersede",
             "memory_mark_contradiction",
             "memory_resolve_contradiction",
         }
@@ -272,6 +273,25 @@ class TestOrganize:
 
 
 class TestLifecycle:
+    async def test_supersedence_roundtrip_and_retry(self, session):
+        stored = []
+        for content in ("Atlas uses east.", "Atlas uses west."):
+            result = await session.call_tool("memory_store", {
+                "content": content, "user_id": "correction-user", "node_type": "fact",
+            })
+            stored.append(json.loads(result.content[0].text))
+        arguments = {
+            "old_node_id": stored[0]["node_id"],
+            "new_node_id": stored[1]["node_id"],
+            "evidence_id": stored[1]["event_id"],
+        }
+        result = await session.call_tool("memory_supersede", arguments)
+        assert [node["lifecycle_state"] for node in json.loads(
+            result.content[0].text
+        )["nodes"]] == ["superseded", "tentative"]
+        replay = await session.call_tool("memory_supersede", arguments)
+        assert "error" not in json.loads(replay.content[0].text)
+
     async def test_contradiction_roundtrip(self, session):
         node_ids = []
         for content in ("Atlas uses east.", "Atlas uses west."):

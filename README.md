@@ -129,10 +129,14 @@ source events, missing evidence, contradiction links, and paged transition
 history. The async engine exposes the same method; HTTP uses
 `GET /v1/nodes/{node_id}/provenance`, and MCP uses `memory_get_provenance`.
 
-Applications can also record and resolve a conflict without reaching into a
-storage backend:
+Corrections and conflicts use the same public lifecycle instead of reaching
+into a storage backend:
 
 ```python
+client.supersede(
+    outdated_claim_id, corrected_claim_id,
+    evidence_id=correction_event_id, user_id="alice", actor_id="alice",
+)
 contested = client.contradict(
     first_claim_id, second_claim_id,
     user_id="alice", actor_id="reviewer",
@@ -143,10 +147,12 @@ winner, loser = client.resolve_contradiction(
 )
 ```
 
-Both operations update the claims, graph edge, and audit record atomically.
-Repeating the same call is safe after an ambiguous timeout. HTTP exposes
-`POST /v1/contradictions` and `POST /v1/contradictions/resolve`; MCP exposes
-`memory_mark_contradiction` and `memory_resolve_contradiction`.
+These operations update claims, graph edges, and audit records atomically.
+Repeating an exact call is safe after an ambiguous timeout. HTTP exposes
+`POST /v1/supersedences`, `POST /v1/contradictions`, and
+`POST /v1/contradictions/resolve`; the corresponding MCP tools are
+`memory_supersede`, `memory_mark_contradiction`, and
+`memory_resolve_contradiction`.
 
 The [packing guide](docs/PACKING.md) explains exact context budgets and the
 experimental `balanced` policy. It improved source retention in completed

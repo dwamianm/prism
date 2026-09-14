@@ -57,6 +57,40 @@ async def test_batch_failure_rolls_back_previous_state_pointer_and_edge(config, 
         assert await graph.get_edges(source_id=str(nodes[1].id), edge_type=EdgeType.SUPERSEDES) == []
 
 
+async def test_exact_batch_retry_does_not_duplicate_edges_or_journals(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        graph = engine._graph_store
+        nodes = [
+            MemoryNode(user_id=user, node_type=NodeType.FACT, content=str(i))
+            for i in range(4)
+        ]
+        for node in nodes:
+            await graph.create_node(node)
+        replacements = [
+            (str(nodes[0].id), str(nodes[1].id), None),
+            (str(nodes[2].id), str(nodes[3].id), None),
+        ]
+        await graph.supersede_many(replacements, actor_id="reviewer")
+        await graph.supersede_many(replacements, actor_id="reviewer")
+        assert len(await graph.get_edges(
+            node_ids=[str(node.id) for node in nodes], edge_type=EdgeType.SUPERSEDES,
+        )) == 2
+        if hasattr(graph, "_pool"):
+            async with graph._pool.acquire() as conn:
+                count = await conn.fetchval(
+                    "SELECT count(*) FROM operations "
+                    "WHERE op_type='SUPERSEDENCE_APPLIED' AND target_id=ANY($1::text[])",
+                    [str(nodes[0].id), str(nodes[2].id)],
+                )
+        else:
+            count = graph._conn.execute(
+                "SELECT count(*) FROM operations "
+                "WHERE op_type='SUPERSEDENCE_APPLIED' AND target_id IN (?, ?)",
+                [str(nodes[0].id), str(nodes[2].id)],
+            ).fetchone()[0]
+        assert count == 2
+
+
 @pytest.mark.parametrize("boundary", ["user", "scope", "self", "retired"])
 async def test_invalid_replacement_cannot_mutate_old_fact(config, user, boundary):  # noqa: F811
     async with MemoryEngine.open(config) as engine:

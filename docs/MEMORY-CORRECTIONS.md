@@ -18,6 +18,7 @@ with MemoryClient("./memory") as memory:
         str(new_node.id),
         evidence_id=new_event,
         user_id="alice",
+        actor_id="alice",
     )
 
     assert memory.get_node(str(old_node.id), user_id="alice") is None
@@ -35,8 +36,9 @@ same-scope requirement between nodes.
 
 The old node becomes superseded and a `SUPERSEDES` relationship points from the
 new node to the old node. Source events and the old content remain available.
-Default retrieval excludes the retired node. State and relationship publication
-commit together; index eviction follows commit and failed cleanup is repairable.
+Default retrieval excludes the retired node. The state, deterministic edge, and
+a checksummed `SUPERSEDENCE_APPLIED` record with complete before/after snapshots
+commit together. Index eviction follows commit and failed cleanup is repairable.
 
 Optional `evidence_id` must identify an existing event in the same owner and
 scope. Missing, malformed, foreign-owner and foreign-scope references all raise
@@ -50,7 +52,11 @@ The graph backend applies the same evidence checks to `supersede_many`,
 replacement batch. These checks do not validate every arbitrary `create_edge`
 or low-level graph update.
 
-Repeated supersedence still raises an invalid-transition error; this API has no
-request key. After cancellation or a lost acknowledgement, inspect the old node
-with `include_superseded=True` to determine its current state before retrying.
-Supersedence records are not a complete historical replay system.
+An exact retry with the same old node, replacement, evidence, and actor is a
+durable no-op, including after restart. A retry that changes the actor or
+evidence is rejected instead of being mistaken for the original correction.
+The operation ID is derived from the ordered node pair, so callers do not need
+to manage a separate request key. HTTP exposes `POST /v1/supersedences`; MCP
+exposes `memory_supersede`. New explicit corrections are fully journaled, but
+legacy operations and other historical mutations still prevent a claim of
+complete graph replay.

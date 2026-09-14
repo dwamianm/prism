@@ -100,6 +100,25 @@ resolving persistent failures. Operator-mode callers must specify `user_id`.
 Malformed UUIDs and invalid request fields produce HTTP 422 with structured
 validation details. Valid unknown or foreign identities return 404.
 
+## Correct an outdated claim
+
+Store the corrected source first, resolve both event IDs to node IDs, then call
+`POST /v1/supersedences`:
+
+```json
+{
+  "old_node_id": "11111111-1111-4111-8111-111111111111",
+  "new_node_id": "22222222-2222-4222-8222-222222222222",
+  "evidence_id": "33333333-3333-4333-8333-333333333333"
+}
+```
+
+The response returns the superseded old node followed by the active replacement.
+All nodes and optional evidence must belong to the authenticated owner and one
+scope. The state, edge, and checksummed audit record commit atomically. Sending
+the exact body again is safe after a timeout or restart; changing its evidence
+after publication returns 422.
+
 ## Save relevance judgments for future evaluated learning
 
 Retrieval `metrics` include `request_id` and `receipt_persisted`. If the latter is

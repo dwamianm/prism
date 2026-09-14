@@ -218,8 +218,13 @@ class GraphStore(Protocol):
         """Atomically retire a source only while its summary coverage is valid."""
         ...
 
-    async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
-        """Atomically replace nodes and create edges for (old, new, evidence).
+    async def supersede_many(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        *,
+        actor_id: str = "system",
+    ) -> None:
+        """Atomically replace nodes, create edges and journal each correction.
 
         Every pair must belong to the same user/scope. Failure leaves all
         states, pointers, and edges unchanged.
@@ -380,6 +385,7 @@ class GraphStore(Protocol):
         new_node_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark a node as superseded by another.
 
@@ -389,6 +395,7 @@ class GraphStore(Protocol):
             evidence_id: Optional event ID providing evidence for
                 the supersedence. Required for automated transitions,
                 optional for manual.
+            actor_id: Actor recording the correction.
 
         Raises:
             ValueError: If the transition is invalid.

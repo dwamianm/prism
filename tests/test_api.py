@@ -425,6 +425,40 @@ class TestContradictions:
         }).status_code == 422
 
 
+class TestSupersedence:
+    def test_replace_and_exact_retry(self, client):
+        stored = [
+            client.post("/v1/store", json={
+                "content": content,
+                "user_id": "correction-user",
+                "node_type": "fact",
+            }).json()
+            for content in ("Atlas uses east.", "Atlas uses west.")
+        ]
+        body = {
+            "old_node_id": stored[0]["node_id"],
+            "new_node_id": stored[1]["node_id"],
+            "evidence_id": stored[1]["event_id"],
+        }
+        response = client.post("/v1/supersedences", json=body)
+        assert response.status_code == 200
+        assert [node["lifecycle_state"] for node in response.json()["nodes"]] == [
+            "superseded", "tentative",
+        ]
+        assert client.post("/v1/supersedences", json=body).status_code == 200
+        provenance = client.get(
+            f"/v1/nodes/{stored[0]['node_id']}/provenance"
+        ).json()
+        assert [item["op_type"] for item in provenance["operations"]] == [
+            "SUPERSEDENCE_APPLIED"
+        ]
+
+    def test_supersedence_body_ids_are_validated(self, client):
+        assert client.post("/v1/supersedences", json={
+            "old_node_id": "bad", "new_node_id": "also-bad",
+        }).status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Archive
 # ---------------------------------------------------------------------------

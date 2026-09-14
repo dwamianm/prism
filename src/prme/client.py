@@ -381,10 +381,12 @@ class MemoryClient:
         ))
 
     def supersede(self, old_node_id: str, new_node_id: str, *,
-                  evidence_id: str | None = None, user_id: str | None = None) -> None:
-        """Replace a memory within one owner/scope, retaining its original source."""
+                  evidence_id: str | None = None, user_id: str | None = None,
+                  actor_id: str | None = None) -> None:
+        """Replace a memory atomically; exact retries are safe."""
         self._run(self._engine.supersede(old_node_id, new_node_id,
-                                        evidence_id=evidence_id, user_id=user_id))
+                                        evidence_id=evidence_id, user_id=user_id,
+                                        actor_id=actor_id))
 
     def contradict(
         self, node_a_id: str, node_b_id: str, *, evidence_id: str | None = None,

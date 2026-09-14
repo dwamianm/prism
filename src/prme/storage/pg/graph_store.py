@@ -610,63 +610,30 @@ class PgGraphStore:
         new_node_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
-        """Atomically update replacement state and its provenance edge."""
-        await self.supersede_many([(old_node_id, new_node_id, evidence_id)])
+        """Atomically update replacement state, provenance edge and journal."""
+        await self.supersede_many(
+            [(old_node_id, new_node_id, evidence_id)], actor_id=actor_id,
+        )
 
     async def retire_consolidated(self, source_id: str, summary_id: str, **policy) -> bool:
         """Lock source and summary, then validate coverage and commit retirement."""
         from prme.storage.consolidation_retirement import retire_postgres
         return await retire_postgres(self, source_id, summary_id, **policy)
 
-    async def supersede_many(self, replacements: list[tuple[str, str, str | None]]) -> None:
-        """Commit all replacements in one transaction with ordered row locks."""
+    async def supersede_many(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        *,
+        actor_id: str = "system",
+    ) -> None:
+        """Commit all replacements and journals with ordered row locks."""
         if not replacements:
             return
-        async with self._pool.acquire() as conn, conn.transaction():
-            node_ids = sorted({nid for old, new, _ in replacements for nid in (old, new)})
-            # Lock both endpoints in a consistent order across concurrent clients.
-            await conn.fetch(
-                "SELECT id FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
-                node_ids,
-            )
-            for old_id, new_id, evidence_id in replacements:
-                old = await conn.fetchrow(
-                    "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1", old_id,
-                )
-                new = await conn.fetchrow(
-                    "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1", new_id,
-                )
-                if old is None or new is None:
-                    raise ValueError("Both replacement nodes must exist")
-                if UUID(old_id) == UUID(new_id):
-                    raise ValueError("A node cannot supersede itself")
-                if (old["user_id"], old["scope"]) != (new["user_id"], new["scope"]):
-                    raise ValueError("Replacement nodes must have the same user and scope")
-                if LifecycleState(new["lifecycle_state"]) not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
-                    raise ValueError("Replacement node must be active")
-                if not validate_transition(LifecycleState(old["lifecycle_state"]), LifecycleState.SUPERSEDED):
-                    raise ValueError(f"Cannot supersede: node is {old['lifecycle_state']}")
-                from prme.storage.transition_evidence import validate_postgres
-                provenance = await validate_postgres(conn, evidence_id, old["user_id"], old["scope"])
-                edge = MemoryEdge(
-                    source_id=UUID(new_id), target_id=UUID(old_id),
-                    edge_type=EdgeType.SUPERSEDES, user_id=old["user_id"],
-                    confidence=1.0, provenance_event_id=provenance,
-                )
-                await conn.execute(
-                    "UPDATE nodes SET lifecycle_state = $1, superseded_by = $2::uuid, "
-                    "updated_at = now() WHERE id = $3",
-                    LifecycleState.SUPERSEDED.value, new_id, old_id,
-                )
-                await conn.execute(
-                    "INSERT INTO edges (id, source_id, target_id, edge_type, user_id, confidence, "
-                    "valid_from, valid_to, provenance_event_id, metadata, created_at) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL, $10)",
-                    str(edge.id), new_id, old_id, edge.edge_type.value, edge.user_id,
-                    edge.confidence, edge.valid_from, edge.valid_to,
-                    str(provenance) if provenance else None, edge.created_at,
-                )
+        from prme.storage.supersedence import supersede_many_postgres
+
+        await supersede_many_postgres(self, replacements, actor_id=actor_id)
 
     async def contradict(
         self,

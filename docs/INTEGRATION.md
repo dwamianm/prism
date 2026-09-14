@@ -373,11 +373,17 @@ async def supersede(
     new_node_id: str,
     *,
     evidence_id: str | None = None,
+    user_id: str | None = None,
+    actor_id: str | None = None,
 ) -> None                                              # → SUPERSEDED
 async def archive(self, node_id: str) -> None          # → ARCHIVED (terminal)
 ```
 
-All raise `ValueError` if the transition is invalid per the lifecycle state machine.
+All raise `ValueError` if the transition is invalid per the lifecycle state
+machine. Supersedence commits a deterministic edge and checksummed before/after
+record with the state change. Repeating the same ordered nodes, evidence, and
+actor is safe across restarts; changing an input after publication is rejected.
+HTTP exposes `POST /v1/supersedences`, and MCP exposes `memory_supersede`.
 
 #### `engine.evaluate_condition()`
 
