@@ -31,7 +31,7 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 4
+ADAPTER_SCHEMA_VERSION = 5
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
@@ -65,6 +65,7 @@ def _config_identity(agent: Any) -> dict[str, object]:
         "context_format": agent.prme_context_format,
         "reader_reasoning_effort": agent.reader_reasoning_effort,
         "reader_seed": agent.reader_seed,
+        "run_id": agent.prme_run_id,
     }
 
 
@@ -162,6 +163,7 @@ def initialize_prme_agent(
     ).strip()
     agent.reader_reasoning_effort = config.get("reader_reasoning_effort")
     agent.reader_seed = config.get("reader_seed")
+    agent.prme_run_id = str(config.get("prme_run_id", "default")).strip()
     if not agent.prme_user_id:
         raise ValueError("prme_user_id must be non-empty")
     if agent.prme_result_limit <= 0:
@@ -182,6 +184,17 @@ def initialize_prme_agent(
         and not isinstance(agent.reader_seed, int)
     ):
         raise ValueError("reader_seed must be an integer or omitted")
+    if (
+        not agent.prme_run_id
+        or len(agent.prme_run_id) > 64
+        or any(
+            not char.isalnum() and char not in "._-"
+            for char in agent.prme_run_id
+        )
+    ):
+        raise ValueError(
+            "prme_run_id must contain 1-64 letters, digits, dots, underscores, or hyphens"
+        )
 
     agent.prme_pack_path = Path(agent.agent_save_to_folder) / "prme_pack"
     agent.prme_client = None
@@ -364,6 +377,7 @@ def _save_retrieval(
         "context_format": agent.prme_context_format,
         "reader_reasoning_effort": agent.reader_reasoning_effort,
         "reader_seed": agent.reader_seed,
+        "run_id": agent.prme_run_id,
         "context_token_count": context_token_count,
         "included_count": included_count,
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),

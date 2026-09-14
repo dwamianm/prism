@@ -79,6 +79,7 @@ def _verify_manifest(
     expected_context_format: str,
     expected_reasoning_effort: str | None,
     expected_reader_seed: int | None,
+    expected_run_id: str,
 ) -> dict[str, Any]:
     manifest = _load_object(path)
     identity = manifest.get("config")
@@ -95,6 +96,7 @@ def _verify_manifest(
         or identity.get("context_format") != expected_context_format
         or identity.get("reader_reasoning_effort") != expected_reasoning_effort
         or identity.get("reader_seed") != expected_reader_seed
+        or identity.get("run_id") != expected_run_id
         or manifest.get("config_sha256")
         != hashlib.sha256(_canonical(identity)).hexdigest()
     ):
@@ -253,6 +255,7 @@ def verify(
     context_format = agent_config.get("prme_context_format", "auditable")
     reasoning_effort = agent_config.get("reader_reasoning_effort")
     reader_seed = agent_config.get("reader_seed")
+    run_id = agent_config.get("prme_run_id", "default")
     if not all(
         isinstance(value, str) and value for value in (sub_dataset, model, output_dir)
     ):
@@ -273,6 +276,13 @@ def verify(
         reader_seed is not None and not isinstance(reader_seed, int)
     ):
         raise ValueError("configuration has an invalid reader seed")
+    if (
+        not isinstance(run_id, str)
+        or not run_id
+        or len(run_id) > 64
+        or any(not char.isalnum() and char not in "._-" for char in run_id)
+    ):
+        raise ValueError("configuration has an invalid PRME run ID")
 
     registered_contexts = registered_task.get("contexts")
     if (
@@ -394,7 +404,9 @@ def verify(
             "retrieval captures do not cover exactly the completed queries"
         )
 
-    agent_root = upstream_root / "agents" / f"prme_{sub_dataset}_model{model}"
+    agent_root = (
+        upstream_root / "agents" / f"prme_{sub_dataset}_model{model}_run{run_id}"
+    )
     manifests: dict[int, tuple[Path, dict[str, Any]]] = {}
     context_token_counts: list[int] = []
     included_counts: list[int] = []
@@ -425,6 +437,7 @@ def verify(
             or capture.get("context_format") != context_format
             or capture.get("reader_reasoning_effort") != reasoning_effort
             or capture.get("reader_seed") != reader_seed
+            or capture.get("run_id") != run_id
         ):
             raise ValueError(f"query {query_id} retrieval capture is inconsistent")
         try:
@@ -456,6 +469,7 @@ def verify(
                 expected_context_format=context_format,
                 expected_reasoning_effort=reasoning_effort,
                 expected_reader_seed=reader_seed,
+                expected_run_id=run_id,
             )
             if manifest["source_chunks"] != expected_chunks[context_id]:
                 raise ValueError(

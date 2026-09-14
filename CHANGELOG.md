@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the values into its pack identity and retrieval captures. This prevents a local
   common-reader comparison from silently using different thinking or sampling
   behavior between memory arms.
+- Isolated MemoryAgentBench PRME state through a validated experiment slug.
+  `prme_run_id` participates in the saved-agent path, pack identity, retrieval
+  capture, and verifier so multiple configurations using one reader cannot reuse
+  or overwrite each other's memory packs.
 - Opt-in compact packed context for short-record workloads. It replaces repeated
   JSON keys and full in-prompt UUIDs with one declared array schema and deterministic
   bundle-local references while retaining type, scope, epistemic state,

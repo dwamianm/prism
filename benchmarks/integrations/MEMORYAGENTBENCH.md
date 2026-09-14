@@ -59,6 +59,12 @@ for every prepared source chunk, query, answer, query-to-context assignment,
 configuration file, adapter file, and upstream harness file. It contains no
 model outputs or scores and refuses uncommitted benchmark source code.
 
+Set a distinct path-safe `prme_run_id` for each PRME arm. The installer includes
+it in the saved-agent directory, and the adapter binds it into manifests and
+retrieval captures. This permits auditable and compact configurations using the
+same reader model to coexist without deleting, reusing, or overwriting either
+memory pack.
+
 For a registered development subset, copy the upstream dataset configuration,
 add a positive `max_test_queries`, register that copied file, and pass the same
 value to upstream `--max_test_queries_ablation`. The registration includes only

@@ -113,8 +113,12 @@ _PATCHES = {
             '        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)\n'
             '        return f"{base_path}/exp_{current_context_index}"\n',
             '    if "prme" in agent_name:\n'
+            '        run_id = str(agent_config.get("prme_run_id", "default"))\n'
+            '        if (not run_id or len(run_id) > 64 or\n'
+            '                any(not char.isalnum() and char not in "._-" for char in run_id)):\n'
+            '            raise ValueError("invalid prme_run_id")\n'
             '        base_path = (f"./agents/prme_{dataset_config[\'sub_dataset\']}"\n'
-            '                     f"_model{agent_config[\'model\']}")\n'
+            '                     f"_model{agent_config[\'model\']}_run{run_id}")\n'
             '        return f"{base_path}/exp_{current_context_index}"\n'
             '    elif any(agent_type in agent_name for agent_type in ["mem0", "cognee", "letta", "zep"]):\n'
             '        base_path = _generate_memory_agent_base_path(agent_config, dataset_config)\n'

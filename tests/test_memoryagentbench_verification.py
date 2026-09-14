@@ -64,6 +64,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "prme_token_budget": 4096,
         "reader_reasoning_effort": "none",
         "reader_seed": 42,
+        "prme_run_id": "verified-arm",
     }
     dataset_config = {
         "dataset": "Accurate_Retrieval",
@@ -91,6 +92,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "context_format": "auditable",
         "reader_reasoning_effort": "none",
         "reader_seed": 42,
+        "run_id": "verified-arm",
     }
     manifest = {
         "schema_version": adapter.ADAPTER_SCHEMA_VERSION,
@@ -105,7 +107,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     manifest_path = (
         upstream_root
         / "agents"
-        / "prme_eventqa_65536_modelreader-model"
+        / "prme_eventqa_65536_modelreader-model_runverified-arm"
         / "exp_0"
         / "prme_pack"
         / adapter._MANIFEST_NAME
@@ -128,6 +130,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "context_format": "auditable",
         "reader_reasoning_effort": "none",
         "reader_seed": 42,
+        "run_id": "verified-arm",
         "context_token_count": count_tokens(context),
         "included_count": 1,
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),

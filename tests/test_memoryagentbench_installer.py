@@ -86,6 +86,8 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert f'revision="{installer.DATASET_REVISION}"' in data
     initialization = (tmp_path / "initialization.py").read_text(encoding="utf-8")
     assert "prme_{dataset_config['sub_dataset']}" in initialization
+    assert "prme_run_id" in initialization
+    assert "_run{run_id}" in initialization
     assert "answer = saved_data_entry['answer']" in initialization
     assert "saved_data_entry['answer'][0]" not in initialization
 

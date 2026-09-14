@@ -15,3 +15,4 @@ prme_token_budget: 4096
 prme_context_format: auditable
 prme_max_chunk_chars: 6000
 prme_user_id: memoryagentbench
+prme_run_id: default

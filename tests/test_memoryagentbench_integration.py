@@ -70,6 +70,7 @@ def fake_agent(
             "prme_context_format": context_format,
             "reader_reasoning_effort": "none",
             "reader_seed": 42,
+            "prme_run_id": f"test-{context_format}",
         },
     )
     return agent
@@ -137,10 +138,11 @@ def test_adapter_preserves_text_and_round_trips_pack(
         )
         assert retrieval["context_sha256"]
         assert retrieval["request_id"]
-        assert retrieval["adapter_schema_version"] == 4
+        assert retrieval["adapter_schema_version"] == 5
         assert retrieval["context_format"] == context_format
         assert retrieval["reader_reasoning_effort"] == "none"
         assert retrieval["reader_seed"] == 42
+        assert retrieval["run_id"] == f"test-{context_format}"
         assert retrieval["sub_dataset"] == "eventqa_65536"
         assert retrieval["query_id"] == 3
         assert retrieval["context_id"] == 7
@@ -220,3 +222,12 @@ def test_adapter_rejects_invalid_reader_settings(
     agent.agent_save_to_folder = str(tmp_path / "agent")
     with pytest.raises(ValueError, match=match):
         adapter.initialize_prme_agent(agent, config)
+
+
+@pytest.mark.parametrize("run_id", ["", "../escape", "has space", "x" * 65])
+def test_adapter_rejects_invalid_run_id(tmp_path: Path, run_id: str) -> None:
+    agent = FakeAgent()
+    agent.sub_dataset = "eventqa_65536"
+    agent.agent_save_to_folder = str(tmp_path / "agent")
+    with pytest.raises(ValueError, match="prme_run_id"):
+        adapter.initialize_prme_agent(agent, {"prme_run_id": run_id})
