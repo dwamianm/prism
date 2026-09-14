@@ -704,6 +704,14 @@ evaluation protocol. It returns an inspectable model and never changes ranking
 or retention. See the [memory credit guide](docs/MEMORY-CREDIT.md) for the full
 workflow and its limits.
 
+In a registered 37-question development diagnostic, removing the sole annotated
+source from an otherwise byte-identical balanced context reduced the fixed
+reader from 29 correct answers to 7; 23 answers changed from correct to wrong.
+The [complete ablation report](benchmarks/results/research/2026-09-13/CONTEXT-ABLATION-ANSWER.md)
+retains every transition, the failed first run, and the important limits: this is
+source-anchored development evidence, not model-citation calibration, bank-level
+deletion, or a competitive benchmark holdout.
+
 Evaluate a proposed adjustment after collecting explicit positive and negative
 judgments across enough distinct queries:
 

@@ -196,6 +196,16 @@ useful causal evidence for a fixed rendered prompt, while a full reproduction of
 bank-level presence credit still requires the retrieval-invariant experiment
 described below.
 
+The registered 37-question source-anchored development diagnostic provides an
+initial causal check on this primitive. Removing the only annotated source from
+the balanced context reduced a fixed reader from 29/37 to 7/37 correct, including
+23 correct-to-wrong transitions. Six non-flips retained duplicate support and one
+apparent cure exposed a source/reference inconsistency, confirming that neither
+branch can be converted mechanically into a relevance label. The cohort had
+already been examined, uses gold sources rather than model citations, and is not
+a held-out bank-deletion result. The complete evidence is in
+`benchmarks/results/research/2026-09-13/CONTEXT-ABLATION-ANSWER.md`.
+
 ## Offline proposal evaluation
 
 `MemoryEngine.evaluate_learning` and `MemoryClient.evaluate_learning` capture an

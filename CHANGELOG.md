@@ -121,6 +121,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `prme organize --user-id`, with cross-owner merge guards.
 
 ### Benchmark measurement
+- A registered exact-context ablation over all 37 development questions with one
+  annotated source in the balanced bundle reduced the fixed reader from 29/37 to
+  7/37 correct. Twenty-three correct answers became wrong. The audit retained six
+  redundant non-flips, seven noncuring reader errors, and one benchmark-reference
+  inconsistency rather than converting them into negative memory labels.
 - Preserve per-question evaluation failures in reports and retry selection.
 - Report scored coverage and whole-benchmark failures; weight summary accuracy by
   measured questions and fail the CLI when any repeated run is incomplete.
