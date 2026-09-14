@@ -21,7 +21,7 @@ import pytest
 import pytest_asyncio
 
 from prme.models.nodes import MemoryNode
-from prme.retrieval.candidates import generate_candidates
+from prme.retrieval.candidates import generate_candidates, merge_normalized_bm25_hits
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import QueryAnalysis
 from prme.retrieval.pipeline import RetrievalPipeline
@@ -72,6 +72,26 @@ class MockEmbeddingProvider:
                 base[i] += ((h >> i) % 5) * 0.01
             results.append(base)
         return results
+
+
+def test_supplementary_bm25_queries_are_normalized_before_merge():
+    first = [
+        {"node_id": "shared", "score": 20.0},
+        {"node_id": "first-low", "score": 10.0},
+    ]
+    second = [
+        {"node_id": "second-high", "score": 500.0},
+        {"node_id": "shared", "score": 100.0},
+    ]
+
+    merged = merge_normalized_bm25_hits([first, second])
+
+    assert {hit["node_id"] for hit in merged} == {
+        "shared", "first-low", "second-high",
+    }
+    assert all(0.0 <= hit["normalized_score"] <= 1.0 for hit in merged)
+    assert next(hit for hit in merged if hit["node_id"] == "shared")["normalized_score"] == 1.0
+    assert "normalized_score" not in first[0]
 
 
 # ---------------------------------------------------------------------------

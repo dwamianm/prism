@@ -31,7 +31,11 @@ import duckdb
 
 from prme.models.learning import RankingMultipliers
 from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
-from prme.retrieval.candidates import CandidateDiagnostics, generate_candidates
+from prme.retrieval.candidates import (
+    CandidateDiagnostics,
+    generate_candidates,
+    merge_normalized_bm25_hits,
+)
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
     DEFAULT_SCORING_WEIGHTS,
@@ -354,19 +358,15 @@ class RetrievalPipeline:
                 ],
                 return_exceptions=True,
             )
-            agg_seen_ids: set[str] = set()
-            agg_hits: list[dict] = []
+            successful_term_results: list[list[dict]] = []
             for hits in term_results:
                 if isinstance(hits, BaseException):
                     aggregation_scan_failed = True
                     continue
                 if len(hits) >= 50:
                     aggregation_term_limit_reached = True
-                for hit in hits:
-                    nid = hit["node_id"]
-                    if nid not in agg_seen_ids:
-                        agg_seen_ids.add(nid)
-                        agg_hits.append(hit)
+                successful_term_results.append(hits)
+            agg_hits = merge_normalized_bm25_hits(successful_term_results)
             if agg_hits:
                 try:
                     agg_nodes = await self._graph_store.get_nodes(
@@ -380,7 +380,7 @@ class RetrievalPipeline:
                                 node=node,
                                 paths=["LEXICAL"],
                                 path_count=1,
-                                lexical_score=hit.get("score", 0.0),
+                                lexical_score=hit.get("normalized_score", 0.0),
                             ))
                 except Exception:
                     aggregation_scan_failed = True
@@ -452,7 +452,7 @@ class RetrievalPipeline:
                 ],
                 return_exceptions=True,
             )
-            entity_hits: list[dict] = []
+            successful_entity_results: list[list[dict]] = []
             for name, hits in zip(entity_names, entity_results):
                 if isinstance(hits, BaseException):
                     logger.debug(
@@ -461,12 +461,13 @@ class RetrievalPipeline:
                         exc_info=hits,
                     )
                     continue
-                for hit in hits:
-                    nid = hit["node_id"]
-                    if nid in existing_ids:
-                        continue
-                    existing_ids.add(nid)
-                    entity_hits.append(hit)
+                successful_entity_results.append(hits)
+            entity_hits = [
+                hit
+                for hit in merge_normalized_bm25_hits(successful_entity_results)
+                if hit["node_id"] not in existing_ids
+            ]
+            existing_ids.update(hit["node_id"] for hit in entity_hits)
             if entity_hits:
                 try:
                     entity_nodes = await self._graph_store.get_nodes(
@@ -480,7 +481,7 @@ class RetrievalPipeline:
                                 node=node,
                                 paths=["LEXICAL"],
                                 path_count=1,
-                                lexical_score=hit.get("score", 0.0),
+                                lexical_score=hit.get("normalized_score", 0.0),
                             ))
                             candidate_counts["LEXICAL"] = candidate_counts.get("LEXICAL", 0) + 1
                 except Exception:

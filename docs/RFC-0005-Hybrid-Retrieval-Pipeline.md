@@ -247,6 +247,11 @@ score(obj) =
 | `epistemic_weight` | Multiplier by epistemic type from RFC-0003, Section 8. | [0.1, 1.0] |
 | `path_count` | Number of retrieval paths that surfaced this object. | [1, 4] |
 
+Every lexical path, including aggregation keyword scans and entity-focused
+fan-out queries, normalises its BM25 result set before composite scoring. Raw
+BM25 values are unbounded and are not comparable across separate queries, so
+they must never enter `lexical_relevance` directly.
+
 **Default weights `[HYPOTHESIS — require empirical calibration]`:**
 
 ```

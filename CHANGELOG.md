@@ -73,6 +73,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Supplementary aggregation and entity-focused lexical searches now normalize
+  their BM25 scores before composite ranking. Unbounded raw Tantivy scores can
+  no longer overwhelm semantic, graph, recency, salience, and confidence
+  signals or crowd relevant hybrid candidates out of a bounded result set.
 - Packing configuration now rejects negative candidate limits and graph depths
   outside the RFC's 1-3 range. The legacy no-op `chars_per_token` and
   `cross_scope_token_budget` fields remain parseable for receipt compatibility,

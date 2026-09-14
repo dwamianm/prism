@@ -64,6 +64,25 @@ def normalize_bm25_scores(results: list[dict]) -> list[dict]:
     return results
 
 
+def merge_normalized_bm25_hits(result_sets: list[list[dict]]) -> list[dict]:
+    """Normalize each lexical query and merge duplicate hits by best score.
+
+    Supplementary lexical searches run as separate BM25 queries, whose raw
+    scores are neither bounded nor comparable across result sets. Normalize
+    each set first, then retain the strongest normalized score for each node.
+    Input dictionaries are copied so backend results remain unchanged.
+    """
+    merged: dict[str, dict] = {}
+    for result_set in result_sets:
+        normalized = normalize_bm25_scores([dict(hit) for hit in result_set])
+        for hit in normalized:
+            node_id = hit["node_id"]
+            saved = merged.get(node_id)
+            if saved is None or hit["normalized_score"] > saved["normalized_score"]:
+                merged[node_id] = hit
+    return list(merged.values())
+
+
 async def _generate_graph_candidates(
     analysis: QueryAnalysis,
     graph_store: GraphStore,
