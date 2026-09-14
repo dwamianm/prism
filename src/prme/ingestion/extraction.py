@@ -17,7 +17,7 @@ import structlog
 from pydantic import Field, SecretStr, ValidationInfo, model_validator
 
 from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
-from prme.ingestion.grounding import _mentioned, canonical_source_quote
+from prme.ingestion.grounding import _mentioned, _supporting_passage
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
 from prme.ingestion.entity_references import reference_errors
 
@@ -70,7 +70,7 @@ def _validate_modality(
 
 
 def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
-    evidence_quote = canonical_source_quote(fact.evidence_quote or "", source)
+    evidence_quote = _supporting_passage(fact.evidence_quote or "", source)
     if evidence_quote is None:
         raise ValueError("evidence_quote must be copied verbatim from the source")
     fact.evidence_quote = evidence_quote
@@ -83,7 +83,7 @@ def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
 def _validate_relationship_source_support(
     relationship: ExtractedRelationship, source: str
 ) -> None:
-    evidence_quote = canonical_source_quote(relationship.evidence_quote or "", source)
+    evidence_quote = _supporting_passage(relationship.evidence_quote or "", source)
     if evidence_quote is None:
         raise ValueError("relationship evidence_quote must be copied verbatim from the source")
     relationship.evidence_quote = evidence_quote
@@ -284,10 +284,37 @@ _ROLE_EXTRACTION_GUIDANCE = {
     ),
 }
 
+_ASSISTANT_EXTRACTION_SYSTEM_PROMPT = """\
+You extract durable conversational memory from one historical assistant message.
+
+Admit only:
+- an explicit commitment or promise made by the assistant;
+- an action the assistant explicitly says it completed;
+- concrete user, project, task, or conversation state the assistant explicitly attributes.
+
+You MUST extract admitted claims. For example, "I scheduled the meeting" is a
+completed action and "I will send the agenda tomorrow" is a commitment. Preserve
+the literal assistant subject `I`; do not replace it with a guessed name.
+
+Do not catalog generic knowledge, explanations, examples, advice, book or product
+descriptions, or standalone recommendations. A message that only answers a question,
+explains a topic, or lists suggestions must return empty entities, facts, and
+relationships. Include entities only when an admitted claim references them.
+
+For every admitted fact or relationship, copy a complete verbatim evidence_quote
+containing its subject, object or endpoint names, negation, conditions, and time
+qualifiers. Preserve semantic polarity and use conditional or hypothetical for
+uncertain claims. Literal references such as I, we, or they may remain unlisted;
+never invent a speaker identity. Do not infer claims from prior conversation.
+An optional one-sentence summary may describe the message without becoming a claim.
+"""
+
 
 def _extraction_prompt_for_role(role: str) -> str:
     """Add source-role admission policy without trusting role as prompt text."""
     normalized = role.strip().casefold()
+    if normalized == "assistant":
+        return _ASSISTANT_EXTRACTION_SYSTEM_PROMPT
     policy = _ROLE_EXTRACTION_GUIDANCE.get(
         normalized,
         "Extract only durable, source-supported state; omit examples and presentation text.",

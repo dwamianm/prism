@@ -93,9 +93,11 @@ async def test_historical_source_is_always_submitted_as_extraction_input(source_
     assert request["messages"][-1] == {"role": "user", "content": source}
     assert request["context"] == {"source_text": source, "source_role": source_role}
     system_prompt = request["messages"][0]["content"]
-    assert f"SOURCE MESSAGE ROLE: {source_role}" in system_prompt
     if source_role == "assistant":
+        assert "historical assistant message" in system_prompt
         assert "standalone recommendations" in system_prompt
+    else:
+        assert f"SOURCE MESSAGE ROLE: {source_role}" in system_prompt
 
 
 async def test_provider_error_is_not_a_successful_empty_extraction():

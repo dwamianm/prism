@@ -134,7 +134,7 @@ def test_builtin_schema_keeps_supported_claims_when_one_proposal_is_invalid():
         "facts": [
             {"subject": "I", "predicate": "joined", "object": "Page Turners",
              "polarity": "positive", "evidence_quote": 'I joined "Page Turners"'},
-            {"subject": "Page Turners", "predicate": "discusses", "object": "novels",
+            {"subject": "Page Turners", "predicate": "discusses", "object": "magazines",
              "polarity": "positive", "evidence_quote": "where we discuss novels"},
         ],
     }
