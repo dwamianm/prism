@@ -21,6 +21,7 @@ from prme.ingestion.grounding import (
     _mentioned,
     _supporting_claim_passage,
     _supporting_passage,
+    validate_extracted_quantity,
 )
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
 from prme.ingestion.entity_references import reference_errors
@@ -104,6 +105,18 @@ def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
         raise ValueError("subject and object must occur in evidence_quote")
     _validate_condition(fact.epistemic_type, fact.condition, claim_passage)
     _validate_modality(fact.fact_type, fact.epistemic_type, claim_passage)
+    quantity = validate_extracted_quantity(
+        fact.quantity,
+        object_value=fact.object,
+        claim_passage=claim_passage,
+    )
+    if fact.quantity is not None and quantity is None:
+        logger.warning(
+            "extraction_quantity_discarded",
+            subject=fact.subject,
+            reason="Quantity is not an exact supported value and unit in the claim object",
+        )
+    fact.quantity = quantity
     fact.evidence_quote = evidence_passage
 
 
@@ -173,6 +186,24 @@ class _CitedExtractionResult(ExtractionResult):
                 try:
                     model.model_validate(item)
                 except (ValidationError, TypeError):
+                    without_quantity = None
+                    if field_name == "facts" and isinstance(item, dict) and "quantity" in item:
+                        candidate = dict(item)
+                        candidate.pop("quantity")
+                        try:
+                            model.model_validate(candidate)
+                        except (ValidationError, TypeError):
+                            pass
+                        else:
+                            without_quantity = candidate
+                    if without_quantity is not None:
+                        logger.warning(
+                            "extraction_quantity_discarded",
+                            path=f"{field_name}[{index}].quantity",
+                            reason="malformed quantity fields",
+                        )
+                        admitted.append(without_quantity)
+                        continue
                     logger.warning(
                         "extraction_claim_discarded",
                         path=f"{field_name}[{index}]",
@@ -240,6 +271,11 @@ made or communicated (e.g., "We decided to use PostgreSQL"), and \
 "preference" for personal preferences expressed (e.g., "I prefer dark mode")
    - A polarity: "positive" when the proposition is affirmed or "negative" \
 when it is denied, rejected, stopped, or stated with does not/never/no longer
+   - An optional quantity for one unambiguous numeric amount in the object: copy \
+the exact quantified phrase into source_text, its verbatim unit or symbol into \
+unit, and its exact decimal value into value. Use unit "1" only when source_text \
+is the bare number. Leave quantity null for ranges, approximations, locale decimal \
+commas, scientific notation, or objects containing multiple numeric amounts.
 
 3. **Relationships** between entities: How entities relate to each other. \
 Use a source-supported predicate such as lives_in, works_at, or uses. Do not \
@@ -300,6 +336,9 @@ IMPORTANT RULES:
 sentences verbatim, including negation, conditions, exceptions, and time references.
 - Subject and object must occur in the supporting text. Keep object values as \
 written rather than normalizing or paraphrasing them.
+- A quantity source_text must be contained in that fact's object and evidence. \
+Do not convert units, infer a currency from a symbol, or attach a number from \
+another part of the sentence.
 - Using something does not imply preferring it. One occurrence does not imply \
 a habit. Multiple values can coexist (e.g., liking tea and coffee).
 - Set replaces_object only for an explicit replacement of a named previous value \
@@ -360,6 +399,8 @@ containing its subject, object or endpoint names, negation, conditions, and time
 qualifiers. Preserve semantic polarity and use conditional or hypothetical for
 uncertain claims. Literal references such as I, we, or they may remain unlisted;
 never invent a speaker identity. Do not infer claims from prior conversation.
+For one unambiguous numeric amount in a fact object, preserve the exact decimal,
+verbatim quantified source_text, and verbatim unit or symbol. Do not convert units.
 An optional one-sentence summary may describe the message without becoming a claim.
 """
 

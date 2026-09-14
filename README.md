@@ -239,6 +239,13 @@ coverage plus normalized-exact-only semantic equivalence. HTTP clients use
 `POST /v1/assertions/aggregate`; MCP clients use
 `memory_aggregate_assertions`. Both require an owner or bound identity.
 
+Built-in extraction also preserves one unambiguous quantity on a fact when its
+decimal, quantified phrase, and unit are all present in the claim object and
+source evidence. Values are stored as decimal strings with the verbatim unit;
+unsupported ranges, approximations, locale decimal commas, scientific notation,
+and multi-number phrases remain ordinary source-cited claims without quantity
+metadata. PRME does not infer currency or convert units.
+
 <details>
 <summary>Async API (advanced)</summary>
 

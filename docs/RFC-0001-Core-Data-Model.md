@@ -264,16 +264,22 @@ across conversations. Relationship predicates remain model metadata on FACT
 nodes; ingestion does not map them directly to structural edge types. Existing
 saved plans retain their original materialization policy and replay unchanged.
 
-New plans explicitly record `claim_qualifiers_v5`. Unresolved English personal
+Historical `claim_qualifiers_v5` plans keep their exact node metadata and replay
+unchanged. New plans record `grounded_quantities_v6`. Unresolved English personal
 references (`I`, `we`, `they`, etc.) reuse an identity only within the same source
 event, with matching unresolved-reference metadata and provenance. Claim nodes
 also preserve semantic polarity and exact explicit conditions; conditions start
-with an unknown state. Absent event provenance or a legacy globally merged
+with an unknown state. A fact may additionally preserve one exact decimal
+quantity when its quantified phrase and unit occur verbatim in both the claim
+object and source evidence. The value is stored as a decimal string; no unit or
+currency conversion is inferred. Unsupported notation leaves the claim intact
+without quantity metadata. Absent event provenance or a legacy globally merged
 reference does not authorize reuse. Explicit non-personal types retain
 named-entity behavior. Historical plans retain their serialized policies and
 checksums; the model's missing-policy default has not changed. This does not solve
-within-message quotation/coreference, condition evaluation, or same-name
-homonyms. See [entity identity and merge rules](ENTITY-IDENTITY.md).
+within-message quotation/coreference, condition evaluation, same-name homonyms,
+unit conversion, or quantities expressed as ranges or approximations. See
+[entity identity and merge rules](ENTITY-IDENTITY.md).
 
 
 ---

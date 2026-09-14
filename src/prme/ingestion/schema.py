@@ -6,12 +6,52 @@ and an optional summary. All models include LLM-friendly Field descriptions
 to guide structured extraction via instructor.
 """
 
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 
 ClaimPolarity = Literal["positive", "negative", "unknown"]
+
+
+class ExtractedQuantity(BaseModel):
+    """One source-grounded decimal quantity attached to a claim object.
+
+    The unit is copied from the source and is not converted or inferred. Use
+    ``"1"`` only for a dimensionless number whose source text is the number.
+    """
+
+    value: Decimal = Field(
+        description="Exact decimal value represented by source_text; never a float approximation"
+    )
+    unit: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Verbatim unit or symbol from source_text, or '1' for dimensionless",
+    )
+    source_text: str = Field(
+        min_length=1,
+        max_length=500,
+        description="Exact verbatim quantified phrase contained in the fact object",
+    )
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, value: Decimal) -> Decimal:
+        if not value.is_finite():
+            raise ValueError("quantity value must be finite")
+        if len(value.as_tuple().digits) > 38 or abs(value.adjusted()) > 100:
+            raise ValueError("quantity value exceeds the supported precision or magnitude")
+        return value
+
+    @field_validator("unit", "source_text")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("quantity text fields must be nonempty")
+        return stripped
 
 
 class ExtractedEntity(BaseModel):
@@ -54,6 +94,14 @@ class ExtractedFact(BaseModel):
         description="Relationship or attribute type (e.g., works_at, lives_in, role)"
     )
     object: str = Field(description="Value or target entity")
+    quantity: ExtractedQuantity | None = Field(
+        default=None,
+        description=(
+            "One explicit numeric amount represented by this fact object. "
+            "Copy its quantified phrase and unit from the source; null when "
+            "the object has no single unambiguous decimal quantity."
+        ),
+    )
     polarity: ClaimPolarity = Field(
         default="unknown",
         description=(

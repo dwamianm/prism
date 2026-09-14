@@ -605,6 +605,13 @@ class IngestionPipeline:
             if fact.condition is not None:
                 fact_metadata["condition"] = fact.condition
                 fact_metadata["condition_state"] = "unknown"
+            if fact.quantity is not None:
+                fact_metadata["quantity"] = {
+                    "value": str(fact.quantity.value),
+                    "unit": fact.quantity.unit,
+                    "source_text": fact.quantity.source_text,
+                    "grounding": "object_decimal_v1",
+                }
             if fact.scope:
                 fact_metadata["suggested_scope"] = fact.scope
             if fact.temporal_ref:

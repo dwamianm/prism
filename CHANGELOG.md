@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Source-grounded decimal quantities for extracted facts. Built-in and custom
+  grounding retain a quantity only when its exact decimal, quantified phrase,
+  and verbatim unit occur in the claim object and evidence. New derivation plans
+  version the metadata policy while historical plans and checksums remain
+  unchanged; invalid optional quantities do not discard otherwise valid claims.
 - Exact owner-scoped assertion aggregation across Python, HTTP, and MCP. It
   counts every matching structured claim for an unchanged store, groups
   normalized subject/predicate/object/polarity values, retains bounded evidence

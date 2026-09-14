@@ -7,11 +7,13 @@ so the reader can see negations, conditions, and other qualifications.
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 import re
+import unicodedata
 
 import structlog
 
-from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.schema import ExtractedQuantity, ExtractionResult
 
 logger = structlog.get_logger(__name__)
 
@@ -40,6 +42,72 @@ def _mentioned(value: str, text: str) -> bool:
     if not value:
         return False
     return re.search(r"(?<!\w)" + re.escape(value) + r"(?!\w)", text, re.IGNORECASE) is not None
+
+
+_QUANTITY_NUMBER_RE = re.compile(
+    r"(?<![\w.])[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?![\d.,])"
+)
+_INEXACT_QUANTITY_RE = re.compile(
+    r"(?:[~≈<>−()]|\b(?:about|approximately|around|roughly|nearly|almost|between|"
+    r"more\s+than|less\s+than|at\s+least|at\s+most|over|under)\b)",
+    re.IGNORECASE,
+)
+
+
+def _normalize_quantity_unit(value: str) -> str:
+    return " ".join(unicodedata.normalize("NFKC", value).strip().casefold().split())
+
+
+def _unit_mentioned(unit: str, text: str) -> bool:
+    if unit == "1":
+        return True
+    if any(character.isalnum() for character in unit):
+        # Unit letters may directly follow a number ("5kg") but must not be
+        # embedded in another alphabetic word.
+        return re.search(
+            r"(?<![^\W\d_])" + re.escape(unit) + r"(?![^\W\d_])",
+            text,
+            re.IGNORECASE,
+        ) is not None
+    return unit in text
+
+
+def validate_extracted_quantity(
+    quantity: ExtractedQuantity | None,
+    *,
+    object_value: str,
+    claim_passage: str,
+) -> ExtractedQuantity | None:
+    """Return a quantity only when its decimal, unit, and object are source-bound.
+
+    Supported notation is one signed decimal token with optional comma thousands
+    separators. Ranges, scientific notation, locale decimal commas, and multiple
+    numbers are intentionally rejected instead of guessed.
+    """
+    if quantity is None:
+        return None
+    source_text = canonical_source_quote(quantity.source_text, claim_passage)
+    if source_text is None or canonical_source_quote(source_text, object_value) is None:
+        return None
+    if _INEXACT_QUANTITY_RE.search(source_text):
+        return None
+    matches = list(_QUANTITY_NUMBER_RE.finditer(source_text))
+    if len(matches) != 1:
+        return None
+    token = matches[0].group(0)
+    outside_number = source_text[:matches[0].start()] + source_text[matches[0].end():]
+    if re.search(r"\d", outside_number):
+        return None
+    try:
+        parsed = Decimal(token.replace(",", ""))
+    except InvalidOperation:
+        return None
+    unit = quantity.unit.strip()
+    if parsed != quantity.value or not _unit_mentioned(unit, source_text):
+        return None
+    if _normalize_quantity_unit(unit) == "1" and source_text.strip() != token:
+        return None
+    return quantity.model_copy(update={"source_text": source_text, "unit": unit})
 
 
 def _supporting_passage(quote: str, source: str) -> str | None:
@@ -194,11 +262,23 @@ def validate_grounding(
                 # an ordinary assertion. Hypothetical is the conservative legacy
                 # fallback until a provider supplies the actual condition.
                 epistemic_type = "hypothetical"
+            quantity = validate_extracted_quantity(
+                fact.quantity,
+                object_value=fact.object,
+                claim_passage=passage,
+            )
+            if fact.quantity is not None and quantity is None:
+                logger.warning(
+                    "grounding_quantity_discarded",
+                    subject=fact.subject,
+                    reason="Quantity is not an exact supported value and unit in the claim object",
+                )
             grounded_facts.append(fact.model_copy(update={
                 "evidence_quote": passage,
                 "replaces_object": replacement,
                 "condition": condition,
                 "epistemic_type": epistemic_type,
+                "quantity": quantity,
             }))
         else:
             logger.warning(

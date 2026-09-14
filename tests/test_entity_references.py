@@ -64,7 +64,7 @@ async def test_namesake_types_wire_correct_entities_independent_of_order(config,
         relationships = await engine._graph_store.get_edges(source_id=str(fact.id), target_id=str(entities["location"].id))
         assert len(relationships) == 1 and relationships[0].edge_type == EdgeType.MENTIONS
         plan = await engine._event_store.get_derivation_plan(event_id, user_id=user)
-        assert plan.materialization_policy == "claim_qualifiers_v5"
+        assert plan.materialization_policy == "grounded_quantities_v6"
         assert await engine.get_event_nodes(event_id, user_id=user + "-other") == []
 
 

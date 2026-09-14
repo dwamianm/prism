@@ -20,6 +20,26 @@ the admitted source. JSON normalization still applies: tuples become arrays,
 for example. This is an event-admission contract; it does not validate arbitrary
 low-level graph or table mutations.
 
+Grounded extracted quantities use a portable metadata object:
+
+```json
+{
+  "quantity": {
+    "value": "12.50",
+    "unit": "$",
+    "source_text": "$12.50",
+    "grounding": "object_decimal_v1"
+  }
+}
+```
+
+The decimal stays a string so event, graph, DuckDB, PostgreSQL JSONB, and replay
+paths preserve its exact value without binary floating-point conversion. The
+unit and source text are verbatim evidence, with only surrounding whitespace
+removed. No unit, currency, plural, or locale conversion is implied. New
+materialization plans use `grounded_quantities_v6`; older plans and their
+checksums remain unchanged.
+
 JSON object keys must remain unambiguous after normalization. A nested Python
 mapping such as `{1: "first", "1": "second"}` would otherwise serialize both
 keys as `"1"`, silently losing one value when read. Admission rejects collisions
