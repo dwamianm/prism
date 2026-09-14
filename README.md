@@ -398,9 +398,12 @@ message is admitted. This does not rewrite already journaled extraction plans.
 
 Raw `store()` and `ingest_fast()` writes accept the same timezone-aware clock,
 including through `MemoryClient`; omitted source times remain unknown. MCP
-`memory_store` also accepts `event_time`, and node responses expose source time
-and validity dates separately. None of these APIs infer a timezone for a naive
-datetime.
+`memory_store` also accepts `event_time`. Direct `store()` calls can separately
+set timezone-aware `valid_from` and exclusive `valid_to` values. `valid_to`
+requires an explicit earlier `valid_from`; invalid intervals fail before source
+admission. Node responses expose all three clocks separately. New extracted
+facts begin validity at their resolved source-effective time. None of these APIs
+infer a timezone for a naive datetime.
 
 Deferred raw events survive restart. LLM `ingest()` also queues original-source
 indexing atomically with its event, so extraction failure cannot make that source
@@ -710,8 +713,13 @@ before enabling approximate search on a large corpus.
 act on the direct node, request a structured receipt instead:
 
 ```python
+from datetime import datetime
+
 receipt = client.store_with_receipt(
-    "Use the staging key only for staging.", user_id="alice"
+    "Alice's office is Chicago.",
+    user_id="alice",
+    valid_from=datetime.fromisoformat("2025-01-01T00:00:00+00:00"),
+    valid_to=datetime.fromisoformat("2025-07-01T00:00:00+00:00"),
 )
 event_id = str(receipt.event_id)
 node_id = str(receipt.node_id)

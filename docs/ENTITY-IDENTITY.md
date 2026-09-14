@@ -14,8 +14,9 @@ This is a conservative English guard, not general coreference resolution. It
 does not disambiguate several quoted speakers inside one event or equal names
 belonging to different people.
 
-New prepared derivations identify qualifier-aware, quantity-preserving rules as
-`grounded_quantities_v6`. Prepared plans using `claim_qualifiers_v5`,
+New prepared derivations identify qualifier-aware, quantity-preserving, and
+source-effective validity rules as `temporal_validity_v7`. Prepared plans using
+`grounded_quantities_v6`, `claim_qualifiers_v5`,
 `event_local_references_v4`, and earlier policies remain valid immutable replay
 inputs.
 Previously saved plans preserve their policy, node IDs and checksums and replay

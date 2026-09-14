@@ -54,7 +54,12 @@ def _validate_dependencies(plan: DerivationPlan, current: dict[str, MemoryNode])
             raise ValueError("Only tentative or stable assertions can participate in replacement")
         if new.epistemic_type not in (EpistemicType.OBSERVED, EpistemicType.ASSERTED):
             raise ValueError("A hypothetical or unverified derivation cannot retire prior knowledge")
-        if old.event_time and new.event_time and new.event_time < old.event_time:
+        if plan.materialization_policy == "temporal_validity_v7":
+            old_effective = old.event_time or old.valid_from
+            new_effective = new.event_time or new.valid_from
+            if new_effective < old_effective:
+                raise ValueError("An older effective assertion cannot retire a later assertion")
+        elif old.event_time and new.event_time and new.event_time < old.event_time:
             raise ValueError("An older effective assertion cannot retire a later assertion")
         if edge.created_at < old.updated_at:
             raise ValueError("A replacement cannot precede its dependency's last update")
@@ -116,11 +121,23 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, claim: Extrac
                 store._create_node_sync(node)
             for edge in plan.edges:
                 store._create_edge_sync(edge)
+            published_nodes = {node.id: node for node in plan.nodes}
             for edge in plan.replacements:
-                conn.execute(
-                    "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, updated_at = ? WHERE id = ?",
-                    [str(edge.source_id), edge.created_at, str(edge.target_id)],
-                )
+                if plan.materialization_policy == "temporal_validity_v7":
+                    replacement = published_nodes[edge.source_id]
+                    conn.execute(
+                        "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, "
+                        "valid_to = CASE WHEN ? >= valid_from AND "
+                        "(valid_to IS NULL OR valid_to > ?) THEN ? ELSE valid_to END, "
+                        "updated_at = ? WHERE id = ?",
+                        [str(edge.source_id), replacement.valid_from, replacement.valid_from,
+                         replacement.valid_from, edge.created_at, str(edge.target_id)],
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, updated_at = ? WHERE id = ?",
+                        [str(edge.source_id), edge.created_at, str(edge.target_id)],
+                    )
                 store._create_edge_sync(edge)
             validate_duck_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
             receipt = _new_receipt(plan, claim)
@@ -182,11 +199,23 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: E
             )
         for edge in plan.edges:
             await store._create_edge_on_connection(conn, edge)
+        published_nodes = {node.id: node for node in plan.nodes}
         for edge in plan.replacements:
-            await conn.execute(
-                "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, updated_at = $2 WHERE id = $3",
-                str(edge.source_id), edge.created_at, str(edge.target_id),
-            )
+            if plan.materialization_policy == "temporal_validity_v7":
+                replacement = published_nodes[edge.source_id]
+                await conn.execute(
+                    "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, "
+                    "valid_to = CASE WHEN $2 >= valid_from AND "
+                    "(valid_to IS NULL OR valid_to > $2) THEN $2 ELSE valid_to END, "
+                    "updated_at = $3 WHERE id = $4",
+                    str(edge.source_id), replacement.valid_from, edge.created_at,
+                    str(edge.target_id),
+                )
+            else:
+                await conn.execute(
+                    "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, updated_at = $2 WHERE id = $3",
+                    str(edge.source_id), edge.created_at, str(edge.target_id),
+                )
             await store._create_edge_on_connection(conn, edge)
         await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
         receipt = _new_receipt(plan, claim)

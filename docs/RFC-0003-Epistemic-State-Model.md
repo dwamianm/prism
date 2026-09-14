@@ -166,6 +166,14 @@ cannot retire existing facts. Unnamed changes remain alongside prior evidence
 until a more informed resolution is available. The lower-level supersedence
 detector retains its explicit caller-driven legacy matching mode.
 
+Newly extracted facts start `valid_from` at their resolved source-effective
+time. A valid explicit update in a `temporal_validity_v7` plan atomically retires
+the previous claim and closes its half-open interval at the replacement's
+`valid_from`. Existing derivation policies replay unchanged. A legacy row whose
+stored start is later than that boundary remains lifecycle-superseded without an
+inverted `valid_to`; this preserves readable historical bytes while keeping it
+out of current state.
+
 Explicit backend supersedence, contradiction and resolution accept optional
 evidence only when the event exists in the affected nodes' owner and scope.
 Validation occurs inside the state/relationship transaction; an invalid item in

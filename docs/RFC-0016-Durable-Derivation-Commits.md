@@ -187,8 +187,8 @@ Legacy sources are not automatically enrolled in extraction work. Unmanaged or
 ambiguous staging remains conservatively retained; collection only covers the
 explicitly replaced, uniquely owned revision protocol above.
 
-Historical plans through materialization policy `claim_qualifiers_v5` keep their
-original behavior. Current plans use `grounded_quantities_v6`: relationship
+Historical plans through materialization policy `grounded_quantities_v6` keep
+their original behavior. Current plans use `temporal_validity_v7`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
 edges, unresolved personal references remain event-local, and claim polarity and
 explicit conditions are preserved in node metadata. A fact can also carry one
@@ -198,8 +198,14 @@ its unit or symbol remains verbatim. Invalid optional quantity output is dropped
 without discarding the grounded claim. Type-qualified object
 references avoid arbitrary namesake links. Conditional claims start with an
 unknown condition state and stay out of DEFAULT retrieval until confirmed.
+Each new fact also sets `valid_from` to its resolved source-effective time. A
+valid newer replacement closes the referenced prior interval in the same graph
+transaction. The commit skips interval closure when the boundary precedes a
+legacy stored start, avoiding an inverted range while still publishing lifecycle,
+supersedence, edge, and receipt atomically.
 Existing `source_passage_v1`, `typed_references_v2`, and
-`event_local_references_v4` and `claim_qualifiers_v5` plans remain readable and
+`event_local_references_v4`, `claim_qualifiers_v5`, and
+`grounded_quantities_v6` plans remain readable and
 replay their saved artifacts unchanged. Recovery never regenerates an existing
 plan under the current policy implicitly; historical committed edges are not
 migrated.

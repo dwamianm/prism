@@ -171,6 +171,10 @@ async def store(
     confidence: float | None = None,
     epistemic_type: EpistemicType | None = None,
     source_type: SourceType | None = None,
+    event_time: datetime | None = None,
+    valid_from: datetime | None = None,
+    valid_to: datetime | None = None,
+    ttl_days: int | None = ...,
 ) -> str
 ```
 
@@ -196,6 +200,10 @@ are outside this job's completion boundary.
 | `confidence` | `float \| None` | `None` | Confidence 0.0-1.0. If None, derived from confidence matrix |
 | `epistemic_type` | `EpistemicType \| None` | `None` | If None, inferred from node_type |
 | `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role; `role="tool"` selects `TOOL_OUTPUT` |
+| `event_time` | `datetime \| None` | `None` | Timezone-aware source event time; remains separate from admission and validity |
+| `valid_from` | `datetime \| None` | `None` | Timezone-aware inclusive validity start; omission uses admission time |
+| `valid_to` | `datetime \| None` | `None` | Exclusive validity end; requires an explicit earlier `valid_from` |
+| `ttl_days` | `int \| None` | `...` | Omit for configured default, pass `None` to disable, or set a nonnegative override |
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
 
@@ -203,6 +211,13 @@ An explicit `EpistemicType.CONDITIONAL` requires
 `metadata={"condition": "..."}`. New conditional memories always begin with
 `condition_state="unknown"`; setting a resolved state during creation is
 rejected so an evaluation cannot bypass its audit record.
+
+Validity intervals use `[valid_from, valid_to)`. Python, HTTP `/v1/store`, and
+MCP `memory_store` preserve the same fields. Timezone-free values, an end without
+an explicit start, and empty or inverted intervals fail before the immutable
+source is admitted. New extracted facts use their resolved source-effective time
+as `valid_from`; source-grounded replacements close the previous interval in the
+same derivation transaction when the stored interval can be closed safely.
 
 ---
 

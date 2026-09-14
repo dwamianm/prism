@@ -100,7 +100,9 @@ class PlanningGraph:
             raise ValueError("Invalid planned replacement")
         # Late-arriving historical information is retained without retiring a
         # fact that became effective later. Arrival time is not authority.
-        if old.event_time and new.event_time and new.event_time < old.event_time:
+        old_effective = old.event_time or old.valid_from
+        new_effective = new.event_time or new.valid_from
+        if new_effective < old_effective:
             return
         self.replacements.append(MemoryEdge(
             source_id=new.id, target_id=old.id, edge_type=EdgeType.SUPERSEDES,
@@ -166,7 +168,7 @@ class PlanningIndexes:
             raise ValueError("Embedding configuration changed during planning")
         event = self.graph.event
         return DerivationPlan(
-            materialization_policy="grounded_quantities_v6",
+            materialization_policy="temporal_validity_v7",
             event_id=event.id, user_id=event.user_id, scope=event.scope, content_hash=event.content_hash,
             nodes=nodes, references=references, edges=tuple(self.graph.edges),
             replacements=tuple(self.graph.replacements),

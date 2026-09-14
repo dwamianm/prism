@@ -646,6 +646,11 @@ class IngestionPipeline:
             fact_decay_profile = DEFAULT_DECAY_PROFILE_MAPPING.get(
                 fact_epistemic_type, DecayProfile.MEDIUM
             )
+            effective_time = (
+                datetime.fromisoformat(resolved_date)
+                if resolved_date
+                else (event.event_time or event.timestamp)
+            )
             fact_node = MemoryNode(
                 node_type=node_type,
                 content=fact_content,
@@ -660,7 +665,8 @@ class IngestionPipeline:
                 decay_profile=fact_decay_profile,
                 metadata=fact_metadata,
                 evidence_refs=[event.id],
-                event_time=datetime.fromisoformat(resolved_date) if resolved_date else (event.event_time or event.timestamp),
+                event_time=effective_time,
+                valid_from=effective_time,
             )
             fact_node_id = await writer.create_node(fact_node)
 

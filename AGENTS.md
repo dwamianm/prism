@@ -60,11 +60,14 @@ and old raw checksums must remain unchanged. Do not restore Pydantic JSON
 serialization that silently converts non-finite metadata to null. See
 `docs/METADATA.md` for exact compatibility limits.
 
-New extraction plans use `grounded_quantities_v6`. A quantity survives only
+New extraction plans use `temporal_validity_v7`. A quantity survives only
 when one supported decimal, its quantified phrase, and its verbatim unit occur
 in both the claim object and source evidence. Invalid optional quantities are
 dropped without discarding the claim. Older plan policies and checksums remain
-unchanged; do not infer unit aliases or rewrite historical metadata.
+unchanged; do not infer unit aliases or rewrite historical metadata. Extracted
+facts start validity at their resolved source-effective time. Valid newer
+replacements close the prior interval atomically when the boundary does not
+precede its stored start; legacy intervals that would invert remain unchanged.
 
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 

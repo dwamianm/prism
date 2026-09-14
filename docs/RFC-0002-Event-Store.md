@@ -77,6 +77,15 @@ Raw NOTE recovery retains the saved source clock, and extracted claims without a
 resolved temporal reference inherit it. Explicit older-effective replacements
 remain historical rather than retiring later facts. Existing saved plans retain
 their original timestamps on retry; this is not a retroactive temporal migration.
+New extracted facts set `valid_from` to that resolved source-effective time.
+Direct Python, HTTP, and MCP storage can provide a separate timezone-aware
+`valid_from` and exclusive `valid_to`; omission retains the admission-time start.
+An end requires an explicit earlier start, and invalid intervals fail before the
+event or recovery job is admitted. New source-grounded replacements close the
+prior validity interval inside the derivation commit when the boundary is not
+earlier than its stored start. Older ingestion-based intervals that cannot be
+closed without inversion retain their stored dates and are retired by lifecycle
+and supersedence state.
 Timezone-free new imports are rejected; missing source time is not guessed.
 This admission check also applies to Python `store()` and `ingest_fast()` and
 their synchronous client equivalents, before any event or recovery job is

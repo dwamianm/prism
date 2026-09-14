@@ -157,6 +157,7 @@ async def test_abrupt_process_exit_recovers_original_typed_request(config, user,
 
     script = '''
 import asyncio, hashlib, os, sys
+from datetime import datetime, timezone
 from prme import MemoryEngine, PRMEConfig, NodeType, Scope
 import prme.storage.engine as engine_module
 class Provider:
@@ -188,6 +189,8 @@ async def main():
         await engine.store('Use cobalt telescopes for observation', user_id=user,
                            node_type=NodeType.INSTRUCTION, scope=Scope.PROJECT,
                            session_id='observation', confidence=.87, ttl_days=43,
+                           valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+                           valid_to=datetime(2026, 1, 1, tzinfo=timezone.utc),
                            metadata={'source': 'operator'})
 asyncio.run(main())
 '''
@@ -211,7 +214,8 @@ asyncio.run(main())
         assert (await engine.process_pending(user_id=user)).processed == (0 if boundary == "complete" else 1)
         node = (await engine.get_event_nodes(eid, user_id=user))[0]
         for field in ("id", "node_type", "scope", "session_id", "metadata", "ttl_days",
-                      "created_at", "valid_from", "event_time", "evidence_refs", "epistemic_type", "source_type"):
+                      "created_at", "valid_from", "valid_to", "event_time", "evidence_refs",
+                      "epistemic_type", "source_type"):
             assert getattr(node, field) == getattr(request.node, field), field
         assert node.confidence == pytest.approx(request.node.confidence)
         assert (await engine.processing_status(eid, user_id=user)).status == "complete"

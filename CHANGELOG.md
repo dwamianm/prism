@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Explicit half-open validity intervals for direct writes across async/sync
+  Python, HTTP, and MCP. New extracted facts start validity at their resolved
+  source-effective time, and a source-grounded replacement closes the prior
+  interval atomically when doing so cannot invert a legacy interval. Invalid or
+  timezone-free intervals fail before source admission; historical derivation
+  plans retain their original bytes and behavior.
 - Exact temporal assertion state across async/sync Python, HTTP, and MCP. A
   required owner, scope, structured subject/predicate, and timezone aware
   validity instant produce auditable current candidates plus stored history,

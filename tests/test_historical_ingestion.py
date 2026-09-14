@@ -50,6 +50,7 @@ async def test_historical_clock_survives_failed_extraction_and_restart(config, u
         fact = next(n for n in nodes if n.node_type == NodeType.FACT)
         raw = next(n for n in nodes if n.node_type == NodeType.NOTE)
         assert fact.event_time == SOURCE_TIME - timedelta(days=1)
+        assert fact.valid_from == fact.event_time
         assert raw.event_time == SOURCE_TIME
         assert fact.created_at > SOURCE_TIME and raw.created_at == event.created_at
         assert fact.session_id == raw.session_id == "archive"
@@ -75,6 +76,7 @@ async def test_batch_uses_each_source_clock_and_keeps_omitted_time(config, user,
                           if n.node_type == NodeType.FACT) for eid in ids]
             assert facts[0].event_time == SOURCE_TIME - timedelta(days=1)
             assert facts[1].event_time == second.timestamp - timedelta(days=1)
+            assert all(fact.valid_from == fact.event_time for fact in facts)
 
 
 @pytest.mark.parametrize("pipeline_enabled", [True, False])
@@ -98,7 +100,9 @@ async def test_http_historical_ingestion_and_validation(config, user, monkeypatc
             event = (await client.get(f"/v1/events/{eid}")).json()
             assert datetime.fromisoformat(event["event_time"]) == SOURCE_TIME
             nodes = await engine.get_event_nodes(eid, user_id=user)
-            assert next(n for n in nodes if n.node_type == NodeType.FACT).event_time == SOURCE_TIME - timedelta(days=1)
+            fact = next(n for n in nodes if n.node_type == NodeType.FACT)
+            assert fact.event_time == SOURCE_TIME - timedelta(days=1)
+            assert fact.valid_from == fact.event_time
             response = await client.post("/v1/ingest", json={**body, "event_time": "2024-03-10T01:30:00"})
             assert response.status_code == 422
             assert len(await engine.get_events(user)) == 1
@@ -110,8 +114,10 @@ def test_sync_client_preserves_historical_source_and_metadata(config, user, monk
         eid = client.ingest(SOURCE, user_id=user, event_time=SOURCE_TIME, metadata={"import": "history"})
         event = client.get_event(eid, user_id=user)
         assert event.event_time == SOURCE_TIME and event.metadata == {"import": "history"}
-        assert next(n for n in client.get_event_nodes(eid, user_id=user)
-                    if n.node_type == NodeType.FACT).event_time == SOURCE_TIME - timedelta(days=1)
+        fact = next(n for n in client.get_event_nodes(eid, user_id=user)
+                    if n.node_type == NodeType.FACT)
+        assert fact.event_time == SOURCE_TIME - timedelta(days=1)
+        assert fact.valid_from == fact.event_time
 
 
 @pytest.mark.parametrize("source_year,old_state", [(2024, "tentative"), (2026, "superseded")])
@@ -135,7 +141,73 @@ async def test_import_order_does_not_override_effective_replacement_time(config,
         by_value = {node.metadata["object"]: node for node in facts}
         assert by_value["Rust"].lifecycle_state.value == old_state
         assert by_value["Python"].event_time == datetime(source_year, 3, 9, tzinfo=timezone.utc)
+        assert by_value["Python"].valid_from == by_value["Python"].event_time
         assert by_value["Rust"].event_time == datetime(2025, 1, 1, tzinfo=timezone.utc)
+        assert by_value["Rust"].valid_to == (
+            by_value["Python"].valid_from if old_state == "superseded" else None
+        )
+
+
+async def test_replacement_does_not_invert_legacy_ingestion_time_interval(
+    config, user, monkeypatch
+):
+    async with MemoryEngine.open(config) as engine:
+        initial = "Alice uses Rust."
+        old_extraction = extraction()
+        old_extraction.facts[0].evidence_quote = initial
+        old_extraction.facts[0].temporal_ref = None
+        monkeypatch.setattr(
+            engine._pipeline._extraction_provider,
+            "extract",
+            AsyncMock(return_value=old_extraction),
+        )
+        old_event = await engine.ingest(
+            initial,
+            user_id=user,
+            event_time=datetime(2025, 1, 1, tzinfo=timezone.utc),
+            wait_for_extraction=True,
+        )
+        old = next(
+            node for node in await engine.get_event_nodes(old_event, user_id=user)
+            if node.node_type == NodeType.FACT
+        )
+        legacy_start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        if engine._conn is not None:
+            engine._conn.execute(
+                "UPDATE nodes SET valid_from = ? WHERE id = ?",
+                [legacy_start, str(old.id)],
+            )
+        else:
+            async with engine._pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE nodes SET valid_from = $1 WHERE id = $2",
+                    legacy_start,
+                    str(old.id),
+                )
+        imported = "Alice switched from Rust to Python."
+        update = extraction()
+        update.facts[0].evidence_quote = imported
+        update.facts[0].object = "Python"
+        update.facts[0].temporal_ref = None
+        update.facts[0].temporal_intent = "update"
+        update.facts[0].replaces_object = "Rust"
+        monkeypatch.setattr(
+            engine._pipeline._extraction_provider,
+            "extract",
+            AsyncMock(return_value=update),
+        )
+        await engine.ingest(
+            imported,
+            user_id=user,
+            event_time=datetime(2025, 6, 1, tzinfo=timezone.utc),
+            wait_for_extraction=True,
+        )
+        retired = await engine.get_node(
+            str(old.id), user_id=user, include_superseded=True
+        )
+        assert retired.lifecycle_state.value == "superseded"
+        assert retired.valid_from == legacy_start
+        assert retired.valid_to is None
 
 
 async def test_mcp_historical_ingest_validates_before_admission(config, user, monkeypatch):
@@ -169,5 +241,7 @@ async def test_mcp_historical_ingest_validates_before_admission(config, user, mo
             event = await engine.get_event(eid, user_id=user)
             assert event.event_time == SOURCE_TIME
             assert event.session_id == "archive" and event.metadata == {"import": "history"}
-            assert next(n for n in await engine.get_event_nodes(eid, user_id=user)
-                        if n.node_type == NodeType.FACT).event_time == SOURCE_TIME - timedelta(days=1)
+            fact = next(n for n in await engine.get_event_nodes(eid, user_id=user)
+                        if n.node_type == NodeType.FACT)
+            assert fact.event_time == SOURCE_TIME - timedelta(days=1)
+            assert fact.valid_from == fact.event_time

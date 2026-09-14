@@ -148,6 +148,8 @@ async def memory_store(
     node_type: str = "note",
     scope: str = "personal",
     event_time: Optional[AwareDatetime] = None,
+    valid_from: Optional[AwareDatetime] = None,
+    valid_to: Optional[AwareDatetime] = None,
     role: str = "user",
     session_id: Optional[str] = None,
     metadata: Optional[dict[str, Any]] = None,
@@ -168,6 +170,8 @@ async def memory_store(
             preference, task, instruction, summary, note. Default: note.
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
         event_time: Original source time with timezone; separate from admission and validity.
+        valid_from: Optional timezone-aware start of real-world claim validity.
+        valid_to: Optional exclusive validity end; requires valid_from.
         role: Source role used for default provenance inference.
         session_id: Optional conversation or episode identifier.
         metadata: Optional structured application metadata.
@@ -204,6 +208,8 @@ async def memory_store(
             epistemic_type=epistemic_type,
             source_type=source_type,
             event_time=event_time,
+            valid_from=valid_from,
+            valid_to=valid_to,
         )
 
         return json.dumps({

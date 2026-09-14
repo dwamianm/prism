@@ -98,10 +98,14 @@ class TestToolDiscovery:
 class TestStore:
     async def test_store_source_clock_is_returned_separately_from_validity(self, session):
         clock = "2025-04-03T09:15:00+05:30"
+        valid_from = "2025-04-04T00:00:00+05:30"
+        valid_to = "2025-05-04T00:00:00+05:30"
         result = await session.call_tool("memory_store", {
             "content": "Imported telescope observation",
             "user_id": "source-clock-user",
             "event_time": clock,
+            "valid_from": valid_from,
+            "valid_to": valid_to,
         })
         assert not result.isError
         stored = json.loads(result.content[0].text)
@@ -111,8 +115,19 @@ class TestStore:
         })
         node = json.loads(result.content[0].text)
         assert datetime.fromisoformat(node["event_time"]) == datetime.fromisoformat(clock)
-        assert datetime.fromisoformat(node["valid_from"]) > datetime.fromisoformat(clock)
-        assert node["valid_to"] is None
+        assert datetime.fromisoformat(node["valid_from"]) == datetime.fromisoformat(valid_from)
+        assert datetime.fromisoformat(node["valid_to"]) == datetime.fromisoformat(valid_to)
+
+    async def test_store_rejects_invalid_validity_window_before_admission(self, session):
+        result = await session.call_tool("memory_store", {
+            "content": "Incomplete validity interval",
+            "user_id": "validity-user",
+            "valid_to": "2025-05-04T00:00:00Z",
+        })
+        assert not result.isError
+        assert json.loads(result.content[0].text) == {
+            "error": "valid_to requires an explicit valid_from"
+        }
 
     async def test_store_rejects_timezone_free_clock_before_engine_write(self, session, monkeypatch):
         write = AsyncMock(side_effect=AssertionError("invalid clock reached storage"))

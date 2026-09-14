@@ -251,6 +251,8 @@ class MemoryClient:
         epistemic_type: EpistemicType | None = None,
         source_type: SourceType | None = None,
         event_time: datetime | None = None,
+        valid_from: datetime | None = None,
+        valid_to: datetime | None = None,
         ttl_days: int | None = ...,
     ) -> str:
         """Store a memory. Returns the event UUID.
@@ -271,6 +273,8 @@ class MemoryClient:
                 epistemic_type=epistemic_type,
                 source_type=source_type,
                 event_time=event_time,
+                valid_from=valid_from,
+                valid_to=valid_to,
                 ttl_days=ttl_days,
             )
         )
@@ -289,6 +293,8 @@ class MemoryClient:
         epistemic_type: EpistemicType | None = None,
         source_type: SourceType | None = None,
         event_time: datetime | None = None,
+        valid_from: datetime | None = None,
+        valid_to: datetime | None = None,
         ttl_days: int | None = ...,
     ) -> StoreReceipt:
         """Store a memory and return its event, node, and processing status."""
@@ -304,6 +310,8 @@ class MemoryClient:
             epistemic_type=epistemic_type,
             source_type=source_type,
             event_time=event_time,
+            valid_from=valid_from,
+            valid_to=valid_to,
             ttl_days=ttl_days,
         ))
 

@@ -100,6 +100,12 @@ class StoreRequest(BaseModel):
     source_type: SourceType | None = None
     confidence: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     event_time: AwareDatetime | None = None
+    valid_from: AwareDatetime | None = Field(
+        default=None, description="Start of the claim validity interval"
+    )
+    valid_to: AwareDatetime | None = Field(
+        default=None, description="Exclusive end; requires valid_from"
+    )
     ttl_days: int | None = Field(default=None, ge=0, strict=True,
                                 description="Omit for configured TTL; null disables TTL; integer overrides it")
     metadata: dict[str, Any] | None = Field(

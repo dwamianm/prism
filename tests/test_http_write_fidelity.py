@@ -35,7 +35,10 @@ async def test_store_preserves_explicit_fields_and_ttl_presence(config, user):
                 body = {"content": "Observation recorded by the telescope", "role": "tool",
                         "session_id": "observation-session", "node_type": "note", "scope": "project",
                         "source_type": "tool_output", "epistemic_type": "observed", "confidence": .81,
-                        "event_time": "2024-03-10T01:30:00-06:00", "metadata": {"instrument": "cobalt"}, **extra}
+                        "event_time": "2024-03-10T01:30:00-06:00",
+                        "valid_from": "2024-03-11T00:00:00-06:00",
+                        "valid_to": "2024-04-11T00:00:00-06:00",
+                        "metadata": {"instrument": "cobalt"}, **extra}
                 response = await client.post("/v1/store", json=body)
                 assert response.status_code == 200, response.text
                 receipt = response.json()
@@ -46,6 +49,8 @@ async def test_store_preserves_explicit_fields_and_ttl_presence(config, user):
                 assert event["metadata"] == node["metadata"] == body["metadata"]
                 assert datetime.fromisoformat(event["event_time"]) == datetime.fromisoformat(body["event_time"])
                 assert datetime.fromisoformat(node["event_time"]) == datetime.fromisoformat(body["event_time"])
+                assert datetime.fromisoformat(node["valid_from"]) == datetime.fromisoformat(body["valid_from"])
+                assert datetime.fromisoformat(node["valid_to"]) == datetime.fromisoformat(body["valid_to"])
                 assert node["confidence"] == pytest.approx(.81) and node["source_type"] == "tool_output"
                 assert node["epistemic_type"] == "observed" and node["scope"] == "project"
                 assert node["ttl_days"] == expected_ttl
@@ -57,10 +62,27 @@ async def test_store_preserves_explicit_fields_and_ttl_presence(config, user):
                 assert item[field] == node[field]
 
 
+async def test_store_rejects_invalid_validity_before_source_admission(config, user):
+    async with MemoryEngine.open(config) as engine:
+        async with client_for(app_for(config, engine, user)) as client:
+            response = await client.post(
+                "/v1/store",
+                json={
+                    "content": "Incomplete interval",
+                    "valid_to": "2025-02-01T00:00:00Z",
+                },
+            )
+        assert response.status_code == 422
+        assert response.json()["detail"] == "valid_to requires an explicit valid_from"
+        assert await engine.get_events(user) == []
+
+
 @pytest.mark.parametrize("endpoint,extra", [
     ("store", {"event_tim": "typo"}), ("store", {"ttl_days": True}),
     ("store", {"ttl_days": -1}), ("store", {"confidence": 1.1}),
     ("store", {"event_time": "2024-01-01T00:00:00"}),
+    ("store", {"valid_from": "2024-01-01T00:00:00"}),
+    ("store", {"valid_from": "2024-01-01T00:00:00Z", "valid_to": "2024-02-01T00:00:00"}),
     ("ingest", {"namespace": "unimplemented-private-space"}),
     ("ingest", {"source_type": "tool_output"}), ("ingest", {"wait_for_extraction": "false"}),
 ])

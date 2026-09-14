@@ -37,8 +37,9 @@ The decimal stays a string so event, graph, DuckDB, PostgreSQL JSONB, and replay
 paths preserve its exact value without binary floating-point conversion. The
 unit and source text are verbatim evidence, with only surrounding whitespace
 removed. No unit, currency, plural, or locale conversion is implied. New
-materialization plans use `grounded_quantities_v6`; older plans and their
-checksums remain unchanged.
+materialization plans use `temporal_validity_v7`; the quantity representation is
+unchanged from `grounded_quantities_v6`, and older plans and their checksums
+remain unchanged.
 
 JSON object keys must remain unambiguous after normalization. A nested Python
 mapping such as `{1: "first", "1": "second"}` would otherwise serialize both

@@ -611,6 +611,8 @@ class MemoryEngine:
         epistemic_type: EpistemicType | None = None,
         source_type: SourceType | None = None,
         event_time: datetime | None = None,
+        valid_from: datetime | None = None,
+        valid_to: datetime | None = None,
         ttl_days: int | None = ...,
     ) -> str:
         """Store content across all four backends in one call.
@@ -641,6 +643,10 @@ class MemoryEngine:
             event_time: Optional timezone-aware datetime of when the event
                 happened in the source. None preserves an unknown source time;
                 admission and validity times remain separate.
+            valid_from: Optional timezone-aware start of the claim's real-world
+                validity. Omission uses the node admission time.
+            valid_to: Optional exclusive end of real-world validity. Requires
+                an explicit valid_from and must be later.
             ttl_days: Time-to-live in days from creation. Ellipsis (default)
                 means look up from organizer config by node_type. None means
                 no TTL. An explicit int overrides the config default.
@@ -648,9 +654,10 @@ class MemoryEngine:
         Returns:
             String UUID of the created event (source of truth ID).
         """
-        from prme.ingestion.temporal import validate_source_time
+        from prme.ingestion.temporal import validate_source_time, validate_validity_window
 
         validate_source_time(event_time)
+        validate_validity_window(valid_from, valid_to)
         # Infer epistemic_type and source_type if not provided
         # Lazy imports to avoid circular dependencies
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
@@ -750,6 +757,11 @@ class MemoryEngine:
         else:
             resolved_ttl = ttl_days
 
+        node_kwargs: dict[str, Any] = {}
+        if valid_from is not None:
+            node_kwargs["valid_from"] = valid_from
+        if valid_to is not None:
+            node_kwargs["valid_to"] = valid_to
         node = MemoryNode(
             user_id=user_id,
             session_id=session_id,
@@ -767,6 +779,7 @@ class MemoryEngine:
             decay_profile=decay_profile,
             event_time=event_time,
             ttl_days=resolved_ttl,
+            **node_kwargs,
         )
         # Acknowledged work retains all explicit node values before graph or
         # index writes. A restart cannot reinterpret a FACT/INSTRUCTION as NOTE.
@@ -916,6 +929,8 @@ class MemoryEngine:
         epistemic_type: EpistemicType | None = None,
         source_type: SourceType | None = None,
         event_time: datetime | None = None,
+        valid_from: datetime | None = None,
+        valid_to: datetime | None = None,
         ttl_days: int | None = ...,
     ) -> StoreReceipt:
         """Store one direct memory and return its source, node, and work status.
@@ -941,6 +956,8 @@ class MemoryEngine:
             epistemic_type=epistemic_type,
             source_type=source_type,
             event_time=event_time,
+            valid_from=valid_from,
+            valid_to=valid_to,
             ttl_days=ttl_days,
         )
         try:

@@ -209,7 +209,7 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONRes
         "role": body.role,
     }
     for name in ("node_type", "scope", "epistemic_type", "metadata", "session_id",
-                 "source_type", "confidence", "event_time"):
+                 "source_type", "confidence", "event_time", "valid_from", "valid_to"):
         value = getattr(body, name)
         if value is not None:
             kwargs[name] = value

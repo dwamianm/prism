@@ -14,7 +14,12 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.ingest("Alice used Rust yesterday", user_id="alice",
                               event_time=datetime(2024, 3, 10, tzinfo=timezone.utc),
                               metadata={"source": "import"}), str)
-    assert_type(client.store_with_receipt("Alice uses Rust", user_id="alice"), StoreReceipt)
+    assert_type(client.store_with_receipt(
+        "Alice uses Rust",
+        user_id="alice",
+        valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        valid_to=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    ), StoreReceipt)
     assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)
     assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
