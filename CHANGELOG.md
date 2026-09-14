@@ -19,7 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registers the backend, and safely handles repeat installation. A companion
   launcher durably checkpoints each reader response, preserves exact prompt
   rows across retries, rejects configuration drift, and supports explicit
-  `reasoning_effort: none` for Ollama development runs.
+  `reasoning_effort: none` for Ollama development runs. Schema 3 packs persist a
+  stable retrieval reference clock; schema 2 packs derive it without mutation
+  and remain read-only, preventing saved-run ranking drift across wall-clock
+  dates.
 - A matched raw-store versus real `ingest()` evaluation profile for
   LongMemEval source evidence. Extracted runs freeze the local model digest and
   full configuration before generation, require durable extraction completion,

@@ -117,7 +117,16 @@ content, or an interrupted partial insert, fails explicitly instead of silently
 reusing stale evidence or duplicating state. The recovery action for an
 interrupted benchmark insert is to rebuild that scratch pack. The manifest
 records source-state and inserted-node counts, and long trajectories checkpoint
-and print progress every 100 nodes.
+and print progress every 100 nodes. Schema 3 also records the latest successfully
+inserted event time as the retrieval reference clock. Every query against that
+pack reuses the same clock, so recency and relative-time scoring do not drift
+when a saved run is resumed days later.
+
+Existing schema 2 packs remain queryable without rewriting their evidence. The
+adapter derives their clock from the newest stored node and marks the source as
+`legacy_max_created_at` in post-query metadata. They are read-only: rebuild a
+schema 3 scratch pack before adding trajectories. A schema 3 pack with completed
+trajectories but no clock fails closed rather than falling back to wall time.
 
 `save_memory()` includes the adapter manifest, copied screenshot attachments,
 PRME event and operation logs, graph tables, vector index, and lexical index.
@@ -140,6 +149,8 @@ reader still receives that question image from the official harness, and PRME
 can return source screenshots, but retrieval selection itself is text-only. The
 post-query metadata records this limitation. A result must therefore be labelled
 as text retrieval with multimodal evidence return, not visual query retrieval.
+The metadata also records the exact query reference time and whether the clock
+came from the schema 3 manifest or a read-only schema 2 pack.
 
 ## Evaluation status and resources
 

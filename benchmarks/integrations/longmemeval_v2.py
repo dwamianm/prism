@@ -11,13 +11,22 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 import shutil
 import tempfile
 import threading
 from typing import Any
 
-from prme import EpistemicType, MemoryClient, NodeType, PRMEConfig, Scope, SourceType
+from prme import (
+    EpistemicType,
+    LifecycleState,
+    MemoryClient,
+    NodeType,
+    PRMEConfig,
+    Scope,
+    SourceType,
+)
 from prme.config import EmbeddingConfig
 from prme.retrieval.config import PackingConfig
 
@@ -53,7 +62,8 @@ except ImportError:  # Imported from PRME's own benchmark/test environment.
 
 
 UPSTREAM_REVISION = "2cc8c540bdb87fe6761629b585e727e1c4704520"
-ADAPTER_SCHEMA_VERSION = 2
+ADAPTER_SCHEMA_VERSION = 3
+_READABLE_SCHEMA_VERSIONS = {2, ADAPTER_SCHEMA_VERSION}
 _MANIFEST_NAME = "longmemeval_v2_manifest.json"
 _PACK_NAME = "prme_pack"
 _ALLOWED_PARAMS = {
@@ -213,6 +223,8 @@ class PRMEMemory(Memory):
         self._lock = threading.RLock()
         self._client: MemoryClient | None = None
         self._manifest: dict[str, Any] = {}
+        self._query_reference_time: datetime | None = None
+        self._query_clock_source = "uninitialized"
         self._open(self._root)
 
     @property
@@ -257,8 +269,9 @@ class PRMEMemory(Memory):
         manifest_path = root / _MANIFEST_NAME
         if manifest_path.exists():
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            schema_version = manifest.get("schema_version")
             require(
-                manifest.get("schema_version") == ADAPTER_SCHEMA_VERSION
+                schema_version in _READABLE_SCHEMA_VERSIONS
                 and manifest.get("upstream_revision") == UPSTREAM_REVISION
                 and isinstance(manifest.get("trajectories"), dict),
                 "incompatible LongMemEval-V2 adapter manifest",
@@ -269,11 +282,50 @@ class PRMEMemory(Memory):
             self._manifest = {
                 "schema_version": ADAPTER_SCHEMA_VERSION,
                 "upstream_revision": UPSTREAM_REVISION,
+                "query_reference_time": None,
                 "trajectories": {},
             }
             self._write_manifest()
         self._root = root
         self._client = MemoryClient(config=self._config(root))
+        if self._manifest["schema_version"] == 2:
+            nodes = self._client.query_nodes(
+                user_id=self.user_id,
+                scope=Scope.PROJECT,
+                lifecycle_states=list(LifecycleState),
+                limit=1,
+            )
+            complete = any(
+                record.get("status") == "complete"
+                for record in self._manifest["trajectories"].values()
+            )
+            require(bool(nodes) or not complete, "legacy adapter pack has no query clock source")
+            self._query_reference_time = nodes[0].created_at if nodes else None
+            self._query_clock_source = "legacy_max_created_at"
+        else:
+            raw_reference_time = self._manifest.get("query_reference_time")
+            if raw_reference_time is None:
+                self._query_reference_time = None
+            else:
+                require(
+                    isinstance(raw_reference_time, str),
+                    "adapter query_reference_time must be an ISO timestamp",
+                )
+                parsed = datetime.fromisoformat(raw_reference_time.replace("Z", "+00:00"))
+                require(
+                    parsed.utcoffset() is not None,
+                    "adapter query_reference_time must include an offset",
+                )
+                self._query_reference_time = parsed.astimezone(timezone.utc)
+            complete = any(
+                record.get("status") == "complete"
+                for record in self._manifest["trajectories"].values()
+            )
+            require(
+                self._query_reference_time is not None or not complete,
+                "complete adapter pack is missing its query clock",
+            )
+            self._query_clock_source = "manifest"
 
     def _ensure_client(self) -> MemoryClient:
         if self._client is None:
@@ -335,6 +387,10 @@ class PRMEMemory(Memory):
             )
 
     def insert(self, trajectory: dict[str, object]) -> None:
+        require(
+            self._manifest.get("schema_version") == ADAPTER_SCHEMA_VERSION,
+            "LongMemEval-V2 schema 2 packs are read-only; rebuild to insert trajectories",
+        )
         payload = _trajectory_payload(trajectory)
         trajectory_id = str(payload["id"])
         states = list(payload["states"])
@@ -375,6 +431,7 @@ class PRMEMemory(Memory):
             self._write_manifest()
             client = self._ensure_client()
             node_count = 0
+            last_event_id: str | None = None
             try:
                 action_lines: list[str] = []
                 for position, state in enumerate(states):
@@ -407,7 +464,7 @@ class PRMEMemory(Memory):
                     self.max_chunk_chars,
                 )
                 for chunk_index, content in enumerate(summary_chunks):
-                    client.store(
+                    last_event_id = client.store(
                         content,
                         user_id=self.user_id,
                         session_id=trajectory_id,
@@ -457,7 +514,7 @@ class PRMEMemory(Memory):
                     self.max_chunk_chars,
                 )
                 for chunk_index, content in enumerate(procedure_chunks):
-                    client.store(
+                    last_event_id = client.store(
                         content,
                         user_id=self.user_id,
                         session_id=trajectory_id,
@@ -522,7 +579,7 @@ class PRMEMemory(Memory):
                         self.max_chunk_chars,
                     )
                     for chunk_index, content in enumerate(chunks):
-                        client.store(
+                        last_event_id = client.store(
                             content,
                             user_id=self.user_id,
                             session_id=trajectory_id,
@@ -548,6 +605,19 @@ class PRMEMemory(Memory):
                 self._manifest["trajectories"][trajectory_id]["node_count"] = node_count
                 self._write_manifest()
                 raise
+            require(last_event_id is not None, "trajectory produced no memory events")
+            last_event = client.get_event(last_event_id, user_id=self.user_id)
+            require(last_event is not None, "trajectory query clock source is unavailable")
+            require(
+                last_event.created_at.utcoffset() is not None,
+                "trajectory query clock source must include an offset",
+            )
+            query_reference_time = last_event.created_at.astimezone(timezone.utc)
+            if self._query_reference_time is not None:
+                query_reference_time = max(query_reference_time, self._query_reference_time)
+            self._query_reference_time = query_reference_time
+            self._query_clock_source = "manifest"
+            self._manifest["query_reference_time"] = query_reference_time.isoformat()
             self._manifest["trajectories"][trajectory_id].update(
                 status="complete", node_count=node_count
             )
@@ -556,10 +626,15 @@ class PRMEMemory(Memory):
     def query(self, query: str, query_image: str | None = None) -> list[MemoryContextItem]:
         require(isinstance(query, str) and bool(query.strip()), "prme query must be non-empty")
         with self._lock:
+            require(
+                self._query_reference_time is not None,
+                "cannot query PRME adapter before a completed trajectory insert",
+            )
             response = self._ensure_client().retrieve(
                 query,
                 user_id=self.user_id,
                 scope=Scope.PROJECT,
+                reference_time=self._query_reference_time,
                 token_budget=self.token_budget,
                 limit=self.result_limit,
                 include_cross_scope=False,
@@ -609,6 +684,12 @@ class PRMEMemory(Memory):
             "adapter": "prme",
             "adapter_schema_version": ADAPTER_SCHEMA_VERSION,
             "upstream_revision": UPSTREAM_REVISION,
+            "query_reference_time": (
+                self._query_reference_time.isoformat()
+                if self._query_reference_time is not None
+                else None
+            ),
+            "query_clock_source": self._query_clock_source,
             "query_image_used_for_retrieval": False,
             "returned_text_items": sum(item["type"] == "text" for item in memory_context),
             "returned_image_items": sum(item["type"] == "image" for item in memory_context),

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -60,7 +61,9 @@ def params(root: Path, pack: Path | None = None) -> dict[str, object]:
     }
 
 
-def test_adapter_round_trips_public_context_and_images(tmp_path: Path) -> None:
+def test_adapter_round_trips_public_context_and_images(
+    tmp_path: Path, monkeypatch
+) -> None:
     source = trajectory(tmp_path / "data")
     memory = PRMEMemory(params(tmp_path / "data", tmp_path / "pack"))
     try:
@@ -85,10 +88,21 @@ def test_adapter_round_trips_public_context_and_images(tmp_path: Path) -> None:
             (tmp_path / "pack" / "longmemeval_v2_manifest.json").read_text()
         )
         record = manifest["trajectories"]["trajectory-1"]
+        assert manifest["schema_version"] == 3
+        query_reference_time = datetime.fromisoformat(manifest["query_reference_time"])
+        assert query_reference_time.utcoffset() is not None
         assert record["state_count"] == 2
         assert record["node_count"] == len(after)
         assert record["status"] == "complete"
 
+        retrieve = memory._client.retrieve
+        retrieval_clocks: list[datetime] = []
+
+        def capture_retrieve(*args, **kwargs):
+            retrieval_clocks.append(kwargs["reference_time"])
+            return retrieve(*args, **kwargs)
+
+        monkeypatch.setattr(memory._client, "retrieve", capture_retrieve)
         context = memory.query("What should I know about submitting the order?")
         text = "\n".join(item["value"] for item in context if item["type"] == "text")
         assert sum(item["type"] == "text" for item in context) >= 2
@@ -100,6 +114,9 @@ def test_adapter_round_trips_public_context_and_images(tmp_path: Path) -> None:
             query="order", query_image="question.png", memory_context=context
         )
         assert hook["query_image_used_for_retrieval"] is False
+        assert hook["query_clock_source"] == "manifest"
+        assert datetime.fromisoformat(hook["query_reference_time"]) == query_reference_time
+        assert retrieval_clocks == [query_reference_time]
 
         saved = tmp_path / "saved"
         saved.mkdir()
@@ -127,6 +144,38 @@ def test_adapter_round_trips_public_context_and_images(tmp_path: Path) -> None:
             restored.close()
     finally:
         memory.close()
+
+
+def test_schema_two_pack_derives_a_read_only_stable_clock(tmp_path: Path) -> None:
+    root = tmp_path / "data"
+    pack = tmp_path / "pack"
+    source = trajectory(root)
+    memory = PRMEMemory(params(root, pack))
+    memory.insert(source)
+    expected = max(
+        node.created_at
+        for node in memory._client.iter_nodes(user_id="evaluation", batch_size=100)
+    )
+    memory.close()
+
+    manifest_path = pack / "longmemeval_v2_manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["schema_version"] = 2
+    manifest.pop("query_reference_time")
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n")
+    legacy_bytes = manifest_path.read_bytes()
+
+    legacy = PRMEMemory(params(root, pack))
+    try:
+        assert legacy._query_reference_time == expected
+        assert legacy._query_clock_source == "legacy_max_created_at"
+        with pytest.raises(RuntimeError, match="schema 2 packs are read-only"):
+            legacy.insert(source)
+        context = legacy.query("What happens after submitting the order?")
+        assert any(item["type"] == "text" for item in context)
+    finally:
+        legacy.close()
+    assert manifest_path.read_bytes() == legacy_bytes
 
 
 def test_adapter_rejects_changed_or_interrupted_trajectory(tmp_path: Path) -> None:
