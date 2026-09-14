@@ -41,6 +41,8 @@ def upstream_layout(root: Path) -> None:
             self.chunks.append(formatted_message)
             self.context_len = self.context_len + self.chunk_size
 
+        BM25_LEGACY_CALL
+
         if output.get(\"retrieval_context\"):
             save_dir = f\"./outputs/rag_retrieved/{self.agent_name}/k_{self.retrieve_num}/{self.sub_dataset}/chunksize_{self.chunk_size}/query_{query_id}_context_{context_id}.json\"
 
@@ -53,7 +55,10 @@ def upstream_layout(root: Path) -> None:
 
         if not self._is_agent_type(\"letta\") and not self._is_agent_type(\"zep\"):
             return
-""",
+""".replace(
+            "        BM25_LEGACY_CALL\n",
+            "        bm25_documents = self.bm25_retriever.get_relevant_documents(retrieval_query)   \n",
+        ),
         encoding="utf-8",
     )
     (root / "utils" / "eval_data_utils.py").write_text(
@@ -95,6 +100,8 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert "retrieval_run_id" in agent
     assert "memory_timestamp" in agent
     assert "/run_{self.retrieval_run_id}/" in agent
+    assert "self.bm25_retriever.invoke(retrieval_query)" in agent
+    assert "get_relevant_documents(retrieval_query)" not in agent
     data = (tmp_path / "utils" / "eval_data_utils.py").read_text(encoding="utf-8")
     assert f'revision="{installer.DATASET_REVISION}"' in data
     initialization = (tmp_path / "initialization.py").read_text(encoding="utf-8")

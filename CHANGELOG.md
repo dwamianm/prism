@@ -55,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prepared source, query, answer, context assignment, configuration and harness
   file; post-run verification requires exact registered inputs, complete metrics,
   bounded recounted contexts, durable receipts, and completed source manifests.
+  Matched BM25 registrations bind preprocessing, ranking, and LangChain wrapper
+  dependencies; the installer updates the pinned harness to the current
+  `BM25Retriever.invoke()` API.
   This is an evaluation path; no MemoryAgentBench task score is claimed yet.
 - Durable, atomic hierarchical summary publication. Daily, weekly and monthly
   excerpts use stable owner/scope/level/period lineages, deterministic request

@@ -16,6 +16,10 @@ from benchmarks.integrations import verify_memoryagentbench_bm25 as verifier
 PRME_REVISION = "2" * 40
 DEPENDENCIES = {
     "datasets": {"version": "test"},
+    "langchain-community": {
+        "version": "test",
+        "bm25_source_sha256": "d" * 64,
+    },
     "nltk": {"version": "test", "punkt_tab_english_sha256": "b" * 64},
     "numpy": {"version": "test"},
     "rank-bm25": {"version": "test", "source_sha256": "a" * 64},

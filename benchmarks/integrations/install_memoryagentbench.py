@@ -99,6 +99,10 @@ _PATCHES = {
             "            self.context_len = self.context_len + self.chunk_size\n",
         ),
         (
+            "        bm25_documents = self.bm25_retriever.get_relevant_documents(retrieval_query)   \n",
+            "        bm25_documents = self.bm25_retriever.invoke(retrieval_query)\n",
+        ),
+        (
             '        if output.get("retrieval_context"):\n'
             '            save_dir = f"./outputs/rag_retrieved/{self.agent_name}/k_{self.retrieve_num}/{self.sub_dataset}/chunksize_{self.chunk_size}/query_{query_id}_context_{context_id}.json"\n',
             '        if output.get("retrieval_context"):\n'

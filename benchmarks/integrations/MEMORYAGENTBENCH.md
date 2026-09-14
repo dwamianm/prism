@@ -203,6 +203,8 @@ configuration. The verifier reloads the pinned official inputs, recreates the
 formatted documents, repeats query extraction and `rank-bm25` ordering, and
 requires every isolated context capture to match exactly. It also binds the
 installed NumPy and `rank-bm25` versions and hashes the latter's ranking source.
+The installer uses LangChain's current `BM25Retriever.invoke()` entry point, and
+registration binds the exact installed wrapper version and source hash.
 The same preprocessing identity used by the PRME arm is required here as well.
 These checks establish a reproducible matched lexical control; they do not make
 it a product-equivalent memory system or a published-reader comparison.

@@ -43,13 +43,19 @@ _RUN_ID = re.compile(r"[A-Za-z0-9._-]{1,64}\Z")
 
 
 def _dependency_identity() -> dict[str, dict[str, str]]:
-    """Bind the two packages that define the upstream BM25 ordering."""
+    """Bind the packages and adapter source that define BM25 retrieval."""
+    import langchain_community.retrievers.bm25 as langchain_bm25
     import rank_bm25
 
+    langchain_source = Path(langchain_bm25.__file__).resolve()
     rank_source = Path(rank_bm25.__file__).resolve()
     identity = _preprocessing_identity()
     identity.update(
         {
+            "langchain-community": {
+                "version": importlib.metadata.version("langchain-community"),
+                "bm25_source_sha256": _digest(langchain_source),
+            },
             "numpy": {
                 "version": importlib.metadata.version("numpy"),
             },
