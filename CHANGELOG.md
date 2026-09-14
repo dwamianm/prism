@@ -130,9 +130,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   claims still enter bounded validation retries. Condition and uncertainty
   validation is scoped to the cited source sentence and directly following
   qualifiers, preventing unrelated language elsewhere in a paragraph and
-  indirect questions such as “see if” from contaminating the claim. Model
-  overreach therefore reduces derived recall instead of failing ingestion
-  availability.
+  indirect questions such as “see if” from contaminating the claim. Polite
+  request language such as “could you help” is also excluded from claim
+  modality checks while real possibilities remain hypothetical. Model overreach
+  therefore reduces derived recall instead of failing ingestion availability.
 - Ollama structured extraction now defaults `reasoning_effort` to `none`, with
   an environment and typed-config override. This prevents thinking traces from
   exhausting the same context window needed for the validated response. Ollama

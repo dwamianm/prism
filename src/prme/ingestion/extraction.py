@@ -44,6 +44,11 @@ _INDIRECT_QUESTION_IF_RE = re.compile(
 _UNCERTAINTY_RE = re.compile(
     r"(?i:\b(?:might|could|possibly|perhaps|maybe)\b)|\bmay\b"
 )
+_POLITE_REQUEST_MODAL_RE = re.compile(
+    r"\b(?:could\s+you|may\s+I|you\s+could\s+(?:please\s+)?(?:also\s+)?"
+    r"(?:help|suggest|recommend|explain|show|tell|give|provide|brainstorm))\b",
+    re.IGNORECASE,
+)
 _EXPLICIT_DECISION_RE = re.compile(
     r"\b(?:decid\w*|chos(?:e|en)|select(?:ed|s)?|opt(?:ed|s)?|agree(?:d|s)?|"
     r"commit(?:ted|s)?|reject(?:ed|s)?)\b",
@@ -55,6 +60,12 @@ def _has_explicit_condition(evidence_quote: str) -> bool:
     """Recognize contingent clauses without treating indirect questions as conditions."""
     without_indirect_questions = _INDIRECT_QUESTION_IF_RE.sub("", evidence_quote)
     return _EXPLICIT_CONDITION_RE.search(without_indirect_questions) is not None
+
+
+def _has_uncertainty(evidence_quote: str) -> bool:
+    """Recognize claim modality without treating polite requests as claims."""
+    without_polite_requests = _POLITE_REQUEST_MODAL_RE.sub("", evidence_quote)
+    return _UNCERTAINTY_RE.search(without_polite_requests) is not None
 
 
 def _validate_condition(epistemic_type: str, condition: str | None, evidence_quote: str) -> None:
@@ -73,7 +84,7 @@ def _validate_modality(
     fact_type: str, epistemic_type: str, evidence_quote: str
 ) -> None:
     """Reject common uncertainty and contingent-action category collapses."""
-    uncertain = _UNCERTAINTY_RE.search(evidence_quote) is not None
+    uncertain = _has_uncertainty(evidence_quote)
     if uncertain and epistemic_type not in {"hypothetical", "conditional"}:
         raise ValueError("might/may/could claims require hypothetical or conditional epistemic_type")
     if (

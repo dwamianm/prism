@@ -374,7 +374,8 @@ Stored evidence remains paragraph-complete, while condition and uncertainty
 checks use only the claim's cited sentence and an immediately following
 qualification. This keeps unrelated questions and hypotheticals in the same
 message from contaminating an otherwise factual claim; indirect questions such
-as “see if” do not become logical conditions.
+as “see if” do not become logical conditions, and polite request modals such as
+“could you help” do not turn adjacent asserted memory into a hypothetical.
 
 Custom-provider and historical facts with unresolved subjects remain searchable.
 Their node metadata reports `subject_link_status` as `missing` or `ambiguous`,

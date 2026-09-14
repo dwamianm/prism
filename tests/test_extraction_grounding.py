@@ -177,6 +177,59 @@ def test_indirect_question_if_is_not_a_claim_condition():
     assert result.facts == []
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "Alice uses email, so could you help me configure it?",
+        "Alice uses email and I was wondering if you could suggest a client.",
+        "Alice uses email and I was wondering if you could also help configure it.",
+        "Alice uses email; may I ask you about migration?",
+    ],
+)
+def test_polite_request_modals_do_not_make_supported_claim_hypothetical(source):
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "Alice could use email.",
+        "Could you tell me whether Alice might use email?",
+        "Can you suggest tools that Alice could use for email?",
+    ],
+)
+def test_claim_modals_remain_hypothetical_near_request_phrasing(source):
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+
 @pytest.mark.parametrize("condition", [None, "manager approval"])
 def test_builtin_drops_conditional_without_verbatim_condition(condition):
     source = "If approval is granted, Alice uses email."
