@@ -305,8 +305,12 @@ def baseline_outcomes(paths: dict[str, Path], registration: dict) -> dict[str, b
         or state["complete"] is not True
     ):
         raise ValueError("Complete matching baseline outcomes are required")
+    question_ids = {
+        row["case_id"]: row["question_id"]
+        for row in json.loads(paths["references"].read_bytes())["references"]
+    }
     outcomes = {
-        row["case_id"]: row["answers"]["balanced"]
+        question_ids[row["case_id"]]: row["answers"]["balanced"]
         for row in prior["details"]
     }
     if len(outcomes) != 119 or any(type(value) is not bool for value in outcomes.values()):
