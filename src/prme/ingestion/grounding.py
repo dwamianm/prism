@@ -15,6 +15,24 @@ from prme.ingestion.schema import ExtractionResult
 
 logger = structlog.get_logger(__name__)
 
+_SOURCE_QUOTE_TRANSLATION = str.maketrans({
+    "'": '"', "‘": '"', "’": '"', "“": '"', "”": '"',
+})
+
+
+def canonical_source_quote(quote: str, source: str) -> str | None:
+    """Return the exact source span for text differing only in quote marks."""
+    if not quote.strip():
+        return None
+    if quote in source:
+        return quote
+    normalized_quote = quote.translate(_SOURCE_QUOTE_TRANSLATION)
+    normalized_source = source.translate(_SOURCE_QUOTE_TRANSLATION)
+    start = normalized_source.find(normalized_quote)
+    if start < 0:
+        return None
+    return source[start:start + len(quote)]
+
 
 def _mentioned(value: str, text: str) -> bool:
     """Match a nonempty mention without matching Ann inside Marianne."""
@@ -31,7 +49,8 @@ def _supporting_passage(quote: str, source: str) -> str | None:
     Keep its surrounding paragraph(s), without inventing a sentence boundary.
     Repeated quotations conservatively retain the complete source.
     """
-    if not quote.strip() or quote not in source:
+    quote = canonical_source_quote(quote, source)
+    if quote is None:
         return None
     start = source.find(quote)
     if source.find(quote, start + 1) != -1:

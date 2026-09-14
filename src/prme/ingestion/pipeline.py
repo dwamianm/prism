@@ -32,7 +32,7 @@ from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import validate_grounding
-from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.schema import ExtractedEntity, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
 from prme.ingestion.supersedence import SupersedenceDetector
 from prme.models.edges import MemoryEdge
@@ -40,6 +40,7 @@ from prme.models.events import Event
 from prme.models.extraction import ExtractionRecord
 from prme.models.derivation import DerivationPlan
 from prme.models.extraction_work import ExtractionClaim, ExtractionProcessingResult
+from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage._threading import run_async_to_completion
 from prme.models.nodes import MemoryNode
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
@@ -59,6 +60,42 @@ _FACT_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
     "decision": NodeType.DECISION,
     "preference": NodeType.PREFERENCE,
 }
+
+
+def _entities_with_unresolved_references(result: ExtractionResult) -> list[ExtractedEntity]:
+    """Add one noncanonical identity for each unlisted personal reference.
+
+    The identity is still created through EntityMerger, which binds it to the
+    source event. Choosing ``personal_reference`` when providers omit or
+    disagree on a type avoids asserting that a pronoun is a durable person or
+    group identity.
+    """
+    entities = list(result.entities)
+    listed_names = {entity.name.strip().casefold() for entity in entities}
+    references: list[tuple[str, str | None]] = []
+    for fact in result.facts:
+        references.append((fact.subject, fact.subject_entity_type))
+        if unresolved_personal_reference(fact.object, fact.object_entity_type):
+            references.append((fact.object, fact.object_entity_type))
+    for relationship in result.relationships:
+        references.extend((
+            (relationship.source_entity, relationship.source_entity_type),
+            (relationship.target_entity, relationship.target_entity_type),
+        ))
+
+    missing: dict[str, list[tuple[str, str | None]]] = {}
+    for name, entity_type in references:
+        normalized = name.strip().casefold()
+        if normalized in listed_names or not unresolved_personal_reference(name, entity_type):
+            continue
+        missing.setdefault(normalized, []).append((name, entity_type))
+
+    for normalized, occurrences in missing.items():
+        explicit_types = {entity_type for _, entity_type in occurrences if entity_type is not None}
+        entity_type = next(iter(explicit_types)) if len(explicit_types) == 1 else "personal_reference"
+        entities.append(ExtractedEntity(name=occurrences[0][0], entity_type=entity_type))
+        listed_names.add(normalized)
+    return entities
 
 
 class IngestionPipeline:
@@ -416,7 +453,7 @@ class IngestionPipeline:
         entity_refs = EntityReferences[str]()
 
         # --- Entities ---
-        for entity in result.entities:
+        for entity in _entities_with_unresolved_references(result):
             entity_scope = scope
 
             entity_id, is_new = await entity_merger.find_or_create_entity(
@@ -449,6 +486,25 @@ class IngestionPipeline:
                 ),
                 label=f"vector.entity:{entity_id}",
             )
+
+        # Provider type labels for a pronoun can be absent or inconsistent.
+        # When its name maps to exactly one event-local identity, register each
+        # supplied type as an extraction-local alias to that same identity.
+        personal_references: list[tuple[str, str | None]] = []
+        for fact in result.facts:
+            personal_references.append((fact.subject, fact.subject_entity_type))
+            personal_references.append((fact.object, fact.object_entity_type))
+        for relationship in result.relationships:
+            personal_references.extend((
+                (relationship.source_entity, relationship.source_entity_type),
+                (relationship.target_entity, relationship.target_entity_type),
+            ))
+        for name, entity_type in personal_references:
+            if entity_type is None or not unresolved_personal_reference(name, entity_type):
+                continue
+            identity, status = entity_refs.resolve(name)
+            if status == "resolved" and identity is not None:
+                entity_refs.add(name, entity_type, identity)
 
         # Relationships are source-cited claims, not authoritative graph edge
         # labels. Reuse a covering fact for the same endpoints and passage.

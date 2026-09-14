@@ -17,7 +17,7 @@ import structlog
 from pydantic import Field, SecretStr, ValidationInfo, model_validator
 
 from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
-from prme.ingestion.grounding import _mentioned
+from prme.ingestion.grounding import _mentioned, canonical_source_quote
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
 from prme.ingestion.entity_references import reference_errors
 
@@ -86,8 +86,10 @@ class _CitedFact(ExtractedFact):
     def source_support(self, info: ValidationInfo) -> _CitedFact:
         source = (info.context or {}).get("source_text")
         if source is not None:
-            if not self.evidence_quote.strip() or self.evidence_quote not in source:
+            evidence_quote = canonical_source_quote(self.evidence_quote, source)
+            if evidence_quote is None:
                 raise ValueError("evidence_quote must be copied verbatim from the source")
+            self.evidence_quote = evidence_quote
             if not _mentioned(self.subject, self.evidence_quote) or not _mentioned(self.object, self.evidence_quote):
                 raise ValueError("subject and object must occur in evidence_quote; use source values without paraphrasing")
             _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
@@ -106,8 +108,10 @@ class _CitedRelationship(ExtractedRelationship):
     def source_support(self, info: ValidationInfo):
         source = (info.context or {}).get("source_text")
         if source is not None:
-            if not self.evidence_quote.strip() or self.evidence_quote not in source:
+            evidence_quote = canonical_source_quote(self.evidence_quote, source)
+            if evidence_quote is None:
                 raise ValueError("relationship evidence_quote must be copied verbatim from the source")
+            self.evidence_quote = evidence_quote
             if not _mentioned(self.source_entity, self.evidence_quote) or not _mentioned(self.target_entity, self.evidence_quote):
                 raise ValueError("relationship endpoints must occur in evidence_quote")
             _validate_condition(self.epistemic_type, self.condition, self.evidence_quote)
@@ -189,9 +193,10 @@ prior knowledge
    If unclear, leave temporal_intent as null (the system will use a safe default).
 
 IMPORTANT RULES:
-- Every fact subject and relationship endpoint must use a name listed in entities.
+- Every named fact subject and relationship endpoint must use a name listed in entities.
   Copy that entity name exactly; do not alternate between shortened and full names.
-  Include literal subjects such as "I" or "we" when used; do not invent a speaker name.
+  Literal unresolved personal references such as "I", "we", or "they" may be used
+  without listing them as named entities. Copy the literal reference; do not invent a speaker name.
   Relationship endpoints are entity names, not phrases combining predicates and objects.
   If the same name identifies different entity types, include subject_entity_type,
   object_entity_type, source_entity_type, or target_entity_type to identify the intended listed entity.

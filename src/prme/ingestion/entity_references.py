@@ -4,6 +4,8 @@ from collections import defaultdict
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from prme.models.entity_identity import unresolved_personal_reference
+
 if TYPE_CHECKING:
     from prme.ingestion.schema import ExtractionResult
 
@@ -46,6 +48,11 @@ def reference_errors(result: "ExtractionResult") -> list[str]:
                            (f"relationships[{i}].target_entity", rel.target_entity, rel.target_entity_type)])
     for path, name, entity_type in references:
         _, status = refs.resolve(name, entity_type)
+        # Literal personal references are deliberately not required to be
+        # named entities. The materializer gives an unlisted reference a
+        # source-event-local identity; it never guesses a durable referent.
+        if status == "missing" and unresolved_personal_reference(name, entity_type):
+            continue
         if status != "resolved":
             errors.append(f"{path} is {status}: use a listed entity name and specify its entity_type if ambiguous")
     return errors

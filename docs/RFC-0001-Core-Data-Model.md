@@ -233,13 +233,20 @@ Entity resolution (deduplication of aliases to a canonical entity) is performed 
 ### Extraction reference integrity (implementation clarification, 2026-09-12)
 
 Built-in providers validate extraction-local references before accepting their
-structured response. Fact subjects and relationship endpoints must resolve to a
-listed entity. Optional type qualifiers disambiguate equal names with different
-entity types. Name matching preserves the ingestion merger's stripped,
+structured response. Named fact subjects and relationship endpoints must resolve
+to a listed entity. Literal unresolved English personal references are the sole
+exception: they may remain unlisted and receive a source-event-local identity
+during materialization. Optional type qualifiers disambiguate equal names with
+different entity types. Name matching preserves the ingestion merger's stripped,
 case-insensitive name and exact type semantics; it does not guess aliases.
 Missing/ambiguous references cause bounded provider schema retries. Objects
 may be literals; when an object matches ambiguous entity names or supplies an
 explicit `object_entity_type`, it must resolve uniquely too.
+
+Provider citations that differ from a source span only in straight or curly
+quote marks are aligned to that span before validation. The exact source bytes,
+including the source's original quote marks, are what the extraction record and
+derived claim retain. Other paraphrases remain invalid.
 
 The materializer also resolves by distinct identity rather than overwriting a
 name dictionary entry. Custom or historical facts with unresolved subjects are

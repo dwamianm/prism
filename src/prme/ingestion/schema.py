@@ -47,7 +47,7 @@ class ExtractedFact(BaseModel):
     NodeType.DECISION, or NodeType.PREFERENCE during materialization.
     """
 
-    subject: str = Field(description="Name of a listed entity this fact is about; copy entities[].name exactly")
+    subject: str = Field(description="Name of a listed entity this fact is about, or a literal unresolved personal reference such as I or we; copy the source text exactly")
     subject_entity_type: str | None = Field(default=None, description="Exact entities[].entity_type for the subject; required if its name has multiple types")
     object_entity_type: str | None = Field(default=None, description="Exact entities[].entity_type when the object names an entity; required for an ambiguous entity name, otherwise null for literal values")
     predicate: str = Field(
@@ -154,9 +154,9 @@ class ExtractedFact(BaseModel):
 class ExtractedRelationship(BaseModel):
     """A relationship between two entities extracted from text."""
 
-    source_entity: str = Field(description="Source entity name; copy entities[].name exactly")
+    source_entity: str = Field(description="Source entity name, or a literal unresolved personal reference such as I or we; copy the source text exactly")
     source_entity_type: str | None = Field(default=None, description="Exact source entity_type; required for an ambiguous name")
-    target_entity: str = Field(description="Target entity name; copy entities[].name exactly")
+    target_entity: str = Field(description="Target entity name, or a literal unresolved personal reference such as I or we; copy the source text exactly")
     target_entity_type: str | None = Field(default=None, description="Exact target entity_type; required for an ambiguous name")
     relationship_type: str = Field(
         description="Source-supported relationship predicate, such as lives_in or works_at; do not force it into a graph edge category"

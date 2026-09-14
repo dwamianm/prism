@@ -97,6 +97,77 @@ def test_builtin_accepts_literal_object_without_entity_entry():
     assert _CitedExtractionResult.model_validate(payload).facts[0].object == "green"
 
 
+def test_builtin_schema_accepts_grounded_unlisted_personal_references():
+    source = 'I joined a group called "Page Turners", where we share recommendations.'
+    payload = {
+        "entities": [{"name": "Page Turners", "entity_type": "organization"}],
+        "facts": [
+            {"subject": "I", "predicate": "joined", "object": "Page Turners",
+             "object_entity_type": "organization", "polarity": "positive",
+             "evidence_quote": source},
+            {"subject": "we", "predicate": "share", "object": "recommendations",
+             "polarity": "positive", "evidence_quote": source},
+        ],
+        "relationships": [
+            {"source_entity": "I", "target_entity": "Page Turners",
+             "target_entity_type": "organization", "relationship_type": "member_of",
+             "polarity": "positive", "epistemic_type": "asserted", "evidence_quote": source},
+        ],
+    }
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert [fact.subject for fact in result.facts] == ["I", "we"]
+
+
+def test_builtin_schema_keeps_source_support_strict_for_personal_references():
+    payload = {"facts": [
+        {"subject": "I", "predicate": "likes", "object": "tea", "polarity": "positive",
+         "evidence_quote": "Alice likes tea."},
+    ]}
+    with pytest.raises(ValidationError, match="subject and object"):
+        _CitedExtractionResult.model_validate(payload, context={"source_text": "Alice likes tea."})
+
+
+def test_builtin_schema_canonicalizes_quote_marks_to_exact_source_span():
+    source = 'I joined "Page Turners" last week.'
+    payload = {"facts": [
+        {"subject": "I", "predicate": "joined", "object": "Page Turners",
+         "polarity": "positive", "evidence_quote": "I joined 'Page Turners' last week."},
+    ]}
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts[0].evidence_quote == source
+
+
+async def test_unlisted_personal_references_reuse_only_within_source_event(config, user):
+    source = "I prefer tea and I drink tea."
+    result = ExtractionResult.model_validate({
+        "facts": [
+            {"subject": "I", "subject_entity_type": "person", "predicate": "prefers",
+             "object": "tea", "polarity": "positive", "evidence_quote": source},
+            {"subject": "I", "predicate": "drinks", "object": "tea",
+             "polarity": "positive", "evidence_quote": source},
+        ],
+    })
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = AsyncMock(side_effect=[result, result])
+        event_ids = [
+            await engine.ingest(source, user_id=user, wait_for_extraction=True),
+            await engine.ingest(source, user_id=user, wait_for_extraction=True),
+        ]
+        identities = []
+        for event_id in event_ids:
+            nodes = await engine.get_event_nodes(event_id, user_id=user)
+            pronouns = [node for node in nodes if node.node_type == NodeType.ENTITY and node.content == "I"]
+            facts = [node for node in nodes if node.node_type == NodeType.FACT]
+            assert len(pronouns) == 1 and len(facts) == 2
+            assert pronouns[0].metadata["identity_status"] == "unresolved_reference"
+            assert pronouns[0].metadata["reference_event_id"] == event_id
+            edges = await engine._graph_store.get_edges(source_id=str(pronouns[0].id))
+            assert {edge.target_id for edge in edges} == {fact.id for fact in facts}
+            assert all(fact.metadata["subject_link_status"] == "resolved" for fact in facts)
+            identities.append(pronouns[0].id)
+        assert identities[0] != identities[1]
+
+
 async def test_custom_ambiguous_object_keeps_claim_without_guessing_link(config, user):
     payload = namesakes()
     payload["facts"][0]["object_entity_type"] = None
