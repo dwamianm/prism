@@ -63,7 +63,7 @@ adapter, invokes the pinned upstream client, fixes the run identity and complete
 question selection, and writes source and dataset attestation before ingestion:
 
 ```shell
-uv run python -m benchmarks.integrations.run_beam \
+uv run --extra api python -m benchmarks.integrations.run_beam \
   /absolute/path/to/memory-benchmarks \
   /absolute/path/to/new-beam-execution \
   --registration benchmarks/results/research/2026-09-14/beam-100k-raw-v1-registration.json \
@@ -97,7 +97,7 @@ chunks, and its model client can return an empty string after exhausting
 retries. Validate the output before reading aggregate quality:
 
 ```sh
-uv run python -m benchmarks.integrations.validate_beam \
+uv run --extra api python -m benchmarks.integrations.validate_beam \
   /absolute/path/to/new-beam-execution/upstream-results/predicted_prme-beam-100k-raw-v1 \
   --chat-sizes 100K \
   --conversations 0 \
@@ -148,4 +148,6 @@ The source inspection record is
 [`beam-upstream-audit.json`](../results/research/2026-09-14/beam-upstream-audit.json).
 The pinned official client also passed an
 [authored loopback preflight](../results/research/2026-09-14/beam-native-client-preflight.json).
-No BEAM quality result has been registered or completed yet.
+The registered raw predict-only execution and its interpretation boundary are
+reported in
+[`BEAM-100K-RAW.md`](../results/research/2026-09-14/BEAM-100K-RAW.md).
