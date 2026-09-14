@@ -31,6 +31,8 @@ async def test_similar_message_cannot_corroborate_an_unrelated_or_untrusted_inst
         kwargs = {"content": RULE, "user_id": user, "node_type": NodeType.INSTRUCTION,
                   "scope": Scope.PERSONAL, "epistemic_type": EpistemicType.ASSERTED,
                   "source_type": SourceType.USER_STATED, "role": "user", **change}
+        if kwargs["epistemic_type"] == EpistemicType.CONDITIONAL:
+            kwargs["metadata"] = {"condition": "the rule becomes applicable"}
         await engine.store(**kwargs)
         current = await engine.get_node(str(original.id), user_id=user)
         assert current.evidence_refs == original.evidence_refs

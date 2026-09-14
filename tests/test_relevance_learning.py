@@ -29,7 +29,8 @@ def evidence(count=100):
                 semantic_score=semantic, lexical_score=lexical, graph_proximity=graph))
         items, _ = score_and_rank(items, now=NOW)
         receipt = make_receipt(request_id=UUID(int=10000 + i), user_id="owner", query=f"query {i}",
-            reference_time=NOW, scopes=(Scope.PROJECT,), scoring=ScoringWeights(), packing=PackingConfig(),
+            reference_time=NOW, scopes=(Scope.PROJECT,), scoring=ScoringWeights(),
+            packing=PackingConfig(multipath_ordering="density"),
             candidates=items, bundle=MemoryBundle())
         receipts.append(receipt)
         records.append(RelevanceRecord(feedback_id=UUID(int=20000 + i), request_id=receipt.request_id,
@@ -182,7 +183,8 @@ def test_ndcg_gain_cannot_hide_a_pairwise_ordering_regression(monkeypatch):
     receipts, records = evidence()
     for i, old in enumerate(receipts):
         receipts[i] = make_receipt(request_id=old.request_id, user_id="owner", query=old.query,
-            reference_time=NOW, scopes=(Scope.PROJECT,), scoring=weights, packing=PackingConfig(),
+            reference_time=NOW, scopes=(Scope.PROJECT,), scoring=weights,
+            packing=PackingConfig(multipath_ordering="density"),
             candidates=ranked, bundle=MemoryBundle())
         records[i] = records[i].model_copy(update={"labels": {n.node.id: j in (1, 2) for j, n in enumerate(nodes)},
             "receipt_checksum": receipts[i].checksum})

@@ -756,6 +756,11 @@ async def test_09_epistemic_types_and_confidence(engine: MemoryEngine, log: Test
                 scope=Scope.PERSONAL,
                 epistemic_type=epistemic_type,
                 source_type=source_type,
+                metadata=(
+                    {"condition": "the team grows"}
+                    if epistemic_type == EpistemicType.CONDITIONAL
+                    else None
+                ),
             )
         # Look up the created node to check confidence
         nodes = await engine.query_nodes(user_id="alex")

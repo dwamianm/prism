@@ -22,7 +22,7 @@ from benchmarks.models import BenchmarkResult, QueryResult
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
 
-from prme.types import EpistemicType, LifecycleState, NodeType, Scope
+from prme.types import EpistemicType, NodeType, Scope
 
 
 # ---------------------------------------------------------------------------
@@ -526,6 +526,10 @@ class EpistemicBenchmark:
                     kwargs["epistemic_type"] = EpistemicType(
                         fact["epistemic_type"]
                     )
+                    if kwargs["epistemic_type"] == EpistemicType.CONDITIONAL:
+                        kwargs["metadata"] = {
+                            "condition": fact.get("condition", fact["content"])
+                        }
                 await engine.store(fact["content"], **kwargs)
 
             # Evaluate test cases
