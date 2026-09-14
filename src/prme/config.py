@@ -47,7 +47,7 @@ class ExtractionConfig(_ProjectSettings):
     )
     max_retries: int = Field(
         default=3,
-        description="Instructor retry count for schema validation failures",
+        description="Instructor retry count for response-schema and admitted-reference failures",
     )
     timeout: float = Field(
         default=30.0,

@@ -131,9 +131,8 @@ async def test_configured_timeout_cancels_a_stalled_provider():
 @pytest.mark.parametrize("fact", [
     {"subject": "Alice", "predicate": "uses", "object": "email"},
     {"subject": "Alice", "predicate": "uses", "object": "email", "evidence_quote": "Alice always uses email"},
-    {"subject": "Alice", "predicate": "uses", "object": "Slack", "evidence_quote": "Alice uses email"},
 ])
-async def test_provider_schema_requests_retry_for_missing_or_fabricated_support(fact):
+async def test_provider_schema_requests_retry_for_missing_required_support(fact):
     from pydantic import ValidationError
 
     provider = InstructorExtractionProvider("openai/gpt-4o-mini")
@@ -143,6 +142,19 @@ async def test_provider_schema_requests_retry_for_missing_or_fabricated_support(
     args = client.create.await_args.kwargs
     with pytest.raises(ValidationError):
         args["response_model"].model_validate({"facts": [fact]}, context=args["context"])
+
+
+async def test_provider_schema_drops_a_fabricated_claim_without_failing_the_event():
+    provider = InstructorExtractionProvider("openai/gpt-4o-mini")
+    client = _mock_client()
+    with patch.object(provider, "_ensure_client", return_value=client):
+        await provider.extract("Alice uses email")
+    args = client.create.await_args.kwargs
+    result = args["response_model"].model_validate({"facts": [{
+        "subject": "Alice", "predicate": "uses", "object": "Slack",
+        "polarity": "positive", "evidence_quote": "Alice uses email",
+    }]}, context=args["context"])
+    assert result.facts == []
 
 
 async def test_provider_schema_accepts_source_supported_fact():

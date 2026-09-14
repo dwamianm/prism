@@ -124,14 +124,11 @@ class _CitedExtractionResult(ExtractionResult):
     def supported_closed_references(self, info: ValidationInfo):
         source = (info.context or {}).get("source_text")
         if source is not None:
-            proposed_claims = len(self.facts) + len(self.relationships)
-            rejection_reasons = []
             supported_facts = []
             for index, fact in enumerate(self.facts):
                 try:
                     _validate_fact_source_support(fact, source)
                 except ValueError as exc:
-                    rejection_reasons.append(f"facts[{index}]: {exc}")
                     logger.warning(
                         "extraction_claim_discarded",
                         path=f"facts[{index}]",
@@ -144,7 +141,6 @@ class _CitedExtractionResult(ExtractionResult):
                 try:
                     _validate_relationship_source_support(relationship, source)
                 except ValueError as exc:
-                    rejection_reasons.append(f"relationships[{index}]: {exc}")
                     logger.warning(
                         "extraction_claim_discarded",
                         path=f"relationships[{index}]",
@@ -154,11 +150,6 @@ class _CitedExtractionResult(ExtractionResult):
                     supported_relationships.append(relationship)
             self.facts = supported_facts
             self.relationships = supported_relationships
-            if proposed_claims and not self.facts and not self.relationships:
-                raise ValueError(
-                    "all proposed claims lack valid source support: "
-                    + "; ".join(rejection_reasons)
-                )
         errors = reference_errors(self)
         if errors:
             raise ValueError("; ".join(errors))

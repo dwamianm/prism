@@ -68,7 +68,7 @@ def test_builtin_fact_requires_explicit_polarity():
 
 
 @pytest.mark.parametrize("condition", [None, "manager approval"])
-def test_builtin_conditional_requires_verbatim_condition(condition):
+def test_builtin_drops_conditional_without_verbatim_condition(condition):
     source = "If approval is granted, Alice uses email."
     payload = {
         "entities": [{"name": "Alice", "entity_type": "person"}],
@@ -82,8 +82,8 @@ def test_builtin_conditional_requires_verbatim_condition(condition):
             "condition": condition,
         }],
     }
-    with pytest.raises(ValidationError, match="verbatim condition"):
-        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
 
     payload["facts"][0]["condition"] = "approval is granted"
     result = _CitedExtractionResult.model_validate(
@@ -92,7 +92,7 @@ def test_builtin_conditional_requires_verbatim_condition(condition):
     assert result.facts[0].condition == "approval is granted"
 
 
-def test_builtin_explicit_condition_cannot_be_materialized_as_asserted():
+def test_builtin_drops_explicit_condition_materialized_as_asserted():
     source = "If approval is granted, Alice uses email."
     payload = {
         "entities": [{"name": "Alice", "entity_type": "person"}],
@@ -105,19 +105,19 @@ def test_builtin_explicit_condition_cannot_be_materialized_as_asserted():
             "epistemic_type": "asserted",
         }],
     }
-    with pytest.raises(ValidationError, match="explicit if/unless condition"):
-        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
 
     payload["facts"][0].update({
         "epistemic_type": "conditional",
         "condition": "approval is granted",
         "fact_type": "decision",
     })
-    with pytest.raises(ValidationError, match="not a decision"):
-        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
 
 
-def test_builtin_uncertainty_cannot_be_materialized_as_asserted_decision():
+def test_builtin_drops_uncertainty_materialized_as_asserted_decision():
     source = "Alice might use Redis after evaluation."
     payload = {
         "entities": [
@@ -134,12 +134,12 @@ def test_builtin_uncertainty_cannot_be_materialized_as_asserted_decision():
             "epistemic_type": "asserted",
         }],
     }
-    with pytest.raises(ValidationError, match="hypothetical or conditional"):
-        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
 
     payload["facts"][0]["epistemic_type"] = "hypothetical"
-    with pytest.raises(ValidationError, match="not a decision"):
-        _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
 
 
 def test_builtin_explicit_choice_remains_a_decision():

@@ -123,8 +123,10 @@ def test_builtin_schema_keeps_source_support_strict_for_personal_references():
         {"subject": "I", "predicate": "likes", "object": "tea", "polarity": "positive",
          "evidence_quote": "Alice likes tea."},
     ]}
-    with pytest.raises(ValidationError, match="subject and object"):
-        _CitedExtractionResult.model_validate(payload, context={"source_text": "Alice likes tea."})
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": "Alice likes tea."}
+    )
+    assert result.facts == []
 
 
 def test_builtin_schema_keeps_supported_claims_when_one_proposal_is_invalid():

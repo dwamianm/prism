@@ -92,11 +92,13 @@ must still supply source-supported subject and object values. This deliberately
 rejects unsupported paraphrased object values.
 The built-in Instructor provider requires citations in its response schema and
 passes the source to local validation, allowing its configured validation retries
-to repair responses with no supported claims. When a response mixes supported
-and unsupported claim proposals, validation retains the supported subset and
-drops the rest instead of allowing one weak proposal to erase valid memory or
-inflate retry context. Missing or ambiguous named references still reject the
-response as a structural integrity error.
+to repair structural schema and admitted-reference failures. Claim proposals
+that overstate certainty, omit source support, or otherwise fail semantic
+admission are dropped independently. This applies even when every proposed claim
+is rejected: the immutable raw event remains successful and searchable instead
+of becoming failed extraction work. Missing or ambiguous named references on a
+claim that otherwise passes admission still reject the response as a structural
+integrity error.
 Source-role admission guidance limits assistant messages to durable conversation
 state such as commitments, completed actions, and explicitly attributed user or
 project facts. Generic recommendations, explanations, background knowledge, and

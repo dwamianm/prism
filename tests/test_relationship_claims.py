@@ -25,7 +25,7 @@ def extraction(source, *, epistemic="hypothetical"):
     )
 
 
-@pytest.mark.parametrize("field,value", [("evidence_quote", None), ("evidence_quote", "Alice owns Acme"),
+@pytest.mark.parametrize("field,value", [("evidence_quote", None),
                                           ("epistemic_type", None), ("epistemic_type", "deprecated")])
 def test_builtin_relationships_require_supported_citations_and_epistemic_types(field, value):
     source = "Alice might work at Acme."
@@ -36,6 +36,14 @@ def test_builtin_relationships_require_supported_citations_and_epistemic_types(f
         payload["relationships"][0][field] = value
     with pytest.raises(ValidationError):
         _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+
+
+def test_builtin_drops_relationship_with_unsupported_citation():
+    source = "Alice might work at Acme."
+    payload = extraction(source).model_dump()
+    payload["relationships"][0]["evidence_quote"] = "Alice owns Acme"
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.relationships == []
 
 
 def test_short_relationship_quote_keeps_trailing_conditions():
