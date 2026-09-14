@@ -941,14 +941,15 @@ class TestRunJob:
         assert result.details.get("status") == "no_signals"
 
     @pytest.mark.asyncio
-    async def test_stub_jobs(self, engine_parts):
-        """Stub jobs return empty results with status note."""
+    async def test_unimplemented_jobs_are_not_advertised(self, engine_parts):
+        """A registered organizer job must perform real work."""
         engine, _, _ = engine_parts
         config = OrganizerConfig()
-        for job_name in ["centrality_boost"]:
-            result = await run_job(job_name, engine, config, 5000.0)
-            assert result.job == job_name
-            assert result.details.get("status") == "stub"
+        from prme.organizer.jobs import ALL_JOBS
+
+        assert "centrality_boost" not in ALL_JOBS
+        with pytest.raises(ValueError, match="Unknown organizer job"):
+            await run_job("centrality_boost", engine, config, 5000.0)
 
     @pytest.mark.asyncio
     async def test_implemented_dedup_and_alias_jobs(self, engine_parts):

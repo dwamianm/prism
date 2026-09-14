@@ -61,6 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The organizer registry now contains only implemented jobs. The unimplemented,
+  unvalidated `centrality_boost` no-op is no longer advertised or run during
+  default maintenance; explicit requests fail as an unknown job instead of
+  returning a misleading success result.
 - Temporal reasoning guidance is now enabled by default when it fits after
   evidence selection. A registered 70-context confirmation improved temporal
   answers from 31/50 to 34/50. Personalization and current-state guidance remain

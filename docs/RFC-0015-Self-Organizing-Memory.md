@@ -249,7 +249,7 @@ async def organize(
 | `alias_resolve` | Resolve entity aliases (e.g., "JS" → "JavaScript") | RFC-0001 |
 | `summarize` | Generate summary nodes from event windows | RFC-0001, RFC-0006 |
 | `feedback_apply` | Legacy global tuner; explicit unscoped operator selection only | RFC-0008, RFC-0009 |
-| `centrality_boost` | Recalculate graph centrality salience boost | RFC-0007 §11 |
+| `centrality_boost` | Proposed graph centrality salience experiment; not registered | RFC-0007 §11 |
 | `tombstone_sweep` | Enforce retention policies and create tombstones | RFC-0007 §9 |
 | `snapshot_generation` | Generate entity snapshots for active entities | RFC-0006 |
 | `consolidate` | Cluster similar memories into summary abstractions | RFC-0006 |
@@ -530,6 +530,13 @@ raise `ValueError` before any job or pending-work drain runs. Pending anonymous
 signals remain untouched. A trusted operator can explicitly call
 `organize(jobs=["feedback_apply"])` without a scope to retain legacy behavior.
 That operation affects every user of the engine and is not scoped learning.
+
+`centrality_boost` is not registered. RFC-0007 §11 labels its in-degree formula
+as a hypothesis, and the repository has no benchmark evidence supporting a
+retrieval or retention benefit. Returning a successful no-op misrepresents
+maintenance coverage and makes default runs harder to audit. A future
+implementation must first define drift-free persistence and pass a controlled
+quality and retention study before joining `ALL_JOBS`.
 
 ---
 

@@ -1,10 +1,8 @@
 """Organizer job registry and execution for explicit organize() calls.
 
-Implements RFC-0015 Layer 3 jobs. Each job is an async function that takes
-the engine, config, and time budget, and returns a JobResult. Implemented
-jobs: promote, decay_sweep, archive, feedback_apply, tombstone_sweep.
-Remaining jobs are stubs that return empty results pending future RFC
-implementations.
+Implements RFC-0015 Layer 3 jobs. Each registered job is an async function that
+takes the engine, config, and time budget, and performs its documented work.
+Proposed jobs are not advertised until they have an implementation and evidence.
 """
 
 from __future__ import annotations
@@ -33,7 +31,6 @@ ALL_JOBS: list[str] = [
     "alias_resolve",
     "summarize",
     "feedback_apply",
-    "centrality_boost",
     "tombstone_sweep",
     "snapshot_generation",
     "consolidate",
@@ -79,7 +76,6 @@ async def run_job(
         "deduplicate": _job_deduplicate,
         "alias_resolve": _job_alias_resolve,
         "summarize": _job_summarize,
-        "centrality_boost": _job_stub,
         "tombstone_sweep": _job_tombstone_sweep,
         "snapshot_generation": _job_snapshot_generation,
         "consolidate": _job_consolidate,
@@ -904,21 +900,4 @@ async def _job_index_compaction(
         duration_ms=round(duration_ms, 2),
         details={"stale_found": len(stale_ids), "retired_staging_found": len(retired_ids),
                  "stage_cleanup_blocked": cleanup_reason is not None, "stage_cleanup_reason": cleanup_reason},
-    )
-
-
-async def _job_stub(
-    job_name: str,
-    engine: MemoryEngine,
-    config: OrganizerConfig,
-    budget_ms: float,
-    user_id: str | None = None,
-) -> JobResult:
-    """Stub job returning an empty result.
-
-    Used for jobs whose full implementation depends on future RFCs.
-    """
-    return JobResult(
-        job=job_name,
-        details={"status": "stub", "note": f"Job '{job_name}' not yet implemented"},
     )
