@@ -4,7 +4,9 @@ For the separate chronological dialogue replay, see the
 [MemConflict adapter](MEMCONFLICT.md). The
 [LongMemEval-V2 adapter](LONGMEMEVAL_V2.md) connects PRME to the official
 agent-trajectory memory harness, including source screenshot return and portable
-adapter state.
+adapter state. The [MELT bridge](MELT.md) exercises corrections, conflicts,
+consolidation, temporal lineage, and retrieval through an independent lifecycle
+harness.
 
 ## PrecisionMemBench diagnostic adapter
 
