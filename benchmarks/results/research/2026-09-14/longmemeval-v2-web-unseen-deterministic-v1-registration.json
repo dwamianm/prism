@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "registered_at_utc": "2026-09-14T15:52:00Z",
+  "status": "registered_before answer generation",
+  "purpose": "Judge-independent held-out confirmation of PRME memory utility against the official no-memory baseline",
+  "source": {
+    "upstream_repository": "xiaowu0162/LongMemEval-V2",
+    "upstream_revision": "2cc8c540bdb87fe6761629b585e727e1c4704520",
+    "dataset_revision": "f152293e235517d504809563c833d7190b8c713b",
+    "prme_revision": "69699245fa0614352b7163b61c025b6605b07e8a",
+    "prme_adapter_schema_version": 2,
+    "prme_pack_manifest_sha256": "14046b5a6310aaac30f974b3c4b2408b6ce4e588593a5559153ccfe997560644",
+    "prme_memory_config_sha256": "6df1b58baf8401ffeeedc463091e40a786b88cee819f6bb20c46046d38801db3"
+  },
+  "selection": {
+    "domain": "web",
+    "tier": "small",
+    "included_question_types": [
+      "dynamic-environment",
+      "procedure",
+      "static-environment"
+    ],
+    "excluded_reason": "Questions inspected by any earlier LongMemEval-V2 smoke, diagnosis, or recovery run are excluded before answer generation.",
+    "excluded_prior_question_ids": [
+      "00aa905a",
+      "01f6e679",
+      "0382ed92",
+      "0401f0c8",
+      "0574c69a",
+      "05cce9b3",
+      "06a5a25f",
+      "07ab3723"
+    ],
+    "question_count": 149,
+    "counts_by_type": {
+      "dynamic-environment": 49,
+      "procedure": 41,
+      "static-environment": 59
+    },
+    "ordered_question_ids_sha256": "0e62ed1823394f145a287af3a15378ed6a71350b076e078be93be270f25487a7",
+    "questions_file_sha256": "848f46be62bbc15525e89148cbac4bdee9dd92458138b8c3a4f46fca2f70f10e",
+    "haystack_file_sha256": "d7466326ea7dbd705fbe657259d29fc2bf945b3bb23ec8c671cbfb6b0a1f2cf0"
+  },
+  "systems": {
+    "prme": {
+      "memory_config": "evaluation/memory_configs/prme.json",
+      "saved_memory": "web-small schema-2 100-trajectory pack",
+      "internal_context_budget_cl100k_tokens": 32768,
+      "upstream_context_budget_tokens": 65536,
+      "max_source_screenshots": 8
+    },
+    "baseline": {
+      "memory_config": "evaluation/memory_configs/no_retrieval.json",
+      "description": "Official no-memory adapter"
+    }
+  },
+  "reader": {
+    "provider": "Ollama 0.34.0",
+    "model": "qwen3.5:9b",
+    "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+    "model_modelfile_sha256": "f9faf665e9a9e2435765e8d343635db296e8d11ac5bb1b028434bec11dff8f10",
+    "reasoning_effort": "none",
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "top_k": 20,
+    "max_completion_tokens": 4096,
+    "max_concurrent_requests": 1,
+    "profile_classification": "local development reader; not the prescribed leaderboard serving stack"
+  },
+  "protocol": {
+    "question_order": "released dataset order after the registered filter",
+    "answer_generation": "PRME first, then the no-memory baseline, with no code or configuration changes after observing PRME outcomes",
+    "scoring": "Unmodified official deterministic evaluation functions",
+    "checkpointing": "Durable exact-request checkpoint launcher; all failures and UNKNOWN answers are retained",
+    "primary_metrics": [
+      "overall and per-category exact score for each system",
+      "paired wins and losses versus no memory",
+      "UNKNOWN rate",
+      "reader prompt and completion tokens",
+      "PRME memory query latency"
+    ],
+    "stopping_rule": "Run every registered question for both systems; do not tune from intermediate or final outcomes. Infrastructure failures may be resumed from exact checkpoints.",
+    "claim_boundary": "This is a broad held-out development confirmation for deterministic web-small questions. It excludes judge-dependent categories, enterprise, prescribed-server reproduction, and other published memory baselines."
+  }
+}
