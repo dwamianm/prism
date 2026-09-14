@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from benchmarks.diagnostics.packing_reader import canonical, digest
+from benchmarks.diagnostics.packing_reader import digest
 from benchmarks.diagnostics.verify_personamem import require
 from benchmarks.personamem import cohort_identity, conversation_sources, history_path, case_id
 

@@ -134,7 +134,8 @@ async def hindsight(args):
             include_entities=False, include_chunks=False, reranking="rrf", request_context=request_context)
     finally:
         await second.close()
-    normalized = lambda result: [(r.id, r.text, r.document_id) for r in result.results]
+    def normalized(result):
+        return [(r.id, r.text, r.document_id) for r in result.results]
     if normalized(before) != normalized(after):
         raise ValueError("Reopened recall changed source identities or ordering")
     if not any(r.text == contents[0][1] for r in after.results):
