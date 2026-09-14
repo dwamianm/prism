@@ -10,6 +10,18 @@ from benchmarks.integrations import melt_sut
 from prme.types import DecayProfile, LifecycleState
 
 
+def test_git_identity_is_read_from_the_prme_checkout(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(stdout="a" * 40 + "\n")
+
+    monkeypatch.setattr(melt_sut.subprocess, "run", run)
+    assert melt_sut._git_commit() == "a" * 40
+    assert calls[0][:3] == ["git", "-C", str(Path(melt_sut.__file__).resolve().parents[2])]
+
+
 class _FakeClient:
     def __init__(self, directory: str, **kwargs) -> None:
         self.directory = directory

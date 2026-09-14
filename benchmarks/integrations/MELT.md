@@ -14,54 +14,38 @@ organizer, and ordinary queries use the complete hybrid retrieval pipeline.
 Evidence rows retain the MELT source ID, PRME node ID, content, lifecycle state,
 and decay value.
 
-## Run the lifecycle suite
+## Run the registered lifecycle suite
 
-Create a MELT configuration with an absolute PRME checkout path:
+Use a clean PRME worktree at the revision named in the registration and a clean
+checkout of the pinned MELT commit. The launcher creates the exact configuration
+and writes a source-attestation manifest before MELT creates any result:
 
-```toml
-[run]
-output_dir = "/absolute/path/to/melt-results"
-store_case_io = true
-
-[sut]
-adapter = "shisad"
-contract_version = "b2"
-command = [
-  "uv", "--directory", "/absolute/path/to/prism", "run", "python", "-m",
-  "benchmarks.integrations.melt_sut",
-]
-capabilities = [
-  "reset",
-  "time_control",
-  "consolidation",
-  "query_as_of",
-  "structured_memory_write",
-  "answer_generation",
-]
-timeout_seconds = 60
-
-[suite]
-name = "lifecycle"
-version = "lifecycle-v5"
-fixture = "stress"
-profile = "lifecycle-v5-core"
-top_k = 12
-
-[answer]
-mode = "retrieval_only"
+```shell
+uv run python -m benchmarks.integrations.run_melt \
+  /absolute/path/to/melt /absolute/path/to/new-melt-results \
+  --registration benchmarks/results/research/2026-09-14/melt-lifecycle-v5-core-v1-registration.json
 ```
 
-Then run from the pinned MELT checkout:
+The registered protocol uses MELT's `held_out` split, `stress` fixture,
+`lifecycle-v5-core` score profile, top-k 12, and the official five-seed schedule.
+The split is explicit because MELT defaults to `dev`; a five-run dev report is
+still preliminary.
 
-```sh
-uv run melt run --config /absolute/path/to/prme-melt.toml \
-  --runs 5 --seed-schedule 1103,2207,3301,4409,5501
+After completion, validate the summary through MELT's own report loader and the
+independent source, protocol, run, case, and checkpoint checks:
+
+```shell
+uv run python -m benchmarks.integrations.validate_melt \
+  /absolute/path/to/new-melt-results/lifecycle_prme_*/summary.json \
+  --registration benchmarks/results/research/2026-09-14/melt-lifecycle-v5-core-v1-registration.json \
+  --upstream-root /absolute/path/to/melt \
+  --output /absolute/path/to/melt-validation.json
 ```
 
 Use MELT's smaller historical contract as an integration smoke before the
 registered five-run profile:
 
-```sh
+```shell
 uv run melt run --config /absolute/path/to/prme-melt.toml \
   --suite-version lifecycle-v4 --fixture smoke --score-profile lifecycle-v4-all \
   --runs 1 --seed 42 --top-k 3

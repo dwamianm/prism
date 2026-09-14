@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A preregistered MELT lifecycle launcher and fail-closed report validator. The
+  launcher pins the held-out final profile, five-seed schedule, source commits,
+  adapter and upstream file hashes before execution. Validation uses MELT's own
+  report loader and independently requires final status, exact protocol and SUT
+  identity, five complete runs, all case checkpoints, and retained case I/O.
 - Opt-in `prme doctor --verify-extraction` provider diagnostics. It verifies
   endpoint reachability, hosted credentials, and the configured model through
   read-only model metadata APIs without generating or storing content, and

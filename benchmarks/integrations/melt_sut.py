@@ -84,9 +84,10 @@ def _node_type(value: Any) -> NodeType:
 
 
 def _git_commit() -> str:
+    project_root = Path(__file__).resolve().parents[2]
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            ["git", "-C", str(project_root), "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
             text=True,
