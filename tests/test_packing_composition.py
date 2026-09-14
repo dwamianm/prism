@@ -16,7 +16,12 @@ def test_controls_match_existing_policy_and_preserve_inputs(reserve_head, alpha)
         source("Only if the pilot succeeds. " * 45, 0.99),
         *[source(f"Short source {i}", 0.4) for i in range(8)],
     ]
-    config = PackingConfig(token_budget=900, overhead_tokens=0, min_fidelity="full")
+    config = PackingConfig(
+        token_budget=900,
+        overhead_tokens=0,
+        min_fidelity="full",
+        multipath_ordering="density",
+    )
     before = [candidate.model_dump(mode="json") for candidate in candidates]
     original = packing.compute_str
     expected = (

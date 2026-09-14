@@ -46,7 +46,7 @@ Query
   │
   ▼
 [Stage 6] Context Packing
-  │  Apply STR budget, assemble Memory Bundle
+  │  Apply configured measured packing policy, assemble Memory Bundle
   │
   ▼
 Memory Bundle → LLM Context

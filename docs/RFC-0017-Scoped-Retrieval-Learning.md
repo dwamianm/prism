@@ -113,13 +113,15 @@ check old receipt feedback and new policy recording across graph changes and
 restart. Score replay still describes returned candidate order, not a replay of
 packing or unseen candidates.
 
-### Experimental balanced policy and receipt version 5
+### Default balanced policy and receipt version 5
 
 Balanced packing reserves the highest-scored ordinary multi-path candidate and
 then applies the fixed quarter-length penalty. It uses the same priority tiers,
-whole-source rendering and measured budget. The public option is explicit;
-density remains the default. Completed source studies do not prove answer
-quality or authorize a learned profile.
+whole-source rendering and measured budget. It is the application default after
+a complete 119-question answer trial improved correctness from 67 to 83, with
+26 paired wins, 10 losses and no lower category total. The examined development
+cohort and custom local judge do not establish universal superiority or authorize
+a learned profile. Density and score ordering remain explicit alternatives.
 
 Only balanced pipeline retrievals need the new version 5 receipt. They require
 an explicit ordering and execution descriptor and retain the existing score

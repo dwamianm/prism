@@ -158,11 +158,23 @@ retains 89.37% of labelled evidence and the combined policy 90.55%, versus 65.04
 for density. Both improve every category mean, including preferences, but each
 loses on two questions. The combination improves assistant retention while
 losing on two multi-session questions versus quarter-length. The public
-`balanced` opt-in now reproduces all 4,500 saved density/score/balanced contexts
+`balanced` policy now reproduces all 4,500 saved density/score/balanced contexts
 over 500 questions and three budgets. Installed receipt compatibility and the
-guide workflow pass; complete balanced answer validation remains pending. See
+guide workflow pass. See
 the [implementation verification](../benchmarks/results/recovery/2026-09-12/BALANCED-PACKING.md).
-The original failed score-policy gate and density default remain unchanged.
+The original failed score-only policy gate remains unchanged.
+
+The [complete balanced answer trial](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
+then retained all 119 development questions across density, balanced and empty
+contexts. A fixed 35B Qwen reader and separately calibrated 31B Gemma judge
+scored balanced at 83/119 versus density at 67/119, with 26 paired wins, 10
+losses and no lower category total. The first registered run failed at a
+512-token generation ceiling and remains recorded; a separately registered
+short-answer replacement completed all 714 reader and judge outcomes without a
+provider failure. This answer evidence, together with the two source-retention
+studies, promotes balanced to the default while preserving explicit density and
+score options. The examined cohort and custom local judge still require an
+independent answer holdout before any competitive leadership claim.
 
 The [simulation clock correction](../benchmarks/results/recovery/2026-09-12/SIMULATION-CLOCK.md)
 fixed real-time leakage into maintenance age checks and native mutation

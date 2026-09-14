@@ -15,7 +15,8 @@ def candidate(text, score, **kwargs):
 def test_head_preserves_whole_qualified_source_and_restores_inputs():
     head = candidate('Only if the pilot succeeds. ' * 30, .99)
     short = [candidate(f'Short unrelated note {i}.', .4) for i in range(8)]
-    cfg = PackingConfig(token_budget=1000, overhead_tokens=0, min_fidelity='full')
+    cfg = PackingConfig(token_budget=1000, overhead_tokens=0, min_fidelity='full',
+                        multipath_ordering='density')
     cfg = cfg.model_copy(update={'token_budget': packing.pack_context([head], cfg).tokens_used})
     candidates = [*short, head]
     before = [c.model_dump(mode='json') for c in candidates]

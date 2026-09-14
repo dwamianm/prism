@@ -159,9 +159,10 @@ Reuse it for an exact retry; HTTP uses the `Idempotency-Key` header and the MCP
 lifecycle tools expose the same `request_id` field.
 
 The [packing guide](docs/PACKING.md) explains exact context budgets and the
-experimental `balanced` policy. It improved source retention in completed
-studies, with individual losses; density remains the default pending broader
-answer validation.
+default `balanced` policy. It improved 4K source retention from 74.85% to 95.91%
+and answer accuracy from 67/119 to 83/119 on the complete development cohort.
+Use explicit `density` or `score` ordering when a workload-specific evaluation
+supports it.
 
 For exports and counts, enumerate the stored records instead of counting search
 results. Iteration reads every matching node in bounded pages:

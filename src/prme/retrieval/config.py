@@ -144,13 +144,13 @@ class PackingConfig(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
 
     multipath_ordering: Literal["density", "score", "balanced"] = Field(
-        default="density",
+        default="balanced",
         description=(
             "Order multi-path candidates by score per token ('density'), "
             "composite score ('score'), or reserve the highest-scored ordinary "
             "multi-path candidate then use score / full_tokens**0.25 ('balanced'). "
-            "Balanced is experimental: examined cohorts improved source retention, "
-            "with individual losses; complete answer validation remains necessary. "
+            "Balanced is the evidence-backed default; density and score remain "
+            "available for compatibility and workload-specific evaluation. "
             "Other priority tiers and whole-output token limits are unchanged."
         ),
     )

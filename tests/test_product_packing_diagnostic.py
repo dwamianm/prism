@@ -23,7 +23,12 @@ def make_candidate(sid, text, score):
 def fixture_report(tmp_path):
     relevant = make_candidate("s0:t0", "The project uses PostgreSQL. " * 100, .95)
     short = make_candidate("s1:t0", "Thanks.", .5)
-    cfg = PackingConfig(token_budget=3000, overhead_tokens=0, min_fidelity="full")
+    cfg = PackingConfig(
+        token_budget=3000,
+        overhead_tokens=0,
+        min_fidelity="full",
+        multipath_ordering="density",
+    )
     cfg.token_budget = pack_context([relevant], cfg).tokens_used
     candidates = [relevant, short]
     control = pack_context(candidates, cfg)

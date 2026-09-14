@@ -832,18 +832,19 @@ ScoringWeights(
 ### PackingConfig
 
 `multipath_ordering="score"` selects composite-score ordering within the multi-path
-priority tier. The default remains `"density"` (score per token). Pins, instructions,
+priority tier. The default is `"balanced"`: it reserves the highest-scored ordinary
+multi-path candidate, then uses a quarter-length penalty. Pins, instructions,
 active tasks, other tiers and measured whole-output budgets keep their existing
-rules. Two local reader studies support the score option on development data;
-the completed source-retention confirmation failed its preference-category guard. This is an opt-in
-policy, not a claim of superior results for every workload.
+rules. The default change follows a complete 119-question answer trial at 4K:
+balanced scored 83 versus density at 67, with 26 wins and 10 losses. This examined
+cohort does not establish superior results for every workload.
 
 ```python
 from prme import MemoryClient, config_from_directory
 from prme.retrieval.config import PackingConfig
 
 config = config_from_directory("./my_memories")
-config.packing = PackingConfig(multipath_ordering="score")
+config.packing = PackingConfig(multipath_ordering="density")
 
 with MemoryClient(config=config) as client:
     client.store("Aurora requires deployment approval.", user_id="alice")
@@ -855,8 +856,9 @@ with MemoryClient(config=config) as client:
 and lexical paths together. Set typed options before opening the client. Passing
 a `config` to `MemoryClient` uses its paths as-is; its separate `directory` argument
 is ignored. The equivalent environment setting is
-`PRME_PACKING__MULTIPATH_ORDERING=score`.
-New retrieval receipts use schema version 4 and retain the chosen policy in
+`PRME_PACKING__MULTIPATH_ORDERING=density`.
+Balanced retrieval receipts use schema version 5. Density and score retrievals
+use schema version 4. Every receipt retains the chosen policy in
 `receipt.packing.multipath_ordering`. Versions 1–3 retain their original canonical
 JSON and feedback checksums and always mean density ordering.
 

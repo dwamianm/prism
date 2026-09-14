@@ -20,7 +20,12 @@ def fixture_report():
                                   composite_score=score, path_count=2, paths=["VECTOR", "LEXICAL"])
     relevant = source("relevant", "The project uses PostgreSQL. " * 100, .95)
     short = source("short", "Thanks.", .5)
-    cfg = PackingConfig(token_budget=2000, overhead_tokens=0, min_fidelity="full")
+    cfg = PackingConfig(
+        token_budget=2000,
+        overhead_tokens=0,
+        min_fidelity="full",
+        multipath_ordering="density",
+    )
     cfg.token_budget = pack_context([relevant], cfg).tokens_used
     control = pack_context([relevant, short], cfg)
     return {

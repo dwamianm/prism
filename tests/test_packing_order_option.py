@@ -88,7 +88,7 @@ def test_ordering_does_not_override_priority_or_budget(ordering, priority):
 
 
 def test_default_and_environment_selection_are_explicit(monkeypatch):
-    assert PackingConfig().multipath_ordering == "density"
+    assert PackingConfig().multipath_ordering == "balanced"
     monkeypatch.setenv("PRME_PACKING__MULTIPATH_ORDERING", "score")
     assert PRMEConfig(_env_file=None).packing.multipath_ordering == "score"
     monkeypatch.setenv("PRME_PACKING__MULTIPATH_ORDERING", "balanced")

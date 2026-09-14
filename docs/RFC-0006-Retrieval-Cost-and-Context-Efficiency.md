@@ -24,26 +24,36 @@ recall rose from 75.51% to 93.49%, with 31 wins and no losses among 114 labelled
 questions. There were five losses at 2K, including a negative preference-category
 mean. The subsequent frozen 381-question confirmation improved overall 4K
 recall from 65.04% to 85.77% but regressed preference recall from 78.26% to 68.12%.
-It failed the preregistered category guard, so density remains the default;
+It failed the preregistered category guard, so density remained the default at that gate;
 see the [study and limitations](../benchmarks/results/packing/2026-09-12/CONFIRMATION.md).
 This supersedes the earlier rationale treating STR as established superior utility.
 
-**Configurable policy:** `PackingConfig.multipath_ordering` accepts `"density"`
-(default), `"score"` or experimental `"balanced"`. It changes only the ordering of the multi-path tier; ties
+**Evidence update, 2026-09-13:** the later balanced policy combines one reserved
+top-score candidate with a quarter-length penalty. At 4K it retained 95.91% of
+labelled sources versus density at 74.85% on all 119 development questions, and
+90.55% versus 65.04% on the frozen 381-question regression partition. A fixed
+answer trial then scored 83/119 for balanced and 67/119 for density, with 26
+paired wins, 10 losses and no lower category total. Balanced is now the default;
+the examined cohort and custom local judge do not establish universal superiority.
+The [answer report](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
+retains the protocol, failures, category results and audit.
+
+**Configurable policy:** `PackingConfig.multipath_ordering` accepts `"balanced"`
+(default), `"density"` or `"score"`. It changes only the ordering of the multi-path tier; ties
 still use node ID and all representations obey the same measured budget. The
 public implementation reproduces all 714 frozen development contexts and source
 measurements across both arms and three budgets. This is implementation parity,
-not additional quality evidence. The completed confirmation failed its
+not additional quality evidence. The completed score-only confirmation failed its
 preference-category guard. New retrieval
 receipts record this policy in schema version 4; legacy receipts preserve their
 original bytes and implicit density semantics. Balanced ordering reserves the
 highest-scored ordinary multi-path candidate, then orders the remainder by
 score divided by full-entry tokens to the power 0.25. The head still obeys
-ordinary fidelity and budget checks. Balanced emits version 5 receipts; default
-density and explicit score continue to emit version 4. No legacy receipt bytes
+ordinary fidelity and budget checks. Balanced emits version 5 receipts; explicit
+density and score continue to emit version 4. No legacy receipt bytes
 change. The [packing guide](PACKING.md) describes the completed source-retention
-studies, per-question losses and pending answer validation. This option does not
-supersede the failed score-policy default-promotion gate.
+studies, per-question losses and answer validation. The balanced decision does
+not retroactively change the failed score-only promotion result.
 
 **Implemented contract, 2026-09-12:** the product packer now counts its complete
 rendered context with a named tiktoken encoding. `MemoryBundle.render()` returns
@@ -92,9 +102,10 @@ Where:
 - `composite_score` is the retrieval score from RFC-0005, Stage 5. Range: [0, 1].
 - `token_cost` is the estimated token count for the object's representation in the bundle (Section 3).
 
-STR represents how much retrieval value the object delivers per token consumed. Objects with high STR are preferred over low-STR objects when the context budget is tight.
-
-STR is used as a tiebreaker within priority tiers (RFC-0005, Stage 6), not as a replacement for composite score.
+STR represents how much retrieval value the object delivers per token consumed.
+It is the explicit `density` ordering metric. The default `balanced` policy uses
+`score / token_cost**0.25` after reserving the highest-scored ordinary multi-path
+candidate, reducing the extreme short-entry bias observed with STR.
 
 ---
 
@@ -182,9 +193,15 @@ for obj in ranked_objects where obj.salience == 1.0 or obj.type == TASK:
             include(obj, REFERENCE)
             available -= token_cost(obj, REFERENCE)
 
-# Priority 2: Multi-path objects (path_count >= 2) by STR descending
+# Priority 2: Multi-path objects (path_count >= 2) by configured ordering
 multi_path = [obj for obj in ranked_objects if obj.path_count >= 2 and obj not in included]
-multi_path.sort(by=STR, descending=True)
+if packing_policy == BALANCED:
+    reserve argmax(multi_path, by=(composite_score, inverse_node_id))
+    multi_path.sort(by=(is_reserved, composite_score / token_cost**0.25, inverse_node_id), descending=True)
+elif packing_policy == SCORE:
+    multi_path.sort(by=(composite_score, inverse_node_id), descending=True)
+else:
+    multi_path.sort(by=(STR, inverse_node_id), descending=True)
 for obj in multi_path:
     representation = select_representation(available, obj)
     cost = token_cost(obj, representation)

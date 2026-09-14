@@ -53,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Balanced multi-path context packing is now the default. A complete fixed
+  119-question answer trial scored 83 correct with balanced contexts versus 67
+  with density, with 26 paired wins, 10 losses, and no lower category total.
+  Explicit density and score policies remain available, while historical
+  receipts retain their original density meaning and checksums.
 - Current-state retrieval now recognizes ordinary present-tense state questions,
   while inferred recency reweighting requires explicit update evidence and dated
   temporal queries remain historical. Decisions and instructions receive the

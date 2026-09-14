@@ -34,7 +34,8 @@ def candidate(number, *, semantic=0.8, lexical=0.6, days=0, session=None, paths=
 def receipt(candidates, *, query="telescope", policy="score_path_id", weights=None):
     return make_receipt(request_id=UUID(int=100), user_id="owner", query=query,
                         reference_time=NOW, scopes=(Scope.PROJECT,),
-                        scoring=weights or ScoringWeights(), packing=PackingConfig(),
+                        scoring=weights or ScoringWeights(),
+                        packing=PackingConfig(multipath_ordering="density"),
                         candidates=candidates, bundle=MemoryBundle(), ranking_policy=policy)
 
 
