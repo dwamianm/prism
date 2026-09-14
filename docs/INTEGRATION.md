@@ -1102,6 +1102,31 @@ with semantic equivalence limited to normalized exact values. Finish pending
 ingestion and prevent concurrent mutation for audited counts. This API
 counts and groups text values; it does not parse or sum numeric quantities.
 
+For facts carrying `grounding="object_decimal_v1"`, use the dedicated exact
+quantity operation:
+
+```python
+from prme import QuantityAggregationQuery
+
+totals = memory.aggregate_quantities(
+    QuantityAggregationQuery(
+        predicates=["spent"],
+        units=["USD"],
+        group_by=["predicate", "unit"],
+    ),
+    user_id="alice",
+)
+```
+
+Each group returns an exact `Decimal` total, minimum, maximum, value/evidence
+counts, temporal bounds, and bounded per-node source samples. JSON serializes
+decimals as strings. `group_by` must contain `unit`; normalization is limited to
+Unicode, case, and whitespace, and no conversion or currency inference occurs.
+The read path revalidates the stored decimal against its claim object and source
+evidence. HTTP exposes `POST /v1/quantities/aggregate`; MCP exposes
+`memory_aggregate_quantities`. These operations use the same unchanged-store and
+extraction/real-world coverage boundaries as assertion aggregation.
+
 ---
 
 ## 8. Multi-User / Multi-Tenant

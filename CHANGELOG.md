@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Exact decimal quantity aggregation across Python, HTTP, and MCP, with totals,
+  minima, maxima, counts, temporal bounds, and source/evidence samples. Every
+  group must retain its normalized unit, stored quantities are revalidated at
+  read time, incompatible units are never mixed, and scaled-integer addition
+  avoids decimal-context rounding.
 - Source-grounded decimal quantities for extracted facts. Built-in and custom
   grounding retain a quantity only when its exact decimal, quantified phrase,
   and verbatim unit occur in the claim object and evidence. New derivation plans

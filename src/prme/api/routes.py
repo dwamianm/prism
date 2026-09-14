@@ -28,7 +28,7 @@ from prme.models.relevance import (
     RetrievalReceipt,
 )
 from prme.models.learning import LearningEvaluation
-from prme.models.aggregation import AssertionAggregation
+from prme.models.aggregation import AssertionAggregation, QuantityAggregation
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
     AcceptedWorkErrorResponse,
@@ -49,6 +49,7 @@ from prme.api.models import (
     NodeResponse,
     OrganizeRequest,
     OrganizeResponse,
+    QuantityAggregationRequest,
     RelevanceRequest,
     ReinforceRequest,
     RetrieveRequest,
@@ -486,6 +487,26 @@ async def aggregate_assertions(
     """Scan all matching structured assertions for an unchanged store."""
     try:
         return await _get_engine(request).aggregate_assertions(
+            body.query,
+            user_id=_user_id(request, body.user_id, required=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/quantities/aggregate",
+    response_model=QuantityAggregation,
+    summary="Sum and inspect exact grounded quantities",
+    responses={422: {"model": ErrorResponse}},
+)
+async def aggregate_quantities(
+    request: Request,
+    body: QuantityAggregationRequest,
+) -> QuantityAggregation:
+    """Scan all matching grounded decimals without converting units."""
+    try:
+        return await _get_engine(request).aggregate_quantities(
             body.query,
             user_id=_user_id(request, body.user_id, required=True),
         )

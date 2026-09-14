@@ -31,6 +31,14 @@ state. It is not exact historical replay. Responses expose
 context; lifecycle transitions, mutations, and evicted index entries are not
 reconstructed.
 
+`aggregate_assertions` is the complete structured counting/grouping path over
+stored subject/predicate/object/polarity metadata; it does not use semantic
+top-k retrieval. `aggregate_quantities` accepts only read-time-revalidated
+`object_decimal_v1` quantity metadata, keeps unit in every group, uses exact
+decimal addition, and never converts units or infers currencies. Both require an
+owner, are complete only for an unchanged store, and report unknown extraction
+and real-world coverage. HTTP and MCP expose corresponding aggregate tools.
+
 ## Memory Object Lifecycle
 
 New event/direct-node metadata must be finite and JSON-serializable, with no
@@ -42,6 +50,12 @@ legacy non-finite values through a versioned path encoding; finite record bytes
 and old raw checksums must remain unchanged. Do not restore Pydantic JSON
 serialization that silently converts non-finite metadata to null. See
 `docs/METADATA.md` for exact compatibility limits.
+
+New extraction plans use `grounded_quantities_v6`. A quantity survives only
+when one supported decimal, its quantified phrase, and its verbatim unit occur
+in both the claim object and source evidence. Invalid optional quantities are
+dropped without discarding the claim. Older plan policies and checksums remain
+unchanged; do not infer unit aliases or rewrite historical metadata.
 
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 

@@ -14,7 +14,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
-from prme.models.aggregation import AssertionQuery
+from prme.models.aggregation import AssertionQuery, QuantityAggregationQuery
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -330,6 +330,14 @@ class AssertionAggregationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     query: AssertionQuery = Field(default_factory=AssertionQuery)
+
+
+class QuantityAggregationRequest(BaseModel):
+    """Exact, owner-scoped aggregation over grounded stored quantities."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    query: QuantityAggregationQuery = Field(default_factory=QuantityAggregationQuery)
 
 
 # ---------------------------------------------------------------------------

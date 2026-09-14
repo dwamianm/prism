@@ -454,6 +454,32 @@ transaction snapshot; callers requiring an audited count must prevent concurrent
 mutation and finish pending ingestion first. Numeric parsing and sums are
 outside this contract.
 
+### Grounded quantity aggregation
+
+`aggregate_quantities(QuantityAggregationQuery(...), user_id=...)` applies the
+same owner, assertion, scope, lifecycle, epistemic, and temporal filters, then
+admits only quantity metadata with `grounding="object_decimal_v1"`. It validates
+the stored decimal, verbatim unit, quantified source text, claim object, and
+evidence again at read time. Missing and invalid quantities receive separate
+exclusion counts.
+
+Every group key must include `unit`; normalized units use only NFKC, case-fold,
+trim, and whitespace normalization. No currency inference, plural resolution,
+dimensional analysis, or unit conversion occurs. This prevents a total from
+silently mixing values such as `$`, `USD`, `kg`, and `lb`. The response returns
+an exact decimal `total`, `minimum`, `maximum`, contribution count, distinct
+evidence count, event-time bounds, and bounded samples that keep each value with
+its node, source text, unit, and evidence references. Decimal addition uses
+scaled integers rather than the process decimal context, so totals do not round
+at 28 significant digits. JSON represents decimal results as strings.
+
+The completeness and consistency boundary is identical to structured assertion
+aggregation: all matching grounded quantities are visited for an unchanged
+store, while source-extraction and real-world coverage remain unknown. HTTP
+exposes `POST /v1/quantities/aggregate`; MCP exposes
+`memory_aggregate_quantities`. Natural-language retrieval does not automatically
+route to this operation.
+
 Natural-language count and list retrievals expose this boundary directly as
 `RetrievalMetadata.aggregation_coverage`. It reports unique candidates before
 explicit selection, returned candidates, context-included candidates, stable

@@ -54,7 +54,7 @@ _INEXACT_QUANTITY_RE = re.compile(
 )
 
 
-def _normalize_quantity_unit(value: str) -> str:
+def normalize_quantity_unit(value: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", value).strip().casefold().split())
 
 
@@ -105,7 +105,7 @@ def validate_extracted_quantity(
     unit = quantity.unit.strip()
     if parsed != quantity.value or not _unit_mentioned(unit, source_text):
         return None
-    if _normalize_quantity_unit(unit) == "1" and source_text.strip() != token:
+    if normalize_quantity_unit(unit) == "1" and source_text.strip() != token:
         return None
     return quantity.model_copy(update={"source_text": source_text, "unit": unit})
 

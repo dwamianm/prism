@@ -54,7 +54,12 @@ from prme.retrieval.models import RetrievalResponse
 _Result = TypeVar("_Result")
 
 if TYPE_CHECKING:
-    from prme.models.aggregation import AssertionAggregation, AssertionQuery
+    from prme.models.aggregation import (
+        AssertionAggregation,
+        AssertionQuery,
+        QuantityAggregation,
+        QuantityAggregationQuery,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -590,6 +595,18 @@ class MemoryClient:
     ) -> "AssertionAggregation":
         """Count and group exact stored assertions without top-k retrieval."""
         return self._run(self._engine.aggregate_assertions(
+            query, user_id=user_id, batch_size=batch_size,
+        ))
+
+    def aggregate_quantities(
+        self,
+        query: "QuantityAggregationQuery",
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "QuantityAggregation":
+        """Calculate exact decimal statistics without implicit unit conversion."""
+        return self._run(self._engine.aggregate_quantities(
             query, user_id=user_id, batch_size=batch_size,
         ))
 

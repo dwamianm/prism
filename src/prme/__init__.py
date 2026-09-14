@@ -18,7 +18,15 @@ if TYPE_CHECKING:
 
 from prme.config import PRMEConfig
 from prme.ingestion.errors import ExtractionError, MaterializationError
-from prme.models.aggregation import AssertionAggregation, AssertionGroup, AssertionQuery
+from prme.models.aggregation import (
+    AssertionAggregation,
+    AssertionGroup,
+    AssertionQuery,
+    QuantityAggregation,
+    QuantityAggregationQuery,
+    QuantityGroup,
+    QuantitySample,
+)
 from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
 from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
@@ -87,6 +95,10 @@ __all__ = [
     "AssertionAggregation",
     "AssertionGroup",
     "AssertionQuery",
+    "QuantityAggregation",
+    "QuantityAggregationQuery",
+    "QuantityGroup",
+    "QuantitySample",
     "ConditionEvaluationMethod",
     "ConditionState",
     "ContextAblation",

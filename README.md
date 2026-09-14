@@ -246,6 +246,29 @@ unsupported ranges, approximations, locale decimal commas, scientific notation,
 and multi-number phrases remain ordinary source-cited claims without quantity
 metadata. PRME does not infer currency or convert units.
 
+Exact totals stay separated by unit and retain sampled contributions with their
+node and evidence IDs:
+
+```python
+from prme import QuantityAggregationQuery
+
+costs = client.aggregate_quantities(
+    QuantityAggregationQuery(
+        subjects=["I"],
+        predicates=["spent"],
+        units=["$"],
+        group_by=["predicate", "unit"],
+    ),
+    user_id="alice",
+)
+print(costs.groups[0].total)  # Decimal, serialized as an exact JSON string
+```
+
+Each group returns `value_count`, `total`, `minimum`, `maximum`, distinct
+evidence count, event-time bounds, and bounded source samples. The API never
+combines different normalized units. HTTP uses
+`POST /v1/quantities/aggregate`; MCP uses `memory_aggregate_quantities`.
+
 <details>
 <summary>Async API (advanced)</summary>
 
@@ -1042,8 +1065,8 @@ See [ROADMAP.md](ROADMAP.md) for the full development plan.
 **Current (v0.11.0)** — hybrid retrieval, synchronous and async clients, MCP/REST, framework adapters, deterministic vector search, and index rebuilds.
 
 **Next** — a trustworthy comparative retrieval baseline, broader temporal state
-operations, typed numeric aggregation, and measured improvements to context
-packing. See the roadmap for acceptance criteria and GitHub issue links.
+operations, and measured improvements to context packing. See the roadmap for
+acceptance criteria and GitHub issue links.
 
 ## Contributing
 

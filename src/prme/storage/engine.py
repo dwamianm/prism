@@ -80,7 +80,12 @@ from prme.types import (
 
 if TYPE_CHECKING:
     import asyncpg
-    from prme.models.aggregation import AssertionAggregation, AssertionQuery
+    from prme.models.aggregation import (
+        AssertionAggregation,
+        AssertionQuery,
+        QuantityAggregation,
+        QuantityAggregationQuery,
+    )
     from prme.storage.encryption import EncryptionProvider
 
     from prme.ingestion.pipeline import IngestionPipeline
@@ -1901,6 +1906,24 @@ class MemoryEngine:
         return await aggregate_assertions(
             self,
             AssertionQuery.model_validate(query),
+            user_id=user_id,
+            batch_size=batch_size,
+        )
+
+    async def aggregate_quantities(
+        self,
+        query: "QuantityAggregationQuery",
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "QuantityAggregation":
+        """Calculate exact decimal statistics without implicit unit conversion."""
+        from prme.models.aggregation import QuantityAggregationQuery
+        from prme.retrieval.aggregation import aggregate_quantities
+
+        return await aggregate_quantities(
+            self,
+            QuantityAggregationQuery.model_validate(query),
             user_id=user_id,
             batch_size=batch_size,
         )
