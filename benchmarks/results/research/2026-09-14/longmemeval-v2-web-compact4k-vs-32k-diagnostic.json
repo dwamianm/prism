@@ -54,7 +54,7 @@
   },
   "limitations": [
     "This is a post-result comparison on the same cohort; it is not a new holdout.",
-    "The arms change both PRME context budget and rendering format, so the score difference cannot be assigned to either factor alone.",
+    "Both arms use auditable rendering. The PRME revision and downstream reader cap differ along with the internal context budget, so this is not a strict single-variable budget ablation.",
     "The reader used nonzero temperature and the arms ran at different times; paired differences include generation variance."
   ]
 }

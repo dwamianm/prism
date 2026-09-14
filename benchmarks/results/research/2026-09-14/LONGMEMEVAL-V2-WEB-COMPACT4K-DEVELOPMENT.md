@@ -1,8 +1,8 @@
-# LongMemEval-V2 compact 4K development study
+# LongMemEval-V2 4K-budget development study
 
 **Completed:** 2026-09-14
 
-**Systems:** compact 4K PRME versus the official no-memory adapter
+**Systems:** 4K-budget PRME versus the official no-memory adapter
 
 **Reader:** local Ollama `qwen3.5:9b`, thinking disabled
 
@@ -12,13 +12,13 @@
 
 ## Result
 
-Compact 4K PRME answered 49 of 149 questions correctly (32.89%). The fresh
+The 4K-budget PRME arm answered 49 of 149 questions correctly (32.89%). The fresh
 no-memory arm answered 10 of 149 (6.71%), a paired improvement of 26.17
 percentage points. PRME won 45 pairs, lost 6 and tied 98. The question-bootstrap
 95% interval for the paired difference is 17.45 to 34.90 points, and the exact
 two-sided McNemar p-value is `1.83e-8`.
 
-| Category | Questions | Compact 4K PRME | No memory | Paired difference | Wins / losses | 95% bootstrap interval |
+| Category | Questions | 4K-budget PRME | No memory | Paired difference | Wins / losses | 95% bootstrap interval |
 |---|---:|---:|---:|---:|---:|---:|
 | Dynamic | 49 | 11 (22.45%) | 1 (2.04%) | +20.41 points | 11 / 1 | +8.16 to +32.65 |
 | Procedure | 41 | 21 (51.22%) | 3 (7.32%) | +43.90 points | 20 / 2 | +24.39 to +60.98 |
@@ -32,7 +32,7 @@ the 45/6/98 paired outcomes.
 
 ## Efficiency and the 32K reference
 
-The compact bundle used an exact internal budget of 4,096 `cl100k_base` tokens.
+The 4K bundle used an exact internal budget of 4,096 `cl100k_base` tokens.
 Under the upstream reader tokenizer, mean memory context was 7,321 tokens,
 versus 43,195 in the earlier 32K study, an 83.05% reduction. Total prompt tokens
 fell from 6,528,210 to 1,146,080 (82.44%). The PRME arm took 4,613 seconds versus
@@ -41,21 +41,22 @@ fell from 6,528,210 to 1,146,080 (82.44%). The PRME arm took 4,613 seconds versu
 prompt lengths prevent treating wall time as a controlled latency comparison.
 
 The efficiency gain did not preserve answer quality. On the same question IDs,
-compact 4K scored 49 versus 80 for the earlier auditable 32K arm. Compact 4K won
+the 4K arm scored 49 versus 80 for the earlier auditable 32K arm. The 4K arm won
 5 pairs, lost 36 and tied 108, a 20.81-point accuracy regression. The loss was
-largest on static questions: 17 correct versus 35. This study changes both the
-budget and context format, so it does not identify which change caused each
-answer difference.
+largest on static questions: 17 correct versus 35. Inspection confirms that both
+arms use auditable rendering; the installed configuration named `prme_compact`
+is a 4K budget preset. The PRME revision, downstream reader cap and generation
+time also differ, so the result is not a strict single-variable budget ablation.
 
 | Same-cohort arm | Correct | Accuracy | Mean reader memory context |
 |---|---:|---:|---:|
 | Auditable 32K | 80 / 149 | 53.69% | 43,195 tokens |
-| Compact 4K | 49 / 149 | 32.89% | 7,321 tokens |
+| 4K budget | 49 / 149 | 32.89% | 7,321 tokens |
 | Change | -31 | -20.81 points | -83.05% |
 
 ## Protocol and decision
 
-The compact study was registered before its answer generation with a frozen
+The 4K study was registered before its answer generation with a frozen
 PRME `08311ac`, adapter, launcher, upstream harness, configurations, cohort order,
 reader settings and saved-memory artifact. PRME ran first, followed by a fresh
 no-memory arm. Both used the same Qwen model digest, temperature 0.6, top-p 0.95,
@@ -65,7 +66,7 @@ reasoning. The schema-2 comparator accepted the exact source and system binding.
 This is a post-result development study: all 149 questions and their earlier
 32K outcomes were already known. It shows that 4K PRME still adds substantial
 memory utility over no memory, but it does not support adopting this budget as
-the quality reference. Compact rendering remains an explicit option. The next
+the quality reference. The 4K preset remains an explicit option. The next
 efficiency work should measure an intermediate budget curve and improve evidence
 selection before changing a quality-oriented default.
 

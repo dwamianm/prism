@@ -39,10 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to full node IDs. Exact token accounting covers the complete output, and receipt
   schema version 7 records the format while versions 1–6 preserve their canonical
   bytes and historical auditable semantics. The auditable format remains default.
-- A registered 149-question LongMemEval-V2 compact 4K development study. PRME
+- A registered 149-question LongMemEval-V2 4K-budget development study. PRME
   scored 49/149 versus 10/149 without memory, while mean reader memory context
   fell 83.05% from the earlier 32K arm. The same-cohort PRME score fell from
-  80/149 to 49/149, so the result preserves compact mode as explicit and makes
+  80/149 to 49/149, so the result preserves the 4K preset as explicit and makes
   intermediate-budget answer retention the next gate rather than supporting a
   quality-default change.
 - A pinned MemoryAgentBench adapter for the benchmark's four incremental memory

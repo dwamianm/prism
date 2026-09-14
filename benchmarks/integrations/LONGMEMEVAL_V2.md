@@ -109,12 +109,13 @@ The adapter asks PRME for at most 32,768 `cl100k_base` tokens. The larger
 upstream ceiling leaves room for Qwen's independently measured chat-template
 and image tokens; the harness records and enforces the actual final count.
 Use `evaluation/memory_configs/prme_compact.json` for the explicit product-default
-4,096-token retrieval arm. A saved-memory run must also use a copied
-`memory_config.json` with the same compact settings; the comparator hashes that
+4,096-token retrieval arm. Here `compact` names the budget preset; this adapter
+still returns auditable records. A saved-memory run must also use a copied
+`memory_config.json` with the same budget settings; the comparator hashes that
 loaded configuration independently. Use the official combine and leaderboard
 utilities for aggregate metrics.
 
-The completed [compact 4K development study](../results/research/2026-09-14/LONGMEMEVAL-V2-WEB-COMPACT4K-DEVELOPMENT.md)
+The completed [4K-budget development study](../results/research/2026-09-14/LONGMEMEVAL-V2-WEB-COMPACT4K-DEVELOPMENT.md)
 reduced mean reader memory context by 83.05% but scored 49/149 versus 80/149 for
 the earlier 32K arm on the same known cohort. It documents a budget tradeoff and
 does not support replacing the larger quality reference.
