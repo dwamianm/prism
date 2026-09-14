@@ -8,7 +8,12 @@ from benchmarks.diagnostics import assistant_packing_answer as diagnostic
 
 
 def test_prepare_reproduces_current_density_and_balanced_contexts():
-    prepared = diagnostic.prepare(Path(__file__).parents[1])
+    root = Path(__file__).parents[1]
+    paths = diagnostic.source_paths(root)
+    required = [path for name, path in paths.items() if name != "snapshots"]
+    if any(not path.is_file() for path in required) or not paths["snapshots"].is_dir():
+        pytest.skip("local benchmark evidence is not included in the source checkout")
+    prepared = diagnostic.prepare(root)
     assert len(prepared["rows"]) == 9
     assert {frozenset(row["contexts"]) for row in prepared["rows"]} == {
         frozenset(diagnostic.ARMS)

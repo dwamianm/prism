@@ -15,27 +15,29 @@ async def test_failed_startup_releases_database_and_queue(config, user, monkeypa
         event_id = await engine.store('Durable source before a startup failure', user_id=user)
     connections, pools, queues = [], [], []
     import prme.storage.engine as module
-    import prme.storage.pg as pg
     from prme.storage.write_queue import WriteQueue
     initialize = module.initialize_database
-    create_pool = pg.create_pool
     start_queue = WriteQueue.start
 
     def initialize_and_capture(conn):
         connections.append(conn)
         return initialize(conn)
 
-    async def capture_pool(*args, **kwargs):
-        pool = await create_pool(*args, **kwargs)
-        pools.append(pool)
-        return pool
-
     async def capture_queue(queue):
         queues.append(queue)
         return await start_queue(queue)
 
     monkeypatch.setattr(module, 'initialize_database', initialize_and_capture)
-    monkeypatch.setattr(pg, 'create_pool', capture_pool)
+    if config.backend == 'postgres':
+        import prme.storage.pg as pg
+        create_pool = pg.create_pool
+
+        async def capture_pool(*args, **kwargs):
+            pool = await create_pool(*args, **kwargs)
+            pools.append(pool)
+            return pool
+
+        monkeypatch.setattr(pg, 'create_pool', capture_pool)
     monkeypatch.setattr(WriteQueue, 'start', capture_queue)
     with patch('prme.ingestion.extraction.create_extraction_provider', side_effect=RuntimeError('startup fault')):
         with pytest.raises(RuntimeError, match='startup fault'):
