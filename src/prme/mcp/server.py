@@ -298,6 +298,7 @@ async def memory_retrieve(
     ctx: Context = None,
     min_score: Optional[float] = None,
     limit: Optional[int] = None,
+    max_per_source: Optional[int] = None,
     token_budget: Optional[int] = None,
     ranking_multipliers: Optional[RankingMultipliers] = None,
     reference_time: Optional[AwareDatetime] = None,
@@ -321,6 +322,8 @@ async def memory_retrieve(
         user_id: User whose memories to search.
         min_score: Inclusive composite score floor, not a probability.
         limit: Maximum primary results; zero returns none.
+        max_per_source: Optional maximum results sharing one exact source
+            passage and evidence set. Use 1 for source-diverse results.
         token_budget: Maximum packed context tokens.
         scope: One scope or a nonempty list of scopes.
         ranking_multipliers: Explicit bounded ranking trial; does not activate a profile.
@@ -382,14 +385,20 @@ async def memory_retrieve(
         if mode is not None:
             kwargs["retrieval_mode"] = RetrievalMode(mode)
         from prme.retrieval.selection import validate_selection
-        validate_selection(min_score, limit)
+        validate_selection(min_score, limit, max_per_source)
         if token_budget is not None and token_budget < 0:
             raise ValueError("token_budget must be nonnegative")
     except ValueError as exc:
         return json.dumps({"error": str(exc)})
 
     try:
-        response = await engine.retrieve(**kwargs, min_score=min_score, limit=limit, token_budget=token_budget)
+        response = await engine.retrieve(
+            **kwargs,
+            min_score=min_score,
+            limit=limit,
+            max_per_source=max_per_source,
+            token_budget=token_budget,
+        )
 
         results = []
         for candidate in response.results:

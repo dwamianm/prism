@@ -236,6 +236,12 @@ class RetrieveRequest(BaseModel):
     reference_time: AwareDatetime | None = Field(default=None, description="Clock for query dates and scoring")
     token_budget: int | None = Field(default=None, ge=0)
     limit: int | None = Field(default=None, ge=0, strict=True, description="Max primary results before packing")
+    max_per_source: int | None = Field(
+        default=None,
+        ge=1,
+        strict=True,
+        description="Max results sharing one exact source passage and evidence set",
+    )
     min_score: float | None = Field(default=None, ge=0, allow_inf_nan=False, description="Inclusive ranking score floor, not a probability")
     mode: RetrievalMode | None = Field(default=None, description="Epistemic filtering mode within generated candidates")
     filters: RetrievalFilters | None = None

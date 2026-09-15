@@ -418,6 +418,13 @@ class RetrievalMetadata(BaseModel):
     )
     min_score: float | None = None
     result_limit: int | None = None
+    max_per_source: int | None = Field(
+        default=None,
+        description=(
+            "Optional maximum returned nodes for one exact nonempty evidence "
+            "set and byte-identical source passage"
+        ),
+    )
     candidates_included: int = Field(
         default=0, description="Candidates included in final response"
     )

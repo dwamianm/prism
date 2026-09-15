@@ -207,6 +207,7 @@ class RetrievalPipeline:
         token_budget: int | None = None,
         min_score: float | None = None,
         limit: int | None = None,
+        max_per_source: int | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         ranking_profile: dict | None = None,
@@ -247,6 +248,8 @@ class RetrievalPipeline:
             token_budget: Override default token budget for this request.
             min_score: Inclusive ranking score floor; not a probability.
             limit: Maximum primary results before context packing. Zero returns none.
+            max_per_source: Optional maximum results with the same exact source
+                passage and evidence set.
             weights: Override default scoring weights for this request.
             ranking_multipliers: Explicit bounded adjustment after query-specific
                 weight redistribution, before reranking and session expansion.
@@ -262,7 +265,7 @@ class RetrievalPipeline:
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
-        validate_selection(min_score, limit)
+        validate_selection(min_score, limit, max_per_source)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
         execution_features = self.execution_features()
@@ -745,7 +748,12 @@ class RetrievalPipeline:
 
         # Apply selection to results and the bundle together. Explicit count
         # and score bounds apply to pinned/tasks and adjacent context as well.
-        scored, selection_excluded = select_candidates(scored, min_score=min_score, limit=limit)
+        scored, selection_excluded = select_candidates(
+            scored,
+            min_score=min_score,
+            limit=limit,
+            max_per_source=max_per_source,
+        )
         excluded.extend(selection_excluded)
         cross_scope_hints, _ = select_candidates(cross_scope_hints, min_score=min_score, limit=None)
         traces = [c.score_trace for c in scored if c.score_trace is not None]
@@ -816,6 +824,7 @@ class RetrievalPipeline:
             execution = RetrievalExecution(features=execution_features, parameters={
                 "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
                 "ranking_profile": ranking_profile,
+                "max_per_source": max_per_source,
                 "time_from": time_from.isoformat() if time_from else None,
                 "time_to": time_to.isoformat() if time_to else None,
                 "knowledge_at": knowledge_at.isoformat() if knowledge_at else None,
@@ -858,6 +867,7 @@ class RetrievalPipeline:
                 "tokenizer": bundle.tokenizer,
                 "scoring_config_version": effective_weights.version_id,
                 "min_score": min_score, "result_limit": limit,
+                "max_per_source": max_per_source,
                 "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
@@ -904,6 +914,7 @@ class RetrievalPipeline:
             request_id=analysis.request_id,
             reference_time=scoring_now,
             min_score=min_score, result_limit=limit,
+            max_per_source=max_per_source,
             candidates_generated=candidate_counts,
             candidates_filtered=len(excluded),
             candidates_included=bundle.included_count,

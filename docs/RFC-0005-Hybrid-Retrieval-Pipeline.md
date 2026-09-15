@@ -232,6 +232,15 @@ candidate.paths:        [PathType]  -- GRAPH | VECTOR | LEXICAL | PINNED
 
 An object that appears in both GRAPH and VECTOR retrieval is almost certainly more relevant than one appearing in only one path. This signal is used explicitly in scoring.
 
+After ranking, callers may set `max_per_source` to a positive integer. The
+selection stage then limits candidates that have both the same exact nonempty
+`evidence_refs` set and byte-identical content, and fills the requested result
+limit from later source groups. This is useful for LLM extraction, where several
+claim nodes can cite the same complete source passage. Matching text from
+different events and different passages from one event remain distinct. The
+default is disabled until answer trials establish a broadly safe value. Applied
+values and `source_limit` exclusions are retained in retrieval telemetry.
+
 ---
 
 ## 6. Stage 4: Epistemic Filtering

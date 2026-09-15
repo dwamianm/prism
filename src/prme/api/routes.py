@@ -408,7 +408,14 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
     if body.reference_time is not None:
         kwargs["reference_time"] = body.reference_time
 
-    for name in ("limit", "min_score", "token_budget", "ranking_multipliers", "min_fidelity"):
+    for name in (
+        "limit",
+        "max_per_source",
+        "min_score",
+        "token_budget",
+        "ranking_multipliers",
+        "min_fidelity",
+    ):
         value = getattr(body, name)
         if value is not None:
             kwargs[name] = value

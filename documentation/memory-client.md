@@ -116,6 +116,7 @@ def retrieve(
 | `knowledge_at` | `datetime \| None` | `None` | Point-in-time snapshot (bi-temporal) |
 | `reference_time` | `datetime \| None` | `None` | Timezone-aware clock for relative query dates and scoring; defaults to request time and is recorded in response metadata |
 | `token_budget` | `int \| None` | `None` | Max tokens for context packing |
+| `max_per_source` | `int \| None` | `None` | Max results sharing an exact source passage and evidence set |
 
 **Returns:** `RetrievalResponse` with:
 - `results` — list of `RetrievalCandidate` objects, each with `.node` (MemoryNode) and `.composite_score` (float)

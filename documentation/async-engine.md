@@ -200,6 +200,9 @@ Additional parameters vs MemoryClient:
 
 - `weights` — override scoring weights for this query
 - `min_fidelity` — minimum representation level for context packing
+- `max_per_source` — optional positive cap for results sharing one exact
+  nonempty evidence set and byte-identical passage; use `1` when extracted
+  sibling claims would otherwise repeat the same source text
 - `include_cross_scope` — include hints from other scopes (default: True)
 - `event_time_from`/`event_time_to` — filter by when events actually occurred (vs when they were stored)
 - `time_from`/`time_to` — filter assertion validity windows across all retrieval

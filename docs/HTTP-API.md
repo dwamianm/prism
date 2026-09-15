@@ -143,6 +143,12 @@ content hashes, configuration and context membership through the authenticated
 owner. A logging failure does not fail retrieval; it sets the flag to false.
 Legacy requests without a receipt return 404.
 
+`POST /v1/retrieve` accepts `max_per_source` as an optional positive integer.
+Candidates with the same exact nonempty evidence set and byte-identical content
+share that cap; later source groups fill the requested `limit`. Equal text from
+distinct events remains distinct. The response metrics report the applied value,
+and excluded candidates use reason `source_limit`.
+
 Current pipeline receipts use schema version 9 and explicitly retain packing
 ordering, context guidance, context format, episode-routing settings, and the
 configured current-update multiplier. Version 9 score provenance records any

@@ -1002,6 +1002,12 @@ Runs **three backends in parallel:**
 
 Candidates are deduplicated by `node_id`. Each candidate tracks which backends produced it (`paths` field) and multi-path count.
 
+For extracted stores, set `max_per_source=1` on `retrieve()` when the consuming
+surface presents `node.content` as a list of passages. This limits only results
+with the same exact nonempty evidence set and byte-identical content, so sibling
+claims cannot consume the result budget with repeated source text. The default
+is disabled while answer-quality trials establish when to promote it.
+
 ### Stage 4: Epistemic Filtering
 
 **Input:** Merged candidates, retrieval mode.

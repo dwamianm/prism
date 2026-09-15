@@ -67,6 +67,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python, HTTP, and MCP retrieval now accept an optional `max_per_source`
+  result-selection bound. It collapses only byte-identical passages with the
+  same exact nonempty evidence set, fills the requested count from later source
+  groups, records every exclusion, and leaves equal text from distinct events
+  untouched. This prevents one extracted passage from occupying dozens of LLM
+  context slots while remaining opt-in pending broader answer trials.
+
 - The first fail-closed scored extracted-memory BEAM execution completed on the
   registered 100K development conversation: 12/20 pass (60.0%) with a 0.51875
   mean rubric score, 94/94 chunks ingested, 188/188 durable extractions, 20/20

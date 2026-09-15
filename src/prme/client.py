@@ -345,6 +345,7 @@ class MemoryClient:
         token_budget: int | None = None,
         min_score: float | None = None,
         limit: int | None = None,
+        max_per_source: int | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -370,6 +371,7 @@ class MemoryClient:
                 event_time_from=event_time_from, event_time_to=event_time_to,
                 token_budget=token_budget,
                 min_score=min_score, limit=limit,
+                max_per_source=max_per_source,
                 weights=weights, ranking_multipliers=ranking_multipliers, min_fidelity=min_fidelity,
                 retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope,
             )
