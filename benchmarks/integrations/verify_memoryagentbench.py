@@ -93,6 +93,7 @@ def _verify_manifest(
     expected_context_format: str,
     expected_reasoning_effort: str | None,
     expected_reader_seed: int | None,
+    expected_reader_output_contract: str,
     expected_run_id: str,
 ) -> dict[str, Any]:
     manifest = _load_object(path)
@@ -115,6 +116,7 @@ def _verify_manifest(
         "context_format": expected_context_format,
         "reader_reasoning_effort": expected_reasoning_effort,
         "reader_seed": expected_reader_seed,
+        "reader_output_contract": expected_reader_output_contract,
         "run_id": expected_run_id,
     }
     if (
@@ -336,6 +338,7 @@ def verify(
     context_format = agent_config.get("prme_context_format", "auditable")
     reasoning_effort = agent_config.get("reader_reasoning_effort")
     reader_seed = agent_config.get("reader_seed")
+    reader_output_contract = agent_config.get("reader_output_contract", "upstream")
     run_id = agent_config.get("prme_run_id", "default")
     if (
         not isinstance(sub_dataset, str)
@@ -377,6 +380,12 @@ def verify(
         reader_seed is not None and not isinstance(reader_seed, int)
     ):
         raise ValueError("configuration has an invalid reader seed")
+    if reader_output_contract not in adapter._READER_OUTPUT_CONTRACTS:
+        raise ValueError("configuration has an invalid reader output contract")
+    if reader_output_contract == "numeric-label-v1" and not sub_dataset.startswith(
+        "icl_"
+    ):
+        raise ValueError("numeric-label-v1 is only valid for ICL tasks")
     if (
         not isinstance(run_id, str)
         or not run_id
@@ -546,6 +555,7 @@ def verify(
             or capture.get("context_format") != context_format
             or capture.get("reader_reasoning_effort") != reasoning_effort
             or capture.get("reader_seed") != reader_seed
+            or capture.get("reader_output_contract") != reader_output_contract
             or capture.get("run_id") != run_id
         ):
             raise ValueError(f"query {query_id} retrieval capture is inconsistent")
@@ -581,6 +591,7 @@ def verify(
                 expected_context_format=context_format,
                 expected_reasoning_effort=reasoning_effort,
                 expected_reader_seed=reader_seed,
+                expected_reader_output_contract=reader_output_contract,
                 expected_run_id=run_id,
             )
             if manifest["source_chunks"] != expected_chunks[context_id]:

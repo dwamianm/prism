@@ -32,13 +32,18 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 6
+ADAPTER_SCHEMA_VERSION = 7
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
 _DEFAULT_RESULT_LIMIT = 100
 _SEGMENTATION_POLICY = "task-aware-semantic-boundaries-v1"
 _RETRIEVAL_QUERY_POLICY = "upstream-plus-terminal-label-question-v1"
+_READER_OUTPUT_CONTRACTS = frozenset({"upstream", "numeric-label-v1"})
+_NUMERIC_LABEL_INSTRUCTION = (
+    "For scoring, return the numeric label alone. Your entire response must contain "
+    "only ASCII digits. Do not include 'label:', punctuation, reasoning, or explanation."
+)
 _BLANK_LINE = re.compile(r"\r?\n(?:[ \t]*\r?\n)+")
 _NUMBERED_ITEM = re.compile(r"(?<!\S)\d+\.[ \t]+")
 _TERMINAL_LABEL_QUESTION = re.compile(
@@ -77,6 +82,7 @@ def _config_identity(agent: Any) -> dict[str, object]:
         "context_format": agent.prme_context_format,
         "reader_reasoning_effort": agent.reader_reasoning_effort,
         "reader_seed": agent.reader_seed,
+        "reader_output_contract": agent.reader_output_contract,
         "run_id": agent.prme_run_id,
     }
 
@@ -225,6 +231,17 @@ def _retrieval_query(message: str, upstream_query: str | None = None) -> str:
     return message
 
 
+def reader_message(message: str, *, sub_dataset: str, contract: str) -> str:
+    """Apply an explicit reader-only output contract without changing retrieval."""
+    if contract not in _READER_OUTPUT_CONTRACTS:
+        raise ValueError(f"unsupported reader_output_contract: {contract}")
+    if contract == "upstream":
+        return message
+    if not sub_dataset.strip().startswith("icl_"):
+        raise ValueError("numeric-label-v1 is only valid for ICL tasks")
+    return f"{message}\n\n{_NUMERIC_LABEL_INSTRUCTION}"
+
+
 def initialize_prme_agent(
     agent: Any, agent_config: dict[str, object] | None = None
 ) -> None:
@@ -244,6 +261,9 @@ def initialize_prme_agent(
     ).strip()
     agent.reader_reasoning_effort = config.get("reader_reasoning_effort")
     agent.reader_seed = config.get("reader_seed")
+    agent.reader_output_contract = str(
+        config.get("reader_output_contract", "upstream")
+    ).strip()
     agent.prme_run_id = str(config.get("prme_run_id", "default")).strip()
     if not agent.prme_user_id:
         raise ValueError("prme_user_id must be non-empty")
@@ -265,6 +285,15 @@ def initialize_prme_agent(
         and not isinstance(agent.reader_seed, int)
     ):
         raise ValueError("reader_seed must be an integer or omitted")
+    if agent.reader_output_contract not in _READER_OUTPUT_CONTRACTS:
+        raise ValueError(
+            "reader_output_contract must be 'upstream' or 'numeric-label-v1'"
+        )
+    if (
+        agent.reader_output_contract == "numeric-label-v1"
+        and not agent.sub_dataset.strip().startswith("icl_")
+    ):
+        raise ValueError("numeric-label-v1 is only valid for ICL tasks")
     if (
         not agent.prme_run_id
         or len(agent.prme_run_id) > 64
@@ -475,6 +504,7 @@ def _save_retrieval(
         "context_format": agent.prme_context_format,
         "reader_reasoning_effort": agent.reader_reasoning_effort,
         "reader_seed": agent.reader_seed,
+        "reader_output_contract": agent.reader_output_contract,
         "run_id": agent.prme_run_id,
         "context_token_count": context_token_count,
         "included_count": included_count,
@@ -523,7 +553,11 @@ def handle_prme_agent(
 
     system_message = get_template(agent.sub_dataset, "system", agent.agent_name)
     messages = format_chat(
-        message=retrieval_context + "\n" + message,
+        message=reader_message(
+            retrieval_context + "\n" + message,
+            sub_dataset=agent.sub_dataset,
+            contract=agent.reader_output_contract,
+        ),
         system_message=system_message,
     )
     completion_options = {

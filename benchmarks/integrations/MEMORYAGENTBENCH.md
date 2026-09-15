@@ -156,13 +156,22 @@ A local-reader result is not directly comparable to a published result using a
 different reader. Run every compared arm with the same model, generation
 parameters, task data, and judging path.
 
-Copied PRME and baseline configs may set `reader_reasoning_effort` and
-`reader_seed`. The pinned installer validates these fields and forwards them to
+Copied PRME and baseline configs may set `reader_reasoning_effort`,
+`reader_seed`, and `reader_output_contract`. The pinned installer validates
+these fields and forwards them to
 the OpenAI-compatible request; the BM25 path also always passes the dataset's
 generation limit. Use the same values in every arm. PRME records them in its pack
 identity and each retrieval capture, while the registration and upstream result
 retain the complete agent configuration. Omitted values preserve the provider
 defaults.
+
+The pinned upstream ICL prompt asks for `label: N`, but its documented official
+metric requires the output to be exactly `N`. For a matched ICL trial, set
+`reader_output_contract: numeric-label-v1` in both PRME and BM25 configurations.
+This appends the same digits-only reader instruction to each arm without changing
+the retrieval query or rewriting the model output. The contract is restricted to
+`icl_*` tasks and is bound by the registrations; `upstream` preserves the original
+prompt unchanged.
 
 For a registered compact-context trial, set `prme_context_format: compact` in a
 copied agent configuration before registration. The setting is included in the
@@ -184,6 +193,7 @@ model: qwen3.5:9b
 temperature: 0.0
 reader_reasoning_effort: none
 reader_seed: 42
+reader_output_contract: numeric-label-v1
 retrieval_run_id: bm25-dev20-v1
 memory_timestamp: "2000-01-01 00:00:00"
 input_length_limit: 10000000

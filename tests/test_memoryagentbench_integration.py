@@ -146,10 +146,11 @@ def test_adapter_preserves_text_and_round_trips_pack(
         )
         assert retrieval["context_sha256"]
         assert retrieval["request_id"]
-        assert retrieval["adapter_schema_version"] == 6
+        assert retrieval["adapter_schema_version"] == 7
         assert retrieval["context_format"] == context_format
         assert retrieval["reader_reasoning_effort"] == "none"
         assert retrieval["reader_seed"] == 42
+        assert retrieval["reader_output_contract"] == "upstream"
         assert retrieval["run_id"] == f"test-{context_format}"
         assert retrieval["sub_dataset"] == "eventqa_65536"
         assert retrieval["query_id"] == 3
@@ -234,6 +235,25 @@ def test_retrieval_query_isolates_terminal_label_question() -> None:
     assert adapter._retrieval_query(ordinary) == ordinary
 
 
+def test_numeric_label_reader_contract_is_explicit_and_task_scoped() -> None:
+    prompt = adapter.reader_message(
+        "Question: Where is my transfer?\n\nlabel:",
+        sub_dataset="icl_banking77_5900shot_balance",
+        contract="numeric-label-v1",
+    )
+    assert prompt.endswith(adapter._NUMERIC_LABEL_INSTRUCTION)
+    assert "only ASCII digits" in prompt
+    assert adapter.reader_message(
+        "ordinary", sub_dataset="eventqa_65536", contract="upstream"
+    ) == "ordinary"
+    with pytest.raises(ValueError, match="only valid for ICL"):
+        adapter.reader_message(
+            "ordinary",
+            sub_dataset="eventqa_65536",
+            contract="numeric-label-v1",
+        )
+
+
 def test_adapter_rejects_incomplete_and_changed_packs(tmp_path: Path) -> None:
     agent = fake_agent(tmp_path)
     try:
@@ -268,6 +288,8 @@ def test_adapter_rejects_unknown_context_format(tmp_path: Path) -> None:
         ({"reader_reasoning_effort": "maximum"}, "reader_reasoning_effort"),
         ({"reader_seed": True}, "reader_seed"),
         ({"reader_seed": "42"}, "reader_seed"),
+        ({"reader_output_contract": "unknown"}, "reader_output_contract"),
+        ({"reader_output_contract": "numeric-label-v1"}, "only valid for ICL"),
     ],
 )
 def test_adapter_rejects_invalid_reader_settings(

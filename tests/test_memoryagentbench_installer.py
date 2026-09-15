@@ -41,6 +41,8 @@ def upstream_layout(root: Path) -> None:
             self.chunks.append(formatted_message)
             self.context_len = self.context_len + self.chunk_size
 
+        ask_llm_message = retrieval_memory_string + "\\n" + message
+
         BM25_LEGACY_CALL
 
         if output.get(\"retrieval_context\"):
@@ -96,6 +98,8 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert agent.count("load_prme_agent") == 2
     assert "reader_reasoning_effort" in agent
     assert "completion_options['seed']" in agent
+    assert "reader_output_contract" in agent
+    assert "from methods.prme import reader_message" in agent
     assert "'max_tokens': self.max_tokens" in agent
     assert "retrieval_run_id" in agent
     assert "memory_timestamp" in agent

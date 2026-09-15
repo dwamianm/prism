@@ -117,6 +117,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "context_format": "auditable",
         "reader_reasoning_effort": "none",
         "reader_seed": 42,
+        "reader_output_contract": "upstream",
         "run_id": "verified-arm",
     }
     manifest = {
@@ -225,6 +226,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "context_format": "auditable",
         "reader_reasoning_effort": "none",
         "reader_seed": 42,
+        "reader_output_contract": "upstream",
         "run_id": "verified-arm",
         "context_token_count": count_tokens(context),
         "included_count": 1,

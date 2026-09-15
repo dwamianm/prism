@@ -32,6 +32,9 @@ _PATCHES = {
             "        self.reader_seed = agent_config.get('reader_seed')\n"
             "        if isinstance(self.reader_seed, bool) or (self.reader_seed is not None and not isinstance(self.reader_seed, int)):\n"
             "            raise ValueError('reader_seed must be an integer or omitted')\n"
+            "        self.reader_output_contract = str(agent_config.get('reader_output_contract', 'upstream')).strip()\n"
+            "        if self.reader_output_contract not in ('upstream', 'numeric-label-v1'):\n"
+            "            raise ValueError('invalid reader_output_contract')\n"
             "        self.retrieval_run_id = str(agent_config.get('retrieval_run_id', 'default'))\n"
             "        if (not self.retrieval_run_id or len(self.retrieval_run_id) > 64 or\n"
             "                any(not char.isalnum() and char not in '._-' for char in self.retrieval_run_id)):\n"
@@ -58,6 +61,15 @@ _PATCHES = {
             "        if self.reader_seed is not None:\n"
             "            completion_options['seed'] = self.reader_seed\n"
             "        response = self._create_oai_client().chat.completions.create(**completion_options)\n",
+        ),
+        (
+            "        ask_llm_message = retrieval_memory_string + \"\\n\" + message\n",
+            "        from methods.prme import reader_message\n"
+            "        ask_llm_message = reader_message(\n"
+            "            retrieval_memory_string + \"\\n\" + message,\n"
+            "            sub_dataset=self.sub_dataset,\n"
+            "            contract=self.reader_output_contract,\n"
+            "        )\n",
         ),
         (
             '        elif self._is_agent_type("zep"):\n'

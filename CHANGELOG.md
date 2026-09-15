@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MemoryAgentBench ICL trials may opt into a registered `numeric-label-v1`
+  reader contract shared by PRME and BM25. It resolves the pinned harness's
+  conflict between a `label: N` prompt and its documented digits-only exact-match
+  metric by appending the same explicit instruction to both arms. Retrieval
+  queries and raw model outputs remain unchanged, and manifests and captures bind
+  the selected contract.
+
 - MemoryAgentBench verification now authenticates each claimed durable
   retrieval receipt directly from the completed DuckDB pack, including its
   checksum, owner/request identity, replayable ranking, context hash, packing

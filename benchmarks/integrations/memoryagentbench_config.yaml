@@ -5,6 +5,7 @@ model: gpt-4o-mini
 temperature: 0.7
 reader_reasoning_effort: null
 reader_seed: null
+reader_output_contract: upstream
 input_length_limit: 10000000
 buffer_length: 200
 output_dir: ./outputs/prme-gpt-4o-mini
