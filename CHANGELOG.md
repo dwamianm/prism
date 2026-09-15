@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Repeated single-vector archive cycles no longer stall in the native HNSW
   deletion path after roughly 192 operations. PRME now requires USearch 2.26.2,
   whose deletion implementation completes this churn pattern; a subprocess
-  regression test keeps a native stall bounded and observable.
+  regression test keeps a native stall bounded and observable. A preregistered
+  AgentMemBench confirmation completed 200/200 archive-retirement cases, with
+  every memory visible before archival and absent from retrieval afterward.
 
 ### Added
 
