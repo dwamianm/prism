@@ -54,7 +54,7 @@ New event/direct-node metadata must be finite and JSON-serializable, with no
 object keys that collide after JSON normalization. Admission
 copies metadata before awaiting backend locks/connections; it does not validate
 all low-level graph writes. Existing rows remain readable. Journal snapshots for
-lifecycle, reinforcement, organizer merges and alias proposals use
+lifecycle, reinforcement, organizer merges, alias proposals and TTL expiration use
 `_snapshot_json` to preserve legacy non-finite values through a versioned path
 encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
@@ -116,6 +116,13 @@ evidence. DuckDB conflicts can fail safely and require a fresh retry. External
 index eviction follows commit and remains repairable by compaction. Do not
 restore separate evidence/edge/lifecycle writes or infer rollback from a cancelled
 caller. Historical organizer/manual mutations are not all replayable yet.
+
+TTL expiration rechecks owner, active lifecycle, pinning, creation time and TTL
+inside one backend transaction, then commits archival with a deterministic,
+checksummed `TOMBSTONE_SWEEP` record containing complete before/after state and
+the RFC-0007 policy fields. Both DuckDB and PostgreSQL use this path. External
+index eviction follows commit and remains repairable. Do not restore a separate
+post-archive tombstone insert.
 
 Consolidation retirement rechecks current source/summary coverage and policy
 inside one transaction, then commits the supersedence edge and a checksummed

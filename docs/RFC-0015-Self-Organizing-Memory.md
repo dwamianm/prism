@@ -509,6 +509,14 @@ repeat returns the saved outcome without another edge. Preexisting random-ID
 alias links are reused without writing a record that would claim they were
 created atomically; their historical inputs remain unavailable.
 
+The `tombstone_sweep` job publishes TTL archival through
+`ttl_expiration_v1`. Current owner, lifecycle, pinning, creation time and TTL are
+revalidated under the backend lock. The archived node and deterministic,
+checksummed `TOMBSTONE_SWEEP` record commit together on DuckDB and PostgreSQL;
+the record preserves complete before/after state and the RFC-0007 tombstone
+fields. Repeated and concurrent attempts converge on one operation. Index
+eviction occurs after commit and is repairable by compaction.
+
 External index eviction follows commit. Compaction repairs failures, while the
 durable retired lifecycle excludes stale index candidates. Cancellation and lost
 acknowledgments do not imply rollback. Full historical graph reconstruction still

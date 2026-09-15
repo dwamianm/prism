@@ -605,6 +605,15 @@ class DuckPGQGraphStore:
             self, node_id, "archive", request_id=request_id, actor_id=actor_id,
         )
 
+    async def archive_expired(
+        self, node_id: str, *, user_id: str, evaluated_at: datetime,
+    ) -> bool:
+        """Atomically archive an expired node with its retention tombstone."""
+        from prme.storage.retention import expire_duckdb
+        return await expire_duckdb(
+            self, node_id, user_id=user_id, evaluated_at=evaluated_at
+        )
+
     async def deprecate(
         self, node_id: str, *, request_id: str | UUID | None = None,
         actor_id: str = "system",

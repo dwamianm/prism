@@ -505,6 +505,12 @@ class GraphStore(Protocol):
         """
         ...
 
+    async def archive_expired(
+        self, node_id: str, *, user_id: str, evaluated_at: datetime,
+    ) -> bool:
+        """Atomically archive an expired node with its retention tombstone."""
+        ...
+
     # --- Cleanup / Rollback ---
 
     async def delete_node(self, node_id: str) -> None:

@@ -7,7 +7,6 @@ Proposed jobs are not advertised until they have an implementation and evidence.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -613,9 +612,6 @@ async def _job_tombstone_sweep(
 
     Logs a TOMBSTONE_SWEEP operation for each archived node.
     """
-    import json
-    import uuid
-
     start = time.monotonic()
     now = datetime.now(timezone.utc)
 
@@ -655,57 +651,14 @@ async def _job_tombstone_sweep(
         if expiry >= now:
             continue  # not yet expired
 
-        # Archive the expired node
+        # Archive and retain the triggering policy in one graph transaction.
         try:
-            await engine.archive(str(node.id), user_id=user_id)
-            modified += 1
-
-            # Log a TOMBSTONE_SWEEP operation via write queue
-            try:
-                op_id = str(uuid.uuid4())
-                payload = json.dumps({
-                    "target_id": str(node.id),
-                    "target_type": "memory_object",
-                    "reason": "retention_policy_expiry",
-                    "ttl_days": node.ttl_days,
-                    "created_at": node.created_at.isoformat(),
-                    "expired_at": expiry.isoformat(),
-                    "tombstone_ts": now.isoformat(),
-                })
-                conn = getattr(engine, "_conn", None)
-                if conn is not None:
-                    # The write queue awaits what the factory returns, so the
-                    # insert has to be wrapped rather than handed over as a
-                    # bare conn.execute() (which returns a connection).
-                    async def _log(
-                        c=conn,
-                        oid=op_id,
-                        nid=str(node.id),
-                        aid=node.user_id,
-                        p=payload,
-                        n=now,
-                    ) -> None:
-                        # The queue serializes writes only; retrieval reads
-                        # also use this connection and share the graph lock.
-                        async with engine._graph_store._conn_lock:
-                            await asyncio.to_thread(
-                                c.execute,
-                                "INSERT INTO operations "
-                                "(id, op_type, target_id, actor_id, payload, created_at) "
-                                "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?, ?::JSON, ?)",
-                                [oid, nid, aid, p, n],
-                            )
-
-                    await engine._write_queue.submit(
-                        _log,
-                        label=f"tombstone_sweep.log:{node.id}",
-                    )
-            except Exception:
-                logger.warning(
-                    "Failed to log TOMBSTONE_SWEEP operation for node %s",
-                    node.id,
-                    exc_info=True,
-                )
+            changed = await engine._graph_store.archive_expired(
+                str(node.id), user_id=node.user_id, evaluated_at=now
+            )
+            if changed:
+                modified += 1
+                await engine._evict_from_indexes(str(node.id))
         except ValueError:
             errors += 1
 

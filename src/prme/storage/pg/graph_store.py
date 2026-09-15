@@ -1045,6 +1045,15 @@ class PgGraphStore:
             self, node_id, "archive", request_id=request_id, actor_id=actor_id,
         )
 
+    async def archive_expired(
+        self, node_id: str, *, user_id: str, evaluated_at: datetime,
+    ) -> bool:
+        """Atomically archive an expired node with its retention tombstone."""
+        from prme.storage.retention import expire_postgres
+        return await expire_postgres(
+            self, node_id, user_id=user_id, evaluated_at=evaluated_at
+        )
+
     # --- Graph Traversal ---
 
     async def get_neighborhood(

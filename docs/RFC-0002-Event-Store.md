@@ -38,6 +38,11 @@ identities and commit a checksummed `ALIAS_PROPOSED` record with complete node
 inputs and the published edge. This is distinct from full replay of historical
 organizer and manual mutations, whose complete operation inputs are not all
 journaled.
+TTL expiration also uses a backend transaction to bind the archived graph state
+to a deterministic, checksummed `TOMBSTONE_SWEEP` record. Its portable summary
+contains the RFC-0007 policy, reason, content hash and clocks; its authoritative
+record retains complete before/after nodes. External index eviction follows the
+durable transition.
 - Efficient range scans by timestamp and stream.
 - Content-addressed deduplication by `content_hash`.
 

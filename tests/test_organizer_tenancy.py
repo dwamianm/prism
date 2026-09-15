@@ -270,9 +270,9 @@ async def test_organizer_raw_sql_holds_shared_connection_lock(engine, monkeypatc
     observed = []
 
     async def checked_to_thread(func, *args, **kwargs):
-        is_log = args and isinstance(args[0], str) and "'TOMBSTONE_SWEEP'" in args[0]
+        is_retention = getattr(func, "__name__", "") == "_expire_duckdb"
         is_compaction = getattr(func, "__name__", "") == "_find_stale"
-        if is_log or is_compaction:
+        if is_retention or is_compaction:
             observed.append(engine._graph_store._conn_lock.locked())
         return await original(func, *args, **kwargs)
 

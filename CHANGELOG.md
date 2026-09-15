@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- TTL expiration now revalidates policy under lock and commits archival with a
+  deterministic, checksummed `TOMBSTONE_SWEEP` record in one DuckDB or
+  PostgreSQL transaction. The record retains complete before/after state and
+  RFC-0007 policy fields; concurrent, restarted, failed, and cancelled attempts
+  cannot leave an unlogged archive or a tombstone without its transition.
+
 - Unverified organizer alias proposals now publish their deterministic
   `RELATES_TO` edge and a checksummed complete `ALIAS_PROPOSED` record in one
   DuckDB or PostgreSQL transaction. Exact, concurrent and restarted retries
