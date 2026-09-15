@@ -40,7 +40,7 @@ _DEFAULT_RESULT_LIMIT = 100
 _SEGMENTATION_POLICY = "task-aware-semantic-boundaries-v1"
 _RETRIEVAL_QUERY_POLICY = "upstream-plus-terminal-label-question-v1"
 _READER_OUTPUT_CONTRACTS = frozenset(
-    {"upstream", "numeric-label-v1", "answer-only-v1"}
+    {"upstream", "numeric-label-v1", "answer-only-v1", "choice-only-v1"}
 )
 _NUMERIC_LABEL_INSTRUCTION = (
     "For scoring, return the numeric label alone. Your entire response must contain "
@@ -50,6 +50,12 @@ _ANSWER_ONLY_INSTRUCTION = (
     "For scoring, follow the task's requested output format and return only the "
     "answer. Do not include reasoning, explanations, prefaces, an 'Answer:' label, "
     "or Markdown."
+)
+_CHOICE_ONLY_INSTRUCTION = (
+    "For scoring, ignore any request to return JSON, reasoning, or an 'Output:' "
+    "wrapper. Select one listed choice and return exactly its choice label and "
+    "text in the form 'A. choice text'. Your entire response must be one line and "
+    "contain nothing else."
 )
 _BLANK_LINE = re.compile(r"\r?\n(?:[ \t]*\r?\n)+")
 _NUMBERED_ITEM = re.compile(r"(?<!\S)\d+\.[ \t]+")
@@ -238,16 +244,30 @@ def _retrieval_query(message: str, upstream_query: str | None = None) -> str:
     return message
 
 
+def validate_reader_output_contract(*, sub_dataset: str, contract: object) -> str:
+    """Validate a reader contract and its benchmark-task boundary."""
+    if not isinstance(contract, str) or contract not in _READER_OUTPUT_CONTRACTS:
+        raise ValueError(f"unsupported reader_output_contract: {contract}")
+    if contract == "numeric-label-v1" and not sub_dataset.strip().startswith("icl_"):
+        raise ValueError("numeric-label-v1 is only valid for ICL tasks")
+    if contract == "choice-only-v1" and not sub_dataset.strip().startswith(
+        "detective_"
+    ):
+        raise ValueError("choice-only-v1 is only valid for DetectiveQA tasks")
+    return contract
+
+
 def reader_message(message: str, *, sub_dataset: str, contract: str) -> str:
     """Apply an explicit reader-only output contract without changing retrieval."""
-    if contract not in _READER_OUTPUT_CONTRACTS:
-        raise ValueError(f"unsupported reader_output_contract: {contract}")
+    contract = validate_reader_output_contract(
+        sub_dataset=sub_dataset, contract=contract
+    )
     if contract == "upstream":
         return message
     if contract == "answer-only-v1":
         return f"{message}\n\n{_ANSWER_ONLY_INSTRUCTION}"
-    if not sub_dataset.strip().startswith("icl_"):
-        raise ValueError("numeric-label-v1 is only valid for ICL tasks")
+    if contract == "choice-only-v1":
+        return f"{message}\n\n{_CHOICE_ONLY_INSTRUCTION}"
     return f"{message}\n\n{_NUMERIC_LABEL_INSTRUCTION}"
 
 
@@ -294,16 +314,9 @@ def initialize_prme_agent(
         and not isinstance(agent.reader_seed, int)
     ):
         raise ValueError("reader_seed must be an integer or omitted")
-    if agent.reader_output_contract not in _READER_OUTPUT_CONTRACTS:
-        raise ValueError(
-            "reader_output_contract must be 'upstream', 'numeric-label-v1', "
-            "or 'answer-only-v1'"
-        )
-    if (
-        agent.reader_output_contract == "numeric-label-v1"
-        and not agent.sub_dataset.strip().startswith("icl_")
-    ):
-        raise ValueError("numeric-label-v1 is only valid for ICL tasks")
+    validate_reader_output_contract(
+        sub_dataset=agent.sub_dataset, contract=agent.reader_output_contract
+    )
     if (
         not agent.prme_run_id
         or len(agent.prme_run_id) > 64

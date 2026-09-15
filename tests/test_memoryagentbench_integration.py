@@ -267,6 +267,25 @@ def test_answer_only_reader_contract_preserves_task_format_without_reasoning() -
     assert "Do not include reasoning" in prompt
 
 
+def test_choice_only_reader_contract_overrides_detective_json_wrapper() -> None:
+    original = 'Output: {"answer":"C. Choice", "reasoning":"why"}'
+    prompt = adapter.reader_message(
+        original,
+        sub_dataset="detective_qa",
+        contract="choice-only-v1",
+    )
+    assert prompt.startswith(original)
+    assert prompt.endswith(adapter._CHOICE_ONLY_INSTRUCTION)
+    assert "ignore any request to return JSON" in prompt
+    assert "A. choice text" in prompt
+    with pytest.raises(ValueError, match="only valid for DetectiveQA"):
+        adapter.reader_message(
+            original,
+            sub_dataset="eventqa_65536",
+            contract="choice-only-v1",
+        )
+
+
 def test_adapter_rejects_incomplete_and_changed_packs(tmp_path: Path) -> None:
     agent = fake_agent(tmp_path)
     try:
@@ -303,6 +322,10 @@ def test_adapter_rejects_unknown_context_format(tmp_path: Path) -> None:
         ({"reader_seed": "42"}, "reader_seed"),
         ({"reader_output_contract": "unknown"}, "reader_output_contract"),
         ({"reader_output_contract": "numeric-label-v1"}, "only valid for ICL"),
+        (
+            {"reader_output_contract": "choice-only-v1"},
+            "only valid for DetectiveQA",
+        ),
     ],
 )
 def test_adapter_rejects_invalid_reader_settings(

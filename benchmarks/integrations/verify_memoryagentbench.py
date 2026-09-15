@@ -380,12 +380,12 @@ def verify(
         reader_seed is not None and not isinstance(reader_seed, int)
     ):
         raise ValueError("configuration has an invalid reader seed")
-    if reader_output_contract not in adapter._READER_OUTPUT_CONTRACTS:
-        raise ValueError("configuration has an invalid reader output contract")
-    if reader_output_contract == "numeric-label-v1" and not sub_dataset.startswith(
-        "icl_"
-    ):
-        raise ValueError("numeric-label-v1 is only valid for ICL tasks")
+    try:
+        adapter.validate_reader_output_contract(
+            sub_dataset=sub_dataset, contract=reader_output_contract
+        )
+    except ValueError as error:
+        raise ValueError("configuration has an invalid reader output contract") from error
     if (
         not isinstance(run_id, str)
         or not run_id

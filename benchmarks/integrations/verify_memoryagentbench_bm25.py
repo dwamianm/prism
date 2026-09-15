@@ -217,6 +217,16 @@ def verify(
         raise ValueError("benchmark configuration differs from the registration")
     if agent_config.get("agent_name") != "Simple_rag_bm25":
         raise ValueError("result does not identify the BM25 MemoryAgentBench baseline")
+    sub_dataset = dataset_config.get("sub_dataset")
+    if not isinstance(sub_dataset, str) or not sub_dataset.strip():
+        raise ValueError("dataset configuration has an invalid sub_dataset")
+    try:
+        adapter.validate_reader_output_contract(
+            sub_dataset=sub_dataset,
+            contract=agent_config.get("reader_output_contract", "upstream"),
+        )
+    except ValueError as error:
+        raise ValueError("configuration has an invalid reader output contract") from error
 
     if chunks is None or query_groups is None or memorize_template is None:
         with registrar._upstream_imports(upstream_root):

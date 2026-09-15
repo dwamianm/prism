@@ -180,6 +180,13 @@ answer labels, and Markdown. The adapter does not parse, rewrite, or truncate th
 saved response. Register this contract before inference and retain the original
 `upstream` contract as a separate arm when measuring the instruction's effect.
 
+DetectiveQA embeds an example JSON object with a `reasoning` field even though
+its official exact-match reference is the selected option text alone. Use
+`reader_output_contract: choice-only-v1` in both arms for this task. The contract
+explicitly overrides the JSON wrapper and requires one option line in the form
+`A. choice text`. It is rejected outside `detective_*` tasks, does not alter the
+retrieval query, and does not parse or rewrite the saved response.
+
 The installer also applies PRME's terminal ICL-question extraction to the BM25
 arm. Both systems therefore rank memory using the actual classification question
 instead of giving one arm the repeated prompt wrapper. Each registration binds

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MemoryAgentBench DetectiveQA trials can register a shared
+  `choice-only-v1` reader contract. It resolves the pinned task prompt's conflict
+  between an example JSON reasoning object and its option-text exact-match
+  reference by requiring one `A. choice text` line in both arms. Registration,
+  runtime initialization and verification reject the contract outside
+  DetectiveQA, and saved model output remains untouched.
+
 - A matched MemoryAgentBench Conflict Resolution development trial completed on
   20 questions under the shared `answer-only-v1` contract. PRME scored 1/20 and
   BM25 scored 0/20. Post hoc inspection found reference-answer text in 19 PRME

@@ -102,6 +102,7 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert "completion_options['seed']" in agent
     assert "reader_output_contract" in agent
     assert "answer-only-v1" in agent
+    assert "choice-only-v1" in agent
     assert "from methods.prme import reader_message" in agent
     assert "from methods.prme import _retrieval_query" in agent
     assert "'max_tokens': self.max_tokens" in agent

@@ -266,6 +266,10 @@ def register(
     sub_dataset = dataset_config.get("sub_dataset")
     if not isinstance(sub_dataset, str) or not sub_dataset.strip():
         raise ValueError("dataset configuration has an invalid sub_dataset")
+    adapter.validate_reader_output_contract(
+        sub_dataset=sub_dataset,
+        contract=agent_config.get("reader_output_contract", "upstream"),
+    )
     if max_queries is not None and (
         isinstance(max_queries, bool)
         or not isinstance(max_queries, int)

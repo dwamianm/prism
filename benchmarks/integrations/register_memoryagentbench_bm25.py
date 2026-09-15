@@ -273,6 +273,13 @@ def register(
     effective_input_limit = configured_input_limit - buffer_length - generation_limit
     if effective_input_limit <= 0:
         raise ValueError("BM25 effective input limit must be positive")
+    sub_dataset = dataset_config.get("sub_dataset")
+    if not isinstance(sub_dataset, str) or not sub_dataset.strip():
+        raise ValueError("dataset configuration has an invalid sub_dataset")
+    adapter.validate_reader_output_contract(
+        sub_dataset=sub_dataset,
+        contract=agent_config.get("reader_output_contract", "upstream"),
+    )
     max_queries = dataset_config.get("max_test_queries")
 
     if chunks is None or query_groups is None or memorize_template is None:
