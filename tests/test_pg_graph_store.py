@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -69,6 +70,47 @@ async def test_query_nodes(graph_store):
     results = await graph_store.query_nodes(user_id=uid, node_type=NodeType.FACT)
     assert len(results) >= 1
     assert any(r.content == "queryable fact" for r in results)
+
+
+async def test_session_neighbors_are_bounded_and_scope_partitioned(graph_store):
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    base_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    personal = [
+        MemoryNode(
+            user_id=uid,
+            session_id="shared-session",
+            node_type=NodeType.EVENT,
+            scope=Scope.PERSONAL,
+            content=f"personal {i}",
+            created_at=base_time + timedelta(minutes=i),
+            updated_at=base_time + timedelta(minutes=i),
+        )
+        for i in range(5)
+    ]
+    project = MemoryNode(
+        user_id=uid,
+        session_id="shared-session",
+        node_type=NodeType.EVENT,
+        scope=Scope.PROJECT,
+        content="project interloper",
+        created_at=base_time + timedelta(minutes=2),
+        updated_at=base_time + timedelta(minutes=2),
+    )
+    for node in [*personal, project]:
+        await graph_store.create_node(node)
+
+    windows = await graph_store.get_session_neighbors(
+        [str(personal[2].id)],
+        user_id=uid,
+        window=1,
+        scopes=[Scope.PERSONAL, Scope.PROJECT],
+    )
+
+    assert [node.content for node in windows[str(personal[2].id)]] == [
+        "personal 1",
+        "personal 2",
+        "personal 3",
+    ]
 
 
 async def test_create_edge(graph_store):

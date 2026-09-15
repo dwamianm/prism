@@ -234,6 +234,68 @@ class PgGraphStore:
             )
         return [self._record_to_node(row) for row in rows]
 
+    async def get_session_neighbors(
+        self,
+        trigger_ids: list[str],
+        *,
+        user_id: str,
+        window: int,
+        scopes: list[Scope] | None = None,
+    ) -> dict[str, list[MemoryNode]]:
+        """Fetch exact bounded neighborhoods without hydrating whole sessions."""
+        if not user_id or window < 0:
+            raise ValueError("get_session_neighbors requires user_id and a non-negative window")
+        ids = list(dict.fromkeys(str(UUID(node_id)) for node_id in trigger_ids))
+        if not ids:
+            return {}
+        active = [state.value for state in ACTIVE_LIFECYCLE_STATES]
+        scope_clause = ""
+        params: list = [ids, user_id, window, active]
+        if scopes:
+            params.append([scope.value for scope in scopes])
+            scope_clause = " AND scope = ANY($5::text[])"
+        query = f"""
+            WITH anchor_sessions AS (
+                SELECT DISTINCT session_id, scope
+                FROM nodes
+                WHERE id = ANY($1::uuid[])
+                  AND user_id = $2
+                  AND session_id IS NOT NULL
+                  AND lifecycle_state = ANY($4::text[])
+                  {scope_clause}
+            ), ranked AS (
+                SELECT n.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY n.session_id, n.scope
+                           ORDER BY n.created_at, n.id
+                       ) AS session_rank
+                FROM nodes n
+                JOIN anchor_sessions a
+                  ON n.session_id = a.session_id AND n.scope = a.scope
+                WHERE n.user_id = $2
+                  AND n.lifecycle_state = ANY($4::text[])
+            ), anchor_ranks AS (
+                SELECT id AS trigger_id, session_id, scope, session_rank
+                FROM ranked
+                WHERE id = ANY($1::uuid[])
+            )
+            SELECT a.trigger_id, {_NODE_COLUMNS_QUALIFIED}
+            FROM anchor_ranks a
+            JOIN ranked n
+              ON a.session_id = n.session_id
+             AND a.scope = n.scope
+             AND ABS(n.session_rank - a.session_rank) <= $3
+            ORDER BY a.trigger_id, n.session_rank, n.id
+        """
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+        windows: dict[str, list[MemoryNode]] = {}
+        for row in rows:
+            windows.setdefault(str(row["trigger_id"]), []).append(
+                self._record_to_node(row)
+            )
+        return windows
+
     async def query_nodes(
         self,
         *,

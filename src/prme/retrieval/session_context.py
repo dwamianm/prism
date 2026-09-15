@@ -78,32 +78,49 @@ async def expand_session_context(
 
     # Group the top-K candidates by session_id.
     top_candidates = scored[:top_k]
-    session_triggers: dict[str, list[RetrievalCandidate]] = {}
+    session_triggers: dict[tuple[str, Scope], list[RetrievalCandidate]] = {}
     for candidate in top_candidates:
         sid = candidate.node.session_id
         if sid is not None:
-            session_triggers.setdefault(sid, []).append(candidate)
+            session_triggers.setdefault((sid, candidate.node.scope), []).append(candidate)
 
     if not session_triggers:
         return scored
 
-    # Fetch the triggering sessions' nodes in one query (session_id IN
-    # (...) is pushed into SQL instead of hydrating the newest 2000 nodes
-    # and filtering in Python).
-    session_nodes: dict[str, list[MemoryNode]] = {}
+    # Built-in stores return one exact bounded window per trigger. The
+    # compatibility path reconstructs those windows from the legacy query.
+    trigger_windows: dict[str, list[MemoryNode]] = {}
     try:
-        all_nodes = await graph_store.query_nodes(
-            user_id=user_id,
-            session_ids=list(session_triggers.keys()),
-            scopes=scope if scope else None,
-            limit=2000,
-        )
-        for n in all_nodes:
-            if n.session_id in session_triggers:
-                session_nodes.setdefault(n.session_id, []).append(n)
-        # Use the node ID as a stable tie-break for equal timestamps.
-        for sid in session_nodes:
-            session_nodes[sid].sort(key=lambda n: (n.created_at, str(n.id)))
+        native_neighbor_query = getattr(type(graph_store), "get_session_neighbors", None)
+        if callable(native_neighbor_query):
+            trigger_windows = await graph_store.get_session_neighbors(
+                [str(candidate.node.id) for candidate in top_candidates],
+                user_id=user_id,
+                window=window,
+                scopes=scope if scope else None,
+            )
+        else:
+            # Compatibility path for third-party GraphStore implementations.
+            all_nodes = await graph_store.query_nodes(
+                user_id=user_id,
+                session_ids=list({key[0] for key in session_triggers}),
+                scopes=scope if scope else None,
+                limit=2000,
+            )
+            session_nodes: dict[tuple[str, Scope], list[MemoryNode]] = {}
+            for n in all_nodes:
+                key = (n.session_id, n.scope) if n.session_id is not None else None
+                if key in session_triggers:
+                    session_nodes.setdefault(key, []).append(n)
+            for session_key, nodes in session_nodes.items():
+                nodes.sort(key=lambda n: (n.created_at, str(n.id)))
+                node_id_to_pos = {str(node.id): i for i, node in enumerate(nodes)}
+                for trigger in session_triggers[session_key]:
+                    pos = node_id_to_pos.get(str(trigger.node.id))
+                    if pos is not None:
+                        trigger_windows[str(trigger.node.id)] = nodes[
+                            max(0, pos - window) : pos + window + 1
+                        ]
     except Exception:
         logger.warning(
             "Failed to fetch session nodes for user_id=%s; skipping expansion",
@@ -112,74 +129,58 @@ async def expand_session_context(
         )
 
     # Apply each context signal while preserving the strongest inherited score.
-    for sid, triggers in session_triggers.items():
-        nodes = session_nodes.get(sid, [])
+    for trigger in top_candidates:
+        nodes = trigger_windows.get(str(trigger.node.id), [])
         if not nodes:
             continue
 
-        # Build an index from node_id to position for quick lookup.
-        node_id_to_pos: dict[str, int] = {
-            str(n.id): i for i, n in enumerate(nodes)
-        }
+        trigger_id = str(trigger.node.id)
+        context_score = trigger.composite_score * decay
+        provenance = trigger.score_provenance
+        if provenance is not None:
+            provenance = provenance.model_copy(update={
+                "adjustments": provenance.adjustments + (ScoreAdjustment(
+                    kind="session_decay", coefficient=decay, source_node_id=trigger.node.id,
+                ),),
+            })
 
-        for trigger in triggers:
-            trigger_id = str(trigger.node.id)
-            pos = node_id_to_pos.get(trigger_id)
-            if pos is None:
-                # Trigger node not found in session query results; skip.
+        for ctx_node in nodes:
+            ctx_id = str(ctx_node.id)
+
+            # A trigger does not provide context evidence for itself.
+            if ctx_id == trigger_id:
                 continue
 
-            # Determine the window of adjacent nodes.
-            start = max(0, pos - window)
-            end = min(len(nodes), pos + window + 1)
+            current = candidates_by_id.get(ctx_id)
+            if current is None:
+                candidates_by_id[ctx_id] = RetrievalCandidate(
+                    node=ctx_node,
+                    paths=["SESSION_CONTEXT"],
+                    path_count=1,
+                    semantic_score=0.0,
+                    lexical_score=0.0,
+                    graph_proximity=0.0,
+                    composite_score=context_score,
+                    score_provenance=provenance,
+                )
+                changed = True
+                ranking_changed = True
+                continue
 
-            context_score = trigger.composite_score * decay
-            provenance = trigger.score_provenance
-            if provenance is not None:
-                provenance = provenance.model_copy(update={
-                    "adjustments": provenance.adjustments + (ScoreAdjustment(
-                        kind="session_decay", coefficient=decay, source_node_id=trigger.node.id,
-                    ),),
-                })
-
-            for i in range(start, end):
-                ctx_node = nodes[i]
-                ctx_id = str(ctx_node.id)
-
-                # A trigger does not provide context evidence for itself.
-                if ctx_id == trigger_id:
-                    continue
-
-                current = candidates_by_id.get(ctx_id)
-                if current is None:
-                    candidates_by_id[ctx_id] = RetrievalCandidate(
-                        node=ctx_node,
-                        paths=["SESSION_CONTEXT"],
-                        path_count=1,
-                        semantic_score=0.0,
-                        lexical_score=0.0,
-                        graph_proximity=0.0,
-                        composite_score=context_score,
-                        score_provenance=provenance,
-                    )
-                    changed = True
-                    ranking_changed = True
-                    continue
-
-                updates: dict[str, object] = {}
-                if "SESSION_CONTEXT" not in current.paths:
-                    updates["paths"] = [*current.paths, "SESSION_CONTEXT"]
-                if context_score > current.composite_score:
-                    updates.update(
-                        composite_score=context_score,
-                        reranker_score=None,
-                        score_trace=None,
-                        score_provenance=provenance,
-                    )
-                    ranking_changed = True
-                if updates:
-                    candidates_by_id[ctx_id] = current.model_copy(update=updates)
-                    changed = True
+            updates: dict[str, object] = {}
+            if "SESSION_CONTEXT" not in current.paths:
+                updates["paths"] = [*current.paths, "SESSION_CONTEXT"]
+            if context_score > current.composite_score:
+                updates.update(
+                    composite_score=context_score,
+                    reranker_score=None,
+                    score_trace=None,
+                    score_provenance=provenance,
+                )
+                ranking_changed = True
+            if updates:
+                candidates_by_id[ctx_id] = current.model_copy(update=updates)
+                changed = True
 
     if not changed:
         return scored

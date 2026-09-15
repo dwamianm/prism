@@ -158,6 +158,10 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_nodes_scope ON nodes (scope)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_nodes_session "
+        "ON nodes (user_id, session_id, scope, created_at, id)"
+    )
 
     # --- Edges table ---
     # Note: source_id and target_id intentionally do NOT use REFERENCES

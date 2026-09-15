@@ -173,6 +173,79 @@ class DuckPGQGraphStore:
             ).fetchall())
         return [self._row_to_node(row) for row in rows]
 
+    async def get_session_neighbors(
+        self,
+        trigger_ids: list[str],
+        *,
+        user_id: str,
+        window: int,
+        scopes: list[Scope] | None = None,
+    ) -> dict[str, list[MemoryNode]]:
+        """Fetch exact bounded neighborhoods without hydrating whole sessions."""
+        if not user_id or window < 0:
+            raise ValueError("get_session_neighbors requires user_id and a non-negative window")
+        ids = list(dict.fromkeys(str(UUID(node_id)) for node_id in trigger_ids))
+        if not ids:
+            return {}
+
+        id_slots = ",".join("?" for _ in ids)
+        active = [state.value for state in ACTIVE_LIFECYCLE_STATES]
+        state_slots = ",".join("?" for _ in active)
+        scope_clause = ""
+        anchor_params: list[Any] = [*ids, user_id, *active]
+        if scopes:
+            scope_slots = ",".join("?" for _ in scopes)
+            scope_clause = f" AND scope IN ({scope_slots})"
+            anchor_params.extend(scope.value for scope in scopes)
+        sql = f"""
+            WITH anchor_sessions AS (
+                SELECT DISTINCT session_id, scope
+                FROM nodes
+                WHERE id IN ({id_slots})
+                  AND user_id = ?
+                  AND session_id IS NOT NULL
+                  AND lifecycle_state IN ({state_slots})
+                  {scope_clause}
+            ), ranked AS (
+                SELECT n.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY n.session_id, n.scope
+                           ORDER BY n.created_at, n.id
+                       ) AS session_rank
+                FROM nodes n
+                JOIN anchor_sessions a
+                  ON n.session_id = a.session_id AND n.scope = a.scope
+                WHERE n.user_id = ?
+                  AND n.lifecycle_state IN ({state_slots})
+            ), anchor_ranks AS (
+                SELECT id AS trigger_id, session_id, scope, session_rank
+                FROM ranked
+                WHERE id IN ({id_slots})
+            )
+            SELECT a.trigger_id, r.* EXCLUDE (session_rank)
+            FROM anchor_ranks a
+            JOIN ranked r
+              ON a.session_id = r.session_id
+             AND a.scope = r.scope
+             AND ABS(r.session_rank - a.session_rank) <= ?
+            ORDER BY a.trigger_id, r.session_rank, r.id
+        """
+        params = [
+            *anchor_params,
+            user_id,
+            *active,
+            *ids,
+            window,
+        ]
+        async with self._conn_lock:
+            rows = await run_to_completion(
+                lambda: self._conn.execute(sql, params).fetchall()
+            )
+        windows: dict[str, list[MemoryNode]] = {}
+        for row in rows:
+            windows.setdefault(str(row[0]), []).append(self._row_to_node(row[1:]))
+        return windows
+
     async def query_nodes(
         self,
         *,

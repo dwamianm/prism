@@ -118,6 +118,23 @@ class GraphStore(Protocol):
         """Return all scoped graph nodes citing the event, including retired nodes."""
         ...
 
+    async def get_session_neighbors(
+        self,
+        trigger_ids: list[str],
+        *,
+        user_id: str,
+        window: int,
+        scopes: list[Scope] | None = None,
+    ) -> dict[str, list[MemoryNode]]:
+        """Return active nodes within ``window`` turns of owned trigger nodes.
+
+        Ordering and adjacency are computed independently for each exact
+        ``(session_id, scope)`` partition using ``(created_at, id)``. The
+        Each trigger ID maps to its own ordered window, including the visible
+        trigger node. There is no whole-session row cap.
+        """
+        ...
+
     async def query_nodes(
         self,
         *,

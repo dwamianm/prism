@@ -83,6 +83,8 @@ _NODES_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes (node_type)",
     "CREATE INDEX IF NOT EXISTS idx_nodes_lifecycle ON nodes (lifecycle_state)",
     "CREATE INDEX IF NOT EXISTS idx_nodes_scope ON nodes (scope)",
+    "CREATE INDEX IF NOT EXISTS idx_nodes_session "
+    "ON nodes (user_id, session_id, scope, created_at, id)",
     "CREATE INDEX IF NOT EXISTS idx_nodes_content_tsv ON nodes USING GIN (content_tsv)",
 ]
 

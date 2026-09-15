@@ -193,7 +193,9 @@ to the pool or was already found by vector, lexical, or graph generation; a
 broad candidate pool must not turn session expansion into a no-op. Inherited
 scores retain the triggering node and decay operation in replayable score
 provenance. Expansion remains owner and exact-scope constrained and is filtered
-again before packing.
+again before packing. Built-in stores compute bounded neighborhoods in SQL for
+each exact `(session_id, scope)` partition; the behavior does not depend on a
+fixed whole-session read limit.
 
 ---
 
