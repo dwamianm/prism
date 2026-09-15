@@ -54,8 +54,19 @@ def feature_identity(
         except PackageNotFoundError:
             packages[package] = None
     sources: dict[str, JsonValue] = {}
-    for name in ("scoring", "ranking_adjustments", "query_analysis", "scope", "candidates", "filtering",
-                 "session_context", "reranker", "packing", "context_formatter"):
+    for name in (
+        "scoring",
+        "ranking_adjustments",
+        "query_analysis",
+        "scope",
+        "candidates",
+        "filtering",
+        "session_context",
+        "episode_context",
+        "reranker",
+        "packing",
+        "context_formatter",
+    ):
         try:
             sources[name] = hashlib.sha256(Path(__file__).with_name(name + ".py").read_bytes()).hexdigest()
         except OSError:

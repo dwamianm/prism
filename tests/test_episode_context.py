@@ -213,6 +213,11 @@ async def test_pipeline_persists_episode_policy_and_replayable_promotions(config
         assert receipt.packing.episode_context_top_k == 1
         assert receipt.packing.episode_context_local_k == 2
         assert receipt.packing.episode_context_score_decay == 0.95
+        assert receipt.execution is not None
+        episode_source = receipt.execution.features["source_files_sha256"][
+            "episode_context"
+        ]
+        assert isinstance(episode_source, str) and len(episode_source) == 64
         assert receipt.replay_ranking() == tuple(
             candidate.node.id for candidate in response.results
         )

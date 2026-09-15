@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Receipt schema version 8 records the complete policy while versions 1–7 retain
   their canonical bytes and disabled semantics. MemoryAgentBench schema 8 can
   preserve upstream source chunks as distinct registered episode partitions.
+  New execution descriptors also hash the episode-routing module alongside the
+  other retrieval stages.
 
 - MemoryAgentBench DetectiveQA trials can register a shared
   `choice-only-v1` reader contract. It resolves the pinned task prompt's conflict
