@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Contract-correct LangChain and LlamaIndex chat persistence over the immutable
+  event log. Versioned control events make clear, replacement, and deletion
+  visible to framework callers without erasing source messages or creating
+  retrievable control nodes. The adapters page beyond 1,000 events, isolate exact
+  scopes, preserve structured message payloads, and now run against the locked
+  current framework releases in a dedicated CI job.
+- Automatic adjacent question-answer pairing now includes exact scope in its
+  session cache identity. A personal turn followed by a project turn can no
+  longer produce a combined cross-scope memory, and chat-history control events
+  reset the applicable cache before later messages are stored.
+
 - A registered, fail-closed MemoryAgentBench BM25 control for matched-reader
   trials. It binds the exact prepared sources, formatted BM25 documents,
   questions, answers, harness code, configuration, NumPy and `rank-bm25`

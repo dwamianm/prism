@@ -160,6 +160,15 @@ HTTP event endpoints and MCP `memory_get_event` bind source access to the curren
 principal. These APIs expose durable sources and current derivations; they do not
 claim complete graph replay from the event log.
 
+Framework chat adapters represent clear, replacement and individual deletion as
+versioned system control events. They interpret those events when reading logical
+history, while prior message events remain immutable and owner scoped. Control
+events intentionally have no derived graph node or search-index entry; they are
+history operations rather than memories. Exact scope filtering prevents a clear
+in one scope from hiding messages in another. The logical history operation does
+not retire memory nodes already derived from prior message events; applications
+use the explicit owner-scoped lifecycle API when retrieval retirement is intended.
+
 ## 3. Event Log Schema
 
 ```sql

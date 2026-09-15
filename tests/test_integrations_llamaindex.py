@@ -16,6 +16,7 @@ except ImportError:
     from llama_index.core.base.llms.types import ChatMessage
 
 from prme.integrations.llamaindex import PRMEChatStore, PRMERetriever
+from prme.types import SourceType
 
 
 @pytest.fixture
@@ -87,6 +88,15 @@ class TestPRMERetriever:
 
 
 class TestPRMEChatStore:
+    @pytest.mark.parametrize("key", ["", ":session", "alice:", "   :session"])
+    def test_rejects_invalid_keys(self, tmpdir: str, key: str):
+        store = PRMEChatStore(directory=tmpdir)
+        try:
+            with pytest.raises(ValueError, match="non-empty user_id and session_id"):
+                store.get_messages(key)
+        finally:
+            store.close()
+
     def test_add_and_get_messages(self, tmpdir: str):
         store = PRMEChatStore(directory=tmpdir)
         try:
@@ -129,12 +139,41 @@ class TestPRMEChatStore:
         finally:
             store.close()
 
-    def test_delete_returns_none(self, tmpdir: str):
+    def test_delete_message_returns_and_hides_selected_message(self, tmpdir: str):
         store = PRMEChatStore(directory=tmpdir)
         try:
-            assert store.delete_messages("alice:s1") is None
-            assert store.delete_message("alice:s1", 0) is None
-            assert store.delete_last_message("alice:s1") is None
+            store.add_message("alice:s1", ChatMessage(role="user", content="one"))
+            store.add_message("alice:s1", ChatMessage(role="assistant", content="two"))
+            store.add_message("alice:s1", ChatMessage(role="user", content="three"))
+
+            removed = store.delete_message("alice:s1", 1)
+            assert removed is not None and removed.content == "two"
+            assert [message.content for message in store.get_messages("alice:s1")] == [
+                "one",
+                "three",
+            ]
+
+            last = store.delete_last_message("alice:s1")
+            assert last is not None and last.content == "three"
+            assert [message.content for message in store.get_messages("alice:s1")] == [
+                "one"
+            ]
+            assert store.delete_message("alice:s1", 4) is None
+        finally:
+            store.close()
+
+    def test_delete_messages_matches_chat_store_contract(self, tmpdir: str):
+        store = PRMEChatStore(directory=tmpdir)
+        try:
+            assert store.delete_messages("unknown:s1") is None
+            store.add_message("alice:s1", ChatMessage(role="user", content="one"))
+            store.add_message("alice:s1", ChatMessage(role="assistant", content="two"))
+
+            removed = store.delete_messages("alice:s1")
+            assert removed is not None
+            assert [message.content for message in removed] == ["one", "two"]
+            assert store.get_messages("alice:s1") == []
+            assert "alice:s1" not in store.get_keys()
         finally:
             store.close()
 
@@ -167,5 +206,47 @@ class TestPRMEChatStore:
             )
             msgs = store.get_messages("alice:s1")
             assert len(msgs) == 2
+        finally:
+            store.close()
+
+    def test_set_messages_replaces_existing_messages(self, tmpdir: str):
+        store = PRMEChatStore(directory=tmpdir)
+        try:
+            store.add_message(
+                "alice:s1", ChatMessage(role="user", content="Old message")
+            )
+            store.set_messages(
+                "alice:s1",
+                [ChatMessage(role="assistant", content="Replacement")],
+            )
+            messages = store.get_messages("alice:s1")
+            assert [message.content for message in messages] == ["Replacement"]
+        finally:
+            store.close()
+
+    def test_preserves_structured_message_fields(self, tmpdir: str):
+        store = PRMEChatStore(directory=tmpdir)
+        message = ChatMessage(
+            role="assistant",
+            content="Result",
+            additional_kwargs={"tool_calls": [{"name": "lookup", "id": "call-1"}]},
+        )
+        try:
+            store.add_message("alice:s1", message)
+            restored = store.get_messages("alice:s1")[0]
+            assert restored.model_dump(mode="json") == message.model_dump(mode="json")
+        finally:
+            store.close()
+
+    def test_tool_role_keeps_tool_provenance(self, tmpdir: str):
+        store = PRMEChatStore(directory=tmpdir)
+        try:
+            store.add_message(
+                "alice:s1", ChatMessage(role="tool", content="Tool result")
+            )
+            event = store._client.get_events("alice", session_id="s1")[0]
+            assert event.role == "tool"
+            nodes = store._client.get_event_nodes(str(event.id), user_id="alice")
+            assert nodes[0].source_type == SourceType.TOOL_OUTPUT
         finally:
             store.close()

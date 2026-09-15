@@ -755,6 +755,24 @@ class MemoryClient:
             )
         )
 
+    def _append_control_event(
+        self,
+        content: str,
+        *,
+        user_id: str,
+        session_id: str,
+        scope: Scope,
+        metadata: dict,
+    ) -> str:
+        """Append an integration control event without a derived memory node."""
+        return self._run(self._engine._append_control_event(
+            content,
+            user_id=user_id,
+            session_id=session_id,
+            scope=scope,
+            metadata=metadata,
+        ))
+
     def consolidate_knowledge(
         self,
         *,

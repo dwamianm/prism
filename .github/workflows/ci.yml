@@ -126,3 +126,33 @@ jobs:
 
       - name: Run simulations
         run: uv run python -m scripts.run_simulations
+
+  test-integrations:
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          version: latest-known
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install integration dependencies
+        run: >-
+          uv sync --python ${{ matrix.python-version }} --dev
+          --extra langchain --extra llamaindex
+
+      - name: Run framework integration tests
+        run: >-
+          uv run --no-sync python -m pytest
+          tests/test_integration_chat_history.py
+          tests/test_integrations_langchain.py
+          tests/test_integrations_llamaindex.py -q

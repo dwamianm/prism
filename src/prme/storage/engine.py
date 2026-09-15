@@ -183,11 +183,11 @@ class MemoryEngine:
         self._closed = False
 
         # Session turn tracking for automatic Q-A pairing.
-        # Maps (user_id, session_id) -> (role, content, node_type, scope)
+        # Maps (user_id, session_id, scope) -> (role, content, node_type, scope)
         # When consecutive messages in the same session have different roles,
         # a merged Q-A node is created for better retrieval coverage.
         self._last_session_turn: dict[
-            tuple[str, str], tuple[str, str, NodeType, Scope]
+            tuple[str, str, Scope], tuple[str, str, NodeType, Scope]
         ] = {}
 
         # Config-driven overrides with module-level defaults as fallback
@@ -882,7 +882,7 @@ class MemoryEngine:
         # This addresses the "orphaned answer" problem where a question is
         # retrievable but the adjacent answer is not.
         if session_id is not None and self._config.enable_qa_pairing:
-            session_key = (user_id, session_id)
+            session_key = (user_id, session_id, scope)
             prev = self._last_session_turn.get(session_key)
             if prev is not None:
                 prev_role, prev_content, prev_nt, prev_scope = prev
@@ -2129,6 +2129,31 @@ class MemoryEngine:
             List of Events.
         """
         return await self._event_store.get_by_user(user_id, **kwargs)
+
+    async def _append_control_event(
+        self,
+        content: str,
+        *,
+        user_id: str,
+        session_id: str,
+        scope: Scope,
+        metadata: dict,
+    ) -> str:
+        """Append an adapter control event without deriving a memory node."""
+        event = Event(
+            content=content,
+            user_id=user_id,
+            session_id=session_id,
+            role="system",
+            scope=scope,
+            metadata=metadata,
+        )
+        event_id = await self._write_queue.submit(
+            lambda: self._event_store.append(event),
+            label=f"chat.control:{event.id}",
+        )
+        self._last_session_turn.pop((user_id, session_id, scope), None)
+        return event_id
 
     # --- Lifecycle Transitions (delegated to GraphStore) ---
 

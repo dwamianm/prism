@@ -85,6 +85,9 @@ Ingestion must treat the caller's scope as its write boundary. An extraction
 model's scope classification is advisory and cannot override that boundary.
 Entity matching and consolidation must remain within the same user and scope;
 matching names or embedding similarity do not grant cross-scope write access.
+Automatic adjacent question-answer pairing keys its in-process turn cache by
+owner, session and exact scope. Messages that share an owner and session but
+cross a scope boundary are never combined into one derived node.
 
 ---
 

@@ -442,7 +442,7 @@ class EventStore:
         query = (
             f"SELECT {_EVENT_COLUMNS} FROM events "
             f"WHERE {where_clause} "
-            f"ORDER BY timestamp DESC "
+            f"ORDER BY timestamp DESC, id DESC "
             f"LIMIT ? OFFSET ?"
         )
         params.extend([limit, offset])
@@ -469,7 +469,7 @@ class EventStore:
         query = (
             f"SELECT {_EVENT_COLUMNS} FROM events "
             f"WHERE {where_clause} "
-            f"ORDER BY timestamp DESC"
+            f"ORDER BY timestamp DESC, id DESC"
         )
 
         result = self._conn.execute(query, params).fetchall()

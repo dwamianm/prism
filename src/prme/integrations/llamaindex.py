@@ -43,7 +43,27 @@ except ImportError:
 
 from prme.client import MemoryClient
 from prme.config import PRMEConfig
+from prme.integrations._chat_history import (
+    append_chat_control,
+    chat_message_metadata,
+    serialized_chat_message,
+    visible_chat_events,
+)
 from prme.types import NodeType, Scope
+
+_LLAMAINDEX_MESSAGE_FORMAT = "llamaindex-v1"
+
+
+def _message_role(message: ChatMessage) -> str:
+    """Map LlamaIndex roles to PRME provenance roles."""
+    role = message.role.value
+    if role in {"function", "tool"}:
+        return "tool"
+    if role in {"assistant", "chatbot", "model"}:
+        return "assistant"
+    if role == "system":
+        return "system"
+    return "user"
 
 
 class PRMERetriever(BaseRetriever):
@@ -134,8 +154,14 @@ def _parse_key(key: str) -> tuple[str, str]:
     """Parse a 'user_id:session_id' key into components."""
     if ":" in key:
         user_id, session_id = key.split(":", 1)
-        return user_id, session_id
-    return key, "default"
+    else:
+        user_id, session_id = key, "default"
+    if not user_id.strip() or not session_id.strip():
+        raise ValueError(
+            "PRME chat keys require a non-empty user_id and session_id: "
+            "'user_id:session_id'"
+        )
+    return user_id, session_id
 
 
 class PRMEChatStore(BaseChatStore):
@@ -143,7 +169,7 @@ class PRMEChatStore(BaseChatStore):
 
     Messages are keyed by ``"user_id:session_id"`` strings.
     Stores messages via :meth:`~prme.client.MemoryClient.store` and
-    queries them via :meth:`~prme.client.MemoryClient.query_nodes`.
+    reads them via :meth:`~prme.client.MemoryClient.get_events`.
 
     Args:
         directory: Path to the PRME memory directory.
@@ -164,64 +190,117 @@ class PRMEChatStore(BaseChatStore):
         self._known_keys: set[str] = set()
 
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
-        """Store messages for a key (appends; PRME is append-only)."""
-        self._known_keys.add(key)
+        """Replace the logical messages for a key using an append-only marker."""
         user_id, session_id = _parse_key(key)
+        append_chat_control(
+            self._client,
+            user_id=user_id,
+            session_id=session_id,
+            scope=self._scope,
+            operation="clear",
+        )
         for msg in messages:
-            self._client.store(
-                msg.content,
-                user_id=user_id,
-                session_id=session_id,
-                role=msg.role.value,
-                node_type=NodeType.NOTE,
-                scope=self._scope,
-                metadata={"role": msg.role.value},
-            )
+            self._store_message(user_id, session_id, msg)
+        self._known_keys.add(key)
 
     def get_messages(self, key: str) -> list[ChatMessage]:
         """Retrieve all messages for a key."""
-        self._known_keys.add(key)
         user_id, session_id = _parse_key(key)
-        events = self._client.get_events(
-            user_id,
+        events = visible_chat_events(
+            self._client,
+            user_id=user_id,
             session_id=session_id,
-            limit=1000,
+            scope=self._scope,
         )
         messages = []
-        for event in sorted(events, key=lambda e: e.timestamp):
-            role = event.role if hasattr(event, "role") else "user"
-            messages.append(ChatMessage(role=role, content=event.content))
+        for event in events:
+            messages.append(self._message_from_event(event))
         return messages
 
     def add_message(self, key: str, message: ChatMessage) -> None:
         """Add a single message for a key."""
-        self._known_keys.add(key)
         user_id, session_id = _parse_key(key)
+        self._store_message(user_id, session_id, message)
+        self._known_keys.add(key)
+
+    def _store_message(
+        self, user_id: str, session_id: str, message: ChatMessage
+    ) -> None:
+        serialized = message.model_dump(mode="json")
         self._client.store(
-            message.content,
+            message.content or "",
             user_id=user_id,
             session_id=session_id,
-            role=message.role.value,
+            role=_message_role(message),
             node_type=NodeType.NOTE,
             scope=self._scope,
-            metadata={"role": message.role.value},
+            metadata=chat_message_metadata(
+                format_name=_LLAMAINDEX_MESSAGE_FORMAT,
+                message=serialized,
+            ),
         )
 
     def delete_messages(self, key: str) -> Optional[list[ChatMessage]]:
-        """Not supported (PRME is append-only). Returns None."""
-        return None
+        """Logically delete and return all messages for a key."""
+        known = key in self._known_keys
+        messages = self.get_messages(key)
+        if not known and not messages:
+            return None
+        user_id, session_id = _parse_key(key)
+        append_chat_control(
+            self._client,
+            user_id=user_id,
+            session_id=session_id,
+            scope=self._scope,
+            operation="clear",
+        )
+        self._known_keys.discard(key)
+        return messages
 
     def delete_message(self, key: str, idx: int) -> Optional[ChatMessage]:
-        """Not supported (PRME is append-only). Returns None."""
-        return None
+        """Logically delete and return one message by index."""
+        user_id, session_id = _parse_key(key)
+        events = visible_chat_events(
+            self._client,
+            user_id=user_id,
+            session_id=session_id,
+            scope=self._scope,
+        )
+        try:
+            event = events[idx]
+        except IndexError:
+            return None
+        message = self._message_from_event(event)
+        append_chat_control(
+            self._client,
+            user_id=user_id,
+            session_id=session_id,
+            scope=self._scope,
+            operation="delete",
+            target_event_id=str(event.id),
+        )
+        return message
 
     def delete_last_message(self, key: str) -> Optional[ChatMessage]:
-        """Not supported (PRME is append-only). Returns None."""
-        return None
+        """Logically delete and return the last message for a key."""
+        return self.delete_message(key, -1)
 
     def get_keys(self) -> list[str]:
-        """Return keys that have been used in this session."""
+        """Return keys written through this chat-store instance."""
         return sorted(self._known_keys)
+
+    @staticmethod
+    def _message_from_event(event: Any) -> ChatMessage:
+        serialized = serialized_chat_message(
+            event, format_name=_LLAMAINDEX_MESSAGE_FORMAT
+        )
+        if serialized is not None:
+            try:
+                return ChatMessage.model_validate(serialized)
+            except (TypeError, ValueError):
+                pass
+        role = event.role if hasattr(event, "role") else "user"
+        return ChatMessage(role=role, content=event.content)
 
     def close(self) -> None:
         """Close the underlying MemoryClient."""

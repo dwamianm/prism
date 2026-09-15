@@ -32,6 +32,10 @@ Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
 Python and CLI contracts separately from draft RFC requirements.
 
+[Framework integrations](FRAMEWORK-INTEGRATIONS.md) documents the LangChain and
+LlamaIndex retrievers, lossless structured-message storage, and append-only
+logical history mutations.
+
 [Scoped retrieval learning](LEARNING.md) documents the two-stage evidence gate,
 immutable owner/scope profiles, automatic application, and rollback workflow.
 

@@ -89,6 +89,8 @@ With optional extras:
 ```bash
 pip install prme[postgres]   # PostgreSQL backend
 pip install prme[api]        # HTTP API (FastAPI)
+pip install prme[langchain]  # LangChain retriever and chat history
+pip install prme[llamaindex] # LlamaIndex retriever and chat store
 ```
 
 ### From source
@@ -116,6 +118,11 @@ with MemoryClient("./my_memories") as client:
 ```
 
 `MemoryClient` is a synchronous wrapper — no `async`/`await` needed. It works everywhere: scripts, notebooks, FastAPI apps.
+
+LangChain and LlamaIndex adapters preserve structured framework messages and
+implement logical clear, replacement, and deletion over PRME's immutable event
+log. See the [framework integration guide](docs/FRAMEWORK-INTEGRATIONS.md) for
+copy-paste examples and lifecycle semantics.
 
 Conditional memories require explicit condition text and always start unresolved.
 Record the result when a user, tool, rule, or model evaluates that condition:

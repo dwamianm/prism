@@ -317,7 +317,7 @@ class PgEventStore:
         query = (
             f"SELECT {_EVENT_COLUMNS} FROM events "
             f"WHERE {where} "
-            f"ORDER BY timestamp DESC "
+            f"ORDER BY timestamp DESC, id DESC "
             f"LIMIT ${idx} OFFSET ${idx + 1}"
         )
         params.extend([limit, offset])
@@ -347,7 +347,7 @@ class PgEventStore:
         query = (
             f"SELECT {_EVENT_COLUMNS} FROM events "
             f"WHERE {where} "
-            f"ORDER BY timestamp DESC"
+            f"ORDER BY timestamp DESC, id DESC"
         )
 
         async with self._pool.acquire() as conn:
