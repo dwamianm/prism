@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Real extraction diagnostics can now run the same qualifier and entity-reference
+  probes through either Ollama or OpenAI. Checked worker processes forward the
+  provider explicitly and record it in the report, enabling provider-diverse
+  validation without changing the cases or weakening grounding checks.
+
 - MemoryAgentBench ICL trials may opt into a registered `numeric-label-v1`
   reader contract shared by PRME and BM25. It resolves the pinned harness's
   conflict between a `label: N` prompt and its documented digits-only exact-match

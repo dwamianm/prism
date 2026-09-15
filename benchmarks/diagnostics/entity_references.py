@@ -142,7 +142,7 @@ async def run(args, *, cases=None):
                 "api_key": None,
             },
             extraction={
-                "provider": "ollama",
+                "provider": args.provider,
                 "model": args.model,
                 "base_url": args.base_url,
                 "api_key": None,
@@ -205,7 +205,7 @@ async def run(args, *, cases=None):
     out["cases_sha256"] = hashlib.sha256(json.dumps(cases, sort_keys=True).encode()).hexdigest()
     out["case_count"] = len(cases)
     out["cases_passed"] = sum(r["passed"] for r in reports)
-    out["provider"] = "ollama"
+    out["provider"] = args.provider
     out["model"] = args.model
     out["provider_max_retries"] = 3
     out["provider_temperature"] = config.extraction.temperature
@@ -214,6 +214,7 @@ async def run(args, *, cases=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--provider", choices=("ollama", "openai"), default="ollama")
     parser.add_argument("--model", default="qwen3.5:4b")
     parser.add_argument("--base-url", default="http://127.0.0.1:11434/v1")
     parser.add_argument("--timeout", type=float, default=90)

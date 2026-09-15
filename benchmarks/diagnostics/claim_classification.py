@@ -51,6 +51,7 @@ CASES = [
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--provider", choices=("ollama", "openai"), default="ollama")
     parser.add_argument("--model", default="qwen3.5:4b")
     parser.add_argument("--base-url", default="http://127.0.0.1:11434/v1")
     parser.add_argument("--timeout", type=float, default=90)
@@ -63,7 +64,8 @@ def main():
     else:
         report = checked_report([
             sys.executable, "-m", "benchmarks.diagnostics.claim_classification", "--worker",
-            "--model", args.model, "--base-url", args.base_url, "--timeout", str(args.timeout),
+            "--provider", args.provider, "--model", args.model,
+            "--base-url", args.base_url, "--timeout", str(args.timeout),
         ], timeout=args.timeout * len(CASES) + 60)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")

@@ -30,6 +30,21 @@ def checked_report(command: list[str], *, timeout: float) -> dict:
 
 
 def run_diagnostic(module: str, args) -> dict:
-    return checked_report([sys.executable, "-m", module, "--worker", "--model", args.model,
-                           "--base-url", args.base_url, "--timeout", str(args.timeout)],
-                          timeout=max(60, args.timeout * 6 + 60))
+    command = [
+        sys.executable,
+        "-m",
+        module,
+        "--worker",
+        "--model",
+        args.model,
+        "--base-url",
+        args.base_url,
+        "--timeout",
+        str(args.timeout),
+    ]
+    if provider := getattr(args, "provider", None):
+        command[4:4] = ["--provider", provider]
+    return checked_report(
+        command,
+        timeout=max(60, args.timeout * 6 + 60),
+    )

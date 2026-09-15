@@ -55,6 +55,12 @@ default because a 23 GB model download and roughly 22 GB loaded model are not a
 portable assumption, and these authored probes are not held-out accuracy or
 competitive evidence.
 
+The diagnostic CLI accepts `--provider ollama|openai`. This supports
+provider-diverse checks with the same cases, schema, grounding rules, and process
+exit boundary. A provider change is a separate run whose model, endpoint, prompt,
+schema, and case hashes must remain in its report; it does not make the authored
+cases held out.
+
 The reports retain prompt, response-schema and fixture hashes, graph assertions,
 and raw extraction output. Reproduce the temperature-zero run with an installed
 Ollama model:

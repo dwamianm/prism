@@ -1,6 +1,7 @@
 """A passing workflow cannot hide a failed native/interpreter shutdown."""
 
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,6 +21,27 @@ def test_missing_report_and_timeout_cannot_pass():
     assert not checked_report([sys.executable, "-c", "pass"], timeout=5)["passed"]
     report = checked_report([sys.executable, "-c", "import time; time.sleep(10)"], timeout=0.1)
     assert report["passed"] is False and report["error_type"] == "TimeoutExpired"
+
+
+def test_diagnostic_worker_forwards_an_explicit_optional_provider(monkeypatch):
+    from benchmarks.diagnostics import _process
+
+    commands = []
+
+    def capture(command, *, timeout):
+        commands.append((command, timeout))
+        return {"passed": True}
+
+    monkeypatch.setattr(_process, "checked_report", capture)
+    common = {
+        "model": "model",
+        "base_url": "https://example.invalid/v1",
+        "timeout": 5,
+    }
+    _process.run_diagnostic("probe", SimpleNamespace(**common, provider="openai"))
+    _process.run_diagnostic("legacy-probe", SimpleNamespace(**common))
+    assert commands[0][0][3:7] == ["--worker", "--provider", "openai", "--model"]
+    assert "--provider" not in commands[1][0]
 
 
 
