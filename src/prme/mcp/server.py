@@ -30,6 +30,7 @@ from prme.models.learning import (
     LearningEvaluation,
     RankingMultipliers,
 )
+from prme.models.processing import FastIngestItem
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -235,6 +236,48 @@ async def memory_store(
         return json.dumps({"error": str(e)})
     except Exception as e:
         return _internal_error("memory_store", e)
+
+
+async def memory_ingest_fast_many(
+    items: list[FastIngestItem],
+    user_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Atomically admit ordered raw sources for deferred graph/index work.
+
+    Every item belongs to the resolved owner. This makes no model call and
+    returns event IDs in input order. Use ``memory_process_materializations``
+    to complete the durable work immediately; retrieval can also drain it
+    opportunistically under the configured budget.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        if not items:
+            raise ValueError("items must contain at least one raw source")
+        event_ids = await engine.ingest_fast_many(items, user_id=owner)
+        return json.dumps({"event_ids": event_ids, "accepted": len(event_ids)})
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_ingest_fast_many", exc)
+
+
+async def memory_process_materializations(
+    user_id: Optional[str] = None,
+    budget_ms: int = 1000,
+    ctx: Context = None,
+) -> str:
+    """Process one owner's saved raw-source graph and index work without an LLM."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.process_pending(user_id=owner, budget_ms=budget_ms)
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_process_materializations", exc)
 
 
 async def memory_retrieve(
@@ -1509,7 +1552,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
         lifespan=lifespan, stateless_http=True, json_response=True,
     )
     server.prme_config = config
-    for tool in (memory_store, memory_retrieve, memory_ingest, memory_organize,
+    for tool in (memory_store, memory_ingest_fast_many, memory_process_materializations,
+                 memory_retrieve, memory_ingest, memory_organize,
                  memory_get_node, memory_scan_nodes, memory_aggregate_assertions,
                  memory_aggregate_quantities, memory_get_assertion_state,
                  memory_get_event, memory_get_extraction,

@@ -33,7 +33,7 @@ from prme.types import (
     Scope,
     SourceType,
 )
-from prme.models.processing import ProcessingStatus
+from prme.models.processing import FastIngestItem, ProcessingStatus
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +160,25 @@ class IngestResponse(BaseModel):
     """Response body for POST /v1/ingest."""
 
     event_id: str = Field(description="ID of the persisted event")
+
+
+class FastIngestBatchRequest(BaseModel):
+    """Atomic raw-source admission for POST /v1/ingest/fast."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: Annotated[list[FastIngestItem], Field(min_length=1)]
+    user_id: str | None = Field(
+        default=None,
+        description="Owner for every item; defaults to authenticated user",
+    )
+
+
+class FastIngestBatchResponse(BaseModel):
+    """Ordered IDs for one admitted raw-source batch."""
+
+    event_ids: list[str]
+    accepted: int
 
 
 class ExtractionProcessRequest(BaseModel):

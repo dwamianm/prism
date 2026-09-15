@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from prme import StoreReceipt
+from prme import FastIngestItem, StoreReceipt
 from prme.client import MemoryClient, config_from_directory
 from prme.config import PRMEConfig
 from prme.types import ConditionState, EpistemicType, LifecycleState, NodeType, Scope
@@ -238,6 +238,25 @@ class TestStoreRetrieve:
             assert result.pending == 0 and result.processed == 1
             assert client.processing_status(event_id, user_id="alice").status == "complete"
             assert client.retrieve("telescope", user_id="alice").results
+
+    def test_fast_batch_ingestion_is_ordered_and_processes_once(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_ids = client.ingest_fast_many(
+                [
+                    FastIngestItem(content="First telescope note"),
+                    {"content": "Second telescope note", "scope": "project"},
+                ],
+                user_id="alice",
+            )
+            assert [
+                client.get_event(event_id, user_id="alice").content
+                for event_id in event_ids
+            ] == ["First telescope note", "Second telescope note"]
+            assert client.process_pending(user_id="alice", budget_ms=5000).processed == 2
+            assert all(
+                client.processing_status(event_id, user_id="alice").status == "complete"
+                for event_id in event_ids
+            )
 
     def test_store_returns_uuid(self, tmp_dir):
         with MemoryClient(tmp_dir) as client:

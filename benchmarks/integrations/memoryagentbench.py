@@ -19,12 +19,10 @@ from typing import Any
 import weakref
 
 from prme import (
-    EpistemicType,
+    FastIngestItem,
     MemoryClient,
-    NodeType,
     PRMEConfig,
     Scope,
-    SourceType,
 )
 from prme.config import EmbeddingConfig
 from prme.retrieval.config import PackingConfig
@@ -32,7 +30,7 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 8
+ADAPTER_SCHEMA_VERSION = 9
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
@@ -443,40 +441,51 @@ def save_prme_agent(agent: Any) -> None:
     ):
         source["piece_count"] = piece_count
     agent.prme_manifest["stored_nodes"] = len(pieces)
-    last_event_id: str | None = None
     client = _open_client(agent)
     try:
+        items: list[FastIngestItem] = []
         for piece_index, (piece, source_index) in enumerate(
             zip(pieces, source_indices)
         ):
             session_id = f"{agent.sub_dataset}:context:{agent.prme_context_id}"
             if agent.prme_episode_context_top_k > 0:
                 session_id += f":source:{source_index}"
-            last_event_id = client.store(
-                piece,
-                user_id=agent.prme_user_id,
-                session_id=session_id,
-                role="tool",
-                node_type=NodeType.NOTE,
-                scope=Scope.PROJECT,
-                epistemic_type=EpistemicType.OBSERVED,
-                source_type=SourceType.TOOL_OUTPUT,
-                metadata={
-                    "benchmark": "memoryagentbench",
-                    "dataset_revision": DATASET_REVISION,
-                    "sub_dataset": agent.sub_dataset,
-                    "context_id": agent.prme_context_id,
-                    "source_chunk_index": source_index,
-                    "piece_index": piece_index,
-                    "piece_count": len(pieces),
-                },
+            items.append(
+                FastIngestItem(
+                    content=piece,
+                    session_id=session_id,
+                    role="tool",
+                    scope=Scope.PROJECT,
+                    metadata={
+                        "benchmark": "memoryagentbench",
+                        "dataset_revision": DATASET_REVISION,
+                        "sub_dataset": agent.sub_dataset,
+                        "context_id": agent.prme_context_id,
+                        "source_chunk_index": source_index,
+                        "piece_index": piece_index,
+                        "piece_count": len(pieces),
+                    },
+                )
             )
+        event_ids = client.ingest_fast_many(items, user_id=agent.prme_user_id)
+        while True:
+            processing = client.process_pending(
+                user_id=agent.prme_user_id,
+                budget_ms=300_000,
+            )
+            if processing.pending == 0:
+                break
+            if processing.processed == 0:
+                raise RuntimeError(
+                    "PRME benchmark materialization made no progress; "
+                    f"{processing.pending} source records remain pending"
+                )
     except BaseException:
         _write_manifest(agent)
         raise
-    if last_event_id is None:
+    if not event_ids:
         raise RuntimeError("MemoryAgentBench source chunks produced no PRME event")
-    event = client.get_event(last_event_id, user_id=agent.prme_user_id)
+    event = client.get_event(event_ids[-1], user_id=agent.prme_user_id)
     if event is None or event.created_at.utcoffset() is None:
         raise RuntimeError("PRME benchmark query clock source is unavailable")
     agent.prme_reference_time = event.created_at.astimezone(timezone.utc)

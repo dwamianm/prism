@@ -131,6 +131,59 @@ class TestStore:
         assert resp.status_code == 422
 
 
+class TestFastIngestBatch:
+    def test_atomic_batch_admission_and_explicit_processing(self, client):
+        response = client.post(
+            "/v1/ingest/fast",
+            json={
+                "user_id": "batch-user",
+                "items": [
+                    {
+                        "content": "First imported note",
+                        "role": "tool",
+                        "session_id": "episode-1",
+                        "scope": "project",
+                    },
+                    {"content": "Second imported note"},
+                ],
+            },
+        )
+        assert response.status_code == 200
+        admitted = response.json()
+        assert admitted["accepted"] == 2
+        assert len(admitted["event_ids"]) == 2
+        for event_id in admitted["event_ids"]:
+            status = client.get(
+                f"/v1/events/{event_id}/processing-status",
+                params={"user_id": "batch-user"},
+            )
+            assert status.status_code == 200
+            assert status.json()["status"] == "pending"
+
+        processed = client.post(
+            "/v1/materializations/process",
+            json={"user_id": "batch-user", "budget_ms": 5000},
+        )
+        assert processed.status_code == 200
+        assert processed.json() == {"processed": 2, "pending": 0, "failed": 0}
+
+    def test_empty_or_invalid_batch_is_rejected(self, client):
+        assert client.post(
+            "/v1/ingest/fast",
+            json={"user_id": "batch-user", "items": []},
+        ).status_code == 422
+        assert client.post(
+            "/v1/ingest/fast",
+            json={
+                "user_id": "batch-user",
+                "items": [
+                    {"content": "valid"},
+                    {"content": "invalid", "event_time": "2026-09-14T12:00:00"},
+                ],
+            },
+        ).status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Retrieve
 # ---------------------------------------------------------------------------

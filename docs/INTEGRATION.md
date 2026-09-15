@@ -207,6 +207,18 @@ are outside this job's completion boundary.
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
 
+For raw imports that do not need typed-node overrides or model extraction, use
+`ingest_fast_many(items, user_id=...)`. Each `FastIngestItem` carries `content`,
+`role`, `session_id`, `scope`, `metadata`, and an optional timezone-aware
+`event_time`. PRME validates and snapshots the complete list before I/O, then
+admits every immutable event and materialization job in one transaction. It
+returns event IDs in input order; an empty Python batch is a no-op. Run
+`process_pending()` until `pending == 0` to build the deterministic raw NOTE and
+both indexes. HTTP `POST /v1/ingest/fast` and MCP
+`memory_ingest_fast_many` expose the same owner-scoped admission contract; their
+empty request lists are rejected. MCP `memory_process_materializations` mirrors
+the HTTP processing endpoint.
+
 An explicit `EpistemicType.CONDITIONAL` requires
 `metadata={"condition": "..."}`. New conditional memories always begin with
 `condition_state="unknown"`; setting a resolved state during creation is

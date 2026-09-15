@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -212,6 +213,62 @@ class PgEventStore:
                         record.operation_id, str(event.id), record.operation_payload(), event.scope.value, event.created_at,
                     )
         return str(event.id)
+
+    async def append_many(
+        self,
+        events: Sequence[Event],
+        *,
+        defer_materialization: bool = False,
+    ) -> list[str]:
+        """Atomically append an ordered raw-event batch and optional repair work."""
+        from prme.storage.metadata import snapshot_metadata
+
+        snapshots = tuple(
+            event.model_copy(update={"metadata": snapshot_metadata(event.metadata)})
+            for event in events
+        )
+        event_ids = [str(event.id) for event in snapshots]
+        if len(event_ids) != len(set(event_ids)):
+            raise ValueError("A raw event batch cannot contain duplicate IDs")
+        if not snapshots:
+            return []
+        rows = [self._event_values(event) for event in snapshots]
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.executemany(
+                    """
+                    INSERT INTO events (
+                        id, timestamp, role, content, content_hash,
+                        user_id, session_id, scope, metadata, created_at, event_time
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11)
+                    """,
+                    rows,
+                )
+                if defer_materialization:
+                    await conn.executemany(
+                        "INSERT INTO event_materializations (event_id) VALUES ($1)",
+                        [(event_id,) for event_id in event_ids],
+                    )
+        return event_ids
+
+    @staticmethod
+    def _event_values(event: Event) -> tuple[object, ...]:
+        metadata_json = (
+            json.dumps(event.metadata) if event.metadata is not None else None
+        )
+        return (
+            str(event.id),
+            event.timestamp,
+            event.role,
+            event.content,
+            event.content_hash,
+            event.user_id,
+            event.session_id,
+            event.scope.value,
+            metadata_json,
+            event.created_at,
+            event.event_time,
+        )
 
     async def get_direct_store(self, event_id: str, *, user_id: str) -> DirectStoreRecord | None:
         """Read initial typed values only through their source owner's scope."""

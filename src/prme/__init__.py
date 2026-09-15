@@ -35,7 +35,12 @@ from prme.models.temporal import (
     AssertionStateQuery,
     AssertionStateValue,
 )
-from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
+from prme.models.processing import (
+    FastIngestItem,
+    ProcessingResult,
+    ProcessingStatus,
+    StoreReceipt,
+)
 from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.relevance import (
@@ -143,6 +148,7 @@ __all__ = [
     "ExtractionRecord",
     "ExtractionStatus",
     "ExtractionProcessingResult",
+    "FastIngestItem",
     "IngestionPipeline",
     "LifecycleState",
     "LearningConfig",

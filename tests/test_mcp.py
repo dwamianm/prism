@@ -65,6 +65,8 @@ class TestToolDiscovery:
         names = {t.name for t in result.tools}
         expected = {
             "memory_store",
+            "memory_ingest_fast_many",
+            "memory_process_materializations",
             "memory_retrieve",
             "memory_ingest",
             "memory_organize",
@@ -182,6 +184,38 @@ class TestStore:
         })
         data = json.loads(result.content[0].text)
         assert "error" in data
+
+    async def test_fast_batch_admission_and_processing(self, session):
+        admitted = await session.call_tool(
+            "memory_ingest_fast_many",
+            {
+                "user_id": "batch-user",
+                "items": [
+                    {"content": "First MCP batch source", "scope": "project"},
+                    {"content": "Second MCP batch source", "role": "tool"},
+                ],
+            },
+        )
+        payload = json.loads(admitted.content[0].text)
+        assert payload["accepted"] == 2
+        assert len(payload["event_ids"]) == 2
+
+        processed = await session.call_tool(
+            "memory_process_materializations",
+            {"user_id": "batch-user", "budget_ms": 5000},
+        )
+        assert json.loads(processed.content[0].text) == {
+            "processed": 2,
+            "pending": 0,
+            "failed": 0,
+        }
+
+    async def test_fast_batch_rejects_empty_input(self, session):
+        result = await session.call_tool(
+            "memory_ingest_fast_many",
+            {"user_id": "batch-user", "items": []},
+        )
+        assert "error" in json.loads(result.content[0].text)
 
 
 # ---------------------------------------------------------------------------

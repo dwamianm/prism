@@ -151,7 +151,7 @@ def test_adapter_preserves_text_and_round_trips_pack(
         )
         assert retrieval["context_sha256"]
         assert retrieval["request_id"]
-        assert retrieval["adapter_schema_version"] == 8
+        assert retrieval["adapter_schema_version"] == 9
         assert retrieval["context_format"] == context_format
         assert retrieval["episode_context_top_k"] == 0
         assert retrieval["episode_context_local_k"] == 8

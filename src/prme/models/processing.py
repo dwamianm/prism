@@ -1,12 +1,30 @@
 """Observable state for restart-safe source and index processing."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from prme.models.nodes import MemoryNode
+from prme.types import Scope
+
+
+class FastIngestItem(BaseModel):
+    """One raw source accepted by ``ingest_fast_many()``.
+
+    The owner is supplied once on the batch call. Every other field can vary by
+    item while retaining the same semantics as ``ingest_fast()``.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    content: str
+    role: str = "user"
+    session_id: str | None = None
+    metadata: dict[str, Any] | None = None
+    scope: Scope = Scope.PERSONAL
+    event_time: AwareDatetime | None = Field(default=None)
 
 
 class ProcessingStatus(BaseModel):

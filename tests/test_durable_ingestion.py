@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from prme import MemoryEngine, PRMEConfig, StoreReceipt
+from prme import FastIngestItem, MemoryEngine, PRMEConfig, StoreReceipt
 from prme.models import Event
 from prme.types import Scope
 
@@ -61,6 +61,137 @@ async def test_public_processing_status_survives_retry_and_restart(config, user,
         assert status.last_error is None
         assert (await engine.processing_status(foreign, user_id=user + "-other")).status == "pending"
         assert (await engine.process_pending(user_id=user)).processed == 0
+
+
+async def test_fast_batch_admission_preserves_order_fields_and_recovery(config, user):
+    source_time = datetime(2026, 9, 14, 12, 30, tzinfo=timezone.utc)
+    metadata = {"source": {"page": 1}}
+    async with MemoryEngine.open(config) as engine:
+        event_ids = await engine.ingest_fast_many(
+            [
+                FastIngestItem(
+                    content="First batch source",
+                    role="tool",
+                    session_id="episode-a",
+                    scope=Scope.PROJECT,
+                    metadata=metadata,
+                    event_time=source_time,
+                ),
+                {
+                    "content": "Second batch source",
+                    "role": "assistant",
+                    "session_id": "episode-b",
+                    "scope": "personal",
+                },
+            ],
+            user_id=user,
+        )
+        metadata["source"]["page"] = 9
+
+        assert len(event_ids) == len(set(event_ids)) == 2
+        events = [await engine.get_event(event_id, user_id=user) for event_id in event_ids]
+        assert [event.content for event in events] == [
+            "First batch source",
+            "Second batch source",
+        ]
+        assert events[0].metadata == {"source": {"page": 1}}
+        assert events[0].event_time == source_time
+        assert events[0].scope == Scope.PROJECT
+        assert events[1].scope == Scope.PERSONAL
+        statuses = [
+            await engine.processing_status(event_id, user_id=user)
+            for event_id in event_ids
+        ]
+        assert all(status.status == "pending" for status in statuses)
+        assert engine.materialization_debt == 2
+
+    async with MemoryEngine.open(config) as engine:
+        result = await engine.process_pending(user_id=user, budget_ms=5000)
+        assert (result.processed, result.pending, result.failed) == (2, 0, 0)
+        for event_id in event_ids:
+            nodes = await engine.get_event_nodes(event_id, user_id=user)
+            assert len(nodes) == 1
+            assert str(nodes[0].id) == event_id
+            assert nodes[0].evidence_refs == [UUID(event_id)]
+
+
+async def test_fast_batch_rejects_any_invalid_item_before_admission(config, user):
+    async with MemoryEngine.open(config) as engine:
+        with pytest.raises(ValueError):
+            await engine.ingest_fast_many(
+                [
+                    {"content": "Would otherwise be accepted"},
+                    {
+                        "content": "Invalid source clock",
+                        "event_time": datetime(2026, 9, 14, 12, 30),
+                    },
+                ],
+                user_id=user,
+            )
+        with pytest.raises(ValueError):
+            await engine.ingest_fast_many(
+                [
+                    {"content": "Still must not be accepted"},
+                    {"content": "Invalid metadata", "metadata": {"score": float("nan")}},
+                ],
+                user_id=user,
+            )
+        assert await engine._event_store.get_by_user(user) == []
+        assert await engine.ingest_fast_many([], user_id=user) == []
+        assert engine.materialization_debt == 0
+
+
+async def test_fast_batch_snapshots_metadata_before_waiting_for_admission(
+    config, user, monkeypatch
+):
+    reached, release = asyncio.Event(), asyncio.Event()
+    metadata = {"source": {"page": 1}}
+    async with MemoryEngine.open(config) as engine:
+        original_submit = engine._write_queue.submit
+
+        async def gated_submit(coro_factory, label=""):
+            reached.set()
+            await release.wait()
+            return await original_submit(coro_factory, label=label)
+
+        monkeypatch.setattr(engine._write_queue, "submit", gated_submit)
+        task = asyncio.create_task(
+            engine.ingest_fast_many(
+                [{"content": "Frozen batch source", "metadata": metadata}],
+                user_id=user,
+            )
+        )
+        try:
+            await asyncio.wait_for(reached.wait(), 5)
+            metadata["source"]["page"] = 9
+        finally:
+            release.set()
+        event_id = (await task)[0]
+        event = await engine.get_event(event_id, user_id=user)
+        assert event.metadata == {"source": {"page": 1}}
+
+
+async def test_event_store_batch_rolls_back_all_admissions_on_conflict(config, user):
+    async with MemoryEngine.open(config) as engine:
+        existing = Event(content="Existing source", user_id=user, role="user")
+        await engine._event_store.append(existing)
+        fresh = Event(content="Fresh source", user_id=user, role="user")
+        conflicting = Event(
+            id=existing.id,
+            content="Conflicting source",
+            user_id=user,
+            role="user",
+        )
+
+        with pytest.raises(Exception):
+            await engine._event_store.append_many(
+                [fresh, conflicting],
+                defer_materialization=True,
+            )
+
+        assert await engine.get_event(str(fresh.id), user_id=user) is None
+        assert await engine.get_event(str(existing.id), user_id=user) == existing
+        assert await engine.processing_status(str(fresh.id), user_id=user) is None
 
 
 async def test_processing_status_tracks_direct_store_and_rejects_unknown_sources(config, user):

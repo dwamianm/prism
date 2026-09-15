@@ -7,6 +7,7 @@ to avoid blocking the event loop.
 
 import asyncio
 import json
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -214,6 +215,64 @@ class EventStore:
             await run_to_completion(self._append_with_work_sync, event, defer_materialization, defer_extraction, record)
         return str(event.id)
 
+    async def append_many(
+        self,
+        events: Sequence[Event],
+        *,
+        defer_materialization: bool = False,
+    ) -> list[str]:
+        """Atomically append an ordered raw-event batch and optional repair work.
+
+        This admission path intentionally excludes direct-store snapshots and
+        extraction work. It backs ``ingest_fast_many()``, whose raw NOTE
+        materialization is deterministic from each immutable event.
+        """
+        from prme.storage.metadata import snapshot_metadata
+
+        snapshots = tuple(
+            event.model_copy(update={"metadata": snapshot_metadata(event.metadata)})
+            for event in events
+        )
+        event_ids = [str(event.id) for event in snapshots]
+        if len(event_ids) != len(set(event_ids)):
+            raise ValueError("A raw event batch cannot contain duplicate IDs")
+        if not snapshots:
+            return []
+        async with self._conn_lock:
+            await run_to_completion(
+                self._append_many_sync,
+                snapshots,
+                defer_materialization,
+            )
+        return event_ids
+
+    def _append_many_sync(
+        self,
+        events: tuple[Event, ...],
+        defer_materialization: bool,
+    ) -> None:
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._conn.executemany(
+                """
+                INSERT INTO events (
+                    id, timestamp, role, content, content_hash,
+                    user_id, session_id, scope, metadata, created_at,
+                    event_time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [self._event_values(event) for event in events],
+            )
+            if defer_materialization:
+                self._conn.executemany(
+                    "INSERT INTO event_materializations (event_id) VALUES (?)",
+                    [(str(event.id),) for event in events],
+                )
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
     def _append_with_work_sync(self, event: Event, deferred: bool, extraction: bool = False, record: DirectStoreRecord | None = None) -> None:
         if not deferred and not extraction:
             self._append_sync(event)
@@ -378,9 +437,6 @@ class EventStore:
 
     def _append_sync(self, event: Event) -> None:
         """Insert an event into the events table (sync)."""
-        metadata_json = (
-            json.dumps(event.metadata) if event.metadata is not None else None
-        )
         self._conn.execute(
             """
             INSERT INTO events (
@@ -389,20 +445,27 @@ class EventStore:
                 event_time
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            [
-                str(event.id),
-                event.timestamp,
-                event.role,
-                event.content,
-                event.content_hash,
-                event.user_id,
-                event.session_id,
-                event.scope.value,
-                metadata_json,
-                event.created_at,
-                event.event_time,
-            ],
+            self._event_values(event),
         )
+
+    @staticmethod
+    def _event_values(event: Event) -> list[object]:
+        metadata_json = (
+            json.dumps(event.metadata) if event.metadata is not None else None
+        )
+        return [
+            str(event.id),
+            event.timestamp,
+            event.role,
+            event.content,
+            event.content_hash,
+            event.user_id,
+            event.session_id,
+            event.scope.value,
+            metadata_json,
+            event.created_at,
+            event.event_time,
+        ]
 
     def _get_sync(self, event_id: str) -> Event | None:
         """Retrieve a single event by ID (sync)."""

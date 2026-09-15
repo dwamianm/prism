@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Atomic `ingest_fast_many()` raw-source admission across the asynchronous
+  engine, synchronous client, HTTP, MCP, DuckDB, and PostgreSQL. One owner is
+  bound to the complete ordered batch, every item is validated before I/O, and
+  all immutable events and restart-safe materialization jobs commit together or
+  roll back together. MemoryAgentBench adapter schema 9 uses this path and
+  drains the existing bounded materialization queue before publishing a pack.
+
 - Opt-in deterministic two-stage episode routing for sources stored under
   meaningful session boundaries. It uses BM25 to route candidate-backed
   `(scope, session_id)` groups, promotes a bounded local evidence set with

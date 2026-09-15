@@ -36,8 +36,10 @@ class DurableMaterializationQueue:
         """Last observed pending count; call debt() for a database refresh."""
         return self._debt
 
-    def note_added(self) -> None:
-        self._debt += 1
+    def note_added(self, count: int = 1) -> None:
+        if count < 0:
+            raise ValueError("Materialization debt increment cannot be negative")
+        self._debt += count
 
     async def process_one(self, engine: MemoryEngine, event) -> None:
         """Process one accepted source under the same local lock as draining."""

@@ -67,6 +67,14 @@ not LLM derivation completion. Model summaries cannot overwrite source indexes.
 Events are immutable, so the API's inherited `updated_at` equals `created_at`
 rather than the time a row happened to be read.
 
+`ingest_fast_many()` extends that boundary to an ordered, single-owner raw batch.
+All items and metadata snapshots are validated before acquiring a backend
+connection. DuckDB and PostgreSQL commit every event and materialization job in
+one transaction or roll back the whole batch. Graph and index work remains
+deferred, owner scoped, bounded, and restart safe; event IDs preserve input
+order. This path creates deterministic raw NOTEs and does not accept typed-node
+overrides or queue model extraction.
+
 ### Historical source clocks
 
 LLM ingestion accepts an explicit timezone-aware `event_time` through the engine,

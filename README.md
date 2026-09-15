@@ -405,27 +405,39 @@ status = await engine.processing_status(event_id, user_id="alice")
 ```
 
 For a raw conversation import, accept the events first and then process them
-together. This lets the local index share a durable commit:
+together. The admission is one all-or-nothing transaction, and the local index
+shares bounded durable commits:
 
 ```python
+from prme import FastIngestItem
+
 with MemoryClient("./memories") as memory:
-    event_ids = [
-        memory.ingest_fast(
-            message["content"], user_id="alice", role=message["role"],
-            session_id="imported-conversation",
-        )
-        for message in messages
-    ]
-    result = memory.process_pending(user_id="alice", budget_ms=30_000)
+    event_ids = memory.ingest_fast_many(
+        [
+            FastIngestItem(
+                content=message["content"],
+                role=message["role"],
+                session_id="imported-conversation",
+            )
+            for message in messages
+        ],
+        user_id="alice",
+    )
+    while True:
+        result = memory.process_pending(user_id="alice", budget_ms=30_000)
+        if result.pending == 0:
+            break
+        if result.processed == 0:
+            raise RuntimeError(f"{result.failed} materializations need repair")
     print(result.processed, result.pending, result.failed)
 ```
 
-Each event is durably accepted separately; the whole import is not one
-transaction. `pending` means more processing remains, and `failed` reports
-failed attempts in that pass. Fix any underlying failure and process the same
-owner's pending work again, rather than resubmitting accepted source events.
-Use `ingest()` when the import needs LLM extraction, or `store()` for immediate
-typed storage.
+Every item is validated before I/O. The batch uses one owner, preserves input
+order, and either admits every immutable event plus repair job or admits none.
+`pending` means more processing remains, and `failed` reports failed attempts in
+that pass. Fix any underlying failure and process the same owner's pending work
+again, rather than resubmitting accepted source events. Use `ingest()` when the
+import needs LLM extraction, or `store()` for immediate typed storage.
 
 For imported conversations, `ingest()` accepts a timezone-aware `event_time`:
 
@@ -452,8 +464,10 @@ all-or-nothing transaction. Dates without a timezone are rejected before that
 message is admitted. This does not rewrite already journaled extraction plans.
 
 Raw `store()` and `ingest_fast()` writes accept the same timezone-aware clock,
-including through `MemoryClient`; omitted source times remain unknown. MCP
-`memory_store` also accepts `event_time`. Direct `store()` calls can separately
+including through `MemoryClient`; `ingest_fast_many()` accepts a separate clock
+on each item. HTTP `/v1/ingest/fast` and MCP `memory_ingest_fast_many` expose the
+same atomic raw batch. Omitted source times remain unknown. MCP `memory_store`
+also accepts `event_time`. Direct `store()` calls can separately
 set timezone-aware `valid_from` and exclusive `valid_to` values. `valid_to`
 requires an explicit earlier `valid_from`; invalid intervals fail before source
 admission. Node responses expose all three clocks separately. New extracted
@@ -1042,6 +1056,7 @@ Endpoints under `/v1`:
 |--------|------|-------------|
 | `POST` | `/v1/store` | Store a memory node |
 | `POST` | `/v1/ingest` | LLM-powered ingestion |
+| `POST` | `/v1/ingest/fast` | Atomically admit raw sources for deferred indexing |
 | `POST` | `/v1/retrieve` | Hybrid retrieval |
 | `GET` | `/v1/events/{id}` | Original source evidence |
 | `GET` | `/v1/events/{id}/nodes` | Nodes citing that source |

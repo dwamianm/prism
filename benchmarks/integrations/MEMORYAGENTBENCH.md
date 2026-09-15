@@ -26,7 +26,9 @@ dispatch sees `prme` and invokes the PRME adapter, while template selection sees
 `Simple_rag_bm25`. Registrations require that exact name so a matched trial
 cannot silently return to the distinct agentic-memory reader prompt.
 
-Adapter schema 8 stores blank-line-delimited units and serial-numbered facts
+Adapter schema 9 admits its raw source records with `ingest_fast_many()` and
+finishes the restart-safe materialization queue before publishing a completed
+pack. Schema 8 introduced blank-line-delimited units and serial-numbered facts
 independently, applying the configured character limit only when one semantic
 unit is too large. This keeps individual demonstrations and facts from becoming
 mixed-topic embedding records while preserving the concatenated source text

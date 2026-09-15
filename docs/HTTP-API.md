@@ -90,6 +90,14 @@ support client idempotency keys.
 | Supplied node or raw-source indexes | `GET /v1/events/{event_id}/processing-status` | `POST /v1/materializations/process` |
 | LLM extraction and its derived artifacts | `GET /v1/events/{event_id}/extraction-status` | `POST /v1/events/{event_id}/retry-extraction`, then `POST /v1/extractions/process` |
 
+For raw imports, `POST /v1/ingest/fast` accepts `{"user_id": "...", "items":
+[...]}`. Each item can set `content`, `role`, `session_id`, `scope`, `metadata`,
+and a timezone-aware `event_time`. The resolved owner applies to the complete
+ordered list, which is validated before I/O and committed with its repair jobs
+as one transaction. The response returns `event_ids` in input order and an
+`accepted` count. Call the materialization processor until `pending` is zero;
+do not resubmit IDs whose admission already succeeded.
+
 Materialization processing accepts `{"budget_ms": 5000}` and returns `processed`,
 `pending` and `failed` counts. With zero budget it only inspects counts. The budget
 is checked between operations; a started operation can exceed it. It processes

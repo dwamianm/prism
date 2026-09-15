@@ -48,6 +48,8 @@ from prme.api.models import (
     ContradictionResolutionRequest,
     ErrorResponse,
     ExtractionProcessRequest,
+    FastIngestBatchRequest,
+    FastIngestBatchResponse,
     HealthResponse,
     IngestRequest,
     IngestResponse,
@@ -270,6 +272,28 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSON
     except (ExtractionError, MaterializationError) as exc:
         return _accepted_work_failure(exc)
     return IngestResponse(event_id=event_id)
+
+
+@router.post(
+    "/ingest/fast",
+    response_model=FastIngestBatchResponse,
+    summary="Atomically admit raw sources for deferred indexing",
+    responses={422: {"model": ErrorResponse}},
+)
+async def ingest_fast_many(
+    request: Request,
+    body: FastIngestBatchRequest,
+) -> FastIngestBatchResponse:
+    """Admit an ordered owner-scoped batch without model inference."""
+    owner = _user_id(request, body.user_id, required=True)
+    try:
+        event_ids = await _get_engine(request).ingest_fast_many(
+            body.items,
+            user_id=owner,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return FastIngestBatchResponse(event_ids=event_ids, accepted=len(event_ids))
 
 
 @router.get("/events/{event_id}", summary="Read original source evidence")

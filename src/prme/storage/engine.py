@@ -37,7 +37,14 @@ import duckdb
 
 from prme.config import PRMEConfig
 from prme.ingestion.errors import MaterializationError, extraction_failure_code
-from prme.models import Event, MemoryNode, ProcessingResult, ProcessingStatus, StoreReceipt
+from prme.models import (
+    Event,
+    FastIngestItem,
+    MemoryNode,
+    ProcessingResult,
+    ProcessingStatus,
+    StoreReceipt,
+)
 from prme.models.provenance import NodeProvenance
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -1422,6 +1429,56 @@ class MemoryEngine:
             self._materialization_queue.debt_sync(),
         )
         return event_id
+
+    async def ingest_fast_many(
+        self,
+        items: Sequence[FastIngestItem | dict[str, Any]],
+        *,
+        user_id: str,
+    ) -> list[str]:
+        """Atomically accept an ordered batch of raw events without inference.
+
+        Every item is validated and its metadata is copied before the storage
+        transaction begins. The batch either admits every immutable event and
+        repair job or admits none. As with ``ingest_fast()``, graph and index
+        work remains explicit through ``process_pending()`` and is recoverable
+        after restart.
+
+        Returns event IDs in the same order as ``items``. An empty input is a
+        no-op. The owner is supplied once to make accidental mixed-tenant
+        batches impossible.
+        """
+        if not user_id:
+            raise ValueError("user_id must be nonempty")
+        from prme.storage.metadata import snapshot_metadata
+
+        validated = tuple(FastIngestItem.model_validate(item) for item in items)
+        events = tuple(
+            Event(
+                content=item.content,
+                user_id=user_id,
+                session_id=item.session_id,
+                role=item.role,
+                scope=item.scope,
+                metadata=snapshot_metadata(item.metadata),
+                event_time=item.event_time,
+            )
+            for item in validated
+        )
+        event_ids = await self._write_queue.submit(
+            lambda: self._event_store.append_many(
+                events,
+                defer_materialization=True,
+            ),
+            label=f"ingest_fast_many.events:{len(events)}",
+        )
+        self._materialization_queue.note_added(len(events))
+        logger.info(
+            "ingest_fast_many.complete events=%d debt=%d",
+            len(event_ids),
+            self._materialization_queue.debt_sync(),
+        )
+        return event_ids
 
     async def _materialize_event(self, event: Event, *, pending_lexical: dict[str, MemoryNode] | None = None) -> None:
         """Materialize a saved direct store or raw source without a new event.

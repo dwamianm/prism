@@ -52,7 +52,12 @@ from prme.models.learning import (
 )
 from prme.retrieval.config import ScoringWeights
 from prme.retrieval.scope import ScopeInput
-from prme.models.processing import ProcessingResult, ProcessingStatus, StoreReceipt
+from prme.models.processing import (
+    FastIngestItem,
+    ProcessingResult,
+    ProcessingStatus,
+    StoreReceipt,
+)
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -634,6 +639,15 @@ class MemoryClient:
             content, user_id=user_id, role=role, session_id=session_id,
             metadata=metadata, scope=scope, event_time=event_time,
         ))
+
+    def ingest_fast_many(
+        self,
+        items: Sequence[FastIngestItem | dict[str, Any]],
+        *,
+        user_id: str,
+    ) -> list[str]:
+        """Atomically accept raw events; process their durable work separately."""
+        return self._run(self._engine.ingest_fast_many(items, user_id=user_id))
 
     def extraction_status(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
         """Inspect durable extraction separately from raw-source indexing."""
