@@ -143,8 +143,10 @@ content hashes, configuration and context membership through the authenticated
 owner. A logging failure does not fail retrieval; it sets the flag to false.
 Legacy requests without a receipt return 404.
 
-Current pipeline receipts use schema version 8 and explicitly retain packing
-ordering, context guidance, context format, and episode-routing settings.
+Current pipeline receipts use schema version 9 and explicitly retain packing
+ordering, context guidance, context format, episode-routing settings, and the
+configured current-update multiplier. Version 9 score provenance records any
+applied `current_update` operation and its exact coefficient.
 Historical schema versions 4 and 5 introduced density/score and balanced
 ordering; version 6 introduced guidance, and version 7 introduced context format.
 Their `score_provenance` map contains applied
@@ -155,7 +157,8 @@ replay this saved ranking without the current graph. Version 1 and 2 receipt JSO
 and checksums remain unchanged and still support labels; version 1 cannot replay scores.
 These snapshots cover returned candidates only, not unseen retrieval candidates.
 Versions 1–7 mean episode routing was disabled and omit its three configuration
-fields when serialized.
+fields when serialized. Versions 1–8 mean the separate current-update multiplier
+was disabled and omit it from configured and applied scoring weights.
 Versions 3 and later also include `execution.parameters` and `execution.features`, recording
 request filters/adjustments and reported model/environment identity. These fields
 do not establish that a remote model is pinned. The explicit ranking-adjustment

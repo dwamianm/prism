@@ -191,10 +191,12 @@ ordering. The default `multipath_ordering="balanced"` reserves the highest-score
 ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
 It emits version 5 receipts with explicit ordering and execution; versions 1–4
 cannot claim balanced and retain their canonical bytes. See `docs/PACKING.md`.
-Current pipeline receipts use version 8. Version 6 introduced context guidance,
+Current pipeline receipts use version 9. Version 6 introduced context guidance,
 version 7 introduced auditable/compact context format, and version 8 records the
-optional deterministic episode-routing policy. Versions 1–7 mean episode routing
-was disabled and omit its fields. Episode routing is candidate-backed within exact
+optional deterministic episode-routing policy. Version 9 records the configured
+current-update multiplier and replayable applied operations; versions 1–8 mean
+that separate multiplier was disabled and omit it. Versions 1–7 mean episode
+routing was disabled and omit its fields. Episode routing is candidate-backed within exact
 `(scope, session_id)` groups; it is not a full session scan or historical replay.
 Explicit density and score policies remain available. The default follows a
 complete 119-question development answer trial where balanced scored 83 versus

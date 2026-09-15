@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Current-state scoring now recognizes the newest record when it explicitly
+  presents itself as an update and applies a configurable, relevance-capped,
+  replayable multiplier. A 100-pair AgentMemBench development diagnostic moved
+  new-fact-first retrieval from 20% to 100%; the default 1.30 multiplier remains
+  provisional. Receipt schema version 9 records configured and applied values,
+  while versions 1–8 preserve their canonical bytes and disabled semantics.
+
 - Atomic `ingest_fast_many()` raw-source admission across the asynchronous
   engine, synchronous client, HTTP, MCP, DuckDB, and PostgreSQL. One owner is
   bound to the complete ordered batch, every item is validated before I/O, and

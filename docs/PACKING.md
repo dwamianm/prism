@@ -95,13 +95,15 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Current retrievals produce version 8 receipts with explicit ordering,
+Current retrievals produce version 9 receipts with explicit ordering,
 context-guidance, context-format, and episode-routing policies and the same
-score-replay and execution requirements. Versions 1–7 keep their previous
+score-replay and execution requirements. Version 9 also records the explicit
+current-update scoring policy. Versions 1–7 keep their previous
 canonical bytes and checksums and mean episode routing was disabled. Versions
 1–6 always mean auditable rendering; versions 1–5 also mean context guidance was
 off. Version 5 remains the historical balanced format, and versions 1–4 cannot
-claim balanced packing. Older readers that lack version 8 support cannot consume
+claim balanced packing. Versions 1–8 mean current-update scoring was disabled.
+Older readers that lack version 9 support cannot consume
 new receipts. Score replay reproduces the returned
 candidate ranking; it is not a reconstruction of packing or unseen candidates.
 Relevance feedback remains linked to the saved context exposure.

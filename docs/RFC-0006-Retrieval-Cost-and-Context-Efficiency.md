@@ -53,9 +53,10 @@ ordering policy; legacy receipts preserve their original bytes and implicit
 density semantics. Balanced ordering reserves the
 highest-scored ordinary multi-path candidate, then orders the remainder by
 score divided by full-entry tokens to the power 0.25. The head still obeys
-ordinary fidelity and budget checks. New pipeline retrievals emit version 8
+ordinary fidelity and budget checks. New pipeline retrievals emit version 9
 receipts with ordering, context-guidance, context-format, and episode-routing
-policy. No legacy receipt bytes change. The [packing guide](PACKING.md) describes
+policy, plus the versioned current-update scoring policy. No legacy receipt bytes
+change. The [packing guide](PACKING.md) describes
 the completed source-retention
 studies, per-question losses and answer validation. The balanced decision does
 not retroactively change the failed score-only promotion result.
@@ -382,6 +383,6 @@ delimiters as data. The default `"auditable"` object format is unchanged.
 `resolve_context_ref()` provides checked lookup for citation handling. Token
 accounting covers the schema declaration and complete arrays. Version 7
 introduced the selected format and exact rendered-context binding. Current
-version 8 receipts retain that contract and add explicit episode-routing
-settings. Versions 1–6 retain their canonical bytes and always mean
+version 9 receipts retain that contract, the version 8 episode-routing settings,
+and explicit current-update scoring policy. Versions 1–6 retain their canonical bytes and always mean
 `"auditable"`; versions 1–7 always mean episode routing was disabled.

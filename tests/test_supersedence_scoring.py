@@ -123,6 +123,10 @@ class TestUpdateLanguageDetection:
             "The database was upgraded to version 15",
             "The new provider is AWS",
             "This change is effective immediately",
+            "The user has moved and now lives in Lisbon",
+            "The user changed jobs and now works as an architect",
+            "The user's preference changed; they now prefer tea",
+            "The updated project budget is 5000 dollars",
             "MIGRATED FROM heroku to AWS",  # case insensitive
         ],
     )
@@ -262,6 +266,125 @@ class TestSupersedenceAwareScoring:
 
         # The update fact should rank higher despite lower semantic score
         assert ranked[0].node.content == update_fact.node.content
+
+    @pytest.mark.parametrize(
+        ("old_content", "new_content", "query"),
+        [
+            (
+                "The user currently lives in OLD_LOCATION.",
+                "The user has moved and now lives in NEW_LOCATION.",
+                "Where does the user currently live?",
+            ),
+            (
+                "The user works as an OLD_ROLE.",
+                "The user changed jobs and now works as a NEW_ROLE.",
+                "What is the user's current job?",
+            ),
+            (
+                "The user prefers OLD_PREFERENCE.",
+                "The user's preference changed; they now prefer NEW_PREFERENCE.",
+                "What does the user currently prefer?",
+            ),
+            (
+                "The project status is OLD_STATUS.",
+                "The project status has changed to NEW_STATUS.",
+                "What is the project's current status?",
+            ),
+            (
+                "The project budget is OLD_BUDGET dollars.",
+                "The updated project budget is NEW_BUDGET dollars.",
+                "What is the current project budget?",
+            ),
+        ],
+    )
+    def test_newest_explicit_update_beats_rapid_prior_assertion(
+        self, old_content: str, new_content: str, query: str
+    ):
+        now = datetime.now(timezone.utc)
+        old = _make_candidate(
+            content=old_content,
+            semantic_score=0.85,
+            lexical_score=1.0,
+            updated_at=now - timedelta(microseconds=1),
+        )
+        update = _make_candidate(
+            content=new_content,
+            semantic_score=0.80,
+            lexical_score=0.0,
+            updated_at=now,
+        )
+
+        ranked, _ = score_and_rank(
+            [old, update],
+            DEFAULT_SCORING_WEIGHTS,
+            now=now,
+            query_analysis=_make_query_analysis(query),
+        )
+
+        assert ranked[0] is update
+        adjustment = update.score_provenance.adjustments[-1]
+        assert adjustment.kind == "current_update"
+        assert adjustment.source_node_id == update.node.id
+        assert update.score_provenance.replay_score() == update.composite_score
+
+    def test_older_update_marker_does_not_override_newer_plain_assertion(self):
+        now = datetime.now(timezone.utc)
+        old_update = _make_candidate(
+            content="The project was updated to use SQLite.",
+            semantic_score=0.9,
+            lexical_score=0.9,
+            updated_at=now - timedelta(days=30),
+        )
+        current = _make_candidate(
+            content="The project database is PostgreSQL.",
+            semantic_score=0.9,
+            lexical_score=0.9,
+            updated_at=now,
+        )
+
+        ranked, _ = score_and_rank(
+            [old_update, current],
+            DEFAULT_SCORING_WEIGHTS,
+            now=now,
+            query_analysis=_make_query_analysis("What is the current database?"),
+        )
+
+        assert ranked[0] is current
+        assert all(
+            adjustment.kind != "current_update"
+            for adjustment in old_update.score_provenance.adjustments
+        )
+
+    def test_current_update_multiplier_can_be_disabled_and_is_versioned(self):
+        now = datetime.now(timezone.utc)
+        old = _make_candidate(
+            content="The project budget is OLD_BUDGET dollars.",
+            semantic_score=0.85,
+            lexical_score=1.0,
+            updated_at=now - timedelta(microseconds=1),
+        )
+        update = _make_candidate(
+            content="The updated project budget is NEW_BUDGET dollars.",
+            semantic_score=0.80,
+            lexical_score=0.0,
+            updated_at=now,
+        )
+        disabled = DEFAULT_SCORING_WEIGHTS.model_copy(
+            update={"current_update_multiplier": 1.0}
+        )
+
+        ranked, _ = score_and_rank(
+            [old, update],
+            disabled,
+            now=now,
+            query_analysis=_make_query_analysis(
+                "What is the current project budget?"
+            ),
+        )
+
+        assert ranked[0] is old
+        assert update.score_provenance.adjustments == ()
+        assert disabled.version_id != DEFAULT_SCORING_WEIGHTS.version_id
 
     def test_relational_question_without_update_uses_semantic_answer_class(self):
         candidate = _make_candidate(

@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from prme.models.nodes import MemoryNode
 from prme.models.relevance import RetrievalReceipt, make_receipt
 from prme.retrieval.config import PackingConfig, ScoringWeights
+from prme.retrieval.execution import RetrievalExecution
 from prme.retrieval.models import MemoryBundle, QueryAnalysis, RetrievalCandidate
 from prme.retrieval.reranker import CrossEncoderReranker
 from prme.retrieval.scoring import score_and_rank
@@ -59,6 +60,44 @@ def test_replay_uses_query_adjusted_weights_and_frozen_features(query, intent, e
         assert p.replay_score() == item.composite_score
         item.node.confidence_base = 0.01
         assert p.replay_score() == item.composite_score
+    restored = RetrievalReceipt.model_validate_json(saved.model_dump_json())
+    assert restored.checksum == saved.checksum
+    assert restored.replay_ranking() == saved.replay_ranking()
+
+
+def test_version_nine_replays_current_update_adjustment():
+    old = candidate(1, semantic=0.85, lexical=1.0)
+    old.node.content = "The project budget is OLD_BUDGET dollars."
+    old.node.event_time = NOW - timedelta(microseconds=1)
+    update = candidate(2, semantic=0.80, lexical=0.0)
+    update.node.content = "The updated project budget is NEW_BUDGET dollars."
+    analysis = QueryAnalysis(
+        query="What is the current project budget?",
+        intent=QueryIntent.FACTUAL,
+    )
+    ranked, _ = score_and_rank(
+        [old, update],
+        now=NOW,
+        query_analysis=analysis,
+    )
+    saved = make_receipt(
+        request_id=UUID(int=101),
+        user_id="owner",
+        query=analysis.query,
+        reference_time=NOW,
+        scopes=(Scope.PROJECT,),
+        scoring=ScoringWeights(),
+        packing=PackingConfig(),
+        candidates=ranked,
+        bundle=MemoryBundle(),
+        execution=RetrievalExecution(features={"test": True}, parameters={}),
+    )
+
+    assert saved.schema_version == 9
+    assert saved.replay_ranking() == (update.node.id, old.node.id)
+    operation = saved.score_provenance[update.node.id].adjustments[-1]
+    assert operation.kind == "current_update"
+    assert operation.coefficient == pytest.approx(1.3)
     restored = RetrievalReceipt.model_validate_json(saved.model_dump_json())
     assert restored.checksum == saved.checksum
     assert restored.replay_ranking() == saved.replay_ranking()

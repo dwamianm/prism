@@ -308,6 +308,29 @@ trusted `model_construct`/`model_copy(update=...)` calls bypass normal validatio
 
 **Calibration requirement:** Default weights are design estimates. Implementations MUST expose weight configuration and SHOULD tune weights based on feedback loop data (RFC-0009). `[HYPOTHESIS — optimal weights are use-case dependent and require A/B testing to validate]`
 
+### 7.1 Explicit current updates
+
+For a current-state query, the newest candidate may receive a bounded
+post-score multiplier when its text explicitly presents itself as an update,
+such as “moved and now lives,” “changed jobs,” or “updated budget.” The default
+`ScoringWeights.current_update_multiplier` is `1.30` and remains a
+`[HYPOTHESIS]`; `1.0` disables the behavior. The relevance floor still caps the
+adjusted score when semantic plus lexical relevance is below the configured
+threshold.
+
+The operation is eligible only for the newest candidate timestamp in the pool
+and is stored as an ordered `current_update` adjustment with its exact applied
+coefficient and source node. It means that the record presents itself as a
+current update. It does not verify the claim, establish graph supersedence, or
+silently retire an earlier assertion. Explicit corrections and contradiction
+resolution remain the authoritative mechanisms for those state changes.
+
+A bounded 100-pair AgentMemBench development diagnostic motivated the default:
+the prior scorer returned the new fact first in 20% of rapid-update pairs, while
+the adjusted scorer returned it first in 100%. This single synthetic diagnostic
+does not establish the multiplier as universally optimal; retained workloads
+must evaluate it directly.
+
 ---
 
 ## 8. Stage 6: Context Packing

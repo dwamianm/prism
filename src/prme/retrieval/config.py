@@ -91,6 +91,16 @@ class ScoringWeights(BaseModel):
             "enabling abstention. Set to 0.0 to disable."
         ),
     )
+    current_update_multiplier: float = Field(
+        default=1.30,
+        ge=1.0,
+        le=2.0,
+        description=(
+            "[HYPOTHESIS] Score multiplier for the newest explicit update on a "
+            "current-state query. The adjustment remains subject to the relevance "
+            "floor and is recorded in score provenance. Set to 1.0 to disable."
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_weights(self) -> ScoringWeights:
@@ -131,7 +141,8 @@ class ScoringWeights(BaseModel):
             f"{self.w_semantic}:{self.w_lexical}:{self.w_graph}:"
             f"{self.w_recency}:{self.w_salience}:{self.w_confidence}:"
             f"{self.w_epistemic}:{self.w_paths}:{self.recency_lambda}:"
-            f"{self.temporal_boost}:{self.relevance_floor}:{ntb_sorted}"
+            f"{self.temporal_boost}:{self.relevance_floor}:"
+            f"{self.current_update_multiplier}:{ntb_sorted}"
         )
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 

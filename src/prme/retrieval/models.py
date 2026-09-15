@@ -125,7 +125,9 @@ class ScoreAdjustment(BaseModel):
     """An ordered, recorded operation after the base composite score."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
-    kind: Literal["neural_blend", "session_decay", "episode_decay"]
+    kind: Literal[
+        "neural_blend", "session_decay", "episode_decay", "current_update"
+    ]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
     source_node_id: UUID
@@ -136,6 +138,8 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("Only neural blending requires a neural score")
         if self.kind == "neural_blend" and not 0 <= self.coefficient <= 1:
             raise ValueError("Neural prior weight must be between zero and one")
+        if self.kind == "current_update" and not 1 <= self.coefficient <= 2:
+            raise ValueError("Current-update multiplier must be between one and two")
         return self
 
 

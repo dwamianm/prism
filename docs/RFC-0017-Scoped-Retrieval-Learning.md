@@ -160,7 +160,7 @@ omit the later field and preserve canonical bytes and feedback checksums. Versio
 
 ### Two-stage episode context and receipt version 8
 
-Current pipeline retrievals use version 8 and explicitly record
+Version 8 pipeline retrievals explicitly recorded
 `packing.episode_context_top_k`, `packing.episode_context_local_k`, and
 `packing.episode_context_score_decay`. The optional retrieval stage routes
 candidate-backed `(scope, session_id)` episodes with deterministic BM25 and
@@ -173,6 +173,23 @@ the three later fields and preserve canonical bytes and feedback checksums.
 Version 8 retains the version 7 execution, ordering, guidance, context-format,
 and rendered-context requirements. Replay still covers returned candidates only;
 it cannot reconstruct unseen candidates or the episode-routing corpus.
+
+### Explicit current-update ranking and receipt version 9
+
+Current pipeline retrievals use version 9. The scoring configuration and every
+candidate's applied weights explicitly record
+`current_update_multiplier`. When eligible, the actual post-score operation is
+stored as a `current_update` adjustment, so `replay_ranking()` reproduces both
+the score and ordering without rerunning text detection. Version 9 requires the
+same execution, ordering, guidance, context-format, episode-routing, and rendered
+context fields as version 8.
+
+Versions 1–8 mean the separate current-update multiplier was disabled. Their
+serializers omit the new field from both configured and applied weights and
+preserve existing canonical bytes and feedback checksums. They cannot contain a
+`current_update` adjustment. This version boundary lets older consumers reject
+the new operation instead of silently interpreting a version 8 receipt under a
+different scoring contract.
 
 ## Explicit relevance records
 

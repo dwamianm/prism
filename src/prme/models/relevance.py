@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -64,8 +64,72 @@ class RetrievalReceipt(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def historical_packing_policy(cls, value):
-        if isinstance(value, dict) and isinstance(value.get("packing"), dict):
+        if isinstance(value, dict):
             version = value.get("schema_version", 1)
+            updates_to_value: dict[str, Any] = {}
+
+            scoring = value.get("scoring")
+            provenance = value.get("score_provenance")
+            if version < 9:
+                if isinstance(scoring, dict) and "current_update_multiplier" not in scoring:
+                    updates_to_value["scoring"] = {
+                        **scoring,
+                        "current_update_multiplier": 1.0,
+                    }
+                if isinstance(provenance, dict):
+                    updated_provenance = {}
+                    changed = False
+                    for node_id, item in provenance.items():
+                        if (
+                            isinstance(item, dict)
+                            and isinstance(item.get("weights"), dict)
+                            and "current_update_multiplier" not in item["weights"]
+                        ):
+                            updated_provenance[node_id] = {
+                                **item,
+                                "weights": {
+                                    **item["weights"],
+                                    "current_update_multiplier": 1.0,
+                                },
+                            }
+                            changed = True
+                        else:
+                            updated_provenance[node_id] = item
+                    if changed:
+                        updates_to_value["score_provenance"] = updated_provenance
+            else:
+                if not (
+                    isinstance(scoring, ScoringWeights)
+                    or (
+                        isinstance(scoring, dict)
+                        and "current_update_multiplier" in scoring
+                    )
+                ):
+                    raise ValueError(
+                        "Version 9 requires an explicit current-update multiplier"
+                    )
+                if isinstance(provenance, dict) and any(
+                    not (
+                        isinstance(item, ScoreProvenance)
+                        or (
+                            isinstance(item, dict)
+                            and (
+                                isinstance(item.get("weights"), ScoringWeights)
+                                or (
+                                    isinstance(item.get("weights"), dict)
+                                    and "current_update_multiplier" in item["weights"]
+                                )
+                            )
+                        )
+                    )
+                    for item in provenance.values()
+                ):
+                    raise ValueError(
+                        "Version 9 requires applied current-update multipliers"
+                    )
+
+            if not isinstance(value.get("packing"), dict):
+                return {**value, **updates_to_value} if updates_to_value else value
             packing = value["packing"]
             updates = {}
             if "multipath_ordering" not in packing:
@@ -85,9 +149,9 @@ class RetrievalReceipt(BaseModel):
             if "context_format" not in packing:
                 if version in (1, 2, 3, 4, 5, 6):
                     updates["context_format"] = "auditable"
-                if version in (7, 8):
+                if version in (7, 8, 9):
                     raise ValueError(
-                        "Versions 7 and 8 require an explicit context format"
+                        "Versions 7 through 9 require an explicit context format"
                     )
             episode_fields = (
                 "episode_context_top_k",
@@ -104,12 +168,14 @@ class RetrievalReceipt(BaseModel):
                         episode_context_local_k=8,
                         episode_context_score_decay=0.95,
                     )
-                if version == 8:
+                if version in (8, 9):
                     raise ValueError(
-                        "Version 8 requires explicit episode context settings"
+                        "Versions 8 and 9 require explicit episode context settings"
                     )
             if updates:
-                return {**value, "packing": {**packing, **updates}}
+                updates_to_value["packing"] = {**packing, **updates}
+            if updates_to_value:
+                return {**value, **updates_to_value}
         return value
 
     @model_serializer(mode="wrap")
@@ -132,12 +198,20 @@ class RetrievalReceipt(BaseModel):
             data["packing"].pop("episode_context_top_k", None)
             data["packing"].pop("episode_context_local_k", None)
             data["packing"].pop("episode_context_score_decay", None)
+        if self.schema_version < 9:
+            if isinstance(data.get("scoring"), dict):
+                data["scoring"].pop("current_update_multiplier", None)
+            provenance = data.get("score_provenance")
+            if isinstance(provenance, dict):
+                for item in provenance.values():
+                    if isinstance(item, dict) and isinstance(item.get("weights"), dict):
+                        item["weights"].pop("current_update_multiplier", None)
         return data
 
     @model_validator(mode="after")
     def unique_candidates(self):
         if (self.schema_version >= 3) != (self.execution is not None):
-            raise ValueError("Versions 3 through 8 require an execution descriptor")
+            raise ValueError("Versions 3 through 9 require an execution descriptor")
         if self.schema_version < 4 and self.packing.multipath_ordering != "density":
             raise ValueError("Legacy receipts support only density packing")
         if self.schema_version < 5 and self.packing.multipath_ordering == "balanced":
@@ -164,6 +238,12 @@ class RetrievalReceipt(BaseModel):
                     raise ValueError("Score provenance does not reproduce the returned score")
             if self.replay_ranking() != tuple(ids):
                 raise ValueError("Score provenance does not reproduce the returned ranking")
+            if self.schema_version < 9 and any(
+                adjustment.kind == "current_update"
+                for provenance in self.score_provenance.values()
+                for adjustment in provenance.adjustments
+            ):
+                raise ValueError("Current-update scoring requires a version 9 receipt")
         return self
 
     def replay_ranking(self) -> tuple[UUID, ...]:
@@ -288,7 +368,7 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     receipt_packing = packing if execution is not None else packing.model_copy(
         update={"context_guidance_mode": "off", "context_format": "auditable"}
     )
-    version: Literal[2, 8] = 8 if execution is not None else 2
+    version: Literal[2, 9] = 9 if execution is not None else 2
     return RetrievalReceipt(schema_version=version, execution=execution,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,

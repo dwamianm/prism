@@ -62,3 +62,44 @@ def test_version_four_cannot_infer_an_omitted_policy_or_execution():
     payload.pop("execution")
     with pytest.raises(ValidationError, match="execution descriptor"):
         RetrievalReceipt.model_validate(payload)
+
+
+def test_version_eight_defaults_to_disabled_current_update_scoring():
+    payload = json.loads((FIXTURES / "receipt-v4-score.json").read_text())
+    payload["schema_version"] = 8
+    payload["packing"].update(
+        context_guidance_mode="off",
+        context_format="auditable",
+        episode_context_top_k=0,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+    )
+
+    receipt = RetrievalReceipt.model_validate(payload)
+
+    assert receipt.scoring.current_update_multiplier == 1.0
+    assert all(
+        item.weights.current_update_multiplier == 1.0
+        for item in receipt.score_provenance.values()
+    )
+    serialized = receipt.model_dump()
+    assert "current_update_multiplier" not in serialized["scoring"]
+    assert all(
+        "current_update_multiplier" not in item["weights"]
+        for item in serialized["score_provenance"].values()
+    )
+
+
+def test_version_nine_requires_explicit_current_update_policy():
+    payload = json.loads((FIXTURES / "receipt-v4-score.json").read_text())
+    payload["schema_version"] = 9
+    payload["packing"].update(
+        context_guidance_mode="off",
+        context_format="auditable",
+        episode_context_top_k=0,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+    )
+
+    with pytest.raises(ValidationError, match="explicit current-update multiplier"):
+        RetrievalReceipt.model_validate(payload)

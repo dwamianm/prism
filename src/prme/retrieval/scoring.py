@@ -27,7 +27,13 @@ from prme.models.nodes import MemoryNode
 from prme.models.learning import RankingMultipliers
 from prme.retrieval.ranking_adjustments import adjusted_weights
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
-from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreProvenance, ScoreTrace
+from prme.retrieval.models import (
+    QueryAnalysis,
+    RetrievalCandidate,
+    ScoreAdjustment,
+    ScoreProvenance,
+    ScoreTrace,
+)
 from prme.types import DECAY_LAMBDAS, EPISTEMIC_WEIGHTS, DecayProfile, EpistemicType, LifecycleState, QueryIntent
 
 
@@ -152,6 +158,8 @@ _UPDATE_LANGUAGE_RE = re.compile(
     r"|upgraded\s+to"
     r"|new\s+\S+\s+is"
     r"|effective\s+immediately"
+    r"|\b(?:changed|moved)\b[^.!?\n]{0,80}\bnow\b"
+    r"|\bupdated\b"
     r")",
     re.IGNORECASE,
 )
@@ -565,6 +573,7 @@ def score_and_rank(
                     temporal_boost=weights.temporal_boost,
                     node_type_boost=weights.node_type_boost,
                     relevance_floor=weights.relevance_floor,
+                    current_update_multiplier=weights.current_update_multiplier,
                 )
 
     # Episodic recency boost: when query is about recent interactions,
@@ -597,6 +606,7 @@ def score_and_rank(
                     temporal_boost=effective_weights.temporal_boost,
                     node_type_boost=effective_weights.node_type_boost,
                     relevance_floor=effective_weights.relevance_floor,
+                    current_update_multiplier=effective_weights.current_update_multiplier,
                 )
 
     if ranking_multipliers is not None:
@@ -609,11 +619,16 @@ def score_and_rank(
     # Only used for current-state queries where we need to differentiate
     # old vs new facts. For other queries (temporal, multi_session, etc.),
     # relative recency would hurt by biasing toward newer events.
+    def _ref_time(candidate: RetrievalCandidate) -> datetime:
+        return (
+            candidate.node.event_time
+            or candidate.node.updated_at
+            or candidate.node.created_at
+        )
+
     recency_ref: datetime | None = None
     if is_current_query and candidates:
-        def _ref_time(c: RetrievalCandidate) -> datetime:
-            return c.node.event_time or c.node.updated_at or c.node.created_at
-        recency_ref = max(_ref_time(c) for c in candidates)
+        recency_ref = max(_ref_time(candidate) for candidate in candidates)
 
     traces: list[ScoreTrace] = []
 
@@ -625,11 +640,42 @@ def score_and_rank(
             recency_multiplier=2.0 if is_current_query and _has_update_language(candidate.node.content) else 1.0,
         )
 
-        candidate.composite_score = trace.composite_score
-        candidate.score_trace = trace
-        candidate.score_provenance = ScoreProvenance(
-            base_node_id=candidate.node.id, trace=trace, weights=effective_weights,
+        provenance = ScoreProvenance(
+            base_node_id=candidate.node.id,
+            trace=trace,
+            weights=effective_weights,
         )
+        if (
+            is_current_query
+            and recency_ref is not None
+            and _ref_time(candidate) == recency_ref
+            and _has_update_language(candidate.node.content)
+            and trace.composite_score > 0
+            and effective_weights.current_update_multiplier > 1
+        ):
+            relevance = candidate.semantic_score + candidate.lexical_score
+            adjusted_score = (
+                trace.composite_score * effective_weights.current_update_multiplier
+            )
+            if (
+                effective_weights.relevance_floor > 0
+                and relevance < effective_weights.relevance_floor
+            ):
+                adjusted_score = min(adjusted_score, relevance)
+            if adjusted_score > trace.composite_score:
+                provenance = provenance.model_copy(update={
+                    "adjustments": provenance.adjustments + (
+                        ScoreAdjustment(
+                            kind="current_update",
+                            coefficient=adjusted_score / trace.composite_score,
+                            source_node_id=candidate.node.id,
+                        ),
+                    ),
+                })
+
+        candidate.composite_score = provenance.replay_score()
+        candidate.score_trace = trace
+        candidate.score_provenance = provenance
         traces.append(trace)
 
     # Deterministic sort: score descending, path_score descending, then ID ascending.
