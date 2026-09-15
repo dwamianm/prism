@@ -29,6 +29,7 @@ _TASK_FIELDS = (
 _QUERY_FIELDS = (
     "query_id",
     "query_sha256",
+    "retrieval_query_sha256",
     "answer_sha256",
     "qa_pair_id_sha256",
 )

@@ -46,6 +46,7 @@ def task_fixture(
         {
             "query_id": index,
             "query_sha256": str(index) * 64,
+            "retrieval_query_sha256": "d" * 64,
             "answer_sha256": str(index + 1) * 64,
             "qa_pair_id_sha256": str(index + 2) * 64,
         }
@@ -97,10 +98,7 @@ def task_fixture(
                     "context_id": 0,
                     "source_chunks": chunks,
                     "bm25_documents": chunks,
-                    "queries": [
-                        {**query, "retrieval_query_sha256": "d" * 64}
-                        for query in queries
-                    ],
+                    "queries": queries,
                 }
             ],
         },
@@ -227,6 +225,21 @@ def test_comparator_rejects_cross_arm_question_drift(tmp_path: Path) -> None:
     registration_path = tmp_path / "conflict-bm25-registration.json"
     registration = json.loads(registration_path.read_text())
     registration["task"]["contexts"][0]["queries"][0]["query_sha256"] = "9" * 64
+    write_json(registration_path, registration)
+
+    with pytest.raises(ValueError, match="different questions or answers"):
+        comparator.compare(manifest, samples=10)
+
+
+def test_comparator_rejects_cross_arm_retrieval_query_drift(
+    tmp_path: Path,
+) -> None:
+    manifest = comparison_fixture(tmp_path)
+    registration_path = tmp_path / "conflict-bm25-registration.json"
+    registration = json.loads(registration_path.read_text())
+    registration["task"]["contexts"][0]["queries"][0][
+        "retrieval_query_sha256"
+    ] = "9" * 64
     write_json(registration_path, registration)
 
     with pytest.raises(ValueError, match="different questions or answers"):

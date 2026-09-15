@@ -20,9 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metric by appending the same explicit instruction to both arms. Retrieval
   queries and raw model outputs remain unchanged, and manifests and captures bind
   the selected contract. The paired comparator now rejects cross-arm contract
-  drift and reports the matched contract with the other reader settings. The
-  matched BM25 path uses the same terminal ICL question extractor as PRME, with
-  both derived queries bound before inference.
+  drift and derived retrieval-query drift, and reports the matched contract with
+  the other reader settings. The matched BM25 path uses the same terminal ICL
+  question extractor as PRME, with both derived queries bound before inference.
 
 - MemoryAgentBench verification now authenticates each claimed durable
   retrieval receipt directly from the completed DuckDB pack, including its
