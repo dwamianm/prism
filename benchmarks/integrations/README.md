@@ -1,5 +1,9 @@
 # Benchmark integrations
 
+- [AgentMemBench](AGENTMEMBENCH.md) — pinned operational contract covering
+  conflicts, isolation, retrieval retirement, concurrency, scale, and optional
+  judged retrieval, with preregistration and aggregate-only verification.
+
 For the separate chronological dialogue replay, see the
 [MemConflict adapter](MEMCONFLICT.md). The
 [LongMemEval-V2 adapter](LONGMEMEVAL_V2.md) connects PRME to the official
