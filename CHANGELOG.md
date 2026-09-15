@@ -78,6 +78,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   complete schema on a longer source after the registered retry budget. The run
   was stopped before retrieval and publishes no score.
 
+- The second registered extracted-memory BEAM attempt is also retained as
+  rejected evidence. It completed 11 durable extractions before a stored Jinja
+  code example exposed Instructor prompt-context evaluation ahead of the model.
+  The run was stopped during ingestion and publishes no score.
+
 - The first fail-closed scored BEAM execution now provides complete answer-quality
   evidence for one 100K raw-memory conversation: 12/20 pass (60.0%) with a
   0.49833 mean rubric score, 94/94 ingested chunks, 20/20 nonempty answers, and

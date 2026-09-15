@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "beam-extracted-scored-incomplete-result",
+  "status": "stopped after a deterministic pre-provider extraction failure made the registered run ineligible",
+  "registration": "beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev2-registration.json",
+  "stopped_at_utc": "2026-09-15T19:57:06Z",
+  "coverage": {
+    "ingestion_chunks_completed": 5,
+    "ingestion_chunks_attempted": 6,
+    "durable_source_events": 12,
+    "extractions_complete": 11,
+    "extractions_pending_at_shutdown": 1,
+    "materialized_nodes": 99,
+    "questions_written": 0,
+    "questions_expected": 20,
+    "complete": false
+  },
+  "observations": {
+    "extractor": "deepseek-v4.1-flash:cloud",
+    "failed_source_characters": 3935,
+    "failed_source_role": "assistant",
+    "failure_type": "UndefinedError",
+    "provider_calls_for_failed_source": 0,
+    "durable_extraction_attempts_observed": 3,
+    "durable_retry_delays_observed_seconds": [5, 30, 180],
+    "source_writes_duplicated": false
+  },
+  "diagnosis": "Instructor used PRME's Pydantic validation context as Jinja prompt context and evaluated template syntax in the stored source before calling the model. The source remained durable and retryable, but every attempt failed deterministically.",
+  "decision": "The execution was stopped because the registered run could not complete without changing PRME. The provider boundary now keeps grounding input in async task-local validation state and sends source text literally; that fix is evaluated only in a separately registered run.",
+  "limitations": [
+    "The execution ended during ingestion and produced no retrieval or answer-quality score.",
+    "The run was manually stopped after three identical durable failures rather than waiting for the upstream HTTP client to exhaust every add attempt.",
+    "The progress checkpoint records five completed chunks; the durable pack supplies authoritative per-event extraction states.",
+    "The service log is hashed rather than copied because it contains public benchmark source text.",
+    "This incomplete execution must not be compared with published BEAM scores."
+  ],
+  "artifact_sha256": {
+    "registration": "84da0887ad2c62ddf28cc8641758564a2cb99ad6666b609dd5caf1ad53924d96",
+    "execution-manifest.json": "6dac404926fb58f9225a327d83ca869e29833db8d669778b781d8ba8b9c5799b",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "95eafb80f40a673d9685936eff7e55ad0640d2abe95e9a505c5dfd094c498c9e",
+    "service.log": "ad491e73ee9c53347ea421568b5f55b94cc0b0f8f7a46f04a7de597c1e23ef8a",
+    "upstream-results/predicted_prme-beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev2/_progress_100K_0.json": "cd4efe1b85d09d1d5401880312fe7d185e28b713529a95892b82038dea56e050"
+  }
+}
