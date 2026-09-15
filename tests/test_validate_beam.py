@@ -305,6 +305,10 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
                 "model": "BAAI/bge-small-en-v1.5",
                 "dimension": 384,
             },
+            "adapter_schema": 2,
+            "duckdb_threads": 1,
+            "scoring_version": "scoring-v1",
+            "packing": {"token_budget": 4096},
             "extraction": extraction,
         },
     }
@@ -341,6 +345,10 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
             "prme_version": "0.11.0",
             "adapter_source_sha256": "c" * 64,
             "embedding": registration["system"]["embedding"],
+            "adapter_schema": 2,
+            "duckdb_threads": 1,
+            "scoring_version": "scoring-v1",
+            "packing": {"token_budget": 4096},
         },
     )
 
@@ -384,6 +392,15 @@ def test_scored_beam_v3_requires_pinned_extraction_model(monkeypatch):
             "id": "prme",
             "version": "0.11.0",
             "profile": "extracted",
+            "adapter_schema": 2,
+            "duckdb_threads": 1,
+            "embedding": {
+                "provider": "fastembed",
+                "model": "BAAI/bge-small-en-v1.5",
+                "dimension": 384,
+            },
+            "scoring_version": "scoring-v1",
+            "packing": {"token_budget": 4096},
             "extraction": {
                 "provider": "ollama",
                 "model": "extractor",

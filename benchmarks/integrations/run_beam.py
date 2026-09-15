@@ -240,6 +240,31 @@ def validate_registration(
             raise RuntimeError("extracted BEAM registration has invalid extraction identity")
         if extraction.get("base_url") != "http://127.0.0.1:11434/v1":
             raise RuntimeError("registered BEAM extraction endpoint must be loopback Ollama")
+    if registration["schema_version"] == 3:
+        required_system = {
+            "id",
+            "version",
+            "profile",
+            "adapter_schema",
+            "duckdb_threads",
+            "embedding",
+            "scoring_version",
+            "packing",
+            "extraction",
+        }
+        if set(system) != required_system:
+            raise RuntimeError("BEAM schema 3 must bind the complete adapter configuration")
+        if (
+            not isinstance(system.get("adapter_schema"), int)
+            or isinstance(system["adapter_schema"], bool)
+            or not isinstance(system.get("duckdb_threads"), int)
+            or isinstance(system["duckdb_threads"], bool)
+            or not isinstance(system.get("embedding"), dict)
+            or not isinstance(system.get("packing"), dict)
+            or not isinstance(system.get("scoring_version"), str)
+            or not system["scoring_version"]
+        ):
+            raise RuntimeError("BEAM schema 3 adapter configuration is incomplete")
     _verify_models(registration)
 
 

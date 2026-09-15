@@ -179,6 +179,15 @@ def _registered_validation(
         embedding = adapter_manifest.get("embedding")
         if embedding != system.get("embedding"):
             errors.append("BEAM embedding configuration differs from registration")
+        if registration_schema == 3:
+            for field in (
+                "adapter_schema",
+                "duckdb_threads",
+                "scoring_version",
+                "packing",
+            ):
+                if adapter_manifest.get(field) != system.get(field):
+                    errors.append(f"BEAM {field} differs from registration")
     for path in (manifest_path, adapter_manifest_path):
         if path.is_file():
             report["artifact_sha256"][str(path.relative_to(execution_root))] = _hash(path)
