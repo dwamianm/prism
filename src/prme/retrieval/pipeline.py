@@ -25,7 +25,7 @@ import uuid
 from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 import duckdb
 
@@ -46,6 +46,7 @@ from prme.retrieval.context_formatter import build_context_guidance
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     AggregationCoverage,
+    AggregationLimitation,
     FilterMetadata,
     HistoricalCoverage,
     RetrievalCandidate,
@@ -604,22 +605,35 @@ class RetrievalPipeline:
                     config=effective_packing_config,
                     scope=normalized_scope,
                 )
-                # Expansion appends adjacent turns that never went through
-                # Stages 3.5 and 4, so the same predicates run once more over
-                # the expanded set (issue #60). Nodes that already passed are
-                # unaffected; only the newly appended ones can be dropped.
-                if len(expanded) != len(scored):
-                    ranking_policy = "score_id"
-                    expanded = _apply_bitemporal_filters(
-                        expanded, knowledge_at, event_time_from, event_time_to,
-                        effective_time_from, effective_time_to,
-                    )
-                    expanded, late_excluded = filter_epistemic(
-                        expanded,
-                        analysis.retrieval_mode,
-                        unverified_threshold=self._unverified_confidence_threshold,
-                    )
-                    excluded.extend(late_excluded)
+                if expanded is not scored:
+                    original_by_id = {candidate.node.id: candidate for candidate in scored}
+                    if any(candidate.node.id not in original_by_id for candidate in expanded):
+                        # Newly appended nodes did not pass the earlier temporal
+                        # and epistemic filters (issue #60). Existing candidates
+                        # already did, but filtering the combined list is stable.
+                        expanded = _apply_bitemporal_filters(
+                            expanded, knowledge_at, event_time_from, event_time_to,
+                            effective_time_from, effective_time_to,
+                        )
+                        expanded, late_excluded = filter_epistemic(
+                            expanded,
+                            analysis.retrieval_mode,
+                            unverified_threshold=self._unverified_confidence_threshold,
+                        )
+                        excluded.extend(late_excluded)
+                    if (
+                        [candidate.node.id for candidate in expanded]
+                        != [candidate.node.id for candidate in scored]
+                        or any(
+                            candidate.composite_score
+                            != original_by_id[candidate.node.id].composite_score
+                            or candidate.reranker_score
+                            != original_by_id[candidate.node.id].reranker_score
+                            for candidate in expanded
+                            if candidate.node.id in original_by_id
+                        )
+                    ):
+                        ranking_policy = "score_id"
                 scored = expanded
             except Exception:
                 logger.warning(
@@ -729,7 +743,7 @@ class RetrievalPipeline:
 
         aggregation_coverage: AggregationCoverage | None = None
         if analysis.is_aggregation:
-            limitation_codes = ["semantic_matching"]
+            limitation_codes: list[AggregationLimitation] = ["semantic_matching"]
             if aggregation_candidate_limit_paths:
                 limitation_codes.append("candidate_limit")
             if candidate_diagnostics.backend_failures:
@@ -739,6 +753,9 @@ class RetrievalPipeline:
                 limitation_codes.append("score_floor")
             if "result_limit" in selection_reasons:
                 limitation_codes.append("result_limit")
+            coverage_status: Literal[
+                "semantic_candidates", "candidate_limited", "context_limited"
+            ]
             if bundle.excluded_ids:
                 limitation_codes.append("token_budget")
 

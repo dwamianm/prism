@@ -70,6 +70,106 @@ async def test_weight_trial_changes_session_expansion_and_preserves_owner_scope(
         assert restored.checksum == saved.checksum
 
 
+async def test_pipeline_promotes_session_node_already_in_candidate_pool(config, user, monkeypatch):
+    async with MemoryEngine.open(config) as engine:
+        await engine.store(
+            "telescope trigger", user_id=user, scope=Scope.PROJECT, session_id="session"
+        )
+        await engine.store(
+            "telescope adjacent answer",
+            user_id=user,
+            scope=Scope.PROJECT,
+            session_id="session",
+        )
+        nodes = await engine._graph_store.query_nodes(
+            user_id=user, scopes=[Scope.PROJECT]
+        )
+
+        async def generate(*args, **kwargs):
+            return [
+                RetrievalCandidate(
+                    node=node,
+                    semantic_score=0.9 if "trigger" in node.content else 0.1,
+                    lexical_score=0.9 if "trigger" in node.content else 0.1,
+                )
+                for node in nodes
+            ], {"VECTOR": len(nodes)}
+
+        monkeypatch.setattr(pipeline, "generate_candidates", generate)
+        engine._retrieval_pipeline._packing_config = config.packing.model_copy(
+            update={"session_context_top_k": 1}
+        )
+        response = await engine.retrieve(
+            "telescope", user_id=user, scope=Scope.PROJECT, include_cross_scope=False
+        )
+
+        assert len(response.results) == len(nodes)
+        adjacent = next(
+            candidate
+            for candidate in response.results
+            if "adjacent answer" in candidate.node.content
+        )
+        assert "SESSION_CONTEXT" in adjacent.paths
+        assert adjacent.score_provenance.base_node_id != adjacent.node.id
+        assert adjacent.score_provenance.adjustments[-1].kind == "session_decay"
+        saved = await engine.get_retrieval_receipt(
+            str(response.metadata.request_id), user_id=user
+        )
+        assert saved.ranking_policy == "score_id"
+        assert saved.replay_ranking() == tuple(
+            candidate.node.id for candidate in response.results
+        )
+
+
+async def test_path_only_session_signal_preserves_neural_prefix(config, user, monkeypatch):
+    async with MemoryEngine.open(config) as engine:
+        await engine.store(
+            "telescope trigger", user_id=user, scope=Scope.PROJECT, session_id="session"
+        )
+        await engine.store(
+            "telescope adjacent answer",
+            user_id=user,
+            scope=Scope.PROJECT,
+            session_id="session",
+        )
+        nodes = await engine._graph_store.query_nodes(
+            user_id=user, scopes=[Scope.PROJECT]
+        )
+
+        async def generate(*args, **kwargs):
+            return [
+                RetrievalCandidate(
+                    node=node,
+                    semantic_score=0.9 if "trigger" in node.content else 0.8,
+                    lexical_score=0.9 if "trigger" in node.content else 0.8,
+                )
+                for node in nodes
+            ], {"VECTOR": len(nodes)}
+
+        monkeypatch.setattr(pipeline, "generate_candidates", generate)
+        reranker = CrossEncoderReranker()
+        monkeypatch.setattr(reranker, "_predict_sync", Mock(return_value=[0.0]))
+        engine._retrieval_pipeline._reranker = reranker
+        engine._retrieval_pipeline._reranker_top_k = 1
+        engine._retrieval_pipeline._packing_config = config.packing.model_copy(
+            update={"session_context_top_k": 1}
+        )
+        response = await engine.retrieve(
+            "telescope", user_id=user, scope=Scope.PROJECT, include_cross_scope=False
+        )
+
+        assert "trigger" in response.results[0].node.content
+        assert response.results[0].composite_score < response.results[1].composite_score
+        assert "SESSION_CONTEXT" in response.results[1].paths
+        saved = await engine.get_retrieval_receipt(
+            str(response.metadata.request_id), user_id=user
+        )
+        assert saved.ranking_policy == "reranked_prefix"
+        assert saved.replay_ranking() == tuple(
+            candidate.node.id for candidate in response.results
+        )
+
+
 async def test_unity_trial_is_identical_and_concurrent_calls_keep_separate_adjustments(config, user):
     async with MemoryEngine.open(config) as engine:
         await engine.store("The telescope is blue", user_id=user, scope=Scope.PROJECT)

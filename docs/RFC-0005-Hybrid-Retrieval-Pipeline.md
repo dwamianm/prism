@@ -185,6 +185,16 @@ Retrieve directly:
 
 These are included unconditionally, subject to context budget. They bypass scoring.
 
+### 4.5 Adjacent session context
+
+After primary scoring, the configured session window promotes adjacent active
+nodes around top candidates. The signal applies whether an adjacent node is new
+to the pool or was already found by vector, lexical, or graph generation; a
+broad candidate pool must not turn session expansion into a no-op. Inherited
+scores retain the triggering node and decay operation in replayable score
+provenance. Expansion remains owner and exact-scope constrained and is filtered
+again before packing.
+
 ---
 
 ## 5. Stage 3: Candidate Merging

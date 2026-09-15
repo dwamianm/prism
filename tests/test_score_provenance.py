@@ -118,6 +118,35 @@ async def test_session_inherits_neural_score_even_if_trigger_not_returned():
     assert restored.replay_ranking() == (session.node.id,)
 
 
+async def test_existing_candidate_inherits_replayable_session_score():
+    trigger = candidate(1, days=1, session="conversation")
+    adjacent = candidate(
+        2, days=2, session="conversation", semantic=0.1, lexical=0.1
+    )
+    items, _ = score_and_rank([trigger, adjacent], now=NOW)
+    assert items[0].node.id == trigger.node.id
+    original_adjacent_score = items[1].composite_score
+    graph = Mock(query_nodes=AsyncMock(return_value=[trigger.node, adjacent.node]))
+
+    expanded = await expand_session_context(
+        items,
+        graph,
+        "owner",
+        PackingConfig(session_context_top_k=1, session_context_score_decay=0.85),
+        [Scope.PROJECT],
+    )
+
+    inherited = next(c for c in expanded if c.node.id == adjacent.node.id)
+    assert inherited.composite_score > original_adjacent_score
+    assert inherited.score_trace is None
+    assert inherited.score_provenance.base_node_id == trigger.node.id
+    assert inherited.score_provenance.adjustments[-1].kind == "session_decay"
+    saved = receipt(expanded, policy="score_id")
+    restored = RetrievalReceipt.model_validate_json(saved.model_dump_json())
+    assert restored.score_provenance[inherited.node.id].replay_score() == inherited.composite_score
+    assert restored.replay_ranking() == tuple(candidate.node.id for candidate in expanded)
+
+
 async def test_provenance_does_not_restrict_existing_finite_session_multipliers():
     trigger = candidate(1, days=1, session="conversation")
     adjacent = candidate(2, session="conversation")

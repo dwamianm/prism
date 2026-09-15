@@ -41,10 +41,11 @@ async def expand_session_context(
     ``config.session_context_window`` turns before and after the
     retrieved node.
 
-    New context nodes receive:
+    Adjacent nodes receive:
     - A composite_score of ``trigger.composite_score * config.session_context_score_decay``
+      when that is stronger than their existing score
     - A ``SESSION_CONTEXT`` entry in their paths list
-    - De-duplication against already-present candidates
+    - De-duplication by node ID
 
     Args:
         scored: Scored and ranked candidates (from score_and_rank).
@@ -66,8 +67,14 @@ async def expand_session_context(
     if window <= 0 or not scored:
         return scored
 
-    # Collect node IDs already in the result set for de-duplication.
-    existing_ids: set[str] = {str(c.node.id) for c in scored}
+    # Keep one candidate per node. Adjacent nodes that primary generation
+    # already found still need the session signal; broad vector/lexical pools
+    # commonly contain every session node before packing.
+    candidates_by_id: dict[str, RetrievalCandidate] = {
+        str(candidate.node.id): candidate for candidate in scored
+    }
+    changed = False
+    ranking_changed = False
 
     # Group the top-K candidates by session_id.
     top_candidates = scored[:top_k]
@@ -94,9 +101,9 @@ async def expand_session_context(
         for n in all_nodes:
             if n.session_id in session_triggers:
                 session_nodes.setdefault(n.session_id, []).append(n)
-        # Sort each session's nodes by created_at.
+        # Use the node ID as a stable tie-break for equal timestamps.
         for sid in session_nodes:
-            session_nodes[sid].sort(key=lambda n: n.created_at)
+            session_nodes[sid].sort(key=lambda n: (n.created_at, str(n.id)))
     except Exception:
         logger.warning(
             "Failed to fetch session nodes for user_id=%s; skipping expansion",
@@ -104,11 +111,7 @@ async def expand_session_context(
             exc_info=True,
         )
 
-    # Build context expansion candidates.
-    # We collect them keyed by trigger candidate to interleave properly.
-    new_candidates: list[RetrievalCandidate] = []
-    newly_added_ids: set[str] = set()
-
+    # Apply each context signal while preserving the strongest inherited score.
     for sid, triggers in session_triggers.items():
         nodes = session_nodes.get(sid, [])
         if not nodes:
@@ -143,12 +146,13 @@ async def expand_session_context(
                 ctx_node = nodes[i]
                 ctx_id = str(ctx_node.id)
 
-                # Skip the trigger node itself and already-included nodes.
-                if ctx_id in existing_ids or ctx_id in newly_added_ids:
+                # A trigger does not provide context evidence for itself.
+                if ctx_id == trigger_id:
                     continue
 
-                new_candidates.append(
-                    RetrievalCandidate(
+                current = candidates_by_id.get(ctx_id)
+                if current is None:
+                    candidates_by_id[ctx_id] = RetrievalCandidate(
                         node=ctx_node,
                         paths=["SESSION_CONTEXT"],
                         path_count=1,
@@ -158,20 +162,32 @@ async def expand_session_context(
                         composite_score=context_score,
                         score_provenance=provenance,
                     )
-                )
-                newly_added_ids.add(ctx_id)
+                    changed = True
+                    ranking_changed = True
+                    continue
 
-    if not new_candidates:
+                updates: dict[str, object] = {}
+                if "SESSION_CONTEXT" not in current.paths:
+                    updates["paths"] = [*current.paths, "SESSION_CONTEXT"]
+                if context_score > current.composite_score:
+                    updates.update(
+                        composite_score=context_score,
+                        reranker_score=None,
+                        score_trace=None,
+                        score_provenance=provenance,
+                    )
+                    ranking_changed = True
+                if updates:
+                    candidates_by_id[ctx_id] = current.model_copy(update=updates)
+                    changed = True
+
+    if not changed:
         return scored
 
-    # Merge: append context nodes to the scored list. They already have
-    # composite_score set, so the existing deterministic sort in pipeline
-    # will position them correctly (just below their triggers).
-    expanded = list(scored) + new_candidates
+    expanded = list(candidates_by_id.values())
 
-    # Re-sort deterministically: score descending, then node ID ascending.
-    expanded.sort(
-        key=lambda c: (-c.composite_score, str(c.node.id)),
-    )
+    if ranking_changed:
+        # A score promotion or new candidate requires a deterministic merge.
+        expanded.sort(key=lambda c: (-c.composite_score, str(c.node.id)))
 
     return expanded

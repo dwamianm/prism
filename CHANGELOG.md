@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Session-context expansion now promotes adjacent turns even when broad vector
+  or lexical generation already placed them in the candidate pool. Previously,
+  those candidates were skipped before packing, making the default session
+  window a no-op on sufficiently complete candidate sets. Inherited scores keep
+  their trigger and decay in replayable receipt provenance.
+
 - Contract-correct LangChain and LlamaIndex chat persistence over the immutable
   event log. Versioned control events make clear, replacement, and deletion
   visible to framework callers without erasing source messages or creating
