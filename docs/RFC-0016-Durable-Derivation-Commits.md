@@ -150,6 +150,12 @@ original exception still reaches its caller; formatting a provider exception is
 not required for the queue to continue processing healthy jobs. This is scoped
 to those failure paths, not a claim that all application logging is sanitized.
 
+Built-in extraction transports source messages literally. Grounding input stays
+in async task-local validation state instead of Instructor's prompt `context`,
+because Instructor applies that context as a Jinja template to every message.
+User code containing `{{ ... }}` or `{% ... %}` must never execute as a prompt
+template, change source bytes, or leak validation state across concurrent calls.
+
 Claims increment a persistent generation and attempt count. Heartbeats renew
 live leases, while extraction journaling, plan binding and graph publication
 check ownership inside their transactions. Completion and its receipt commit

@@ -91,7 +91,8 @@ async def test_historical_source_is_always_submitted_as_extraction_input(source_
 
     request = client.create.await_args.kwargs
     assert request["messages"][-1] == {"role": "user", "content": source}
-    assert request["context"] == {"source_text": source, "source_role": source_role}
+    assert "context" not in request
+    assert "validation_context" not in request
     system_prompt = request["messages"][0]["content"]
     if source_role == "assistant":
         assert "historical assistant message" in system_prompt
@@ -139,9 +140,85 @@ async def test_provider_schema_drops_claims_missing_required_support(fact):
         await provider.extract("Alice uses email")
     args = client.create.await_args.kwargs
     result = args["response_model"].model_validate(
-        {"facts": [fact]}, context=args["context"]
+        {"facts": [fact]}, context={"source_text": "Alice uses email"}
     )
     assert result.facts == []
+
+
+async def test_provider_keeps_literal_jinja_source_and_task_local_grounding():
+    provider = InstructorExtractionProvider("ollama/fake")
+    client = _mock_client()
+    source = "Alice likes tea. Template code: {{ missing.name }} and {% if enabled %}."
+
+    async def validate(**kwargs):
+        assert kwargs["messages"][-1] == {"role": "user", "content": source}
+        assert "context" not in kwargs and "validation_context" not in kwargs
+        return kwargs["response_model"].model_validate({
+            "entities": [{"name": "Alice", "entity_type": "person"}],
+            "facts": [
+                {
+                    "subject": "Alice",
+                    "predicate": "likes",
+                    "object": "tea",
+                    "polarity": "positive",
+                    "evidence_quote": "Alice likes tea.",
+                },
+                {
+                    "subject": "Alice",
+                    "predicate": "likes",
+                    "object": "coffee",
+                    "polarity": "positive",
+                    "evidence_quote": "Alice likes tea.",
+                },
+            ],
+        })
+
+    client.create.side_effect = validate
+    with patch.object(provider, "_ensure_client", return_value=client):
+        result = await provider.extract(source)
+    assert [(fact.subject, fact.object) for fact in result.facts] == [
+        ("Alice", "tea")
+    ]
+
+
+async def test_concurrent_provider_calls_isolate_task_local_grounding():
+    provider = InstructorExtractionProvider("ollama/fake")
+    client = _mock_client()
+
+    async def validate(**kwargs):
+        await asyncio.sleep(0)
+        source = kwargs["messages"][-1]["content"]
+        name, value = (
+            ("Alice", "tea") if source.startswith("Alice") else ("Bob", "coffee")
+        )
+        return kwargs["response_model"].model_validate({
+            "entities": [{"name": name, "entity_type": "person"}],
+            "facts": [
+                {
+                    "subject": name,
+                    "predicate": "likes",
+                    "object": value,
+                    "polarity": "positive",
+                    "evidence_quote": source,
+                },
+                {
+                    "subject": name,
+                    "predicate": "likes",
+                    "object": "fabricated",
+                    "polarity": "positive",
+                    "evidence_quote": source,
+                },
+            ],
+        })
+
+    client.create.side_effect = validate
+    with patch.object(provider, "_ensure_client", return_value=client):
+        alice, bob = await asyncio.gather(
+            provider.extract("Alice likes tea."),
+            provider.extract("Bob likes coffee."),
+        )
+    assert [fact.object for fact in alice.facts] == ["tea"]
+    assert [fact.object for fact in bob.facts] == ["coffee"]
 
 
 async def test_provider_schema_drops_a_fabricated_claim_without_failing_the_event():
@@ -153,7 +230,7 @@ async def test_provider_schema_drops_a_fabricated_claim_without_failing_the_even
     result = args["response_model"].model_validate({"facts": [{
         "subject": "Alice", "predicate": "uses", "object": "Slack",
         "polarity": "positive", "evidence_quote": "Alice uses email",
-    }]}, context=args["context"])
+    }]}, context={"source_text": "Alice uses email"})
     assert result.facts == []
 
 
@@ -164,8 +241,8 @@ async def test_provider_schema_accepts_source_supported_fact():
         await provider.extract("Alice uses email only for nonurgent requests.")
     args = client.create.await_args.kwargs
     result = args["response_model"].model_validate({"entities": [{"name": "Alice", "entity_type": "person"}], "facts": [{
-            "subject": "Alice", "predicate": "uses", "object": "email",
-            "polarity": "positive",
-            "evidence_quote": "Alice uses email only for nonurgent requests.",
-    }]}, context=args["context"])
+        "subject": "Alice", "predicate": "uses", "object": "email",
+        "polarity": "positive",
+        "evidence_quote": "Alice uses email only for nonurgent requests.",
+    }]}, context={"source_text": "Alice uses email only for nonurgent requests."})
     assert result.facts[0].evidence_quote.endswith("nonurgent requests.")

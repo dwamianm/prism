@@ -9,6 +9,7 @@ and Ollama backends through a single unified interface.
 from __future__ import annotations
 
 import asyncio
+from contextvars import ContextVar
 import os
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
@@ -32,6 +33,10 @@ if TYPE_CHECKING:
     from prme.config import ExtractionConfig
 
 logger = structlog.get_logger(__name__)
+
+_VALIDATION_SOURCE: ContextVar[str | None] = ContextVar(
+    "prme_extraction_validation_source", default=None
+)
 
 _EXPLICIT_CONDITION_RE = re.compile(
     r"\b(?:if|unless|provided\s+that|as\s+long\s+as|only\s+if)\b",
@@ -217,6 +222,8 @@ class _CitedExtractionResult(ExtractionResult):
     @model_validator(mode="after")
     def supported_closed_references(self, info: ValidationInfo):
         source = (info.context or {}).get("source_text")
+        if source is None:
+            source = _VALIDATION_SOURCE.get()
         if source is not None:
             supported_facts = []
             for index, fact in enumerate(self.facts):
@@ -601,7 +608,6 @@ class InstructorExtractionProvider:
             client = self._ensure_client()
             create_kwargs: dict = {
                 "response_model": _CitedExtractionResult,
-                "context": {"source_text": content, "source_role": role},
                 "messages": [
                     {"role": "system", "content": _extraction_prompt_for_role(role)},
                     # This is historical text to inspect, regardless of who
@@ -619,7 +625,16 @@ class InstructorExtractionProvider:
             model_id = self._resolve_model_id()
             if model_id:
                 create_kwargs["model"] = model_id
-            result = await asyncio.wait_for(client.create(**create_kwargs), timeout=self._timeout)
+            # Instructor treats validation context as Jinja template context for
+            # every prompt message. Keep grounding input task-local so literal
+            # user code such as ``{{ variable }}`` reaches the model unchanged.
+            token = _VALIDATION_SOURCE.set(content)
+            try:
+                result = await asyncio.wait_for(
+                    client.create(**create_kwargs), timeout=self._timeout
+                )
+            finally:
+                _VALIDATION_SOURCE.reset(token)
             return result
         except Exception as exc:
             logger.error(

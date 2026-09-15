@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Built-in extraction now sends source messages literally even when they contain
+  Jinja expressions or blocks. Grounding context is task-local and isolated
+  across concurrent calls, so Instructor cannot evaluate user code as a prompt
+  template or alter the source before inference.
+
 - BEAM schema-4 extracted-run registrations now bind the extraction retry count,
   and adapter schema 3 reports the applied value. A library-default change can
   no longer silently alter an attested extraction run.
