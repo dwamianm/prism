@@ -29,30 +29,33 @@ async def seed(engine, user):
     )
 
 
-async def proposal_rows(engine, operation_id=None):
+async def proposal_rows(engine, user_id, operation_id=None):
     graph = engine._graph_store
     if hasattr(graph, "_conn"):
         async with graph._conn_lock:
             if operation_id is None:
                 return graph._conn.execute(
                     "SELECT id,payload FROM operations "
-                    "WHERE op_type='ALIAS_PROPOSED' ORDER BY id"
+                    "WHERE op_type='ALIAS_PROPOSED' AND actor_id=? ORDER BY id",
+                    [user_id],
                 ).fetchall()
             return graph._conn.execute(
                 "SELECT id,payload FROM operations "
-                "WHERE op_type='ALIAS_PROPOSED' AND id=?",
-                [operation_id],
+                "WHERE op_type='ALIAS_PROPOSED' AND actor_id=? AND id=?",
+                [user_id, operation_id],
             ).fetchall()
     async with graph._pool.acquire() as conn:
         if operation_id is None:
             rows = await conn.fetch(
                 "SELECT id,payload FROM operations "
-                "WHERE op_type='ALIAS_PROPOSED' ORDER BY id"
+                "WHERE op_type='ALIAS_PROPOSED' AND actor_id=$1 ORDER BY id",
+                user_id,
             )
         else:
             rows = await conn.fetch(
                 "SELECT id,payload FROM operations "
-                "WHERE op_type='ALIAS_PROPOSED' AND id=$1",
+                "WHERE op_type='ALIAS_PROPOSED' AND actor_id=$1 AND id=$2",
+                user_id,
                 operation_id,
             )
     return [(row["id"], row["payload"]) for row in rows]
@@ -75,7 +78,7 @@ async def test_alias_proposal_retains_complete_inputs_and_replays(config, user):
         edges = await engine._graph_store.get_edges(
             node_ids=ids, edge_type=EdgeType.RELATES_TO
         )
-        rows = await proposal_rows(engine, first.operation_id)
+        rows = await proposal_rows(engine, user, first.operation_id)
         assert len(edges) == len(rows) == 1
         record = read_record(rows[0][1])
         assert record.left_before == before[ids[0]]
@@ -97,7 +100,7 @@ async def test_alias_proposal_retains_complete_inputs_and_replays(config, user):
             first.operation_id,
             first.edge_id,
         )
-        assert len(await proposal_rows(engine)) == 1
+        assert len(await proposal_rows(engine, user)) == 1
         assert len(await engine._graph_store.get_edges(node_ids=ids)) == 1
 
 
@@ -121,7 +124,7 @@ async def test_alias_proposal_failure_rolls_back_edge_and_journal(
                     *ids, user_id=user, alias_type="semantic", score=0.87
                 )
         assert await engine._graph_store.get_edges(node_ids=ids) == []
-        assert await proposal_rows(engine) == []
+        assert await proposal_rows(engine, user) == []
 
     async with MemoryEngine.open(config) as engine:
         result = await engine._graph_store.propose_alias(
@@ -129,7 +132,7 @@ async def test_alias_proposal_failure_rolls_back_edge_and_journal(
         )
         assert result is not None and result.applied
         assert len(await engine._graph_store.get_edges(node_ids=ids)) == 1
-        assert len(await proposal_rows(engine)) == 1
+        assert len(await proposal_rows(engine, user)) == 1
 
 
 async def test_concurrent_alias_proposals_publish_once(config, user):
@@ -148,7 +151,7 @@ async def test_concurrent_alias_proposals_publish_once(config, user):
             True,
         ]
         assert len(await engine._graph_store.get_edges(node_ids=ids)) == 1
-        assert len(await proposal_rows(engine)) == 1
+        assert len(await proposal_rows(engine, user)) == 1
 
 
 async def test_alias_proposal_cancellation_has_one_durable_outcome(
@@ -219,13 +222,13 @@ async def test_alias_proposal_cancellation_has_one_durable_outcome(
 
         if not committed:
             assert await graph.get_edges(node_ids=ids) == []
-            assert await proposal_rows(engine) == []
+            assert await proposal_rows(engine, user) == []
         retry = await graph.propose_alias(
             *ids, user_id=user, alias_type="semantic", score=0.87
         )
         assert retry is not None and retry.applied == (not committed)
         assert len(await graph.get_edges(node_ids=ids)) == 1
-        assert len(await proposal_rows(engine)) == 1
+        assert len(await proposal_rows(engine, user)) == 1
 
 
 async def test_legacy_unverified_alias_is_reused_without_inventing_history(
@@ -252,7 +255,7 @@ async def test_legacy_unverified_alias_is_reused_without_inventing_history(
         assert result is not None and not result.applied
         assert result.operation_id is None and result.edge_id == str(legacy.id)
         assert len(await engine._graph_store.get_edges(node_ids=ids)) == 1
-        assert await proposal_rows(engine) == []
+        assert await proposal_rows(engine, user) == []
 
 
 @pytest.mark.parametrize("difference", ["owner", "scope", "type"])
@@ -289,7 +292,7 @@ async def test_direct_alias_proposal_revalidates_namespace_and_type(
             )
             == []
         )
-        assert await proposal_rows(engine) == []
+        assert await proposal_rows(engine, user) == []
 
 
 async def test_resolver_counts_only_new_alias_publications(config, user):
@@ -299,4 +302,4 @@ async def test_resolver_counts_only_new_alias_publications(config, user):
         assert await resolve_aliases(engine, [alias]) == 1
         assert await resolve_aliases(engine, [alias]) == 0
         assert len(await engine._graph_store.get_edges(node_ids=ids)) == 1
-        assert len(await proposal_rows(engine)) == 1
+        assert len(await proposal_rows(engine, user)) == 1
