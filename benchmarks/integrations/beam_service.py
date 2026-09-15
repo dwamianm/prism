@@ -30,8 +30,8 @@ from prme.ingestion.errors import ExtractionError, MaterializationError
 
 UPSTREAM_REPOSITORY = "https://github.com/mem0ai/memory-benchmarks"
 UPSTREAM_COMMIT = "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
-ADAPTER_SCHEMA = 2
-_LEGACY_ADAPTER_SCHEMAS = (1,)
+ADAPTER_SCHEMA = 3
+_LEGACY_ADAPTER_SCHEMAS = (1, 2)
 
 
 class Message(BaseModel):
@@ -402,6 +402,7 @@ def _config(args: argparse.Namespace) -> PRMEConfig:
             model=args.extraction_model,
             base_url=args.extraction_base_url,
             reasoning_effort=args.extraction_reasoning_effort,
+            max_retries=args.extraction_max_retries,
             timeout=args.extraction_timeout,
             lease_seconds=args.extraction_lease_seconds,
         )
@@ -439,6 +440,7 @@ def _manifest(args: argparse.Namespace, config: PRMEConfig) -> dict[str, Any]:
             "model": config.extraction.model,
             "base_url": config.extraction.base_url,
             "reasoning_effort": config.extraction.reasoning_effort,
+            "max_retries": config.extraction.max_retries,
             "temperature": config.extraction.temperature,
             "timeout": config.extraction.timeout,
             "lease_seconds": config.extraction.lease_seconds,
@@ -477,6 +479,7 @@ def main() -> None:
         choices=("none", "low", "medium", "high"),
         default="none",
     )
+    parser.add_argument("--extraction-max-retries", type=int, default=3)
     parser.add_argument("--extraction-timeout", type=float, default=300.0)
     parser.add_argument("--extraction-lease-seconds", type=float, default=60.0)
     args = parser.parse_args()
@@ -484,6 +487,8 @@ def main() -> None:
         raise ValueError("port must be 1-65535")
     if args.duckdb_threads < 1:
         raise ValueError("duckdb-threads must be positive")
+    if args.extraction_max_retries < 1:
+        raise ValueError("extraction-max-retries must be positive")
     if (
         not math.isfinite(args.extraction_timeout)
         or not math.isfinite(args.extraction_lease_seconds)

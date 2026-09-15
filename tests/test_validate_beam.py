@@ -200,6 +200,12 @@ def test_scored_beam_protocol_requires_distinct_pinned_local_models(monkeypatch)
             run_beam.SCORED_REGISTRATION_KIND_V3,
             run_beam.SCORED_EXECUTION_KIND_V3,
         ),
+        (
+            "extracted",
+            4,
+            run_beam.SCORED_REGISTRATION_KIND_V3,
+            run_beam.SCORED_EXECUTION_KIND_V3,
+        ),
     ],
 )
 def test_registered_beam_validation_accepts_bound_scored_execution(
@@ -282,6 +288,8 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
             "timeout": 120.0,
             "lease_seconds": 60.0,
         }
+        if schema_version >= 4:
+            extraction["max_retries"] = 3
     registration = {
         "schema_version": schema_version,
         "kind": registration_kind,
@@ -305,7 +313,7 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
                 "model": "BAAI/bge-small-en-v1.5",
                 "dimension": 384,
             },
-            "adapter_schema": 2,
+            "adapter_schema": 3 if schema_version >= 4 else 2,
             "duckdb_threads": 1,
             "scoring_version": "scoring-v1",
             "packing": {"token_budget": 4096},
@@ -345,7 +353,7 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
             "prme_version": "0.11.0",
             "adapter_source_sha256": "c" * 64,
             "embedding": registration["system"]["embedding"],
-            "adapter_schema": 2,
+            "adapter_schema": 3 if schema_version >= 4 else 2,
             "duckdb_threads": 1,
             "scoring_version": "scoring-v1",
             "packing": {"token_budget": 4096},
@@ -372,10 +380,10 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
     assert report["errors"] == []
 
 
-def test_scored_beam_v3_requires_pinned_extraction_model(monkeypatch):
+def test_scored_beam_v4_requires_pinned_extraction_model_and_retries(monkeypatch):
     protocol = {**_scored_protocol(), "profile": "extracted"}
     registration = {
-        "schema_version": 3,
+        "schema_version": 4,
         "kind": run_beam.SCORED_REGISTRATION_KIND_V3,
         "protocol": protocol,
         "models": _scored_models(),
@@ -392,7 +400,7 @@ def test_scored_beam_v3_requires_pinned_extraction_model(monkeypatch):
             "id": "prme",
             "version": "0.11.0",
             "profile": "extracted",
-            "adapter_schema": 2,
+            "adapter_schema": 3,
             "duckdb_threads": 1,
             "embedding": {
                 "provider": "fastembed",
@@ -407,6 +415,7 @@ def test_scored_beam_v3_requires_pinned_extraction_model(monkeypatch):
                 "base_url": "http://127.0.0.1:11434/v1",
                 "model_digest": "d" * 64,
                 "reasoning_effort": "none",
+                "max_retries": 3,
                 "temperature": 0.0,
                 "timeout": 120.0,
                 "lease_seconds": 60.0,
@@ -429,6 +438,16 @@ def test_scored_beam_v3_requires_pinned_extraction_model(monkeypatch):
         source_hashes={"service_sha256": "c" * 64},
         dataset_sha256="e" * 64,
     )
+    registration["system"]["extraction"]["max_retries"] = 0
+    with pytest.raises(RuntimeError, match="retries must be positive"):
+        run_beam.validate_registration(
+            registration,
+            project_revision="1" * 40,
+            upstream_revision=run_beam.UPSTREAM_COMMIT,
+            source_hashes={"service_sha256": "c" * 64},
+            dataset_sha256="e" * 64,
+        )
+    registration["system"]["extraction"]["max_retries"] = 3
     registration["system"]["extraction"]["model_digest"] = "f" * 64
     with pytest.raises(RuntimeError, match="extraction model digest"):
         run_beam._verify_models(registration)

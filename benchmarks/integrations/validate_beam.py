@@ -67,6 +67,7 @@ def _registered_validation(
             (1, PREDICT_REGISTRATION_KIND),
             (2, SCORED_REGISTRATION_KIND),
             (3, SCORED_REGISTRATION_KIND_V3),
+            (4, SCORED_REGISTRATION_KIND_V3),
         }
     )
     if not supported_registration:
@@ -99,7 +100,7 @@ def _registered_validation(
     if scored:
         expected_execution_kind = (
             SCORED_EXECUTION_KIND_V3
-            if registration_schema == 3
+            if isinstance(registration_schema, int) and registration_schema >= 3
             else SCORED_EXECUTION_KIND
         )
     if manifest.get("kind") != expected_execution_kind:
@@ -179,7 +180,7 @@ def _registered_validation(
         embedding = adapter_manifest.get("embedding")
         if embedding != system.get("embedding"):
             errors.append("BEAM embedding configuration differs from registration")
-        if registration_schema == 3:
+        if registration_schema in {3, 4}:
             for field in (
                 "adapter_schema",
                 "duckdb_threads",

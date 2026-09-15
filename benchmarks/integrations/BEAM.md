@@ -101,6 +101,11 @@ ingestion. The launcher passes those exact settings to the adapter and the
 validator compares the executed adapter manifest with the registration. Schema
 1 predict-only and schema 2 raw scored artifacts retain their original meaning.
 
+Registration schema 4 additionally binds the extraction schema-retry count.
+Adapter schema 3 reports the applied count, preventing the library default from
+changing an attested extracted run without detection. Earlier schemas retain
+their original fields and meaning.
+
 In a checkout of the pinned upstream commit, start with one retrieval-only
 conversation. This downloads only the selected public BEAM split and preserves
 the upstream ingestion and prediction checkpoints:

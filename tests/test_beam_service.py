@@ -54,7 +54,7 @@ async def test_beam_raw_adapter_is_idempotent_isolated_and_resumable(tmp_path):
             assert health == {
                 "status": "ok",
                 "profile": "raw",
-                "adapter_schema": 2,
+                "adapter_schema": 3,
                 "upstream_commit": UPSTREAM_COMMIT,
             }
             first = await client.post("/memories", json=request)
@@ -212,6 +212,7 @@ def test_beam_manifest_fingerprints_extraction_without_persisting_key(tmp_path):
         extraction_model="named-local-model",
         extraction_base_url="http://127.0.0.1:11434/v1",
         extraction_reasoning_effort="none",
+        extraction_max_retries=5,
         extraction_timeout=123.0,
         extraction_lease_seconds=60.0,
     )
@@ -223,6 +224,7 @@ def test_beam_manifest_fingerprints_extraction_without_persisting_key(tmp_path):
         "model": "named-local-model",
         "base_url": "http://127.0.0.1:11434/v1",
         "reasoning_effort": "none",
+        "max_retries": 5,
         "temperature": 0.0,
         "timeout": 123.0,
         "lease_seconds": 60.0,

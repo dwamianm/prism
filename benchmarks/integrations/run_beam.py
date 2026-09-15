@@ -88,6 +88,7 @@ def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
     if (schema_version, kind) not in {
         (2, SCORED_REGISTRATION_KIND),
         (3, SCORED_REGISTRATION_KIND_V3),
+        (4, SCORED_REGISTRATION_KIND_V3),
     }:
         raise RuntimeError("unsupported BEAM registration schema or kind")
     if not isinstance(value, dict):
@@ -95,8 +96,10 @@ def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
     profile = value.get("profile")
     if schema_version == 2 and profile != "raw":
         raise RuntimeError("BEAM schema 2 scored protocol requires the raw profile")
-    if schema_version == 3 and profile not in {"raw", "extracted"}:
-        raise RuntimeError("BEAM schema 3 scored protocol requires a supported profile")
+    if schema_version in {3, 4} and profile not in {"raw", "extracted"}:
+        raise RuntimeError(
+            f"BEAM schema {schema_version} scored protocol requires a supported profile"
+        )
     expected_fixed = {
         "chat_sizes": ["100K"],
         "conversations": [0],
@@ -236,11 +239,19 @@ def validate_registration(
             "timeout",
             "lease_seconds",
         }
+        if registration["schema_version"] >= 4:
+            required.add("max_retries")
         if set(extraction) != required or extraction.get("provider") != "ollama":
             raise RuntimeError("extracted BEAM registration has invalid extraction identity")
+        if registration["schema_version"] >= 4 and (
+            not isinstance(extraction.get("max_retries"), int)
+            or isinstance(extraction["max_retries"], bool)
+            or extraction["max_retries"] < 1
+        ):
+            raise RuntimeError("registered BEAM extraction retries must be positive")
         if extraction.get("base_url") != "http://127.0.0.1:11434/v1":
             raise RuntimeError("registered BEAM extraction endpoint must be loopback Ollama")
-    if registration["schema_version"] == 3:
+    if registration["schema_version"] in {3, 4}:
         required_system = {
             "id",
             "version",
@@ -323,7 +334,7 @@ def prepare_launch(
     scored_schema = registration["schema_version"] if scored else 1
     scored_kind = (
         SCORED_EXECUTION_KIND_V3
-        if scored_schema == 3
+        if scored_schema >= 3
         else SCORED_EXECUTION_KIND
     )
     manifest = {
@@ -448,6 +459,8 @@ def launch(
                 extraction["base_url"],
                 "--extraction-reasoning-effort",
                 extraction["reasoning_effort"],
+                "--extraction-max-retries",
+                str(extraction.get("max_retries", 3)),
                 "--extraction-timeout",
                 str(extraction["timeout"]),
                 "--extraction-lease-seconds",
