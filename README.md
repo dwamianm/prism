@@ -32,6 +32,14 @@ evidence-coverage gaps. It covers one conversation and uses mutable Ollama cloud
 model aliases, so it is development evidence rather than an official-scale or
 cross-product leadership result.
 
+The corrected [BEAM 100K extracted-memory development run](benchmarks/results/research/2026-09-15/BEAM-100K-EXTRACTED-SCORED.md)
+scored 13/20 (65.0%) with a 0.56750 mean rubric score. Its schema-5 validator
+confirmed that all 188 source events completed both raw materialization and
+structured extraction before scoring. Source-diverse retrieval provided a
+median 48 unique passage texts in each top-50 result, compared with 15 in a
+superseded incomplete-pack run. This remains a tuned one-conversation result;
+abstention and event ordering both scored 0/2.
+
 On the first corrected matched MemoryAgentBench task, PRME scored 20/20 versus
 BM25 at 17/20 on 20 Banking77 development questions while using 90.52% fewer
 retrieved-context tokens. The [verified report](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md)

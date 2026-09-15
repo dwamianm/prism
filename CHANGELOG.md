@@ -74,6 +74,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The corrected schema-5 extracted-memory BEAM development run completed at
+  13/20 pass (65.0%) with a 0.56750 mean rubric score. Fail-closed validation
+  confirmed 188/188 durable raw materializations and 188/188 extractions. Exact
+  passage diversity rose from a 15-of-50 median in superseded dev3 to 48-of-50,
+  while median retrieval latency fell from 486.0 ms to 198.05 ms. Against the
+  accepted raw profile it gained three pass-level questions, lost two and tied
+  fifteen. This tuned one-conversation result does not establish a default or
+  cross-product leadership.
+
 - The schema-5 extracted BEAM dev4 run is retained as rejected evidence. A
   14,181-character source exhausted four 120-second DeepSeek extraction calls;
   the run was stopped during ingestion and publishes no score. Controlled
