@@ -452,12 +452,13 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
     enable_qa_pairing: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "When True, store() automatically creates merged Q-A nodes "
-            "when consecutive messages in the same session have different "
-            "roles. This improves retrieval by co-locating questions with "
-            "their answers. Requires session_id to be set."
+            "[HYPOTHESIS] When True, store() creates best-effort merged Q-A "
+            "nodes for consecutive, differently-typed session roles. The "
+            "heuristic is in-process, is not part of durable store recovery, "
+            "and has not improved a registered quality benchmark. Default "
+            "False; requires session_id."
         ),
     )
     enable_surprise_gating: bool = Field(

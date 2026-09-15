@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Automatic question/answer pairing is now disabled by default. Every
+  registered quality benchmark already excluded the in-process heuristic, whose
+  extra derived node is not atomically journaled or recovered after restart.
+  `enable_qa_pairing=True` remains available for explicit hypothesis testing.
+
 - TTL expiration now revalidates policy under lock and commits archival with a
   deterministic, checksummed `TOMBSTONE_SWEEP` record in one DuckDB or
   PostgreSQL transaction. The record retains complete before/after state and

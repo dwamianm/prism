@@ -154,6 +154,10 @@ event ID; index failures remain nonfatal after confirming the node is durable.
 Legacy direct stores have no repair record and are not retroactively queued.
 This does not add cross-process work fencing or exactly-once execution.
 
+The unreplayed QA-pair heuristic is disabled by default. Explicitly enabling it
+is a hypothesis for applications willing to accept an in-process, best-effort
+derived copy; it is not evidence-backed durable ingestion.
+
 ### Validated extraction journal
 
 LLM ingestion now appends an `EXTRACTION_VALIDATED` operation before graph

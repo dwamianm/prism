@@ -517,6 +517,12 @@ QA pairing run afterward and are not replayed by this job. Retired nodes remain
 retired. Historical direct stores without repair jobs still need `prme rebuild`
 for index repair.
 
+Automatic question/answer pairing is disabled by default. Enabling
+`enable_qa_pairing` opts into a best-effort in-process heuristic whose extra
+node is outside direct-store recovery and has not been validated by the
+registered quality studies. Session-aware retrieval remains available without
+that derived copy.
+
 Retrieval reports failures of its primary candidate paths in
 `response.metadata.backend_failures`, using `backend_error` or
 `embedding_mismatch` reason codes without provider error details. No vector

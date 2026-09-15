@@ -188,6 +188,14 @@ with the accepted `event_id`. Recovery preserves the original node values withou
 an LLM. Optional reinforcement, supersedence and QA pairing run afterward and
 are outside this job's completion boundary.
 
+Question/answer pairing is disabled by default. `enable_qa_pairing=True`
+enables an experimental in-process heuristic that creates an extra merged node
+for consecutive, differently-typed roles in one exact session and scope. It is
+not recovered after restart, its graph/index writes are not one atomic durable
+publication, and registered quality evaluations have not enabled it. Prefer
+normal session-aware retrieval unless you are explicitly evaluating this
+hypothesis.
+
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `content` | `str` | required | Text content to store |

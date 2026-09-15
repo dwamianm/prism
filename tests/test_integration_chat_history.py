@@ -12,6 +12,7 @@ from prme.integrations._chat_history import (
     visible_chat_events,
 )
 from prme import MemoryClient
+from prme.client import config_from_directory
 from prme.models import Event
 from prme.types import Scope
 
@@ -114,7 +115,9 @@ def test_visible_chat_events_rejects_unknown_control_versions() -> None:
 
 
 def test_qa_pairing_does_not_cross_scope(tmp_path) -> None:
-    with MemoryClient(str(tmp_path)) as client:
+    config = config_from_directory(str(tmp_path))
+    config.enable_qa_pairing = True
+    with MemoryClient(config=config) as client:
         client.store(
             "Personal question",
             user_id="alice",
@@ -137,7 +140,9 @@ def test_qa_pairing_does_not_cross_scope(tmp_path) -> None:
 
 
 def test_chat_control_prevents_pairing_across_clear(tmp_path) -> None:
-    with MemoryClient(str(tmp_path)) as client:
+    config = config_from_directory(str(tmp_path))
+    config.enable_qa_pairing = True
+    with MemoryClient(config=config) as client:
         client.store(
             "Old question",
             user_id="alice",
@@ -166,3 +171,48 @@ def test_chat_control_prevents_pairing_across_clear(tmp_path) -> None:
         nodes = client.get_event_nodes(event_id, user_id="alice")
         assert len(nodes) == 1
         assert not (nodes[0].metadata or {}).get("qa_pair")
+
+
+def test_qa_pairing_is_disabled_by_default(tmp_path) -> None:
+    config = config_from_directory(str(tmp_path))
+    assert config.enable_qa_pairing is False
+    with MemoryClient(config=config) as client:
+        client.store(
+            "Where is the launch checklist?",
+            user_id="alice",
+            session_id="session",
+            role="user",
+        )
+        event_id = client.store(
+            "It is in the release folder.",
+            user_id="alice",
+            session_id="session",
+            role="assistant",
+        )
+        nodes = client.get_event_nodes(event_id, user_id="alice")
+        assert len(nodes) == 1
+        assert not (nodes[0].metadata or {}).get("qa_pair")
+
+
+def test_qa_pairing_remains_available_as_an_explicit_hypothesis(tmp_path) -> None:
+    config = config_from_directory(str(tmp_path))
+    config.enable_qa_pairing = True
+    with MemoryClient(config=config) as client:
+        client.store(
+            "Where is the launch checklist?",
+            user_id="alice",
+            session_id="session",
+            role="user",
+        )
+        event_id = client.store(
+            "It is in the release folder.",
+            user_id="alice",
+            session_id="session",
+            role="assistant",
+        )
+        nodes = client.get_event_nodes(event_id, user_id="alice")
+        pairs = [node for node in nodes if (node.metadata or {}).get("qa_pair")]
+        assert len(nodes) == 2 and len(pairs) == 1
+        assert pairs[0].content == (
+            "Where is the launch checklist?\nIt is in the release folder."
+        )

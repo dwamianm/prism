@@ -371,6 +371,11 @@ state that was never recorded; nondeterministic historical model output cannot
 be retroactively recovered from a raw event alone. No implementation milestone
 or synthetic test substitutes for that evidence.
 
+QA pairing is disabled by default because the current heuristic depends on an
+in-process previous-turn cache and does not use this protocol. Enabling it is an
+explicit experimental choice until it has source-complete provenance, atomic
+publication, restart recovery, and matched answer-quality evidence.
+
 ## Direct-store vector snapshot cadence (2026-09-12)
 
 Direct `store()` and deferred raw-source materialization rely on the vector
