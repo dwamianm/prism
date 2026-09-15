@@ -6,7 +6,7 @@ environment variables (PRME_ prefix), .env files, and direct arguments.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, ClassVar, Literal
 from uuid import UUID
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -97,19 +97,61 @@ class ExtractionConfig(_ProjectSettings):
 class EmbeddingConfig(_ProjectSettings):
     """Configuration for the embedding provider."""
 
+    _DEFAULT_FASTEMBED_MODEL: ClassVar[str] = "BAAI/bge-small-en-v1.5"
+    _OPENAI_MODELS: ClassVar[dict[str, int]] = {
+        "text-embedding-3-small": 1536,
+        "text-embedding-3-large": 3072,
+    }
+
     provider: str = Field(
         default="fastembed", description="Embedding provider name"
     )
     model_name: str = Field(
-        default="BAAI/bge-small-en-v1.5", description="Embedding model identifier"
+        default=_DEFAULT_FASTEMBED_MODEL, description="Embedding model identifier"
     )
     dimension: int = Field(
-        default=384, description="Embedding vector dimension"
+        default=384,
+        ge=1,
+        description=(
+            "Embedding vector dimension. When omitted, registered FastEmbed and "
+            "OpenAI model dimensions are inferred without loading model weights."
+        ),
     )
     api_key: SecretStr | None = Field(
         default=None,
         description="API key for API-based embedding providers (e.g., OpenAI)",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def infer_builtin_model_dimension(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        data = dict(value)
+        provider = str(data.get("provider", "fastembed")).strip().casefold()
+        if provider == "openai" and "model_name" not in data:
+            data["model_name"] = "text-embedding-3-small"
+        model_name = str(data.get("model_name", cls._DEFAULT_FASTEMBED_MODEL))
+        if data.get("dimension") is not None:
+            return data
+        if provider == "openai":
+            dimension = cls._OPENAI_MODELS.get(model_name)
+            if dimension is None:
+                raise ValueError(
+                    f"OpenAI embedding model {model_name!r} has no known dimension; "
+                    "set dimension explicitly"
+                )
+        elif provider == "fastembed":
+            from prme.storage.embedding import fastembed_model_dimension
+
+            dimension = fastembed_model_dimension(model_name)
+        else:
+            raise ValueError(
+                f"Embedding provider {provider!r} cannot infer a dimension; "
+                "set dimension explicitly"
+            )
+        data["dimension"] = dimension
+        return data
 
     model_config = {
         "env_prefix": "PRME_EMBEDDING_",

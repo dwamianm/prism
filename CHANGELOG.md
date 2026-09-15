@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Built-in embedding configuration now infers registered FastEmbed and OpenAI
+  dimensions when omitted, selects a coherent OpenAI model/dimension pair when
+  only that provider is chosen, and rejects unknown model dimensions before
+  opening an index. Direct `FastEmbedProvider` construction follows the same
+  fail-early contract without loading model weights.
+
 - Repeated single-vector archive cycles no longer stall in the native HNSW
   deletion path after roughly 192 operations. PRME now requires USearch 2.26.2,
   whose deletion implementation completes this churn pattern; a subprocess

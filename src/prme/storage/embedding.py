@@ -15,6 +15,7 @@ import math
 import os
 import threading
 from collections import OrderedDict
+from functools import lru_cache
 from numbers import Real
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -25,6 +26,37 @@ if TYPE_CHECKING:
 
 class EmbeddingVersionMismatchError(ValueError):
     """Stored vectors cannot be compared with the configured embedding model."""
+
+
+_KNOWN_FASTEMBED_DIMENSIONS = {
+    "BAAI/bge-small-en-v1.5": 384,
+    "BAAI/bge-base-en-v1.5": 768,
+    "BAAI/bge-large-en-v1.5": 1024,
+    "mixedbread-ai/mxbai-embed-large-v1": 1024,
+    "nomic-ai/nomic-embed-text-v1.5": 768,
+    "sentence-transformers/all-MiniLM-L6-v2": 384,
+}
+
+
+@lru_cache(maxsize=None)
+def fastembed_model_dimension(model_name: str) -> int:
+    """Resolve a registered FastEmbed model dimension without loading weights."""
+    known = _KNOWN_FASTEMBED_DIMENSIONS.get(model_name)
+    if known is not None:
+        return known
+    from fastembed import TextEmbedding
+
+    for description in TextEmbedding.list_supported_models():
+        if description.get("model") != model_name:
+            continue
+        dimension = description.get("dim")
+        if type(dimension) is int and dimension > 0:
+            return dimension
+        break
+    raise ValueError(
+        f"FastEmbed model {model_name!r} has no registered dimension; "
+        "set dimension explicitly"
+    )
 
 
 @runtime_checkable
@@ -159,14 +191,6 @@ class FastEmbedProvider:
         dimension: Vector dimension for the chosen model. Defaults to 384.
     """
 
-    # Known model dimensions for common models
-    _KNOWN_DIMENSIONS: dict[str, int] = {
-        "BAAI/bge-small-en-v1.5": 384,
-        "BAAI/bge-base-en-v1.5": 768,
-        "BAAI/bge-large-en-v1.5": 1024,
-        "sentence-transformers/all-MiniLM-L6-v2": 384,
-    }
-
     def __init__(
         self,
         model_name: str = "BAAI/bge-small-en-v1.5",
@@ -176,7 +200,15 @@ class FastEmbedProvider:
     ) -> None:
         self._model_name = model_name
         self._cache_dir = cache_dir
-        self._dimension = dimension or self._KNOWN_DIMENSIONS.get(model_name, 384)
+        if dimension is not None and (
+            isinstance(dimension, bool) or not isinstance(dimension, int) or dimension < 1
+        ):
+            raise ValueError("FastEmbed dimension must be a positive integer")
+        self._dimension = (
+            dimension
+            if dimension is not None
+            else fastembed_model_dimension(model_name)
+        )
         self._model: TextEmbedding | None = None  # Lazy-initialized
         self._initialization_lock = threading.Lock()
 

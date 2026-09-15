@@ -65,6 +65,11 @@ storage backends apply the same boundary checks. Earlier successful cache entrie
 remain available. The checks cannot establish that a provider returned the right
 semantic vector or preserved input ordering; those remain provider contracts.
 
+Built-in FastEmbed and OpenAI configuration infers the output dimension for
+registered model names when it is omitted. This metadata lookup does not load or
+download model weights. An unregistered model must declare its dimension
+explicitly; `FastEmbedProvider` enforces the same rule when constructed directly.
+
 Supply the provider on every reopen. Its Python implementation, credentials and
 model resources are not serialized into the memory pack. Saved numerical vectors
 and identity metadata remain portable. Reusing a saved effective config whose

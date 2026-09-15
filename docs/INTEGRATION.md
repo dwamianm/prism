@@ -812,12 +812,17 @@ from prme.config import EmbeddingConfig
 EmbeddingConfig(
     provider="fastembed",               # PRME_EMBEDDING_PROVIDER
     model_name="BAAI/bge-small-en-v1.5", # PRME_EMBEDDING_MODEL_NAME
-    dimension=384,                       # PRME_EMBEDDING_DIMENSION
+    dimension=384,                       # PRME_EMBEDDING_DIMENSION; optional for registered models
     api_key=None,                        # PRME_EMBEDDING_API_KEY
 )
 ```
 
 Supported providers: `"fastembed"` (local, default), `"openai"` (requires API key).
+When `dimension` is omitted, PRME reads registered FastEmbed model metadata or
+uses the known OpenAI model dimension without downloading weights. Selecting
+`provider="openai"` alone chooses `text-embedding-3-small` and 1,536 dimensions.
+Unknown or newly released model names require an explicit positive dimension,
+and fail during configuration instead of after an index has been opened.
 
 ### ExtractionConfig
 
