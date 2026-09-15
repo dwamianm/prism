@@ -54,6 +54,17 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         ("verify_memoryagentbench.py", Path(verifier.__file__)),
     ):
         (source_root / name).write_bytes(source.read_bytes())
+    retrieval_source_root = prme_root / "src" / "prme" / "retrieval"
+    retrieval_source_root.mkdir(parents=True)
+    real_retrieval_root = Path(adapter.__file__).resolve().parents[2] / "src" / "prme" / "retrieval"
+    for name in registrar._RETRIEVAL_SOURCE_NAMES:
+        (retrieval_source_root / f"{name}.py").write_bytes(
+            (real_retrieval_root / f"{name}.py").read_bytes()
+        )
+    retrieval_source_hashes = {
+        name: verifier._digest(retrieval_source_root / f"{name}.py")
+        for name in registrar._RETRIEVAL_SOURCE_NAMES
+    }
     installed_adapter = upstream_root / "methods" / "prme.py"
     installed_adapter.parent.mkdir(parents=True)
     installed_adapter.write_bytes(Path(adapter.__file__).read_bytes())
@@ -182,7 +193,10 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         candidates=candidates,
         bundle=bundle,
         result_limit=100,
-        execution=RetrievalExecution(parameters={}, features={}),
+        execution=RetrievalExecution(
+            parameters={},
+            features={"source_files_sha256": retrieval_source_hashes},
+        ),
     )
     database = manifest_path.parent / "memory.duckdb"
     connection = duckdb.connect(str(database))
@@ -294,6 +308,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
             "prme_files_sha256": {
                 name: verifier._digest(source_root / name) for name in source_names
             },
+            "retrieval_files_sha256": retrieval_source_hashes,
             "upstream_files_sha256": {
                 name: verifier._digest(upstream_root / name) for name in upstream_names
             },
@@ -448,6 +463,7 @@ def test_verifier_rejects_unbound_retrievals(
         ("missing", "durable receipt"),
         ("checksum", "durable receipt"),
         ("query", "differs from its retrieval capture"),
+        ("runtime", "differs from its retrieval capture"),
     ],
 )
 def test_verifier_authenticates_durable_receipt(
@@ -462,9 +478,17 @@ def test_verifier_authenticates_durable_receipt(
         payload = json.loads(payload) if isinstance(payload, str) else payload
         if change == "checksum":
             payload["receipt_checksum"] = "0" * 64
-        else:
+        elif change == "query":
             receipt_value = json.loads(payload["receipt"])
             receipt_value["query"] = "Question: A different question?"
+            changed_receipt = verifier.RetrievalReceipt.model_validate(receipt_value)
+            payload["receipt"] = changed_receipt.model_dump_json()
+            payload["receipt_checksum"] = changed_receipt.checksum
+        else:
+            receipt_value = json.loads(payload["receipt"])
+            receipt_value["execution"]["features"]["source_files_sha256"][
+                "episode_context"
+            ] = "f" * 64
             changed_receipt = verifier.RetrievalReceipt.model_validate(receipt_value)
             payload["receipt"] = changed_receipt.model_dump_json()
             payload["receipt_checksum"] = changed_receipt.checksum

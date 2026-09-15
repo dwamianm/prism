@@ -141,6 +141,10 @@ the capture's `receipt_persisted` flag alone is not accepted as evidence.
 Both registration and verification also hash the modules actually executing and
 require them to match the frozen PRME source. Pointing a newer tool at older
 registered files therefore fails instead of producing a misleading attestation.
+New registrations additionally bind every retrieval module named in receipt
+execution metadata, and verification requires each durable receipt to report
+that exact source map. A process that resolves PRME from another editable
+checkout is rejected even when the benchmark adapter itself is current.
 
 The checked-in configuration uses the same `gpt-4o-mini` temperature and
 reader family as the upstream memory baselines. For an explicitly labelled

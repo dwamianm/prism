@@ -20,6 +20,27 @@ import yaml
 from benchmarks.integrations import memoryagentbench as adapter
 
 
+_RETRIEVAL_SOURCE_NAMES = (
+    "config",
+    "models",
+    "execution",
+    "pipeline",
+    "scoring",
+    "ranking_adjustments",
+    "query_analysis",
+    "scope",
+    "candidates",
+    "filtering",
+    "session_context",
+    "episode_context",
+    "selection",
+    "reranker",
+    "packing",
+    "context_formatter",
+    "tokenization",
+)
+
+
 def _canonical(value: object) -> bytes:
     return json.dumps(
         value,
@@ -241,6 +262,7 @@ def register(
         "--untracked-files=all",
         "--",
         *(str(Path("benchmarks/integrations") / name) for name in source_names),
+        *(str(Path("src/prme/retrieval") / f"{name}.py") for name in _RETRIEVAL_SOURCE_NAMES),
     )
     if dirty:
         raise ValueError("MemoryAgentBench benchmark sources are not committed")
@@ -250,6 +272,11 @@ def register(
     installed_adapter = upstream_root / "methods" / "prme.py"
     if _digest(installed_adapter) != _digest(source_root / "memoryagentbench.py"):
         raise ValueError("installed MemoryAgentBench adapter differs from PRME source")
+    retrieval_source_root = prme_root / "src" / "prme" / "retrieval"
+    retrieval_source_hashes = {
+        name: _digest(retrieval_source_root / f"{name}.py")
+        for name in _RETRIEVAL_SOURCE_NAMES
+    }
 
     agent_config = _load_yaml_object(agent_config_path)
     dataset_config = _load_yaml_object(dataset_config_path)
@@ -331,6 +358,7 @@ def register(
             "prme_files_sha256": {
                 name: _digest(source_root / name) for name in source_names
             },
+            "retrieval_files_sha256": retrieval_source_hashes,
             "upstream_files_sha256": upstream_sources,
             "installed_adapter_sha256": _digest(installed_adapter),
         },

@@ -55,6 +55,10 @@ def feature_identity(
             packages[package] = None
     sources: dict[str, JsonValue] = {}
     for name in (
+        "config",
+        "models",
+        "execution",
+        "pipeline",
         "scoring",
         "ranking_adjustments",
         "query_analysis",
@@ -63,9 +67,11 @@ def feature_identity(
         "filtering",
         "session_context",
         "episode_context",
+        "selection",
         "reranker",
         "packing",
         "context_formatter",
+        "tokenization",
     ):
         try:
             sources[name] = hashlib.sha256(Path(__file__).with_name(name + ".py").read_bytes()).hexdigest()

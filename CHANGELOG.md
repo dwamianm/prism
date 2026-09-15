@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   New execution descriptors also hash the episode-routing module alongside the
   other retrieval stages.
 
+- MemoryAgentBench registrations now bind the complete retrieval source map
+  reported by execution descriptors. Verification compares every durable
+  receipt with that frozen map, rejecting runs whose adapter came from the
+  declared revision but whose PRME runtime resolved from another checkout.
+
 - MemoryAgentBench DetectiveQA trials can register a shared
   `choice-only-v1` reader contract. It resolves the pinned task prompt's conflict
   between an example JSON reasoning object and its option-text exact-match

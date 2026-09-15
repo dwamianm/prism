@@ -275,6 +275,7 @@ def verify(
         raise ValueError("MemoryAgentBench source revision does not match the adapter")
 
     registered_prme_hashes = registered_source.get("prme_files_sha256")
+    registered_retrieval_hashes = registered_source.get("retrieval_files_sha256")
     registered_upstream_hashes = registered_source.get("upstream_files_sha256")
     expected_upstream_names = {
         "main.py",
@@ -286,6 +287,8 @@ def verify(
     }
     if (
         not isinstance(registered_prme_hashes, dict)
+        or not isinstance(registered_retrieval_hashes, dict)
+        or set(registered_retrieval_hashes) != set(registrar._RETRIEVAL_SOURCE_NAMES)
         or not isinstance(registered_upstream_hashes, dict)
         or set(registered_upstream_hashes) != expected_upstream_names
     ):
@@ -295,6 +298,14 @@ def verify(
             prme_root / source_path
         ):
             raise ValueError(f"registered PRME source {source_path.name} has changed")
+    for name, expected_digest in registered_retrieval_hashes.items():
+        source_path = prme_root / "src" / "prme" / "retrieval" / f"{name}.py"
+        if (
+            not isinstance(expected_digest, str)
+            or not source_path.is_file()
+            or _digest(source_path) != expected_digest
+        ):
+            raise ValueError(f"registered retrieval source {name!r} has changed")
     for name, expected_digest in registered_upstream_hashes.items():
         path = upstream_root / name
         if (
@@ -646,6 +657,11 @@ def verify(
             request_id=request_id,
             user_id=user_id,
         )
+        execution_sources = (
+            receipt.execution.features.get("source_files_sha256")
+            if receipt.execution is not None
+            else None
+        )
         if (
             hashlib.sha256(receipt.query.encode("utf-8")).hexdigest()
             != capture["retrieval_query_sha256"]
@@ -658,6 +674,7 @@ def verify(
             or receipt.packing.episode_context_local_k != episode_context_local_k
             or receipt.packing.episode_context_score_decay
             != episode_context_score_decay
+            or execution_sources != registered_retrieval_hashes
             or receipt.result_limit != result_limit
             or receipt.scopes != (Scope.PROJECT,)
             or sum(candidate.in_context for candidate in receipt.candidates)
@@ -690,6 +707,7 @@ def verify(
             "installer_sha256": _digest(prme_root / source_paths[1]),
             "registrar_sha256": _digest(prme_root / source_paths[2]),
             "verifier_sha256": _digest(prme_root / source_paths[3]),
+            "retrieval_files_sha256": registered_retrieval_hashes,
             "agent_config_sha256": _digest(agent_config_path),
             "dataset_config_sha256": _digest(dataset_config_path),
             "result_sha256": _digest(result_path),
