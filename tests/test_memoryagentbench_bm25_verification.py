@@ -272,3 +272,11 @@ def test_registered_task_binds_formatted_documents_and_query() -> None:
     assert contexts[0]["queries"][0]["retrieval_query_sha256"] == hashlib.sha256(
         b"second?"
     ).hexdigest()
+
+
+def test_bm25_registration_uses_same_terminal_label_query_as_prme() -> None:
+    prompt = (
+        "Use the mapping to assign a label.\n\n"
+        "Question:Where is my pending transfer? \n\n label:"
+    )
+    assert registrar._extract_retrieval_query(prompt) == "Where is my pending transfer?"

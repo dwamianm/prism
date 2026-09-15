@@ -63,6 +63,13 @@ _PATCHES = {
             "        response = self._create_oai_client().chat.completions.create(**completion_options)\n",
         ),
         (
+            "        retrieval_query = self._extract_retrieval_query(message)\n",
+            "        from methods.prme import _retrieval_query\n"
+            "        retrieval_query = _retrieval_query(\n"
+            "            message, upstream_query=self._extract_retrieval_query(message)\n"
+            "        )\n",
+        ),
+        (
             "        ask_llm_message = retrieval_memory_string + \"\\n\" + message\n",
             "        from methods.prme import reader_message\n"
             "        ask_llm_message = reader_message(\n"

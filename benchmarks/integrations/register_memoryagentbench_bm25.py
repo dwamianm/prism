@@ -70,14 +70,16 @@ def _dependency_identity() -> dict[str, dict[str, str]]:
 
 
 def _extract_retrieval_query(message: str) -> str:
+    upstream_query = message
     for pattern in (
         r"Now Answer the Question:\s*(.*)",
         r"Here is the conversation:\s*(.*)",
     ):
         match = re.search(pattern, message, re.DOTALL)
         if match:
-            return "".join(match.groups())
-    return message
+            upstream_query = "".join(match.groups())
+            break
+    return adapter._retrieval_query(message, upstream_query=upstream_query)
 
 
 def _prepare_documents(

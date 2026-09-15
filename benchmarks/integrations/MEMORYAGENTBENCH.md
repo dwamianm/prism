@@ -173,6 +173,11 @@ the retrieval query or rewriting the model output. The contract is restricted to
 `icl_*` tasks and is bound by the registrations; `upstream` preserves the original
 prompt unchanged.
 
+The installer also applies PRME's terminal ICL-question extraction to the BM25
+arm. Both systems therefore rank memory using the actual classification question
+instead of giving one arm the repeated prompt wrapper. Each registration binds
+the resulting query hash.
+
 For a registered compact-context trial, set `prme_context_format: compact` in a
 copied agent configuration before registration. The setting is included in the
 adapter manifest, every retrieval capture, and the outcome-free registration's

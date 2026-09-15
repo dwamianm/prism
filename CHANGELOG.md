@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conflict between a `label: N` prompt and its documented digits-only exact-match
   metric by appending the same explicit instruction to both arms. Retrieval
   queries and raw model outputs remain unchanged, and manifests and captures bind
-  the selected contract.
+  the selected contract. The matched BM25 path now uses the same terminal ICL
+  question extractor as PRME, with both derived queries bound before inference.
 
 - MemoryAgentBench verification now authenticates each claimed durable
   retrieval receipt directly from the completed DuckDB pack, including its
