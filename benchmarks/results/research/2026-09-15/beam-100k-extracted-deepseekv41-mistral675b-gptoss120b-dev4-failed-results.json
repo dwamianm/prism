@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "kind": "beam-extracted-scored-incomplete-result",
+  "status": "stopped after the registered extraction timeout budget made the run ineligible",
+  "registration": "beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev4-registration.json",
+  "stopped_at_utc": "2026-09-15T21:14:40Z",
+  "coverage": {
+    "progress_entries_written": 57,
+    "durable_source_events": 114,
+    "raw_materializations_complete": 113,
+    "raw_materializations_pending_at_shutdown": 1,
+    "extractions_complete": 112,
+    "extractions_failed": 1,
+    "extractions_running_at_shutdown": 1,
+    "durable_extraction_attempts": 117,
+    "materialized_nodes": 850,
+    "questions_written": 0,
+    "questions_expected": 20,
+    "complete": false
+  },
+  "observations": {
+    "extractor": "deepseek-v4.1-flash:cloud",
+    "failed_source_characters": 14181,
+    "failed_source_role": "user",
+    "failure_type": "TimeoutError",
+    "failed_source_attempts": 4,
+    "registered_provider_timeout_seconds": 120,
+    "source_writes_duplicated": false,
+    "post_failure_exact_source_probes": {
+      "mistral-large-3:675b-cloud": {
+        "timeout_seconds": 180,
+        "completed": true,
+        "elapsed_seconds": 44.63,
+        "retained_entities": 54,
+        "retained_facts": 0,
+        "retained_relationships": 0,
+        "retained_summary": true
+      },
+      "deepseek-v4.1-flash:cloud": {
+        "timeout_seconds": 240,
+        "completed": true,
+        "elapsed_seconds": 106.42,
+        "retained_entities": 87,
+        "retained_facts": 0,
+        "retained_relationships": 0,
+        "retained_summary": true
+      }
+    }
+  },
+  "diagnosis": "The hosted DeepSeek extractor showed high latency variance on one 14,181-character code-heavy source. It timed out under every registered 120-second call but completed a controlled post-failure probe in 106.42 seconds. Both tested models produced grounded summaries and entities while conditional code claims were rejected by product validation.",
+  "decision": "The run was stopped before question answering because one failed chunk makes schema-5 validation fail. A separately registered run may use a larger provider timeout; this execution cannot be resumed under changed settings.",
+  "limitations": [
+    "The execution ended during ingestion and produced no retrieval or answer-quality score.",
+    "The run was manually stopped after the upstream runner recorded the failed chunk, avoiding answer and judge calls for an ineligible artifact.",
+    "The interrupted final event remained durable with running extraction and pending raw materialization state.",
+    "The progress file records runner progress rather than authoritative per-event completion; the durable pack supplies the reported work states.",
+    "The service log and DuckDB files are hashed rather than copied because they contain public benchmark source text.",
+    "This incomplete execution must not be compared with published BEAM scores."
+  ],
+  "artifact_sha256": {
+    "registration": "c90097c8c7e469f5cf8703661ce97e8668a2a1875d1fc0ce58283dcf9f93675f",
+    "execution-manifest.json": "75e8b4791dbefe88e500b3db318a812caa6d150e98e03da5c2c60d6b64deb815",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "8922c08b1ce2679526986e3621aee0f0fe66c9bccb03e672acfaa6356554f2b8",
+    "prme-pack/memory.duckdb": "4b838d65e5fa5cf9bf2e8dfec44d084281f6c3c38f8b3aa0e0138ed91c765809",
+    "prme-pack/memory.duckdb.wal": "9df71a559c313b71df74783eb5bff9d958ef00506da52eba5e9cbbe459fc69ae",
+    "service.log": "2607ecfa4031bb5fc71728562b0fb00df3ab6382b66941924b7851677148e34b",
+    "upstream-results/predicted_prme-beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev4/_progress_100K_0.json": "135766970275257c48bdf4321c07553c3d29b3e71fce6e5194d46a51213a2a9b"
+  }
+}

@@ -74,6 +74,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The schema-5 extracted BEAM dev4 run is retained as rejected evidence. A
+  14,181-character source exhausted four 120-second DeepSeek extraction calls;
+  the run was stopped during ingestion and publishes no score. Controlled
+  probes on the exact saved source completed with Mistral Large 3 in 44.63
+  seconds and DeepSeek V4.1 Flash in 106.42 seconds, identifying hosted latency
+  variance and the registered timeout as the failure boundary.
+
 - Python, HTTP, and MCP retrieval now accept an optional `max_per_source`
   result-selection bound. It collapses only byte-identical passages with the
   same exact nonempty evidence set, fills the requested count from later source
