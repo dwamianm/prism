@@ -94,6 +94,13 @@ silently grade itself with the same model. An Ollama cloud manifest identifies
 its remote host and model but does not pin remote model weights; registrations
 and reports must disclose that weaker reproducibility boundary.
 
+Registration schema 3 also supports scored `extracted` runs. In addition to the
+answerer and judge identities, it binds the Ollama extraction model digest,
+endpoint, reasoning mode, temperature, timeout, and durable-work lease before
+ingestion. The launcher passes those exact settings to the adapter and the
+validator compares the executed adapter manifest with the registration. Schema
+1 predict-only and schema 2 raw scored artifacts retain their original meaning.
+
 In a checkout of the pinned upstream commit, start with one retrieval-only
 conversation. This downloads only the selected public BEAM split and preserves
 the upstream ingestion and prediction checkpoints:

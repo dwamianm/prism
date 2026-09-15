@@ -185,11 +185,31 @@ def test_scored_beam_protocol_requires_distinct_pinned_local_models(monkeypatch)
         run_beam._protocol(registration)
 
 
-def test_registered_beam_validation_accepts_bound_scored_execution(tmp_path):
+@pytest.mark.parametrize(
+    ("profile", "schema_version", "registration_kind", "execution_kind"),
+    [
+        (
+            "raw",
+            2,
+            run_beam.SCORED_REGISTRATION_KIND,
+            run_beam.SCORED_EXECUTION_KIND,
+        ),
+        (
+            "extracted",
+            3,
+            run_beam.SCORED_REGISTRATION_KIND_V3,
+            run_beam.SCORED_EXECUTION_KIND_V3,
+        ),
+    ],
+)
+def test_registered_beam_validation_accepts_bound_scored_execution(
+    tmp_path, profile, schema_version, registration_kind, execution_kind
+):
     execution_root = tmp_path / "execution"
     prediction_dir = execution_root / "predictions"
     prediction_dir.mkdir(parents=True)
     protocol = _scored_protocol()
+    protocol["profile"] = profile
     models = _scored_models()
     owner = f"beam_100K_0_{protocol['run_id']}"
     _write(
@@ -250,9 +270,21 @@ def test_registered_beam_validation_accepts_bound_scored_execution(tmp_path):
     dataset.parent.mkdir(parents=True)
     dataset.write_text("[]")
     files = {"service_sha256": "c" * 64}
+    extraction = None
+    if profile == "extracted":
+        extraction = {
+            "provider": "ollama",
+            "model": "extractor",
+            "base_url": "http://127.0.0.1:11434/v1",
+            "model_digest": "d" * 64,
+            "reasoning_effort": "none",
+            "temperature": 0.0,
+            "timeout": 120.0,
+            "lease_seconds": 60.0,
+        }
     registration = {
-        "schema_version": 2,
-        "kind": run_beam.SCORED_REGISTRATION_KIND,
+        "schema_version": schema_version,
+        "kind": registration_kind,
         "source": {
             "prme_revision": "1" * 40,
             "upstream_revision": run_beam.UPSTREAM_COMMIT,
@@ -267,12 +299,13 @@ def test_registered_beam_validation_accepts_bound_scored_execution(tmp_path):
         "system": {
             "id": "prme",
             "version": "0.11.0",
-            "profile": "raw",
+            "profile": profile,
             "embedding": {
                 "provider": "fastembed",
                 "model": "BAAI/bge-small-en-v1.5",
                 "dimension": 384,
             },
+            "extraction": extraction,
         },
     }
     registration_path = tmp_path / "registration.json"
@@ -280,8 +313,8 @@ def test_registered_beam_validation_accepts_bound_scored_execution(tmp_path):
     _write(
         execution_root / run_beam.MANIFEST_FILENAME,
         {
-            "schema_version": 2,
-            "kind": run_beam.SCORED_EXECUTION_KIND,
+            "schema_version": schema_version,
+            "kind": execution_kind,
             "registration_sha256": validate_beam._hash(registration_path),
             "dataset_sha256": validate_beam._hash(dataset),
             "protocol": protocol,
@@ -298,8 +331,12 @@ def test_registered_beam_validation_accepts_bound_scored_execution(tmp_path):
     _write(
         execution_root / "prme-pack" / "beam_adapter_manifest.json",
         {
-            "profile": "raw",
-            "extraction": None,
+            "profile": profile,
+            "extraction": (
+                None
+                if extraction is None
+                else {key: value for key, value in extraction.items() if key != "model_digest"}
+            ),
             "upstream_commit": run_beam.UPSTREAM_COMMIT,
             "prme_version": "0.11.0",
             "adapter_source_sha256": "c" * 64,
@@ -325,6 +362,59 @@ def test_registered_beam_validation_accepts_bound_scored_execution(tmp_path):
         cutoffs=(50,),
     )
     assert report["errors"] == []
+
+
+def test_scored_beam_v3_requires_pinned_extraction_model(monkeypatch):
+    protocol = {**_scored_protocol(), "profile": "extracted"}
+    registration = {
+        "schema_version": 3,
+        "kind": run_beam.SCORED_REGISTRATION_KIND_V3,
+        "protocol": protocol,
+        "models": _scored_models(),
+        "source": {
+            "prme_revision": "1" * 40,
+            "upstream_revision": run_beam.UPSTREAM_COMMIT,
+            "files": {"service_sha256": "c" * 64},
+        },
+        "dataset": {
+            "revision": run_beam.DATASET_REVISION,
+            "cache_sha256": "e" * 64,
+        },
+        "system": {
+            "id": "prme",
+            "version": "0.11.0",
+            "profile": "extracted",
+            "extraction": {
+                "provider": "ollama",
+                "model": "extractor",
+                "base_url": "http://127.0.0.1:11434/v1",
+                "model_digest": "d" * 64,
+                "reasoning_effort": "none",
+                "temperature": 0.0,
+                "timeout": 120.0,
+                "lease_seconds": 60.0,
+            },
+        },
+    }
+    monkeypatch.setattr(
+        run_beam,
+        "_ollama_model_digests",
+        lambda _url: {
+            "answerer": "a" * 64,
+            "judge": "b" * 64,
+            "extractor": "d" * 64,
+        },
+    )
+    run_beam.validate_registration(
+        registration,
+        project_revision="1" * 40,
+        upstream_revision=run_beam.UPSTREAM_COMMIT,
+        source_hashes={"service_sha256": "c" * 64},
+        dataset_sha256="e" * 64,
+    )
+    registration["system"]["extraction"]["model_digest"] = "f" * 64
+    with pytest.raises(RuntimeError, match="extraction model digest"):
+        run_beam._verify_models(registration)
 
 
 def test_registered_beam_validation_binds_source_dataset_and_adapter(tmp_path):

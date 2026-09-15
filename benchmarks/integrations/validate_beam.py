@@ -44,7 +44,9 @@ def _registered_validation(
         PREDICT_EXECUTION_KIND,
         PREDICT_REGISTRATION_KIND,
         SCORED_EXECUTION_KIND,
+        SCORED_EXECUTION_KIND_V3,
         SCORED_REGISTRATION_KIND,
+        SCORED_REGISTRATION_KIND_V3,
         _protocol,
     )
 
@@ -64,6 +66,7 @@ def _registered_validation(
         in {
             (1, PREDICT_REGISTRATION_KIND),
             (2, SCORED_REGISTRATION_KIND),
+            (3, SCORED_REGISTRATION_KIND_V3),
         }
     )
     if not supported_registration:
@@ -92,12 +95,16 @@ def _registered_validation(
         ),
     }:
         errors.append("validation selection differs from registration")
-    expected_execution_kind = (
-        SCORED_EXECUTION_KIND if scored else PREDICT_EXECUTION_KIND
-    )
+    expected_execution_kind = PREDICT_EXECUTION_KIND
+    if scored:
+        expected_execution_kind = (
+            SCORED_EXECUTION_KIND_V3
+            if registration_schema == 3
+            else SCORED_EXECUTION_KIND
+        )
     if manifest.get("kind") != expected_execution_kind:
         errors.append("unexpected BEAM execution manifest kind")
-    expected_manifest_schema = 2 if scored else 1
+    expected_manifest_schema = registration_schema if scored else 1
     if manifest.get("schema_version") != expected_manifest_schema:
         errors.append("unsupported BEAM execution manifest schema")
     if manifest.get("registration_sha256") != _hash(registration_path):
@@ -145,12 +152,24 @@ def _registered_validation(
     if not isinstance(system, dict):
         errors.append("registered BEAM system identity is missing")
     else:
-        if adapter_manifest.get("profile") != "raw":
-            errors.append("BEAM adapter did not use the raw profile")
+        profile = system.get("profile")
+        if adapter_manifest.get("profile") != profile:
+            errors.append("BEAM adapter did not use the registered profile")
         if adapter_manifest.get("upstream_commit") != UPSTREAM_COMMIT:
             errors.append("BEAM adapter upstream revision differs")
-        if adapter_manifest.get("extraction") is not None:
+        registered_extraction = system.get("extraction")
+        executed_extraction = adapter_manifest.get("extraction")
+        if profile == "raw" and executed_extraction is not None:
             errors.append("raw BEAM adapter unexpectedly configured extraction")
+        if profile == "extracted":
+            if isinstance(registered_extraction, dict):
+                registered_extraction = {
+                    key: value
+                    for key, value in registered_extraction.items()
+                    if key != "model_digest"
+                }
+            if executed_extraction != registered_extraction:
+                errors.append("BEAM extraction configuration differs from registration")
         if adapter_manifest.get("prme_version") != system.get("version"):
             errors.append("BEAM adapter PRME version differs from registration")
         if adapter_manifest.get("adapter_source_sha256") != registered_files.get(

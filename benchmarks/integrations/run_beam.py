@@ -27,8 +27,10 @@ MANIFEST_FILENAME = "execution-manifest.json"
 PREDICTION_DIRECTORY = f"predicted_{PROJECT_NAME}"
 PREDICT_REGISTRATION_KIND = "beam-raw-predict-only-registration"
 SCORED_REGISTRATION_KIND = "beam-raw-scored-registration"
+SCORED_REGISTRATION_KIND_V3 = "beam-scored-registration"
 PREDICT_EXECUTION_KIND = "beam-raw-predict-only-execution"
 SCORED_EXECUTION_KIND = "beam-raw-scored-execution"
+SCORED_EXECUTION_KIND_V3 = "beam-scored-execution"
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -83,12 +85,19 @@ def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
         if value != _expected_protocol():
             raise RuntimeError("BEAM protocol does not match the registered smoke")
         return cast(dict[str, Any], value)
-    if schema_version != 2 or kind != SCORED_REGISTRATION_KIND:
+    if (schema_version, kind) not in {
+        (2, SCORED_REGISTRATION_KIND),
+        (3, SCORED_REGISTRATION_KIND_V3),
+    }:
         raise RuntimeError("unsupported BEAM registration schema or kind")
     if not isinstance(value, dict):
         raise RuntimeError("BEAM registration is missing its protocol")
+    profile = value.get("profile")
+    if schema_version == 2 and profile != "raw":
+        raise RuntimeError("BEAM schema 2 scored protocol requires the raw profile")
+    if schema_version == 3 and profile not in {"raw", "extracted"}:
+        raise RuntimeError("BEAM schema 3 scored protocol requires a supported profile")
     expected_fixed = {
-        "profile": "raw",
         "chat_sizes": ["100K"],
         "conversations": [0],
         "question_types": list(QUESTION_TYPES),
@@ -149,7 +158,10 @@ def _ollama_model_digests(base_url: str) -> dict[str, str]:
 
 def _verify_models(registration: dict[str, Any]) -> None:
     """Require the registered local model bytes before the first model call."""
-    if registration.get("kind") != SCORED_REGISTRATION_KIND:
+    if registration.get("kind") not in {
+        SCORED_REGISTRATION_KIND,
+        SCORED_REGISTRATION_KIND_V3,
+    }:
         return
     models = registration["models"]
     inventories: dict[str, dict[str, str]] = {}
@@ -164,6 +176,15 @@ def _verify_models(registration: dict[str, Any]) -> None:
             raise RuntimeError(
                 f"BEAM {role} Ollama model digest differs from registration"
             )
+    if registration["protocol"]["profile"] == "extracted":
+        extraction = registration.get("system", {}).get("extraction")
+        if not isinstance(extraction, dict):
+            raise RuntimeError("extracted BEAM registration must bind extraction")
+        inventory = inventories.get(extraction.get("base_url"))
+        if inventory is None:
+            inventory = _ollama_model_digests(extraction.get("base_url", ""))
+        if inventory.get(extraction.get("model")) != extraction.get("model_digest"):
+            raise RuntimeError("BEAM extraction model digest differs from registration")
 
 
 def validate_registration(
@@ -174,7 +195,7 @@ def validate_registration(
     source_hashes: dict[str, str],
     dataset_sha256: str,
 ) -> None:
-    _protocol(registration)
+    protocol = _protocol(registration)
     source = registration.get("source")
     if not isinstance(source, dict):
         raise RuntimeError("BEAM registration is missing source identity")
@@ -195,10 +216,30 @@ def validate_registration(
     if (
         not isinstance(system, dict)
         or system.get("id") != "prme"
-        or system.get("profile") != "raw"
+        or system.get("profile") != protocol["profile"]
         or not isinstance(system.get("version"), str)
     ):
-        raise RuntimeError("BEAM registration does not identify the raw PRME system")
+        raise RuntimeError("BEAM registration does not identify the selected PRME system")
+    extraction = system.get("extraction")
+    if protocol["profile"] == "raw" and extraction is not None:
+        raise RuntimeError("raw BEAM registration cannot configure extraction")
+    if protocol["profile"] == "extracted":
+        if not isinstance(extraction, dict):
+            raise RuntimeError("extracted BEAM registration must configure extraction")
+        required = {
+            "provider",
+            "model",
+            "base_url",
+            "model_digest",
+            "reasoning_effort",
+            "temperature",
+            "timeout",
+            "lease_seconds",
+        }
+        if set(extraction) != required or extraction.get("provider") != "ollama":
+            raise RuntimeError("extracted BEAM registration has invalid extraction identity")
+        if extraction.get("base_url") != "http://127.0.0.1:11434/v1":
+            raise RuntimeError("registered BEAM extraction endpoint must be loopback Ollama")
     _verify_models(registration)
 
 
@@ -254,9 +295,15 @@ def prepare_launch(
     scored = not protocol["predict_only"]
 
     output_root.mkdir(parents=True, exist_ok=True)
+    scored_schema = registration["schema_version"] if scored else 1
+    scored_kind = (
+        SCORED_EXECUTION_KIND_V3
+        if scored_schema == 3
+        else SCORED_EXECUTION_KIND
+    )
     manifest = {
-        "schema_version": 2 if scored else 1,
-        "kind": SCORED_EXECUTION_KIND if scored else PREDICT_EXECUTION_KIND,
+        "schema_version": scored_schema,
+        "kind": scored_kind if scored else PREDICT_EXECUTION_KIND,
         "registration_sha256": digest(registration_path),
         "dataset_sha256": dataset_sha256,
         **({"protocol": protocol, "models": registration["models"]} if scored else {}),
@@ -320,10 +367,13 @@ def prepare_launch(
         "service_log": output_root / "service.log",
         "protocol": protocol,
         "models": registration.get("models"),
+        "system": registration.get("system"),
     }
 
 
-def _wait_for_service(port: int, process: subprocess.Popen[Any]) -> None:
+def _wait_for_service(
+    port: int, process: subprocess.Popen[Any], *, profile: str
+) -> None:
     deadline = time.monotonic() + 60
     url = f"http://127.0.0.1:{port}/health"
     while time.monotonic() < deadline:
@@ -332,7 +382,7 @@ def _wait_for_service(port: int, process: subprocess.Popen[Any]) -> None:
         try:
             with urlopen(url, timeout=1) as response:  # noqa: S310 - loopback only
                 body = json.loads(response.read())
-            if body.get("status") == "ok" and body.get("profile") == "raw":
+            if body.get("status") == "ok" and body.get("profile") == profile:
                 return
         except (OSError, URLError, json.JSONDecodeError):
             pass
@@ -355,12 +405,30 @@ def launch(
         "--directory",
         str(paths["pack_dir"]),
         "--profile",
-        "raw",
+        protocol["profile"],
         "--duckdb-threads",
         "1",
         "--port",
         str(port),
     ]
+    if protocol["profile"] == "extracted":
+        extraction = paths["system"]["extraction"]
+        service_command.extend(
+            [
+                "--extraction-provider",
+                extraction["provider"],
+                "--extraction-model",
+                extraction["model"],
+                "--extraction-base-url",
+                extraction["base_url"],
+                "--extraction-reasoning-effort",
+                extraction["reasoning_effort"],
+                "--extraction-timeout",
+                str(extraction["timeout"]),
+                "--extraction-lease-seconds",
+                str(extraction["lease_seconds"]),
+            ]
+        )
     if resume:
         service_command.append("--resume")
     paths["prediction_root"].mkdir(parents=True, exist_ok=True)
@@ -373,7 +441,7 @@ def launch(
             text=True,
         )
         try:
-            _wait_for_service(port, service)
+            _wait_for_service(port, service, profile=protocol["profile"])
             command = [
                 "uv",
                 "run",
