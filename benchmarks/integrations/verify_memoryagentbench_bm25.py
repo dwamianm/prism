@@ -11,7 +11,9 @@ import re
 from typing import Any
 
 from benchmarks.integrations import memoryagentbench as adapter
+from benchmarks.integrations import register_memoryagentbench as common_registrar
 from benchmarks.integrations import register_memoryagentbench_bm25 as registrar
+from benchmarks.integrations import verify_memoryagentbench as common_verifier
 from benchmarks.integrations.verify_memoryagentbench import (
     _canonical,
     _digest,
@@ -149,6 +151,24 @@ def verify(
     if actual_revision != expected_revision:
         raise ValueError("PRME source revision does not match the declared revision")
     source_root = prme_root / "benchmarks" / "integrations"
+    for module_file, name, label in (
+        (adapter.__file__, "memoryagentbench.py", "adapter"),
+        (
+            common_registrar.__file__,
+            "register_memoryagentbench.py",
+            "PRME registrar",
+        ),
+        (
+            common_verifier.__file__,
+            "verify_memoryagentbench.py",
+            "PRME verifier",
+        ),
+        (registrar.__file__, "register_memoryagentbench_bm25.py", "BM25 registrar"),
+        (__file__, "verify_memoryagentbench_bm25.py", "BM25 verifier"),
+    ):
+        common_registrar._require_executing_source(
+            module_file, source_root / name, label
+        )
     dirty = _git(
         prme_root,
         "status",

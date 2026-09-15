@@ -138,6 +138,9 @@ request and owner identity, replayable candidate ranking, context hash, packing
 budget and format, result limit, project scope, and in-context candidate count.
 Its report commits an aggregate hash of the authenticated receipt checksums;
 the capture's `receipt_persisted` flag alone is not accepted as evidence.
+Both registration and verification also hash the modules actually executing and
+require them to match the frozen PRME source. Pointing a newer tool at older
+registered files therefore fails instead of producing a misleading attestation.
 
 The checked-in configuration uses the same `gpt-4o-mini` temperature and
 reader family as the upstream memory baselines. For an explicitly labelled

@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   retrieval receipt directly from the completed DuckDB pack, including its
   checksum, owner/request identity, replayable ranking, context hash, packing
   contract, scope, and included count. Reports commit an aggregate receipt hash
-  instead of trusting the adapter's persistence flag.
+  instead of trusting the adapter's persistence flag. Registration and both
+  verifiers require their executing module bytes to match the frozen source they
+  report.
 
 - MemoryAgentBench source ingestion now preserves blank-line units and
   serial-numbered facts as independent records, splitting only an overlong unit

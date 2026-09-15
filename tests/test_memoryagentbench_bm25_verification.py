@@ -215,6 +215,17 @@ def test_verifier_recomputes_complete_bm25_run(tmp_path: Path, monkeypatch) -> N
     assert report["averaged_metrics"]["accuracy"] == 100.0
 
 
+def test_bm25_verifier_rejects_unregistered_executing_code(
+    tmp_path: Path, monkeypatch
+) -> None:
+    paths = fixture_run(tmp_path, monkeypatch)
+    rogue = tmp_path / "rogue_bm25_verifier.py"
+    rogue.write_text("# different verifier bytes\n", encoding="utf-8")
+    monkeypatch.setattr(verifier, "__file__", str(rogue))
+    with pytest.raises(ValueError, match="executing BM25 verifier differs"):
+        run_verification(paths)
+
+
 def test_verifier_rejects_changed_bm25_ranking(tmp_path: Path, monkeypatch) -> None:
     paths = fixture_run(tmp_path, monkeypatch)
     write_json(paths["capture"], ["wrong source\n"])

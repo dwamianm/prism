@@ -34,6 +34,16 @@ def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _require_executing_source(
+    module_file: str | Path | None, expected_path: Path, label: str
+) -> None:
+    """Require the imported module bytes to match the declared frozen source."""
+    if module_file is None or _digest(Path(module_file).resolve()) != _digest(
+        expected_path.resolve()
+    ):
+        raise ValueError(f"executing {label} differs from the declared PRME source")
+
+
 def _tree_digest(root: Path) -> str:
     hasher = hashlib.sha256()
     files = sorted(path for path in root.rglob("*") if path.is_file())
@@ -218,6 +228,12 @@ def register(
         "verify_memoryagentbench.py",
     )
     source_root = prme_root / "benchmarks" / "integrations"
+    _require_executing_source(
+        adapter.__file__, source_root / "memoryagentbench.py", "adapter"
+    )
+    _require_executing_source(
+        __file__, source_root / "register_memoryagentbench.py", "registrar"
+    )
     dirty = _git(
         prme_root,
         "status",

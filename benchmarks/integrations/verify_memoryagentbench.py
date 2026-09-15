@@ -238,6 +238,15 @@ def verify(
         Path("benchmarks/integrations/register_memoryagentbench.py"),
         Path("benchmarks/integrations/verify_memoryagentbench.py"),
     ]
+    registrar._require_executing_source(
+        adapter.__file__, prme_root / source_paths[0], "adapter"
+    )
+    registrar._require_executing_source(
+        registrar.__file__, prme_root / source_paths[2], "registrar"
+    )
+    registrar._require_executing_source(
+        __file__, prme_root / source_paths[3], "verifier"
+    )
     dirty = _git(
         prme_root,
         "status",

@@ -12,6 +12,7 @@ import re
 from typing import Any
 
 from benchmarks.integrations import memoryagentbench as adapter
+from benchmarks.integrations import register_memoryagentbench as common_registrar
 from benchmarks.integrations.register_memoryagentbench import (
     _canonical,
     _digest,
@@ -213,6 +214,19 @@ def register(
     if _git(prme_root, "rev-parse", "HEAD").lower() != expected_prme_revision:
         raise ValueError("PRME source revision does not match the declared revision")
     source_root = prme_root / "benchmarks" / "integrations"
+    common_registrar._require_executing_source(
+        adapter.__file__, source_root / "memoryagentbench.py", "adapter"
+    )
+    common_registrar._require_executing_source(
+        common_registrar.__file__,
+        source_root / "register_memoryagentbench.py",
+        "PRME registrar",
+    )
+    common_registrar._require_executing_source(
+        __file__,
+        source_root / "register_memoryagentbench_bm25.py",
+        "BM25 registrar",
+    )
     dirty = _git(
         prme_root,
         "status",
