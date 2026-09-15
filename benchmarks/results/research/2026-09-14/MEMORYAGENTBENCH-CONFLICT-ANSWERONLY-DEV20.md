@@ -2,7 +2,7 @@
 
 **Completed:** 2026-09-14  
 **Systems:** PRME versus the pinned MemoryAgentBench BM25 control  
-**Reader:** local Ollama `qwen3.5:9b`, temperature 0, seed 42, thinking disabled  
+**Primary reader:** local Ollama `qwen3.5:9b`, temperature 0, seed 42, thinking disabled
 **Questions:** first 20 preregistered FactConsolidation 6K conflict-resolution questions  
 **Scoring:** the benchmark's official `substring_exact_match`
 
@@ -25,6 +25,13 @@ on every query. PRME's mean end-to-end query time was 4.83 seconds and BM25's
 was 2.62 seconds, but the arms ran sequentially on one local host, so these
 timings are descriptive rather than a controlled latency claim. PRME ingested
 the two source chunks as 454 records in 35.134 seconds.
+
+A separately preregistered capacity check replaced only the reader tag with the
+already-installed `prme-qwen3.5:35b-a3b-8k`. It produced the same task scores:
+PRME 1/20 and BM25 0/20. The PRME reader input mean was 5,261.70 tokens and the
+BM25 mean remained 7,658.25. This rules out model size alone as a remedy for
+this configuration; it does not compare the readers on a representative task
+suite.
 
 ## Protocol and verification
 
@@ -49,7 +56,9 @@ The serving model's local inventory digest observed after completion was
 `6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7`.
 It was not included in the preregistration, so the registered model identity is
 the `qwen3.5:9b` tag. Future launches should bind the provider model digest
-before generation.
+before generation. The 35B confirmation registered the
+`prme-qwen3.5:35b-a3b-8k` tag; its observed local digest was
+`45870b70b6fa65ab09355aeb7901897763ae40745c6cdd11d28bc33a6b818ffc`.
 
 ## Failure analysis and next technique
 
@@ -60,12 +69,12 @@ so it explains the failure and is not an additional benchmark metric or a
 selectable retrieval policy.
 
 The result isolates reader reasoning and task interpretation as the dominant
-failure for this configuration. The next trial should use the already-installed
-Qwen3.5 35B A3B model with the identical sources, output contract and matched
-arms. Retrieval changes are not justified by a task where the reader fails even
-when the reference text is present. Separately, conflict-resolution evaluation
-must distinguish this benchmark's numbered-source multi-hop QA from PRME's
-transactional correction and supersedence APIs.
+failure for this configuration, and the matched 35B confirmation shows that
+capacity alone does not resolve it. Retrieval changes are not justified by a
+task where both readers fail even when the reference text is present. The next
+step is to audit the numbered-source reasoning interface and separately evaluate
+PRME's transactional correction and supersedence APIs under a lifecycle task
+that measures the product behavior directly.
 
 ## Claim boundary
 
@@ -77,4 +86,7 @@ advantage, or competitive leadership.
 
 Artifacts: [paired comparison](memoryagentbench-conflict-answeronly-dev20-comparison.json),
 [PRME verification](memoryagentbench-conflict-answeronly-dev20-prme-verification.json),
-and [BM25 verification](memoryagentbench-conflict-answeronly-dev20-bm25-verification.json).
+[BM25 verification](memoryagentbench-conflict-answeronly-dev20-bm25-verification.json),
+[35B paired comparison](memoryagentbench-conflict-qwen35b-answeronly-dev20-comparison.json),
+[35B PRME verification](memoryagentbench-conflict-qwen35b-answeronly-dev20-prme-verification.json),
+and [35B BM25 verification](memoryagentbench-conflict-qwen35b-answeronly-dev20-bm25-verification.json).

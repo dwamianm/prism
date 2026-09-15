@@ -37,7 +37,9 @@ retrieval gap rather than a leadership claim. A subsequent
 [Conflict Resolution trial](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md)
 scored 1/20 versus 0/20. Reference-answer text was present in 19 PRME contexts
 and all 20 BM25 contexts, so that run identifies the Qwen 9B reader as inadequate
-for the task rather than supporting a retrieval-quality claim.
+for the task rather than supporting a retrieval-quality claim. Replacing it with
+the installed Qwen 35B A3B reader produced the same 1/20 and 0/20 scores, ruling
+out model size alone as the remedy.
 
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:

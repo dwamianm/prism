@@ -13,8 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   20 questions under the shared `answer-only-v1` contract. PRME scored 1/20 and
   BM25 scored 0/20. Post hoc inspection found reference-answer text in 19 PRME
   contexts and all 20 BM25 contexts, isolating the Qwen 9B reader and task
-  interpretation as the dominant failure. The verified negative result is
-  published without treating its single paired win as evidence of useful
+  interpretation as the dominant failure. A separately preregistered check with
+  the installed Qwen 35B A3B reader produced the same 1/20 and 0/20 scores,
+  ruling out model size alone as the remedy. Both verified negative results are
+  published without treating the single paired win as evidence of useful
   conflict-resolution quality.
 
 - MemoryAgentBench trials can register a shared `answer-only-v1` reader contract
