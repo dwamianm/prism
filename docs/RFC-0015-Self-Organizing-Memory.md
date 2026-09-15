@@ -497,8 +497,17 @@ pair. The record is a checksummed JSON string inside the operation payload,
 preserving numeric bytes through PostgreSQL JSONB. A repeat verifies the record
 and returns its original identity without rewriting graph state. Deterministic
 copy IDs also recognize exact partial transfers from older versions; conflicting
-copies abort publication. Unverified alias links do not retire nodes and remain
-separate from this merge operation.
+copies abort publication.
+
+Unverified alias links do not retire nodes and remain separate from merge
+operations. New links use `unverified_alias_proposals_v1`: the unordered node
+pair determines the operation and edge IDs, and the backend transaction commits
+the `RELATES_TO` edge with a checksummed `ALIAS_PROPOSED` record containing both
+complete node inputs and the edge output. Admission rechecks active lifecycle,
+owner, scope, entity type and compatible provenance under the node locks. A
+repeat returns the saved outcome without another edge. Preexisting random-ID
+alias links are reused without writing a record that would claim they were
+created atomically; their historical inputs remain unavailable.
 
 External index eviction follows commit. Compaction repairs failures, while the
 durable retired lifecycle excludes stale index candidates. Cancellation and lost
@@ -520,8 +529,9 @@ Invalid or repeated terminal transitions still raise `ValueError`; there is no
 caller-supplied idempotency key for these actions. After an ambiguous outcome,
 inspect the current node with retired states included. Index eviction follows
 archival and remains repairable by compaction. These records cover the named
-transition methods, not arbitrary low-level `update_node` calls or older
-unjournaled mutations. Full historical replay remains incomplete.
+transition methods and new alias proposals, not arbitrary low-level
+`update_node` calls or older unjournaled mutations. Full historical replay
+remains incomplete.
 
 `ALL_JOBS` lists available jobs. `DEFAULT_JOBS` excludes the legacy global
 `feedback_apply` tuner. Default `organize()` calls use `DEFAULT_JOBS`, with or

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Unverified organizer alias proposals now publish their deterministic
+  `RELATES_TO` edge and a checksummed complete `ALIAS_PROPOSED` record in one
+  DuckDB or PostgreSQL transaction. Exact, concurrent and restarted retries
+  reuse one pair identity; incompatible current nodes are rejected, and legacy
+  random-ID links are reused without fabricating historical journal inputs.
+
 - Built-in embedding configuration now infers registered FastEmbed and OpenAI
   dimensions when omitted, selects a coherent OpenAI model/dimension pair when
   only that provider is chosen, and rejects unknown model dimensions before

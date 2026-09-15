@@ -54,11 +54,11 @@ New event/direct-node metadata must be finite and JSON-serializable, with no
 object keys that collide after JSON normalization. Admission
 copies metadata before awaiting backend locks/connections; it does not validate
 all low-level graph writes. Existing rows remain readable. Journal snapshots for
-lifecycle, reinforcement and organizer merges use `_snapshot_json` to preserve
-legacy non-finite values through a versioned path encoding; finite record bytes
-and old raw checksums must remain unchanged. Do not restore Pydantic JSON
-serialization that silently converts non-finite metadata to null. See
-`docs/METADATA.md` for exact compatibility limits.
+lifecycle, reinforcement, organizer merges and alias proposals use
+`_snapshot_json` to preserve legacy non-finite values through a versioned path
+encoding; finite record bytes and old raw checksums must remain unchanged. Do
+not restore Pydantic JSON serialization that silently converts non-finite
+metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
 New extraction plans use `temporal_validity_v7`. A quantity survives only
 when one supported decimal, its quantified phrase, and its verbatim unit occur
@@ -101,8 +101,11 @@ Organizer merges also enforce semantic/provenance compatibility, including
 memory/entity types, source type, session, event time and metadata. Non-entity
 copies require exact content and the same validity start. Vector similarity alone
 does not authorize merging claims; purely semantic aliases remain unverified
-`RELATES_TO` proposals. Extracted unresolved English personal references are
-event-local under new `event_local_references_v4` plans; old plans replay unchanged.
+`RELATES_TO` proposals. New proposals use deterministic pair/edge identities and
+atomically retain complete inputs and output in `ALIAS_PROPOSED`; existing
+random-ID proposal edges are reused without invented history. Extracted
+unresolved English personal references are event-local under new
+`event_local_references_v4` plans; old plans replay unchanged.
 See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.
 
 Duplicate/alias merges publish evidence, relationship copies, source retirement

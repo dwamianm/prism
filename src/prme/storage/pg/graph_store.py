@@ -18,6 +18,7 @@ import asyncpg  # type: ignore[import-untyped]
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
+from prme.storage.alias_proposal import AliasProposalResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
@@ -573,6 +574,17 @@ class PgGraphStore:
         """Atomically publish a compatible organizer merge and its journal."""
         from prme.storage.organizer_merge import merge_postgres
         return await merge_postgres(self, node_a_id, node_b_id, user_id=user_id, kind=kind, score=score)
+
+    async def propose_alias(
+        self, node_a_id: str, node_b_id: str, *, user_id: str,
+        alias_type: str, score: float,
+    ) -> AliasProposalResult | None:
+        """Atomically publish an unverified alias link and its journal."""
+        from prme.storage.alias_proposal import propose_postgres
+        return await propose_postgres(
+            self, node_a_id, node_b_id, user_id=user_id,
+            alias_type=alias_type, score=score,
+        )
 
     async def create_edge(self, edge: MemoryEdge) -> str:
         """Create a new edge between two nodes."""

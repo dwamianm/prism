@@ -16,11 +16,9 @@ from __future__ import annotations
 import logging
 import time
 from typing import TYPE_CHECKING
-from uuid import UUID
 
-from prme.models.edges import MemoryEdge
 from prme.organizer.merge_policy import alias_pair_allowed
-from prme.types import EdgeType, LifecycleState, NodeType
+from prme.types import LifecycleState, NodeType
 
 if TYPE_CHECKING:
     from prme.config import OrganizerConfig
@@ -348,20 +346,15 @@ async def resolve_aliases(
                     alias.confidence,
                 )
             else:
-                # Lower confidence: create RELATES_TO link
-                link_edge = MemoryEdge(
-                    source_id=UUID(alias.entity_a_id),
-                    target_id=UUID(alias.entity_b_id),
-                    edge_type=EdgeType.RELATES_TO,
+                result = await engine._graph_store.propose_alias(
+                    alias.entity_a_id,
+                    alias.entity_b_id,
                     user_id=node_a.user_id,
-                    confidence=alias.confidence,
-                    metadata={
-                        "relation": "alias",
-                        "alias_type": alias.alias_type,
-                        "identity_verified": False,
-                    },
+                    alias_type=alias.alias_type,
+                    score=alias.confidence,
                 )
-                await engine._graph_store.create_edge(link_edge)
+                if result is None or not result.applied:
+                    continue
                 resolved_count += 1
 
                 logger.info(

@@ -75,6 +75,13 @@ marked `identity_verified=False`, preserving both entities. Caller-supplied
 candidate labels do not bypass these checks. A proposed alias is not a verified
 same-person relationship.
 
+New proposals publish their relationship and a checksum-protected
+`ALIAS_PROPOSED` record in one backend transaction. Their operation and edge IDs
+are stable for the unordered pair, so repeated or concurrent organizer passes
+do not create duplicate links. The record retains both complete node inputs and
+the exact edge. Existing random-ID proposal edges are recognized and reused but
+not backfilled with invented creation history.
+
 These guards protect source identity and merge behavior. They do not establish
 that extraction predicates are entailed, that a source is truthful, or that a
 reader correctly attributes every quotation. The PersonaMem reader diagnostic

@@ -33,8 +33,11 @@ New LLM ingestion uses the journaled derivation protocol in RFC-0016: saved
 extraction and prepared inputs, idempotent index staging, and fenced atomic
 graph publication. New duplicate/alias merges atomically append a checksummed
 `ORGANIZER_MERGED` operation containing complete node and relationship inputs and
-outputs. This is distinct from full replay of historical organizer and manual
-mutations, whose complete operation inputs are not all journaled.
+outputs. New unverified alias links similarly use deterministic pair and edge
+identities and commit a checksummed `ALIAS_PROPOSED` record with complete node
+inputs and the published edge. This is distinct from full replay of historical
+organizer and manual mutations, whose complete operation inputs are not all
+journaled.
 - Efficient range scans by timestamp and stream.
 - Content-addressed deduplication by `content_hash`.
 
@@ -340,6 +343,8 @@ The following operation types MUST be supported. The `payload` field is operatio
 |---|---|---|
 | `SUMMARY_CREATED` | A summary object was generated. | `object_ids_summarised`, `time_window`, `summary_type` |
 | `DEDUP_RESOLVED` | Duplicate objects were resolved. | `primary_id`, `merged_ids`, `resolution_strategy` |
+| `ORGANIZER_MERGED` | Atomically publish one duplicate or verified name-variant merge. | checksummed versioned merge record |
+| `ALIAS_PROPOSED` | Atomically publish one unverified alias relationship. | checksummed versioned node inputs and edge output |
 
 ---
 

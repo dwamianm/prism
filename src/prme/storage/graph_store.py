@@ -13,6 +13,7 @@ from typing import Any, Protocol, runtime_checkable
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
+from prme.storage.alias_proposal import AliasProposalResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
@@ -60,6 +61,13 @@ class GraphStore(Protocol):
 
     async def merge_nodes(self, node_a_id: str, node_b_id: str, *, user_id: str, kind: str, score: float) -> MergeResult | None:
         """Validate and journal an organizer merge in one backend transaction."""
+        ...
+
+    async def propose_alias(
+        self, node_a_id: str, node_b_id: str, *, user_id: str,
+        alias_type: str, score: float,
+    ) -> AliasProposalResult | None:
+        """Publish one durable, unverified alias relationship for a node pair."""
         ...
 
     async def create_node(self, node: MemoryNode) -> str:
