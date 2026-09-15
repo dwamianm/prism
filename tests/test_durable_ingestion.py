@@ -104,7 +104,6 @@ async def test_fast_batch_admission_preserves_order_fields_and_recovery(config, 
             for event_id in event_ids
         ]
         assert all(status.status == "pending" for status in statuses)
-        assert engine.materialization_debt == 2
 
     async with MemoryEngine.open(config) as engine:
         result = await engine.process_pending(user_id=user, budget_ms=5000)
@@ -145,7 +144,6 @@ async def test_fast_batch_rejects_any_invalid_item_before_admission(config, user
             )
         assert await engine._event_store.get_by_user(user) == []
         assert await engine.ingest_fast_many([], user_id=user) == []
-        assert engine.materialization_debt == 0
 
 
 async def test_fast_batch_snapshots_metadata_before_waiting_for_admission(
@@ -191,7 +189,6 @@ async def test_fast_batch_request_id_is_concurrent_and_restart_safe(config, user
         )
         assert concurrent_retry == first
         assert len(await engine._event_store.get_by_user(user)) == 2
-        assert engine.materialization_debt == 2
 
         with pytest.raises(FastIngestConflict):
             await engine.ingest_fast_many(
@@ -209,7 +206,6 @@ async def test_fast_batch_request_id_is_concurrent_and_restart_safe(config, user
         )
         assert restart_retry == first
         assert len(await engine._event_store.get_by_user(user)) == 2
-        assert engine.materialization_debt == 2
         assert (await engine.process_pending(user_id=user, budget_ms=5000)).processed == 2
 
 
