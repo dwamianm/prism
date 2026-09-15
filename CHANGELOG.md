@@ -47,6 +47,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The first fail-closed scored BEAM execution now provides complete answer-quality
+  evidence for one 100K raw-memory conversation: 12/20 pass (60.0%) with a
+  0.49833 mean rubric score, 94/94 ingested chunks, 20/20 nonempty answers, and
+  53/53 complete judge verdicts. Registration binds the source, dataset,
+  selection, endpoint, and Ollama manifests before execution. Three precursor
+  attempts remain published as rejected evidence, including a completed
+  upstream result that the validator rejected for six silent empty answers.
+  The accepted cohort identifies abstention and broad summarization as the
+  largest measured gaps and does not establish official-scale or cross-product
+  leadership.
+
 - Registered BEAM evaluation now supports complete scored runs as well as the
   earlier predict-only workflow. Schema-2 registrations bind distinct local
   answerer and judge models, full Ollama digests, endpoint, selection,

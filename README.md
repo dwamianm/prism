@@ -24,6 +24,14 @@ efficiency/quality tradeoff rather than replacing the 32K quality reference.
 Older runs with other configurations remain research
 artifacts unless their own reports establish a complete reproducible protocol.
 
+The first validated scored [BEAM 100K raw-memory development run](benchmarks/results/research/2026-09-15/BEAM-100K-RAW-SCORED.md)
+completed all ten abilities at 12/20 (60.0%) with a 0.49833 mean rubric score.
+All 20 answers and 53 judge verdicts passed structural validation. The same run
+scored 0/2 on abstention and summarization, exposing answerability and broad
+evidence-coverage gaps. It covers one conversation and uses mutable Ollama cloud
+model aliases, so it is development evidence rather than an official-scale or
+cross-product leadership result.
+
 On the first corrected matched MemoryAgentBench task, PRME scored 20/20 versus
 BM25 at 17/20 on 20 Banking77 development questions while using 90.52% fewer
 retrieved-context tokens. The [verified report](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md)

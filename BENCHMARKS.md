@@ -98,8 +98,14 @@ diagnostics; it does not report official accuracy.
 For 100K-to-10M conversation histories across ten memory abilities, see the
 [BEAM integration](benchmarks/integrations/BEAM.md). It runs behind the pinned
 official harness without exposing rubrics or answers to PRME and provides raw
-source and full product-extraction profiles. The adapter contract is tested; no
-BEAM quality result has been completed yet.
+source and full product-extraction profiles. The first validated scored raw
+development run completed one 100K conversation and all ten abilities at 12/20
+(60.0%), with a 0.49833 mean rubric score and no structural validation errors.
+The [report](benchmarks/results/research/2026-09-15/BEAM-100K-RAW-SCORED.md)
+records the complete claim boundary and the three rejected precursor trials.
+This small cloud-model cohort identifies abstention, broad summarization,
+temporal coverage, and contradiction coverage as gaps; it is not an official-scale
+or matched cross-system result.
 
 For controlled evidence retrieval without a generation or judge API, use:
 

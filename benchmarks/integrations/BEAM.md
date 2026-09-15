@@ -77,13 +77,15 @@ run; both PRME and upstream checkpoints must already exist.
 
 Registration schema 2 supports a scored raw-memory run through the same
 launcher. It binds separate answerer and judge model names, their complete
-Ollama digests, the loopback OpenAI-compatible endpoint, worker/rate controls,
+installed Ollama manifest digests, the loopback OpenAI-compatible endpoint, worker/rate controls,
 question selection, cutoff, dataset, and source files before the first model
 call. The launcher verifies both installed model digests and supplies the
 registered values to the unmodified upstream harness. The execution manifest
 retains the exact protocol and model identities; registered validation rejects
 any drift. Answerer and judge must be distinct models so a scored run cannot
-silently grade itself with the same model.
+silently grade itself with the same model. An Ollama cloud manifest identifies
+its remote host and model but does not pin remote model weights; registrations
+and reports must disclose that weaker reproducibility boundary.
 
 In a checkout of the pinned upstream commit, start with one retrieval-only
 conversation. This downloads only the selected public BEAM split and preserves
@@ -126,7 +128,8 @@ verdicts. It hashes every accepted artifact and exits nonzero on any gap.
 For a scored run, create a schema-2 registration and pass it to the same
 `run_beam` command. The current registered profile is intentionally narrow: one
 100K conversation, every ability, top-50 recall, one cutoff, raw source storage,
-and local Ollama through `http://127.0.0.1:11434/v1`. The upstream harness fixes
+and Ollama through `http://127.0.0.1:11434/v1`. Models may execute locally or
+through an explicitly recorded Ollama cloud manifest. The upstream harness fixes
 generation temperature at zero and its own retry/timeout behavior; those
 runtime sources are hashed by the registration. Use `--resume` after an
 interruption so the launcher rechecks every bound input before reusing output.
@@ -161,3 +164,6 @@ The pinned official client also passed an
 The registered raw predict-only execution and its interpretation boundary are
 reported in
 [`BEAM-100K-RAW.md`](../results/research/2026-09-14/BEAM-100K-RAW.md).
+The first accepted scored raw development execution and its rejected precursor
+trials are reported in
+[`BEAM-100K-RAW-SCORED.md`](../results/research/2026-09-15/BEAM-100K-RAW-SCORED.md).

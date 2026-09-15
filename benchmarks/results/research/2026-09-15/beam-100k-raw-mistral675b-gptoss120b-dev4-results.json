@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "kind": "beam-raw-scored-result",
+  "status": "complete and accepted by fail-closed validation",
+  "registration": "beam-100k-raw-mistral675b-gptoss120b-dev4-registration.json",
+  "registration_sha256": "a21bb14648e768aa8e93269ab03e3c35451eab06b17aad4aa135537e2eda39a4",
+  "source": {
+    "prme_revision": "b95931aae261ff627756fa2f979cc110c15ac639",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "protocol": {
+    "profile": "raw",
+    "chat_sizes": [
+      "100K"
+    ],
+    "conversations": [
+      0
+    ],
+    "question_types": 10,
+    "questions_per_type": 2,
+    "top_k": 50,
+    "cutoff": 50
+  },
+  "models": {
+    "answerer": {
+      "model": "mistral-large-3:675b-cloud",
+      "manifest_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c"
+    },
+    "judge": {
+      "model": "gpt-oss:120b-cloud",
+      "manifest_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed"
+    }
+  },
+  "metrics": {
+    "overall": {
+      "correct": 12,
+      "total": 20,
+      "accuracy": 60.0,
+      "average_score": 0.49833,
+      "errors": 0
+    },
+    "by_question_type": {
+      "abstention": {
+        "correct": 0,
+        "total": 2,
+        "accuracy": 0.0,
+        "average_score": 0.0
+      },
+      "contradiction_resolution": {
+        "correct": 1,
+        "total": 2,
+        "accuracy": 50.0,
+        "average_score": 0.375
+      },
+      "event_ordering": {
+        "correct": 1,
+        "total": 2,
+        "accuracy": 50.0,
+        "average_score": 0.46665
+      },
+      "information_extraction": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.91665
+      },
+      "instruction_following": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.75
+      },
+      "knowledge_update": {
+        "correct": 1,
+        "total": 2,
+        "accuracy": 50.0,
+        "average_score": 0.5
+      },
+      "multi_session_reasoning": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.875
+      },
+      "preference_following": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.75
+      },
+      "summarization": {
+        "correct": 0,
+        "total": 2,
+        "accuracy": 0.0,
+        "average_score": 0.1
+      },
+      "temporal_reasoning": {
+        "correct": 1,
+        "total": 2,
+        "accuracy": 50.0,
+        "average_score": 0.25
+      }
+    }
+  },
+  "execution": {
+    "ingestion_chunks_processed": 94,
+    "ingestion_chunks_failed": 0,
+    "questions_written": 20,
+    "retrieval_results_per_question_min": 50,
+    "retrieval_results_per_question_max": 50,
+    "retrieval_latency_ms_min": 71.5,
+    "retrieval_latency_ms_median": 90.8,
+    "retrieval_latency_ms_mean": 100.265,
+    "retrieval_latency_ms_max": 174.5,
+    "answer_characters_min": 616,
+    "answer_characters_median": 2008.0,
+    "answer_characters_max": 9871,
+    "nonempty_answers": 20,
+    "judge_verdicts": 53,
+    "nonempty_judge_reasons": 53,
+    "validation_errors": 0
+  },
+  "claim_boundary": "This is a one-conversation, 20-question 100K development result using raw PRME notes and mutable Ollama cloud model aliases. It is not an official-scale BEAM result, a matched cross-system comparison, or evidence of market leadership.",
+  "artifact_sha256": {
+    "execution-manifest.json": "06a9aa39f79f9e254edc7716ffca62db93f077e05262d66e457c3733955cd9f1",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "13818b34d493498d7e28de83963cf85ad9bac412f853ea64edc46cc9999a7046",
+    "service.log": "1ff5fd7f0c4e18a2ce2ddc0fc1823e0ac32878d698560cdff4251e1e0f0cd32e",
+    "upstream-results/beam_results_20260915_140715.json": "452267a3c7de17f45d51acdad160058f5b6be41d86d8411a4029bcfdea94a4a0",
+    "validator.json": "cf57d01c08ac78498db720e45039e28945456f319b7cb00248ba96d0c72ae573",
+    "_ingestion_100K_0.json": "a029bc508b7e53fdfcc2e8498dc72be61d4637d9c0d73e065847894455fd30bb",
+    "100K_0_q0_abstention.json": "f42b22210ae0ec084ffb6ed886fc0b04cd87431cd0443fbcba1894f9fa6f002e",
+    "100K_0_q1_abstention.json": "d7b411ed62ff4d1ffc7aeeeae415f8f8cc215391cc4e61ee18df2744a220e594",
+    "100K_0_q2_contradiction_resolution.json": "1301b5a53c82a93c0ab52145f715e71d810a576569baf38cb41e6f7f7203ce11",
+    "100K_0_q3_contradiction_resolution.json": "9d5195e25b4287021f7c9545fa4a204bf07e34fde16cbccbb331943096d563f9",
+    "100K_0_q4_event_ordering.json": "541d6def580ed12a4d6c6007499dce8f7b45b33da68b49adfde88d220bc9861a",
+    "100K_0_q5_event_ordering.json": "45d3257aafedc5efd0c2dc996dd9cd5e403903509f2946995a8d02daeba71d2f",
+    "100K_0_q6_information_extraction.json": "0e5144bfb703d95cc9e1e55c6102597ee2029ac3bf85c1edc07f9c9844f7cda7",
+    "100K_0_q7_information_extraction.json": "8562fab30fd92e54d6879b3508d1ea90b845bbfcfe83d8def04ab058ce24b24a",
+    "100K_0_q8_instruction_following.json": "29ec2b6c33fb6c4b9db3b14b4895fbe9499bcb54a7419acfeecbcb2119f047a9",
+    "100K_0_q9_instruction_following.json": "54bcd6ed4f2bb3922499da0b0f911199bb0d3cebae1142e7f1fa4e187fefb710",
+    "100K_0_q10_knowledge_update.json": "dcb1344f39238ccaae882bb209af7fe4225fb3804dce14b9a76c82893ddcf28c",
+    "100K_0_q11_knowledge_update.json": "01a84affb7c30d4a9dce67a30985d8b762a45f71a433472defa582792105ebf2",
+    "100K_0_q12_multi_session_reasoning.json": "5bae010d5015c296d060d563d96b06243bd705e2a53f7b3e87a16b7c550b04ec",
+    "100K_0_q13_multi_session_reasoning.json": "688e26cfe9f9f9d901c119eca7e6a7675fba6366ae23dd169f16b4f6b1475c35",
+    "100K_0_q14_preference_following.json": "aec0b840ecd99b873439ef7d55b9255cc6cabb0821358960544fab61647cab09",
+    "100K_0_q15_preference_following.json": "eccb0b44debf5895e207ebc1bb04d45dcd04600993e40656f9a4dc17f7a69fc5",
+    "100K_0_q16_summarization.json": "c1059823619fecb7d12c67663f984f43a772b23bd10cc2c67c99d165a0f6d50d",
+    "100K_0_q17_summarization.json": "a0ace8c545f79a60538ba2d18af5111d29873240578236121b121a8f89a343e5",
+    "100K_0_q18_temporal_reasoning.json": "6d498185028742bee16cd2719baeec139c588082c5fba97dc2cb189ff59ea8a1",
+    "100K_0_q19_temporal_reasoning.json": "c301c3936bbbedec64726889b81e2d948b5f4ae9da7eff94e8197041212abd90"
+  }
+}
