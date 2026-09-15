@@ -33,7 +33,12 @@ pack build, and development-cohort boundary. The next matched
 found the opposite quality result: PRME scored 16/20 versus BM25 at 20/20 while
 using 90.48% fewer retrieved-context tokens. The failed contexts omitted stored
 answer-bearing episode fragments, making episodic reconstruction a measured
-retrieval gap rather than a leadership claim. A subsequent
+retrieval gap rather than a leadership claim. A subsequent registered
+[two-stage episode-routing trial](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-EPISODE-DEV20.md)
+scored 19/20 versus BM25 at 20/20 with the same 90.48% context reduction. It
+recovered three of the earlier PRME failures without a paired loss; the option
+remains disabled by default pending cross-task regressions and a larger cohort.
+A subsequent
 [Conflict Resolution trial](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md)
 scored 1/20 versus 0/20. Reference-answer text was present in 19 PRME contexts
 and all 20 BM25 contexts, so that run identifies the Qwen 9B reader as inadequate

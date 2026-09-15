@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   New execution descriptors also hash the episode-routing module alongside the
   other retrieval stages.
 
+- The registered EventQA episode-routing development trial scored 19/20 versus
+  BM25 at 20/20 while using 90.48% fewer retrieved-context tokens. Against the
+  earlier flat-session PRME arm on the same 20 questions and reader, it recovered
+  three of four failures with no paired losses and essentially unchanged context
+  size and query time. The one remaining miss contained the strongest routed
+  evidence but not the answer verbatim. This supports the technique on the named
+  slice; the default remains disabled pending cross-task regressions and a larger
+  cohort.
+
 - MemoryAgentBench registrations now bind the complete retrieval source map
   reported by execution descriptors. Verification compares every durable
   receipt with that frozen map, rejecting runs whose adapter came from the
