@@ -88,10 +88,10 @@ class VectorIndex:
         )
         if os.path.exists(index_path):
             self._index.load(index_path)
-            # USearch 2.23.0 can segfault when adding to a loaded snapshot
-            # whose final vector was removed before it was saved. Discarding
-            # that empty native object is lossless; durable payload recovery
-            # below repopulates a fresh index when metadata still owns vectors.
+            # Discarding an empty loaded native object is lossless; durable
+            # payload recovery below repopulates a fresh index when metadata
+            # still owns vectors. It also avoids relying on native empty-index
+            # reuse behavior across USearch releases.
             if len(self._index) == 0:
                 self._index = Index(
                     ndim=embedding_provider.dimension,

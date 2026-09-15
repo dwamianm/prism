@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Repeated single-vector archive cycles no longer stall in the native HNSW
+  deletion path after roughly 192 operations. PRME now requires USearch 2.26.2,
+  whose deletion implementation completes this churn pattern; a subprocess
+  regression test keeps a native stall bounded and observable.
+
 ### Added
 
 - Current-state scoring now recognizes the newest record when it explicitly

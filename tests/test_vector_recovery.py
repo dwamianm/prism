@@ -166,6 +166,29 @@ async def test_loaded_empty_snapshot_accepts_first_new_vector(database, tmp_path
     assert len(reopened._index) == 1
 
 
+def test_usearch_survives_repeated_single_vector_churn():
+    """The supported native index must not stall after repeated archive cycles."""
+    script = """
+import numpy as np
+from usearch.index import Index
+
+index = Index(ndim=3, metric="cos", dtype="f32")
+for key in range(1, 251):
+    vector = np.array(
+        [key % 7 + 1, key % 11 + 1, key % 13 + 1], dtype=np.float32
+    )
+    index.add(key, vector)
+    index.remove(key)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
 async def test_failed_snapshot_write_preserves_previous_complete_file(database, tmp_path, monkeypatch):
     index = open_index(database, tmp_path, save_interval=1)
     await index.index("one", "first", "alice")
