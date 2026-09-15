@@ -25,7 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aborts after malformed output or exhausted retries instead of silently scoring
   judge failures as retrieval misses. The first registered 100-record Qwen 35B
   development run completed at 95/100 recall@5 with a 90% to 99% bootstrap
-  interval and 100/100 durable materializations.
+  interval and 100/100 durable materializations. The preregistered official-size
+  confirmation scored 979/1,000 with a 97.0% to 98.7% interval, including 98.8%
+  personal-fact and 97.0% task-request recall, with all 1,000 writes durably
+  materialized.
 
 - Current-state scoring now recognizes the newest record when it explicitly
   presents itself as an update and applies a configurable, relevance-capped,
