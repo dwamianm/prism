@@ -41,7 +41,11 @@ def _registered_validation(
     from benchmarks.integrations.run_beam import (
         DATASET_FILENAME,
         MANIFEST_FILENAME,
-        _expected_protocol,
+        PREDICT_EXECUTION_KIND,
+        PREDICT_REGISTRATION_KIND,
+        SCORED_EXECUTION_KIND,
+        SCORED_REGISTRATION_KIND,
+        _protocol,
     )
 
     errors = report["errors"]
@@ -53,13 +57,22 @@ def _registered_validation(
     dataset_path = execution_root / "dataset" / DATASET_FILENAME
     if registration is None or manifest is None:
         return
-    if registration.get("schema_version") != 1:
+    registration_schema = registration.get("schema_version")
+    registration_kind = registration.get("kind")
+    supported_registration = (
+        (registration_schema, registration_kind)
+        in {
+            (1, PREDICT_REGISTRATION_KIND),
+            (2, SCORED_REGISTRATION_KIND),
+        }
+    )
+    if not supported_registration:
         errors.append("unsupported BEAM registration schema")
-    if registration.get("kind") != "beam-raw-predict-only-registration":
-        errors.append("unexpected BEAM registration kind")
     registered_protocol = registration.get("protocol")
-    if registered_protocol != _expected_protocol():
-        errors.append("registration does not describe the raw predict-only protocol")
+    try:
+        _protocol(registration)
+    except RuntimeError as exc:
+        errors.append(str(exc))
     if not isinstance(registered_protocol, dict):
         registered_protocol = {}
     expected_selection = {
@@ -79,12 +92,21 @@ def _registered_validation(
         ),
     }:
         errors.append("validation selection differs from registration")
-    if manifest.get("kind") != "beam-raw-predict-only-execution":
+    expected_execution_kind = (
+        SCORED_EXECUTION_KIND if scored else PREDICT_EXECUTION_KIND
+    )
+    if manifest.get("kind") != expected_execution_kind:
         errors.append("unexpected BEAM execution manifest kind")
-    if manifest.get("schema_version") != 1:
+    expected_manifest_schema = 2 if scored else 1
+    if manifest.get("schema_version") != expected_manifest_schema:
         errors.append("unsupported BEAM execution manifest schema")
     if manifest.get("registration_sha256") != _hash(registration_path):
         errors.append("BEAM execution manifest does not match registration")
+    if scored:
+        if manifest.get("protocol") != registered_protocol:
+            errors.append("executed BEAM protocol differs from registration")
+        if manifest.get("models") != registration.get("models"):
+            errors.append("executed BEAM models differ from registration")
     source = manifest.get("source")
     registered_source = registration.get("source")
     registered_files: dict[str, Any] = {}

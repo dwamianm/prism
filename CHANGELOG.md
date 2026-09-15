@@ -47,6 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Registered BEAM evaluation now supports complete scored runs as well as the
+  earlier predict-only workflow. Schema-2 registrations bind distinct local
+  answerer and judge models, full Ollama digests, endpoint, selection,
+  concurrency, dataset, and runtime source before the first model call. The
+  launcher and fail-closed validator reject model or protocol drift while
+  preserving schema-1 predict-only artifacts unchanged.
+
 - AgentMemBench retrieval registrations now bind the exact Ollama judge model
   digest, endpoint, and generation/retry controls before execution. Verification
   checks both the saved harness arguments and the live model identity. The

@@ -1,4 +1,4 @@
-"""Launch the registered retrieval-only BEAM workflow from attested sources."""
+"""Launch registered BEAM workflows from attested sources."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ import shutil
 import subprocess
 import tempfile
 import time
-from typing import Any
+from typing import Any, cast
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import ProxyHandler, build_opener, urlopen
 
 from benchmarks.integrations.beam_service import UPSTREAM_COMMIT
 from benchmarks.integrations.run_melt import canonical_json, digest, git_identity
@@ -25,6 +25,10 @@ DATASET_REVISION = "3205395e897e7318c7b094ef4e6047b9b82dbb03"
 DATASET_FILENAME = "beam_100K.json"
 MANIFEST_FILENAME = "execution-manifest.json"
 PREDICTION_DIRECTORY = f"predicted_{PROJECT_NAME}"
+PREDICT_REGISTRATION_KIND = "beam-raw-predict-only-registration"
+SCORED_REGISTRATION_KIND = "beam-raw-scored-registration"
+PREDICT_EXECUTION_KIND = "beam-raw-predict-only-execution"
+SCORED_EXECUTION_KIND = "beam-raw-scored-execution"
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -70,6 +74,98 @@ def _expected_protocol() -> dict[str, Any]:
     }
 
 
+def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
+    """Validate and return either supported registered protocol."""
+    schema_version = registration.get("schema_version")
+    kind = registration.get("kind")
+    value = registration.get("protocol")
+    if schema_version == 1 and kind == PREDICT_REGISTRATION_KIND:
+        if value != _expected_protocol():
+            raise RuntimeError("BEAM protocol does not match the registered smoke")
+        return cast(dict[str, Any], value)
+    if schema_version != 2 or kind != SCORED_REGISTRATION_KIND:
+        raise RuntimeError("unsupported BEAM registration schema or kind")
+    if not isinstance(value, dict):
+        raise RuntimeError("BEAM registration is missing its protocol")
+    expected_fixed = {
+        "profile": "raw",
+        "chat_sizes": ["100K"],
+        "conversations": [0],
+        "question_types": list(QUESTION_TYPES),
+        "top_k": 50,
+        "top_k_cutoffs": [50],
+        "predict_only": False,
+        "chunk_size": 2,
+    }
+    if any(value.get(key) != expected for key, expected in expected_fixed.items()):
+        raise RuntimeError("BEAM scored protocol changes the registered selection")
+    for key in ("project_name", "run_id"):
+        if not isinstance(value.get(key), str) or not value[key].strip():
+            raise RuntimeError(f"BEAM scored protocol requires {key}")
+    for key in ("max_workers", "rpm"):
+        if (
+            not isinstance(value.get(key), int)
+            or isinstance(value[key], bool)
+            or value[key] < 1
+        ):
+            raise RuntimeError(f"BEAM scored protocol requires a positive {key}")
+    models = registration.get("models")
+    if not isinstance(models, dict) or set(models) != {"answerer", "judge"}:
+        raise RuntimeError("BEAM scored registration must bind answerer and judge")
+    for role, model in models.items():
+        if not isinstance(model, dict):
+            raise RuntimeError(f"BEAM {role} identity must be an object")
+        if model.get("provider") != "openai":
+            raise RuntimeError(
+                "The registered local BEAM run requires the OpenAI-compatible provider"
+            )
+        for key in ("model", "base_url", "model_digest"):
+            if not isinstance(model.get(key), str) or not model[key].strip():
+                raise RuntimeError(f"BEAM {role} identity requires {key}")
+        if model["base_url"] != "http://127.0.0.1:11434/v1":
+            raise RuntimeError(
+                "The registered BEAM model endpoint must be loopback Ollama"
+            )
+    if models["answerer"]["model"] == models["judge"]["model"]:
+        raise RuntimeError("BEAM answerer and judge models must be distinct")
+    return value
+
+
+def _ollama_model_digests(base_url: str) -> dict[str, str]:
+    native_url = base_url.rstrip("/")
+    if native_url.endswith("/v1"):
+        native_url = native_url[:-3]
+    opener = build_opener(ProxyHandler({}))
+    with opener.open(native_url + "/api/tags", timeout=10) as response:
+        inventory = json.load(response)
+    return {
+        item["name"]: item["digest"]
+        for item in inventory.get("models", ())
+        if isinstance(item, dict)
+        and isinstance(item.get("name"), str)
+        and isinstance(item.get("digest"), str)
+    }
+
+
+def _verify_models(registration: dict[str, Any]) -> None:
+    """Require the registered local model bytes before the first model call."""
+    if registration.get("kind") != SCORED_REGISTRATION_KIND:
+        return
+    models = registration["models"]
+    inventories: dict[str, dict[str, str]] = {}
+    for role in ("answerer", "judge"):
+        identity = models[role]
+        base_url = identity["base_url"]
+        inventory = inventories.get(base_url)
+        if inventory is None:
+            inventory = _ollama_model_digests(base_url)
+            inventories[base_url] = inventory
+        if inventory.get(identity["model"]) != identity["model_digest"]:
+            raise RuntimeError(
+                f"BEAM {role} Ollama model digest differs from registration"
+            )
+
+
 def validate_registration(
     registration: dict[str, Any],
     *,
@@ -78,10 +174,7 @@ def validate_registration(
     source_hashes: dict[str, str],
     dataset_sha256: str,
 ) -> None:
-    if registration.get("schema_version") != 1:
-        raise RuntimeError("BEAM registration schema version must equal 1")
-    if registration.get("kind") != "beam-raw-predict-only-registration":
-        raise RuntimeError("unexpected BEAM registration kind")
+    _protocol(registration)
     source = registration.get("source")
     if not isinstance(source, dict):
         raise RuntimeError("BEAM registration is missing source identity")
@@ -98,8 +191,6 @@ def validate_registration(
         raise RuntimeError("BEAM dataset revision differs from registration")
     if dataset.get("cache_sha256") != dataset_sha256:
         raise RuntimeError("BEAM dataset cache differs from registration")
-    if registration.get("protocol") != _expected_protocol():
-        raise RuntimeError("BEAM protocol does not match the registered smoke")
     system = registration.get("system")
     if (
         not isinstance(system, dict)
@@ -108,6 +199,7 @@ def validate_registration(
         or not isinstance(system.get("version"), str)
     ):
         raise RuntimeError("BEAM registration does not identify the raw PRME system")
+    _verify_models(registration)
 
 
 def _write_exact(path: Path, payload: bytes) -> None:
@@ -134,7 +226,7 @@ def prepare_launch(
     registration_path: Path,
     dataset_path: Path,
     resume: bool,
-) -> dict[str, Path]:
+) -> dict[str, Any]:
     project_root = Path(__file__).resolve().parents[2]
     project_revision, project_changes = git_identity(project_root)
     upstream_revision, upstream_changes = git_identity(upstream_root)
@@ -158,13 +250,16 @@ def prepare_launch(
         source_hashes=files,
         dataset_sha256=dataset_sha256,
     )
+    protocol = _protocol(registration)
+    scored = not protocol["predict_only"]
 
     output_root.mkdir(parents=True, exist_ok=True)
     manifest = {
-        "schema_version": 1,
-        "kind": "beam-raw-predict-only-execution",
+        "schema_version": 2 if scored else 1,
+        "kind": SCORED_EXECUTION_KIND if scored else PREDICT_EXECUTION_KIND,
         "registration_sha256": digest(registration_path),
         "dataset_sha256": dataset_sha256,
+        **({"protocol": protocol, "models": registration["models"]} if scored else {}),
         "source": {
             "prme_revision": project_revision,
             "prme_worktree_changes": project_changes,
@@ -221,8 +316,10 @@ def prepare_launch(
         "dataset_dir": frozen_dataset.parent,
         "pack_dir": pack_dir,
         "prediction_root": prediction_root,
-        "prediction_dir": prediction_root / PREDICTION_DIRECTORY,
+        "prediction_dir": prediction_root / f"predicted_{protocol['project_name']}",
         "service_log": output_root / "service.log",
+        "protocol": protocol,
+        "models": registration.get("models"),
     }
 
 
@@ -244,8 +341,9 @@ def _wait_for_service(port: int, process: subprocess.Popen[Any]) -> None:
 
 
 def launch(
-    *, upstream_root: Path, paths: dict[str, Path], port: int, resume: bool
+    *, upstream_root: Path, paths: dict[str, Any], port: int, resume: bool
 ) -> Path:
+    protocol = paths["protocol"]
     service_command = [
         "uv",
         "--directory",
@@ -287,30 +385,55 @@ def launch(
                 "-m",
                 "benchmarks.beam.run",
                 "--project-name",
-                PROJECT_NAME,
+                protocol["project_name"],
                 "--backend",
                 "oss",
                 "--mem0-host",
                 f"http://127.0.0.1:{port}",
                 "--chat-sizes",
-                "100K",
+                ",".join(protocol["chat_sizes"]),
                 "--conversations",
-                "0",
+                ",".join(str(value) for value in protocol["conversations"]),
                 "--top-k",
-                "50",
+                str(protocol["top_k"]),
                 "--top-k-cutoffs",
-                "50",
-                "--predict-only",
+                ",".join(str(value) for value in protocol["top_k_cutoffs"]),
+                "--question-types",
+                ",".join(protocol["question_types"]),
                 "--run-id",
-                RUN_ID,
+                protocol["run_id"],
                 "--dataset-cache-dir",
                 str(paths["dataset_dir"]),
                 "--output-dir",
                 str(paths["prediction_root"]),
             ]
+            environment = None
+            if protocol["predict_only"]:
+                command.append("--predict-only")
+            else:
+                models = paths["models"]
+                command.extend(
+                    [
+                        "--answerer-model",
+                        models["answerer"]["model"],
+                        "--judge-model",
+                        models["judge"]["model"],
+                        "--provider",
+                        models["answerer"]["provider"],
+                        "--judge-provider",
+                        models["judge"]["provider"],
+                        "--max-workers",
+                        str(protocol["max_workers"]),
+                        "--rpm",
+                        str(protocol["rpm"]),
+                    ]
+                )
+                environment = os.environ.copy()
+                environment["OPENAI_BASE_URL"] = models["answerer"]["base_url"]
+                environment["OPENAI_API_KEY"] = "local-beam-evaluation"
             if resume:
                 command.append("--resume")
-            subprocess.run(command, cwd=upstream_root, check=True)
+            subprocess.run(command, cwd=upstream_root, env=environment, check=True)
         finally:
             service.terminate()
             try:
@@ -318,7 +441,7 @@ def launch(
             except subprocess.TimeoutExpired:
                 service.kill()
                 service.wait(timeout=10)
-    return paths["prediction_dir"]
+    return cast(Path, paths["prediction_dir"])
 
 
 def main() -> None:

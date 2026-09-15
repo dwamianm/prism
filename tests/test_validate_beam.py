@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from benchmarks.integrations import run_beam
 from benchmarks.integrations.validate_beam import validate_run
 from benchmarks.integrations import validate_beam
@@ -127,6 +129,202 @@ def _registered_protocol():
         "run_id": run_beam.RUN_ID,
         "chunk_size": 2,
     }
+
+
+def _scored_protocol():
+    return {
+        "profile": "raw",
+        "chat_sizes": ["100K"],
+        "conversations": [0],
+        "question_types": list(validate_beam.QUESTION_TYPES),
+        "top_k": 50,
+        "top_k_cutoffs": [50],
+        "predict_only": False,
+        "project_name": "prme-beam-scored-test",
+        "run_id": "prme-beam-scored-test",
+        "chunk_size": 2,
+        "max_workers": 1,
+        "rpm": 60,
+    }
+
+
+def _scored_models():
+    return {
+        "answerer": {
+            "provider": "openai",
+            "model": "answerer",
+            "base_url": "http://127.0.0.1:11434/v1",
+            "model_digest": "a" * 64,
+        },
+        "judge": {
+            "provider": "openai",
+            "model": "judge",
+            "base_url": "http://127.0.0.1:11434/v1",
+            "model_digest": "b" * 64,
+        },
+    }
+
+
+def test_scored_beam_protocol_requires_distinct_pinned_local_models(monkeypatch):
+    registration = {
+        "schema_version": 2,
+        "kind": run_beam.SCORED_REGISTRATION_KIND,
+        "protocol": _scored_protocol(),
+        "models": _scored_models(),
+    }
+    assert run_beam._protocol(registration) == registration["protocol"]
+    monkeypatch.setattr(
+        run_beam,
+        "_ollama_model_digests",
+        lambda _url: {"answerer": "a" * 64, "judge": "b" * 64},
+    )
+    run_beam._verify_models(registration)
+
+    registration["models"]["judge"]["model"] = "answerer"
+    with pytest.raises(RuntimeError, match="must be distinct"):
+        run_beam._protocol(registration)
+
+
+def test_registered_beam_validation_accepts_bound_scored_execution(tmp_path):
+    execution_root = tmp_path / "execution"
+    prediction_dir = execution_root / "predictions"
+    prediction_dir.mkdir(parents=True)
+    protocol = _scored_protocol()
+    models = _scored_models()
+    owner = f"beam_100K_0_{protocol['run_id']}"
+    _write(
+        prediction_dir / "_ingestion_100K_0.json",
+        {
+            "chat_size": "100K",
+            "conversation_idx": 0,
+            "user_id": owner,
+            "run_id": protocol["run_id"],
+            "chunk_size": 2,
+            "total_chunks_processed": 10,
+            "total_chunks_failed": 0,
+        },
+    )
+    question_index = 0
+    for question_type in validate_beam.QUESTION_TYPES:
+        for _ in range(2):
+            question_id = f"100K_0_q{question_index}_{question_type}"
+            question = f"Question {question_index}?"
+            _write(
+                prediction_dir / f"{question_id}.json",
+                {
+                    "question_id": question_id,
+                    "chat_size": "100K",
+                    "conversation_idx": 0,
+                    "question_type": question_type,
+                    "question": question,
+                    "rubric": ["Bound nugget"],
+                    "user_id": owner,
+                    "retrieval": {
+                        "search_query": question,
+                        "search_results": [
+                            {"id": "node", "memory": "memory", "score": 0.5}
+                        ],
+                        "search_latency_ms": 1.0,
+                        "total_results": 1,
+                    },
+                    "cutoff_results": {
+                        "top_50": {
+                            "judgment": "PASS",
+                            "score": 1.0,
+                            "generated_answer": "Bound answer",
+                            "memories_evaluated": 1,
+                            "nugget_scores": [
+                                {
+                                    "nugget": "Bound nugget",
+                                    "score": 1.0,
+                                    "reason": "Supported",
+                                }
+                            ],
+                        }
+                    },
+                },
+            )
+            question_index += 1
+
+    dataset = execution_root / "dataset" / run_beam.DATASET_FILENAME
+    dataset.parent.mkdir(parents=True)
+    dataset.write_text("[]")
+    files = {"service_sha256": "c" * 64}
+    registration = {
+        "schema_version": 2,
+        "kind": run_beam.SCORED_REGISTRATION_KIND,
+        "source": {
+            "prme_revision": "1" * 40,
+            "upstream_revision": run_beam.UPSTREAM_COMMIT,
+            "files": files,
+        },
+        "dataset": {
+            "revision": run_beam.DATASET_REVISION,
+            "cache_sha256": validate_beam._hash(dataset),
+        },
+        "protocol": protocol,
+        "models": models,
+        "system": {
+            "id": "prme",
+            "version": "0.11.0",
+            "profile": "raw",
+            "embedding": {
+                "provider": "fastembed",
+                "model": "BAAI/bge-small-en-v1.5",
+                "dimension": 384,
+            },
+        },
+    }
+    registration_path = tmp_path / "registration.json"
+    _write(registration_path, registration)
+    _write(
+        execution_root / run_beam.MANIFEST_FILENAME,
+        {
+            "schema_version": 2,
+            "kind": run_beam.SCORED_EXECUTION_KIND,
+            "registration_sha256": validate_beam._hash(registration_path),
+            "dataset_sha256": validate_beam._hash(dataset),
+            "protocol": protocol,
+            "models": models,
+            "source": {
+                "prme_revision": "1" * 40,
+                "prme_worktree_changes": [],
+                "upstream_revision": run_beam.UPSTREAM_COMMIT,
+                "upstream_worktree_changes": [],
+                "files": files,
+            },
+        },
+    )
+    _write(
+        execution_root / "prme-pack" / "beam_adapter_manifest.json",
+        {
+            "profile": "raw",
+            "extraction": None,
+            "upstream_commit": run_beam.UPSTREAM_COMMIT,
+            "prme_version": "0.11.0",
+            "adapter_source_sha256": "c" * 64,
+            "embedding": registration["system"]["embedding"],
+        },
+    )
+
+    report = validate_beam.validate_run(
+        prediction_dir,
+        chat_sizes=("100K",),
+        conversations=(0,),
+        scored=True,
+        cutoffs=(50,),
+    )
+    validate_beam._registered_validation(
+        report,
+        registration_path=registration_path,
+        execution_root=execution_root,
+        chat_sizes=("100K",),
+        conversations=(0,),
+        question_types=validate_beam.QUESTION_TYPES,
+        scored=True,
+        cutoffs=(50,),
+    )
+    assert report["errors"] == []
 
 
 def test_registered_beam_validation_binds_source_dataset_and_adapter(tmp_path):

@@ -75,6 +75,16 @@ registration pins its SHA-256 digest and the Hugging Face dataset revision. Use
 `--resume` with the same output directory and registration after an interrupted
 run; both PRME and upstream checkpoints must already exist.
 
+Registration schema 2 supports a scored raw-memory run through the same
+launcher. It binds separate answerer and judge model names, their complete
+Ollama digests, the loopback OpenAI-compatible endpoint, worker/rate controls,
+question selection, cutoff, dataset, and source files before the first model
+call. The launcher verifies both installed model digests and supplies the
+registered values to the unmodified upstream harness. The execution manifest
+retains the exact protocol and model identities; registered validation rejects
+any drift. Answerer and judge must be distinct models so a scored run cannot
+silently grade itself with the same model.
+
 In a checkout of the pinned upstream commit, start with one retrieval-only
 conversation. This downloads only the selected public BEAM split and preserves
 the upstream ingestion and prediction checkpoints:
@@ -113,13 +123,13 @@ two questions per selected ability and conversation, exact owner/query
 continuity, finite retrieval records, and complete non-empty answer and nugget
 verdicts. It hashes every accepted artifact and exits nonzero on any gap.
 
-For a scored run, omit `--predict-only` and explicitly select the answerer,
-judge, providers, model endpoints, sampling behavior, and repeated-run policy.
-The upstream OpenAI client honors `OPENAI_BASE_URL` for an OpenAI-compatible
-local endpoint, but its current CLI does not record every endpoint or sampling
-control. Record them in a separate registration before making a comparative
-claim. Use the same upstream `--run-id`, its `--resume` flag, and PRME's
-`--resume` flag after interruption.
+For a scored run, create a schema-2 registration and pass it to the same
+`run_beam` command. The current registered profile is intentionally narrow: one
+100K conversation, every ability, top-50 recall, one cutoff, raw source storage,
+and local Ollama through `http://127.0.0.1:11434/v1`. The upstream harness fixes
+generation temperature at zero and its own retry/timeout behavior; those
+runtime sources are hashed by the registration. Use `--resume` after an
+interruption so the launcher rechecks every bound input before reusing output.
 
 ## Interpretation boundaries
 
