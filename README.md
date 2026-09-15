@@ -24,6 +24,12 @@ efficiency/quality tradeoff rather than replacing the 32K quality reference.
 Older runs with other configurations remain research
 artifacts unless their own reports establish a complete reproducible protocol.
 
+On the first corrected matched MemoryAgentBench task, PRME scored 20/20 versus
+BM25 at 17/20 on 20 Banking77 development questions while using 90.52% fewer
+retrieved-context tokens. The [verified report](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md)
+records the exact source and result hashes, paired uncertainty, 468-second PRME
+pack build, and development-cohort boundary.
+
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:
 reliable evidence retrieval, explicit aggregation coverage, and correct temporal state.

@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the other reader settings. The matched BM25 path uses the same terminal ICL
   question extractor as PRME, with both derived queries bound before inference.
 
+- The first corrected matched MemoryAgentBench answer trial completed on 20
+  Banking77 development questions: PRME scored 20/20 versus BM25 at 17/20 under
+  the official strict metric while using 90.52% fewer retrieved-context tokens.
+  Both independent verifiers and the strengthened paired comparator accepted the
+  exact artifact chain. The paired interval includes zero, and PRME's 5,897-node
+  pack took 467.549 seconds to construct, so this remains bounded development
+  evidence and exposes typed bulk ingestion as the next performance target.
+
 - MemoryAgentBench verification now authenticates each claimed durable
   retrieval receipt directly from the completed DuckDB pack, including its
   checksum, owner/request identity, replayable ranking, context hash, packing
@@ -117,7 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   official accuracy metric, and reports paired uncertainty without raw answers.
   Both arm verifiers accept the harness's native boolean match metrics while
   retaining finite numeric validation for graded metrics.
-  This is an evaluation path; no MemoryAgentBench task score is claimed yet.
+  This is an evaluation path; task results retain their individual claim bounds.
 - Durable, atomic hierarchical summary publication. Daily, weekly and monthly
   excerpts use stable owner/scope/level/period lineages, deterministic request
   generations, checksummed preparation, fenced index staging and transactional

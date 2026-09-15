@@ -26,6 +26,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 | PersonaMem-v2 pilot | All 96 questions completed and independently verified. Alpha .25 packing answered 42 correctly, density 36, score 41 and no memory 33. | Primary cluster interval includes zero; losses on other-person and health questions. Custom persona-hidden variant, one local reader, no default promotion. |
 | Scoped retrieval learning | Explicit labels feed a deterministic observed-candidate proposal gate; fresh paired receipts with complete gold identities feed a separate full-retrieval gate. Immutable owner/exact-scope profiles persist and apply across restart with inspected activation, deactivation and rollback on both backends. | Authored functional and concurrency validation proves the gate and lifecycle contracts. No learned profile has yet passed a representative task holdout or established answer-quality improvement. |
 | External lifecycle and scale workflows | The registered MELT run completed five seeds and all 20 lifecycle checkpoints at recall@12 and NDCG@12 of 1.000. The registered BEAM raw workflow ingested all 94 public 100K chunks and returned all 50 requested memories for 20 questions across ten abilities. | MELT uses four held-out lifecycle cases and a deterministic embedding profile. BEAM is predict-only and does not measure relevance or answer correctness. |
+| MemoryAgentBench test-time learning | [Matched Banking77 development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md): PRME scored 20/20 versus BM25 at 17/20 under the official strict metric, while using 90.52% fewer retrieved-context tokens. Both arms used the same registered derived questions, Qwen 9B reader and digits-only output contract; both artifact chains verified. | Twenty previously inspected development questions, one reader and one lexical control. The paired interval includes zero. PRME's 5,897-record pack took 467.549 seconds to construct, so bulk typed ingestion remains a material cost. |
 
 See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
 [recovery evidence](../benchmarks/results/recovery/2026-09-12/README.md),
@@ -257,11 +258,16 @@ source chunks, questions, reader prompts and model settings across PRME and BM25
 as well as exact preprocessing dependencies. The BM25 verifier independently
 reconstructs every ranking and captured source list. Contract tests, pinned-tree
 installation, a real-data 500-query EventQA registration dry run, and one-context
-real-data ingress smoke across all four families pass, but no task score has been
-promoted. Run and verify this registered common-reader matrix next. Treat its
-test-time-learning arm as retrieved in-context demonstrations and its conflict
-arm as numbered-source resolution; separate experiments are still required for
-scoped ranking-profile learning and transactional graph supersedence.
+real-data ingress smoke across all four families pass. The first corrected
+[Banking77 result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md)
+scored PRME at 20/20 versus BM25 at 17/20 while reducing mean retrieved context
+from 41,925 to 3,975 tokens. Its three paired wins and zero losses are encouraging,
+but its interval includes zero and the 468-second PRME pack build exposes a bulk
+ingestion gap. Complete the other registered task families and improve typed
+bulk ingestion before broadening the claim. Treat the test-time-learning arm as
+retrieved in-context demonstrations and its conflict arm as numbered-source
+resolution; separate experiments are still required for scoped ranking-profile
+learning and transactional graph supersedence.
 
 The existing [namespace RFC](RFC-0004-Namespace-and-Scope-Isolation.md),
 [derivation RFC](RFC-0016-Durable-Derivation-Commits.md), and
