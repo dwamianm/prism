@@ -64,6 +64,14 @@ class DuckPGQGraphStore:
         from prme.storage.reinforcement import reinforce_duckdb
         await reinforce_duckdb(self, node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id)
 
+    async def apply_oscillation_penalty(
+        self, node_id: str, chain_node_ids: list[str], *, user_id: str,
+    ) -> bool:
+        from prme.storage.oscillation_penalty import apply_duckdb
+        return await apply_duckdb(
+            self, node_id, chain_node_ids, user_id=user_id
+        )
+
     async def evaluate_condition(self, node_id: str, state, **kwargs):
         from prme.storage.condition_evaluation import evaluate_condition_duckdb
         return await evaluate_condition_duckdb(self, node_id, state, **kwargs)

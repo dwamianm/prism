@@ -1239,16 +1239,14 @@ class MemoryEngine:
                 osc.confidence_penalty,
             )
 
-            # Reduce confidence_base on the new node
             node = await self._graph_store.get_node(
                 new_node_id, include_superseded=True
             )
             if node is not None:
-                new_confidence = max(
-                    0.0, node.confidence_base - osc.confidence_penalty
-                )
-                await self._graph_store.update_node(
-                    new_node_id, confidence_base=new_confidence
+                await self._graph_store.apply_oscillation_penalty(
+                    new_node_id,
+                    osc.oscillating_node_ids,
+                    user_id=node.user_id,
                 )
 
     # --- Ingestion Operations ---

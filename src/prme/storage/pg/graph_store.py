@@ -491,6 +491,14 @@ class PgGraphStore:
         from prme.storage.reinforcement import reinforce_postgres
         await reinforce_postgres(self, node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id)
 
+    async def apply_oscillation_penalty(
+        self, node_id: str, chain_node_ids: list[str], *, user_id: str,
+    ) -> bool:
+        from prme.storage.oscillation_penalty import apply_postgres
+        return await apply_postgres(
+            self, node_id, chain_node_ids, user_id=user_id
+        )
+
     async def evaluate_condition(self, node_id: str, state, **kwargs):
         from prme.storage.condition_evaluation import evaluate_condition_postgres
         return await evaluate_condition_postgres(self, node_id, state, **kwargs)

@@ -41,6 +41,12 @@ class GraphStore(Protocol):
         """Atomically validate, reinforce and journal a node without lost updates."""
         ...
 
+    async def apply_oscillation_penalty(
+        self, node_id: str, chain_node_ids: list[str], *, user_id: str,
+    ) -> bool:
+        """Atomically validate and journal one detected oscillation penalty."""
+        ...
+
     async def evaluate_condition(
         self, node_id: str, state: ConditionState | str, **kwargs: Any
     ) -> MemoryNode:

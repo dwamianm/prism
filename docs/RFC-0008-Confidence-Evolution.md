@@ -49,6 +49,17 @@ The general update formula and correlation controls below
 remain design requirements rather than claims about this heuristic. Historical
 incorrect reinforcement is not retroactively undone.
 
+Store-time oscillation dampening is also a narrower implemented policy. It runs
+only with opt-in store supersedence, revalidates the complete bounded chain and
+its `SUPERSEDES` edges under lock, and atomically commits the confidence change
+with a deterministic, checksummed `PENALTY` record. The record retains complete
+before/after state and all chain inputs; concurrent and restarted attempts do
+not apply it twice. `oscillation_subtractive_v1` preserves the pre-existing
+absolute 0.1-per-cycle adjustment capped at 0.3. It is not the general
+multiplicative penalty policy proposed below, has no salience effect, and is not
+evidence that the lexical heuristic is calibrated. Historical unjournaled
+penalties are not reconstructed.
+
 ## 2. Reinforcement Update Rule
 
 When a positive signal is received for a memory object:

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Store-time oscillation dampening now revalidates the complete owner-scoped
+  supersedence chain under lock and commits its confidence update with a
+  deterministic, checksummed `PENALTY` record in one DuckDB or PostgreSQL
+  transaction. Concurrent, restarted, failed, and cancelled attempts cannot
+  apply the same penalty twice or leave an unjournaled confidence change.
+
 - Automatic question/answer pairing is now disabled by default. Every
   registered quality benchmark already excluded the in-process heuristic, whose
   extra derived node is not atomically journaled or recovered after restart.

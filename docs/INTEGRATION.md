@@ -196,6 +196,14 @@ publication, and registered quality evaluations have not enabled it. Prefer
 normal session-aware retrieval unless you are explicitly evaluating this
 hypothesis.
 
+When `enable_store_supersedence=True`, a newly formed flip-flop chain can apply
+the existing bounded oscillation confidence penalty. The engine revalidates the
+exact owner, scope, node snapshots, and `SUPERSEDES` edges under the backend
+transaction, then commits the confidence update with one deterministic,
+checksummed `PENALTY` record. Concurrent and restarted attempts reuse that
+identity. This is a lexical heuristic behind the supersedence opt-in, not a
+truth judgment or calibrated confidence model.
+
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `content` | `str` | required | Text content to store |

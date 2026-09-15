@@ -686,6 +686,14 @@ row before reading; DuckDB holds the connection lock through native completion.
 Concurrent successful calls accumulate. An aborted transaction publishes neither
 the node change nor the operation.
 
+New store-time oscillation penalties likewise commit the target confidence and
+one checksummed `PENALTY` record in the same transaction. The record captures
+the exact owner-scoped node chain and supersedence edges used by the bounded
+lexical policy. Its deterministic target identity prevents repeat application
+after concurrency or restart. This narrows the unlogged-mutation gap; it does
+not provide a complete historical replay engine or validate the heuristic's
+confidence calibration.
+
 The current `additive_caps_v1` policy preserves the existing +0.15 boost / +0.05
 confidence increments, 0.5 / 0.95 increment caps and above-cap values. It does not
 prove that cited evidence semantically supports the claim, re-evaluate conditions,

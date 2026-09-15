@@ -6,7 +6,7 @@ Tests cover:
 - Confidence penalty calculation
 - Penalty cap at 0.3
 - Deep chains (A -> B -> A -> B -> A)
-- Integration with engine.store() when enable_store_supersedence=True
+- Store-path eligibility when enable_store_supersedence=True
 """
 
 from __future__ import annotations
@@ -315,9 +315,8 @@ class TestOscillationDetector:
 
 
 @pytest.mark.asyncio
-async def test_engine_store_oscillation_reduces_confidence(config):
-    """store() with enable_store_supersedence=True should detect oscillation
-    and reduce confidence on the oscillating node."""
+async def test_store_sequence_does_not_penalize_without_complete_chain(config):
+    """Similar updates alone must not be treated as a connected oscillation."""
     engine = await create_engine(config)
     try:
         user_id = "test-user"
@@ -354,8 +353,14 @@ async def test_engine_store_oscillation_reduces_confidence(config):
             limit=100,
         )
 
-        # Verify we stored nodes
-        assert len(all_nodes) >= 1, "Should have at least one node"
+        assert len(all_nodes) == 3
+        assert all(node.confidence_base == pytest.approx(0.8) for node in all_nodes)
+        graph = engine._graph_store
+        async with graph._conn_lock:
+            penalties = graph._conn.execute(
+                "SELECT count(*) FROM operations WHERE op_type='PENALTY'"
+            ).fetchone()[0]
+        assert penalties == 0
 
     finally:
         await engine.close()

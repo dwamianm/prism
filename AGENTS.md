@@ -54,7 +54,7 @@ New event/direct-node metadata must be finite and JSON-serializable, with no
 object keys that collide after JSON normalization. Admission
 copies metadata before awaiting backend locks/connections; it does not validate
 all low-level graph writes. Existing rows remain readable. Journal snapshots for
-lifecycle, reinforcement, organizer merges, alias proposals and TTL expiration use
+lifecycle, reinforcement, oscillation penalties, organizer merges, alias proposals and TTL expiration use
 `_snapshot_json` to preserve legacy non-finite values through a versioned path
 encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
@@ -167,6 +167,15 @@ idempotent across restart, with changed node/evidence requests rejected. Unkeyed
 calls remain separate signals. Version 2 records retain request identity; version
 1 records keep their original checksums. This is not semantic evidence verification
 or complete historical replay. See `docs/REINFORCEMENT.md`.
+
+Store-time oscillation dampening remains coupled to opt-in supersedence. A new
+penalty revalidates the exact bounded chain and supersedence edges under lock,
+then commits confidence plus a checksummed complete `PENALTY` record in one
+backend transaction. Its deterministic target identity prevents duplicate
+application across concurrency and restart. The subtractive policy preserves
+legacy behavior and is not the general RFC-0008 multiplicative policy or proof
+that lexical similarity calibrates belief. Historical silent penalties remain
+unreplayed.
 
 ## RFCs
 
