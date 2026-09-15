@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "beam-raw-scored-incomplete-result",
+  "status": "stopped after the first question did not complete within the operational observation window",
+  "registration": "beam-100k-raw-deepseekv41-qwen9b-dev2-registration.json",
+  "stopped_at_utc": "2026-09-15T18:46:07Z",
+  "coverage": {
+    "ingestion_chunks_processed": 94,
+    "ingestion_chunks_failed": 0,
+    "search_requests_served": 1,
+    "questions_written": 0,
+    "questions_expected": 20,
+    "complete": false
+  },
+  "observations": {
+    "judge_model": "prme-qwen3.5:9b-8k",
+    "judge_gpu_utilization_during_stall_percent": 100,
+    "first_question_observation_seconds": 300,
+    "first_question_artifact_written": false
+  },
+  "decision": "The execution was stopped before any benchmark score existed. The replacement trial retains the complete selection and answerer, and changes only the judge after a synthetic exact-template preflight.",
+  "limitations": [
+    "The upstream terminal transcript was not persisted by launcher schema 2, so elapsed time and utilization are operator observations rather than hashed artifacts.",
+    "The hashed service log establishes complete ingestion, one search request, and orderly shutdown; the prediction directory contains no question result.",
+    "This incomplete execution is not an answer-quality result and must not be compared with published BEAM scores."
+  ],
+  "artifact_sha256": {
+    "execution-manifest.json": "646e8d8a433eb5ea122b637d20568327f87c09e6af0289d539859d210126385c",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "13818b34d493498d7e28de83963cf85ad9bac412f853ea64edc46cc9999a7046",
+    "service.log": "ed66e7b9c88058d0dc1ab3e3f88e0e349cda64b963990539c87cb6309b201d4f",
+    "upstream-results/predicted_prme-beam-100k-raw-deepseekv41-qwen9b-dev2/_ingestion_100K_0.json": "46b13c72e4ac6d58c603cf46285f8e10f2f84418065e85a3097f2b72fd996775"
+  }
+}
