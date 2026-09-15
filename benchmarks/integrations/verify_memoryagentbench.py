@@ -95,6 +95,9 @@ def _verify_manifest(
     expected_reader_seed: int | None,
     expected_reader_output_contract: str,
     expected_run_id: str,
+    expected_episode_context_top_k: int,
+    expected_episode_context_local_k: int,
+    expected_episode_context_score_decay: float,
 ) -> dict[str, Any]:
     manifest = _load_object(path)
     identity = manifest.get("config")
@@ -112,6 +115,14 @@ def _verify_manifest(
         "embedding_dimension": 384,
         "segmentation_policy": adapter._SEGMENTATION_POLICY,
         "retrieval_query_policy": adapter._RETRIEVAL_QUERY_POLICY,
+        "episode_partition_policy": (
+            adapter._EPISODE_PARTITION_POLICY
+            if expected_episode_context_top_k > 0
+            else "context-session-v1"
+        ),
+        "episode_context_top_k": expected_episode_context_top_k,
+        "episode_context_local_k": expected_episode_context_local_k,
+        "episode_context_score_decay": expected_episode_context_score_decay,
         "packing_policy": "balanced",
         "context_format": expected_context_format,
         "reader_reasoning_effort": expected_reasoning_effort,
@@ -336,6 +347,11 @@ def verify(
     max_chunk_chars = agent_config.get("prme_max_chunk_chars", 6000)
     user_id = agent_config.get("prme_user_id", "memoryagentbench")
     context_format = agent_config.get("prme_context_format", "auditable")
+    episode_context_top_k = agent_config.get("prme_episode_context_top_k", 0)
+    episode_context_local_k = agent_config.get("prme_episode_context_local_k", 8)
+    episode_context_score_decay = agent_config.get(
+        "prme_episode_context_score_decay", 0.95
+    )
     reasoning_effort = agent_config.get("reader_reasoning_effort")
     reader_seed = agent_config.get("reader_seed")
     reader_output_contract = agent_config.get("reader_output_contract", "upstream")
@@ -374,6 +390,19 @@ def verify(
     user_id = user_id.strip()
     if context_format not in {"auditable", "compact"}:
         raise ValueError("configuration has an invalid PRME context format")
+    if (
+        isinstance(episode_context_top_k, bool)
+        or not isinstance(episode_context_top_k, int)
+        or episode_context_top_k < 0
+        or isinstance(episode_context_local_k, bool)
+        or not isinstance(episode_context_local_k, int)
+        or episode_context_local_k <= 0
+        or isinstance(episode_context_score_decay, bool)
+        or not isinstance(episode_context_score_decay, (int, float))
+        or not 0 < float(episode_context_score_decay) <= 1
+    ):
+        raise ValueError("configuration has invalid PRME episode context settings")
+    episode_context_score_decay = float(episode_context_score_decay)
     if reasoning_effort not in {None, "none", "low", "medium", "high"}:
         raise ValueError("configuration has an invalid reader reasoning effort")
     if isinstance(reader_seed, bool) or (
@@ -553,6 +582,10 @@ def verify(
             or capture.get("receipt_persisted") is not True
             or capture.get("token_budget") != token_budget
             or capture.get("context_format") != context_format
+            or capture.get("episode_context_top_k") != episode_context_top_k
+            or capture.get("episode_context_local_k") != episode_context_local_k
+            or capture.get("episode_context_score_decay")
+            != episode_context_score_decay
             or capture.get("reader_reasoning_effort") != reasoning_effort
             or capture.get("reader_seed") != reader_seed
             or capture.get("reader_output_contract") != reader_output_contract
@@ -593,6 +626,9 @@ def verify(
                 expected_reader_seed=reader_seed,
                 expected_reader_output_contract=reader_output_contract,
                 expected_run_id=run_id,
+                expected_episode_context_top_k=episode_context_top_k,
+                expected_episode_context_local_k=episode_context_local_k,
+                expected_episode_context_score_decay=episode_context_score_decay,
             )
             if manifest["source_chunks"] != expected_chunks[context_id]:
                 raise ValueError(
@@ -618,6 +654,10 @@ def verify(
             or receipt.packing.token_budget != token_budget
             or receipt.packing.multipath_ordering != "balanced"
             or receipt.packing.context_format != context_format
+            or receipt.packing.episode_context_top_k != episode_context_top_k
+            or receipt.packing.episode_context_local_k != episode_context_local_k
+            or receipt.packing.episode_context_score_decay
+            != episode_context_score_decay
             or receipt.result_limit != result_limit
             or receipt.scopes != (Scope.PROJECT,)
             or sum(candidate.in_context for candidate in receipt.candidates)

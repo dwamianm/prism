@@ -32,13 +32,14 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 7
+ADAPTER_SCHEMA_VERSION = 8
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
 _DEFAULT_RESULT_LIMIT = 100
 _SEGMENTATION_POLICY = "task-aware-semantic-boundaries-v1"
 _RETRIEVAL_QUERY_POLICY = "upstream-plus-terminal-label-question-v1"
+_EPISODE_PARTITION_POLICY = "source-chunk-session-v1"
 _READER_OUTPUT_CONTRACTS = frozenset(
     {"upstream", "numeric-label-v1", "answer-only-v1", "choice-only-v1"}
 )
@@ -91,6 +92,14 @@ def _config_identity(agent: Any) -> dict[str, object]:
         "embedding_dimension": 384,
         "segmentation_policy": _SEGMENTATION_POLICY,
         "retrieval_query_policy": _RETRIEVAL_QUERY_POLICY,
+        "episode_partition_policy": (
+            _EPISODE_PARTITION_POLICY
+            if agent.prme_episode_context_top_k > 0
+            else "context-session-v1"
+        ),
+        "episode_context_top_k": agent.prme_episode_context_top_k,
+        "episode_context_local_k": agent.prme_episode_context_local_k,
+        "episode_context_score_decay": agent.prme_episode_context_score_decay,
         "packing_policy": "balanced",
         "context_format": agent.prme_context_format,
         "reader_reasoning_effort": agent.reader_reasoning_effort,
@@ -117,6 +126,9 @@ def _config(root: Path, agent: Any) -> PRMEConfig:
             token_budget=agent.prme_token_budget,
             multipath_ordering="balanced",
             context_format=agent.prme_context_format,
+            episode_context_top_k=agent.prme_episode_context_top_k,
+            episode_context_local_k=agent.prme_episode_context_local_k,
+            episode_context_score_decay=agent.prme_episode_context_score_decay,
         ),
         enable_qa_pairing=False,
         enable_query_reformulation=False,
@@ -288,6 +300,11 @@ def initialize_prme_agent(
     agent.prme_context_format = str(
         config.get("prme_context_format", "auditable")
     ).strip()
+    agent.prme_episode_context_top_k = config.get("prme_episode_context_top_k", 0)
+    agent.prme_episode_context_local_k = config.get("prme_episode_context_local_k", 8)
+    agent.prme_episode_context_score_decay = config.get(
+        "prme_episode_context_score_decay", 0.95
+    )
     agent.reader_reasoning_effort = config.get("reader_reasoning_effort")
     agent.reader_seed = config.get("reader_seed")
     agent.reader_output_contract = str(
@@ -304,6 +321,29 @@ def initialize_prme_agent(
         raise ValueError("prme_max_chunk_chars must be at least 512")
     if agent.prme_context_format not in {"auditable", "compact"}:
         raise ValueError("prme_context_format must be 'auditable' or 'compact'")
+    if (
+        isinstance(agent.prme_episode_context_top_k, bool)
+        or not isinstance(agent.prme_episode_context_top_k, int)
+        or agent.prme_episode_context_top_k < 0
+    ):
+        raise ValueError("prme_episode_context_top_k must be a non-negative integer")
+    if (
+        isinstance(agent.prme_episode_context_local_k, bool)
+        or not isinstance(agent.prme_episode_context_local_k, int)
+        or agent.prme_episode_context_local_k <= 0
+    ):
+        raise ValueError("prme_episode_context_local_k must be a positive integer")
+    if (
+        isinstance(agent.prme_episode_context_score_decay, bool)
+        or not isinstance(agent.prme_episode_context_score_decay, (int, float))
+        or not 0 < float(agent.prme_episode_context_score_decay) <= 1
+    ):
+        raise ValueError(
+            "prme_episode_context_score_decay must be greater than zero and at most one"
+        )
+    agent.prme_episode_context_score_decay = float(
+        agent.prme_episode_context_score_decay
+    )
     if agent.reader_reasoning_effort not in {None, "none", "low", "medium", "high"}:
         raise ValueError(
             "reader_reasoning_effort must be none, low, medium, high, or omitted"
@@ -409,10 +449,13 @@ def save_prme_agent(agent: Any) -> None:
         for piece_index, (piece, source_index) in enumerate(
             zip(pieces, source_indices)
         ):
+            session_id = f"{agent.sub_dataset}:context:{agent.prme_context_id}"
+            if agent.prme_episode_context_top_k > 0:
+                session_id += f":source:{source_index}"
             last_event_id = client.store(
                 piece,
                 user_id=agent.prme_user_id,
-                session_id=f"{agent.sub_dataset}:context:{agent.prme_context_id}",
+                session_id=session_id,
                 role="tool",
                 node_type=NodeType.NOTE,
                 scope=Scope.PROJECT,
@@ -525,6 +568,9 @@ def _save_retrieval(
         "receipt_persisted": receipt_persisted,
         "token_budget": agent.prme_token_budget,
         "context_format": agent.prme_context_format,
+        "episode_context_top_k": agent.prme_episode_context_top_k,
+        "episode_context_local_k": agent.prme_episode_context_local_k,
+        "episode_context_score_decay": agent.prme_episode_context_score_decay,
         "reader_reasoning_effort": agent.reader_reasoning_effort,
         "reader_seed": agent.reader_seed,
         "reader_output_contract": agent.reader_output_contract,

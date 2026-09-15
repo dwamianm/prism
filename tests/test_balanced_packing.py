@@ -103,6 +103,8 @@ def test_version_seven_records_context_format_and_requires_it_explicitly():
     })
     receipt = RetrievalReceipt.model_validate(raw)
     assert receipt.packing.context_format == "compact"
+    assert receipt.packing.episode_context_top_k == 0
+    assert "episode_context_top_k" not in receipt.model_dump()["packing"]
     assert RetrievalReceipt.model_validate_json(receipt.model_dump_json()).checksum == receipt.checksum
     complete = json.loads(receipt.model_dump_json())
     raw["packing"].pop("context_format")
@@ -115,6 +117,38 @@ def test_version_seven_records_context_format_and_requires_it_explicitly():
         missing = json.loads(json.dumps(complete))
         missing["packing"].pop(field)
         with pytest.raises(ValidationError, match=message):
+            RetrievalReceipt.model_validate(missing)
+
+
+def test_version_eight_records_episode_context_and_requires_it_explicitly():
+    raw = json.loads(
+        (Path(__file__).parent / "fixtures/relevance/receipt-v4.json").read_text()
+    )
+    raw["schema_version"] = 8
+    raw["packing"].update(
+        {
+            "multipath_ordering": "balanced",
+            "context_guidance_mode": "temporal",
+            "context_format": "compact",
+            "episode_context_top_k": 2,
+            "episode_context_local_k": 8,
+            "episode_context_score_decay": 0.95,
+        }
+    )
+    receipt = RetrievalReceipt.model_validate(raw)
+    assert receipt.packing.episode_context_top_k == 2
+    assert (
+        RetrievalReceipt.model_validate_json(receipt.model_dump_json()).checksum
+        == receipt.checksum
+    )
+    for field in (
+        "episode_context_top_k",
+        "episode_context_local_k",
+        "episode_context_score_decay",
+    ):
+        missing = json.loads(receipt.model_dump_json())
+        missing["packing"].pop(field)
+        with pytest.raises(ValidationError, match="episode context settings"):
             RetrievalReceipt.model_validate(missing)
 
 

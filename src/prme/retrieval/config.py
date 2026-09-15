@@ -251,6 +251,32 @@ class PackingConfig(BaseModel):
             "below the node that caused their inclusion."
         ),
     )
+    episode_context_top_k: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Number of session-scoped episodes to route with deterministic BM25 "
+            "before packing. Zero disables two-stage episode reconstruction. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    episode_context_local_k: int = Field(
+        default=8,
+        ge=1,
+        description=(
+            "Maximum query-relevant records promoted from each routed episode. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    episode_context_score_decay: float = Field(
+        default=0.95,
+        gt=0,
+        le=1,
+        description=(
+            "Score inherited by routed episode records from the strongest record "
+            "in that episode. [HYPOTHESIS]"
+        ),
+    )
     aggregation_k_multiplier: float = Field(
         default=3.0,
         description="Multiplier for candidate k values on aggregation/count queries",

@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -85,8 +85,29 @@ class RetrievalReceipt(BaseModel):
             if "context_format" not in packing:
                 if version in (1, 2, 3, 4, 5, 6):
                     updates["context_format"] = "auditable"
-                if version == 7:
-                    raise ValueError("Version 7 requires an explicit context format")
+                if version in (7, 8):
+                    raise ValueError(
+                        "Versions 7 and 8 require an explicit context format"
+                    )
+            episode_fields = (
+                "episode_context_top_k",
+                "episode_context_local_k",
+                "episode_context_score_decay",
+            )
+            missing_episode_fields = [
+                field for field in episode_fields if field not in packing
+            ]
+            if missing_episode_fields:
+                if version in (1, 2, 3, 4, 5, 6, 7):
+                    updates.update(
+                        episode_context_top_k=0,
+                        episode_context_local_k=8,
+                        episode_context_score_decay=0.95,
+                    )
+                if version == 8:
+                    raise ValueError(
+                        "Version 8 requires explicit episode context settings"
+                    )
             if updates:
                 return {**value, "packing": {**packing, **updates}}
         return value
@@ -107,12 +128,16 @@ class RetrievalReceipt(BaseModel):
             data["packing"].pop("context_guidance_mode", None)
         if self.schema_version < 7 and isinstance(data.get("packing"), dict):
             data["packing"].pop("context_format", None)
+        if self.schema_version < 8 and isinstance(data.get("packing"), dict):
+            data["packing"].pop("episode_context_top_k", None)
+            data["packing"].pop("episode_context_local_k", None)
+            data["packing"].pop("episode_context_score_decay", None)
         return data
 
     @model_validator(mode="after")
     def unique_candidates(self):
         if (self.schema_version >= 3) != (self.execution is not None):
-            raise ValueError("Versions 3 through 7 require an execution descriptor")
+            raise ValueError("Versions 3 through 8 require an execution descriptor")
         if self.schema_version < 4 and self.packing.multipath_ordering != "density":
             raise ValueError("Legacy receipts support only density packing")
         if self.schema_version < 5 and self.packing.multipath_ordering == "balanced":
@@ -121,6 +146,8 @@ class RetrievalReceipt(BaseModel):
             raise ValueError("Context guidance requires a version 6 receipt")
         if self.schema_version < 7 and self.packing.context_format != "auditable":
             raise ValueError("Compact context requires a version 7 receipt")
+        if self.schema_version < 8 and self.packing.episode_context_top_k != 0:
+            raise ValueError("Episode context requires a version 8 receipt")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -254,12 +281,14 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         raise ValueError("Balanced packing receipts require an execution descriptor")
     if packing.context_format == "compact" and execution is None:
         raise ValueError("Compact context receipts require an execution descriptor")
+    if packing.episode_context_top_k > 0 and execution is None:
+        raise ValueError("Episode context receipts require an execution descriptor")
     # Pre-guidance receipts mean guidance was off. Direct callers that omit an
     # execution descriptor retain that historical schema and exact semantics.
     receipt_packing = packing if execution is not None else packing.model_copy(
         update={"context_guidance_mode": "off", "context_format": "auditable"}
     )
-    version: Literal[2, 7] = 7 if execution is not None else 2
+    version: Literal[2, 8] = 8 if execution is not None else 2
     return RetrievalReceipt(schema_version=version, execution=execution,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,

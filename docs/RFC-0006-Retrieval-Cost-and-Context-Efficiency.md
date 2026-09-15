@@ -53,9 +53,10 @@ ordering policy; legacy receipts preserve their original bytes and implicit
 density semantics. Balanced ordering reserves the
 highest-scored ordinary multi-path candidate, then orders the remainder by
 score divided by full-entry tokens to the power 0.25. The head still obeys
-ordinary fidelity and budget checks. New pipeline retrievals emit version 7
-receipts with ordering, context-guidance, and context-format policy. No legacy receipt bytes
-change. The [packing guide](PACKING.md) describes the completed source-retention
+ordinary fidelity and budget checks. New pipeline retrievals emit version 8
+receipts with ordering, context-guidance, context-format, and episode-routing
+policy. No legacy receipt bytes change. The [packing guide](PACKING.md) describes
+the completed source-retention
 studies, per-question losses and answer validation. The balanced decision does
 not retroactively change the failed score-only promotion result.
 
@@ -213,7 +214,12 @@ for obj in ranked_objects where obj.salience == 1.0 or obj.type == TASK:
             include(obj, REFERENCE)
             available -= token_cost(obj, REFERENCE)
 
-# Priority 2: Multi-path objects (path_count >= 2) by configured ordering
+# Priority 2: Evidence selected by the optional two-stage episode route
+for obj in ranked_objects where EPISODE_CONTEXT in obj.paths and obj not in included:
+    representation = select_representation(available, obj)
+    include only when that representation fits
+
+# Priority 3: Multi-path objects (path_count >= 2) by configured ordering
 multi_path = [obj for obj in ranked_objects if obj.path_count >= 2 and obj not in included]
 if packing_policy == BALANCED:
     reserve argmax(multi_path, by=(composite_score, inverse_node_id))
@@ -374,6 +380,8 @@ delimiters as data. The default `"auditable"` object format is unchanged.
 
 `MemoryBundle.context_references` maps compact references to full node UUIDs, and
 `resolve_context_ref()` provides checked lookup for citation handling. Token
-accounting covers the schema declaration and complete arrays. Version 7 retrieval
-receipts record the selected format and bind the exact rendered context hash;
-versions 1–6 retain their canonical bytes and always mean `"auditable"`.
+accounting covers the schema declaration and complete arrays. Version 7
+introduced the selected format and exact rendered-context binding. Current
+version 8 receipts retain that contract and add explicit episode-routing
+settings. Versions 1–6 retain their canonical bytes and always mean
+`"auditable"`; versions 1–7 always mean episode routing was disabled.

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in deterministic two-stage episode routing for sources stored under
+  meaningful session boundaries. It uses BM25 to route candidate-backed
+  `(scope, session_id)` groups, promotes a bounded local evidence set with
+  replayable score provenance, and reserves that evidence during packing. It is
+  disabled by default while matched answer trials test the EventQA hypothesis.
+  Receipt schema version 8 records the complete policy while versions 1–7 retain
+  their canonical bytes and disabled semantics. MemoryAgentBench schema 8 can
+  preserve upstream source chunks as distinct registered episode partitions.
+
 - MemoryAgentBench DetectiveQA trials can register a shared
   `choice-only-v1` reader contract. It resolves the pinned task prompt's conflict
   between an example JSON reasoning object and its option-text exact-match

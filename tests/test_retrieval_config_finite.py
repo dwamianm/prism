@@ -21,7 +21,12 @@ def test_nonfinite_scoring_fields_have_specific_validation_errors(field, bad):
 
 @pytest.mark.parametrize(
     "field",
-    ["chars_per_token", "session_context_score_decay", "aggregation_k_multiplier"],
+    [
+        "chars_per_token",
+        "session_context_score_decay",
+        "episode_context_score_decay",
+        "aggregation_k_multiplier",
+    ],
 )
 @pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf")])
 def test_nonfinite_packing_parameters_fail_at_load(field, bad):
@@ -89,6 +94,10 @@ def test_ignored_legacy_packing_fields_warn_on_nondefault_use(field, value):
         ("graph_max_hops", 0),
         ("graph_max_hops", 4),
         ("cross_scope_top_n", -1),
+        ("episode_context_top_k", -1),
+        ("episode_context_local_k", 0),
+        ("episode_context_score_decay", 0),
+        ("episode_context_score_decay", 1.01),
     ],
 )
 def test_candidate_generation_limits_reject_impossible_values(field, value):

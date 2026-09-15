@@ -270,6 +270,23 @@ def register(
         sub_dataset=sub_dataset,
         contract=agent_config.get("reader_output_contract", "upstream"),
     )
+    episode_context_top_k = agent_config.get("prme_episode_context_top_k", 0)
+    episode_context_local_k = agent_config.get("prme_episode_context_local_k", 8)
+    episode_context_score_decay = agent_config.get(
+        "prme_episode_context_score_decay", 0.95
+    )
+    if (
+        isinstance(episode_context_top_k, bool)
+        or not isinstance(episode_context_top_k, int)
+        or episode_context_top_k < 0
+        or isinstance(episode_context_local_k, bool)
+        or not isinstance(episode_context_local_k, int)
+        or episode_context_local_k <= 0
+        or isinstance(episode_context_score_decay, bool)
+        or not isinstance(episode_context_score_decay, (int, float))
+        or not 0 < float(episode_context_score_decay) <= 1
+    ):
+        raise ValueError("agent configuration has invalid PRME episode settings")
     if max_queries is not None and (
         isinstance(max_queries, bool)
         or not isinstance(max_queries, int)

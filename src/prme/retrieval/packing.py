@@ -334,8 +334,13 @@ def pack_context(
             tier, value = 0, candidate.composite_score
         elif _is_pinned_or_active_task(candidate):
             tier, value = 1, candidate.composite_score
+        elif "EPISODE_CONTEXT" in candidate.paths:
+            # Two-stage episode extraction is already bounded by episode and
+            # local-record limits. Reserve its source evidence before the broad
+            # multi-path pool, while preserving instructions and user pins.
+            tier, value = 2, candidate.composite_score
         elif candidate.path_count >= 2:
-            tier = 2
+            tier = 3
             if config.multipath_ordering == "balanced":
                 value = (float("inf") if candidate.node.id == balanced_head else
                          candidate.composite_score / max(candidate.token_cost, 1) ** 0.25)
@@ -344,7 +349,7 @@ def pack_context(
             else:
                 value = compute_str(candidate)
         else:
-            tier, value = 3, candidate.composite_score
+            tier, value = 4, candidate.composite_score
         return tier, -value, str(candidate.node.id)
 
     for candidate in sorted(candidates, key=priority):

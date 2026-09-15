@@ -158,6 +158,22 @@ always mean the historical auditable JSON-object renderer; their serializers
 omit the later field and preserve canonical bytes and feedback checksums. Version
 7 keeps the version 6 execution, ordering, and guidance requirements.
 
+### Two-stage episode context and receipt version 8
+
+Current pipeline retrievals use version 8 and explicitly record
+`packing.episode_context_top_k`, `packing.episode_context_local_k`, and
+`packing.episode_context_score_decay`. The optional retrieval stage routes
+candidate-backed `(scope, session_id)` episodes with deterministic BM25 and
+promotes a bounded local evidence set. Any inherited score is represented as an
+ordered `episode_decay` adjustment and remains reproducible through
+`replay_ranking()`.
+
+Versions 1–7 always mean episode routing was disabled. Their serializers omit
+the three later fields and preserve canonical bytes and feedback checksums.
+Version 8 retains the version 7 execution, ordering, guidance, context-format,
+and rendered-context requirements. Replay still covers returned candidates only;
+it cannot reconstruct unseen candidates or the episode-routing corpus.
+
 ## Explicit relevance records
 
 `record_relevance(request_id, labels, user_id=..., feedback_id=...)` accepts

@@ -884,12 +884,16 @@ is ignored. The equivalent environment setting is
 Temporal context guidance is enabled by default; disable it with
 `PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
 experimental current-state and personalization prompts. Every current retrieval
-receipt uses schema version 7 and retains ordering, guidance, and context format
-in `receipt.packing`. Set `PRME_PACKING__CONTEXT_FORMAT=compact` to use
+receipt uses schema version 8 and retains ordering, guidance, context format,
+and episode settings in `receipt.packing`. Set
+`PRME_PACKING__CONTEXT_FORMAT=compact` to use
 schema-declared JSON arrays and bundle-local references; `auditable` remains the
-default. Versions 1–6 retain their original canonical JSON and feedback checksums
-and always mean auditable rendering. Versions 1–5 also mean context guidance was
-off.
+default. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+their original canonical JSON and feedback checksums and always mean auditable
+rendering. Versions 1–5 also mean context guidance was off. For source blocks or
+bounded dialogue episodes stored under meaningful session IDs, set
+`PRME_PACKING__EPISODE_CONTEXT_TOP_K=2` to trial deterministic episode routing;
+the default `0` disables it.
 
 This example chooses smaller candidate limits explicitly; it is not a list of defaults.
 
@@ -902,6 +906,9 @@ PackingConfig(
     min_fidelity=RepresentationLevel.REFERENCE,  # Minimum fidelity
     overhead_tokens=100,             # Additional caller reserve beyond measured context
     context_format="auditable",      # Or "compact" for schema-declared arrays
+    episode_context_top_k=0,         # Opt-in session-scoped episode routing
+    episode_context_local_k=8,       # Records reserved per selected episode
+    episode_context_score_decay=0.95,# Inherited episode-evidence score
     graph_max_candidates=50,         # Max from graph traversal
     vector_k=50,                     # Max from vector search
     lexical_k=50,                    # Max from lexical search

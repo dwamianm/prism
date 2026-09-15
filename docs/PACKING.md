@@ -56,6 +56,28 @@ objects and full node IDs in the model context. Exact token accounting applies t
 both formats. Evaluate answer quality before changing a production workload.
 The equivalent environment setting is `PRME_PACKING__CONTEXT_FORMAT=compact`.
 
+For workloads that store a source block or bounded dialogue episode under one
+`session_id`, opt into deterministic two-stage episode routing:
+
+```python
+config = config.model_copy(update={
+    "packing": PackingConfig(
+        token_budget=4096,
+        episode_context_top_k=2,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+    )
+})
+```
+
+PRME first uses BM25 over the candidate-backed text of each exact
+`(scope, session_id)` group, then reserves a bounded set of locally relevant
+records from the selected groups. The route makes no model calls and cannot
+cross scopes. It does not fetch an entire session outside the existing candidate
+pool. The default `episode_context_top_k=0` keeps it disabled while the
+hypothesis is evaluated across workloads. Set session IDs to real episode
+boundaries before enabling it; reused, unrelated session IDs reduce precision.
+
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously
 examined 381-question regression partition, it increased from 65.04% to 90.55%,
@@ -73,13 +95,14 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Current retrievals produce version 7 receipts with explicit ordering,
-context-guidance, and context-format policies and the same score-replay and
-execution requirements. Versions 1–6 keep their previous canonical bytes and
-checksums; they always mean auditable rendering. Versions 1–5 also mean context
-guidance was off. Version 5 remains the historical balanced format, and versions
-1–4 cannot claim balanced packing. Older readers that lack version 7 support
-cannot consume new receipts. Score replay reproduces the returned
+Current retrievals produce version 8 receipts with explicit ordering,
+context-guidance, context-format, and episode-routing policies and the same
+score-replay and execution requirements. Versions 1–7 keep their previous
+canonical bytes and checksums and mean episode routing was disabled. Versions
+1–6 always mean auditable rendering; versions 1–5 also mean context guidance was
+off. Version 5 remains the historical balanced format, and versions 1–4 cannot
+claim balanced packing. Older readers that lack version 8 support cannot consume
+new receipts. Score replay reproduces the returned
 candidate ranking; it is not a reconstruction of packing or unseen candidates.
 Relevance feedback remains linked to the saved context exposure.
 

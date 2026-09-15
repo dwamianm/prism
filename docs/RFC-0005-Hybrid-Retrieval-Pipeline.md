@@ -197,6 +197,26 @@ again before packing. Built-in stores compute bounded neighborhoods in SQL for
 each exact `(session_id, scope)` partition; the behavior does not depend on a
 fixed whole-session read limit.
 
+### 4.6 Two-stage episode context
+
+`PackingConfig.episode_context_top_k` enables deterministic episode routing.
+The default is `0`, which preserves the existing retrieval path. When enabled,
+PRME treats exact `(scope, session_id)` groups as episode boundaries, scores the
+candidate-backed text of each episode against the query with BM25, and marks at
+most `episode_context_local_k` locally relevant records from each selected
+episode as `EPISODE_CONTEXT`. Selected records inherit a bounded score from the
+strongest candidate in their episode through a replayable `episode_decay`
+operation.
+
+This stage performs no model calls. It operates after temporal and epistemic
+filtering, never crosses scope, and only sees records already present in the
+candidate pool (including records added by adjacent-session expansion). It is
+therefore a bounded evidence-routing strategy, not an exhaustive session scan or
+historical replay. The packer reserves selected episode evidence after system
+instructions, pins, and active tasks and before the ordinary multi-path tier.
+Receipt schema version 8 records all three episode settings; versions 1–7 mean
+episode routing was disabled.
+
 ---
 
 ## 5. Stage 3: Candidate Merging

@@ -9,7 +9,8 @@ Chains the stages in sequence:
 4. Epistemic Filtering (exclude HYPOTHETICAL/DEPRECATED in DEFAULT mode)
 5. Scoring + Ranking (8-input composite score, deterministic sort)
 5.5b. Session Context Expansion (pull adjacent turns from same session)
-6. Context Packing (3-priority greedy bin-packing within token budget)
+5.5c. Episode Context Expansion (route sessions, then select local evidence)
+6. Context Packing (deterministic priority packing within token budget)
 
 Each retrieval generates a RETRIEVAL_REQUEST operation record with a unique
 request_id for replay capability and audit trail.
@@ -43,6 +44,7 @@ from prme.retrieval.config import (
     ScoringWeights,
 )
 from prme.retrieval.context_formatter import build_context_guidance
+from prme.retrieval.episode_context import expand_episode_context
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
     AggregationCoverage,
@@ -638,6 +640,32 @@ class RetrievalPipeline:
             except Exception:
                 logger.warning(
                     "Session context expansion failed; continuing without expansion",
+                    exc_info=True,
+                )
+
+        # --- Stage 5.5c: Two-stage Episode Context Expansion ---
+        # Sessions are the existing episode boundary. Route complete candidate
+        # episodes, then reserve a bounded local evidence set without an LLM.
+        if effective_packing_config.episode_context_top_k > 0:
+            try:
+                expanded = expand_episode_context(
+                    scored,
+                    query,
+                    effective_packing_config,
+                )
+                if (
+                    [candidate.node.id for candidate in expanded]
+                    != [candidate.node.id for candidate in scored]
+                    or any(
+                        candidate.composite_score != original.composite_score
+                        for candidate, original in zip(expanded, scored)
+                    )
+                ):
+                    ranking_policy = "score_id"
+                scored = expanded
+            except Exception:
+                logger.warning(
+                    "Episode context expansion failed; continuing without expansion",
                     exc_info=True,
                 )
 

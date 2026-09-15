@@ -26,7 +26,7 @@ dispatch sees `prme` and invokes the PRME adapter, while template selection sees
 `Simple_rag_bm25`. Registrations require that exact name so a matched trial
 cannot silently return to the distinct agentic-memory reader prompt.
 
-Adapter schema 6 stores blank-line-delimited units and serial-numbered facts
+Adapter schema 8 stores blank-line-delimited units and serial-numbered facts
 independently, applying the configured character limit only when one semantic
 unit is too large. This keeps individual demonstrations and facts from becoming
 mixed-topic embedding records while preserving the concatenated source text
@@ -199,6 +199,22 @@ configuration hash. Use a distinct agent/output path so no auditable-format pack
 can be reused. Compact output remains bound by the same 4K token budget and
 durable receipt checks.
 
+For a registered episode-routing trial, set all three fields before
+registration:
+
+```yaml
+prme_episode_context_top_k: 2
+prme_episode_context_local_k: 8
+prme_episode_context_score_decay: 0.95
+```
+
+The enabled adapter preserves each upstream source chunk as a distinct PRME
+session so that the chunk is the episode boundary. The default top-k is zero;
+in that mode the historical single context session is preserved. The partition
+policy and all three values participate in the pack identity, registration,
+retrieval captures, and durable receipt verification. This option is a
+development technique until matched answer trials establish its effect.
+
 ## Matched BM25 control
 
 For a common-reader comparison, copy the pinned upstream BM25 configuration and
@@ -302,7 +318,9 @@ sizes without copying raw questions, references or model answers.
 The upstream harness chunks each source before it reaches a memory method. PRME
 further splits those inputs losslessly at 6,000 characters so a single large
 source record cannot consume the entire 4K output budget. Every piece is stored
-as observed tool output under one owner and one context session. Generic
+as observed tool output under one owner. The default uses one context session;
+an explicitly registered episode-routing arm uses one session per upstream
+source chunk. Generic
 opportunistic organization, store-time supersedence, query reformulation, QA
 pairing, surprise gating, and reranking are disabled for the benchmark.
 

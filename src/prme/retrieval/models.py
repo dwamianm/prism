@@ -125,7 +125,7 @@ class ScoreAdjustment(BaseModel):
     """An ordered, recorded operation after the base composite score."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
-    kind: Literal["neural_blend", "session_decay"]
+    kind: Literal["neural_blend", "session_decay", "episode_decay"]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
     source_node_id: UUID

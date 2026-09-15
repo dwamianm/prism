@@ -34,7 +34,11 @@ class FakeAgent:
 
 
 def fake_agent(
-    root: Path, *, budget: int = 4096, context_format: str = "auditable"
+    root: Path,
+    *,
+    budget: int = 4096,
+    context_format: str = "auditable",
+    episode_top_k: int = 0,
 ) -> FakeAgent:
     completions = FakeCompletions()
     reader = SimpleNamespace(chat=SimpleNamespace(completions=completions))
@@ -68,6 +72,7 @@ def fake_agent(
             "prme_max_chunk_chars": 512,
             "prme_user_id": "test-owner",
             "prme_context_format": context_format,
+            "prme_episode_context_top_k": episode_top_k,
             "reader_reasoning_effort": "none",
             "reader_seed": 42,
             "prme_run_id": f"test-{context_format}",
@@ -146,8 +151,11 @@ def test_adapter_preserves_text_and_round_trips_pack(
         )
         assert retrieval["context_sha256"]
         assert retrieval["request_id"]
-        assert retrieval["adapter_schema_version"] == 7
+        assert retrieval["adapter_schema_version"] == 8
         assert retrieval["context_format"] == context_format
+        assert retrieval["episode_context_top_k"] == 0
+        assert retrieval["episode_context_local_k"] == 8
+        assert retrieval["episode_context_score_decay"] == 0.95
         assert retrieval["reader_reasoning_effort"] == "none"
         assert retrieval["reader_seed"] == 42
         assert retrieval["reader_output_contract"] == "upstream"
@@ -186,6 +194,35 @@ def test_adapter_preserves_text_and_round_trips_pack(
         assert result["memory_construction_time"] == 0
     finally:
         adapter._close_client(reopened)
+
+
+def test_episode_mode_preserves_source_blocks_as_session_partitions(
+    tmp_path: Path,
+) -> None:
+    agent = fake_agent(tmp_path, episode_top_k=2)
+    try:
+        adapter.handle_prme_agent(agent, "First source episode.\n\n", True, None, 2)
+        adapter.handle_prme_agent(agent, "Second source episode.\n\n", True, None, 2)
+        adapter.save_prme_agent(agent)
+        nodes = agent.prme_client.query_nodes(
+            user_id="test-owner",
+            scope=None,
+            limit=10,
+        )
+        assert {node.session_id for node in nodes} == {
+            "eventqa_65536:context:2:source:0",
+            "eventqa_65536:context:2:source:1",
+        }
+        manifest = json.loads(
+            (agent.prme_pack_path / adapter._MANIFEST_NAME).read_text()
+        )
+        assert (
+            manifest["config"]["episode_partition_policy"]
+            == adapter._EPISODE_PARTITION_POLICY
+        )
+        assert manifest["config"]["episode_context_top_k"] == 2
+    finally:
+        adapter._close_client(agent)
 
 
 def test_split_units_preserves_blank_line_semantics_and_source_bytes() -> None:
@@ -312,6 +349,28 @@ def test_adapter_rejects_unknown_context_format(tmp_path: Path) -> None:
     agent.agent_save_to_folder = str(tmp_path / "agent")
     with pytest.raises(ValueError, match="prme_context_format"):
         adapter.initialize_prme_agent(agent, {"prme_context_format": "opaque"})
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"prme_episode_context_top_k": -1},
+        {"prme_episode_context_top_k": True},
+        {"prme_episode_context_local_k": 0},
+        {"prme_episode_context_local_k": True},
+        {"prme_episode_context_score_decay": 0},
+        {"prme_episode_context_score_decay": 1.1},
+        {"prme_episode_context_score_decay": "0.95"},
+    ],
+)
+def test_adapter_rejects_invalid_episode_settings(
+    tmp_path: Path, config: dict[str, object]
+) -> None:
+    agent = FakeAgent()
+    agent.sub_dataset = "eventqa_65536"
+    agent.agent_save_to_folder = str(tmp_path / "agent")
+    with pytest.raises(ValueError, match="prme_episode_context"):
+        adapter.initialize_prme_agent(agent, config)
 
 
 @pytest.mark.parametrize(

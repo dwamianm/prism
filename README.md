@@ -97,7 +97,7 @@ earlier information available when circumstances change. PRME combines:
 - **Graph-based relational model** — 9 typed node kinds (entities, facts, preferences, decisions, tasks, instructions, summaries, events, notes) with edges capturing relationships, supersedence, and temporal validity
 - **Epistemic state tracking** — memories have lifecycle states (tentative -> stable -> superseded -> archived), confidence scores, contradiction detection, and oscillation dampening
 - **Auditable conditions** — conditional claims begin unresolved, stay out of factual retrieval, and can be evaluated through an atomic, retry-safe transition with evidence
-- **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle
+- **Hybrid retrieval** — semantic similarity + lexical search + graph proximity, scored and packed into a token-efficient context bundle, with opt-in deterministic episode routing for meaningful session boundaries
 - **Self-organizing memory** — organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival
 - **Dual-stream ingestion** — durable fast path with deferred graph materialization and indexing
 - **Local-first** — everything lives in a single directory (DuckDB + usearch + Tantivy). No cloud dependency. Optional PostgreSQL backend for production.
