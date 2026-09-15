@@ -17,6 +17,7 @@ _READER_FIELDS = (
     "temperature",
     "reader_reasoning_effort",
     "reader_seed",
+    "reader_output_contract",
 )
 _TASK_FIELDS = (
     "dataset",

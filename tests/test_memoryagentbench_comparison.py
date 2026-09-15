@@ -34,6 +34,7 @@ def task_fixture(
         "temperature": 0.0,
         "reader_reasoning_effort": "none",
         "reader_seed": 42,
+        "reader_output_contract": "upstream",
     }
     dataset_config = {"dataset": dataset, "sub_dataset": sub_dataset}
     preprocessing = {
@@ -229,6 +230,21 @@ def test_comparator_rejects_cross_arm_question_drift(tmp_path: Path) -> None:
     write_json(registration_path, registration)
 
     with pytest.raises(ValueError, match="different questions or answers"):
+        comparator.compare(manifest, samples=10)
+
+
+def test_comparator_rejects_cross_arm_reader_output_contract_drift(
+    tmp_path: Path,
+) -> None:
+    manifest = comparison_fixture(tmp_path)
+    registration_path = tmp_path / "conflict-bm25-registration.json"
+    registration = json.loads(registration_path.read_text())
+    registration["configuration"]["agent"]["reader_output_contract"] = (
+        "numeric-label-v1"
+    )
+    write_json(registration_path, registration)
+
+    with pytest.raises(ValueError, match="different reader settings"):
         comparator.compare(manifest, samples=10)
 
 
