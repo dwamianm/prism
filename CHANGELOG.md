@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Registered extracted BEAM ingestion now completes both durable raw-source
+  materialization and structured extraction before acknowledging a source.
+  Source-list timestamps come from the latest cited evidence event, and exact
+  sibling passages are capped with `max_per_source=1`. Schema-5 validation
+  inspects each registered owner's DuckDB work rows after execution, so a scored
+  run with pending raw notes or extractions cannot pass again.
+
 - Built-in extraction now sends source messages literally even when they contain
   Jinja expressions or blocks. Grounding context is task-local and isolated
   across concurrent calls, so Instructor cannot evaluate user code as a prompt
@@ -74,15 +81,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   untouched. This prevents one extracted passage from occupying dozens of LLM
   context slots while remaining opt-in pending broader answer trials.
 
-- The first fail-closed scored extracted-memory BEAM execution completed on the
-  registered 100K development conversation: 12/20 pass (60.0%) with a 0.51875
-  mean rubric score, 94/94 chunks ingested, 188/188 durable extractions, 20/20
-  nonempty answers, and 53/53 complete judge verdicts. Against the accepted raw
-  profile on the same cohort, it gained three pass-level questions, lost three,
-  and tied fourteen; the mean score rose by 0.02042 while median retrieval
-  latency rose from 90.8 ms to 486.0 ms. The mixed result identifies exact
-  source-evidence retention and candidate efficiency as the next retrieval
-  targets and does not establish extracted-profile or market leadership.
+- The first scored extracted-memory BEAM execution produced 12/20 pass (60.0%)
+  with a 0.51875 mean rubric score, but a later pack audit found only 66 of 188
+  raw-source materializations complete. The original validator checked all 188
+  structured extractions but missed the second durable work stream. The result
+  is retained as superseded diagnostic evidence and is no longer accepted as a
+  complete extracted-profile quality result.
 
 - Registered BEAM evaluation can now attest scored extracted-memory runs. The
   schema-3 launcher binds and verifies the extraction model and settings before

@@ -54,7 +54,7 @@ async def test_beam_raw_adapter_is_idempotent_isolated_and_resumable(tmp_path):
             assert health == {
                 "status": "ok",
                 "profile": "raw",
-                "adapter_schema": 3,
+                "adapter_schema": 4,
                 "upstream_commit": UPSTREAM_COMMIT,
             }
             first = await client.post("/memories", json=request)
@@ -169,7 +169,7 @@ async def test_beam_raw_adapter_repairs_saved_source_before_acknowledging_retry(
 
 async def test_beam_extracted_adapter_uses_product_ingestion_once_per_source(tmp_path):
     app = create_app(_test_config(tmp_path / "pack"), profile="extracted")
-    source = "Alice uses Rust for deployment automation."
+    source = "On March 29, 2024, Alice uses Rust for deployment automation."
     extraction = AsyncMock(
         return_value=ExtractionResult(
             entities=[ExtractedEntity(name="Alice", entity_type="person")],
@@ -179,6 +179,7 @@ async def test_beam_extracted_adapter_uses_product_ingestion_once_per_source(tmp
                     predicate="uses",
                     object="Rust",
                     evidence_quote=source,
+                    temporal_ref="March 29, 2024",
                 )
             ],
         )
@@ -195,12 +196,35 @@ async def test_beam_extracted_adapter_uses_product_ingestion_once_per_source(tmp
             first = await client.post("/memories", json=request)
             assert first.status_code == 200
             assert any("Rust" in item["memory"] for item in first.json()["results"])
+            assert {item["created_at"] for item in first.json()["results"]} == {
+                "2025-01-01T00:00:00+00:00"
+            }
+            event = (await app.state.engine.get_events("beam_extracted", limit=1))[0]
+            status = await app.state.engine.processing_status(
+                str(event.id), user_id="beam_extracted"
+            )
+            assert status is not None and status.status == "complete"
+            assert app.state.engine.materialization_debt == 0
             retried = await client.post("/memories", json=request)
             assert retried.status_code == 200
             assert [item["id"] for item in retried.json()["results"]] == [
                 item["id"] for item in first.json()["results"]
             ]
             extraction.assert_awaited_once()
+
+            found = await client.post(
+                "/search",
+                json={
+                    "query": "Which language does Alice use?",
+                    "user_id": "beam_extracted",
+                    "limit": 10,
+                },
+            )
+            source_results = [
+                item for item in found.json()["results"] if item["memory"] == source
+            ]
+            assert len(source_results) == 1
+            assert source_results[0]["created_at"] == "2025-01-01T00:00:00+00:00"
 
 
 def test_beam_manifest_fingerprints_extraction_without_persisting_key(tmp_path):
@@ -230,6 +254,14 @@ def test_beam_manifest_fingerprints_extraction_without_persisting_key(tmp_path):
         "lease_seconds": 60.0,
     }
     assert manifest["duckdb_threads"] == 2
+    assert manifest["retrieval"] == {
+        "max_per_source": 1,
+        "passage_time": "latest_evidence_event",
+    }
+    assert manifest["admission"] == {
+        "raw_materialization_before_ack": True,
+        "extraction_before_ack": True,
+    }
     assert manifest["adapter_source_sha256"]
 
     config = _service_config(args)

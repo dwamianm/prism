@@ -68,6 +68,7 @@ def _registered_validation(
             (2, SCORED_REGISTRATION_KIND),
             (3, SCORED_REGISTRATION_KIND_V3),
             (4, SCORED_REGISTRATION_KIND_V3),
+            (5, SCORED_REGISTRATION_KIND_V3),
         }
     )
     if not supported_registration:
@@ -180,7 +181,7 @@ def _registered_validation(
         embedding = adapter_manifest.get("embedding")
         if embedding != system.get("embedding"):
             errors.append("BEAM embedding configuration differs from registration")
-        if registration_schema in {3, 4}:
+        if registration_schema in {3, 4, 5}:
             for field in (
                 "adapter_schema",
                 "duckdb_threads",
@@ -189,11 +190,93 @@ def _registered_validation(
             ):
                 if adapter_manifest.get(field) != system.get(field):
                     errors.append(f"BEAM {field} differs from registration")
+        if registration_schema == 5:
+            for field in ("retrieval", "admission"):
+                if adapter_manifest.get(field) != system.get(field):
+                    errors.append(f"BEAM {field} differs from registration")
+            _validate_durable_pack(
+                report,
+                execution_root=execution_root,
+                profile=profile,
+            )
     for path in (manifest_path, adapter_manifest_path):
         if path.is_file():
             report["artifact_sha256"][str(path.relative_to(execution_root))] = _hash(path)
     report["registration_sha256"] = _hash(registration_path)
     report["execution_root"] = str(execution_root.resolve())
+
+
+def _validate_durable_pack(
+    report: dict[str, Any], *, execution_root: Path, profile: str
+) -> None:
+    """Require every admitted BEAM source stream to be durably complete."""
+    import duckdb
+
+    errors = report["errors"]
+    database = execution_root / "prme-pack" / "memory.duckdb"
+    if not database.is_file():
+        errors.append("BEAM durable pack database is missing")
+        return
+    prediction_dir = Path(report["prediction_directory"])
+    owners: set[str] = set()
+    for checkpoint in prediction_dir.glob("_ingestion_*.json"):
+        row = _read(checkpoint, errors)
+        owner = row.get("user_id") if row is not None else None
+        if isinstance(owner, str) and owner:
+            owners.add(owner)
+    if not owners:
+        errors.append("BEAM durable pack validation has no registered owners")
+        return
+
+    state: dict[str, Any] = {}
+    try:
+        connection = duckdb.connect(str(database), read_only=True)
+        try:
+            for owner in sorted(owners):
+                event_count = connection.execute(
+                    "SELECT count(*) FROM events WHERE user_id = ?", [owner]
+                ).fetchone()[0]
+                materializations = dict(
+                    connection.execute(
+                        "SELECT m.status, count(*) FROM event_materializations m "
+                        "JOIN events e ON e.id=m.event_id WHERE e.user_id=? "
+                        "GROUP BY m.status",
+                        [owner],
+                    ).fetchall()
+                )
+                extractions = dict(
+                    connection.execute(
+                        "SELECT x.status, count(*) FROM event_extractions x "
+                        "JOIN events e ON e.id=x.event_id WHERE e.user_id=? "
+                        "GROUP BY x.status",
+                        [owner],
+                    ).fetchall()
+                )
+                state[owner] = {
+                    "events": event_count,
+                    "materializations": materializations,
+                    "extractions": extractions,
+                }
+                if event_count <= 0:
+                    errors.append(f"BEAM owner {owner} has no durable events")
+                if materializations != {"complete": event_count}:
+                    errors.append(
+                        f"BEAM owner {owner} raw materialization is incomplete"
+                    )
+                expected_extractions = (
+                    {"complete": event_count} if profile == "extracted" else {}
+                )
+                if extractions != expected_extractions:
+                    errors.append(f"BEAM owner {owner} extraction is incomplete")
+        finally:
+            connection.close()
+    except Exception as exc:
+        errors.append(
+            f"BEAM durable pack could not be inspected ({type(exc).__name__})"
+        )
+        return
+    report["durable_state"] = state
+    report["artifact_sha256"]["prme-pack/memory.duckdb"] = _hash(database)
 
 
 def parse_indices(spec: str) -> tuple[int, ...]:

@@ -30,8 +30,9 @@ from prme.ingestion.errors import ExtractionError, MaterializationError
 
 UPSTREAM_REPOSITORY = "https://github.com/mem0ai/memory-benchmarks"
 UPSTREAM_COMMIT = "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
-ADAPTER_SCHEMA = 3
-_LEGACY_ADAPTER_SCHEMAS = (1, 2)
+ADAPTER_SCHEMA = 4
+_LEGACY_ADAPTER_SCHEMAS = (1, 2, 3)
+MAX_RESULTS_PER_SOURCE = 1
 
 
 class Message(BaseModel):
@@ -112,15 +113,26 @@ class _SourceIndex:
         self.engine = engine
         self.loaded: set[str] = set()
         self.events: dict[tuple[str, str, int], str] = {}
+        self.event_times: dict[str, datetime] = {}
         self.latest: dict[str, datetime] = {}
 
     def note(self, user_id: str, request_hash: str, index: int, event_id: str,
              event_time: datetime | None) -> None:
         self.events[(user_id, request_hash, index)] = event_id
         if event_time is not None:
+            self.event_times[event_id] = event_time
             current = self.latest.get(user_id)
             if current is None or event_time > current:
                 self.latest[user_id] = event_time
+
+    def source_time(self, node: Any) -> datetime | None:
+        """Return when the cited source was observed, not a date inside a fact."""
+        observed = [
+            self.event_times[str(reference)]
+            for reference in node.evidence_refs
+            if str(reference) in self.event_times
+        ]
+        return max(observed) if observed else None
 
     async def load(self, user_id: str) -> None:
         if user_id in self.loaded:
@@ -150,8 +162,8 @@ class _SourceIndex:
         self.loaded.add(user_id)
 
 
-def _result(node: Any) -> dict[str, Any]:
-    created = node.event_time or node.created_at
+def _result(node: Any, *, source_time: datetime | None = None) -> dict[str, Any]:
+    created = source_time or node.event_time or node.created_at
     return {
         "id": str(node.id),
         "memory": node.content,
@@ -337,6 +349,11 @@ def create_app(config: PRMEConfig, *, profile: Literal["raw", "extracted"] = "ra
                         engine, event_id=event_id, user_id=body.user_id
                     )
 
+                if profile == "extracted":
+                    await _complete_existing_materialization(
+                        engine, event_id=event_id, user_id=body.user_id
+                    )
+
                 event = await engine.get_event(event_id, user_id=body.user_id)
                 if event is None:
                     raise HTTPException(503, "Persisted source is unavailable")
@@ -348,7 +365,13 @@ def create_app(config: PRMEConfig, *, profile: Literal["raw", "extracted"] = "ra
                     event.event_time or event.created_at,
                 )
                 nodes = await engine.get_event_nodes(event_id, user_id=body.user_id)
-                output.extend({**_result(node), "event": "ADD"} for node in nodes)
+                output.extend(
+                    {
+                        **_result(node, source_time=sources.source_time(node)),
+                        "event": "ADD",
+                    }
+                    for node in nodes
+                )
 
             return {"results": output}
 
@@ -367,11 +390,18 @@ def create_app(config: PRMEConfig, *, profile: Literal["raw", "extracted"] = "ra
                 user_id=body.user_id,
                 reference_time=sources.latest.get(body.user_id),
                 limit=body.limit,
+                max_per_source=MAX_RESULTS_PER_SOURCE,
                 include_cross_scope=False,
             )
             return {
                 "results": [
-                    {**_result(candidate.node), "score": candidate.composite_score}
+                    {
+                        **_result(
+                            candidate.node,
+                            source_time=sources.source_time(candidate.node),
+                        ),
+                        "score": candidate.composite_score,
+                    }
                     for candidate in response.results[: body.limit]
                 ]
             }
@@ -460,6 +490,14 @@ def _manifest(args: argparse.Namespace, config: PRMEConfig) -> dict[str, Any]:
         },
         "scoring_version": config.scoring.version_id,
         "packing": config.packing.model_dump(mode="json"),
+        "retrieval": {
+            "max_per_source": MAX_RESULTS_PER_SOURCE,
+            "passage_time": "latest_evidence_event",
+        },
+        "admission": {
+            "raw_materialization_before_ack": True,
+            "extraction_before_ack": args.profile == "extracted",
+        },
         "extraction": extraction,
     }
 

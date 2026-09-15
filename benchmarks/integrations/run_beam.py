@@ -89,6 +89,7 @@ def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
         (2, SCORED_REGISTRATION_KIND),
         (3, SCORED_REGISTRATION_KIND_V3),
         (4, SCORED_REGISTRATION_KIND_V3),
+        (5, SCORED_REGISTRATION_KIND_V3),
     }:
         raise RuntimeError("unsupported BEAM registration schema or kind")
     if not isinstance(value, dict):
@@ -96,7 +97,7 @@ def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
     profile = value.get("profile")
     if schema_version == 2 and profile != "raw":
         raise RuntimeError("BEAM schema 2 scored protocol requires the raw profile")
-    if schema_version in {3, 4} and profile not in {"raw", "extracted"}:
+    if schema_version in {3, 4, 5} and profile not in {"raw", "extracted"}:
         raise RuntimeError(
             f"BEAM schema {schema_version} scored protocol requires a supported profile"
         )
@@ -251,7 +252,7 @@ def validate_registration(
             raise RuntimeError("registered BEAM extraction retries must be positive")
         if extraction.get("base_url") != "http://127.0.0.1:11434/v1":
             raise RuntimeError("registered BEAM extraction endpoint must be loopback Ollama")
-    if registration["schema_version"] in {3, 4}:
+    if registration["schema_version"] in {3, 4, 5}:
         required_system = {
             "id",
             "version",
@@ -263,8 +264,12 @@ def validate_registration(
             "packing",
             "extraction",
         }
+        if registration["schema_version"] >= 5:
+            required_system.update({"retrieval", "admission"})
         if set(system) != required_system:
-            raise RuntimeError("BEAM schema 3 must bind the complete adapter configuration")
+            raise RuntimeError(
+                f"BEAM schema {registration['schema_version']} must bind the complete adapter configuration"
+            )
         if (
             not isinstance(system.get("adapter_schema"), int)
             or isinstance(system["adapter_schema"], bool)
@@ -276,6 +281,19 @@ def validate_registration(
             or not system["scoring_version"]
         ):
             raise RuntimeError("BEAM schema 3 adapter configuration is incomplete")
+        if registration["schema_version"] >= 5:
+            if system["adapter_schema"] != 4:
+                raise RuntimeError("BEAM schema 5 requires adapter schema 4")
+            if system.get("retrieval") != {
+                "max_per_source": 1,
+                "passage_time": "latest_evidence_event",
+            }:
+                raise RuntimeError("BEAM schema 5 must bind source-diverse passage retrieval")
+            if system.get("admission") != {
+                "raw_materialization_before_ack": True,
+                "extraction_before_ack": protocol["profile"] == "extracted",
+            }:
+                raise RuntimeError("BEAM schema 5 must bind complete admission work")
     _verify_models(registration)
 
 

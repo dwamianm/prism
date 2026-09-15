@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "beam-extracted-scored-result",
-  "status": "complete and accepted by fail-closed validation",
+  "status": "scored execution superseded after post-publication validator audit",
   "registration": "beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev3-registration.json",
   "registration_sha256": "02f5c9de6e80d53a065aa0d3872d7fed10a6087e8988ace18b61254677e2cda1",
   "source": {
@@ -118,6 +118,8 @@
     "ingestion_chunks_processed": 94,
     "ingestion_chunks_failed": 0,
     "durable_source_events": 188,
+    "raw_materializations_complete": 66,
+    "raw_materializations_pending": 122,
     "extractions_complete": 188,
     "extraction_attempts": 188,
     "extraction_errors": 0,
@@ -144,7 +146,13 @@
     "nonempty_judge_reasons": 53,
     "validation_errors": 0
   },
-  "claim_boundary": "This is a tuned one-conversation, 20-question 100K development result using durable PRME extraction and mutable Ollama cloud model aliases. It is not an untouched confirmation, official-scale BEAM result, matched cross-system comparison, or evidence of market leadership.",
+  "post_publication_audit": {
+    "accepted_by_original_validator": true,
+    "validator_gap": "The schema-4 validator checked structured extraction completion but did not inspect the separate raw-source materialization stream.",
+    "impact": "Only 66 of 188 raw notes were complete before question retrieval. Opportunistic processing completed pending notes during the question sequence, so the retrieved graph depended on question order.",
+    "disposition": "Superseded; retain metrics as diagnostic evidence but do not treat them as a complete extracted-profile quality result."
+  },
+  "claim_boundary": "This is a tuned one-conversation, 20-question 100K diagnostic result from an incompletely materialized pack using mutable Ollama cloud model aliases. It is superseded and cannot support extracted-profile, official-scale, cross-system, or market-leadership claims.",
   "artifact_sha256": {
     "execution-manifest.json": "9b4f7d85dee9f4114fe9bd4ac53cc168bc1d9c53fbdeeefc4281f5b956cab4b7",
     "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",

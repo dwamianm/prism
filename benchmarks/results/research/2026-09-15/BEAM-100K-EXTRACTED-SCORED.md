@@ -1,11 +1,17 @@
-# BEAM 100K extracted-memory scored development run
+# BEAM 100K extracted-memory scored development run (superseded)
 
-PRME scored **12/20 (60.0%)** with a mean rubric score of **0.51875** on one
-100K-token BEAM conversation using durable structured extraction. All 94 source
-chunks produced 188 durable source events, all 188 extraction jobs completed in
-one attempt, every query returned 50 memories, all 20 answers were nonempty, and
-all 53 rubric verdicts contained a reason. The fail-closed validator accepted the
-run with no errors.
+This execution scored **12/20 (60.0%)** with a mean rubric score of **0.51875**
+on one 100K-token BEAM conversation, but it is **superseded and not accepted as
+complete extracted-memory quality evidence**. A post-publication audit found
+that all 188 structured extraction jobs completed while only 66 of the 188
+durable raw-source materializations had completed; 122 remained pending. The
+then-current validator checked the extraction stream but not the raw-source
+stream.
+
+Retrieval opportunistically completed some pending raw notes while the questions
+ran, so the available graph changed with question order. The measured answers
+and scores remain useful diagnostic evidence for the specific execution, but
+they do not describe a fixed, completely admitted extracted-memory pack.
 
 This is tuned development evidence. Two earlier extraction failures from this
 conversation directly informed product fixes before this run, so it is not an
@@ -35,12 +41,13 @@ facts, 66 notes, 54 preferences, and 23 decisions. This is sequential warm
 latency for one local pack. It excludes extraction, answer generation, and judge
 generation and is not a general service latency claim.
 
-## Paired raw comparison
+## Diagnostic paired raw comparison
 
 The accepted raw-memory run used the same conversation, answerer, judge, query
 selection, and top-50 cutoff. It scored 12/20 with a 0.49833 mean rubric score.
-The extracted profile gained 0.02042 mean score, with three pass-level wins,
-three losses, and fourteen ties.
+This superseded extracted execution measured 0.02042 higher, with three
+pass-level wins, three losses, and fourteen ties. Because its graph changed
+during retrieval, these deltas cannot establish extracted-profile quality.
 
 | Ability | Raw pass | Extracted pass | Raw score | Extracted score |
 | --- | ---: | ---: | ---: | ---: |
@@ -62,11 +69,16 @@ controlled performance benchmark.
 
 ## What the run exposed
 
-Structured extraction fixed the stale-update failure in the raw profile and
-improved contradiction, temporal, and one summarization result. The latest
-project total reached the answer context instead of the older assertion, which
-is evidence that current-state scoring can work when extraction creates explicit
-claims.
+The audit exposed two benchmark correctness gaps. Extracted ingestion creates a
+structured derivation stream and a raw-source materialization stream, but the
+adapter acknowledged a source after only the first completed. The adapter also
+used a fact's resolved temporal reference as its list timestamp even though the
+upstream runner interprets that field as source observation time.
+
+Schema 5 closes both gaps: admission waits for both durable work records,
+validation inspects their final per-owner state directly in DuckDB, and result
+timestamps use the latest cited evidence event. It also caps exact passage
+siblings per source so one extracted paragraph cannot occupy many result slots.
 
 The offsetting losses identify a retrieval-composition problem. Both direct
 information-extraction questions passed with raw notes and failed with the much
@@ -80,11 +92,9 @@ Both profiles failed both abstention questions. Related memories still encourage
 plausible unsupported answers when the requested relationship is absent. Broad
 coverage and answerability remain separate quality gaps.
 
-The next development target is deterministic source-evidence retention during
-hybrid candidate generation and packing, followed by latency work on the larger
-candidate set. Any tuned change must beat both profiles on this development
-conversation and then hold on untouched conversations before it can become a
-default.
+The corrected schema-5 execution must be run before any extracted-profile score
+is promoted. A tuned change must then hold on untouched conversations before it
+can become a default.
 
 ## Failed-trial handling
 

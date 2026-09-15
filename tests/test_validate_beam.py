@@ -2,6 +2,7 @@
 
 import json
 
+import duckdb
 import pytest
 
 from benchmarks.integrations import run_beam
@@ -12,6 +13,39 @@ from benchmarks.integrations import validate_beam
 def _write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value))
+
+
+def _write_durable_work(
+    execution_root,
+    *,
+    owner,
+    materialization_status="complete",
+    extraction_status="complete",
+):
+    database = execution_root / "prme-pack" / "memory.duckdb"
+    database.parent.mkdir(parents=True, exist_ok=True)
+    event_id = "00000000-0000-0000-0000-000000000001"
+    connection = duckdb.connect(str(database))
+    try:
+        connection.execute("CREATE TABLE events (id UUID PRIMARY KEY, user_id VARCHAR)")
+        connection.execute(
+            "CREATE TABLE event_materializations (event_id UUID PRIMARY KEY, status VARCHAR)"
+        )
+        connection.execute(
+            "CREATE TABLE event_extractions (event_id UUID PRIMARY KEY, status VARCHAR)"
+        )
+        connection.execute("INSERT INTO events VALUES (?, ?)", [event_id, owner])
+        connection.execute(
+            "INSERT INTO event_materializations VALUES (?, ?)",
+            [event_id, materialization_status],
+        )
+        if extraction_status is not None:
+            connection.execute(
+                "INSERT INTO event_extractions VALUES (?, ?)",
+                [event_id, extraction_status],
+            )
+    finally:
+        connection.close()
 
 
 def _prediction(tmp_path, *, scored=False):
@@ -206,6 +240,12 @@ def test_scored_beam_protocol_requires_distinct_pinned_local_models(monkeypatch)
             run_beam.SCORED_REGISTRATION_KIND_V3,
             run_beam.SCORED_EXECUTION_KIND_V3,
         ),
+        (
+            "extracted",
+            5,
+            run_beam.SCORED_REGISTRATION_KIND_V3,
+            run_beam.SCORED_EXECUTION_KIND_V3,
+        ),
     ],
 )
 def test_registered_beam_validation_accepts_bound_scored_execution(
@@ -313,11 +353,25 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
                 "model": "BAAI/bge-small-en-v1.5",
                 "dimension": 384,
             },
-            "adapter_schema": 3 if schema_version >= 4 else 2,
+            "adapter_schema": 4 if schema_version >= 5 else (3 if schema_version >= 4 else 2),
             "duckdb_threads": 1,
             "scoring_version": "scoring-v1",
             "packing": {"token_budget": 4096},
             "extraction": extraction,
+            **(
+                {
+                    "retrieval": {
+                        "max_per_source": 1,
+                        "passage_time": "latest_evidence_event",
+                    },
+                    "admission": {
+                        "raw_materialization_before_ack": True,
+                        "extraction_before_ack": profile == "extracted",
+                    },
+                }
+                if schema_version >= 5
+                else {}
+            ),
         },
     }
     registration_path = tmp_path / "registration.json"
@@ -353,12 +407,22 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
             "prme_version": "0.11.0",
             "adapter_source_sha256": "c" * 64,
             "embedding": registration["system"]["embedding"],
-            "adapter_schema": 3 if schema_version >= 4 else 2,
+            "adapter_schema": 4 if schema_version >= 5 else (3 if schema_version >= 4 else 2),
             "duckdb_threads": 1,
             "scoring_version": "scoring-v1",
             "packing": {"token_budget": 4096},
+            **(
+                {
+                    "retrieval": registration["system"]["retrieval"],
+                    "admission": registration["system"]["admission"],
+                }
+                if schema_version >= 5
+                else {}
+            ),
         },
     )
+    if schema_version >= 5:
+        _write_durable_work(execution_root, owner=owner)
 
     report = validate_beam.validate_run(
         prediction_dir,
@@ -380,7 +444,7 @@ def test_registered_beam_validation_accepts_bound_scored_execution(
     assert report["errors"] == []
 
 
-def test_scored_beam_v4_requires_pinned_extraction_model_and_retries(monkeypatch):
+def test_scored_beam_v4_and_v5_bind_extraction_and_admission(monkeypatch):
     protocol = {**_scored_protocol(), "profile": "extracted"}
     registration = {
         "schema_version": 4,
@@ -451,6 +515,72 @@ def test_scored_beam_v4_requires_pinned_extraction_model_and_retries(monkeypatch
     registration["system"]["extraction"]["model_digest"] = "f" * 64
     with pytest.raises(RuntimeError, match="extraction model digest"):
         run_beam._verify_models(registration)
+    registration["system"]["extraction"]["model_digest"] = "d" * 64
+    registration["schema_version"] = 5
+    registration["system"].update(
+        {
+            "adapter_schema": 4,
+            "retrieval": {
+                "max_per_source": 1,
+                "passage_time": "latest_evidence_event",
+            },
+            "admission": {
+                "raw_materialization_before_ack": True,
+                "extraction_before_ack": True,
+            },
+        }
+    )
+    run_beam.validate_registration(
+        registration,
+        project_revision="1" * 40,
+        upstream_revision=run_beam.UPSTREAM_COMMIT,
+        source_hashes={"service_sha256": "c" * 64},
+        dataset_sha256="e" * 64,
+    )
+    registration["system"]["admission"]["raw_materialization_before_ack"] = False
+    with pytest.raises(RuntimeError, match="complete admission work"):
+        run_beam.validate_registration(
+            registration,
+            project_revision="1" * 40,
+            upstream_revision=run_beam.UPSTREAM_COMMIT,
+            source_hashes={"service_sha256": "c" * 64},
+            dataset_sha256="e" * 64,
+        )
+
+
+def test_beam_durable_pack_validation_rejects_pending_materialization(tmp_path):
+    execution_root = tmp_path / "execution"
+    prediction_dir = execution_root / "predictions"
+    owner = "beam_100K_0_pending"
+    _write(
+        prediction_dir / "_ingestion_100K_0.json",
+        {"user_id": owner},
+    )
+    _write_durable_work(
+        execution_root,
+        owner=owner,
+        materialization_status="pending",
+    )
+    report = {
+        "errors": [],
+        "artifact_sha256": {},
+        "prediction_directory": str(prediction_dir),
+    }
+
+    validate_beam._validate_durable_pack(
+        report,
+        execution_root=execution_root,
+        profile="extracted",
+    )
+
+    assert report["errors"] == [
+        f"BEAM owner {owner} raw materialization is incomplete"
+    ]
+    assert report["durable_state"][owner] == {
+        "events": 1,
+        "materializations": {"pending": 1},
+        "extractions": {"complete": 1},
+    }
 
 
 def test_registered_beam_validation_binds_source_dataset_and_adapter(tmp_path):
