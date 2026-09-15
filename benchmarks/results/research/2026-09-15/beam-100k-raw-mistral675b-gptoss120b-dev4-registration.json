@@ -1,0 +1,146 @@
+{
+  "schema_version": 2,
+  "kind": "beam-raw-scored-registration",
+  "registered_at_utc": "2026-09-15T18:59:57Z",
+  "status": "registered before dev4 PRME ingestion, retrieval, answer generation, or judging",
+  "purpose": "Measure complete answer and rubric quality for PRME raw memory on one public 100K-token BEAM conversation using a non-thinking long-context answerer and a separately hosted structured judge",
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "b95931aae261ff627756fa2f979cc110c15ac639",
+    "upstream_repository": "mem0ai/memory-benchmarks",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "files": {
+      "launcher_sha256": "249df3beb4a8bea36659dd7b0287b858f9daffd3c78d92d0b08e16b53bb4c833",
+      "service_sha256": "115813504c5329d67274daa3a9bd5d10e777b7e3cfee2a79e751e009cbd2e00d",
+      "validator_sha256": "a4f1a7bfacf8a2878baf165ce99b606df04ae39cb653ec487cae49736efe9c0b",
+      "upstream_runner_sha256": "c13ed8464d28f0b09c1f6f3d1b703cb2be92dbc51dbdb3e91834e355ad5aad0c",
+      "upstream_mem0_client_sha256": "a3047e4113978c3b04c2635d53e85e0ac5e7a5d43aef530beccedf591df29b99",
+      "upstream_utils_sha256": "c49e85a0d0f846c7963261e7396995203ad9f0732fe8a64b2aea1decadeabdc4",
+      "upstream_requirements_sha256": "14cb7961cff56ba10fd9d1cbb18c7842c6a2377565f18ad538d2b439402fd007"
+    }
+  },
+  "dataset": {
+    "repository": "Mohammadta/BEAM",
+    "revision": "3205395e897e7318c7b094ef4e6047b9b82dbb03",
+    "split": "100K",
+    "source_parquet_sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "normalized_by": "Pinned upstream download_dataset field selection and probing-question parsing",
+    "cache_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "cache_bytes": 13661638,
+    "conversation_count": 20
+  },
+  "protocol": {
+    "profile": "raw",
+    "chat_sizes": [
+      "100K"
+    ],
+    "conversations": [
+      0
+    ],
+    "question_types": [
+      "abstention",
+      "contradiction_resolution",
+      "event_ordering",
+      "information_extraction",
+      "instruction_following",
+      "knowledge_update",
+      "multi_session_reasoning",
+      "preference_following",
+      "summarization",
+      "temporal_reasoning"
+    ],
+    "top_k": 50,
+    "top_k_cutoffs": [
+      50
+    ],
+    "predict_only": false,
+    "project_name": "prme-beam-100k-raw-mistral675b-gptoss120b-dev4",
+    "run_id": "prme-beam-100k-raw-mistral675b-gptoss120b-dev4",
+    "chunk_size": 2,
+    "max_workers": 1,
+    "rpm": 60
+  },
+  "models": {
+    "answerer": {
+      "provider": "openai",
+      "model": "mistral-large-3:675b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "mistral-large-3:675b",
+      "parameter_size": "675B",
+      "quantization": "FP8",
+      "advertised_context_tokens": 262144,
+      "thinking": false,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    },
+    "judge": {
+      "provider": "openai",
+      "model": "gpt-oss:120b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "gpt-oss:120b",
+      "parameter_size": "117B",
+      "quantization": "MXFP4",
+      "advertised_context_tokens": 131072,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    }
+  },
+  "runtime": {
+    "generation_temperature": 0,
+    "generation_max_tokens": 4096,
+    "llm_max_retries": 5,
+    "llm_timeout_seconds": 120,
+    "answerer_and_judge_share_endpoint": true,
+    "judge_family_is_distinct_from_answerer": true
+  },
+  "preflight": {
+    "performed_before_registration": true,
+    "used_beam_dataset_content": false,
+    "answerer": {
+      "synthetic_input_characters": 135216,
+      "required_terminal_marker": "Z7",
+      "returned_nonempty_answer_containing_terminal_marker": true,
+      "elapsed_seconds": 4.79,
+      "max_tokens": 4096
+    },
+    "judge": {
+      "used_exact_upstream_prompt_template": true,
+      "synthetic_prompt_characters": 6120,
+      "synthetic_response_characters": 2219,
+      "returned_score_and_reason": true,
+      "elapsed_seconds": 1.10,
+      "max_tokens": 4096
+    }
+  },
+  "system": {
+    "id": "prme",
+    "version": "0.11.0",
+    "profile": "raw",
+    "adapter_schema": 1,
+    "duckdb_threads": 1,
+    "embedding": {
+      "provider": "fastembed",
+      "model": "BAAI/bge-small-en-v1.5",
+      "dimension": 384
+    },
+    "extraction": null,
+    "reranker": false,
+    "opportunistic_organizer": false
+  },
+  "reporting": {
+    "expected_ingestion_checkpoints": 1,
+    "expected_questions": 20,
+    "expected_questions_per_ability": 2,
+    "require_zero_failed_chunks": true,
+    "require_no_partial_progress": true,
+    "require_nonempty_answers": true,
+    "require_complete_nugget_verdicts": true,
+    "preserve_every_retrieval_answer_and_verdict": true,
+    "prior_trial_disclosure": "Dev1 exposed an answerer context mismatch and judge timeouts. Dev2's local judge did not finish its first verdict. Dev3 completed but fail-closed validation rejected six empty answers from a thinking answerer. The selection and retrieval protocol are unchanged; dev4 changes only the answerer after a non-thinking long-context synthetic preflight.",
+    "claim_boundary": "This development run measures one 100K conversation with Ollama-hosted Mistral Large 3 and GPT-OSS 120B cloud aliases. Ollama does not expose immutable remote weight revisions. This is not an official-scale BEAM result or a matched comparison with another memory system."
+  }
+}

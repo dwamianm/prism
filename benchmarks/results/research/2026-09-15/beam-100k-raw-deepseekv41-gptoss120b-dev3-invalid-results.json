@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "beam-raw-scored-invalid-result",
+  "status": "rejected by fail-closed validation",
+  "registration": "beam-100k-raw-deepseekv41-gptoss120b-dev3-registration.json",
+  "registration_sha256": "1f669f00023703fd229af6bdca7119d0ae8bcbae9e5d1144b2a2b10ed8aeeb68",
+  "completed_at_utc": "2026-09-15T18:59:24Z",
+  "validation": {
+    "complete": false,
+    "questions_written": 20,
+    "questions_expected": 20,
+    "empty_generated_answers": 6,
+    "empty_answer_question_ids": [
+      "100K_0_q1_abstention",
+      "100K_0_q4_event_ordering",
+      "100K_0_q9_instruction_following",
+      "100K_0_q13_multi_session_reasoning",
+      "100K_0_q16_summarization",
+      "100K_0_q17_summarization"
+    ]
+  },
+  "rejected_upstream_metrics": {
+    "correct": 10,
+    "total": 20,
+    "accuracy": 50.0,
+    "average_score": 0.475,
+    "reason_rejected": "The upstream harness counted empty answer generations as ordinary scored failures and reported zero errors. PRME's validator requires every answer to be nonempty."
+  },
+  "decision": "Do not publish or compare the upstream score. The replacement trial retains the complete selection and judge, and replaces only the answerer after a synthetic long-context preflight with a non-thinking model.",
+  "artifact_sha256": {
+    "execution-manifest.json": "5c361fa17fb53a3538fced35c95458ba7bdab104c77cf9ff35eec283cb7a8461",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "13818b34d493498d7e28de83963cf85ad9bac412f853ea64edc46cc9999a7046",
+    "service.log": "cfb334d3a6cf1550bffbc5958edeec85691e6e90806d88bc32eed329ad92b4f2",
+    "upstream-results/beam_results_20260915_135924.json": "0759750ed9affea567ee94ede65f82b36b368c1b23d1ba335cdcd9f5f7b9aac3",
+    "validator.json": "81f42ad1fa710c6d5845c1200d0de1ec40e78c873d9bb2bff6adba45d411be3e",
+    "_ingestion_100K_0.json": "2778b368cb2cce0efcab9d11a73490c9d3bedbc129d5431044f0dc4acffe383d",
+    "100K_0_q0_abstention.json": "a5ede27b701646cef6d4d08782112555345836c395c6bd1e5376a161702c5e3a",
+    "100K_0_q1_abstention.json": "d1ae5c885ab60a296eaddc673b306fc3a176686eb82157e8b5b1443839ea3786",
+    "100K_0_q2_contradiction_resolution.json": "e7ed573a514bc9496b693361b429b67a09af005b3e127dddb3b58f3b97f44aeb",
+    "100K_0_q3_contradiction_resolution.json": "266c1bdd3a18681307d3412456bc10a9c19724f2e264fcb3fa5ae9a5dad07228",
+    "100K_0_q4_event_ordering.json": "4f03e7f6fc752b41b18c42800386150431064ef70d3142a7a40927510fd72d37",
+    "100K_0_q5_event_ordering.json": "04c7cdaa724de2c12c671b227847690cb05652b9dc159dfadf75f1a529b5478c",
+    "100K_0_q6_information_extraction.json": "2bb6664eab325481b3f88e0db489fbfc15063966342f4be88a9114d16aed331c",
+    "100K_0_q7_information_extraction.json": "7b12c3b66e992fb83b10c05b0c35a83e8a6ba6b4e1a0c2c2642209f3ab6fe5fc",
+    "100K_0_q8_instruction_following.json": "985a022ee3e4e1321e9d44c81cc725008515b0768825c0b6072f104f13f2363b",
+    "100K_0_q9_instruction_following.json": "2134da6942cef00cda7317bd1bd9c4fabdff809f85fe493b718bc81e62572c72",
+    "100K_0_q10_knowledge_update.json": "e4c8384fa33077272f25f247036ec06f979b7ecd3e800e3f06db7dbf4b443e91",
+    "100K_0_q11_knowledge_update.json": "78cc459f29d2b35ad4866fab7fd19ecdf0affdbec3793b4c5931bb819e18aa11",
+    "100K_0_q12_multi_session_reasoning.json": "b85a7d6dba8013103e4eaa0237d6f68b4b9e1c34d3e12fc9e088053022ce6039",
+    "100K_0_q13_multi_session_reasoning.json": "cea3d916073b9b2338fea909312965ebdd33e33a74b57d23a1ca0f279bf99d66",
+    "100K_0_q14_preference_following.json": "20e74284a041163bb39f95c42802547a4468bcc2877d64fc52ea59e55b692ae7",
+    "100K_0_q15_preference_following.json": "c3595f10f34c3614c6a64ac9a0f22f7959c87834261d3b950f24dc5eed033e3c",
+    "100K_0_q16_summarization.json": "1f91f23736c1a9898e8841fae3c78729fe6c64672ea262402a5d3b294b300f5e",
+    "100K_0_q17_summarization.json": "457180dec14cc8cd898e135bf6c4b824ecdb81a2e1eab91a91930881c3e5e454",
+    "100K_0_q18_temporal_reasoning.json": "cf8f094fad7106cbaaef0f46706897f9f40fda6b258090d7425f349d9362f16e",
+    "100K_0_q19_temporal_reasoning.json": "15922b02351759327b1ebfd74001ed2dcd5c3746a1a2691cceb7e779e0912ce2"
+  }
+}
