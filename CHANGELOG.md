@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runtime initialization and verification reject the contract outside
   DetectiveQA, and saved model output remains untouched.
 
+- The matched DetectiveQA development trial completed on 20 questions under
+  that contract. PRME and BM25 each scored 13/20, with one paired win and one
+  loss. PRME used 90.52% fewer retrieved-context tokens and 89.27% fewer reader
+  input tokens. Two PRME responses and three BM25 responses contained a
+  reference answer but violated the exact format; saved outputs were scored without
+  rewriting. The verified tie completes a first matched development pass across
+  all four MemoryAgentBench competency families, with task-specific gaps and no
+  general leadership claim.
+
 - A matched MemoryAgentBench Conflict Resolution development trial completed on
   20 questions under the shared `answer-only-v1` contract. PRME scored 1/20 and
   BM25 scored 0/20. Post hoc inspection found reference-answer text in 19 PRME

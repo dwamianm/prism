@@ -29,6 +29,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 | MemoryAgentBench test-time learning | [Matched Banking77 development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md): PRME scored 20/20 versus BM25 at 17/20 under the official strict metric, while using 90.52% fewer retrieved-context tokens. Both arms used the same registered derived questions, Qwen 9B reader and digits-only output contract; both artifact chains verified. | Twenty previously inspected development questions, one reader and one lexical control. The paired interval includes zero. PRME's 5,897-record pack took 467.549 seconds to construct, so bulk typed ingestion remains a material cost. |
 | MemoryAgentBench accurate retrieval | [Matched EventQA development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-SESSION-DEV20.md): PRME scored 16/20 versus BM25 at 20/20 while using 90.48% fewer retrieved-context tokens. Both arms used the same registered questions, upstream reader contract and Qwen 9B controls; both artifact chains verified. Post hoc inspection found stored answer-bearing records outside every failed packed context. | Twenty previously inspected development questions, one reader and one lexical control. The exact paired test does not reject equality. Reference-answer inspection is explanatory only. Flat candidate and budget increases were insufficient; evaluate source-cited episodic reconstruction before changing defaults. |
 | MemoryAgentBench conflict resolution | [Matched FactConsolidation development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md): PRME scored 1/20 versus BM25 at 0/20 under the shared answer-only contract. Reference-answer text appeared in 19 PRME contexts and all 20 BM25 contexts. A separately registered Qwen 35B A3B check produced the same scores; all artifact chains verified. | Twenty previously inspected development questions, two related local readers and one lexical control. Near-zero accuracy in both arms makes this a reader-interface failure, not a retrieval or conflict-resolution quality result. Audit numbered-source reasoning and evaluate PRME's actual correction lifecycle directly. |
+| MemoryAgentBench long-range understanding | [Matched DetectiveQA development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-DETECTIVE-CHOICE-DEV20.md): PRME and BM25 each scored 13/20 under the official exact metric, with one paired win and one loss. PRME used 90.52% fewer retrieved-context tokens and 89.27% fewer reader input tokens; both artifact chains verified. | Twenty previously inspected development questions, one local reader and one lexical control. The paired interval is -15 to +15 points. This supports compact-context efficiency on the named slice, not general equivalence or leadership; expand the preregistered cohort and readers. |
 
 See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
 [recovery evidence](../benchmarks/results/recovery/2026-09-12/README.md),
@@ -274,9 +275,12 @@ matched [Conflict Resolution result](../benchmarks/results/research/2026-09-14/M
 scored 1/20 versus 0/20 despite reference-answer text appearing in 19/20 and
 20/20 contexts, respectively. The installed Qwen 35B A3B reader produced the
 same scores in a separately registered check, ruling out capacity alone. Audit
-the numbered-source interface, evaluate PRME's actual correction lifecycle,
-complete the long-range task family and improve typed bulk ingestion before
-broadening any claim. Treat the test-time-learning arm as
+the numbered-source interface and evaluate PRME's actual correction lifecycle.
+The matched [DetectiveQA result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-DETECTIVE-CHOICE-DEV20.md)
+completed the first four-family development pass: both arms scored 13/20 while
+PRME reduced retrieved context by 90.52%. Expand the preregistered cohorts and
+reader families, add evidence-aware retrieval diagnostics, and improve typed
+bulk ingestion before broadening any claim. Treat the test-time-learning arm as
 retrieved in-context demonstrations and its conflict arm as numbered-source
 resolution; separate experiments are still required for scoped ranking-profile
 learning and transactional graph supersedence.

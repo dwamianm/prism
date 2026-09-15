@@ -41,6 +41,13 @@ for the task rather than supporting a retrieval-quality claim. Replacing it with
 the installed Qwen 35B A3B reader produced the same 1/20 and 0/20 scores, ruling
 out model size alone as the remedy.
 
+The final matched competency family, a
+[DetectiveQA trial](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-DETECTIVE-CHOICE-DEV20.md),
+produced a 13/20 exact tie. PRME used 90.52% fewer retrieved-context tokens and
+89.27% fewer reader input tokens, with one paired win and one loss. This supports
+compact-context efficiency on the named development slice; the wide paired
+interval and one-reader design do not establish equivalence or leadership.
+
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:
 reliable evidence retrieval, explicit aggregation coverage, and correct temporal state.
