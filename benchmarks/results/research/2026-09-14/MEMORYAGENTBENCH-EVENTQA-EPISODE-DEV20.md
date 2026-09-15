@@ -79,11 +79,10 @@ policy or an additional score. The failure now points to multi-record evidence
 composition or reader grounding rather than a missing routed episode.
 
 The result supports the two-stage technique on this named EventQA development
-slice. It does not support enabling the route by default across unrelated
-workloads. The product option remains disabled by default until registered
-Banking77 and DetectiveQA regressions show that reserving episode evidence does
-not displace task-relevant records, followed by a larger cohort and another
-reader family.
+slice. The subsequent [cross-task regression trials](MEMORYAGENTBENCH-EPISODE-REGRESSIONS-DEV20.md)
+preserved Banking77 at 20/20 and improved DetectiveQA from 13/20 to 15/20. The
+product option remains disabled by default until a larger cohort and another
+reader family test whether the gains persist and bound displacement risk.
 
 ## Claim boundary
 

@@ -36,8 +36,10 @@ answer-bearing episode fragments, making episodic reconstruction a measured
 retrieval gap rather than a leadership claim. A subsequent registered
 [two-stage episode-routing trial](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-EPISODE-DEV20.md)
 scored 19/20 versus BM25 at 20/20 with the same 90.48% context reduction. It
-recovered three of the earlier PRME failures without a paired loss; the option
-remains disabled by default pending cross-task regressions and a larger cohort.
+recovered three of the earlier PRME failures without a paired loss. Follow-up
+[regression trials](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EPISODE-REGRESSIONS-DEV20.md)
+preserved Banking77 at 20/20 and improved DetectiveQA from 13/20 to 15/20. The
+option remains disabled by default pending a larger cohort and another reader.
 A subsequent
 [Conflict Resolution trial](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md)
 scored 1/20 versus 0/20. Reference-answer text was present in 19 PRME contexts
@@ -51,7 +53,9 @@ The final matched competency family, a
 produced a 13/20 exact tie. PRME used 90.52% fewer retrieved-context tokens and
 89.27% fewer reader input tokens, with one paired win and one loss. This supports
 compact-context efficiency on the named development slice; the wide paired
-interval and one-reader design do not establish equivalence or leadership.
+interval and one-reader design do not establish equivalence or leadership. The
+episode-routing follow-up scored 15/20, with three gains and one loss against
+the earlier flat PRME arm.
 
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:

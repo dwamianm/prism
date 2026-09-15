@@ -26,8 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   three of four failures with no paired losses and essentially unchanged context
   size and query time. The one remaining miss contained the strongest routed
   evidence but not the answer verbatim. This supports the technique on the named
-  slice; the default remains disabled pending cross-task regressions and a larger
-  cohort.
+  slice. Registered follow-up arms preserved Banking77 at 20/20 and improved
+  DetectiveQA from 13/20 to 15/20, with every receipt verified and no context
+  expansion. The default remains disabled pending a larger cohort and another
+  reader.
 
 - MemoryAgentBench registrations now bind the complete retrieval source map
   reported by execution descriptors. Verification compares every durable
