@@ -67,6 +67,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The first fail-closed scored extracted-memory BEAM execution completed on the
+  registered 100K development conversation: 12/20 pass (60.0%) with a 0.51875
+  mean rubric score, 94/94 chunks ingested, 188/188 durable extractions, 20/20
+  nonempty answers, and 53/53 complete judge verdicts. Against the accepted raw
+  profile on the same cohort, it gained three pass-level questions, lost three,
+  and tied fourteen; the mean score rose by 0.02042 while median retrieval
+  latency rose from 90.8 ms to 486.0 ms. The mixed result identifies exact
+  source-evidence retention and candidate efficiency as the next retrieval
+  targets and does not establish extracted-profile or market leadership.
+
 - Registered BEAM evaluation can now attest scored extracted-memory runs. The
   schema-3 launcher binds and verifies the extraction model and settings before
   ingestion, launches the selected durable extraction profile, and rejects

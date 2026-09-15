@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "kind": "beam-extracted-scored-result",
+  "status": "complete and accepted by fail-closed validation",
+  "registration": "beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev3-registration.json",
+  "registration_sha256": "02f5c9de6e80d53a065aa0d3872d7fed10a6087e8988ace18b61254677e2cda1",
+  "source": {
+    "prme_revision": "37f9f4dfc41284599bfc9b34ecb45b4daff4ee28",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "protocol": {
+    "profile": "extracted",
+    "chat_sizes": ["100K"],
+    "conversations": [0],
+    "question_types": 10,
+    "questions_per_type": 2,
+    "top_k": 50,
+    "cutoff": 50
+  },
+  "models": {
+    "extractor": {
+      "model": "deepseek-v4.1-flash:cloud",
+      "manifest_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8"
+    },
+    "answerer": {
+      "model": "mistral-large-3:675b-cloud",
+      "manifest_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c"
+    },
+    "judge": {
+      "model": "gpt-oss:120b-cloud",
+      "manifest_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed"
+    }
+  },
+  "metrics": {
+    "overall": {
+      "correct": 12,
+      "total": 20,
+      "accuracy": 60.0,
+      "average_score": 0.51875,
+      "errors": 0
+    },
+    "by_question_type": {
+      "abstention": {
+        "correct": 0,
+        "total": 2,
+        "accuracy": 0.0,
+        "average_score": 0.0
+      },
+      "contradiction_resolution": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.6875
+      },
+      "event_ordering": {
+        "correct": 0,
+        "total": 2,
+        "accuracy": 0.0,
+        "average_score": 0.36665
+      },
+      "information_extraction": {
+        "correct": 0,
+        "total": 2,
+        "accuracy": 0.0,
+        "average_score": 0.08335
+      },
+      "instruction_following": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.75
+      },
+      "knowledge_update": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 1.0
+      },
+      "multi_session_reasoning": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.75
+      },
+      "preference_following": {
+        "correct": 2,
+        "total": 2,
+        "accuracy": 100.0,
+        "average_score": 0.75
+      },
+      "summarization": {
+        "correct": 1,
+        "total": 2,
+        "accuracy": 50.0,
+        "average_score": 0.3
+      },
+      "temporal_reasoning": {
+        "correct": 1,
+        "total": 2,
+        "accuracy": 50.0,
+        "average_score": 0.5
+      }
+    }
+  },
+  "paired_raw_comparison": {
+    "raw_registration": "beam-100k-raw-mistral675b-gptoss120b-dev4-registration.json",
+    "raw_correct": 12,
+    "extracted_correct": 12,
+    "raw_average_score": 0.49833,
+    "extracted_average_score": 0.51875,
+    "average_score_delta": 0.02042,
+    "pass_level_wins": 3,
+    "pass_level_losses": 3,
+    "pass_level_ties": 14,
+    "interpretation": "This is a tuned within-cohort development comparison. Equal pass count and offsetting wins and losses do not establish superiority for either profile."
+  },
+  "execution": {
+    "ingestion_chunks_processed": 94,
+    "ingestion_chunks_failed": 0,
+    "durable_source_events": 188,
+    "extractions_complete": 188,
+    "extraction_attempts": 188,
+    "extraction_errors": 0,
+    "materialized_nodes": 1243,
+    "materialized_nodes_by_type": {
+      "decision": 23,
+      "entity": 587,
+      "fact": 513,
+      "note": 66,
+      "preference": 54
+    },
+    "questions_written": 20,
+    "retrieval_results_per_question_min": 50,
+    "retrieval_results_per_question_max": 50,
+    "retrieval_latency_ms_min": 402.4,
+    "retrieval_latency_ms_median": 486.0,
+    "retrieval_latency_ms_mean": 500.665,
+    "retrieval_latency_ms_max": 837.7,
+    "answer_characters_min": 255,
+    "answer_characters_median": 1474.0,
+    "answer_characters_max": 9997,
+    "nonempty_answers": 20,
+    "judge_verdicts": 53,
+    "nonempty_judge_reasons": 53,
+    "validation_errors": 0
+  },
+  "claim_boundary": "This is a tuned one-conversation, 20-question 100K development result using durable PRME extraction and mutable Ollama cloud model aliases. It is not an untouched confirmation, official-scale BEAM result, matched cross-system comparison, or evidence of market leadership.",
+  "artifact_sha256": {
+    "execution-manifest.json": "9b4f7d85dee9f4114fe9bd4ac53cc168bc1d9c53fbdeeefc4281f5b956cab4b7",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "95eafb80f40a673d9685936eff7e55ad0640d2abe95e9a505c5dfd094c498c9e",
+    "service.log": "74566402f9207be331067c83165f980a0069da3408af8c33b2660edf609b3c86",
+    "upstream-results/beam_results_20260915_151648.json": "5866f5fcc30e92ab141099f9a474881f5051c8878cfd4cc6ad401095e2b32684",
+    "validator.json": "164f06cce00178dd449faf5b74c940833c94a81aa0cd5da53283ff1371723f2d",
+    "_ingestion_100K_0.json": "0c288f5a95aaf7f9ce92d2d8ecd3a545dc115e8a7d2f6fecc03b54afb3e8e2b8",
+    "100K_0_q0_abstention.json": "292ed7d024123f1f0f5dda8ee0858a692267d13eec5d203c348cf9167b08ae4d",
+    "100K_0_q1_abstention.json": "5fa4df5d12131c9a8df6f2be7d68c8086ea9c22ba3ef3e83c5abf4f5fba5e5e8",
+    "100K_0_q2_contradiction_resolution.json": "d80180e69289621ea951caff2e44c3c36b928e7af21b5fe69c1e249fca76e9ed",
+    "100K_0_q3_contradiction_resolution.json": "d07c3d0c1d65477dfb109c4bb2522205fcbfef362336c7dbb13baa61c305fc37",
+    "100K_0_q4_event_ordering.json": "f24a44a46a3045f6f4f6c54953e493e4dd6759d67a178b3aa7ae41294c84988d",
+    "100K_0_q5_event_ordering.json": "7d299d64f43779a63408adb1a5324a4fb1369eb05e22e983f9f19efc9535d2ed",
+    "100K_0_q6_information_extraction.json": "a503b8aeab11a868f504af4fd456fc0002eee7de5d6c3f78a322851f9d8b12eb",
+    "100K_0_q7_information_extraction.json": "f6aaa486ab2ffd3962ccf5969ef667c47b97502b09e057302d2d71163e29e615",
+    "100K_0_q8_instruction_following.json": "26cfb6545ae672ef3e0b33ea6c85130407edca3314bd44541da7a5a86817e640",
+    "100K_0_q9_instruction_following.json": "c2da69e18077f958ed49d0fca5c0dbebc427e4070e3f34dd50f0fb6dd7e78e10",
+    "100K_0_q10_knowledge_update.json": "d4cd29737af5031773a196f9130c9b83c835b8058e8f669b0296ac05348dc136",
+    "100K_0_q11_knowledge_update.json": "500d81cd813942e76c4478aadd7e96e7f9a3d42226f45bce9a754e91f0ed8b2d",
+    "100K_0_q12_multi_session_reasoning.json": "15748de77ab242f0c1f212e60c940bb975ea3e6fbb67e535199904db7373b5c4",
+    "100K_0_q13_multi_session_reasoning.json": "e53704671b5f7bf0fe3195e84bf7d9896b14f09c528daad773b57306fd083a80",
+    "100K_0_q14_preference_following.json": "977b6a52a7c3b40dd760063f0ff7edb35f6a88f7479ef1dc597d07d0d3dd1bb8",
+    "100K_0_q15_preference_following.json": "4d2872e928a8253e2f5f8c00fe73688c1f4ab8d9ce2e84e55f6e37e950dcd83e",
+    "100K_0_q16_summarization.json": "939c6f6403e21f26a789cf813cc96c0d9c77b66223e8e9efb9c35bbe04967d62",
+    "100K_0_q17_summarization.json": "28ad515bfd4e60518df6a7d789f71732cc017e866f5181e1519b4319e118abbe",
+    "100K_0_q18_temporal_reasoning.json": "cf15c0ec2ef329fe3119d91ae3103fa822a8be065c5dd51e20f41aee35322c11",
+    "100K_0_q19_temporal_reasoning.json": "9ed7839cc50f9734692e0706396e846036b967d7ea157b557f566940bcd603ab"
+  }
+}
