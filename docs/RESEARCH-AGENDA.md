@@ -28,6 +28,7 @@ comparisons and whose ordinary APIs preserve user data and isolation.
 | External lifecycle and scale workflows | The registered MELT run completed five seeds and all 20 lifecycle checkpoints at recall@12 and NDCG@12 of 1.000. The registered BEAM raw workflow ingested all 94 public 100K chunks and returned all 50 requested memories for 20 questions across ten abilities. | MELT uses four held-out lifecycle cases and a deterministic embedding profile. BEAM is predict-only and does not measure relevance or answer correctness. |
 | MemoryAgentBench test-time learning | [Matched Banking77 development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md): PRME scored 20/20 versus BM25 at 17/20 under the official strict metric, while using 90.52% fewer retrieved-context tokens. Both arms used the same registered derived questions, Qwen 9B reader and digits-only output contract; both artifact chains verified. | Twenty previously inspected development questions, one reader and one lexical control. The paired interval includes zero. PRME's 5,897-record pack took 467.549 seconds to construct, so bulk typed ingestion remains a material cost. |
 | MemoryAgentBench accurate retrieval | [Matched EventQA development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-SESSION-DEV20.md): PRME scored 16/20 versus BM25 at 20/20 while using 90.48% fewer retrieved-context tokens. Both arms used the same registered questions, upstream reader contract and Qwen 9B controls; both artifact chains verified. Post hoc inspection found stored answer-bearing records outside every failed packed context. | Twenty previously inspected development questions, one reader and one lexical control. The exact paired test does not reject equality. Reference-answer inspection is explanatory only. Flat candidate and budget increases were insufficient; evaluate source-cited episodic reconstruction before changing defaults. |
+| MemoryAgentBench conflict resolution | [Matched FactConsolidation development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md): PRME scored 1/20 versus BM25 at 0/20 under the shared answer-only contract. Reference-answer text appeared in 19 PRME contexts and all 20 BM25 contexts. Both artifact chains and the paired comparison verified. | Twenty previously inspected development questions, one Qwen 9B reader and one lexical control. Near-zero accuracy in both arms makes this a reader-task failure, not a retrieval or conflict-resolution quality result. Validate the already-installed 35B reader before changing retrieval. |
 
 See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
 [recovery evidence](../benchmarks/results/recovery/2026-09-12/README.md),
@@ -268,9 +269,12 @@ ingestion gap. The subsequent matched
 [EventQA result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-SESSION-DEV20.md)
 scored PRME at 16/20 versus BM25 at 20/20 despite a 90.48% retrieved-context
 reduction. Its missing packed evidence and failed larger-budget diagnostic make
-source-cited episodic reconstruction the next retrieval-quality experiment.
-Complete the long-range and conflict task families and improve typed bulk
-ingestion before broadening any claim. Treat the test-time-learning arm as
+source-cited episodic reconstruction the next retrieval-quality experiment. The
+matched [Conflict Resolution result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md)
+scored 1/20 versus 0/20 despite reference-answer text appearing in 19/20 and
+20/20 contexts, respectively. Treat that as a failed Qwen 9B reader trial and
+test the installed 35B model before changing retrieval. Complete the long-range
+task family and improve typed bulk ingestion before broadening any claim. Treat the test-time-learning arm as
 retrieved in-context demonstrations and its conflict arm as numbered-source
 resolution; separate experiments are still required for scoped ranking-profile
 learning and transactional graph supersedence.
