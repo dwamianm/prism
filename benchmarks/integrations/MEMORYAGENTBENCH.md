@@ -121,6 +121,13 @@ durable retrieval receipts, exact token recounts within the registered budget,
 and completed memory manifests with every registered source chunk. A mismatch
 stops verification instead of producing a partial report.
 
+The verifier opens each completed DuckDB pack read-only and resolves the exact
+owner-scoped `RETRIEVAL_REQUEST`. It validates the stored receipt checksum,
+request and owner identity, replayable candidate ranking, context hash, packing
+budget and format, result limit, project scope, and in-context candidate count.
+Its report commits an aggregate hash of the authenticated receipt checksums;
+the capture's `receipt_persisted` flag alone is not accepted as evidence.
+
 The checked-in configuration uses the same `gpt-4o-mini` temperature and
 reader family as the upstream memory baselines. For an explicitly labelled
 local development run, change the copied config's model and point the PRME arm

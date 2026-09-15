@@ -12,11 +12,14 @@ import subprocess
 from typing import Any
 from uuid import UUID
 
-import yaml
+import duckdb
+import yaml  # type: ignore[import-untyped]
 
 from benchmarks.integrations import memoryagentbench as adapter
 from benchmarks.integrations import register_memoryagentbench as registrar
+from prme.models.relevance import RetrievalReceipt
 from prme.retrieval.tokenization import count_tokens
+from prme.types import Scope
 
 
 _CAPTURE_NAME = re.compile(r"query_(\d+)_context_(\d+)\.json\Z")
@@ -83,7 +86,10 @@ def _verify_manifest(
     path: Path,
     *,
     expected_sub_dataset: str,
+    expected_user_id: str,
     expected_budget: int,
+    expected_result_limit: int,
+    expected_max_chunk_chars: int,
     expected_context_format: str,
     expected_reasoning_effort: str | None,
     expected_reader_seed: int | None,
@@ -91,20 +97,28 @@ def _verify_manifest(
 ) -> dict[str, Any]:
     manifest = _load_object(path)
     identity = manifest.get("config")
+    expected_identity = {
+        "adapter_schema_version": adapter.ADAPTER_SCHEMA_VERSION,
+        "upstream_revision": adapter.UPSTREAM_REVISION,
+        "dataset_revision": adapter.DATASET_REVISION,
+        "sub_dataset": expected_sub_dataset,
+        "user_id": expected_user_id,
+        "token_budget": expected_budget,
+        "result_limit": expected_result_limit,
+        "max_chunk_chars": expected_max_chunk_chars,
+        "embedding_provider": "fastembed",
+        "embedding_model": "BAAI/bge-small-en-v1.5",
+        "embedding_dimension": 384,
+        "packing_policy": "balanced",
+        "context_format": expected_context_format,
+        "reader_reasoning_effort": expected_reasoning_effort,
+        "reader_seed": expected_reader_seed,
+        "run_id": expected_run_id,
+    }
     if (
         manifest.get("schema_version") != adapter.ADAPTER_SCHEMA_VERSION
         or manifest.get("status") != "complete"
-        or not isinstance(identity, dict)
-        or identity.get("adapter_schema_version") != adapter.ADAPTER_SCHEMA_VERSION
-        or identity.get("upstream_revision") != adapter.UPSTREAM_REVISION
-        or identity.get("dataset_revision") != adapter.DATASET_REVISION
-        or identity.get("sub_dataset") != expected_sub_dataset
-        or identity.get("token_budget") != expected_budget
-        or identity.get("packing_policy") != "balanced"
-        or identity.get("context_format") != expected_context_format
-        or identity.get("reader_reasoning_effort") != expected_reasoning_effort
-        or identity.get("reader_seed") != expected_reader_seed
-        or identity.get("run_id") != expected_run_id
+        or identity != expected_identity
         or manifest.get("config_sha256")
         != hashlib.sha256(_canonical(identity)).hexdigest()
     ):
@@ -137,6 +151,42 @@ def _verify_manifest(
     return manifest
 
 
+def _load_receipt(
+    pack_root: Path, *, request_id: str, user_id: str
+) -> RetrievalReceipt:
+    """Read and authenticate one durable receipt without mutating the pack."""
+    database = pack_root / "memory.duckdb"
+    if not database.is_file():
+        raise ValueError(f"{pack_root} has no memory.duckdb")
+    try:
+        connection = duckdb.connect(str(database), read_only=True)
+        try:
+            rows = connection.execute(
+                "SELECT payload FROM operations "
+                "WHERE op_type='RETRIEVAL_REQUEST' AND target_id=? AND actor_id=? "
+                "LIMIT 2",
+                [request_id, user_id],
+            ).fetchall()
+        finally:
+            connection.close()
+    except duckdb.Error as error:
+        raise ValueError(f"retrieval {request_id} receipt store is unreadable") from error
+    if len(rows) != 1:
+        raise ValueError(f"retrieval {request_id} has no unique durable receipt")
+    payload = rows[0][0]
+    payload = json.loads(payload) if isinstance(payload, str) else payload
+    if not isinstance(payload, dict) or not isinstance(payload.get("receipt"), str):
+        raise ValueError(f"retrieval {request_id} has an invalid durable receipt")
+    receipt = RetrievalReceipt.model_validate_json(payload["receipt"])
+    if (
+        str(receipt.request_id) != request_id
+        or receipt.user_id != user_id
+        or receipt.checksum != payload.get("receipt_checksum")
+    ):
+        raise ValueError(f"retrieval {request_id} has a mismatched durable receipt")
+    return receipt
+
+
 def verify(
     *,
     upstream_root: Path,
@@ -157,9 +207,10 @@ def verify(
     registered_source = registration.get("source")
     registered_configuration = registration.get("configuration")
     registered_task = registration.get("task")
-    if not all(
-        isinstance(value, dict)
-        for value in (registered_source, registered_configuration, registered_task)
+    if (
+        not isinstance(registered_source, dict)
+        or not isinstance(registered_configuration, dict)
+        or not isinstance(registered_task, dict)
     ):
         raise ValueError(
             "registration is missing source, configuration, or task identity"
@@ -266,12 +317,20 @@ def verify(
     model = agent_config.get("model")
     output_dir = agent_config.get("output_dir")
     token_budget = agent_config.get("prme_token_budget")
+    result_limit = agent_config.get("prme_result_limit", 100)
+    max_chunk_chars = agent_config.get("prme_max_chunk_chars", 6000)
+    user_id = agent_config.get("prme_user_id", "memoryagentbench")
     context_format = agent_config.get("prme_context_format", "auditable")
     reasoning_effort = agent_config.get("reader_reasoning_effort")
     reader_seed = agent_config.get("reader_seed")
     run_id = agent_config.get("prme_run_id", "default")
-    if not all(
-        isinstance(value, str) and value for value in (sub_dataset, model, output_dir)
+    if (
+        not isinstance(sub_dataset, str)
+        or not sub_dataset
+        or not isinstance(model, str)
+        or not model
+        or not isinstance(output_dir, str)
+        or not output_dir
     ):
         raise ValueError(
             "configuration is missing sub-dataset, model, or output directory"
@@ -282,6 +341,21 @@ def verify(
         or token_budget <= 0
     ):
         raise ValueError("configuration has an invalid PRME token budget")
+    if (
+        isinstance(result_limit, bool)
+        or not isinstance(result_limit, int)
+        or result_limit <= 0
+    ):
+        raise ValueError("configuration has an invalid PRME result limit")
+    if (
+        isinstance(max_chunk_chars, bool)
+        or not isinstance(max_chunk_chars, int)
+        or max_chunk_chars < 512
+    ):
+        raise ValueError("configuration has an invalid PRME chunk limit")
+    if not isinstance(user_id, str) or not user_id.strip():
+        raise ValueError("configuration has an invalid PRME user ID")
+    user_id = user_id.strip()
     if context_format not in {"auditable", "compact"}:
         raise ValueError("configuration has an invalid PRME context format")
     if reasoning_effort not in {None, "none", "low", "medium", "high"}:
@@ -426,6 +500,7 @@ def verify(
     included_counts: list[int] = []
     retrieval_seconds: list[float] = []
     aggregate_lines: list[str] = []
+    receipt_lines: list[str] = []
     for query_id in range(expected_queries):
         context_id, capture_path = captures[query_id]
         if context_id != expected_context_for_query[query_id]:
@@ -479,7 +554,10 @@ def verify(
             manifest = _verify_manifest(
                 manifest_path,
                 expected_sub_dataset=sub_dataset,
+                expected_user_id=user_id,
                 expected_budget=token_budget,
+                expected_result_limit=result_limit,
+                expected_max_chunk_chars=max_chunk_chars,
                 expected_context_format=context_format,
                 expected_reasoning_effort=reasoning_effort,
                 expected_reader_seed=reader_seed,
@@ -490,10 +568,32 @@ def verify(
                     f"context {context_id} memory inputs differ from the registration"
                 )
             manifests[context_id] = (manifest_path, manifest)
-        manifest_path, _ = manifests[context_id]
+        manifest_path, manifest = manifests[context_id]
         if capture.get("manifest_sha256") != _digest(manifest_path):
             raise ValueError(
                 f"query {query_id} does not bind its completed memory manifest"
+            )
+        request_id = str(capture["request_id"])
+        receipt = _load_receipt(
+            manifest_path.parent,
+            request_id=request_id,
+            user_id=user_id,
+        )
+        if (
+            hashlib.sha256(receipt.query.encode("utf-8")).hexdigest()
+            != capture["query_sha256"]
+            or receipt.context_sha256 != capture["context_sha256"]
+            or receipt.reference_time.isoformat() != manifest["query_reference_time"]
+            or receipt.packing.token_budget != token_budget
+            or receipt.packing.multipath_ordering != "balanced"
+            or receipt.packing.context_format != context_format
+            or receipt.result_limit != result_limit
+            or receipt.scopes != (Scope.PROJECT,)
+            or sum(candidate.in_context for candidate in receipt.candidates)
+            != included_count
+        ):
+            raise ValueError(
+                f"query {query_id} durable receipt differs from its retrieval capture"
             )
         context_token_counts.append(context_tokens)
         included_counts.append(included_count)
@@ -503,6 +603,7 @@ def verify(
         aggregate_lines.append(
             f"{capture_path.relative_to(retrieval_root)}\0{_digest(capture_path)}"
         )
+        receipt_lines.append(f"{query_id}\0{receipt.checksum}")
 
     return {
         "schema_version": 1,
@@ -523,6 +624,9 @@ def verify(
             "result_sha256": _digest(result_path),
             "retrieval_captures_sha256": hashlib.sha256(
                 "\n".join(aggregate_lines).encode("utf-8")
+            ).hexdigest(),
+            "retrieval_receipts_sha256": hashlib.sha256(
+                "\n".join(receipt_lines).encode("utf-8")
             ).hexdigest(),
         },
         "task": {

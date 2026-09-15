@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MemoryAgentBench verification now authenticates each claimed durable
+  retrieval receipt directly from the completed DuckDB pack, including its
+  checksum, owner/request identity, replayable ranking, context hash, packing
+  contract, scope, and included count. Reports commit an aggregate receipt hash
+  instead of trusting the adapter's persistence flag.
+
 - Session-context expansion now promotes adjacent turns even when broad vector
   or lexical generation already placed them in the candidate pool. Previously,
   those candidates were skipped before packing, making the default session

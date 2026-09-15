@@ -3,15 +3,26 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import UUID
 
+import duckdb
 import pytest
 import yaml
 
 from benchmarks.integrations import memoryagentbench as adapter
 from benchmarks.integrations import register_memoryagentbench as registrar
 from benchmarks.integrations import verify_memoryagentbench as verifier
+from prme.models.nodes import MemoryNode
+from prme.models.relevance import make_receipt
+from prme.retrieval.config import PackingConfig, ScoringWeights
+from prme.retrieval.execution import RetrievalExecution
+from prme.retrieval.models import MemoryBundle, RetrievalCandidate
+from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.tokenization import count_tokens
+from prme.types import NodeType, RepresentationLevel, Scope
 
 
 PRME_REVISION = "1" * 40
@@ -128,6 +139,75 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
 
     query = "Question: What happened?"
     context = "## Memories\n- The event happened on Monday."
+    request_id = "de305d54-75b4-431b-adb2-eb6b9e546014"
+    reference_time = datetime(2026, 9, 14, 12, tzinfo=timezone.utc)
+    node = MemoryNode(
+        id=UUID("de305d54-75b4-431b-adb2-eb6b9e546015"),
+        user_id="memoryagentbench",
+        scope=Scope.PROJECT,
+        node_type=NodeType.FACT,
+        content="The event happened on Monday.",
+        created_at=reference_time,
+        updated_at=reference_time,
+        last_reinforced_at=reference_time,
+    )
+    candidates, _ = score_and_rank(
+        [RetrievalCandidate(node=node, semantic_score=0.9)], now=reference_time
+    )
+    candidates[0].representation = RepresentationLevel.FULL
+    candidates[0].token_cost = count_tokens(context)
+    bundle = MemoryBundle(
+        sections={"stable_facts": candidates},
+        included_count=1,
+        tokens_used=count_tokens(context),
+        token_budget=4096,
+        rendered_context=context,
+        context_format="auditable",
+    )
+    receipt = make_receipt(
+        request_id=UUID(request_id),
+        user_id="memoryagentbench",
+        query=query,
+        reference_time=reference_time,
+        scopes=(Scope.PROJECT,),
+        scoring=ScoringWeights(),
+        packing=PackingConfig(token_budget=4096, multipath_ordering="balanced"),
+        candidates=candidates,
+        bundle=bundle,
+        result_limit=100,
+        execution=RetrievalExecution(parameters={}, features={}),
+    )
+    database = manifest_path.parent / "memory.duckdb"
+    connection = duckdb.connect(str(database))
+    connection.execute(
+        """
+        CREATE TABLE operations (
+            id VARCHAR PRIMARY KEY,
+            op_type VARCHAR NOT NULL,
+            target_id VARCHAR,
+            payload JSON,
+            actor_id VARCHAR,
+            created_at TIMESTAMPTZ DEFAULT now()
+        )
+        """
+    )
+    connection.execute(
+        "INSERT INTO operations (id,op_type,target_id,payload,actor_id) "
+        "VALUES (?,?,?,?,?)",
+        [
+            "receipt-operation",
+            "RETRIEVAL_REQUEST",
+            request_id,
+            json.dumps(
+                {
+                    "receipt": receipt.model_dump_json(),
+                    "receipt_checksum": receipt.checksum,
+                }
+            ),
+            "memoryagentbench",
+        ],
+    )
+    connection.close()
     capture = {
         "adapter_schema_version": adapter.ADAPTER_SCHEMA_VERSION,
         "upstream_revision": adapter.UPSTREAM_REVISION,
@@ -136,7 +216,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "query_id": 0,
         "context_id": 0,
         "query_sha256": hashlib.sha256(query.encode()).hexdigest(),
-        "request_id": "de305d54-75b4-431b-adb2-eb6b9e546014",
+        "request_id": request_id,
         "receipt_persisted": True,
         "token_budget": 4096,
         "context_format": "auditable",
@@ -249,6 +329,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "result": result_path,
         "registration": registration_path,
         "capture": capture_path,
+        "database": database,
     }
 
 
@@ -277,6 +358,7 @@ def test_verifier_binds_complete_run(tmp_path: Path, monkeypatch) -> None:
     }
     assert report["retrieval"]["context_tokens_max"] > 0
     assert report["source"]["result_sha256"] == verifier._digest(paths["result"])
+    assert len(report["source"]["retrieval_receipts_sha256"]) == 64
 
 
 def test_registrar_hashes_every_prepared_input() -> None:
@@ -324,6 +406,60 @@ def test_verifier_rejects_unbound_retrievals(
     capture[field] = value
     write_json(paths["capture"], capture)
     with pytest.raises(ValueError, match=message):
+        run_verification(paths)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ("missing", "durable receipt"),
+        ("checksum", "durable receipt"),
+        ("query", "differs from its retrieval capture"),
+    ],
+)
+def test_verifier_authenticates_durable_receipt(
+    tmp_path: Path, monkeypatch, change: str, message: str
+) -> None:
+    paths = fixture_run(tmp_path, monkeypatch)
+    connection = duckdb.connect(str(paths["database"]))
+    if change == "missing":
+        connection.execute("DELETE FROM operations")
+    else:
+        payload = connection.execute("SELECT payload FROM operations").fetchone()[0]
+        payload = json.loads(payload) if isinstance(payload, str) else payload
+        if change == "checksum":
+            payload["receipt_checksum"] = "0" * 64
+        else:
+            receipt_value = json.loads(payload["receipt"])
+            receipt_value["query"] = "Question: A different question?"
+            changed_receipt = verifier.RetrievalReceipt.model_validate(receipt_value)
+            payload["receipt"] = changed_receipt.model_dump_json()
+            payload["receipt_checksum"] = changed_receipt.checksum
+        connection.execute(
+            "UPDATE operations SET payload=?", [json.dumps(payload)]
+        )
+    connection.close()
+
+    with pytest.raises(ValueError, match=message):
+        run_verification(paths)
+
+
+def test_verifier_binds_complete_manifest_configuration(
+    tmp_path: Path, monkeypatch
+) -> None:
+    paths = fixture_run(tmp_path, monkeypatch)
+    capture = verifier._load_object(paths["capture"])
+    manifest_path = next(paths["upstream_root"].rglob(adapter._MANIFEST_NAME))
+    manifest = verifier._load_object(manifest_path)
+    manifest["config"]["result_limit"] = 99
+    manifest["config_sha256"] = hashlib.sha256(
+        verifier._canonical(manifest["config"])
+    ).hexdigest()
+    write_json(manifest_path, manifest)
+    capture["manifest_sha256"] = verifier._digest(manifest_path)
+    write_json(paths["capture"], capture)
+
+    with pytest.raises(ValueError, match="incompatible or incomplete manifest"):
         run_verification(paths)
 
 
