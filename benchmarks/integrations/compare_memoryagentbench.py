@@ -191,7 +191,10 @@ def _validate_registrations(
             len(compact_prme_queries) != len(prme_queries)
             or compact_prme_queries != compact_bm25_queries
         ):
-            raise ValueError("paired registrations use different questions or answers")
+            raise ValueError(
+                "paired registrations use different questions, retrieval queries, "
+                "or answers"
+            )
         for query in compact_prme_queries:
             query_id = query[0]
             if isinstance(query_id, bool) or not isinstance(query_id, int):

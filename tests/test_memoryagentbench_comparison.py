@@ -227,7 +227,7 @@ def test_comparator_rejects_cross_arm_question_drift(tmp_path: Path) -> None:
     registration["task"]["contexts"][0]["queries"][0]["query_sha256"] = "9" * 64
     write_json(registration_path, registration)
 
-    with pytest.raises(ValueError, match="different questions or answers"):
+    with pytest.raises(ValueError, match="different questions, retrieval queries"):
         comparator.compare(manifest, samples=10)
 
 
@@ -242,7 +242,7 @@ def test_comparator_rejects_cross_arm_retrieval_query_drift(
     ] = "9" * 64
     write_json(registration_path, registration)
 
-    with pytest.raises(ValueError, match="different questions or answers"):
+    with pytest.raises(ValueError, match="different questions, retrieval queries"):
         comparator.compare(manifest, samples=10)
 
 
