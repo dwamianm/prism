@@ -16,6 +16,13 @@ dataset, question rubric, answer nuggets, question type, source-chat labels, or
 the generated answer. Non-empty benchmark-side metadata and custom extraction
 instructions are rejected so labels cannot silently enter memory.
 
+BEAM does not send an explicit session identifier. Adapter schema 2 groups
+chunks that share the same observation timestamp, which is the strongest source
+session boundary present on the neutral HTTP request. A request without a
+timestamp remains its own session. This avoids treating a user's complete
+multi-session history as one adjacent-turn sequence; equal timestamps from two
+independent source sessions remain indistinguishable at this boundary.
+
 ## Start PRME
 
 Use a fresh directory for a new run:

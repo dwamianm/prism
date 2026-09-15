@@ -54,7 +54,7 @@ async def test_beam_raw_adapter_is_idempotent_isolated_and_resumable(tmp_path):
             assert health == {
                 "status": "ok",
                 "profile": "raw",
-                "adapter_schema": 1,
+                "adapter_schema": 2,
                 "upstream_commit": UPSTREAM_COMMIT,
             }
             first = await client.post("/memories", json=request)
@@ -72,6 +72,26 @@ async def test_beam_raw_adapter_is_idempotent_isolated_and_resumable(tmp_path):
                 item["id"] for item in first_results
             ]
             assert await app.state.engine.count_nodes(user_id="beam_case_alice") == 2
+            stored = await app.state.engine.query_nodes(
+                user_id="beam_case_alice", limit=10
+            )
+            assert len({node.session_id for node in stored}) == 1
+
+            later = await client.post(
+                "/memories",
+                json={
+                    **request,
+                    "messages": [
+                        {"role": "user", "content": "The later session is separate."}
+                    ],
+                    "timestamp": request["timestamp"] + 86_400,
+                },
+            )
+            assert later.status_code == 200
+            stored = await app.state.engine.query_nodes(
+                user_id="beam_case_alice", limit=10
+            )
+            assert len({node.session_id for node in stored}) == 2
 
             found = await client.post(
                 "/search",
@@ -106,7 +126,7 @@ async def test_beam_raw_adapter_is_idempotent_isolated_and_resumable(tmp_path):
             assert [item["id"] for item in retried.json()["results"]] == [
                 item["id"] for item in first_results
             ]
-            assert await reopened.state.engine.count_nodes(user_id="beam_case_alice") == 2
+            assert await reopened.state.engine.count_nodes(user_id="beam_case_alice") == 3
 
 
 async def test_beam_adapter_rejects_unsupported_search_reranking(tmp_path):

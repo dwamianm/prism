@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve BEAM source-session boundaries when the upstream request exposes an
+  observation timestamp, preventing adjacent-turn expansion from treating a
+  complete multi-session history as one session.
+
 - Store-time oscillation dampening now revalidates the complete owner-scoped
   supersedence chain under lock and commits its confidence update with a
   deterministic, checksummed `PENALTY` record in one DuckDB or PostgreSQL

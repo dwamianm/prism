@@ -30,7 +30,8 @@ from prme.ingestion.errors import ExtractionError, MaterializationError
 
 UPSTREAM_REPOSITORY = "https://github.com/mem0ai/memory-benchmarks"
 UPSTREAM_COMMIT = "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
-ADAPTER_SCHEMA = 1
+ADAPTER_SCHEMA = 2
+_LEGACY_ADAPTER_SCHEMAS = (1,)
 
 
 class Message(BaseModel):
@@ -60,9 +61,11 @@ class SearchRequest(BaseModel):
     rerank: bool = False
 
 
-def _request_hash(body: AddRequest, event_time: datetime | None) -> str:
+def _request_hash(
+    body: AddRequest, event_time: datetime | None, *, adapter_schema: int = ADAPTER_SCHEMA
+) -> str:
     payload = {
-        "adapter_schema": ADAPTER_SCHEMA,
+        "adapter_schema": adapter_schema,
         "event_time": event_time.isoformat() if event_time else None,
         "messages": [message.model_dump() for message in body.messages],
     }
@@ -70,6 +73,21 @@ def _request_hash(body: AddRequest, event_time: datetime | None) -> str:
         payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode()
     return hashlib.sha256(canonical).hexdigest()
+
+
+def _session_id(
+    *, user_id: str, event_time: datetime | None, request_hash: str
+) -> str:
+    """Derive the strongest session boundary exposed by the upstream API.
+
+    BEAM sends a conversation in two-message chunks without a session identifier.
+    Chunks from one source session share an observation timestamp, so timestamp is
+    the only neutral boundary that reconstructs those sessions.  When it is absent,
+    keep the request itself isolated instead of joining the user's entire history.
+    """
+    boundary = event_time.isoformat() if event_time is not None else request_hash
+    digest = hashlib.sha256(f"{user_id}\0{boundary}".encode()).hexdigest()
+    return f"beam:{digest}"
 
 
 def _event_time(body: AddRequest) -> datetime | None:
@@ -229,6 +247,18 @@ def create_app(config: PRMEConfig, *, profile: Literal["raw", "extracted"] = "ra
             raise HTTPException(422, "BEAM adapter does not accept benchmark-side metadata")
         event_time = _event_time(body)
         request_hash = _request_hash(body, event_time)
+        compatible_request_hashes = (
+            request_hash,
+            *(
+                _request_hash(body, event_time, adapter_schema=schema)
+                for schema in _LEGACY_ADAPTER_SCHEMAS
+            ),
+        )
+        session_id = _session_id(
+            user_id=body.user_id,
+            event_time=event_time,
+            request_hash=request_hash,
+        )
         engine: MemoryEngine = app.state.engine
         sources: _SourceIndex = app.state.sources
 
@@ -236,8 +266,14 @@ def create_app(config: PRMEConfig, *, profile: Literal["raw", "extracted"] = "ra
             await sources.load(body.user_id)
             output: list[dict[str, Any]] = []
             for index, message in enumerate(body.messages):
-                key = (body.user_id, request_hash, index)
-                event_id = sources.events.get(key)
+                event_id = next(
+                    (
+                        sources.events[(body.user_id, compatible_hash, index)]
+                        for compatible_hash in compatible_request_hashes
+                        if (body.user_id, compatible_hash, index) in sources.events
+                    ),
+                    None,
+                )
                 if event_id is None:
                     metadata = {
                         "benchmark_adapter": "beam",
@@ -252,7 +288,7 @@ def create_app(config: PRMEConfig, *, profile: Literal["raw", "extracted"] = "ra
                                 message.content,
                                 user_id=body.user_id,
                                 role=message.role,
-                                session_id=f"beam:{body.user_id}",
+                                session_id=session_id,
                                 metadata=metadata,
                                 event_time=event_time,
                             )
@@ -273,7 +309,7 @@ def create_app(config: PRMEConfig, *, profile: Literal["raw", "extracted"] = "ra
                                 message.content,
                                 user_id=body.user_id,
                                 role=message.role,
-                                session_id=f"beam:{body.user_id}",
+                                session_id=session_id,
                                 metadata=metadata,
                                 event_time=event_time,
                                 wait_for_extraction=True,
