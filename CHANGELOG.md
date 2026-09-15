@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adapter-profile or extraction-config drift while preserving earlier raw
   registration semantics.
 
+- The first registered extracted-memory BEAM attempt is retained as rejected
+  evidence: DeepSeek V4.1 Flash completed 8 durable extractions but failed the
+  complete schema on a longer source after the registered retry budget. The run
+  was stopped before retrieval and publishes no score.
+
 - The first fail-closed scored BEAM execution now provides complete answer-quality
   evidence for one 100K raw-memory conversation: 12/20 pass (60.0%) with a
   0.49833 mean rubric score, 94/94 ingested chunks, 20/20 nonempty answers, and
