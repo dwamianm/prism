@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import time
 from typing import Any
 import weakref
@@ -31,11 +32,19 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 5
+ADAPTER_SCHEMA_VERSION = 6
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
 _DEFAULT_RESULT_LIMIT = 100
+_SEGMENTATION_POLICY = "blank-line-v1"
+_RETRIEVAL_QUERY_POLICY = "upstream-plus-terminal-label-question-v1"
+_BLANK_LINE = re.compile(r"\r?\n(?:[ \t]*\r?\n)+")
+_TERMINAL_LABEL_QUESTION = re.compile(
+    r"(?:\A|\r?\n[ \t]*\r?\n)Question:[ \t]*(?P<query>.*?)"
+    r"\r?\n[ \t]*\r?\n[ \t]*label:[ \t]*\Z",
+    re.DOTALL,
+)
 
 
 def _canonical(value: object) -> bytes:
@@ -61,6 +70,8 @@ def _config_identity(agent: Any) -> dict[str, object]:
         "embedding_provider": "fastembed",
         "embedding_model": "BAAI/bge-small-en-v1.5",
         "embedding_dimension": 384,
+        "segmentation_policy": _SEGMENTATION_POLICY,
+        "retrieval_query_policy": _RETRIEVAL_QUERY_POLICY,
         "packing_policy": "balanced",
         "context_format": agent.prme_context_format,
         "reader_reasoning_effort": agent.reader_reasoning_effort,
@@ -123,25 +134,73 @@ def _close_client(agent: Any) -> None:
 
 
 def _split_units(text: str, limit: int) -> list[str]:
-    """Preserve all text while keeping each stored record packable at 4K."""
+    """Preserve source bytes and blank-line semantic units under a hard limit."""
     if limit < 512:
         raise ValueError("prme_max_chunk_chars must be at least 512")
+    units: list[str] = []
+    start = 0
+    for boundary in _BLANK_LINE.finditer(text):
+        units.append(text[start : boundary.end()])
+        start = boundary.end()
+    if start < len(text):
+        units.append(text[start:])
+    if not units:
+        units.append(text)
+
     chunks: list[str] = []
-    current = ""
-    for unit in text.splitlines(keepends=True) or [text]:
+    for unit in units:
         while len(unit) > limit:
-            if current:
-                chunks.append(current)
-                current = ""
             chunks.append(unit[:limit])
             unit = unit[limit:]
-        if current and len(current) + len(unit) > limit:
-            chunks.append(current)
-            current = ""
-        current += unit
-    if current:
-        chunks.append(current)
+        if unit:
+            chunks.append(unit)
     return chunks or [text]
+
+
+def _split_source_chunks(
+    source_chunks: list[str], limit: int
+) -> tuple[list[str], list[int], list[int]]:
+    """Segment one ordered source stream and attribute records by ending chunk."""
+    if not source_chunks or any(not chunk for chunk in source_chunks):
+        raise ValueError("source chunks must be non-empty")
+    source_ends: list[int] = []
+    total = 0
+    for source_chunk in source_chunks:
+        total += len(source_chunk)
+        source_ends.append(total)
+
+    pieces = _split_units("".join(source_chunks), limit)
+    source_indices: list[int] = []
+    piece_counts = [0] * len(source_chunks)
+    piece_end = 0
+    source_index = 0
+    for piece in pieces:
+        piece_end += len(piece)
+        while (
+            source_index < len(source_ends) - 1
+            and piece_end > source_ends[source_index]
+        ):
+            source_index += 1
+        source_indices.append(source_index)
+        piece_counts[source_index] += 1
+    return pieces, source_indices, piece_counts
+
+
+def _retrieval_query(message: str, upstream_query: str | None = None) -> str:
+    """Apply the pinned upstream extraction and isolate terminal label questions."""
+    match = _TERMINAL_LABEL_QUESTION.search(message)
+    if match is not None and (question := match.group("query").strip()):
+        return question
+    if upstream_query is not None:
+        return upstream_query
+    for pattern in (
+        r"Now Answer the Question:\s*(.*)",
+        r"Here is the conversation:\s*(.*)",
+    ):
+        match = re.search(pattern, message, re.DOTALL)
+        if match:
+            return "".join(match.groups())
+    return message
 
 
 def initialize_prme_agent(
@@ -204,6 +263,8 @@ def initialize_prme_agent(
     agent.prme_ingest_started = None
     agent.prme_ingest_seconds = 0.0
     agent.prme_report_ingest = False
+    agent.prme_source_chunks = []
+    agent.prme_context_id = None
 
 
 def _begin_ingestion(agent: Any) -> None:
@@ -236,54 +297,19 @@ def _store_source_chunk(agent: Any, message: str, context_id: int | None) -> Non
     _begin_ingestion(agent)
     if agent.prme_manifest["status"] != "preparing":
         raise RuntimeError("cannot append to a completed PRME benchmark pack")
+    if agent.prme_source_chunks and context_id != agent.prme_context_id:
+        raise RuntimeError("one PRME benchmark pack cannot mix source contexts")
+    agent.prme_context_id = context_id
 
     source_index = len(agent.prme_manifest["source_chunks"])
-    source_digest = hashlib.sha256(message.encode("utf-8")).hexdigest()
-    pieces = _split_units(message, agent.prme_max_chunk_chars)
-    last_event_id: str | None = None
-    client = _open_client(agent)
-    try:
-        for piece_index, piece in enumerate(pieces):
-            last_event_id = client.store(
-                piece,
-                user_id=agent.prme_user_id,
-                session_id=f"{agent.sub_dataset}:context:{context_id}",
-                role="tool",
-                node_type=NodeType.NOTE,
-                scope=Scope.PROJECT,
-                epistemic_type=EpistemicType.OBSERVED,
-                source_type=SourceType.TOOL_OUTPUT,
-                metadata={
-                    "benchmark": "memoryagentbench",
-                    "dataset_revision": DATASET_REVISION,
-                    "sub_dataset": agent.sub_dataset,
-                    "context_id": context_id,
-                    "source_chunk_index": source_index,
-                    "piece_index": piece_index,
-                    "piece_count": len(pieces),
-                },
-            )
-    except BaseException:
-        _write_manifest(agent)
-        raise
-    if last_event_id is None:
-        raise RuntimeError("MemoryAgentBench source chunk produced no PRME event")
-    event = client.get_event(last_event_id, user_id=agent.prme_user_id)
-    if event is None or event.created_at.utcoffset() is None:
-        raise RuntimeError("PRME benchmark query clock source is unavailable")
-    reference_time = event.created_at.astimezone(timezone.utc)
-    if agent.prme_reference_time is not None:
-        reference_time = max(reference_time, agent.prme_reference_time)
-    agent.prme_reference_time = reference_time
+    agent.prme_source_chunks.append(message)
     agent.prme_manifest["source_chunks"].append(
         {
             "index": source_index,
-            "sha256": source_digest,
-            "piece_count": len(pieces),
+            "sha256": hashlib.sha256(message.encode("utf-8")).hexdigest(),
+            "piece_count": 0,
         }
     )
-    agent.prme_manifest["stored_nodes"] += len(pieces)
-    agent.prme_manifest["query_reference_time"] = reference_time.isoformat()
     _write_manifest(agent)
 
 
@@ -293,10 +319,54 @@ def save_prme_agent(agent: Any) -> None:
         raise RuntimeError("cannot save an empty PRME MemoryAgentBench pack")
     if agent.prme_manifest["status"] != "preparing":
         raise RuntimeError("PRME MemoryAgentBench pack was already completed")
+    pieces, source_indices, piece_counts = _split_source_chunks(
+        agent.prme_source_chunks, agent.prme_max_chunk_chars
+    )
+    for source, piece_count in zip(
+        agent.prme_manifest["source_chunks"], piece_counts
+    ):
+        source["piece_count"] = piece_count
+    agent.prme_manifest["stored_nodes"] = len(pieces)
+    last_event_id: str | None = None
+    client = _open_client(agent)
+    try:
+        for piece_index, (piece, source_index) in enumerate(
+            zip(pieces, source_indices)
+        ):
+            last_event_id = client.store(
+                piece,
+                user_id=agent.prme_user_id,
+                session_id=f"{agent.sub_dataset}:context:{agent.prme_context_id}",
+                role="tool",
+                node_type=NodeType.NOTE,
+                scope=Scope.PROJECT,
+                epistemic_type=EpistemicType.OBSERVED,
+                source_type=SourceType.TOOL_OUTPUT,
+                metadata={
+                    "benchmark": "memoryagentbench",
+                    "dataset_revision": DATASET_REVISION,
+                    "sub_dataset": agent.sub_dataset,
+                    "context_id": agent.prme_context_id,
+                    "source_chunk_index": source_index,
+                    "piece_index": piece_index,
+                    "piece_count": len(pieces),
+                },
+            )
+    except BaseException:
+        _write_manifest(agent)
+        raise
+    if last_event_id is None:
+        raise RuntimeError("MemoryAgentBench source chunks produced no PRME event")
+    event = client.get_event(last_event_id, user_id=agent.prme_user_id)
+    if event is None or event.created_at.utcoffset() is None:
+        raise RuntimeError("PRME benchmark query clock source is unavailable")
+    agent.prme_reference_time = event.created_at.astimezone(timezone.utc)
+    agent.prme_manifest["query_reference_time"] = agent.prme_reference_time.isoformat()
     agent.prme_ingest_seconds = time.monotonic() - agent.prme_ingest_started
     agent.prme_manifest["status"] = "complete"
     agent.prme_manifest["ingest_seconds"] = agent.prme_ingest_seconds
     _write_manifest(agent)
+    agent.prme_source_chunks = []
     agent.prme_report_ingest = True
     print(
         f"[prme] indexed {agent.prme_manifest['stored_nodes']} records in "
@@ -353,6 +423,7 @@ def _save_retrieval(
     query_id: int | None,
     context_id: int | None,
     query: str,
+    retrieval_query: str,
     retrieval_context: str,
     request_id: str,
     context_token_count: int,
@@ -371,6 +442,9 @@ def _save_retrieval(
         "query_id": query_id,
         "context_id": context_id,
         "query_sha256": hashlib.sha256(query.encode("utf-8")).hexdigest(),
+        "retrieval_query_sha256": hashlib.sha256(
+            retrieval_query.encode("utf-8")
+        ).hexdigest(),
         "request_id": request_id,
         "receipt_persisted": receipt_persisted,
         "token_budget": agent.prme_token_budget,
@@ -405,7 +479,9 @@ def handle_prme_agent(
         raise RuntimeError("cannot query an incomplete PRME MemoryAgentBench pack")
 
     started = time.monotonic()
-    retrieval_query = agent._extract_retrieval_query(message)
+    retrieval_query = _retrieval_query(
+        message, upstream_query=agent._extract_retrieval_query(message)
+    )
     response = _open_client(agent).retrieve(
         retrieval_query,
         user_id=agent.prme_user_id,
@@ -445,6 +521,7 @@ def handle_prme_agent(
         query_id=query_id,
         context_id=context_id,
         query=message,
+        retrieval_query=retrieval_query,
         retrieval_context=retrieval_context,
         request_id=str(response.metadata.request_id),
         context_token_count=response.bundle.tokens_used,

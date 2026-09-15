@@ -111,6 +111,8 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "embedding_provider": "fastembed",
         "embedding_model": "BAAI/bge-small-en-v1.5",
         "embedding_dimension": 384,
+        "segmentation_policy": adapter._SEGMENTATION_POLICY,
+        "retrieval_query_policy": adapter._RETRIEVAL_QUERY_POLICY,
         "packing_policy": "balanced",
         "context_format": "auditable",
         "reader_reasoning_effort": "none",
@@ -216,6 +218,7 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         "query_id": 0,
         "context_id": 0,
         "query_sha256": hashlib.sha256(query.encode()).hexdigest(),
+        "retrieval_query_sha256": hashlib.sha256(query.encode()).hexdigest(),
         "request_id": request_id,
         "receipt_persisted": True,
         "token_budget": 4096,
@@ -307,6 +310,9 @@ def fixture_run(tmp_path: Path, monkeypatch) -> dict[str, Path]:
                         {
                             "query_id": 0,
                             "query_sha256": hashlib.sha256(query.encode()).hexdigest(),
+                            "retrieval_query_sha256": hashlib.sha256(
+                                query.encode()
+                            ).hexdigest(),
                             "answer_sha256": hashlib.sha256(
                                 verifier._canonical("Monday")
                             ).hexdigest(),
@@ -376,6 +382,9 @@ def test_registrar_hashes_every_prepared_input() -> None:
         == hashlib.sha256(b"second source").hexdigest()
     )
     assert contexts[1]["queries"][0]["query_id"] == 1
+    assert contexts[0]["queries"][0]["retrieval_query_sha256"] == hashlib.sha256(
+        b"Question: one?"
+    ).hexdigest()
     assert (
         contexts[1]["queries"][0]["answer_sha256"]
         == hashlib.sha256(registrar._canonical(["two"])).hexdigest()

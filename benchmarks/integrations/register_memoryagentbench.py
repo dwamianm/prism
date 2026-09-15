@@ -157,10 +157,14 @@ def _registered_contexts(
             qa_pair_id = query_data[2] if len(query_data) == 3 else None
             if not isinstance(query, str) or not query:
                 raise ValueError(f"query {query_id} is empty or non-text")
+            retrieval_query = adapter._retrieval_query(query)
             registered_queries.append(
                 {
                     "query_id": query_id,
                     "query_sha256": hashlib.sha256(query.encode("utf-8")).hexdigest(),
+                    "retrieval_query_sha256": hashlib.sha256(
+                        retrieval_query.encode("utf-8")
+                    ).hexdigest(),
                     "answer_sha256": hashlib.sha256(_canonical(answer)).hexdigest(),
                     "qa_pair_id_sha256": hashlib.sha256(
                         _canonical(qa_pair_id)
@@ -168,6 +172,9 @@ def _registered_contexts(
                 }
             )
             query_id += 1
+        _, _, piece_counts = adapter._split_source_chunks(
+            source_chunks, max_chunk_chars
+        )
         contexts.append(
             {
                 "context_id": context_id,
@@ -175,9 +182,7 @@ def _registered_contexts(
                     {
                         "index": index,
                         "sha256": hashlib.sha256(chunk.encode("utf-8")).hexdigest(),
-                        "piece_count": len(
-                            adapter._split_units(chunk, max_chunk_chars)
-                        ),
+                        "piece_count": piece_counts[index],
                     }
                     for index, chunk in enumerate(source_chunks)
                 ],

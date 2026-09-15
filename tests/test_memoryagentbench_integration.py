@@ -49,7 +49,7 @@ def fake_agent(
     agent._reader = reader
     agent._reader_completions = completions
     agent._create_oai_client = lambda: reader
-    agent._extract_retrieval_query = lambda message: message.rsplit("Question:", 1)[-1]
+    agent._extract_retrieval_query = adapter._retrieval_query
     agent._create_standard_response = (
         lambda output, input_tokens, output_tokens, memory_time, query_time: {
             "output": output,
@@ -109,7 +109,12 @@ def test_adapter_preserves_text_and_round_trips_pack(
         manifest_path = agent.prme_pack_path / adapter._MANIFEST_NAME
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert manifest["status"] == "complete"
-        assert manifest["stored_nodes"] == 2
+        assert manifest["stored_nodes"] == 3
+        assert manifest["config"]["segmentation_policy"] == "blank-line-v1"
+        assert (
+            manifest["config"]["retrieval_query_policy"]
+            == "upstream-plus-terminal-label-question-v1"
+        )
         assert manifest["source_chunks"][0]["sha256"]
         assert manifest["query_reference_time"]
 
@@ -138,7 +143,7 @@ def test_adapter_preserves_text_and_round_trips_pack(
         )
         assert retrieval["context_sha256"]
         assert retrieval["request_id"]
-        assert retrieval["adapter_schema_version"] == 5
+        assert retrieval["adapter_schema_version"] == 6
         assert retrieval["context_format"] == context_format
         assert retrieval["reader_reasoning_effort"] == "none"
         assert retrieval["reader_seed"] == 42
@@ -155,6 +160,7 @@ def test_adapter_preserves_text_and_round_trips_pack(
                 b"Question: What should be clicked only once?"
             ).hexdigest()
         )
+        assert retrieval["retrieval_query_sha256"] == retrieval["query_sha256"]
         assert (
             retrieval["manifest_sha256"]
             == hashlib.sha256(manifest_path.read_bytes()).hexdigest()
@@ -176,6 +182,40 @@ def test_adapter_preserves_text_and_round_trips_pack(
         assert result["memory_construction_time"] == 0
     finally:
         adapter._close_client(reopened)
+
+
+def test_split_units_preserves_blank_line_semantics_and_source_bytes() -> None:
+    source = "first line\ncontinued\n\nsecond\r\n\r\nthird"
+    pieces = adapter._split_units(source, 512)
+    assert pieces == ["first line\ncontinued\n\n", "second\r\n\r\n", "third"]
+    assert "".join(pieces) == source
+
+
+def test_split_source_chunks_reassembles_cross_boundary_semantic_unit() -> None:
+    sources = ["first question", " label: 7\n\nsecond question label: 8"]
+    pieces, source_indices, piece_counts = adapter._split_source_chunks(sources, 512)
+    assert pieces == [
+        "first question label: 7\n\n",
+        "second question label: 8",
+    ]
+    assert source_indices == [1, 1]
+    assert piece_counts == [0, 2]
+    assert "".join(pieces) == "".join(sources)
+
+
+def test_retrieval_query_isolates_terminal_label_question() -> None:
+    prompt = (
+        "Use the provided mapping from context to a label.\n\n"
+        "Question:Are there restrictions for my disposable card? \n\n label:"
+    )
+    assert adapter._retrieval_query(prompt, upstream_query=prompt) == (
+        "Are there restrictions for my disposable card?"
+    )
+    assert adapter._retrieval_query(
+        "Now Answer the Question: Where is the clock?"
+    ) == "Where is the clock?"
+    ordinary = "Question: What happened?"
+    assert adapter._retrieval_query(ordinary) == ordinary
 
 
 def test_adapter_rejects_incomplete_and_changed_packs(tmp_path: Path) -> None:

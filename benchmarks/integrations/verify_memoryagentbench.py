@@ -109,6 +109,8 @@ def _verify_manifest(
         "embedding_provider": "fastembed",
         "embedding_model": "BAAI/bge-small-en-v1.5",
         "embedding_dimension": 384,
+        "segmentation_policy": adapter._SEGMENTATION_POLICY,
+        "retrieval_query_policy": adapter._RETRIEVAL_QUERY_POLICY,
         "packing_policy": "balanced",
         "context_format": expected_context_format,
         "reader_reasoning_effort": expected_reasoning_effort,
@@ -136,10 +138,12 @@ def _verify_manifest(
             or _HEX64.fullmatch(chunk["sha256"]) is None
             or isinstance(chunk.get("piece_count"), bool)
             or not isinstance(chunk.get("piece_count"), int)
-            or chunk["piece_count"] <= 0
+            or chunk["piece_count"] < 0
         ):
             raise ValueError(f"{path} has an invalid source chunk at index {index}")
         pieces += chunk["piece_count"]
+    if pieces <= 0:
+        raise ValueError(f"{path} has no stored source records")
     if manifest.get("stored_nodes") != pieces:
         raise ValueError(f"{path} stored-node count does not match its source chunks")
     reference_time = manifest.get("query_reference_time")
@@ -433,9 +437,14 @@ def verify(
         )
         _require_number(row.get("query_time_len"), f"result row {index} query_time_len")
         registered_query = expected_query_rows[index]
+        retrieval_query_sha256 = hashlib.sha256(
+            adapter._retrieval_query(row["query"]).encode("utf-8")
+        ).hexdigest()
         if (
             registered_query.get("query_sha256")
             != hashlib.sha256(row["query"].encode("utf-8")).hexdigest()
+            or registered_query.get("retrieval_query_sha256")
+            != retrieval_query_sha256
             or registered_query.get("answer_sha256")
             != hashlib.sha256(_canonical(row.get("answer"))).hexdigest()
             or registered_query.get("qa_pair_id_sha256")
@@ -519,6 +528,8 @@ def verify(
             or not isinstance(context, str)
             or capture.get("query_sha256")
             != hashlib.sha256(rows[query_id]["query"].encode("utf-8")).hexdigest()
+            or capture.get("retrieval_query_sha256")
+            != expected_query_rows[query_id]["retrieval_query_sha256"]
             or capture.get("context_sha256")
             != hashlib.sha256(context.encode("utf-8")).hexdigest()
             or capture.get("receipt_persisted") is not True
@@ -581,7 +592,7 @@ def verify(
         )
         if (
             hashlib.sha256(receipt.query.encode("utf-8")).hexdigest()
-            != capture["query_sha256"]
+            != capture["retrieval_query_sha256"]
             or receipt.context_sha256 != capture["context_sha256"]
             or receipt.reference_time.isoformat() != manifest["query_reference_time"]
             or receipt.packing.token_budget != token_budget
