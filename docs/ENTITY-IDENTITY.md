@@ -14,6 +14,11 @@ This is a conservative English guard, not general coreference resolution. It
 does not disambiguate several quoted speakers inside one event or equal names
 belonging to different people.
 
+Built-in extraction keeps only claims whose named references resolve within the
+same response, apart from those event-local personal references. A missing or
+ambiguous reference discards its claim while preserving grounded, closed
+siblings; it never creates or selects an identity to repair model output.
+
 New prepared derivations identify qualifier-aware, quantity-preserving, and
 source-effective validity rules as `temporal_validity_v7`. Prepared plans using
 `grounded_quantities_v6`, `claim_qualifiers_v5`,

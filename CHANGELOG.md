@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Exact integer and string decimal quantities from Instructor JSON responses now
+  survive strict extraction validation. JSON float approximations and malformed
+  quantities are still discarded without losing an otherwise grounded fact.
+  Missing or ambiguous named references now discard only their affected claim,
+  so one omitted entity declaration cannot exhaust retries and lose every
+  grounded, reference-closed sibling in the provider response.
+
 - Preserve BEAM source-session boundaries when the upstream request exposes an
   observation timestamp, preventing adjacent-turn expansion from treating a
   complete multi-session history as one session.

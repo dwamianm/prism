@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from pydantic import ValidationError
 
 from prme import MemoryEngine
 from prme.ingestion.extraction import _CitedExtractionResult
@@ -32,9 +31,10 @@ def namesakes(*, qualified=True, reverse=False):
      "relationships": [{"source_entity": "Aster", "target_entity": "uses PostgreSQL", "relationship_type": "relates_to", "polarity": "positive", "evidence_quote": "Jordan lives in Jordan.", "epistemic_type": "asserted"}]},
     namesakes(qualified=False),
 ])
-def test_builtin_schema_rejects_missing_and_ambiguous_references(payload):
-    with pytest.raises(ValidationError, match="missing|ambiguous"):
-        _CitedExtractionResult.model_validate(payload)
+def test_builtin_schema_discards_claims_with_missing_or_ambiguous_references(payload):
+    result = _CitedExtractionResult.model_validate(payload)
+    assert result.facts == []
+    assert result.relationships == []
 
 
 @pytest.mark.parametrize("reverse", [False, True])
@@ -83,11 +83,41 @@ async def test_custom_provider_unresolved_facts_are_preserved_without_guessing(c
 
 
 @pytest.mark.parametrize("qualifier", [None, "organization"])
-def test_builtin_rejects_ambiguous_or_wrongly_typed_object(qualifier):
+def test_builtin_discards_ambiguous_or_wrongly_typed_object(qualifier):
     payload = namesakes()
     payload["facts"][0]["object_entity_type"] = qualifier
-    with pytest.raises(ValidationError, match=r"facts\[0\].object is (ambiguous|missing)"):
-        _CitedExtractionResult.model_validate(payload)
+    result = _CitedExtractionResult.model_validate(payload)
+    assert result.facts == []
+    assert len(result.relationships) == 1
+
+
+def test_builtin_keeps_closed_sibling_when_another_claim_has_missing_subject():
+    source = "Alice likes tea. app runs on port 5000."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [
+            {
+                "subject": "Alice",
+                "predicate": "likes",
+                "object": "tea",
+                "polarity": "positive",
+                "evidence_quote": "Alice likes tea.",
+            },
+            {
+                "subject": "app",
+                "predicate": "runs_on_port",
+                "object": "5000",
+                "polarity": "positive",
+                "evidence_quote": "app runs on port 5000.",
+            },
+        ],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert [(fact.subject, fact.object) for fact in result.facts] == [
+        ("Alice", "tea")
+    ]
 
 
 def test_builtin_accepts_literal_object_without_entity_entry():

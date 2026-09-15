@@ -39,6 +39,51 @@ def test_quantity_schema_rejects_nonfinite_or_unbounded_decimals():
             ExtractedQuantity(value=value, unit="$", source_text="$1")
 
 
+@pytest.mark.parametrize(("encoded", "expected"), [
+    ('5000', Decimal("5000")),
+    ('"12.50"', Decimal("12.50")),
+])
+def test_quantity_schema_accepts_exact_json_decimals_under_strict_validation(
+    encoded, expected
+):
+    quantity = ExtractedQuantity.model_validate_json(
+        f'{{"value":{encoded},"unit":"1","source_text":"{expected}"}}',
+        strict=True,
+    )
+    assert quantity.value == expected
+
+
+def test_builtin_strict_json_preserves_exact_quantity_after_result_sanitizing():
+    source = "app.run(port=5000)"
+    raw = (
+        '{"entities":[{"name":"app","entity_type":"product"}],'
+        '"facts":[{"subject":"app","predicate":"runs_on_port",'
+        '"object":"5000","quantity":{"value":5000,"unit":"1",'
+        '"source_text":"5000"},"polarity":"positive",'
+        f'"evidence_quote":"{source}"}}]}}'
+    )
+    result = _CitedExtractionResult.model_validate_json(
+        raw, context={"source_text": source}, strict=True
+    )
+    assert result.facts[0].quantity.value == Decimal("5000")
+
+
+def test_builtin_discards_json_float_quantity_without_losing_fact():
+    source = "Alice spent $12.50 on lunch."
+    raw = (
+        '{"entities":[{"name":"Alice","entity_type":"person"}],'
+        '"facts":[{"subject":"Alice","predicate":"spent",'
+        '"object":"$12.50","quantity":{"value":12.5,"unit":"$",'
+        '"source_text":"$12.50"},"polarity":"positive",'
+        f'"evidence_quote":"{source}"}}]}}'
+    )
+    result = _CitedExtractionResult.model_validate_json(
+        raw, context={"source_text": source}, strict=True
+    )
+    assert len(result.facts) == 1
+    assert result.facts[0].quantity is None
+
+
 def test_builtin_keeps_exact_grounded_quantity():
     source, payload = _payload({
         "value": "12.50",

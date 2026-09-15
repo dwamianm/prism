@@ -24,7 +24,7 @@ from prme.ingestion.grounding import (
     validate_extracted_quantity,
 )
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
-from prme.ingestion.entity_references import reference_errors
+from prme.ingestion.entity_references import reference_errors_by_claim
 
 if TYPE_CHECKING:
     import instructor
@@ -244,9 +244,32 @@ class _CitedExtractionResult(ExtractionResult):
                     supported_relationships.append(relationship)
             self.facts = supported_facts
             self.relationships = supported_relationships
-        errors = reference_errors(self)
-        if errors:
-            raise ValueError("; ".join(errors))
+        fact_errors, relationship_errors = reference_errors_by_claim(self)
+        closed_facts = []
+        for index, (fact, errors) in enumerate(zip(self.facts, fact_errors, strict=True)):
+            if errors:
+                logger.warning(
+                    "extraction_claim_discarded",
+                    path=f"facts[{index}]",
+                    reason="; ".join(errors),
+                )
+            else:
+                closed_facts.append(fact)
+        self.facts = closed_facts
+
+        closed_relationships = []
+        for index, (relationship, errors) in enumerate(
+            zip(self.relationships, relationship_errors, strict=True)
+        ):
+            if errors:
+                logger.warning(
+                    "extraction_claim_discarded",
+                    path=f"relationships[{index}]",
+                    reason="; ".join(errors),
+                )
+            else:
+                closed_relationships.append(relationship)
+        self.relationships = closed_relationships
         return self
 
 EXTRACTION_SYSTEM_PROMPT = """\

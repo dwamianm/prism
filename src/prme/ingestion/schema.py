@@ -6,7 +6,7 @@ and an optional summary. All models include LLM-friendly Field descriptions
 to guide structured extraction via instructor.
 """
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -35,6 +35,21 @@ class ExtractedQuantity(BaseModel):
         max_length=500,
         description="Exact verbatim quantified phrase contained in the fact object",
     )
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def parse_exact_value(cls, value: object) -> Decimal:
+        """Preserve JSON decimals across strict result-level validation."""
+        if isinstance(value, Decimal):
+            return value
+        if isinstance(value, bool) or not isinstance(value, (int, str)):
+            raise ValueError("quantity value must be an exact integer or decimal string")
+        if isinstance(value, str) and len(value) > 200:
+            raise ValueError("quantity value exceeds the supported representation length")
+        try:
+            return Decimal(value)
+        except (InvalidOperation, ValueError):
+            raise ValueError("quantity value must be a decimal") from None
 
     @field_validator("value")
     @classmethod

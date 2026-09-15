@@ -245,9 +245,12 @@ exception: they may remain unlisted and receive a source-event-local identity
 during materialization. Optional type qualifiers disambiguate equal names with
 different entity types. Name matching preserves the ingestion merger's stripped,
 case-insensitive name and exact type semantics; it does not guess aliases.
-Missing/ambiguous references cause bounded provider schema retries. Objects
-may be literals; when an object matches ambiguous entity names or supplies an
-explicit `object_entity_type`, it must resolve uniquely too.
+Missing or ambiguous references discard only the affected built-in-provider
+claim while retaining grounded, reference-closed siblings. This preserves the
+closed-reference rule without losing a complete response when a model repeatedly
+omits one entity declaration. Objects may be literals; when an object matches
+ambiguous entity names or supplies an explicit `object_entity_type`, it must
+resolve uniquely too.
 
 Provider citations that differ from a source span only in straight or curly
 quote marks are aligned to that span before validation. The exact source bytes,
