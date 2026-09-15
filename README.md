@@ -28,7 +28,12 @@ On the first corrected matched MemoryAgentBench task, PRME scored 20/20 versus
 BM25 at 17/20 on 20 Banking77 development questions while using 90.52% fewer
 retrieved-context tokens. The [verified report](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md)
 records the exact source and result hashes, paired uncertainty, 468-second PRME
-pack build, and development-cohort boundary.
+pack build, and development-cohort boundary. The next matched
+[EventQA trial](benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-SESSION-DEV20.md)
+found the opposite quality result: PRME scored 16/20 versus BM25 at 20/20 while
+using 90.48% fewer retrieved-context tokens. The failed contexts omitted stored
+answer-bearing episode fragments, making episodic reconstruction a measured
+retrieval gap rather than a leadership claim.
 
 See [BENCHMARKS.md](BENCHMARKS.md) for the measurement contract, commands, and
 remaining baseline work. The [roadmap](ROADMAP.md) prioritizes retrieval quality:

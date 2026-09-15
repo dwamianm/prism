@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pack took 467.549 seconds to construct, so this remains bounded development
   evidence and exposes typed bulk ingestion as the next performance target.
 
+- The matched MemoryAgentBench EventQA development trial completed on 20
+  questions with independently verified PRME, BM25 and paired artifact chains.
+  PRME scored 16/20 versus BM25 at 20/20 while using 90.48% fewer
+  retrieved-context tokens. All four PRME misses omitted the reference answer
+  from the packed context even though answer-bearing records remained in the
+  durable store; flat limit and token-budget increases did not recover them
+  consistently. This records episodic context reconstruction as a quality gap
+  and preserves the negative result rather than treating compression as success.
+
 - MemoryAgentBench verification now authenticates each claimed durable
   retrieval receipt directly from the completed DuckDB pack, including its
   checksum, owner/request identity, replayable ranking, context hash, packing
