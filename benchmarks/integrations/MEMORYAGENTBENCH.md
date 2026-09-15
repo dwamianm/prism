@@ -52,7 +52,9 @@ configuration, adds the narrow dispatch hooks to `agent.py`, and pins the
 dataset loader. It also gives PRME saved-state paths the sub-dataset identity so
 sequential competency runs cannot silently reuse another task's pack. Existing
 conflicting files or ambiguous source anchors fail without leaving a partial
-install.
+install. Re-running a newer installer upgrades its managed reader-configuration
+block in place, then marks that block so later installs can verify it without
+duplicating an older validator.
 
 ## Run
 

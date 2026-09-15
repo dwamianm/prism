@@ -21,27 +21,67 @@ _CONFIG_RELATIVE = Path(
     "configs/agent_conf/RAG_Agents/gpt-4o-mini/PRME_gpt-4o-mini.yaml"
 )
 
+_READER_CONFIG_ANCHOR = (
+    "        self.temperature = agent_config.get('temperature', 0.0)\n"
+)
+_LEGACY_READER_CONFIG_FIELDS = (
+    "        self.reader_reasoning_effort = agent_config.get('reader_reasoning_effort')\n"
+    "        if self.reader_reasoning_effort not in (None, 'none', 'low', 'medium', 'high'):\n"
+    "            raise ValueError('reader_reasoning_effort must be none, low, medium, high, or omitted')\n"
+    "        self.reader_seed = agent_config.get('reader_seed')\n"
+    "        if isinstance(self.reader_seed, bool) or (self.reader_seed is not None and not isinstance(self.reader_seed, int)):\n"
+    "            raise ValueError('reader_seed must be an integer or omitted')\n"
+    "        self.reader_output_contract = str(agent_config.get('reader_output_contract', 'upstream')).strip()\n"
+    "        if self.reader_output_contract not in ('upstream', 'numeric-label-v1'):\n"
+    "            raise ValueError('invalid reader_output_contract')\n"
+    "        self.retrieval_run_id = str(agent_config.get('retrieval_run_id', 'default'))\n"
+    "        if (not self.retrieval_run_id or len(self.retrieval_run_id) > 64 or\n"
+    "                any(not char.isalnum() and char not in '._-' for char in self.retrieval_run_id)):\n"
+    "            raise ValueError('invalid retrieval_run_id')\n"
+    "        self.memory_timestamp = agent_config.get('memory_timestamp')\n"
+    "        if self.memory_timestamp is not None and (not isinstance(self.memory_timestamp, str) or not self.memory_timestamp):\n"
+    "            raise ValueError('memory_timestamp must be a non-empty string or omitted')\n"
+)
+_CURRENT_READER_CONFIG_FIELDS_UNMARKED = (
+    "        self.reader_reasoning_effort = agent_config.get('reader_reasoning_effort')\n"
+    "        if self.reader_reasoning_effort not in (None, 'none', 'low', 'medium', 'high'):\n"
+    "            raise ValueError('reader_reasoning_effort must be none, low, medium, high, or omitted')\n"
+    "        self.reader_seed = agent_config.get('reader_seed')\n"
+    "        if isinstance(self.reader_seed, bool) or (self.reader_seed is not None and not isinstance(self.reader_seed, int)):\n"
+    "            raise ValueError('reader_seed must be an integer or omitted')\n"
+    "        self.reader_output_contract = str(agent_config.get('reader_output_contract', 'upstream')).strip()\n"
+    "        if self.reader_output_contract not in ('upstream', 'numeric-label-v1', 'answer-only-v1', 'choice-only-v1'):\n"
+    "            raise ValueError('invalid reader_output_contract')\n"
+    "        self.retrieval_run_id = str(agent_config.get('retrieval_run_id', 'default'))\n"
+    "        if (not self.retrieval_run_id or len(self.retrieval_run_id) > 64 or\n"
+    "                any(not char.isalnum() and char not in '._-' for char in self.retrieval_run_id)):\n"
+    "            raise ValueError('invalid retrieval_run_id')\n"
+    "        self.memory_timestamp = agent_config.get('memory_timestamp')\n"
+    "        if self.memory_timestamp is not None and (not isinstance(self.memory_timestamp, str) or not self.memory_timestamp):\n"
+    "            raise ValueError('memory_timestamp must be a non-empty string or omitted')\n"
+)
+_CURRENT_READER_CONFIG_FIELDS = (
+    "        # PRME reader configuration (managed by install_memoryagentbench.py)\n"
+    + _CURRENT_READER_CONFIG_FIELDS_UNMARKED
+    + "        # End PRME reader configuration\n"
+)
+_AGENT_PATCH_MIGRATIONS = (
+    (
+        _CURRENT_READER_CONFIG_FIELDS_UNMARKED + _LEGACY_READER_CONFIG_FIELDS,
+        _CURRENT_READER_CONFIG_FIELDS,
+    ),
+    (_LEGACY_READER_CONFIG_FIELDS, _CURRENT_READER_CONFIG_FIELDS),
+    (_CURRENT_READER_CONFIG_FIELDS_UNMARKED, _CURRENT_READER_CONFIG_FIELDS),
+)
+
+# These are byte-exact fragments from the pinned upstream source. Keep their
+# quoting and layout stable so changes remain reviewable against that source.
+# fmt: off
 _PATCHES = {
     "agent.py": (
         (
-            "        self.temperature = agent_config.get('temperature', 0.0)\n",
-            "        self.temperature = agent_config.get('temperature', 0.0)\n"
-            "        self.reader_reasoning_effort = agent_config.get('reader_reasoning_effort')\n"
-            "        if self.reader_reasoning_effort not in (None, 'none', 'low', 'medium', 'high'):\n"
-            "            raise ValueError('reader_reasoning_effort must be none, low, medium, high, or omitted')\n"
-            "        self.reader_seed = agent_config.get('reader_seed')\n"
-            "        if isinstance(self.reader_seed, bool) or (self.reader_seed is not None and not isinstance(self.reader_seed, int)):\n"
-            "            raise ValueError('reader_seed must be an integer or omitted')\n"
-            "        self.reader_output_contract = str(agent_config.get('reader_output_contract', 'upstream')).strip()\n"
-            "        if self.reader_output_contract not in ('upstream', 'numeric-label-v1', 'answer-only-v1', 'choice-only-v1'):\n"
-            "            raise ValueError('invalid reader_output_contract')\n"
-            "        self.retrieval_run_id = str(agent_config.get('retrieval_run_id', 'default'))\n"
-            "        if (not self.retrieval_run_id or len(self.retrieval_run_id) > 64 or\n"
-            "                any(not char.isalnum() and char not in '._-' for char in self.retrieval_run_id)):\n"
-            "            raise ValueError('invalid retrieval_run_id')\n"
-            "        self.memory_timestamp = agent_config.get('memory_timestamp')\n"
-            "        if self.memory_timestamp is not None and (not isinstance(self.memory_timestamp, str) or not self.memory_timestamp):\n"
-            "            raise ValueError('memory_timestamp must be a non-empty string or omitted')\n",
+            _READER_CONFIG_ANCHOR,
+            _READER_CONFIG_ANCHOR + _CURRENT_READER_CONFIG_FIELDS,
         ),
         (
             "        response = self._create_oai_client().chat.completions.create(\n"
@@ -183,6 +223,7 @@ _PATCHES = {
         ),
     ),
 }
+# fmt: on
 
 
 def _checkout_revision(root: Path) -> str:
@@ -195,7 +236,9 @@ def _checkout_revision(root: Path) -> str:
             text=True,
         )
     except (OSError, subprocess.CalledProcessError) as error:
-        raise RuntimeError(f"could not read the upstream Git revision at {root}") from error
+        raise RuntimeError(
+            f"could not read the upstream Git revision at {root}"
+        ) from error
     return result.stdout.strip()
 
 
@@ -234,10 +277,27 @@ def _copy_exact(source: Path, destination: Path) -> str:
     return "installed"
 
 
-def _patch_exact(path: Path, replacements: tuple[tuple[str, str], ...]) -> str:
+def _patch_exact(
+    path: Path,
+    replacements: tuple[tuple[str, str], ...],
+    *,
+    migrations: tuple[tuple[str, str], ...] = (),
+) -> str:
     original = path.read_text(encoding="utf-8")
     updated = original
     changed = False
+    already_current = bool(migrations and replacements[0][1] in updated)
+    if not already_current:
+        for before, after in migrations:
+            if before not in updated:
+                continue
+            if updated.count(before) != 1:
+                raise RuntimeError(
+                    f"unsupported or ambiguous upstream source at {path}"
+                )
+            updated = updated.replace(before, after, 1)
+            changed = True
+            break
     for before, after in replacements:
         if after in updated:
             continue
@@ -278,7 +338,8 @@ def install(
         for relative, replacements in _PATCHES.items():
             path = root / relative
             originals[path] = path.read_bytes()
-            patches.append(_patch_exact(path, replacements))
+            migrations = _AGENT_PATCH_MIGRATIONS if relative == "agent.py" else ()
+            patches.append(_patch_exact(path, replacements, migrations=migrations))
     except BaseException:
         for path, content in originals.items():
             path.write_bytes(content)
@@ -290,7 +351,9 @@ def install(
         "adapter": adapter,
         "config": config,
         "source_patches": (
-            "installed" if any(status == "installed" for status in patches) else "unchanged"
+            "installed"
+            if any(status == "installed" for status in patches)
+            else "unchanged"
         ),
         "upstream_revision": revision,
         "dataset_revision": DATASET_REVISION,

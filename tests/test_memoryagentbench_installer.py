@@ -80,9 +80,7 @@ def upstream_layout(root: Path) -> None:
     )
 
 
-def test_installer_is_idempotent_and_pins_dataset(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_installer_is_idempotent_and_pins_dataset(tmp_path: Path, monkeypatch) -> None:
     upstream_layout(tmp_path)
     monkeypatch.setattr(
         installer, "_checkout_revision", lambda root: installer.UPSTREAM_REVISION
@@ -92,7 +90,9 @@ def test_installer_is_idempotent_and_pins_dataset(
     second = installer.install(tmp_path)
 
     assert first["adapter"] == first["config"] == first["source_patches"] == "installed"
-    assert second["adapter"] == second["config"] == second["source_patches"] == "unchanged"
+    assert (
+        second["adapter"] == second["config"] == second["source_patches"] == "unchanged"
+    )
     agent = (tmp_path / "agent.py").read_text(encoding="utf-8")
     assert agent.count("initialize_prme_agent") == 2
     assert agent.count("handle_prme_agent") == 2
@@ -119,6 +119,49 @@ def test_installer_is_idempotent_and_pins_dataset(
     assert "_run{run_id}" in initialization
     assert "answer = saved_data_entry['answer']" in initialization
     assert "saved_data_entry['answer'][0]" not in initialization
+
+
+@pytest.mark.parametrize(
+    "prior_fields",
+    [
+        installer._LEGACY_READER_CONFIG_FIELDS,
+        (
+            installer._CURRENT_READER_CONFIG_FIELDS_UNMARKED
+            + installer._LEGACY_READER_CONFIG_FIELDS
+        ),
+    ],
+    ids=["legacy", "duplicate-upgrade"],
+)
+def test_installer_upgrades_managed_reader_config_without_duplicates(
+    tmp_path: Path, monkeypatch, prior_fields: str
+) -> None:
+    upstream_layout(tmp_path)
+    monkeypatch.setattr(
+        installer, "_checkout_revision", lambda root: installer.UPSTREAM_REVISION
+    )
+    agent_path = tmp_path / "agent.py"
+    source = agent_path.read_text(encoding="utf-8")
+    agent_path.write_text(
+        source.replace(
+            installer._READER_CONFIG_ANCHOR,
+            installer._READER_CONFIG_ANCHOR + prior_fields,
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    first = installer.install(tmp_path)
+    second = installer.install(tmp_path)
+
+    assert first["source_patches"] == "installed"
+    assert second["source_patches"] == "unchanged"
+    agent = agent_path.read_text(encoding="utf-8")
+    assert agent.count("self.reader_reasoning_effort =") == 1
+    assert agent.count("self.reader_output_contract =") == 1
+    assert agent.count("# PRME reader configuration") == 1
+    assert agent.count("# End PRME reader configuration") == 1
+    assert "answer-only-v1" in agent
+    assert "choice-only-v1" in agent
 
 
 def test_installer_rejects_revision_drift_and_rolls_back(

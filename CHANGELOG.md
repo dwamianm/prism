@@ -34,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   receipt with that frozen map, rejecting runs whose adapter came from the
   declared revision but whose PRME runtime resolved from another checkout.
 
+- The MemoryAgentBench installer now upgrades its previously generated reader
+  configuration block in place. Reinstalling after a new reader contract no
+  longer leaves both the old and new validators in `agent.py`; managed markers
+  make subsequent installs idempotent, and ambiguous edits still fail closed.
+
 - MemoryAgentBench DetectiveQA trials can register a shared
   `choice-only-v1` reader contract. It resolves the pinned task prompt's conflict
   between an example JSON reasoning object and its option-text exact-match
