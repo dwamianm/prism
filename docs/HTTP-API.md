@@ -95,8 +95,10 @@ For raw imports, `POST /v1/ingest/fast` accepts `{"user_id": "...", "items":
 and a timezone-aware `event_time`. The resolved owner applies to the complete
 ordered list, which is validated before I/O and committed with its repair jobs
 as one transaction. The response returns `event_ids` in input order and an
-`accepted` count. Call the materialization processor until `pending` is zero;
-do not resubmit IDs whose admission already succeeded.
+`accepted` count. A UUID `Idempotency-Key` header binds the exact ordered inputs
+to the resolved owner. Retrying it returns the original IDs after restart;
+changed inputs return `409`. Call the materialization processor until `pending`
+is zero; do not resubmit IDs whose admission already succeeded.
 
 Materialization processing accepts `{"budget_ms": 5000}` and returns `processed`,
 `pending` and `failed` counts. With zero budget it only inspects counts. The budget

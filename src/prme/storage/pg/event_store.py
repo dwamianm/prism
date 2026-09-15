@@ -20,6 +20,13 @@ from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.types import Scope
 from prme.storage.extraction_work import ExtractionWorkRepository, validate_pg_claim
+from prme.storage.fast_ingest import (
+    FastIngestAdmission,
+    FastIngestBatchRecord,
+    fast_ingest_payload,
+    replay_fast_ingest,
+    validate_fast_ingest_record,
+)
 from prme.models.extraction_work import ExtractionClaim
 
 logger = logging.getLogger(__name__)
@@ -163,6 +170,7 @@ class PgEventStore:
                      defer_extraction: bool = False, store_node: MemoryNode | None = None) -> str:
         """Append an event and optional typed store intent/work atomically."""
         from prme.storage.metadata import snapshot_metadata
+
         event = event.model_copy(update={"metadata": snapshot_metadata(event.metadata)})
         if store_node is not None:
             store_node = store_node.model_copy(update={"metadata": snapshot_metadata(store_node.metadata)})
@@ -219,7 +227,8 @@ class PgEventStore:
         events: Sequence[Event],
         *,
         defer_materialization: bool = False,
-    ) -> list[str]:
+        record: FastIngestBatchRecord | None = None,
+    ) -> FastIngestAdmission:
         """Atomically append an ordered raw-event batch and optional repair work."""
         from prme.storage.metadata import snapshot_metadata
 
@@ -230,11 +239,57 @@ class PgEventStore:
         event_ids = [str(event.id) for event in snapshots]
         if len(event_ids) != len(set(event_ids)):
             raise ValueError("A raw event batch cannot contain duplicate IDs")
+        if record is not None:
+            validate_fast_ingest_record(record, snapshots)
+        if record is not None and not defer_materialization:
+            raise ValueError("Fast-ingest retry identity requires durable materialization")
         if not snapshots:
-            return []
+            return FastIngestAdmission(event_ids=())
         rows = [self._event_values(event) for event in snapshots]
         async with self._pool.acquire() as conn:
             async with conn.transaction():
+                if record is not None:
+                    existing = await conn.fetchrow(
+                        "SELECT op_type,payload FROM operations WHERE id=$1",
+                        str(record.operation_id),
+                    )
+                    replayed = replay_fast_ingest(
+                        tuple(existing) if existing is not None else None,
+                        record,
+                    )
+                    if replayed is not None:
+                        await self._validate_fast_ingest_replay(
+                            conn, replayed, record.user_id
+                        )
+                        return replayed
+                    inserted = await conn.fetchval(
+                        """INSERT INTO operations
+                        (id, op_type, target_id, payload, actor_id, created_at)
+                        VALUES ($1, 'FAST_INGEST_BATCH', $2, $3::jsonb, $4, $5)
+                        ON CONFLICT (id) DO NOTHING RETURNING id""",
+                        str(record.operation_id),
+                        str(record.request_id),
+                        fast_ingest_payload(record),
+                        record.user_id,
+                        record.admitted_at,
+                    )
+                    if inserted is None:
+                        existing = await conn.fetchrow(
+                            "SELECT op_type,payload FROM operations WHERE id=$1",
+                            str(record.operation_id),
+                        )
+                        replayed = replay_fast_ingest(
+                            tuple(existing) if existing is not None else None,
+                            record,
+                        )
+                        if replayed is None:
+                            raise ValueError(
+                                "Fast-ingest request conflict has no durable journal"
+                            )
+                        await self._validate_fast_ingest_replay(
+                            conn, replayed, record.user_id
+                        )
+                        return replayed
                 await conn.executemany(
                     """
                     INSERT INTO events (
@@ -249,7 +304,24 @@ class PgEventStore:
                         "INSERT INTO event_materializations (event_id) VALUES ($1)",
                         [(event_id,) for event_id in event_ids],
                     )
-        return event_ids
+        return FastIngestAdmission(event_ids=tuple(event.id for event in snapshots))
+
+    @staticmethod
+    async def _validate_fast_ingest_replay(
+        conn,
+        admission: FastIngestAdmission,
+        user_id: str,
+    ) -> None:
+        for event_id in admission.event_ids:
+            row = await conn.fetchrow(
+                """SELECT e.id FROM events e
+                JOIN event_materializations m ON m.event_id=e.id
+                WHERE e.id=$1 AND e.user_id=$2""",
+                str(event_id),
+                user_id,
+            )
+            if row is None:
+                raise ValueError("Fast-ingest journal references unavailable work")
 
     @staticmethod
     def _event_values(event: Event) -> tuple[object, ...]:

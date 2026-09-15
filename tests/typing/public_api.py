@@ -3,12 +3,13 @@
 from datetime import datetime, timezone
 from typing import assert_type
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
+from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.organizer.models import OrganizeResult
 
 
 def consume(client: MemoryClient) -> None:
+    assert issubclass(FastIngestConflict, ValueError)
     assert_type(client.promote("node-id", user_id="alice"), None)
     assert_type(client.archive("node-id", user_id="alice"), None)
     assert_type(client.ingest("Alice used Rust yesterday", user_id="alice",
@@ -23,7 +24,7 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.ingest_fast_many([
         FastIngestItem(content="first"),
         {"content": "second", "scope": Scope.PROJECT},
-    ], user_id="alice"), list[str])
+    ], user_id="alice", request_id="47ad2465-9d6d-4e8a-bd64-d4ff27ad1eae"), list[str])
     assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)
     assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])

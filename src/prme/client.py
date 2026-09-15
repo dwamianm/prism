@@ -645,9 +645,16 @@ class MemoryClient:
         items: Sequence[FastIngestItem | dict[str, Any]],
         *,
         user_id: str,
+        request_id: str | UUID | None = None,
     ) -> list[str]:
-        """Atomically accept raw events; process their durable work separately."""
-        return self._run(self._engine.ingest_fast_many(items, user_id=user_id))
+        """Atomically accept raw events with optional retry identity."""
+        return self._run(
+            self._engine.ingest_fast_many(
+                items,
+                user_id=user_id,
+                request_id=request_id,
+            )
+        )
 
     def extraction_status(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
         """Inspect durable extraction separately from raw-source indexing."""

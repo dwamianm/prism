@@ -18,6 +18,13 @@ from prme.models.direct_store import DirectStoreRecord, direct_store_operation_i
 from prme.models.extraction import ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.storage._threading import run_to_completion
+from prme.storage.fast_ingest import (
+    FastIngestAdmission,
+    FastIngestBatchRecord,
+    fast_ingest_payload,
+    replay_fast_ingest,
+    validate_fast_ingest_record,
+)
 from prme.storage.extraction_work import ExtractionWorkRepository, insert_duck_work, validate_duck_claim
 from prme.models.extraction_work import ExtractionClaim
 from prme.types import Scope
@@ -220,7 +227,8 @@ class EventStore:
         events: Sequence[Event],
         *,
         defer_materialization: bool = False,
-    ) -> list[str]:
+        record: FastIngestBatchRecord | None = None,
+    ) -> FastIngestAdmission:
         """Atomically append an ordered raw-event batch and optional repair work.
 
         This admission path intentionally excludes direct-store snapshots and
@@ -236,23 +244,50 @@ class EventStore:
         event_ids = [str(event.id) for event in snapshots]
         if len(event_ids) != len(set(event_ids)):
             raise ValueError("A raw event batch cannot contain duplicate IDs")
+        if record is not None:
+            validate_fast_ingest_record(record, snapshots)
+        if record is not None and not defer_materialization:
+            raise ValueError("Fast-ingest retry identity requires durable materialization")
         if not snapshots:
-            return []
+            return FastIngestAdmission(event_ids=())
         async with self._conn_lock:
-            await run_to_completion(
+            return await run_to_completion(
                 self._append_many_sync,
                 snapshots,
                 defer_materialization,
+                record,
             )
-        return event_ids
 
     def _append_many_sync(
         self,
         events: tuple[Event, ...],
         defer_materialization: bool,
-    ) -> None:
+        record: FastIngestBatchRecord | None,
+    ) -> FastIngestAdmission:
         self._conn.execute("BEGIN TRANSACTION")
         try:
+            if record is not None:
+                row = self._conn.execute(
+                    "SELECT op_type,payload FROM operations WHERE id=?",
+                    [str(record.operation_id)],
+                ).fetchone()
+                replayed = replay_fast_ingest(row, record)
+                if replayed is not None:
+                    self._validate_fast_ingest_replay_sync(replayed, record.user_id)
+                    self._conn.execute("COMMIT")
+                    return replayed
+                self._conn.execute(
+                    """INSERT INTO operations
+                    (id, op_type, target_id, payload, actor_id, created_at)
+                    VALUES (?, 'FAST_INGEST_BATCH', ?, ?, ?, ?)""",
+                    [
+                        str(record.operation_id),
+                        str(record.request_id),
+                        fast_ingest_payload(record),
+                        record.user_id,
+                        record.admitted_at,
+                    ],
+                )
             self._conn.executemany(
                 """
                 INSERT INTO events (
@@ -269,9 +304,27 @@ class EventStore:
                     [(str(event.id),) for event in events],
                 )
             self._conn.execute("COMMIT")
+            return FastIngestAdmission(
+                event_ids=tuple(event.id for event in events)
+            )
         except BaseException:
             self._conn.execute("ROLLBACK")
             raise
+
+    def _validate_fast_ingest_replay_sync(
+        self,
+        admission: FastIngestAdmission,
+        user_id: str,
+    ) -> None:
+        for event_id in admission.event_ids:
+            row = self._conn.execute(
+                """SELECT e.id FROM events e
+                JOIN event_materializations m ON m.event_id=e.id
+                WHERE e.id=? AND e.user_id=?""",
+                [str(event_id), user_id],
+            ).fetchone()
+            if row is None:
+                raise ValueError("Fast-ingest journal references unavailable work")
 
     def _append_with_work_sync(self, event: Event, deferred: bool, extraction: bool = False, record: DirectStoreRecord | None = None) -> None:
         if not deferred and not extraction:

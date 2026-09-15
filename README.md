@@ -422,6 +422,7 @@ with MemoryClient("./memories") as memory:
             for message in messages
         ],
         user_id="alice",
+        request_id=conversation_import_id,  # persist this UUID with the import job
     )
     while True:
         result = memory.process_pending(user_id="alice", budget_ms=30_000)
@@ -434,6 +435,8 @@ with MemoryClient("./memories") as memory:
 
 Every item is validated before I/O. The batch uses one owner, preserves input
 order, and either admits every immutable event plus repair job or admits none.
+An exact retry with the same owner-scoped request UUID returns the original
+event IDs, including after restart; changing any item under that UUID fails.
 `pending` means more processing remains, and `failed` reports failed attempts in
 that pass. Fix any underlying failure and process the same owner's pending work
 again, rather than resubmitting accepted source events. Use `ingest()` when the
@@ -466,7 +469,8 @@ message is admitted. This does not rewrite already journaled extraction plans.
 Raw `store()` and `ingest_fast()` writes accept the same timezone-aware clock,
 including through `MemoryClient`; `ingest_fast_many()` accepts a separate clock
 on each item. HTTP `/v1/ingest/fast` and MCP `memory_ingest_fast_many` expose the
-same atomic raw batch. Omitted source times remain unknown. MCP `memory_store`
+same atomic raw batch and optional UUID retry identity. Omitted source times
+remain unknown. MCP `memory_store`
 also accepts `event_time`. Direct `store()` calls can separately
 set timezone-aware `valid_from` and exclusive `valid_to` values. `valid_to`
 requires an explicit earlier `valid_from`; invalid intervals fail before source

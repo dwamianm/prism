@@ -214,8 +214,12 @@ For raw imports that do not need typed-node overrides or model extraction, use
 admits every immutable event and materialization job in one transaction. It
 returns event IDs in input order; an empty Python batch is a no-op. Run
 `process_pending()` until `pending == 0` to build the deterministic raw NOTE and
-both indexes. HTTP `POST /v1/ingest/fast` and MCP
-`memory_ingest_fast_many` expose the same owner-scoped admission contract; their
+both indexes. Pass a persisted UUID as `request_id` to make a lost-response retry
+return the original event IDs. The identity is owner scoped and survives
+restart; reusing it with different items raises an input conflict. HTTP `POST
+/v1/ingest/fast` uses the UUID `Idempotency-Key` header, while MCP
+`memory_ingest_fast_many` accepts `request_id`. Both expose the same
+owner-scoped admission contract; their
 empty request lists are rejected. MCP `memory_process_materializations` mirrors
 the HTTP processing endpoint.
 

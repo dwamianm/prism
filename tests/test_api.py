@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -133,8 +134,10 @@ class TestStore:
 
 class TestFastIngestBatch:
     def test_atomic_batch_admission_and_explicit_processing(self, client):
+        request_id = str(uuid4())
         response = client.post(
             "/v1/ingest/fast",
+            headers={"Idempotency-Key": request_id},
             json={
                 "user_id": "batch-user",
                 "items": [
@@ -152,6 +155,30 @@ class TestFastIngestBatch:
         admitted = response.json()
         assert admitted["accepted"] == 2
         assert len(admitted["event_ids"]) == 2
+        replay = client.post(
+            "/v1/ingest/fast",
+            headers={"Idempotency-Key": request_id},
+            json={
+                "user_id": "batch-user",
+                "items": [
+                    {
+                        "content": "First imported note",
+                        "role": "tool",
+                        "session_id": "episode-1",
+                        "scope": "project",
+                    },
+                    {"content": "Second imported note"},
+                ],
+            },
+        )
+        assert replay.status_code == 200
+        assert replay.json() == admitted
+        conflict = client.post(
+            "/v1/ingest/fast",
+            headers={"Idempotency-Key": request_id},
+            json={"user_id": "batch-user", "items": [{"content": "changed"}]},
+        )
+        assert conflict.status_code == 409
         for event_id in admitted["event_ids"]:
             status = client.get(
                 f"/v1/events/{event_id}/processing-status",

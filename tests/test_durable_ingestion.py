@@ -13,6 +13,7 @@ import pytest
 
 from prme import FastIngestItem, MemoryEngine, PRMEConfig, StoreReceipt
 from prme.models import Event
+from prme.storage.fast_ingest import FastIngestConflict
 from prme.types import Scope
 
 
@@ -136,6 +137,12 @@ async def test_fast_batch_rejects_any_invalid_item_before_admission(config, user
                 ],
                 user_id=user,
             )
+        with pytest.raises(ValueError, match="request_id must be a UUID"):
+            await engine.ingest_fast_many(
+                [{"content": "Invalid request identity"}],
+                user_id=user,
+                request_id="not-a-uuid",
+            )
         assert await engine._event_store.get_by_user(user) == []
         assert await engine.ingest_fast_many([], user_id=user) == []
         assert engine.materialization_debt == 0
@@ -169,6 +176,41 @@ async def test_fast_batch_snapshots_metadata_before_waiting_for_admission(
         event_id = (await task)[0]
         event = await engine.get_event(event_id, user_id=user)
         assert event.metadata == {"source": {"page": 1}}
+
+
+async def test_fast_batch_request_id_is_concurrent_and_restart_safe(config, user):
+    request_id = uuid4()
+    items = [
+        {"content": "Idempotent first source", "scope": "project"},
+        {"content": "Idempotent second source", "role": "tool"},
+    ]
+    async with MemoryEngine.open(config) as engine:
+        first, concurrent_retry = await asyncio.gather(
+            engine.ingest_fast_many(items, user_id=user, request_id=request_id),
+            engine.ingest_fast_many(items, user_id=user, request_id=str(request_id)),
+        )
+        assert concurrent_retry == first
+        assert len(await engine._event_store.get_by_user(user)) == 2
+        assert engine.materialization_debt == 2
+
+        with pytest.raises(FastIngestConflict):
+            await engine.ingest_fast_many(
+                [{"content": "Changed retry"}],
+                user_id=user,
+                request_id=request_id,
+            )
+        assert len(await engine._event_store.get_by_user(user)) == 2
+
+    async with MemoryEngine.open(config) as engine:
+        restart_retry = await engine.ingest_fast_many(
+            items,
+            user_id=user,
+            request_id=request_id,
+        )
+        assert restart_retry == first
+        assert len(await engine._event_store.get_by_user(user)) == 2
+        assert engine.materialization_debt == 2
+        assert (await engine.process_pending(user_id=user, budget_ms=5000)).processed == 2
 
 
 async def test_event_store_batch_rolls_back_all_admissions_on_conflict(config, user):

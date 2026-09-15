@@ -21,6 +21,7 @@ from prme.storage.condition_evaluation import ConditionEvaluationConflict
 from prme.storage.lifecycle import LifecycleConflict
 from prme.storage.citations import CitationConflict
 from prme.storage.ranking_profiles import StaleRankingProfileError
+from prme.storage.fast_ingest import FastIngestConflict
 from prme.models.relevance import (
     AnswerCitationRecord,
     AnswerCitationSubmission,
@@ -278,19 +279,23 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSON
     "/ingest/fast",
     response_model=FastIngestBatchResponse,
     summary="Atomically admit raw sources for deferred indexing",
-    responses={422: {"model": ErrorResponse}},
+    responses={409: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
 )
 async def ingest_fast_many(
     request: Request,
     body: FastIngestBatchRequest,
+    idempotency_key: UUID | None = Header(default=None, alias="Idempotency-Key"),
 ) -> FastIngestBatchResponse:
-    """Admit an ordered owner-scoped batch without model inference."""
+    """Admit a raw batch; an Idempotency-Key UUID makes retries safe."""
     owner = _user_id(request, body.user_id, required=True)
     try:
         event_ids = await _get_engine(request).ingest_fast_many(
             body.items,
             user_id=owner,
+            request_id=idempotency_key,
         )
+    except FastIngestConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return FastIngestBatchResponse(event_ids=event_ids, accepted=len(event_ids))

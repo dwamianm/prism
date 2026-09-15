@@ -31,6 +31,7 @@ from prme.models.learning import (
     RankingMultipliers,
 )
 from prme.models.processing import FastIngestItem
+from prme.storage.fast_ingest import FastIngestConflict
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -241,22 +242,31 @@ async def memory_store(
 async def memory_ingest_fast_many(
     items: list[FastIngestItem],
     user_id: Optional[str] = None,
+    request_id: Optional[str] = None,
     ctx: Context = None,
 ) -> str:
     """Atomically admit ordered raw sources for deferred graph/index work.
 
     Every item belongs to the resolved owner. This makes no model call and
-    returns event IDs in input order. Use ``memory_process_materializations``
-    to complete the durable work immediately; retrieval can also drain it
-    opportunistically under the configured budget.
+    returns event IDs in input order. Reuse an optional UUID ``request_id`` to
+    recover the same IDs after a lost response. Use
+    ``memory_process_materializations`` to complete the durable work
+    immediately; retrieval can also drain it opportunistically under the
+    configured budget.
     """
     engine = _get_engine(ctx)
     try:
         owner = _get_user_id(engine, user_id, required=True)
         if not items:
             raise ValueError("items must contain at least one raw source")
-        event_ids = await engine.ingest_fast_many(items, user_id=owner)
+        event_ids = await engine.ingest_fast_many(
+            items,
+            user_id=owner,
+            request_id=request_id,
+        )
         return json.dumps({"event_ids": event_ids, "accepted": len(event_ids)})
+    except FastIngestConflict as exc:
+        return json.dumps({"error": str(exc), "conflict": True})
     except (PermissionError, ValueError) as exc:
         return json.dumps({"error": str(exc)})
     except Exception as exc:

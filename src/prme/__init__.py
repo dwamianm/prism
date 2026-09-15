@@ -41,6 +41,7 @@ from prme.models.processing import (
     ProcessingStatus,
     StoreReceipt,
 )
+from prme.storage.fast_ingest import FastIngestConflict
 from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.relevance import (
@@ -149,6 +150,7 @@ __all__ = [
     "ExtractionStatus",
     "ExtractionProcessingResult",
     "FastIngestItem",
+    "FastIngestConflict",
     "IngestionPipeline",
     "LifecycleState",
     "LearningConfig",

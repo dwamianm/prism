@@ -1435,6 +1435,7 @@ class MemoryEngine:
         items: Sequence[FastIngestItem | dict[str, Any]],
         *,
         user_id: str,
+        request_id: str | UUID | None = None,
     ) -> list[str]:
         """Atomically accept an ordered batch of raw events without inference.
 
@@ -1444,14 +1445,21 @@ class MemoryEngine:
         work remains explicit through ``process_pending()`` and is recoverable
         after restart.
 
-        Returns event IDs in the same order as ``items``. An empty input is a
-        no-op. The owner is supplied once to make accidental mixed-tenant
-        batches impossible.
+        Returns event IDs in the same order as ``items``. An optional
+        owner-scoped request UUID makes exact retries return those same IDs,
+        including after restart; reusing it with changed inputs fails. An
+        empty input is a no-op. The owner is supplied once to make accidental
+        mixed-tenant batches impossible.
         """
         if not user_id:
             raise ValueError("user_id must be nonempty")
+        from prme.storage.fast_ingest import (
+            make_fast_ingest_record,
+            parse_fast_ingest_request_id,
+        )
         from prme.storage.metadata import snapshot_metadata
 
+        request_uuid = parse_fast_ingest_request_id(request_id)
         validated = tuple(FastIngestItem.model_validate(item) for item in items)
         events = tuple(
             Event(
@@ -1465,20 +1473,28 @@ class MemoryEngine:
             )
             for item in validated
         )
-        event_ids = await self._write_queue.submit(
+        record = (
+            make_fast_ingest_record(request_uuid, user_id, events)
+            if request_uuid is not None and events
+            else None
+        )
+        admission = await self._write_queue.submit(
             lambda: self._event_store.append_many(
                 events,
                 defer_materialization=True,
+                record=record,
             ),
             label=f"ingest_fast_many.events:{len(events)}",
         )
-        self._materialization_queue.note_added(len(events))
+        if not admission.replayed:
+            self._materialization_queue.note_added(len(events))
         logger.info(
-            "ingest_fast_many.complete events=%d debt=%d",
-            len(event_ids),
+            "ingest_fast_many.complete events=%d replayed=%s debt=%d",
+            len(admission.event_ids),
+            admission.replayed,
             self._materialization_queue.debt_sync(),
         )
-        return event_ids
+        return [str(event_id) for event_id in admission.event_ids]
 
     async def _materialize_event(self, event: Event, *, pending_lexical: dict[str, MemoryNode] | None = None) -> None:
         """Materialize a saved direct store or raw source without a new event.

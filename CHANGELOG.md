@@ -13,8 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   engine, synchronous client, HTTP, MCP, DuckDB, and PostgreSQL. One owner is
   bound to the complete ordered batch, every item is validated before I/O, and
   all immutable events and restart-safe materialization jobs commit together or
-  roll back together. MemoryAgentBench adapter schema 9 uses this path and
-  drains the existing bounded materialization queue before publishing a pack.
+  roll back together. An optional owner-scoped request UUID makes exact retries
+  return the retained event IDs after restart and rejects changed inputs.
+  MemoryAgentBench adapter schema 10 uses this path with a stable request UUID
+  and drains the existing bounded materialization queue before publishing a pack.
 
 - Opt-in deterministic two-stage episode routing for sources stored under
   meaningful session boundaries. It uses BM25 to route candidate-backed

@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import time
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
 import weakref
 
 from prme import (
@@ -30,7 +31,7 @@ from prme.retrieval.config import PackingConfig
 
 UPSTREAM_REVISION = "fe1735de8cf8b9908e1e3d3b5612afc815698062"
 DATASET_REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
-ADAPTER_SCHEMA_VERSION = 9
+ADAPTER_SCHEMA_VERSION = 10
 _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
@@ -467,7 +468,25 @@ def save_prme_agent(agent: Any) -> None:
                     },
                 )
             )
-        event_ids = client.ingest_fast_many(items, user_id=agent.prme_user_id)
+        request_id = uuid5(
+            NAMESPACE_URL,
+            "prme:memoryagentbench:batch:v1:"
+            + hashlib.sha256(
+                _canonical(
+                    {
+                        "config_sha256": agent.prme_manifest["config_sha256"],
+                        "context_id": agent.prme_context_id,
+                        "run_id": agent.prme_run_id,
+                        "user_id": agent.prme_user_id,
+                    }
+                )
+            ).hexdigest(),
+        )
+        event_ids = client.ingest_fast_many(
+            items,
+            user_id=agent.prme_user_id,
+            request_id=request_id,
+        )
         while True:
             processing = client.process_pending(
                 user_id=agent.prme_user_id,

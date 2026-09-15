@@ -73,7 +73,14 @@ connection. DuckDB and PostgreSQL commit every event and materialization job in
 one transaction or roll back the whole batch. Graph and index work remains
 deferred, owner scoped, bounded, and restart safe; event IDs preserve input
 order. This path creates deterministic raw NOTEs and does not accept typed-node
-overrides or queue model extraction.
+overrides or queue model extraction. An optional caller request UUID derives an
+owner-scoped operation identity. Its checksummed input binding, ordered event
+IDs, immutable events and materialization jobs commit in the same transaction.
+An exact retry returns the retained IDs after restart; changed inputs fail, and
+an unkeyed call remains a separate admission. PostgreSQL arbitrates concurrent
+same-key requests at the operation insert. DuckDB may surface a native
+transaction conflict across engine instances; a fresh retry resolves the saved
+record without duplicating events.
 
 ### Historical source clocks
 

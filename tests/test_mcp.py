@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
@@ -186,19 +187,33 @@ class TestStore:
         assert "error" in data
 
     async def test_fast_batch_admission_and_processing(self, session):
+        request_id = str(uuid4())
+        arguments = {
+            "user_id": "batch-user",
+            "request_id": request_id,
+            "items": [
+                {"content": "First MCP batch source", "scope": "project"},
+                {"content": "Second MCP batch source", "role": "tool"},
+            ],
+        }
         admitted = await session.call_tool(
             "memory_ingest_fast_many",
-            {
-                "user_id": "batch-user",
-                "items": [
-                    {"content": "First MCP batch source", "scope": "project"},
-                    {"content": "Second MCP batch source", "role": "tool"},
-                ],
-            },
+            arguments,
         )
         payload = json.loads(admitted.content[0].text)
         assert payload["accepted"] == 2
         assert len(payload["event_ids"]) == 2
+        replay = await session.call_tool("memory_ingest_fast_many", arguments)
+        assert json.loads(replay.content[0].text) == payload
+        conflict = await session.call_tool(
+            "memory_ingest_fast_many",
+            {
+                "user_id": "batch-user",
+                "request_id": request_id,
+                "items": [{"content": "changed"}],
+            },
+        )
+        assert json.loads(conflict.content[0].text)["conflict"] is True
 
         processed = await session.call_tool(
             "memory_process_materializations",
