@@ -254,6 +254,19 @@ def test_numeric_label_reader_contract_is_explicit_and_task_scoped() -> None:
         )
 
 
+def test_answer_only_reader_contract_preserves_task_format_without_reasoning() -> None:
+    original = "Return the suspects as a JSON list."
+    prompt = adapter.reader_message(
+        original,
+        sub_dataset="detective_qa",
+        contract="answer-only-v1",
+    )
+    assert prompt.startswith(original)
+    assert prompt.endswith(adapter._ANSWER_ONLY_INSTRUCTION)
+    assert "requested output format" in prompt
+    assert "Do not include reasoning" in prompt
+
+
 def test_adapter_rejects_incomplete_and_changed_packs(tmp_path: Path) -> None:
     agent = fake_agent(tmp_path)
     try:

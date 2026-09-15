@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MemoryAgentBench trials can register a shared `answer-only-v1` reader contract
+  for strict-answer tasks where a local OpenAI-compatible reader otherwise adds
+  explanations. PRME and BM25 receive the same prompt instruction, registrations
+  bind it before inference, and saved model output is never parsed or rewritten.
+
 - Real extraction diagnostics can now run the same qualifier and entity-reference
   probes through either Ollama or OpenAI. Checked worker processes forward the
   provider explicitly and record it in the report, enabling provider-diverse

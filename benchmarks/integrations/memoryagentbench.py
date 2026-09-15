@@ -39,10 +39,17 @@ _DEFAULT_TOKEN_BUDGET = 4096
 _DEFAULT_RESULT_LIMIT = 100
 _SEGMENTATION_POLICY = "task-aware-semantic-boundaries-v1"
 _RETRIEVAL_QUERY_POLICY = "upstream-plus-terminal-label-question-v1"
-_READER_OUTPUT_CONTRACTS = frozenset({"upstream", "numeric-label-v1"})
+_READER_OUTPUT_CONTRACTS = frozenset(
+    {"upstream", "numeric-label-v1", "answer-only-v1"}
+)
 _NUMERIC_LABEL_INSTRUCTION = (
     "For scoring, return the numeric label alone. Your entire response must contain "
     "only ASCII digits. Do not include 'label:', punctuation, reasoning, or explanation."
+)
+_ANSWER_ONLY_INSTRUCTION = (
+    "For scoring, follow the task's requested output format and return only the "
+    "answer. Do not include reasoning, explanations, prefaces, an 'Answer:' label, "
+    "or Markdown."
 )
 _BLANK_LINE = re.compile(r"\r?\n(?:[ \t]*\r?\n)+")
 _NUMBERED_ITEM = re.compile(r"(?<!\S)\d+\.[ \t]+")
@@ -237,6 +244,8 @@ def reader_message(message: str, *, sub_dataset: str, contract: str) -> str:
         raise ValueError(f"unsupported reader_output_contract: {contract}")
     if contract == "upstream":
         return message
+    if contract == "answer-only-v1":
+        return f"{message}\n\n{_ANSWER_ONLY_INSTRUCTION}"
     if not sub_dataset.strip().startswith("icl_"):
         raise ValueError("numeric-label-v1 is only valid for ICL tasks")
     return f"{message}\n\n{_NUMERIC_LABEL_INSTRUCTION}"
@@ -287,7 +296,8 @@ def initialize_prme_agent(
         raise ValueError("reader_seed must be an integer or omitted")
     if agent.reader_output_contract not in _READER_OUTPUT_CONTRACTS:
         raise ValueError(
-            "reader_output_contract must be 'upstream' or 'numeric-label-v1'"
+            "reader_output_contract must be 'upstream', 'numeric-label-v1', "
+            "or 'answer-only-v1'"
         )
     if (
         agent.reader_output_contract == "numeric-label-v1"

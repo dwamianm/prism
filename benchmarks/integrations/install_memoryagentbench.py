@@ -33,7 +33,7 @@ _PATCHES = {
             "        if isinstance(self.reader_seed, bool) or (self.reader_seed is not None and not isinstance(self.reader_seed, int)):\n"
             "            raise ValueError('reader_seed must be an integer or omitted')\n"
             "        self.reader_output_contract = str(agent_config.get('reader_output_contract', 'upstream')).strip()\n"
-            "        if self.reader_output_contract not in ('upstream', 'numeric-label-v1'):\n"
+            "        if self.reader_output_contract not in ('upstream', 'numeric-label-v1', 'answer-only-v1'):\n"
             "            raise ValueError('invalid reader_output_contract')\n"
             "        self.retrieval_run_id = str(agent_config.get('retrieval_run_id', 'default'))\n"
             "        if (not self.retrieval_run_id or len(self.retrieval_run_id) > 64 or\n"

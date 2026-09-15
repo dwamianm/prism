@@ -173,6 +173,13 @@ the retrieval query or rewriting the model output. The contract is restricted to
 `icl_*` tasks and is bound by the registrations; `upstream` preserves the original
 prompt unchanged.
 
+For a strict-answer task where a local reader otherwise adds explanations, set
+`reader_output_contract: answer-only-v1` in both arms. It appends the same
+instruction to follow the task's requested format and omit reasoning, prefaces,
+answer labels, and Markdown. The adapter does not parse, rewrite, or truncate the
+saved response. Register this contract before inference and retain the original
+`upstream` contract as a separate arm when measuring the instruction's effect.
+
 The installer also applies PRME's terminal ICL-question extraction to the BM25
 arm. Both systems therefore rank memory using the actual classification question
 instead of giving one arm the repeated prompt wrapper. Each registration binds
