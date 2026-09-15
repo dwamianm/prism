@@ -16,10 +16,13 @@ from benchmarks.integrations.agentmembench import (
     UPSTREAM_REVISION,
 )
 from benchmarks.integrations import install_agentmembench
-from benchmarks.integrations.register_agentmembench import SUPPORTED_PHASES
+from benchmarks.integrations.register_agentmembench import (
+    SUPPORTED_PHASES,
+    ollama_model_identity,
+)
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _HERE = Path(__file__).resolve().parent
 _MANIFEST_NAME = "agentmembench-prme-manifest.json"
@@ -152,6 +155,8 @@ def _validate_sources(
     if (
         harness.count(install_agentmembench._ADAPTER_PATCH) != 1
         or harness.count(install_agentmembench._CHOICES_PATCH) != 1
+        or harness.count(install_agentmembench._JUDGE_FAILURE_PATCH) != 1
+        or harness.count(install_agentmembench._JUDGE_REASONING_PATCH) != 1
     ):
         raise RuntimeError("installed AgentMemBench patch changed after registration")
 
@@ -187,6 +192,9 @@ def _validate_result_arguments(
     )
     for key in checks:
         if actual.get(key) != registered.get(key):
+            raise RuntimeError(f"result argument differs from registration: {key}")
+    for key in ("llm_base_url", "llm_model"):
+        if key in registered and actual.get(key) != registered.get(key):
             raise RuntimeError(f"result argument differs from registration: {key}")
     actual_phases = [item.strip() for item in str(actual.get("phases", "")).split(",") if item.strip()]
     actual_workers = [int(item) for item in str(actual.get("workers", "")).split(",")]
@@ -285,7 +293,7 @@ def verify(
     registration = _load_object(registration_path, "registration")
     result = _load_object(result_path, "result")
     if (
-        registration.get("schema_version") != 1
+        registration.get("schema_version") not in {1, 2}
         or registration.get("kind") != "agentmembench-prme-registration"
         or registration.get("status") != "registered"
     ):
@@ -295,6 +303,21 @@ def verify(
     config = result.get("config")
     if not isinstance(config, dict) or Path(str(config.get("history_dir"))).resolve() != history:
         raise RuntimeError("result history directory differs from verification input")
+    judge = registration.get("judge")
+    if "retrieval" in registration["arguments"]["phases"]:
+        if registration.get("schema_version") != 2 or not isinstance(judge, dict):
+            raise RuntimeError("retrieval registration lacks immutable judge identity")
+        if config.get("llm_base_url") != registration["arguments"]["llm_base_url"]:
+            raise RuntimeError("result judge base URL differs from registration")
+        if config.get("llm_model") != registration["arguments"]["llm_model"]:
+            raise RuntimeError("result judge model differs from registration")
+        observed_judge = ollama_model_identity(
+            str(config["llm_base_url"]), str(config["llm_model"])
+        )
+        if observed_judge != judge:
+            raise RuntimeError("retrieval judge identity changed after registration")
+    elif judge is not None:
+        raise RuntimeError("operational-only registration must not claim a judge")
     _validate_manifests(result, registration, history)
     phases = _safe_phases(result, registration["arguments"])
     return {
@@ -305,6 +328,7 @@ def verify(
         "system": "prme",
         "arguments": registration["arguments"],
         "phases": phases,
+        **({"judge": judge} if judge is not None else {}),
         "source": {
             **registration["source"],
             "registration_sha256": _sha256(registration_path),

@@ -110,7 +110,34 @@ or publish the upstream raw result because its retrieval phase contains source
 records, questions, reference answers, and returned text.
 
 The retrieval phase additionally needs AgentMemBench's configured LLM judge.
-Operational phases do not call that judge. A verified development diagnostic
-supports a bounded engineering decision; it is not evidence of universal
-product leadership or a controlled cross-system latency comparison.
+Operational phases do not call that judge. Retrieval registration requires an
+OpenAI-compatible Ollama endpoint and resolves the named model through
+`/api/tags`, binding its immutable digest and the harness's fixed temperature,
+disabled reasoning, token limit, response format, concurrency, retry count, and
+failure policy:
 
+```sh
+python -m benchmarks.integrations.register_agentmembench \
+  --prme-root /absolute/path/to/prme \
+  --upstream-root /absolute/path/to/AgentMemBench \
+  --data /absolute/path/to/AgentMemBench/data/memdialogue_v2.jsonl \
+  --run-id prme_retrieval_dev \
+  --phases retrieval \
+  --retrieval-records 100 \
+  --group-size 10 \
+  --top-k 5 \
+  --seed 2027 \
+  --warmup-writes 0 \
+  --llm-base-url http://127.0.0.1:11434/v1 \
+  --llm-model prme-qwen3.5:35b-a3b-8k \
+  --output /absolute/path/to/run/registration.json
+```
+
+Pass the same `--llm-base-url` and `--llm-model` arguments to the upstream run.
+Verification checks the saved configuration and arguments, then resolves the
+live Ollama model again and rejects a changed digest. The installer also changes
+the pinned harness's permissive judge behavior: invalid JSON or three failed
+requests now abort the run instead of being silently counted as retrieval
+misses. A verified development diagnostic supports a bounded engineering
+decision; it is not evidence of universal product leadership or a controlled
+cross-system latency comparison.

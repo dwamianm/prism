@@ -71,7 +71,11 @@ def _upstream_layout(root: Path, *, include_choices: bool = True) -> Path:
         "def make_adapter(system, config, collection):\n"
         + install_agentmembench._ADAPTER_ANCHOR
         + "\n"
-        + choices,
+        + choices
+        + "\n"
+        + install_agentmembench._JUDGE_FAILURE_ANCHOR
+        + "\n"
+        + install_agentmembench._JUDGE_REASONING_ANCHOR,
         encoding="utf-8",
     )
     return harness
@@ -97,6 +101,9 @@ def test_installer_is_idempotent_and_exact(tmp_path: Path, monkeypatch) -> None:
     text = harness.read_text()
     assert text.count('if system == "prme"') == 1
     assert text.count('"letta", "prme"') == 1
+    assert text.count("retrieval judge failed after retries") == 1
+    assert 'return parsed.get("hit") is True' not in text
+    assert text.count('reasoning_effort="none"') == 1
 
 
 def test_installer_rolls_back_when_harness_anchor_is_ambiguous(
@@ -139,21 +146,46 @@ def test_registration_binds_exact_sources_and_parameters(
         return "a" * 40
 
     monkeypatch.setattr(register_agentmembench, "_git", fake_git)
+    judge = {
+        "provider": "ollama",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "model": "fixed-reader",
+        "model_digest": "b" * 64,
+        "temperature": 0,
+        "reasoning_effort": "none",
+        "max_tokens": 32,
+        "response_format": "json_object",
+        "concurrency": 32,
+        "attempts": 3,
+        "failure_policy": "abort",
+    }
+    monkeypatch.setattr(
+        register_agentmembench,
+        "ollama_model_identity",
+        lambda _base_url, _model: judge,
+    )
     registration = register_agentmembench.register(
         prme_root=tmp_path,
         upstream_root=upstream,
         data=data,
         run_id="contract-run",
-        phases="conflict,isolation",
+        phases="retrieval,conflict,isolation",
         conflict_pairs=10,
         isolation_users=4,
         isolation_facts=2,
         workers="1,4",
         scales="10,100",
+        llm_base_url="http://127.0.0.1:11434/v1",
+        llm_model="fixed-reader",
     )
 
     assert registration["status"] == "registered"
-    assert registration["arguments"]["phases"] == ["conflict", "isolation"]
+    assert registration["schema_version"] == 2
+    assert registration["arguments"]["phases"] == [
+        "retrieval",
+        "conflict",
+        "isolation",
+    ]
     assert registration["arguments"]["workers"] == [1, 4]
     assert registration["source"]["upstream_revision"] == (
         install_agentmembench.UPSTREAM_REVISION
@@ -161,6 +193,79 @@ def test_registration_binds_exact_sources_and_parameters(
     assert registration["source"]["installed_adapter_sha256"] == (
         registration["source"]["adapter_sha256"]
     )
+    assert registration["judge"] == judge
+
+
+def test_ollama_judge_identity_binds_exact_digest(monkeypatch) -> None:
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self):
+            return json.dumps(
+                {"models": [{"name": "fixed-reader", "digest": "c" * 64}]}
+            ).encode()
+
+    observed = {}
+
+    def open_url(url, *, timeout):
+        observed.update(url=url, timeout=timeout)
+        return Response()
+
+    monkeypatch.setattr(register_agentmembench.urlrequest, "urlopen", open_url)
+
+    identity = register_agentmembench.ollama_model_identity(
+        "http://127.0.0.1:11434/v1/", "fixed-reader"
+    )
+
+    assert observed == {"url": "http://127.0.0.1:11434/api/tags", "timeout": 10}
+    assert identity["model_digest"] == "c" * 64
+    assert identity["failure_policy"] == "abort"
+
+
+def test_verifier_rejects_unregistered_judge_arguments() -> None:
+    arguments = {
+        "retrieval_records": 10,
+        "group_size": 2,
+        "conflict_pairs": 5,
+        "isolation_users": 3,
+        "isolation_facts": 2,
+        "deletion_records": 4,
+        "concurrency_records": 6,
+        "scale_read_queries": 3,
+        "top_k": 5,
+        "seed": 2027,
+        "warmup_writes": 0,
+        "phases": ["retrieval"],
+        "workers": [1],
+        "scales": [10],
+        "llm_base_url": "http://127.0.0.1:11434/v1",
+        "llm_model": "fixed-reader",
+    }
+    registration = {
+        "system": "prme",
+        "run_id": "contract-run",
+        "arguments": arguments,
+    }
+    result = {
+        "schema_version": "unified-benchmark-v2",
+        "system": "prme",
+        "run_id": "contract-run",
+        "collection": "amb_kdd27_prme_contract_run",
+        "arguments": {
+            **arguments,
+            "phases": "retrieval",
+            "workers": "1",
+            "scales": "10",
+        },
+    }
+    verify_agentmembench._validate_result_arguments(result, registration)
+    result["arguments"]["llm_model"] = "changed-reader"
+    with pytest.raises(RuntimeError, match="llm_model"):
+        verify_agentmembench._validate_result_arguments(result, registration)
 
 
 def test_verifier_generation_plan_and_output_redaction() -> None:

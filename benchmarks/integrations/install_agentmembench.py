@@ -34,6 +34,39 @@ _CHOICES_ANCHOR = (
 _CHOICES_PATCH = (
     '        choices=("naive_rag", "mem0", "langmem", "graphiti", "letta", "prme"),\n'
 )
+_JUDGE_FAILURE_ANCHOR = (
+    '                    parsed = json.loads(response.choices[0].message.content or "{}")\n'
+    '                    return parsed.get("hit") is True\n'
+    "                except Exception:\n"
+    "                    if attempt == 2:\n"
+    "                        return False\n"
+    "                    await asyncio.sleep(2**attempt)\n"
+    "        return False\n"
+)
+_JUDGE_FAILURE_PATCH = (
+    '                    parsed = json.loads(response.choices[0].message.content or "{}")\n'
+    '                    if not isinstance(parsed.get("hit"), bool):\n'
+    '                        raise ValueError("retrieval judge returned no boolean hit")\n'
+    '                    return bool(parsed["hit"])\n'
+    "                except Exception as error:\n"
+    "                    if attempt == 2:\n"
+    "                        raise RuntimeError(\n"
+    '                            "retrieval judge failed after retries"\n'
+    "                        ) from error\n"
+    "                    await asyncio.sleep(2**attempt)\n"
+    '        raise AssertionError("unreachable retrieval judge state")\n'
+)
+_JUDGE_REASONING_ANCHOR = (
+    "                        temperature=0,\n"
+    "                        max_tokens=32,\n"
+    '                        response_format={"type": "json_object"},\n'
+)
+_JUDGE_REASONING_PATCH = (
+    "                        temperature=0,\n"
+    '                        reasoning_effort="none",\n'
+    "                        max_tokens=32,\n"
+    '                        response_format={"type": "json_object"},\n'
+)
 
 
 def _checkout_revision(root: Path) -> str:
@@ -118,7 +151,24 @@ def install(
         text, choices_status = _replace_exact(
             text, _CHOICES_ANCHOR, _CHOICES_PATCH, "CLI choices"
         )
-        if "installed" in (dispatch_status, choices_status):
+        text, judge_status = _replace_exact(
+            text,
+            _JUDGE_FAILURE_ANCHOR,
+            _JUDGE_FAILURE_PATCH,
+            "retrieval judge failure policy",
+        )
+        text, reasoning_status = _replace_exact(
+            text,
+            _JUDGE_REASONING_ANCHOR,
+            _JUDGE_REASONING_PATCH,
+            "retrieval judge reasoning control",
+        )
+        if "installed" in (
+            dispatch_status,
+            choices_status,
+            judge_status,
+            reasoning_status,
+        ):
             with tempfile.NamedTemporaryFile(
                 dir=harness_path.parent, delete=False
             ) as handle:
@@ -171,4 +221,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

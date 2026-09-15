@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- AgentMemBench retrieval registrations now bind the exact Ollama judge model
+  digest, endpoint, and generation/retry controls before execution. Verification
+  checks both the saved harness arguments and the live model identity. The
+  installed pinned harness disables reasoning for its 32-token JSON decision and
+  aborts after malformed output or exhausted retries instead of silently scoring
+  judge failures as retrieval misses.
+
 - Current-state scoring now recognizes the newest record when it explicitly
   presents itself as an update and applies a configurable, relevance-capped,
   replayable multiplier. A 100-pair AgentMemBench development diagnostic moved

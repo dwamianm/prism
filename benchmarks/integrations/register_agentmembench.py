@@ -9,12 +9,15 @@ from pathlib import Path
 import re
 import subprocess
 from typing import Any
+from urllib import error as urlerror
+from urllib import parse as urlparse
+from urllib import request as urlrequest
 
 from benchmarks.integrations.agentmembench import UPSTREAM_REVISION
 from benchmarks.integrations import install_agentmembench
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SUPPORTED_PHASES = (
     "retrieval",
     "conflict",
@@ -28,6 +31,7 @@ _ADAPTER = Path(__file__).with_name("agentmembench.py")
 _INSTALLER = Path(__file__).with_name("install_agentmembench.py")
 _VERIFIER = Path(__file__).with_name("verify_agentmembench.py")
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
+_MODEL_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _sha256(path: Path) -> str:
@@ -56,6 +60,61 @@ def _parse_csv(value: str, *, label: str) -> list[int]:
     return parsed
 
 
+def ollama_model_identity(base_url: str, model: str) -> dict[str, Any]:
+    """Resolve an OpenAI-compatible Ollama model to immutable local weights."""
+    parsed = urlparse.urlsplit(base_url)
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path.rstrip("/") != "/v1"
+    ):
+        raise RuntimeError(
+            "retrieval judge base URL must be an Ollama OpenAI endpoint ending in /v1"
+        )
+    if not model or any(character.isspace() for character in model):
+        raise RuntimeError("retrieval judge model must be a nonempty Ollama model name")
+    normalized = urlparse.urlunsplit(
+        (parsed.scheme, parsed.netloc, "/v1", "", "")
+    )
+    tags_url = urlparse.urlunsplit(
+        (parsed.scheme, parsed.netloc, "/api/tags", "", "")
+    )
+    try:
+        with urlrequest.urlopen(tags_url, timeout=10) as response:  # noqa: S310
+            payload = json.loads(response.read())
+    except (OSError, urlerror.URLError, json.JSONDecodeError) as error:
+        raise RuntimeError("could not inspect the configured Ollama judge") from error
+    models = payload.get("models") if isinstance(payload, dict) else None
+    if not isinstance(models, list):
+        raise RuntimeError("Ollama judge returned invalid model metadata")
+    matches = [
+        item
+        for item in models
+        if isinstance(item, dict) and item.get("name") == model
+    ]
+    if len(matches) != 1 or not _MODEL_DIGEST_RE.fullmatch(
+        str(matches[0].get("digest", ""))
+    ):
+        raise RuntimeError("configured Ollama judge model and digest are unavailable")
+    return {
+        "provider": "ollama",
+        "base_url": normalized,
+        "model": model,
+        "model_digest": matches[0]["digest"],
+        "temperature": 0,
+        "reasoning_effort": "none",
+        "max_tokens": 32,
+        "response_format": "json_object",
+        "concurrency": 32,
+        "attempts": 3,
+        "failure_policy": "abort",
+    }
+
+
 def _validate_install(upstream: Path) -> dict[str, str]:
     if _git(upstream, "rev-parse", "HEAD") != UPSTREAM_REVISION:
         raise RuntimeError("AgentMemBench checkout is not at the pinned revision")
@@ -67,8 +126,12 @@ def _validate_install(upstream: Path) -> dict[str, str]:
     if (
         text.count(install_agentmembench._ADAPTER_PATCH) != 1
         or text.count(install_agentmembench._CHOICES_PATCH) != 1
+        or text.count(install_agentmembench._JUDGE_FAILURE_PATCH) != 1
+        or text.count(install_agentmembench._JUDGE_REASONING_PATCH) != 1
         or install_agentmembench._ADAPTER_ANCHOR in text
         or install_agentmembench._CHOICES_ANCHOR in text
+        or install_agentmembench._JUDGE_FAILURE_ANCHOR in text
+        or install_agentmembench._JUDGE_REASONING_ANCHOR in text
     ):
         raise RuntimeError("AgentMemBench harness does not contain the exact PRME patch")
     return {
@@ -97,6 +160,8 @@ def register(
     top_k: int = 5,
     seed: int = 2027,
     warmup_writes: int = 5,
+    llm_base_url: str = "http://127.0.0.1:18000/v1",
+    llm_model: str = "qwen2.5-14b-instruct",
 ) -> dict[str, Any]:
     root = prme_root.expanduser().resolve()
     upstream = upstream_root.expanduser().resolve()
@@ -127,6 +192,11 @@ def register(
         raise RuntimeError("benchmark counts other than warmup_writes must be positive")
     worker_values = _parse_csv(workers, label="workers")
     scale_values = _parse_csv(scales, label="scales")
+    judge = (
+        ollama_model_identity(llm_base_url, llm_model)
+        if "retrieval" in selected
+        else None
+    )
     if not dataset.is_file():
         raise RuntimeError(f"missing AgentMemBench data file: {dataset}")
     revision = _git(root, "rev-parse", "HEAD")
@@ -145,6 +215,8 @@ def register(
             "workers": worker_values,
             "scales": scale_values,
             "seed": seed,
+            "llm_base_url": llm_base_url,
+            "llm_model": llm_model,
         },
         "source": {
             "prme_revision": revision,
@@ -156,6 +228,7 @@ def register(
             "verifier_sha256": _sha256(_VERIFIER),
             **installed,
         },
+        **({"judge": judge} if judge is not None else {}),
     }
 
 
@@ -180,6 +253,8 @@ def main() -> int:
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--seed", type=int, default=2027)
     parser.add_argument("--warmup-writes", type=int, default=5)
+    parser.add_argument("--llm-base-url", default="http://127.0.0.1:18000/v1")
+    parser.add_argument("--llm-model", default="qwen2.5-14b-instruct")
     args = parser.parse_args()
     try:
         payload = register(
@@ -201,4 +276,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
