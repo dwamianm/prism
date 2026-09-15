@@ -374,7 +374,7 @@ def test_registrar_hashes_every_prepared_input() -> None:
         [("Question: two?", ["two"], None)],
     ]
     contexts, query_count = registrar._registered_contexts(
-        chunks, queries, max_chunk_chars=512
+        chunks, queries, max_chunk_chars=512, sub_dataset="eventqa_65536"
     )
     assert query_count == 2
     assert (
@@ -391,7 +391,11 @@ def test_registrar_hashes_every_prepared_input() -> None:
     )
 
     limited, limited_count = registrar._registered_contexts(
-        chunks, queries, max_chunk_chars=512, max_queries=1
+        chunks,
+        queries,
+        max_chunk_chars=512,
+        sub_dataset="eventqa_65536",
+        max_queries=1,
     )
     assert limited_count == 1
     assert len(limited) == 1

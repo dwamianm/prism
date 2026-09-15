@@ -15,12 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   contract, scope, and included count. Reports commit an aggregate receipt hash
   instead of trusting the adapter's persistence flag.
 
-- MemoryAgentBench source ingestion now preserves blank-line semantic units as
-  independent records, splitting only an overlong unit at the configured hard
-  limit. Test-time-learning retrieval embeds the terminal classification
-  question instead of its repeated reader instructions. Versioned manifests,
-  preregistrations, captures, and durable receipt checks bind both policies and
-  the exact derived retrieval query.
+- MemoryAgentBench source ingestion now preserves blank-line units and
+  serial-numbered facts as independent records, splitting only an overlong unit
+  at the configured hard limit. Test-time-learning retrieval embeds the terminal
+  classification question instead of its repeated reader instructions.
+  Versioned manifests, preregistrations, captures, and durable receipt checks
+  bind both policies and the exact derived retrieval query.
 
 - Session-context expansion now promotes adjacent turns even when broad vector
   or lexical generation already placed them in the candidate pool. Previously,

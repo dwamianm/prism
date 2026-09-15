@@ -37,9 +37,10 @@ _MANIFEST_NAME = "memoryagentbench_prme_manifest.json"
 _DEFAULT_CHUNK_CHARS = 6000
 _DEFAULT_TOKEN_BUDGET = 4096
 _DEFAULT_RESULT_LIMIT = 100
-_SEGMENTATION_POLICY = "blank-line-v1"
+_SEGMENTATION_POLICY = "task-aware-semantic-boundaries-v1"
 _RETRIEVAL_QUERY_POLICY = "upstream-plus-terminal-label-question-v1"
 _BLANK_LINE = re.compile(r"\r?\n(?:[ \t]*\r?\n)+")
+_NUMBERED_ITEM = re.compile(r"(?<!\S)\d+\.[ \t]+")
 _TERMINAL_LABEL_QUESTION = re.compile(
     r"(?:\A|\r?\n[ \t]*\r?\n)Question:[ \t]*(?P<query>.*?)"
     r"\r?\n[ \t]*\r?\n[ \t]*label:[ \t]*\Z",
@@ -133,15 +134,32 @@ def _close_client(agent: Any) -> None:
     agent.prme_client = None
 
 
-def _split_units(text: str, limit: int) -> list[str]:
-    """Preserve source bytes and blank-line semantic units under a hard limit."""
+def _split_units(
+    text: str, limit: int, *, numbered_items: bool = False
+) -> list[str]:
+    """Preserve source bytes and semantic boundaries under a hard limit."""
     if limit < 512:
         raise ValueError("prme_max_chunk_chars must be at least 512")
+    boundaries = {match.end() for match in _BLANK_LINE.finditer(text)}
+    numbered_starts = (
+        [match.start() for match in _NUMBERED_ITEM.finditer(text)]
+        if numbered_items
+        else []
+    )
+    for position in numbered_starts:
+        if position <= 0:
+            continue
+        prefix = text[:position].strip()
+        if position == numbered_starts[0] and len(prefix) <= 200 and prefix.endswith(":"):
+            continue
+        boundaries.add(position)
+
     units: list[str] = []
     start = 0
-    for boundary in _BLANK_LINE.finditer(text):
-        units.append(text[start : boundary.end()])
-        start = boundary.end()
+    for boundary in sorted(boundaries):
+        if boundary > start:
+            units.append(text[start:boundary])
+        start = boundary
     if start < len(text):
         units.append(text[start:])
     if not units:
@@ -158,7 +176,7 @@ def _split_units(text: str, limit: int) -> list[str]:
 
 
 def _split_source_chunks(
-    source_chunks: list[str], limit: int
+    source_chunks: list[str], limit: int, *, sub_dataset: str
 ) -> tuple[list[str], list[int], list[int]]:
     """Segment one ordered source stream and attribute records by ending chunk."""
     if not source_chunks or any(not chunk for chunk in source_chunks):
@@ -169,7 +187,11 @@ def _split_source_chunks(
         total += len(source_chunk)
         source_ends.append(total)
 
-    pieces = _split_units("".join(source_chunks), limit)
+    pieces = _split_units(
+        "".join(source_chunks),
+        limit,
+        numbered_items=sub_dataset.strip().startswith("factconsolidation_"),
+    )
     source_indices: list[int] = []
     piece_counts = [0] * len(source_chunks)
     piece_end = 0
@@ -320,7 +342,9 @@ def save_prme_agent(agent: Any) -> None:
     if agent.prme_manifest["status"] != "preparing":
         raise RuntimeError("PRME MemoryAgentBench pack was already completed")
     pieces, source_indices, piece_counts = _split_source_chunks(
-        agent.prme_source_chunks, agent.prme_max_chunk_chars
+        agent.prme_source_chunks,
+        agent.prme_max_chunk_chars,
+        sub_dataset=agent.sub_dataset,
     )
     for source, piece_count in zip(
         agent.prme_manifest["source_chunks"], piece_counts

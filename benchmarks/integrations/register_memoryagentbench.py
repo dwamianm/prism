@@ -123,6 +123,7 @@ def _registered_contexts(
     query_groups: list[list[tuple[object, ...]]],
     *,
     max_chunk_chars: int,
+    sub_dataset: str,
     max_queries: int | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     if len(chunks) != len(query_groups) or not chunks:
@@ -173,7 +174,7 @@ def _registered_contexts(
             )
             query_id += 1
         _, _, piece_counts = adapter._split_source_chunks(
-            source_chunks, max_chunk_chars
+            source_chunks, max_chunk_chars, sub_dataset=sub_dataset
         )
         contexts.append(
             {
@@ -246,6 +247,9 @@ def register(
     ):
         raise ValueError("agent configuration has an invalid PRME chunk limit")
     max_queries = dataset_config.get("max_test_queries")
+    sub_dataset = dataset_config.get("sub_dataset")
+    if not isinstance(sub_dataset, str) or not sub_dataset.strip():
+        raise ValueError("dataset configuration has an invalid sub_dataset")
     if max_queries is not None and (
         isinstance(max_queries, bool)
         or not isinstance(max_queries, int)
@@ -263,6 +267,7 @@ def register(
         chunks,
         query_groups,
         max_chunk_chars=max_chunk_chars,
+        sub_dataset=sub_dataset,
         max_queries=max_queries,
     )
 

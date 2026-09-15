@@ -110,7 +110,10 @@ def test_adapter_preserves_text_and_round_trips_pack(
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert manifest["status"] == "complete"
         assert manifest["stored_nodes"] == 3
-        assert manifest["config"]["segmentation_policy"] == "blank-line-v1"
+        assert (
+            manifest["config"]["segmentation_policy"]
+            == "task-aware-semantic-boundaries-v1"
+        )
         assert (
             manifest["config"]["retrieval_query_policy"]
             == "upstream-plus-terminal-label-question-v1"
@@ -191,9 +194,22 @@ def test_split_units_preserves_blank_line_semantics_and_source_bytes() -> None:
     assert "".join(pieces) == source
 
 
+def test_split_units_preserves_numbered_facts_independently() -> None:
+    source = "Here is a list of facts:\n0. first fact. 1. second fact. 2. third fact."
+    pieces = adapter._split_units(source, 512, numbered_items=True)
+    assert pieces == [
+        "Here is a list of facts:\n0. first fact. ",
+        "1. second fact. ",
+        "2. third fact.",
+    ]
+    assert "".join(pieces) == source
+
+
 def test_split_source_chunks_reassembles_cross_boundary_semantic_unit() -> None:
     sources = ["first question", " label: 7\n\nsecond question label: 8"]
-    pieces, source_indices, piece_counts = adapter._split_source_chunks(sources, 512)
+    pieces, source_indices, piece_counts = adapter._split_source_chunks(
+        sources, 512, sub_dataset="icl_banking77_5900shot_balance"
+    )
     assert pieces == [
         "first question label: 7\n\n",
         "second question label: 8",

@@ -26,15 +26,16 @@ dispatch sees `prme` and invokes the PRME adapter, while template selection sees
 `Simple_rag_bm25`. Registrations require that exact name so a matched trial
 cannot silently return to the distinct agentic-memory reader prompt.
 
-Adapter schema 6 stores each blank-line-delimited semantic unit independently,
-applying the configured character limit only when a single unit is too large.
-This keeps individual demonstrations and short facts from becoming mixed-topic
-embedding records while preserving the concatenated source text exactly. It
-also removes the pinned test-time-learning classifier wrapper from retrieval
-queries and embeds the terminal `Question:` body. Other tasks retain the pinned
-upstream query extraction. The manifest records both policies, registrations
-bind the derived retrieval-query hash before inference, and captures bind that
-hash to the durable receipt.
+Adapter schema 6 stores blank-line-delimited units and serial-numbered facts
+independently, applying the configured character limit only when one semantic
+unit is too large. This keeps individual demonstrations and facts from becoming
+mixed-topic embedding records while preserving the concatenated source text
+exactly, including units split across upstream chunk boundaries. It also removes
+the pinned test-time-learning classifier wrapper from retrieval queries and
+embeds the terminal `Question:` body. Other tasks retain the pinned upstream
+query extraction. The manifest records both policies, registrations bind the
+derived retrieval-query hash before inference, and captures bind that hash to
+the durable receipt.
 
 ## Install
 
