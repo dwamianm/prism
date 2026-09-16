@@ -125,3 +125,13 @@ passed all eight targeted gates: the two false refutations became auditable
 conflict, minimal-group and completeness outcomes were retained. That follow-up
 used the fully observed development cohort; it confirms the named fix rather
 than held-out refutation quality.
+
+A subsequent, previously unexecuted
+[48-case development assay](../benchmarks/results/research/2026-09-16/CLAIM-VERIFICATION-BROAD-DEV-V1.md)
+failed its safety gate with two unsafe `supported` decisions. One collapsed a
+desire into a completed action; the other missed explicit counterevidence and
+returned `supported` instead of `contested`. It correctly retained 6/6 explicit
+refutations, rejected all model-only contradictions, found 4/6 new minimal
+groups, and refused 4/4 exhaustive claims without inference. Keep the verifier
+opt-in while these support and conflict failures are addressed and evaluated on
+a new frozen run.

@@ -104,7 +104,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   same-cohort confirmation passed all eight targeted gates and changed only the
   two intended false refutations, yielding 19/20 expected statuses with zero
   unsafe supports. This is regression evidence on an observed development set,
-  not a held-out accuracy result.
+  not a held-out accuracy result. A later 48-case previously unexecuted
+  development assay then failed its safety gate with two unsafe supports: one
+  desire was treated as a completed action and one explicit ownership conflict
+  was missed. The failed result is retained; claim verification remains opt-in.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

@@ -1,0 +1,927 @@
+{
+  "schema_version": 2,
+  "kind": "claim-verification-assay-registration",
+  "status": "preregistered",
+  "registered_at": "2026-09-16T14:44:47.919331+00:00",
+  "purpose": "Measure guarded local claim verification on 48 previously unexecuted authored cases spanning paraphrases, speech acts, temporal scope, explicit and implicit contradiction, two-passage composition, conflict, and completeness",
+  "source": {
+    "prme_revision": "d695ba7bda0a254818d8be07c3b13e4891ab17cb",
+    "files": {
+      "runner_sha256": "421f56ec890d613d9c9327106a8794f0c654b451e6f10fec5767da9d4945ade0",
+      "implementation_sha256": "a3463d732837f2108473d5a58f5dc5334b6cef1ffac1bb274d32e8969c5de057"
+    }
+  },
+  "model": {
+    "name": "cross-encoder/nli-deberta-v3-base",
+    "revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+    "execution": "local_huggingface_cross_encoder",
+    "labels": [
+      "contradiction",
+      "entailment",
+      "neutral"
+    ],
+    "reported_mnli_mismatched_accuracy": 0.9004,
+    "reported_metric_source": "https://sbert.net/docs/cross_encoder/pretrained_models.html"
+  },
+  "protocol": {
+    "cases": [
+      {
+        "id": "support_location",
+        "category": "support",
+        "claim": "The primary data center is in Dublin.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "3cd8c6d8-0933-5dd9-89a7-36a5685f3da7",
+            "text": "Our primary data center is located in Dublin.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_preference",
+        "category": "support",
+        "claim": "The user prefers quieter notifications.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "8dec9d7a-b9ba-558d-94d7-bd11de5f8456",
+            "text": "Please keep notifications quiet and unobtrusive.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_cache_decision",
+        "category": "support",
+        "claim": "The team selected Redis as its cache.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "038453fa-d3df-525e-93ea-031f1933fcab",
+            "text": "We chose Redis for the caching layer.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_completed_task",
+        "category": "support",
+        "claim": "The invoice migration is complete.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "22969ce7-a01b-5f69-ba6c-ed040e6ec569",
+            "text": "We finished migrating the invoice tables yesterday.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_negative_current",
+        "category": "support",
+        "claim": "The user no longer uses Jira.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "4034d62d-297d-5faa-9d60-ac0f107d31c6",
+            "text": "I stopped using Jira last month.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_budget",
+        "category": "support",
+        "claim": "The approved budget is 12500 dollars.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "964c98f5-fe82-5047-bf7c-211c759832aa",
+            "text": "Finance approved a budget of 12500 dollars.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_review_date",
+        "category": "support",
+        "claim": "The architecture review is on October 17.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "bbd7a16e-5604-54b6-bd8d-b6af9ad958b2",
+            "text": "The architecture review will take place on October 17.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_observation",
+        "category": "support",
+        "claim": "The health endpoint returned status 204.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "717d9579-8964-5d40-94bc-4e269dfdcd20",
+            "text": "The latest health check returned HTTP status 204.",
+            "source_type": "tool_output",
+            "epistemic_type": "observed",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_desire",
+        "category": "support",
+        "claim": "The user wants offline synchronization.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "44779fb1-e26b-53b9-a7fa-a9e9566f5a9e",
+            "text": "I would like the application to synchronize offline.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_attempt",
+        "category": "support",
+        "claim": "The user is trying to reduce startup latency.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "4eb58da2-f3f3-5d25-bf76-81f3aba8f301",
+            "text": "I am working on reducing the startup latency.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_recommendation",
+        "category": "support",
+        "claim": "The recommendation was to rotate credentials weekly.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "8cba6f9a-c319-5b1d-b983-fa545bb3677f",
+            "text": "You should rotate the service credentials every week.",
+            "source_type": "system_inferred",
+            "epistemic_type": "inferred",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_owner",
+        "category": "support",
+        "claim": "Nora owns the billing API.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "444fb1ef-0f7d-5d31-90a8-51b77b30f670",
+            "text": "The billing API is owned by Nora.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "group_orion_region",
+        "category": "minimal_group",
+        "claim": "Project Orion runs in the eu-west-1 region.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "d18d0d71-0437-5886-abcc-9bb3dc02940e",
+            "text": "Orion is the payments project.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "0d0891ab-2e86-5492-8ce8-a8bfa5e0887c",
+            "text": "The payments project runs in the eu-west-1 region.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "group_lena_owner",
+        "category": "minimal_group",
+        "claim": "Lena owns the service deployed in Montreal.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "f74fc0b8-db00-5998-a723-a734df6443e2",
+            "text": "Lena owns the Quartz service.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "243590ad-cf1f-5c43-9727-0a86a797c1a0",
+            "text": "The Quartz service is deployed in Montreal.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "group_cedar_deadline",
+        "category": "minimal_group",
+        "claim": "The Cedar migration is due on Friday.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "0fdb85b3-5c79-5eb9-9ea3-9bfd40fd4316",
+            "text": "Cedar is the customer migration.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "3bdf921e-31aa-5f9f-a136-becfe3a8cce2",
+            "text": "The customer migration is due on Friday.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "group_gateway_port",
+        "category": "minimal_group",
+        "claim": "The public gateway listens on port 9443.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "1e68f600-f137-5efa-8c09-54d0c78962b1",
+            "text": "Northstar is the public gateway.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "c6087fd3-9e9b-55b8-a986-b308ee8cd005",
+            "text": "Northstar listens on port 9443.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "group_report_author",
+        "category": "minimal_group",
+        "claim": "Imani wrote the report stored in the audit bucket.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "0dfaf95c-f19e-56de-a20b-7d6cbd95a6fd",
+            "text": "Imani wrote the Mercury report.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "89570470-bf48-5528-9f05-5522d4831b23",
+            "text": "The Mercury report is stored in the audit bucket.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "group_queue_language",
+        "category": "minimal_group",
+        "claim": "The event queue worker is written in Go.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "a692fc9c-fe37-5f93-9aa2-93a79bcc34e1",
+            "text": "Kestrel is the event queue worker.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "79917655-3999-59d0-931c-c56695e89f39",
+            "text": "Kestrel is written in Go.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_explicit_day",
+        "category": "explicit_refutation",
+        "claim": "The release is Monday.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "fcdfcf08-5998-5055-bd0a-3758ed894a58",
+            "text": "The release is not Monday; it is Thursday.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_explicit_language",
+        "category": "explicit_refutation",
+        "claim": "The user currently programs in Ruby.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "540ea2ca-3f47-5173-92cd-70fafe7d582c",
+            "text": "I no longer use Ruby; I switched to Kotlin.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_explicit_date",
+        "category": "explicit_refutation",
+        "claim": "The audit starts on September 12.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "44d00d5a-134f-5c52-a90b-815881aee3ca",
+            "text": "The audit starts on September 13, not September 12.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_explicit_count",
+        "category": "explicit_refutation",
+        "claim": "The cluster has 3 replicas.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "b84207db-0998-5f75-abac-3ff05a0f3d99",
+            "text": "The cluster has 5 replicas.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_explicit_owner",
+        "category": "explicit_refutation",
+        "claim": "Mina owns the search service.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "1c8b7c7f-fa5e-51b6-bbc6-4da0d19c3049",
+            "text": "Mina does not own search; Jules owns it.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_explicit_status",
+        "category": "explicit_refutation",
+        "claim": "The data backfill is complete.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "f3b7cc99-f685-5685-befe-20a906aa2bd4",
+            "text": "The data backfill is not complete.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_implicit_toggle",
+        "category": "implicit_refutation",
+        "claim": "Audit logging is enabled.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "c74b656e-f9bd-5906-af42-a11fd7c84677",
+            "text": "Audit logging is disabled.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_implicit_color",
+        "category": "implicit_refutation",
+        "claim": "The dashboard theme is blue.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "fe189cdd-2000-5b09-8284-e868924b9960",
+            "text": "The dashboard theme is green.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_implicit_database",
+        "category": "implicit_refutation",
+        "claim": "The service uses PostgreSQL.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "274bcadf-b15e-5b42-a99f-1ac795fc47bc",
+            "text": "The service uses SQLite.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_implicit_city",
+        "category": "implicit_refutation",
+        "claim": "The support office is in Paris.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "a8ef7ed2-42e2-5121-896f-203823d527c2",
+            "text": "The support office is in Berlin.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_desire",
+        "category": "speech_act_safety",
+        "claim": "The user enabled passkeys.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "aa86b6c4-f78e-588f-8731-8baec4e6d9fa",
+            "text": "I want to enable passkeys after the security review.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_attempt",
+        "category": "speech_act_safety",
+        "claim": "The user fixed the memory leak.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "47b4135f-5fc1-5dae-9a38-fb45c6fdba65",
+            "text": "I am trying to diagnose the memory leak.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_plan",
+        "category": "relation_safety",
+        "claim": "The archive migration is complete.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "85fba111-f9f4-5306-b67f-fd1e72288b60",
+            "text": "The archive migration plan covers logs and attachments.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_advice",
+        "category": "role_safety",
+        "claim": "The team adopted CockroachDB.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "25d11498-7538-58c2-9b63-9d202d8e5170",
+            "text": "You should consider CockroachDB for this workload.",
+            "source_type": "system_inferred",
+            "epistemic_type": "inferred",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_question",
+        "category": "speech_act_safety",
+        "claim": "The backup job runs hourly.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "72780c29-8de8-550f-916d-d8d2abd8f877",
+            "text": "Should the backup job run hourly?",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_hypothetical",
+        "category": "speech_act_safety",
+        "claim": "The service moved to Kubernetes.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "72766df4-cd8b-5504-9099-5df7d6a1459c",
+            "text": "If the service moved to Kubernetes, deployment would be simpler.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_possibility",
+        "category": "speech_act_safety",
+        "claim": "The outage was caused by DNS.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "1948558f-4874-5f72-9762-8ea9766fd55f",
+            "text": "DNS might have caused the outage.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_topic",
+        "category": "relation_safety",
+        "claim": "The product uses OAuth.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "7bfe7dcf-9267-5d18-820d-49250e1da9c9",
+            "text": "The security review includes a section about OAuth.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_past_current",
+        "category": "temporal_safety",
+        "claim": "The user currently works at Acme.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "da8d67f1-ad6f-5409-bdb2-af279106dd12",
+            "text": "I worked at Acme during college.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_pending_verification",
+        "category": "epistemic_safety",
+        "claim": "The vendor breached the SLA.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "a3a2ddb8-a199-5529-b9b5-75fba74a2f61",
+            "text": "We still need to verify whether the vendor breached the SLA.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_future_completion",
+        "category": "temporal_safety",
+        "claim": "The certificate rotation is complete.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "2cc16675-d3b3-5ed5-bcbd-21c1166998f1",
+            "text": "Certificate rotation is scheduled for next week.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_partial_relation",
+        "category": "relation_safety",
+        "claim": "Nadia leads the Atlas project.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "f260c391-b91e-5f48-8806-7452540d3162",
+            "text": "Nadia attended the Atlas project review.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "contested_region",
+        "category": "conflict",
+        "claim": "The service runs in us-east-1.",
+        "expected_status": "contested",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "39cb337e-3e96-5932-b675-e4f74419fce2",
+            "text": "The service runs in us-east-1.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "58eb5d5b-7e05-501e-b7e0-b684a14ad9a5",
+            "text": "The service does not run in us-east-1; it runs in us-west-2.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "contested_owner",
+        "category": "conflict",
+        "claim": "Ravi owns the ingestion pipeline.",
+        "expected_status": "contested",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "fcadb74f-7616-5f14-b2f0-ea0a24598610",
+            "text": "Ravi owns the ingestion pipeline.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "0026a936-397b-51d5-b2cc-4dd291dd2d66",
+            "text": "Ravi no longer owns ingestion; Tessa owns it.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "contested_date",
+        "category": "conflict",
+        "claim": "The demo is on November 8.",
+        "expected_status": "contested",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "b2398d79-60ee-5a28-b261-606560f1a889",
+            "text": "The demo is on November 8.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "9168cfd1-23dd-5695-aca8-3b57c14e0ab4",
+            "text": "The demo moved to November 9, not November 8.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "contested_preference",
+        "category": "conflict",
+        "claim": "The user prefers compact responses.",
+        "expected_status": "contested",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "e142915e-c0c6-5ce1-8b32-291dd72fa804",
+            "text": "I prefer compact responses.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "e3f4f2eb-7a8f-5344-98d9-fdc673546e01",
+            "text": "I do not prefer compact responses; include full explanations.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "incomplete_total",
+        "category": "completeness",
+        "claim": "There are exactly 6 unresolved incidents.",
+        "expected_status": "incomplete",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "4f2444e8-3f61-5446-b84f-14936090522c",
+            "text": "One unresolved incident concerns billing.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ],
+        "requires_complete_set": true
+      },
+      {
+        "id": "incomplete_complete_list",
+        "category": "completeness",
+        "claim": "The complete dependency list is Redis and NATS.",
+        "expected_status": "incomplete",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "6121e1cf-702d-503d-a9b8-1ef01e783142",
+            "text": "Redis is a dependency.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "87525702-7bdd-58e9-a4e5-ad2cd088bf1e",
+            "text": "NATS is a dependency.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ],
+        "requires_complete_set": true
+      },
+      {
+        "id": "incomplete_all_owners",
+        "category": "completeness",
+        "claim": "All service owners are Nora and Ravi.",
+        "expected_status": "incomplete",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "68c4d7ba-b41f-5e1e-836f-ba93e8dd80b4",
+            "text": "Nora owns billing.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "ad31da95-01ee-51f1-83c8-99d075b2593f",
+            "text": "Ravi owns ingestion.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ],
+        "requires_complete_set": true
+      },
+      {
+        "id": "incomplete_only_risk",
+        "category": "completeness",
+        "claim": "Latency is the only project risk.",
+        "expected_status": "incomplete",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "7b81e03a-b087-5086-8743-af6c9f534a7c",
+            "text": "Latency is a project risk.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ],
+        "requires_complete_set": true
+      }
+    ],
+    "config": {
+      "entailment_threshold": 0.8,
+      "contradiction_threshold": 0.8,
+      "batch_size": 32,
+      "max_evidence": 64,
+      "max_group_size": 2,
+      "group_candidate_limit": 8,
+      "refutation_policy": "explicit_corroboration"
+    },
+    "calls_per_case": 1,
+    "network_after_model_resolution": false,
+    "case_order": "registration order"
+  },
+  "evaluation": {
+    "gates": {
+      "unsafe_supported_count_max": 0,
+      "insufficient_refuted_count_max": 0,
+      "supported_correct_min": 14,
+      "minimal_group_correct_min": 4,
+      "refuted_correct_min": 6,
+      "insufficient_correct_min": 10,
+      "contested_correct_min": 3,
+      "incomplete_without_model_min": 4
+    },
+    "decision_rule": "All gates must pass. Preserve failures without changing cases, labels, thresholds, corroboration policy, group bounds, or category targets after execution."
+  },
+  "selection": {
+    "disclosure": "All 48 cases were authored after the v1 and guarded same-cohort results were known, but none was executed against any NLI model before this registration. Explicit-refutation cases exercise the implemented policy; four separately labeled implicit contradictions intentionally measure its conservative recall cost. Gates and labels were fixed from semantics and desired safety behavior rather than observed model output."
+  },
+  "claim_boundary": "Passing would establish development generalization only for one pinned model on these short authored cases. It would not establish independent held-out accuracy, calibrated probabilities, long-context verification, exhaustive retrieval, domain transfer, answer quality, or product leadership."
+}
