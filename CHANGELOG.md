@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built-in extraction now preserves literal first-person attempts and
   intentions instead of admitting them under completed or current-state
   predicates, including component relationships inside the attempted action.
-  Fresh durable outputs record `speech_act_v3` and prepare `speech_act_v9`
-  plans. Saved v2 outputs remain v8, and legacy extraction records recover
+  Fresh durable outputs record `speech_act_v4` and prepare `speech_act_v10`
+  plans. The prompt requires the attempted target even when it also extracts a
+  count or failure detail. Saved v3 outputs remain v9, v2 outputs remain v8, and legacy extraction records recover
   under `temporal_validity_v7`, so restart cannot claim a validator that did
   not run.
 

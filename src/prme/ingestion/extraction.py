@@ -423,6 +423,9 @@ types when appropriate; do not turn a possible future into a current fact.
   CUDA" should produce tried_to_install; "I would like to use Redis if X" should \
   preserve wants_to_use and condition X. Relationships between tools inside an \
   attempted setup are also non-completed; do not emit used_with or configured_with.
+  When an attempt has a count or failure detail, the attempted action target is \
+  still required as its own claim; attempted_install_count=twice does not replace \
+  tried_to_install=CUDA.
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.
 - Do NOT infer facts that are not grounded in the source text.

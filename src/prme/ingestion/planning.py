@@ -159,9 +159,9 @@ class PlanningIndexes:
         provider: EmbeddingProvider,
         *,
         materialization_policy: Literal[
-            "temporal_validity_v7", "speech_act_v8", "speech_act_v9"
+            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10"
         ] = (
-            "speech_act_v9"
+            "speech_act_v10"
         ),
     ) -> DerivationPlan:
         # Snapshot before provider I/O, including referenced existing nodes.

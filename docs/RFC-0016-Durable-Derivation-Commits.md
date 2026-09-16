@@ -193,10 +193,10 @@ Legacy sources are not automatically enrolled in extraction work. Unmanaged or
 ambiguous staging remains conservatively retained; collection only covers the
 explicitly replaced, uniquely owned revision protocol above.
 
-Historical plans through materialization policy `speech_act_v8` keep
+Historical plans through materialization policy `speech_act_v9` keep
 their original behavior. Fresh built-in inference records
-`grounding_policy="speech_act_v3"`, and plans made from those records use
-`speech_act_v9`: relationship
+`grounding_policy="speech_act_v4"`, and plans made from those records use
+`speech_act_v10`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
 edges, unresolved personal references remain event-local, and claim polarity and
 explicit conditions are preserved in node metadata. A fact can also carry one
@@ -208,18 +208,20 @@ references avoid arbitrary namesake links. Conditional claims start with an
 unknown condition state and stay out of DEFAULT retrieval until confirmed.
 Literal first-person attempts and intentions must retain that non-completed
 speech act in their predicate; they and relationships between components inside
-the attempted action cannot become current-state relations.
+the attempted action cannot become current-state relations. The extraction
+contract also requires the attempted action target when a count or failure
+detail is emitted; those details cannot substitute for the target relation.
 Each new fact also sets `valid_from` to its resolved source-effective time. A
 valid newer replacement closes the referenced prior interval in the same graph
 transaction. The commit skips interval closure when the boundary precedes a
 legacy stored start, avoiding an inverted range while still publishing lifecycle,
 supersedence, edge, and receipt atomically.
-Saved `speech_act_v2` extraction records prepare missing plans under
-`speech_act_v8`. Extraction records whose omitted policy defaults to `source_passage_v1` prepare
+Saved v3 extraction records prepare missing plans under v9, and v2 records
+prepare them under v8. Extraction records whose omitted policy defaults to `source_passage_v1` prepare
 a missing plan under `temporal_validity_v7`; recovery cannot relabel old model
 output as v8. Existing `source_passage_v1`, `typed_references_v2`,
 `event_local_references_v4`, `claim_qualifiers_v5`,
-`grounded_quantities_v6`, `temporal_validity_v7`, and `speech_act_v8` plans remain readable and
+`grounded_quantities_v6`, `temporal_validity_v7`, `speech_act_v8`, and `speech_act_v9` plans remain readable and
 replay their saved artifacts unchanged. Recovery never regenerates an existing
 plan under the current policy implicitly; historical committed edges are not
 migrated.
