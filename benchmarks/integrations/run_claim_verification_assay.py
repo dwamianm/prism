@@ -38,12 +38,15 @@ def _canonical_sha256(value: Any) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def _head(project_root: Path) -> str:
-    return subprocess.check_output(
-        ["git", "rev-parse", "HEAD"],
+def _is_ancestor(revision: str, project_root: Path) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", revision, "HEAD"],
         cwd=project_root,
+        check=False,
+        capture_output=True,
         text=True,
-    ).strip()
+    )
+    return result.returncode == 0
 
 
 def _validate_registration(
@@ -60,8 +63,11 @@ def _validate_registration(
     source = registration.get("source")
     if not isinstance(source, dict):
         raise ValueError("registration source is required")
-    if source.get("prme_revision") != _head(project_root):
-        raise ValueError("registration PRME revision does not match HEAD")
+    prme_revision = source.get("prme_revision")
+    if not isinstance(prme_revision, str) or not _is_ancestor(
+        prme_revision, project_root
+    ):
+        raise ValueError("registered PRME revision is not an ancestor of HEAD")
 
     files = source.get("files")
     if not isinstance(files, dict):

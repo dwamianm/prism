@@ -148,7 +148,7 @@ def test_registration_rejects_duplicate_case_ids(tmp_path: Path, monkeypatch):
         "protocol": {"cases": [case, case]},
         "evaluation": {"gates": {}},
     }
-    monkeypatch.setattr(assay, "_head", lambda _root: "revision")
+    monkeypatch.setattr(assay, "_is_ancestor", lambda _revision, _root: True)
 
     with pytest.raises(ValueError, match="case IDs must be unique"):
         assay._validate_registration(
