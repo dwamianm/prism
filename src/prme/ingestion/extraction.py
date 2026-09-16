@@ -60,6 +60,25 @@ _EXPLICIT_DECISION_RE = re.compile(
     r"commit(?:ted|s)?|reject(?:ed|s)?)\b",
     re.IGNORECASE,
 )
+_FIRST_PERSON_NONACTUAL_CLAUSE_RE = re.compile(
+    r"(?<!\w)(?P<subject>I|we)(?!\w)(?:"
+    r"(?:[’']m|[’']re|\s+am|\s+are)\s+"
+    r"(?:trying|attempting|planning|hoping|aiming|looking|working)"
+    r"|(?:[’']ve|\s+have)\s+(?:tried|attempted|planned|hoped|aimed)"
+    r"|(?:[’']d|\s+would)\s+like"
+    r"|\s+(?:try|tried|attempt|attempted|want|wanted|need|needed|plan|planned|"
+    r"intend|intended|hope|hoped|aim|aimed|look|looked|work|worked)"
+    r")\s+to\b(?P<body>.{0,400})",
+    re.IGNORECASE,
+)
+_NONACTUAL_CLAUSE_BOUNDARY_RE = re.compile(
+    r"[!?;]|\.(?=\s|$)|,(?=\s*(?:but|and|so|although|though|however)\b)",
+    re.IGNORECASE,
+)
+_NONACTUAL_PREDICATE_RE = re.compile(
+    r"(?:try|attempt|plan|intend|want|need|hope|aim|look|work|seek|request|ask|"
+    r"propos|consider|evaluat|explor)", re.IGNORECASE,
+)
 
 
 def _has_explicit_condition(evidence_quote: str) -> bool:
@@ -86,9 +105,8 @@ def _validate_condition(epistemic_type: str, condition: str | None, evidence_quo
         raise ValueError("condition is only valid when epistemic_type is conditional")
 
 
-def _validate_modality(
-    fact_type: str, epistemic_type: str, evidence_quote: str
-) -> None:
+def _validate_modality(fact_type: str, epistemic_type: str, evidence_quote: str,
+                       *, subject: str, predicate: str, object_value: str) -> None:
     """Reject common uncertainty and contingent-action category collapses."""
     uncertain = _has_uncertainty(evidence_quote)
     if uncertain and epistemic_type not in {"hypothetical", "conditional"}:
@@ -99,6 +117,18 @@ def _validate_modality(
         and _EXPLICIT_DECISION_RE.search(evidence_quote) is None
     ):
         raise ValueError("a contingent future action is not a decision without an explicit choice or commitment")
+    if subject.strip().casefold() in {"i", "we"} and not _NONACTUAL_PREDICATE_RE.search(predicate):
+        for match in _FIRST_PERSON_NONACTUAL_CLAUSE_RE.finditer(evidence_quote):
+            body = match.group("body")
+            boundary = _NONACTUAL_CLAUSE_BOUNDARY_RE.search(body)
+            if boundary is not None:
+                body = body[:boundary.start()]
+            if (match.group("subject").casefold() == subject.strip().casefold()
+                    and _mentioned(object_value, body)):
+                raise ValueError(
+                    "an attempt or intention requires a predicate that preserves "
+                    "the non-completed speech act"
+                )
 
 
 def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
@@ -109,7 +139,9 @@ def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
     if not _mentioned(fact.subject, claim_passage) or not _mentioned(fact.object, claim_passage):
         raise ValueError("subject and object must occur in evidence_quote")
     _validate_condition(fact.epistemic_type, fact.condition, claim_passage)
-    _validate_modality(fact.fact_type, fact.epistemic_type, claim_passage)
+    _validate_modality(fact.fact_type, fact.epistemic_type, claim_passage,
+                       subject=fact.subject, predicate=fact.predicate,
+                       object_value=fact.object)
     quantity = validate_extracted_quantity(
         fact.quantity,
         object_value=fact.object,
@@ -144,7 +176,10 @@ def _validate_relationship_source_support(
     _validate_condition(
         relationship.epistemic_type, relationship.condition, claim_passage
     )
-    _validate_modality("fact", relationship.epistemic_type, claim_passage)
+    _validate_modality("fact", relationship.epistemic_type, claim_passage,
+                       subject=relationship.source_entity,
+                       predicate=relationship.relationship_type,
+                       object_value=relationship.target_entity)
     relationship.evidence_quote = evidence_passage
 
 
@@ -376,6 +411,10 @@ a habit. Multiple values can coexist (e.g., liking tea and coffee).
 Copy the previous value exactly from the supporting passage.
 - Preserve conditions and uncertainty. Use conditional or hypothetical epistemic \
 types when appropriate; do not turn a possible future into a current fact.
+- Preserve attempts and intentions in the predicate. "I'm trying to set up ESLint" \
+  can become trying_to_set_up, but it does not establish uses, adopted, configured, \
+  or enforced. "I want/need/plan to use X" does not establish uses X. A pasted \
+  example or a request for help does not establish adoption or completion.
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.
 - Do NOT infer facts that are not grounded in the source text.

@@ -19,7 +19,7 @@ import math
 import time
 import weakref
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 import dateparser
@@ -454,6 +454,7 @@ class IngestionPipeline:
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
+                grounding_policy="speech_act_v2",
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -463,7 +464,15 @@ class IngestionPipeline:
         saved.verify_source(event.user_id, event.scope.value, event.content_hash)
         return ExtractionResult.model_validate(saved.result)
 
-    async def _prepare_plan(self, result: ExtractionResult, event: Event) -> DerivationPlan:
+    async def _prepare_plan(
+        self,
+        result: ExtractionResult,
+        event: Event,
+        *,
+        materialization_policy: Literal[
+            "temporal_validity_v7", "speech_act_v8"
+        ] = "speech_act_v8",
+    ) -> DerivationPlan:
         """Prepare fixed graph/index inputs without publishing any artifacts."""
         from prme.ingestion.planning import PlanningGraph, PlanningIndexes, PlanningQueue
 
@@ -475,7 +484,10 @@ class IngestionPipeline:
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
         )
-        return await indexes.prepare(self._vector_index._provider)
+        return await indexes.prepare(
+            self._vector_index._provider,
+            materialization_policy=materialization_policy,
+        )
 
     async def _populate(
         self, result: ExtractionResult, event: Event, event_id: str, scope: Scope,
@@ -785,7 +797,22 @@ class IngestionPipeline:
                     if plan is None:
                         raise ValueError("Source has legacy derived nodes; explicit migration is required")
             if plan is None:
-                prepared = await self._prepare_plan(result, event)
+                extraction = await self._event_store.get_extraction(
+                    event_id, user_id=event.user_id
+                )
+                materialization_policy: Literal[
+                    "temporal_validity_v7", "speech_act_v8"
+                ] = (
+                    "speech_act_v8"
+                    if extraction is not None
+                    and extraction.grounding_policy == "speech_act_v2"
+                    else "temporal_validity_v7"
+                )
+                prepared = await self._prepare_plan(
+                    result,
+                    event,
+                    materialization_policy=materialization_policy,
+                )
                 if claim is not None and claim.plan_revision != 1:
                     prepared = prepared.model_copy(update={"revision": claim.plan_revision})
                 plan = await self._write_queue.submit(

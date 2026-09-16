@@ -14,13 +14,17 @@ class ExtractionRecord(BaseModel):
 
     A record proves that model output was saved, not that its claims are true
     or that graph materialization completed. ``result`` uses extraction schema
-    version 1. Provider credentials and raw provider responses are excluded.
+    version 1. ``grounding_policy`` records which admission validator produced
+    it; omitted legacy values retain ``source_passage_v1``. Provider
+    credentials and raw provider responses are excluded.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: Literal[1] = 1
-    grounding_policy: Literal["source_passage_v1"] = "source_passage_v1"
+    grounding_policy: Literal["source_passage_v1", "speech_act_v2"] = (
+        "source_passage_v1"
+    )
     event_id: UUID
     user_id: str = Field(min_length=1)
     scope: Scope

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from prme.models import Event, MemoryEdge, MemoryNode
@@ -153,7 +154,14 @@ class PlanningIndexes:
             self.lexical[key] = PreparedLexicalDocument(node_id=key, content=content)
         return 0
 
-    async def prepare(self, provider: EmbeddingProvider) -> DerivationPlan:
+    async def prepare(
+        self,
+        provider: EmbeddingProvider,
+        *,
+        materialization_policy: Literal["temporal_validity_v7", "speech_act_v8"] = (
+            "speech_act_v8"
+        ),
+    ) -> DerivationPlan:
         # Snapshot before provider I/O, including referenced existing nodes.
         nodes = tuple(node.model_copy(deep=True) for node in self.graph.nodes.values())
         references = await self.graph.references()
@@ -168,7 +176,7 @@ class PlanningIndexes:
             raise ValueError("Embedding configuration changed during planning")
         event = self.graph.event
         return DerivationPlan(
-            materialization_policy="temporal_validity_v7",
+            materialization_policy=materialization_policy,
             event_id=event.id, user_id=event.user_id, scope=event.scope, content_hash=event.content_hash,
             nodes=nodes, references=references, edges=tuple(self.graph.edges),
             replacements=tuple(self.graph.replacements),

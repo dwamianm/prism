@@ -60,11 +60,17 @@ encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
 metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
-New extraction plans use `temporal_validity_v7`. A quantity survives only
-when one supported decimal, its quantified phrase, and its verbatim unit occur
+Fresh built-in extractions record `grounding_policy="speech_act_v2"`; plans
+made from those records use `speech_act_v8`. Legacy extraction records default
+to `source_passage_v1` and remain on `temporal_validity_v7` when recovery must
+prepare a missing plan. Version 8 preserves the
+`temporal_validity_v7` effective-time rules and rejects first-person attempts or
+intentions that an extracted predicate collapses into completed/current state;
+the predicate must preserve the non-completed speech act. A quantity survives
+only when one supported decimal, its quantified phrase, and its verbatim unit occur
 in both the claim object and source evidence. Invalid optional quantities are
-dropped without discarding the claim. Older plan policies and checksums remain
-unchanged; do not infer unit aliases or rewrite historical metadata. Extracted
+dropped without discarding the claim. Older extraction and plan policies and
+checksums remain unchanged; do not infer unit aliases or rewrite historical metadata. Extracted
 facts start validity at their resolved source-effective time. Valid newer
 replacements close the prior interval atomically when the boundary does not
 precede its stored start; legacy intervals that would invert remain unchanged.

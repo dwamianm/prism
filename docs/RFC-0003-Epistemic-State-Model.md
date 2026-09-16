@@ -167,12 +167,24 @@ until a more informed resolution is available. The lower-level supersedence
 detector retains its explicit caller-driven legacy matching mode.
 
 Newly extracted facts start `valid_from` at their resolved source-effective
-time. A valid explicit update in a `temporal_validity_v7` plan atomically retires
+time. A valid explicit update in a `temporal_validity_v7` or `speech_act_v8`
+plan atomically retires
 the previous claim and closes its half-open interval at the replacement's
 `valid_from`. Existing derivation policies replay unchanged. A legacy row whose
 stored start is later than that boundary remains lifecycle-superseded without an
 inverted `valid_to`; this preserves readable historical bytes while keeping it
 out of current state.
+
+New `speech_act_v8` plans also enforce a narrow fail-closed boundary for literal
+first-person attempts and intentions. When the cited clause says the speaker is
+trying, planning, wanting, or needing to do something, a built-in extraction
+cannot materialize it under a completed/current predicate such as `uses` or
+`enforces`. The predicate must preserve the speech act, such as
+`trying_to_set_up` or `plans_to_use`. This lexical boundary does not prove
+general entailment and older extraction plans retain their recorded behavior.
+Fresh built-in outputs carry extraction grounding policy `speech_act_v2` before
+they may prepare a v8 plan. Legacy `source_passage_v1` outputs remain eligible
+for v7 recovery only.
 
 Explicit backend supersedence, contradiction and resolution accept optional
 evidence only when the event exists in the affected nodes' owner and scope.

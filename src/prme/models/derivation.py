@@ -105,6 +105,7 @@ class DerivationPlan(BaseModel):
         "claim_qualifiers_v5",
         "grounded_quantities_v6",
         "temporal_validity_v7",
+        "speech_act_v8",
     ] = "relationship_claims_v3"
     id: UUID = Field(default_factory=uuid4)
     event_id: UUID

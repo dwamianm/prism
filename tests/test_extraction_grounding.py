@@ -204,6 +204,86 @@ def test_polite_request_modals_do_not_make_supported_claim_hypothetical(source):
     assert result.facts[0].epistemic_type == "asserted"
 
 
+def test_builtin_drops_attempt_collapsed_into_completed_state():
+    source = ("I'm trying to set up ESLint v8.39 with the Airbnb style guide for my "
+              "JavaScript project, but I'm not sure how to customize it.")
+    payload = {"facts": [{
+        "subject": "I", "predicate": "uses_style_guide",
+        "object": "Airbnb style guide", "polarity": "positive",
+        "evidence_quote": source, "epistemic_type": "observed",
+    }]}
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+
+def test_builtin_keeps_attempt_when_predicate_preserves_speech_act():
+    source = ("I'm trying to set up ESLint v8.39 with the Airbnb style guide for my "
+              "JavaScript project.")
+    payload = {"facts": [{
+        "subject": "I", "predicate": "trying_to_set_up",
+        "object": "Airbnb style guide", "polarity": "positive",
+        "evidence_quote": source, "epistemic_type": "observed",
+    }]}
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].predicate == "trying_to_set_up"
+
+
+def test_builtin_recognizes_unicode_attempt_contractions():
+    source = "I’m trying to use Redis for the cache."
+    payload = {"facts": [{
+        "subject": "I", "predicate": "uses", "object": "Redis",
+        "polarity": "positive", "evidence_quote": source,
+        "epistemic_type": "observed",
+    }]}
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+
+def test_unrelated_attempt_sentence_does_not_hide_actual_fact():
+    source = "I'm trying to optimize the dashboard. The dashboard API averages 800ms."
+    payload = {
+        "entities": [{"name": "dashboard API", "entity_type": "product"}],
+        "facts": [{
+            "subject": "dashboard API", "subject_entity_type": "product",
+            "predicate": "averages", "object": "800ms", "polarity": "positive",
+            "evidence_quote": "The dashboard API averages 800ms.",
+            "epistemic_type": "observed",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].object == "800ms"
+
+
+def test_builtin_relationships_preserve_intention_too():
+    source = "We plan to use Redis after the evaluation."
+    relationship = {
+        "source_entity": "We", "target_entity": "Redis",
+        "relationship_type": "uses", "polarity": "positive",
+        "evidence_quote": source, "epistemic_type": "observed",
+    }
+    payload = {
+        "entities": [{"name": "Redis", "entity_type": "product"}],
+        "relationships": [relationship],
+    }
+    collapsed = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    relationship["relationship_type"] = "plans_to_use"
+    preserved = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert collapsed.relationships == []
+    assert preserved.relationships[0].relationship_type == "plans_to_use"
+
+
 @pytest.mark.parametrize(
     "source",
     [
