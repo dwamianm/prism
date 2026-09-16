@@ -1,0 +1,3470 @@
+{
+  "passed": false,
+  "case_count": 14,
+  "cases_passed": 13,
+  "target_count": 15,
+  "targets_preserved": 14,
+  "unsafe_nonactual_claims": 1,
+  "policy_errors": [],
+  "gates": {
+    "unsafe_nonactual_claims": {
+      "maximum": 0,
+      "actual": 1
+    },
+    "missing_expected_targets": {
+      "maximum": 0,
+      "actual": 1
+    },
+    "policy_errors": {
+      "maximum": 0,
+      "actual": 0
+    }
+  },
+  "cases": [
+    {
+      "case": "trying_setup",
+      "source": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "Airbnb style guide"
+          ],
+          "predicate_stems": [
+            "try",
+            "attempt"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "trying_to_use_with",
+              "object": "Airbnb style guide"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "trying_to_use_with",
+              "object": "Airbnb style guide"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "trying_to_use_with",
+              "object": "Airbnb style guide"
+            },
+            {
+              "kind": "fact",
+              "predicate": "trying_to_use_with",
+              "object": "Airbnb style guide"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "unicode_trying",
+      "source": "I\u2019m trying to configure Vault for the production cluster.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "Vault"
+          ],
+          "predicate_stems": [
+            "try",
+            "attempt"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "trying_to_configure",
+              "object": "Vault"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "trying_to_configure",
+              "object": "Vault"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "trying_to_configure",
+              "object": "Vault"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "plan_migration",
+      "source": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "PostgreSQL"
+          ],
+          "predicate_stems": [
+            "plan",
+            "intend"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "planned_migration_target",
+              "object": "PostgreSQL"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "planned_migration_target",
+              "object": "PostgreSQL"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "decision",
+              "predicate": "planned_migration_target",
+              "object": "PostgreSQL"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "want_adoption",
+      "source": "I want to adopt Ruff, but I have not chosen a linter yet.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "Ruff"
+          ],
+          "predicate_stems": [
+            "want",
+            "consider"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "wants_to_adopt",
+              "object": "Ruff"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "preference",
+              "predicate": "wants_to_adopt",
+              "object": "Ruff"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "need_evaluation",
+      "source": "We need to evaluate Amazon S3 before choosing it for backups.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "Amazon S3",
+            "S3"
+          ],
+          "predicate_stems": [
+            "need",
+            "evaluat"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "needs_to_evaluate",
+              "object": "Amazon S3"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "evaluating",
+              "object": "Amazon S3"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "needs_to_evaluate",
+              "object": "Amazon S3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "past_attempt",
+      "source": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+      "passed": false,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "CUDA 12.4",
+            "CUDA"
+          ],
+          "predicate_stems": [
+            "try",
+            "attempt"
+          ],
+          "preserved": false,
+          "unsafe_claims": [
+            {
+              "kind": "fact",
+              "predicate": "tried_to_install",
+              "object": "CUDA 12.4"
+            }
+          ],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "tried_to_install",
+              "object": "CUDA 12.4"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "tried_to_install",
+              "object": "CUDA 12.4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "conditional_desire",
+      "source": "I would like to use Redis if the latency test succeeds.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "Redis"
+          ],
+          "predicate_stems": [
+            "like",
+            "want",
+            "hope"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "wants_to_use",
+              "object": "Redis"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "preference",
+              "predicate": "wants_to_use",
+              "object": "Redis"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "work_toward_replacement",
+      "source": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "Temporal"
+          ],
+          "predicate_stems": [
+            "work",
+            "try",
+            "attempt"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "working_to_replace_with",
+              "object": "Temporal"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "working_to_replace_with",
+              "object": "Temporal"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "working_to_replace_with",
+              "object": "Temporal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "hope_deployment",
+      "source": "We hope to deploy Phoenix after the security review.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "Phoenix"
+          ],
+          "predicate_stems": [
+            "hope",
+            "plan",
+            "intend"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "hopes_to_deploy",
+              "object": "Phoenix"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "hopes_to_deploy",
+              "object": "Phoenix"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "hypothetical_example",
+      "source": "For example, I want to use TLS 1.3; this is hypothetical, not my configuration.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "TLS 1.3"
+          ],
+          "predicate_stems": [
+            "want",
+            "example",
+            "hypothetical"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "wants_to_use",
+              "object": "TLS 1.3"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "preference",
+              "predicate": "wants_to_use",
+              "object": "TLS 1.3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "configured_control",
+      "source": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "actual",
+          "objects": [
+            "Airbnb style guide"
+          ],
+          "predicate_stems": [
+            "configur",
+            "set_up"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "configured_with",
+              "object": "Airbnb style guide"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "configured_with",
+              "object": "Airbnb style guide"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "configured_with",
+              "object": "Airbnb style guide"
+            },
+            {
+              "kind": "fact",
+              "predicate": "configured_with",
+              "object": "Airbnb style guide"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "usage_control",
+      "source": "We use Redis for session storage in production.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "actual",
+          "objects": [
+            "Redis"
+          ],
+          "predicate_stems": [
+            "use"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "uses",
+              "object": "Redis"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "uses",
+              "object": "Redis"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "uses",
+              "object": "Redis"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "decision_control",
+      "source": "I decided to adopt Ruff for the Orion repository.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "actual",
+          "objects": [
+            "Ruff"
+          ],
+          "predicate_stems": [
+            "adopt",
+            "decid",
+            "chos"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "decided_to_adopt",
+              "object": "Ruff"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "decision",
+              "predicate": "decided_to_adopt",
+              "object": "Ruff"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "mixed_plan_and_actual",
+      "source": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+      "passed": true,
+      "targets": [
+        {
+          "mode": "nonactual",
+          "objects": [
+            "PostgreSQL"
+          ],
+          "predicate_stems": [
+            "plan",
+            "intend"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "plans_to_migrate_to",
+              "object": "PostgreSQL"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "plans_to_migrate_to",
+              "object": "PostgreSQL"
+            }
+          ]
+        },
+        {
+          "mode": "actual",
+          "objects": [
+            "MySQL"
+          ],
+          "predicate_stems": [
+            "run",
+            "use"
+          ],
+          "preserved": true,
+          "unsafe_claims": [],
+          "raw_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "runs_in_production",
+              "object": "MySQL"
+            },
+            {
+              "kind": "relationship",
+              "predicate": "runs_in_production",
+              "object": "MySQL"
+            }
+          ],
+          "materialized_target_claims": [
+            {
+              "kind": "fact",
+              "predicate": "runs_in_production",
+              "object": "MySQL"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "quality_gates_passed": false,
+  "kind": "speech-act-extraction-results",
+  "schema_version": 1,
+  "registration_sha256": "8e9717de1cef8c59bd6cf2c288f0f1203d21136baf926358f1e8dd26c4ffb2c4",
+  "model": {
+    "provider": "ollama",
+    "model": "deepseek-v4.1-flash:cloud",
+    "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0.0,
+    "max_retries": 3,
+    "timeout_seconds": 180.0
+  },
+  "elapsed_seconds": 26.03,
+  "execution_binding_errors": [],
+  "raw_cases": [
+    {
+      "case": "trying_setup",
+      "source": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+      "evaluated_nodes": [
+        {
+          "id": "078d78da-543d-4846-bc36-038063d20f40",
+          "user_id": "trying_setup",
+          "node_type": "fact",
+          "content": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "trying_to_set_up",
+            "object": "ESLint",
+            "polarity": "positive",
+            "evidence_quote": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "096e2aea-7725-478b-bd83-55d74843000b",
+          "user_id": "trying_setup",
+          "node_type": "entity",
+          "content": "Airbnb style guide",
+          "metadata": {
+            "entity_type": "concept",
+            "description": "A JavaScript style guide the user wants to use with ESLint"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "6934e6ed-bde7-4830-b2ec-f0f71f40d84c",
+          "user_id": "trying_setup",
+          "node_type": "entity",
+          "content": "ESLint",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A JavaScript linting tool the user is trying to set up"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "76672591-a1a1-45cd-b491-dcc6c0aff94b",
+          "user_id": "trying_setup",
+          "node_type": "fact",
+          "content": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "relationship",
+            "subject_entity_type": null,
+            "subject": "ESLint",
+            "predicate": "trying_to_use_with",
+            "object": "Airbnb style guide",
+            "polarity": "positive",
+            "evidence_quote": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": null,
+            "replaces_object": null
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "7bd36f87-8cca-46cd-843d-96ee28da3df4",
+          "user_id": "trying_setup",
+          "node_type": "fact",
+          "content": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "trying_to_use_with",
+            "object": "Airbnb style guide",
+            "polarity": "positive",
+            "evidence_quote": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "f3e9f15a-2bf1-4894-8519-304061f58eaf",
+          "user_id": "trying_setup",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "aa10eaa9-760e-47e9-87f6-9530e14ca817"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "faebb27c-afba-41fa-ab2f-1adee5f1e618",
+          "user_id": "trying_setup",
+          "node_type": "entity",
+          "content": "v8.39",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Version of ESLint the user is trying to set up"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "f3e9f15a-2bf1-4894-8519-304061f58eaf",
+          "target_id": "078d78da-543d-4846-bc36-038063d20f40",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "078d78da-543d-4846-bc36-038063d20f40",
+          "target_id": "6934e6ed-bde7-4830-b2ec-f0f71f40d84c",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "f3e9f15a-2bf1-4894-8519-304061f58eaf",
+          "target_id": "7bd36f87-8cca-46cd-843d-96ee28da3df4",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "7bd36f87-8cca-46cd-843d-96ee28da3df4",
+          "target_id": "096e2aea-7725-478b-bd83-55d74843000b",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "6934e6ed-bde7-4830-b2ec-f0f71f40d84c",
+          "target_id": "76672591-a1a1-45cd-b491-dcc6c0aff94b",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "76672591-a1a1-45cd-b491-dcc6c0aff94b",
+          "target_id": "096e2aea-7725-478b-bd83-55d74843000b",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "fact",
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 3,
+      "has_fact_edges": 3,
+      "extraction": {
+        "entities": [
+          {
+            "name": "ESLint",
+            "entity_type": "product",
+            "description": "A JavaScript linting tool the user is trying to set up",
+            "scope": "project"
+          },
+          {
+            "name": "v8.39",
+            "entity_type": "product",
+            "description": "Version of ESLint the user is trying to set up",
+            "scope": "project"
+          },
+          {
+            "name": "Airbnb style guide",
+            "entity_type": "concept",
+            "description": "A JavaScript style guide the user wants to use with ESLint",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "trying_to_set_up",
+            "object": "ESLint",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "trying_to_use_with",
+            "object": "Airbnb style guide",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "ESLint",
+            "source_entity_type": null,
+            "target_entity": "Airbnb style guide",
+            "target_entity_type": null,
+            "relationship_type": "trying_to_use_with",
+            "polarity": "positive",
+            "evidence_quote": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.85
+          }
+        ],
+        "summary": "The user is trying to set up ESLint v8.39 with the Airbnb style guide."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed",
+        "observed",
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "unicode_trying",
+      "source": "I\u2019m trying to configure Vault for the production cluster.",
+      "evaluated_nodes": [
+        {
+          "id": "86fc9ea5-e3a1-47e1-9da2-dfbe9275c286",
+          "user_id": "unicode_trying",
+          "node_type": "entity",
+          "content": "production cluster",
+          "metadata": {
+            "entity_type": "concept",
+            "description": "Target environment for Vault configuration"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "a0cfa6d5-8da4-423f-9c42-6ee6f04f5d24",
+          "user_id": "unicode_trying",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "a9fb3f9c-a6f0-4af1-a0b4-a0e50f6bceee"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "a1761664-9aef-45a6-b2aa-543452c4fc40",
+          "user_id": "unicode_trying",
+          "node_type": "entity",
+          "content": "Vault",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Tool being configured for the production cluster"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "f5935eba-22a7-4c0a-93e9-76195f0031fa",
+          "user_id": "unicode_trying",
+          "node_type": "fact",
+          "content": "I\u2019m trying to configure Vault for the production cluster.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "trying_to_configure",
+            "object": "Vault",
+            "polarity": "positive",
+            "evidence_quote": "I\u2019m trying to configure Vault for the production cluster.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "a0cfa6d5-8da4-423f-9c42-6ee6f04f5d24",
+          "target_id": "f5935eba-22a7-4c0a-93e9-76195f0031fa",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "f5935eba-22a7-4c0a-93e9-76195f0031fa",
+          "target_id": "a1761664-9aef-45a6-b2aa-543452c4fc40",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 1,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Vault",
+            "entity_type": "product",
+            "description": "Tool being configured for the production cluster",
+            "scope": "project"
+          },
+          {
+            "name": "production cluster",
+            "entity_type": "concept",
+            "description": "Target environment for Vault configuration",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "trying_to_configure",
+            "object": "Vault",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I\u2019m trying to configure Vault for the production cluster.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "I",
+            "source_entity_type": null,
+            "target_entity": "Vault",
+            "target_entity_type": null,
+            "relationship_type": "trying_to_configure",
+            "polarity": "positive",
+            "evidence_quote": "I\u2019m trying to configure Vault for the production cluster.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.95
+          }
+        ],
+        "summary": "The user is attempting to configure Vault for the production cluster."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "plan_migration",
+      "source": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+      "evaluated_nodes": [
+        {
+          "id": "0980aa0f-889c-48b2-857c-57dbccaefc43",
+          "user_id": "plan_migration",
+          "node_type": "entity",
+          "content": "Atlas",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A service that is planned to be migrated to PostgreSQL"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "0feb51e2-3060-4458-9c26-03c3f34e659f",
+          "user_id": "plan_migration",
+          "node_type": "entity",
+          "content": "PostgreSQL",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Target database for the Atlas service migration"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "40df5580-d87c-4994-87d4-4d250c8fb306",
+          "user_id": "plan_migration",
+          "node_type": "decision",
+          "content": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "Atlas",
+            "predicate": "planned_migration_target",
+            "object": "PostgreSQL",
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "next quarter"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "58f2ba96-45e8-44eb-baa9-a0aad5d8a3ef",
+          "user_id": "plan_migration",
+          "node_type": "entity",
+          "content": "we",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "1aeb5853-db4f-4258-ac22-aff1559b6c1e"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "a1ae7250-3ab0-41ae-a6cd-11debbbc9635",
+          "user_id": "plan_migration",
+          "node_type": "decision",
+          "content": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "we",
+            "predicate": "plans_to_migrate",
+            "object": "Atlas",
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "next quarter"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "58f2ba96-45e8-44eb-baa9-a0aad5d8a3ef",
+          "target_id": "a1ae7250-3ab0-41ae-a6cd-11debbbc9635",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "a1ae7250-3ab0-41ae-a6cd-11debbbc9635",
+          "target_id": "0980aa0f-889c-48b2-857c-57dbccaefc43",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "0980aa0f-889c-48b2-857c-57dbccaefc43",
+          "target_id": "40df5580-d87c-4994-87d4-4d250c8fb306",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "40df5580-d87c-4994-87d4-4d250c8fb306",
+          "target_id": "0feb51e2-3060-4458-9c26-03c3f34e659f",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": false,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": false,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "decision",
+        "decision"
+      ],
+      "claim_epistemic_types": [
+        "asserted",
+        "asserted"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 0,
+      "has_fact_edges": 2,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Atlas",
+            "entity_type": "product",
+            "description": "A service that is planned to be migrated to PostgreSQL",
+            "scope": "project"
+          },
+          {
+            "name": "PostgreSQL",
+            "entity_type": "product",
+            "description": "Target database for the Atlas service migration",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "we",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "plans_to_migrate",
+            "object": "Atlas",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+            "confidence": 0.95,
+            "temporal_ref": "next quarter",
+            "fact_type": "decision",
+            "scope": "project",
+            "epistemic_type": "asserted",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "Atlas",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "planned_migration_target",
+            "object": "PostgreSQL",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+            "confidence": 0.95,
+            "temporal_ref": "next quarter",
+            "fact_type": "decision",
+            "scope": "project",
+            "epistemic_type": "asserted",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "Atlas",
+            "source_entity_type": "product",
+            "target_entity": "PostgreSQL",
+            "target_entity_type": "product",
+            "relationship_type": "planned_migration_target",
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate the Atlas service to PostgreSQL next quarter.",
+            "epistemic_type": "asserted",
+            "condition": null,
+            "confidence": 0.95
+          }
+        ],
+        "summary": "The team plans to migrate the Atlas service to PostgreSQL next quarter."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "want_adoption",
+      "source": "I want to adopt Ruff, but I have not chosen a linter yet.",
+      "evaluated_nodes": [
+        {
+          "id": "247fe9ff-cbbc-46e3-ae35-29451042a714",
+          "user_id": "want_adoption",
+          "node_type": "fact",
+          "content": "I want to adopt Ruff, but I have not chosen a linter yet.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "missing",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "has_chosen",
+            "object": "a linter",
+            "polarity": "negative",
+            "evidence_quote": "I want to adopt Ruff, but I have not chosen a linter yet.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "yet"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "44e63deb-8fc6-472b-abe6-ac5cad60abda",
+          "user_id": "want_adoption",
+          "node_type": "preference",
+          "content": "I want to adopt Ruff, but I have not chosen a linter yet.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "product",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "wants_to_adopt",
+            "object": "Ruff",
+            "polarity": "positive",
+            "evidence_quote": "I want to adopt Ruff, but I have not chosen a linter yet.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "ba8cb16d-72ab-44e7-97ac-b11c19d9f315",
+          "user_id": "want_adoption",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "7222750e-77dc-417d-99e9-a6bec738f7e7"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "f94b0784-89f2-4bff-b739-8844cc678ac8",
+          "user_id": "want_adoption",
+          "node_type": "entity",
+          "content": "Ruff",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A Python linter the user wants to adopt"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "ba8cb16d-72ab-44e7-97ac-b11c19d9f315",
+          "target_id": "44e63deb-8fc6-472b-abe6-ac5cad60abda",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "44e63deb-8fc6-472b-abe6-ac5cad60abda",
+          "target_id": "f94b0784-89f2-4bff-b739-8844cc678ac8",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "ba8cb16d-72ab-44e7-97ac-b11c19d9f315",
+          "target_id": "247fe9ff-cbbc-46e3-ae35-29451042a714",
+          "edge_type": "has_fact"
+        }
+      ],
+      "passed": false,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": false,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "preference"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact"
+      ],
+      "facts": 1,
+      "has_fact_edges": 2,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Ruff",
+            "entity_type": "product",
+            "description": "A Python linter the user wants to adopt",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": "product",
+            "predicate": "wants_to_adopt",
+            "object": "Ruff",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I want to adopt Ruff, but I have not chosen a linter yet.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "preference",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "has_chosen",
+            "object": "a linter",
+            "quantity": null,
+            "polarity": "negative",
+            "evidence_quote": "I want to adopt Ruff, but I have not chosen a linter yet.",
+            "confidence": 0.95,
+            "temporal_ref": "yet",
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [],
+        "summary": "The user expresses a desire to adopt Ruff as a linter but states they have not yet chosen a linter."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "need_evaluation",
+      "source": "We need to evaluate Amazon S3 before choosing it for backups.",
+      "evaluated_nodes": [
+        {
+          "id": "15c29449-0f33-442d-af89-f80a92b8a7b3",
+          "user_id": "need_evaluation",
+          "node_type": "fact",
+          "content": "We need to evaluate Amazon S3 before choosing it for backups.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "we",
+            "predicate": "needs_to_evaluate",
+            "object": "Amazon S3",
+            "polarity": "positive",
+            "evidence_quote": "We need to evaluate Amazon S3 before choosing it for backups.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "7baf08da-0954-4288-9d21-90cf0f9344df",
+          "user_id": "need_evaluation",
+          "node_type": "entity",
+          "content": "backups",
+          "metadata": {
+            "entity_type": "concept",
+            "description": "Use case for which Amazon S3 is being evaluated"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "bf1ebbca-2b43-4d8e-9221-0bd85c8e8444",
+          "user_id": "need_evaluation",
+          "node_type": "entity",
+          "content": "we",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "48d9ad1e-c7bf-4486-aaa0-6f63b0d52af9"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "cb55e989-c5d1-45ef-9766-669bfa675334",
+          "user_id": "need_evaluation",
+          "node_type": "entity",
+          "content": "Amazon S3",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Cloud storage service being evaluated for backups"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "f5e00803-7b7c-4873-ba04-aa4a16d2b1ca",
+          "user_id": "need_evaluation",
+          "node_type": "fact",
+          "content": "We need to evaluate Amazon S3 before choosing it for backups.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "we",
+            "predicate": "considering_for",
+            "object": "backups",
+            "polarity": "positive",
+            "evidence_quote": "We need to evaluate Amazon S3 before choosing it for backups.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "bf1ebbca-2b43-4d8e-9221-0bd85c8e8444",
+          "target_id": "15c29449-0f33-442d-af89-f80a92b8a7b3",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "15c29449-0f33-442d-af89-f80a92b8a7b3",
+          "target_id": "cb55e989-c5d1-45ef-9766-669bfa675334",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "bf1ebbca-2b43-4d8e-9221-0bd85c8e8444",
+          "target_id": "f5e00803-7b7c-4873-ba04-aa4a16d2b1ca",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "f5e00803-7b7c-4873-ba04-aa4a16d2b1ca",
+          "target_id": "7baf08da-0954-4288-9d21-90cf0f9344df",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 2,
+      "has_fact_edges": 2,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Amazon S3",
+            "entity_type": "product",
+            "description": "Cloud storage service being evaluated for backups",
+            "scope": "project"
+          },
+          {
+            "name": "backups",
+            "entity_type": "concept",
+            "description": "Use case for which Amazon S3 is being evaluated",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "we",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "needs_to_evaluate",
+            "object": "Amazon S3",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We need to evaluate Amazon S3 before choosing it for backups.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "we",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "considering_for",
+            "object": "backups",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We need to evaluate Amazon S3 before choosing it for backups.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "we",
+            "source_entity_type": null,
+            "target_entity": "Amazon S3",
+            "target_entity_type": null,
+            "relationship_type": "evaluating",
+            "polarity": "positive",
+            "evidence_quote": "We need to evaluate Amazon S3 before choosing it for backups.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.95
+          }
+        ],
+        "summary": "The team needs to evaluate Amazon S3 before deciding whether to use it for backups."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "past_attempt",
+      "source": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+      "evaluated_nodes": [
+        {
+          "id": "4dcf5ff0-b964-4233-b3b3-a9515355e477",
+          "user_id": "past_attempt",
+          "node_type": "fact",
+          "content": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "missing",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "attempted_install_count",
+            "object": "twice",
+            "polarity": "positive",
+            "evidence_quote": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "personal"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "a70c843f-81c0-4ade-a908-ca702ce12267",
+          "user_id": "past_attempt",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "2495629d-2aa2-4ebd-ad7d-aab061ce1746"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "acba07d8-015f-48b7-8110-fcbe400e9ab3",
+          "user_id": "past_attempt",
+          "node_type": "entity",
+          "content": "CUDA 12.4",
+          "metadata": {
+            "entity_type": "product",
+            "description": "GPU computing toolkit version the user attempted to install"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "b1e43c99-ff01-4348-9405-1de98c54a856",
+          "user_id": "past_attempt",
+          "node_type": "fact",
+          "content": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "tried_to_install",
+            "object": "CUDA 12.4",
+            "polarity": "positive",
+            "evidence_quote": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "personal"
+          },
+          "epistemic_type": "observed"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "a70c843f-81c0-4ade-a908-ca702ce12267",
+          "target_id": "b1e43c99-ff01-4348-9405-1de98c54a856",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "b1e43c99-ff01-4348-9405-1de98c54a856",
+          "target_id": "acba07d8-015f-48b7-8110-fcbe400e9ab3",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "a70c843f-81c0-4ade-a908-ca702ce12267",
+          "target_id": "4dcf5ff0-b964-4233-b3b3-a9515355e477",
+          "edge_type": "has_fact"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact"
+      ],
+      "facts": 2,
+      "has_fact_edges": 2,
+      "extraction": {
+        "entities": [
+          {
+            "name": "CUDA 12.4",
+            "entity_type": "product",
+            "description": "GPU computing toolkit version the user attempted to install",
+            "scope": "personal"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "tried_to_install",
+            "object": "CUDA 12.4",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "personal",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "attempted_install_count",
+            "object": "twice",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I've tried to install CUDA 12.4 twice, but the installer fails.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "personal",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [],
+        "summary": "The user has attempted to install CUDA 12.4 twice, but the installer fails each time."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "conditional_desire",
+      "source": "I would like to use Redis if the latency test succeeds.",
+      "evaluated_nodes": [
+        {
+          "id": "2bc76c95-1926-41a2-9ac8-8bdfc860c447",
+          "user_id": "conditional_desire",
+          "node_type": "preference",
+          "content": "I would like to use Redis if the latency test succeeds.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "wants_to_use",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": "I would like to use Redis if the latency test succeeds.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": null,
+            "replaces_object": null,
+            "condition": "the latency test succeeds",
+            "condition_state": "unknown",
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "conditional"
+        },
+        {
+          "id": "3201e768-c4bf-4532-ba84-8893781ff10d",
+          "user_id": "conditional_desire",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "24cb1e2b-9199-4da5-b5b7-40f958c95acf"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "6f0d43d5-4a3f-466a-b68f-986c16c4cb06",
+          "user_id": "conditional_desire",
+          "node_type": "entity",
+          "content": "Redis",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A data store the user would like to use conditionally"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "788b94f8-3d88-4d7e-b98d-e32a68fed14d",
+          "user_id": "conditional_desire",
+          "node_type": "entity",
+          "content": "latency test",
+          "metadata": {
+            "entity_type": "event",
+            "description": "A test whose success is the condition for using Redis"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "3201e768-c4bf-4532-ba84-8893781ff10d",
+          "target_id": "2bc76c95-1926-41a2-9ac8-8bdfc860c447",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "2bc76c95-1926-41a2-9ac8-8bdfc860c447",
+          "target_id": "6f0d43d5-4a3f-466a-b68f-986c16c4cb06",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": false,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": false,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "preference"
+      ],
+      "claim_epistemic_types": [
+        "conditional"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 0,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Redis",
+            "entity_type": "product",
+            "description": "A data store the user would like to use conditionally",
+            "scope": "project"
+          },
+          {
+            "name": "latency test",
+            "entity_type": "event",
+            "description": "A test whose success is the condition for using Redis",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "wants_to_use",
+            "object": "Redis",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I would like to use Redis if the latency test succeeds.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "preference",
+            "scope": "project",
+            "epistemic_type": "conditional",
+            "condition": "the latency test succeeds",
+            "temporal_intent": null,
+            "replaces_object": null
+          }
+        ],
+        "relationships": [],
+        "summary": "The user expresses a conditional desire to use Redis, contingent on the latency test succeeding."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "work_toward_replacement",
+      "source": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+      "evaluated_nodes": [
+        {
+          "id": "08d694bd-7502-4034-b11d-cf434fc675d2",
+          "user_id": "work_toward_replacement",
+          "node_type": "entity",
+          "content": "Celery",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Task queue system being replaced"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "38e6f8e8-7e26-4b3f-a2bc-2408dc8fdb7f",
+          "user_id": "work_toward_replacement",
+          "node_type": "entity",
+          "content": "Temporal",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Workflow orchestration system being adopted"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "56deef2f-6cb5-4182-88b7-383a9344c67c",
+          "user_id": "work_toward_replacement",
+          "node_type": "fact",
+          "content": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "working_to_replace_with",
+            "object": "Temporal",
+            "polarity": "positive",
+            "evidence_quote": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "update",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "after the migration rehearsal"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "88f41cd6-39d0-4cbe-bad2-22e6d3b2c880",
+          "user_id": "work_toward_replacement",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "6411c24a-5449-44d3-8b38-184bbec28e28"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "c694491e-1aa0-4e06-b5a8-803b813bc63e",
+          "user_id": "work_toward_replacement",
+          "node_type": "fact",
+          "content": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "working_to_replace",
+            "object": "Celery",
+            "polarity": "positive",
+            "evidence_quote": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "update",
+            "replaces_object": "Celery",
+            "suggested_scope": "project",
+            "temporal_ref": "after the migration rehearsal"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "c73bd19f-f8c6-4526-9f30-a71ba90bf0de",
+          "user_id": "work_toward_replacement",
+          "node_type": "entity",
+          "content": "migration rehearsal",
+          "metadata": {
+            "entity_type": "event",
+            "description": "Rehearsal event after which the replacement is being done"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "88f41cd6-39d0-4cbe-bad2-22e6d3b2c880",
+          "target_id": "c694491e-1aa0-4e06-b5a8-803b813bc63e",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "c694491e-1aa0-4e06-b5a8-803b813bc63e",
+          "target_id": "08d694bd-7502-4034-b11d-cf434fc675d2",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "88f41cd6-39d0-4cbe-bad2-22e6d3b2c880",
+          "target_id": "56deef2f-6cb5-4182-88b7-383a9344c67c",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "56deef2f-6cb5-4182-88b7-383a9344c67c",
+          "target_id": "38e6f8e8-7e26-4b3f-a2bc-2408dc8fdb7f",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 2,
+      "has_fact_edges": 2,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Celery",
+            "entity_type": "product",
+            "description": "Task queue system being replaced",
+            "scope": "project"
+          },
+          {
+            "name": "Temporal",
+            "entity_type": "product",
+            "description": "Workflow orchestration system being adopted",
+            "scope": "project"
+          },
+          {
+            "name": "migration rehearsal",
+            "entity_type": "event",
+            "description": "Rehearsal event after which the replacement is being done",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "working_to_replace",
+            "object": "Celery",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+            "confidence": 0.9,
+            "temporal_ref": "after the migration rehearsal",
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "update",
+            "replaces_object": "Celery"
+          },
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "working_to_replace_with",
+            "object": "Temporal",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+            "confidence": 0.9,
+            "temporal_ref": "after the migration rehearsal",
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "update",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "I",
+            "source_entity_type": null,
+            "target_entity": "Celery",
+            "target_entity_type": null,
+            "relationship_type": "working_to_replace",
+            "polarity": "positive",
+            "evidence_quote": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.9
+          },
+          {
+            "source_entity": "I",
+            "source_entity_type": null,
+            "target_entity": "Temporal",
+            "target_entity_type": null,
+            "relationship_type": "working_to_replace_with",
+            "polarity": "positive",
+            "evidence_quote": "I'm working to replace Celery with Temporal after the migration rehearsal.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.9
+          }
+        ],
+        "summary": "The user is working to replace Celery with Temporal after the migration rehearsal."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "hope_deployment",
+      "source": "We hope to deploy Phoenix after the security review.",
+      "evaluated_nodes": [
+        {
+          "id": "078fdf72-6805-42f6-b2d3-2e9d5b9667f3",
+          "user_id": "hope_deployment",
+          "node_type": "entity",
+          "content": "we",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "71e6c5c8-d4c7-4357-b902-5dc47a5a7789"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "100d46ef-dc79-4435-9259-f2e62f59e4e6",
+          "user_id": "hope_deployment",
+          "node_type": "fact",
+          "content": "We hope to deploy Phoenix after the security review.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "product",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "we",
+            "predicate": "hopes_to_deploy",
+            "object": "Phoenix",
+            "polarity": "positive",
+            "evidence_quote": "We hope to deploy Phoenix after the security review.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": null,
+            "replaces_object": null,
+            "condition": "after the security review",
+            "condition_state": "unknown",
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "conditional"
+        },
+        {
+          "id": "589374a2-2464-4d58-ae2a-4b76fd45db5e",
+          "user_id": "hope_deployment",
+          "node_type": "entity",
+          "content": "security review",
+          "metadata": {
+            "entity_type": "event",
+            "description": "A review process that must occur before deployment"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "aa2a768b-2a86-4fb5-800d-0ac2f134c3da",
+          "user_id": "hope_deployment",
+          "node_type": "entity",
+          "content": "Phoenix",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A system or product the speaker hopes to deploy"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "078fdf72-6805-42f6-b2d3-2e9d5b9667f3",
+          "target_id": "100d46ef-dc79-4435-9259-f2e62f59e4e6",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "100d46ef-dc79-4435-9259-f2e62f59e4e6",
+          "target_id": "aa2a768b-2a86-4fb5-800d-0ac2f134c3da",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "conditional"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 1,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Phoenix",
+            "entity_type": "product",
+            "description": "A system or product the speaker hopes to deploy",
+            "scope": "project"
+          },
+          {
+            "name": "security review",
+            "entity_type": "event",
+            "description": "A review process that must occur before deployment",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "we",
+            "subject_entity_type": null,
+            "object_entity_type": "product",
+            "predicate": "hopes_to_deploy",
+            "object": "Phoenix",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We hope to deploy Phoenix after the security review.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "conditional",
+            "condition": "after the security review",
+            "temporal_intent": null,
+            "replaces_object": null
+          }
+        ],
+        "relationships": [],
+        "summary": "The speaker hopes to deploy Phoenix after the security review is completed."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "conditional"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "hypothetical_example",
+      "source": "For example, I want to use TLS 1.3; this is hypothetical, not my configuration.",
+      "evaluated_nodes": [
+        {
+          "id": "32bd8cc4-253c-4111-a223-6143493a67a2",
+          "user_id": "hypothetical_example",
+          "node_type": "entity",
+          "content": "TLS 1.3",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A transport layer security protocol version the user hypothetically wants to use"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "53869996-9aa2-46bc-bfa5-caa7199c87d2",
+          "user_id": "hypothetical_example",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "6a8df631-c360-4569-a995-2eaab7215917"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "92b79b5b-953b-4538-8fa2-2d5a188a245d",
+          "user_id": "hypothetical_example",
+          "node_type": "preference",
+          "content": "For example, I want to use TLS 1.3; this is hypothetical, not my configuration.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "product",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "wants_to_use",
+            "object": "TLS 1.3",
+            "polarity": "positive",
+            "evidence_quote": "For example, I want to use TLS 1.3; this is hypothetical, not my configuration.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "personal"
+          },
+          "epistemic_type": "hypothetical"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "53869996-9aa2-46bc-bfa5-caa7199c87d2",
+          "target_id": "92b79b5b-953b-4538-8fa2-2d5a188a245d",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "92b79b5b-953b-4538-8fa2-2d5a188a245d",
+          "target_id": "32bd8cc4-253c-4111-a223-6143493a67a2",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": false,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": false,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "preference"
+      ],
+      "claim_epistemic_types": [
+        "hypothetical"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 0,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "TLS 1.3",
+            "entity_type": "product",
+            "description": "A transport layer security protocol version the user hypothetically wants to use",
+            "scope": "personal"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": "product",
+            "predicate": "wants_to_use",
+            "object": "TLS 1.3",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "For example, I want to use TLS 1.3; this is hypothetical, not my configuration.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "preference",
+            "scope": "personal",
+            "epistemic_type": "hypothetical",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [],
+        "summary": "The user states a hypothetical desire to use TLS 1.3, explicitly clarifying that this is not their actual configuration."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "configured_control",
+      "source": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+      "evaluated_nodes": [
+        {
+          "id": "169be652-2b5c-4652-86f0-34962807d0db",
+          "user_id": "configured_control",
+          "node_type": "fact",
+          "content": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "configured_with",
+            "object": "Airbnb style guide",
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "yesterday",
+            "resolved_date": "2026-09-15T05:53:58.367701+00:00"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "25c18d2c-1438-4a58-ba51-0230e90a8fb6",
+          "user_id": "configured_control",
+          "node_type": "fact",
+          "content": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "relationship",
+            "subject_entity_type": null,
+            "subject": "ESLint",
+            "predicate": "configured_with",
+            "object": "Airbnb style guide",
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": null,
+            "replaces_object": null
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "39254c48-c56e-4e76-8e98-eef47811be3c",
+          "user_id": "configured_control",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "2f78b506-5720-4d85-9402-65c930e36200"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "7b3e6366-373c-4e23-a735-46b53e4c3b2a",
+          "user_id": "configured_control",
+          "node_type": "entity",
+          "content": "v8.39",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Version 8.39 of ESLint"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "bf286998-4166-4a7f-928c-372ac72b2e53",
+          "user_id": "configured_control",
+          "node_type": "fact",
+          "content": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "configured",
+            "object": "ESLint",
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "yesterday",
+            "resolved_date": "2026-09-15T05:53:58.367701+00:00"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "cbc1bf57-4bd5-45f0-a651-fb298eb0a3b4",
+          "user_id": "configured_control",
+          "node_type": "entity",
+          "content": "Airbnb style guide",
+          "metadata": {
+            "entity_type": "concept",
+            "description": "A JavaScript style guide used as ESLint configuration"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "e225b45e-bf51-4b26-8a0e-958cac3cd59f",
+          "user_id": "configured_control",
+          "node_type": "fact",
+          "content": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "ESLint",
+            "predicate": "has_version",
+            "object": "v8.39",
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "yesterday",
+            "resolved_date": "2026-09-15T05:53:58.367701+00:00"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "f1ae4eb4-0683-4c62-817f-325471bb59ce",
+          "user_id": "configured_control",
+          "node_type": "entity",
+          "content": "ESLint",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A JavaScript linting tool"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "39254c48-c56e-4e76-8e98-eef47811be3c",
+          "target_id": "bf286998-4166-4a7f-928c-372ac72b2e53",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "bf286998-4166-4a7f-928c-372ac72b2e53",
+          "target_id": "f1ae4eb4-0683-4c62-817f-325471bb59ce",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "f1ae4eb4-0683-4c62-817f-325471bb59ce",
+          "target_id": "e225b45e-bf51-4b26-8a0e-958cac3cd59f",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "e225b45e-bf51-4b26-8a0e-958cac3cd59f",
+          "target_id": "7b3e6366-373c-4e23-a735-46b53e4c3b2a",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "39254c48-c56e-4e76-8e98-eef47811be3c",
+          "target_id": "169be652-2b5c-4652-86f0-34962807d0db",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "169be652-2b5c-4652-86f0-34962807d0db",
+          "target_id": "cbc1bf57-4bd5-45f0-a651-fb298eb0a3b4",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "f1ae4eb4-0683-4c62-817f-325471bb59ce",
+          "target_id": "25c18d2c-1438-4a58-ba51-0230e90a8fb6",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "25c18d2c-1438-4a58-ba51-0230e90a8fb6",
+          "target_id": "cbc1bf57-4bd5-45f0-a651-fb298eb0a3b4",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "fact",
+        "fact",
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed",
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 4,
+      "has_fact_edges": 4,
+      "extraction": {
+        "entities": [
+          {
+            "name": "ESLint",
+            "entity_type": "product",
+            "description": "A JavaScript linting tool",
+            "scope": "project"
+          },
+          {
+            "name": "v8.39",
+            "entity_type": "product",
+            "description": "Version 8.39 of ESLint",
+            "scope": "project"
+          },
+          {
+            "name": "Airbnb style guide",
+            "entity_type": "concept",
+            "description": "A JavaScript style guide used as ESLint configuration",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "configured",
+            "object": "ESLint",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "confidence": 0.95,
+            "temporal_ref": "yesterday",
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "ESLint",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "has_version",
+            "object": "v8.39",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "confidence": 0.95,
+            "temporal_ref": "yesterday",
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "configured_with",
+            "object": "Airbnb style guide",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "confidence": 0.95,
+            "temporal_ref": "yesterday",
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "ESLint",
+            "source_entity_type": null,
+            "target_entity": "Airbnb style guide",
+            "target_entity_type": null,
+            "relationship_type": "configured_with",
+            "polarity": "positive",
+            "evidence_quote": "I configured ESLint v8.39 with the Airbnb style guide yesterday.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.95
+          }
+        ],
+        "summary": "The user configured ESLint v8.39 with the Airbnb style guide yesterday."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed",
+        "observed",
+        "observed",
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "usage_control",
+      "source": "We use Redis for session storage in production.",
+      "evaluated_nodes": [
+        {
+          "id": "00a11d8b-0a06-4ea1-9fcb-859a2d1befce",
+          "user_id": "usage_control",
+          "node_type": "entity",
+          "content": "session storage",
+          "metadata": {
+            "entity_type": "concept",
+            "description": "Purpose for which Redis is used in production"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "2e9e288e-e3eb-4308-a5f0-6cce57bce6d5",
+          "user_id": "usage_control",
+          "node_type": "entity",
+          "content": "we",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "dd15ef4c-591e-4a64-bbc1-b03543d96170"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "44237e7b-dd92-4335-af5e-bbb3a65fdd76",
+          "user_id": "usage_control",
+          "node_type": "entity",
+          "content": "Redis",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Used for session storage in production"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "665224cb-0186-433d-81f1-ba8105a46a12",
+          "user_id": "usage_control",
+          "node_type": "entity",
+          "content": "production",
+          "metadata": {
+            "entity_type": "concept",
+            "description": "Environment where Redis is used for session storage"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "6720681b-1c39-4874-adf2-7c0324d1f2f0",
+          "user_id": "usage_control",
+          "node_type": "fact",
+          "content": "We use Redis for session storage in production.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "concept",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "Redis",
+            "predicate": "used_for",
+            "object": "session storage",
+            "polarity": "positive",
+            "evidence_quote": "We use Redis for session storage in production.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "a8c3a11c-bcd7-4878-a579-b28d50f4f31d",
+          "user_id": "usage_control",
+          "node_type": "fact",
+          "content": "We use Redis for session storage in production.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "concept",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "Redis",
+            "predicate": "used_in",
+            "object": "production",
+            "polarity": "positive",
+            "evidence_quote": "We use Redis for session storage in production.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "f1363d8d-3797-4eaa-bb96-b03c65b26da0",
+          "user_id": "usage_control",
+          "node_type": "fact",
+          "content": "We use Redis for session storage in production.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "product",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "we",
+            "predicate": "uses",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": "We use Redis for session storage in production.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "2e9e288e-e3eb-4308-a5f0-6cce57bce6d5",
+          "target_id": "f1363d8d-3797-4eaa-bb96-b03c65b26da0",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "f1363d8d-3797-4eaa-bb96-b03c65b26da0",
+          "target_id": "44237e7b-dd92-4335-af5e-bbb3a65fdd76",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "44237e7b-dd92-4335-af5e-bbb3a65fdd76",
+          "target_id": "6720681b-1c39-4874-adf2-7c0324d1f2f0",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "6720681b-1c39-4874-adf2-7c0324d1f2f0",
+          "target_id": "00a11d8b-0a06-4ea1-9fcb-859a2d1befce",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "44237e7b-dd92-4335-af5e-bbb3a65fdd76",
+          "target_id": "a8c3a11c-bcd7-4878-a579-b28d50f4f31d",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "a8c3a11c-bcd7-4878-a579-b28d50f4f31d",
+          "target_id": "665224cb-0186-433d-81f1-ba8105a46a12",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "fact",
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 3,
+      "has_fact_edges": 3,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Redis",
+            "entity_type": "product",
+            "description": "Used for session storage in production",
+            "scope": "project"
+          },
+          {
+            "name": "session storage",
+            "entity_type": "concept",
+            "description": "Purpose for which Redis is used in production",
+            "scope": "project"
+          },
+          {
+            "name": "production",
+            "entity_type": "concept",
+            "description": "Environment where Redis is used for session storage",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "we",
+            "subject_entity_type": null,
+            "object_entity_type": "product",
+            "predicate": "uses",
+            "object": "Redis",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We use Redis for session storage in production.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "Redis",
+            "subject_entity_type": null,
+            "object_entity_type": "concept",
+            "predicate": "used_for",
+            "object": "session storage",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We use Redis for session storage in production.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "Redis",
+            "subject_entity_type": null,
+            "object_entity_type": "concept",
+            "predicate": "used_in",
+            "object": "production",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We use Redis for session storage in production.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "we",
+            "source_entity_type": null,
+            "target_entity": "Redis",
+            "target_entity_type": null,
+            "relationship_type": "uses",
+            "polarity": "positive",
+            "evidence_quote": "We use Redis for session storage in production.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.95
+          }
+        ],
+        "summary": "The team uses Redis for session storage in their production environment."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "observed",
+        "observed",
+        "observed"
+      ],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "decision_control",
+      "source": "I decided to adopt Ruff for the Orion repository.",
+      "evaluated_nodes": [
+        {
+          "id": "22423e08-e2f8-4d0d-b657-d5f2ecca724e",
+          "user_id": "decision_control",
+          "node_type": "decision",
+          "content": "I decided to adopt Ruff for the Orion repository.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "I",
+            "predicate": "decided_to_adopt",
+            "object": "Ruff",
+            "polarity": "positive",
+            "evidence_quote": "I decided to adopt Ruff for the Orion repository.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "634955a9-cda2-410c-aec9-c6f96a313d27",
+          "user_id": "decision_control",
+          "node_type": "entity",
+          "content": "Ruff",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A Python linter/formatter tool being adopted"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "bf55d88e-e00e-49be-a7a0-c473251112a3",
+          "user_id": "decision_control",
+          "node_type": "decision",
+          "content": "I decided to adopt Ruff for the Orion repository.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": null,
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "Ruff",
+            "predicate": "adopted_for",
+            "object": "Orion",
+            "polarity": "positive",
+            "evidence_quote": "I decided to adopt Ruff for the Orion repository.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "observed"
+        },
+        {
+          "id": "c6737d41-19bb-4a30-b186-ccc7035c68a8",
+          "user_id": "decision_control",
+          "node_type": "entity",
+          "content": "I",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "f844e6f2-012a-4207-abca-fce7c2c68dc7"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "ebd86f12-8dc2-4891-bfd4-0b9a4f2640bf",
+          "user_id": "decision_control",
+          "node_type": "entity",
+          "content": "Orion",
+          "metadata": {
+            "entity_type": "product",
+            "description": "A repository where Ruff is being adopted"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "c6737d41-19bb-4a30-b186-ccc7035c68a8",
+          "target_id": "22423e08-e2f8-4d0d-b657-d5f2ecca724e",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "22423e08-e2f8-4d0d-b657-d5f2ecca724e",
+          "target_id": "634955a9-cda2-410c-aec9-c6f96a313d27",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "634955a9-cda2-410c-aec9-c6f96a313d27",
+          "target_id": "bf55d88e-e00e-49be-a7a0-c473251112a3",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "bf55d88e-e00e-49be-a7a0-c473251112a3",
+          "target_id": "ebd86f12-8dc2-4891-bfd4-0b9a4f2640bf",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": false,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": false,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "decision",
+        "decision"
+      ],
+      "claim_epistemic_types": [
+        "observed",
+        "observed"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 0,
+      "has_fact_edges": 2,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Ruff",
+            "entity_type": "product",
+            "description": "A Python linter/formatter tool being adopted",
+            "scope": "project"
+          },
+          {
+            "name": "Orion",
+            "entity_type": "product",
+            "description": "A repository where Ruff is being adopted",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "I",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "decided_to_adopt",
+            "object": "Ruff",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I decided to adopt Ruff for the Orion repository.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "decision",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "Ruff",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "adopted_for",
+            "object": "Orion",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "I decided to adopt Ruff for the Orion repository.",
+            "confidence": 0.9,
+            "temporal_ref": null,
+            "fact_type": "decision",
+            "scope": "project",
+            "epistemic_type": "observed",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "Ruff",
+            "source_entity_type": null,
+            "target_entity": "Orion",
+            "target_entity_type": null,
+            "relationship_type": "adopted_for",
+            "polarity": "positive",
+            "evidence_quote": "I decided to adopt Ruff for the Orion repository.",
+            "epistemic_type": "observed",
+            "condition": null,
+            "confidence": 0.9
+          }
+        ],
+        "summary": "The user decided to adopt Ruff as the linter/formatter for the Orion repository."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [],
+      "materialization_policy": "speech_act_v11"
+    },
+    {
+      "case": "mixed_plan_and_actual",
+      "source": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+      "evaluated_nodes": [
+        {
+          "id": "2819b614-af71-49f4-9f20-cd45d29a5c1f",
+          "user_id": "mixed_plan_and_actual",
+          "node_type": "fact",
+          "content": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "product",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "we",
+            "predicate": "plans_to_migrate_to",
+            "object": "PostgreSQL",
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "5e7b3ab2-9752-42f3-a966-fe38d4224645",
+          "user_id": "mixed_plan_and_actual",
+          "node_type": "fact",
+          "content": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+          "metadata": {
+            "subject_link_status": "resolved",
+            "object_link_status": "resolved",
+            "object_entity_type": "product",
+            "extraction_kind": "fact",
+            "subject_entity_type": null,
+            "subject": "we",
+            "predicate": "runs_in_production",
+            "object": "MySQL",
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+            "grounding_method": "source_passage_v1",
+            "temporal_intent": "assertion",
+            "replaces_object": null,
+            "suggested_scope": "project",
+            "temporal_ref": "today",
+            "resolved_date": "2026-09-16T05:54:05.156522+00:00"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "7ceda7c3-995b-4f3c-bf48-209eef3f3541",
+          "user_id": "mixed_plan_and_actual",
+          "node_type": "entity",
+          "content": "PostgreSQL",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Database the team plans to migrate to"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "bc36d7cc-19ef-4d11-bb94-4bc173740497",
+          "user_id": "mixed_plan_and_actual",
+          "node_type": "entity",
+          "content": "MySQL",
+          "metadata": {
+            "entity_type": "product",
+            "description": "Database currently running in production"
+          },
+          "epistemic_type": "asserted"
+        },
+        {
+          "id": "fdc75312-f869-4b07-b0e0-408e912d24c9",
+          "user_id": "mixed_plan_and_actual",
+          "node_type": "entity",
+          "content": "we",
+          "metadata": {
+            "entity_type": "personal_reference",
+            "identity_status": "unresolved_reference",
+            "reference_event_id": "48e7851c-e483-4882-8777-5c6b9a0ef4a7"
+          },
+          "epistemic_type": "asserted"
+        }
+      ],
+      "evaluated_edges": [
+        {
+          "source_id": "fdc75312-f869-4b07-b0e0-408e912d24c9",
+          "target_id": "2819b614-af71-49f4-9f20-cd45d29a5c1f",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "2819b614-af71-49f4-9f20-cd45d29a5c1f",
+          "target_id": "7ceda7c3-995b-4f3c-bf48-209eef3f3541",
+          "edge_type": "mentions"
+        },
+        {
+          "source_id": "fdc75312-f869-4b07-b0e0-408e912d24c9",
+          "target_id": "5e7b3ab2-9752-42f3-a966-fe38d4224645",
+          "edge_type": "has_fact"
+        },
+        {
+          "source_id": "5e7b3ab2-9752-42f3-a966-fe38d4224645",
+          "target_id": "bc36d7cc-19ef-4d11-bb94-4bc173740497",
+          "edge_type": "mentions"
+        }
+      ],
+      "passed": true,
+      "expected_objects_present": true,
+      "expected_claim_count": true,
+      "expected_entity_types_linked": true,
+      "expected_claim_kinds": true,
+      "epistemic_qualifications_preserved": true,
+      "claim_polarities_preserved": true,
+      "conditions_preserved": true,
+      "subject_links_complete": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "claim_node_types": [
+        "fact",
+        "fact"
+      ],
+      "claim_epistemic_types": [
+        "asserted",
+        "asserted"
+      ],
+      "expectation": {},
+      "edge_types": [
+        "has_fact",
+        "mentions",
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 2,
+      "has_fact_edges": 2,
+      "extraction": {
+        "entities": [
+          {
+            "name": "PostgreSQL",
+            "entity_type": "product",
+            "description": "Database the team plans to migrate to",
+            "scope": "project"
+          },
+          {
+            "name": "MySQL",
+            "entity_type": "product",
+            "description": "Database currently running in production",
+            "scope": "project"
+          }
+        ],
+        "facts": [
+          {
+            "subject": "we",
+            "subject_entity_type": null,
+            "object_entity_type": "product",
+            "predicate": "plans_to_migrate_to",
+            "object": "PostgreSQL",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+            "confidence": 0.95,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "asserted",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          },
+          {
+            "subject": "we",
+            "subject_entity_type": null,
+            "object_entity_type": "product",
+            "predicate": "runs_in_production",
+            "object": "MySQL",
+            "quantity": null,
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+            "confidence": 0.95,
+            "temporal_ref": "today",
+            "fact_type": "fact",
+            "scope": "project",
+            "epistemic_type": "asserted",
+            "condition": null,
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "we",
+            "source_entity_type": null,
+            "target_entity": "MySQL",
+            "target_entity_type": null,
+            "relationship_type": "runs_in_production",
+            "polarity": "positive",
+            "evidence_quote": "We plan to migrate to PostgreSQL, but today we run MySQL in production.",
+            "epistemic_type": "asserted",
+            "condition": null,
+            "confidence": 0.95
+          }
+        ],
+        "summary": "The team plans to migrate to PostgreSQL, but currently runs MySQL in production."
+      },
+      "extraction_grounding_policy": "speech_act_v5",
+      "fact_epistemic_types": [
+        "asserted",
+        "asserted"
+      ],
+      "materialization_policy": "speech_act_v11"
+    }
+  ],
+  "limits": "Authored development contrasts; no held-out or competitive claim.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0,
+  "workflow_passed": true
+}
