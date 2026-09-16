@@ -255,3 +255,14 @@ precision. It required a direct no-cache forward to finish locally after two
 registered MPS generation failures; the model weights are also CC-BY-NC-4.0.
 None passed calibration, none was integrated, and the separately selected
 1,100-claim test cohort remains sealed.
+
+A subsequent document-grouped
+[structured FactCG stack](../benchmarks/results/research/2026-09-16/LLM-AGGREFACT-STRUCTURED-STACK-V1B.md)
+tested whether exact sentence-level token alignment, numeric and capitalized
+anchors, and aligned negation could safely calibrate the MIT-licensed scorer.
+Every outer decision used a threshold learned from inner out-of-fold training
+predictions, with exact documents confined to one fold. None of the five inner
+cross-fits found a threshold at 90% precision and 60% recall. Post hoc outer
+scores reached only 81.13% precision at 60.18% recall and 25.09% recall at 90%
+precision. Shallow lexical structure is therefore also rejected on this cohort;
+the sealed test set remains unopened.
