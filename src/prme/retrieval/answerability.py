@@ -23,7 +23,9 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from prme.retrieval.models import MemoryBundle
 
 
-ANSWERABILITY_PROMPT_VERSION = "answerability_requirements_v1"
+ANSWERABILITY_PROMPT_VERSION: Literal["answerability_requirements_v2"] = (
+    "answerability_requirements_v2"
+)
 
 ANSWERABILITY_SYSTEM_PROMPT = """\
 You are a strict evidence-sufficiency verifier for long-term memory. Do not \
@@ -39,7 +41,9 @@ Rules:
 - Split every compound request into separate requirements. For "background and \
   previous projects", background and previous projects are separate.
 - A requirement is supported only when the requested fact and relation follow \
-  directly from cited memories. Cite only bundle labels such as m1.
+  directly from cited memories. Cite only reference tokens present in the memory \
+  records: compact records use labels such as m1; auditable records use the exact \
+  UUID from their id field.
 - Topical similarity is not support.
 - Preserve speech act and state. A request, intention, attempt, question, \
   uncertainty, suggestion, example, draft, or error occurrence does not prove \
@@ -147,9 +151,10 @@ class AnswerabilityAssessment(BaseModel):
     reasoning: str
     provider: str
     model: str
-    prompt_version: Literal["answerability_requirements_v1"] = (
-        "answerability_requirements_v1"
-    )
+    prompt_version: Literal[
+        "answerability_requirements_v1",
+        "answerability_requirements_v2",
+    ] = ANSWERABILITY_PROMPT_VERSION
     prompt_sha256: str = ANSWERABILITY_PROMPT_SHA256
     configuration_sha256: str
     model_called: bool
@@ -217,6 +222,27 @@ def _evaluation_id(
 def _configuration_sha256(config: AnswerabilityConfig) -> str:
     public_config = config.model_dump(mode="json", exclude={"api_key"})
     return _sha256(json.dumps(public_config, sort_keys=True, separators=(",", ":")))
+
+
+def _bundle_references(bundle: MemoryBundle, context: str) -> dict[str, UUID]:
+    """Return only citation tokens that occur in the exact rendered bundle."""
+    if bundle.context_references:
+        return {
+            reference: memory_id
+            for reference, memory_id in bundle.context_references.items()
+            if f'"{reference}"' in context or f"[{reference}]" in context
+        }
+    if bundle.context_format != "auditable":
+        return {}
+
+    references: dict[str, UUID] = {}
+    for candidates in bundle.sections.values():
+        for candidate in candidates:
+            memory_id = candidate.node.id
+            token = str(memory_id)
+            if f'"id":"{token}"' in context:
+                references[token] = memory_id
+    return references
 
 
 def _derived_verdict(
@@ -446,7 +472,7 @@ class AnswerabilityEvaluator:
             raise ValueError("answer must be nonempty when provided")
 
         context = bundle.render().strip()
-        references = dict(bundle.context_references)
+        references = _bundle_references(bundle, context)
         if not context or not references:
             raw = _RawAssessment(
                 requirements=[

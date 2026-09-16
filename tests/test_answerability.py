@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from pydantic import SecretStr
 
+from prme.models import MemoryNode
 from prme.retrieval import answerability
 from prme.retrieval.answerability import (
     AnswerabilityAction,
@@ -13,7 +14,9 @@ from prme.retrieval.answerability import (
     AnswerabilityStatus,
     AnswerabilityVerdict,
 )
-from prme.retrieval.models import MemoryBundle
+from prme.retrieval.config import PackingConfig
+from prme.retrieval.models import MemoryBundle, RetrievalCandidate
+from prme.retrieval.packing import pack_context
 
 
 def _bundle() -> MemoryBundle:
@@ -59,6 +62,26 @@ async def test_empty_bundle_abstains_without_calling_provider(monkeypatch):
     assert assessment.should_abstain is True
     assert assessment.model_called is False
     assert assessment.missing_information == ("Evidence needed to answer the question",)
+
+
+async def test_unrendered_compact_reference_abstains_without_provider(monkeypatch):
+    evaluator = AnswerabilityEvaluator()
+    monkeypatch.setattr(
+        evaluator,
+        "_ensure_client",
+        lambda: pytest.fail("unrendered references must not initialize a provider"),
+    )
+    bundle = MemoryBundle(
+        rendered_context='["m1","fact"]',
+        context_format="compact",
+        context_references={"m2": uuid4()},
+        included_count=1,
+    )
+
+    assessment = await evaluator.assess("What is known?", bundle)
+
+    assert assessment.verdict == AnswerabilityVerdict.INSUFFICIENT
+    assert assessment.model_called is False
 
 
 async def test_compound_question_returns_partial_with_resolved_citations():
@@ -109,6 +132,47 @@ async def test_compound_question_returns_partial_with_resolved_citations():
     )
     assert "not-exposed" not in repr(evaluator.config)
     assert evaluator.config.base_url == "http://127.0.0.1:11434/v1"
+
+
+async def test_default_auditable_bundle_resolves_full_memory_id_citation():
+    node = MemoryNode(
+        user_id="owner",
+        content="The dashboard API averages 250ms.",
+        node_type="fact",
+    )
+    bundle = pack_context(
+        [RetrievalCandidate(node=node, composite_score=1.0)],
+        PackingConfig(
+            token_budget=1000,
+            overhead_tokens=0,
+            min_fidelity="full",
+            context_guidance_mode="off",
+        ),
+    )
+    assert bundle.context_format == "auditable"
+    assert bundle.context_references == {}
+
+    client = AsyncMock()
+    client.create.return_value = _raw(
+        _requirement(
+            "Average dashboard API response time",
+            AnswerabilityStatus.SUPPORTED,
+            [str(node.id)],
+        )
+    )
+    evaluator = AnswerabilityEvaluator()
+    evaluator._client = client
+
+    assessment = await evaluator.assess(
+        "What is the average dashboard API response time?",
+        bundle,
+    )
+
+    assert assessment.verdict == AnswerabilityVerdict.ANSWERABLE
+    assert assessment.requirements[0].evidence_refs == (str(node.id),)
+    assert assessment.requirements[0].evidence_ids == (node.id,)
+    assert assessment.prompt_version == "answerability_requirements_v2"
+    assert bundle.render() in client.create.await_args.kwargs["messages"][1]["content"]
 
 
 async def test_unknown_citation_fails_closed_to_insufficient():

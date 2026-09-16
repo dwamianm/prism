@@ -76,13 +76,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
-  draft answers into independent requirements, resolves cited compact refs to
-  exact packed memory IDs, fails closed on missing or invented citations, and
-  derives `answerable`, `partial`, `insufficient`, or `conflicting` in code.
+  draft answers into independent requirements, resolves cited compact refs or
+  default auditable UUIDs to exact packed memory IDs, fails closed on missing
+  or invented citations, and derives `answerable`, `partial`, `insufficient`,
+  or `conflicting` in code.
   Empty bundles avoid a model call; provider failures raise explicitly; every
   result binds the prompt version and query/context/answer hashes, plus separate
   fixed-input and actual-output digests, without changing retrieval receipts or
-  memory state.
+  memory state. Its first registered 120-assessment BEAM development trial
+  failed all four promotion gates, including 3 unsafe full answers and stable
+  actions on only 27/40 questions, so it remains explicit and opt-in.
 
 - Opt-in direct evidence projection lets extracted claims route retrieval while
   returning the complete active source passage. It replaces bounded exact

@@ -415,8 +415,9 @@ techniques on development questions before a frozen held-out run. See
 An optional post-retrieval answerability evaluator is separate from the six
 deterministic retrieval stages. It decomposes compound questions (and an
 optional draft answer) into requirements, validates model-selected citations
-against the exact packed bundle, and derives `answerable`, `partial`,
-`insufficient`, or `conflicting` in code. Empty bundles are deterministically
+against compact labels or auditable full UUIDs in the exact packed bundle, and
+derives `answerable`, `partial`, `insufficient`, or `conflicting` in code. Empty
+bundles are deterministically
 insufficient; provider failures are errors rather than verdicts. Assessments
 record prompt/model identity and content hashes but do not mutate memory or the
 retrieval receipt. See [ANSWERABILITY.md](ANSWERABILITY.md).

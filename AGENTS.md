@@ -240,11 +240,13 @@ density at 67 and a separately registered 381-question answer confirmation where
 balanced scored 250 versus 185, plus source-retention gains on both cohorts.
 These examined cohorts do not establish universal superiority.
 `AnswerabilityEvaluator` is an optional model-assisted check over the exact
-packed bundle. It validates bundle-local citations and derives full, partial,
-insufficient and conflicting verdicts outside the deterministic retrieval
-pipeline. Provider failures are not verdicts, and assessments do not mutate
-memory or retrieval receipts. The legacy `should_abstain` helper remains a
-fail-open Boolean compatibility API.
+packed bundle. It resolves compact labels and auditable full-UUID citations,
+then derives full, partial, insufficient and conflicting verdicts outside the
+deterministic retrieval pipeline. Provider failures are not verdicts, and
+assessments do not mutate memory or retrieval receipts. A registered repeated
+BEAM development trial failed every promotion gate, so this remains an explicit
+experimental API rather than automatic retrieval behavior. The legacy
+`should_abstain` helper remains a fail-open Boolean compatibility API.
 Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
 for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a

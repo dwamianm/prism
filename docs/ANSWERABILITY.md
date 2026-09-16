@@ -54,12 +54,14 @@ Use one evaluator instance for repeated calls so its provider client is reused.
 | `insufficient` | `abstain` | No requested requirement has validated support. |
 | `conflicting` | `surface_conflict` | At least one requirement has two cited, incompatible answers. |
 
-The provider does not control the set-level verdict. PRME resolves each cited
-compact reference such as `m3` through `MemoryBundle.context_references`.
-Unknown citations are discarded. A claimed supported requirement without one
-valid citation is downgraded to `unsupported`; a claimed conflict requires two.
-The final verdict and action are then derived deterministically from the
-validated requirement states.
+The provider does not control the set-level verdict. PRME resolves compact
+references such as `m3` through `MemoryBundle.context_references`. The default
+auditable format uses the exact UUID already present in each record's `id`
+field. In both formats, a citation is accepted only when its token occurs in
+the exact rendered bundle. Unknown citations are discarded. A claimed
+supported requirement without one valid citation is downgraded to
+`unsupported`; a claimed conflict requires two. The final verdict and action
+are then derived deterministically from the validated requirement states.
 
 An empty bundle returns `insufficient` without a model call. Provider, timeout,
 or schema failures raise `AnswerabilityError`; they do not become an abstention
@@ -84,6 +86,15 @@ Model inference remains best-effort and can vary even at temperature zero. The
 verdict is auditable, not calibrated probability. Evaluate both unsafe-answer
 rejection and answerable-query coverage on the target workload before enforcing
 it in production.
+
+The first registered repeated
+[BEAM development trial](../benchmarks/results/research/2026-09-16/BEAM-ANSWERABILITY-DEV-V1.md)
+failed every promotion gate: it produced 3 unsafe full answers in 12 abstention
+samples, only 60 full answers in 108 ordinary samples, 8 citation errors, and
+stable actions for 27/40 questions. This API therefore remains explicit and
+experimental. The trial flattened frozen integration results to text and IDs;
+future evaluation must also preserve PRME's typed time, lifecycle, and epistemic
+fields and separately test draft-answer claim verification.
 
 The design follows the distinction between retrieval and evidence verification
 studied by [SURE-RAG](https://arxiv.org/abs/2605.03534), the corrective retrieval
