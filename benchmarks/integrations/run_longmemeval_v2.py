@@ -192,6 +192,11 @@ def _build_execution_manifest(
     memory_artifact = (
         _directory_identity(Path(load_memory_value)) if load_memory_value else None
     )
+    memory_payload_artifact = None
+    if load_memory_value:
+        payload_root = Path(load_memory_value) / "prme_pack"
+        if payload_root.is_dir():
+            memory_payload_artifact = _directory_identity(payload_root)
 
     registration_sha256 = None
     if registration_path is not None:
@@ -239,6 +244,7 @@ def _build_execution_manifest(
             "memory_config_sha256": _digest(selected_config),
             "load_memory_dir": load_memory_value,
             "memory_artifact": memory_artifact,
+            "memory_payload_artifact": memory_payload_artifact,
         },
     }
 

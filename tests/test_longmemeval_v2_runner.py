@@ -274,9 +274,9 @@ def test_registered_execution_manifest_binds_clean_source_trees(
         )
     )
     saved_memory = tmp_path / "saved-memory"
-    (saved_memory / "nested").mkdir(parents=True)
+    (saved_memory / "prme_pack").mkdir(parents=True)
     (saved_memory / "memory_config.json").write_text("{}\n")
-    (saved_memory / "nested" / "index.bin").write_bytes(b"index")
+    (saved_memory / "prme_pack" / "index.bin").write_bytes(b"index")
 
     manifest = runner._build_execution_manifest(
         upstream,
@@ -298,6 +298,7 @@ def test_registered_execution_manifest_binds_clean_source_trees(
         "memory_config_sha256": runner._digest(installed_compact_config),
         "load_memory_dir": str(saved_memory),
         "memory_artifact": runner._directory_identity(saved_memory),
+        "memory_payload_artifact": runner._directory_identity(saved_memory / "prme_pack"),
     }
 
 

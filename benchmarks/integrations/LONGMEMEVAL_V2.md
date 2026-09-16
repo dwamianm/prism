@@ -77,6 +77,13 @@ registered per-arm invocation hashes for schema-2 registrations. Schema-1
 registrations remain readable for studies that were already running when source
 manifests were introduced.
 
+Loaded PRME runs also record a separate identity for the `prme_pack/` payload.
+This lets a registered multi-budget curve prove that every arm started from the
+same graph, indexes, attachments, and adapter manifest even though each clone's
+top-level `memory_config.json` declares a different token budget. The curve
+comparator additionally requires every other adapter setting to match and emits
+only aggregate metrics and artifact hashes.
+
 Ollama 0.34 supports reasoning control through its
 [OpenAI-compatible API](https://docs.ollama.com/api/openai-compatibility). For a
 faster development reader profile, use the local model name and add
