@@ -187,6 +187,13 @@ schema. The runner also validates the registered gates and emits their verdict
 from the complete result. Schema-1 results remain readable as historical evidence
 but did not have those independent bindings.
 
+Schema-3 registrations can assess the exact saved top-50 generated answer as a
+draft. The runner binds its hash and the frozen upstream PASS/FAIL label into
+every resumable sample, then reports full acceptance separately for correct and
+incorrect drafts. This evaluates claim verification without making new answer
+generation or retrieval calls; the saved rubric label remains an external task
+judgment rather than proof of claim entailment.
+
 For a scored run, create a schema-2 registration and pass it to the same
 `run_beam` command. The current registered profile is intentionally narrow: one
 100K conversation, every ability, top-50 recall, one cutoff, raw source storage,

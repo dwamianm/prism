@@ -6,8 +6,11 @@ import pytest
 from benchmarks.integrations import run_beam_answerability
 from benchmarks.integrations.run_beam_answerability import (
     _answerability_binding,
+    _draft_answer,
+    _evaluate_draft_gates,
     _evaluate_gates,
     _summarize,
+    _summarize_drafts,
     _verify_saved_sample,
 )
 
@@ -164,3 +167,100 @@ def test_answerability_gates_fail_unsafe_answer():
 
     assert not gates["passed"]
     assert not gates["results"]["unsafe_full_answer_count_max"]["passed"]
+
+
+def test_draft_answer_reads_only_scored_top_50_answer():
+    answer, label = _draft_answer(
+        {
+            "cutoff_results": {
+                "top_50": {
+                    "generated_answer": "The API averages 250ms.",
+                    "judgment": "PASS",
+                    "memories_evaluated": 50,
+                }
+            }
+        }
+    )
+
+    assert answer == "The API averages 250ms."
+    assert label == "correct"
+
+
+def test_draft_answer_rejects_non_top_50_result():
+    with pytest.raises(ValueError, match="not evaluated over top 50"):
+        _draft_answer(
+            {
+                "cutoff_results": {
+                    "top_50": {
+                        "generated_answer": "An answer.",
+                        "judgment": "FAIL",
+                        "memories_evaluated": 10,
+                    }
+                }
+            }
+        )
+
+
+def test_draft_gates_separate_correct_and_incorrect_answer_acceptance():
+    samples = []
+    for question in range(28):
+        for repeat in range(3):
+            samples.append(
+                {
+                    **_sample(
+                        f"correct-{question}",
+                        "factual",
+                        repeat,
+                        "answer",
+                        "answerable",
+                    ),
+                    "answer_label": "correct",
+                }
+            )
+    for question in range(12):
+        for repeat in range(3):
+            samples.append(
+                {
+                    **_sample(
+                        f"incorrect-{question}",
+                        "factual",
+                        repeat,
+                        "abstain",
+                        "insufficient",
+                    ),
+                    "answer_label": "incorrect",
+                }
+            )
+
+    summary = _summarize_drafts(samples)
+    gates = _evaluate_draft_gates(summary)
+
+    assert summary["draft_answers"]["correct"]["full_accept_count"] == 84
+    assert summary["draft_answers"]["incorrect"]["full_accept_count"] == 0
+    assert gates["passed"]
+
+
+def test_draft_resume_binds_answer_and_external_label():
+    sample = {
+        **_sample("q0", "factual", 0, "answer", "answerable"),
+        "cohort": "conversation_0",
+        "artifact": "q0.json",
+        "artifact_sha256": "artifact",
+        "assessment_mode": "draft_answer",
+        "draft_answer_sha256": "answer",
+        "answer_label": "correct",
+    }
+
+    with pytest.raises(ValueError, match="differs from frozen input"):
+        _verify_saved_sample(
+            sample,
+            cohort="conversation_0",
+            question_id="q0",
+            question_type="factual",
+            repeat=0,
+            artifact="q0.json",
+            artifact_sha256="artifact",
+            assessment_mode="draft_answer",
+            draft_answer_sha256="different-answer",
+            answer_label="correct",
+        )

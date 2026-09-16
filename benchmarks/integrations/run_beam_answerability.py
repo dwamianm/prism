@@ -30,13 +30,19 @@ from prme.retrieval.models import MemoryBundle
 
 
 REGISTRATION_KIND = "beam-answerability-registration"
-REGISTRATION_SCHEMA = 2
-SUPPORTED_REGISTRATION_SCHEMAS = frozenset({1, REGISTRATION_SCHEMA})
+REGISTRATION_SCHEMA = 3
+SUPPORTED_REGISTRATION_SCHEMAS = frozenset({1, 2, REGISTRATION_SCHEMA})
 REGISTERED_GATES = {
     "unsafe_full_answer_count_max": 0,
     "citation_errors_max": 0,
     "ordinary_full_answer_count_min": 86,
     "ordinary_abstention_count_max": 10,
+    "stable_action_questions_min": 32,
+}
+DRAFT_REGISTERED_GATES = {
+    "incorrect_draft_full_accept_count_max": 0,
+    "correct_draft_full_accept_count_min": 67,
+    "citation_errors_max": 0,
     "stable_action_questions_min": 32,
 }
 
@@ -170,11 +176,21 @@ def _verify_registration(
                 "differs from registration"
             )
         evaluation = registration.get("evaluation")
+        expected_gates = (
+            DRAFT_REGISTERED_GATES if schema_version >= 3 else REGISTERED_GATES
+        )
         if (
             not isinstance(evaluation, dict)
-            or evaluation.get("gates") != REGISTERED_GATES
+            or evaluation.get("gates") != expected_gates
         ):
             raise ValueError("answerability acceptance gates differ from registration")
+        if schema_version >= 3 and (
+            protocol.get("assessment_mode") != "draft_answer"
+            or protocol.get("draft_answer_field")
+            != "cutoff_results.top_50.generated_answer"
+            or protocol.get("answer_label_field") != "cutoff_results.top_50.judgment"
+        ):
+            raise ValueError("draft-answer protocol differs from registration")
     _verify_model(model)
     return resolved
 
@@ -203,6 +219,25 @@ def _bundle(artifact: dict[str, Any]) -> MemoryBundle:
         context_references=references,
         included_count=len(results),
     )
+
+
+def _draft_answer(artifact: dict[str, Any]) -> tuple[str, str]:
+    cutoff_results = artifact.get("cutoff_results")
+    if not isinstance(cutoff_results, dict):
+        raise ValueError("question artifact has no cutoff results")
+    top_50 = cutoff_results.get("top_50")
+    if not isinstance(top_50, dict):
+        raise ValueError("question artifact has no top-50 result")
+    answer = top_50.get("generated_answer")
+    judgment = top_50.get("judgment")
+    if not isinstance(answer, str) or not answer.strip():
+        raise ValueError("question artifact has no generated answer")
+    if judgment not in {"PASS", "FAIL"}:
+        raise ValueError("question artifact has no valid answer judgment")
+    memories_evaluated = top_50.get("memories_evaluated")
+    if memories_evaluated != 50:
+        raise ValueError("generated answer was not evaluated over top 50")
+    return answer.strip(), "correct" if judgment == "PASS" else "incorrect"
 
 
 def _summarize(samples: list[dict[str, Any]]) -> dict[str, Any]:
@@ -308,6 +343,61 @@ def _evaluate_gates(summary: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _summarize_drafts(samples: list[dict[str, Any]]) -> dict[str, Any]:
+    question_summary = _summarize(samples)
+    action_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    for sample in samples:
+        label = sample.get("answer_label")
+        if label not in {"correct", "incorrect"}:
+            raise ValueError("draft-answer sample has no valid answer label")
+        action_counts[label][sample["assessment"]["recommended_action"]] += 1
+    return {
+        **question_summary,
+        "draft_answers": {
+            label: {
+                "samples": sum(action_counts[label].values()),
+                "actions": dict(sorted(action_counts[label].items())),
+                "full_accept_count": action_counts[label]["answer"],
+                "partial_accept_count": action_counts[label]["answer_partially"],
+                "reject_count": action_counts[label]["abstain"]
+                + action_counts[label]["surface_conflict"],
+            }
+            for label in ("correct", "incorrect")
+        },
+    }
+
+
+def _evaluate_draft_gates(summary: dict[str, Any]) -> dict[str, Any]:
+    observed = {
+        "incorrect_draft_full_accept_count_max": summary["draft_answers"]["incorrect"][
+            "full_accept_count"
+        ],
+        "correct_draft_full_accept_count_min": summary["draft_answers"]["correct"][
+            "full_accept_count"
+        ],
+        "citation_errors_max": summary["citation_errors"],
+        "stable_action_questions_min": summary["stability"][
+            "questions_with_identical_actions"
+        ],
+    }
+    results = {
+        name: {
+            "required": required,
+            "observed": observed[name],
+            "passed": (
+                observed[name] >= required
+                if name.endswith("_min")
+                else observed[name] <= required
+            ),
+        }
+        for name, required in DRAFT_REGISTERED_GATES.items()
+    }
+    return {
+        "passed": all(result["passed"] for result in results.values()),
+        "results": results,
+    }
+
+
 def _verify_saved_sample(
     sample: dict[str, Any],
     *,
@@ -317,6 +407,9 @@ def _verify_saved_sample(
     repeat: int,
     artifact: str,
     artifact_sha256: str,
+    assessment_mode: str = "question_only",
+    draft_answer_sha256: str | None = None,
+    answer_label: str | None = None,
 ) -> None:
     expected = {
         "cohort": cohort,
@@ -326,6 +419,14 @@ def _verify_saved_sample(
         "artifact": artifact,
         "artifact_sha256": artifact_sha256,
     }
+    if assessment_mode == "draft_answer":
+        expected.update(
+            {
+                "assessment_mode": assessment_mode,
+                "draft_answer_sha256": draft_answer_sha256,
+                "answer_label": answer_label,
+            }
+        )
     if any(sample.get(key) != value for key, value in expected.items()):
         raise ValueError("saved answerability sample differs from frozen input")
     assessment = sample.get("assessment")
@@ -352,6 +453,7 @@ async def _run(args: argparse.Namespace) -> None:
 
     model = registration["model"]
     protocol = registration["protocol"]
+    assessment_mode = protocol.get("assessment_mode", "question_only")
     evaluator = AnswerabilityEvaluator(
         AnswerabilityConfig(
             provider=model["provider"],
@@ -382,6 +484,14 @@ async def _run(args: argparse.Namespace) -> None:
             ):
                 raise ValueError(f"invalid question identity: {path}")
             bundle = _bundle(artifact)
+            draft_answer = None
+            answer_label = None
+            draft_answer_sha256 = None
+            if assessment_mode == "draft_answer":
+                draft_answer, answer_label = _draft_answer(artifact)
+                draft_answer_sha256 = hashlib.sha256(
+                    draft_answer.encode("utf-8")
+                ).hexdigest()
             artifact_sha256 = _digest(path)
             for repeat in range(protocol["repeats"]):
                 sample_path = samples_dir / f"{question_id}-repeat-{repeat:02d}.json"
@@ -395,9 +505,16 @@ async def _run(args: argparse.Namespace) -> None:
                         repeat=repeat,
                         artifact=name,
                         artifact_sha256=artifact_sha256,
+                        assessment_mode=assessment_mode,
+                        draft_answer_sha256=draft_answer_sha256,
+                        answer_label=answer_label,
                     )
                 else:
-                    assessment = await evaluator.assess(question, bundle)
+                    assessment = await evaluator.assess(
+                        question,
+                        bundle,
+                        answer=draft_answer,
+                    )
                     sample = {
                         "cohort": cohort,
                         "question_id": question_id,
@@ -405,6 +522,15 @@ async def _run(args: argparse.Namespace) -> None:
                         "repeat": repeat,
                         "artifact": name,
                         "artifact_sha256": artifact_sha256,
+                        **(
+                            {
+                                "assessment_mode": assessment_mode,
+                                "draft_answer_sha256": draft_answer_sha256,
+                                "answer_label": answer_label,
+                            }
+                            if assessment_mode == "draft_answer"
+                            else {}
+                        ),
                         "assessment": assessment.model_dump(mode="json"),
                     }
                     sample_path.write_text(
@@ -425,7 +551,11 @@ async def _run(args: argparse.Namespace) -> None:
                     flush=True,
                 )
 
-    summary = _summarize(samples)
+    summary = (
+        _summarize_drafts(samples)
+        if assessment_mode == "draft_answer"
+        else _summarize(samples)
+    )
     result = {
         "schema_version": registration["schema_version"],
         "kind": "beam-answerability-execution",
@@ -441,7 +571,13 @@ async def _run(args: argparse.Namespace) -> None:
         ),
         "summary": summary,
         **(
-            {"quality_gates": _evaluate_gates(summary)}
+            {
+                "quality_gates": (
+                    _evaluate_draft_gates(summary)
+                    if assessment_mode == "draft_answer"
+                    else _evaluate_gates(summary)
+                )
+            }
             if registration["schema_version"] >= 2
             else {}
         ),
