@@ -186,3 +186,12 @@ untouched evidence. The implementation now requires complete normalized claim
 token coverage within the negated clause and maps reported questions to the same
 speech-act mode as direct questions; a frozen confirmation must test that change
 without rewriting the failure.
+
+The registered
+[relation-alignment confirmation](../benchmarks/results/research/2026-09-16/CLAIM-VERIFICATION-GUARD-ALIGNMENT-V2.md)
+passed all eight targeted gates at 43/44. Raw NLI scores were identical: all
+four wrong-relation negative decisions became `insufficient`, and the reported
+question became `supported`. Every true explicit refutation, completed-action
+refusal, composition chain, conflict and completeness boundary was retained.
+This was a causal same-cohort confirmation; the sole typed-unverified paraphrase
+remains a model recall miss, and the feature remains opt-in.

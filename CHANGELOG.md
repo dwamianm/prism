@@ -125,7 +125,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preserved and blocks promotion of claim verification. Evidence-side negation
   now requires every normalized non-generic claim token in the negated clause
   before either deterministic or model-assisted refutation, and reported
-  questions share the direct-question speech-act mode.
+  questions share the direct-question speech-act mode. A registered same-cohort
+  confirmation passed all eight gates at 43/44 with identical model scores:
+  all four wrong-relation negatives became `insufficient`, the reported question
+  became `supported`, and every true refutation and conflict was retained.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
