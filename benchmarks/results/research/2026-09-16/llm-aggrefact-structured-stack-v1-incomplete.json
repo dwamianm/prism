@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-structured-stack-infrastructure-failure",
+  "completed_at": "2026-09-16T19:59:36Z",
+  "registration_sha256": "c5fd2b9c0781dde7c2f2fb81d40b08875dca19205ee03cb18ed2c3c4f6c4e5b6",
+  "status": "failed",
+  "phase": "input_identity_validation",
+  "error": {
+    "type": "SplitLiteralMismatch",
+    "message": "The runner passed the human-readable literal development to the frozen cohort selector, whose registered split key is dev. The selected identity hash rejected the mismatch."
+  },
+  "observations": {
+    "features_extracted": false,
+    "model_fitted": false,
+    "predictions_produced": false,
+    "result_file_written": false,
+    "test_accessed": false
+  },
+  "conclusion": "The v1 execution supports no quality claim. Preserve the failure and register the corrected split literal before retrying."
+}

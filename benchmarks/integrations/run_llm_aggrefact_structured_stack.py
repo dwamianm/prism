@@ -439,7 +439,7 @@ def run(
     factcg_by_id = {sample["id"]: sample for sample in factcg_samples}
     selected_rows = factcg._select_cohort(
         factcg._load_rows(dev_path),
-        split="development",
+        split="dev",
         seed="prme-llm-aggrefact-factcg-v1",
         per_label_per_dataset=50,
     )
