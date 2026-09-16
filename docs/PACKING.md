@@ -120,8 +120,12 @@ Augmentation applies the same owner, scope, time, validity and epistemic checks,
 but adds sources beside derived candidates. Projection and augmentation cannot
 both be enabled. A registered tuned BEAM ablation at `top_k=10` improved the
 accepted result from 13/20 to 14/20 with one pass-level win, no losses and a
-+0.02916 mean-score delta. Augmentation remains disabled by default pending a
-separately registered untouched confirmation.
++0.02916 mean-score delta. A separately preregistered untouched confirmation
+scored 14/20 versus its fresh baseline at 15/20, with no wins, one
+contradiction-resolution loss and a -0.03375 mean delta. Unconditional top-10
+augmentation remains disabled by default. It can add useful direct wording, but
+callers must evaluate it for their query distribution rather than assume the
+development gain generalizes.
 
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously

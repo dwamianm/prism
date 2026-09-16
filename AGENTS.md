@@ -218,6 +218,10 @@ that separate multiplier was disabled and omit it. Version 10 records the
 optional deterministic evidence-projection policy; versions 1–9 mean projection
 was disabled and omit its fields. Version 11 records mutually exclusive evidence
 augmentation; versions 1–10 mean augmentation was disabled and omit its fields.
+Unconditional top-10 evidence augmentation improved one tuned BEAM development
+conversation but failed a preregistered untouched confirmation with one
+contradiction-resolution loss and a negative mean-score delta. Keep it disabled
+by default; direct source passages are not proof of the queried claim state.
 Versions 1–7 mean episode
 routing was disabled and omit its fields. Episode routing is candidate-backed within exact
 `(scope, session_id)` groups; it is not a full session scan or historical replay.

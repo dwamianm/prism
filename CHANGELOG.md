@@ -90,8 +90,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exclusive. Receipt schema version 11 records augmentation settings and exact
   score inheritance; versions 1–10 retain disabled semantics. A registered
   tuned BEAM ablation improved the accepted result from 13/20 to 14/20 with one
-  pass-level win, zero losses and a +0.02916 mean-score delta. It remains opt-in
-  pending an untouched confirmation.
+  pass-level win, zero losses and a +0.02916 mean-score delta. A preregistered
+  untouched confirmation then scored 14/20 versus the fresh baseline at 15/20,
+  with zero wins, one contradiction-resolution loss and a -0.03375 mean delta.
+  Unconditional top-10 augmentation remains opt-in and is rejected as a default.
 
 - A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
   evidence set held pass accuracy at 13/20 but reduced mean rubric score from
