@@ -97,7 +97,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A new `evidence_augmentation_anchor_policy="non_entity"` mode prevents entity
   name matches from authorizing whole-passage injection and backfills the quota
   from non-entity evidence groups. Receipt schema version 12 records the policy;
-  versions 1–11 preserve `all` semantics and their canonical bytes.
+  versions 1–11 preserve `all` semantics and their canonical bytes. A registered
+  two-conversation diagnostic fixed the observed contradiction regression but
+  produced one win, one temporal loss and a -0.03000 combined mean delta, so the
+  policy remains opt-in and is not a default candidate.
 
 - A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
   evidence set held pass accuracy at 13/20 but reduced mean rubric score from

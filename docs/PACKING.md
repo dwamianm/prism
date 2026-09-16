@@ -133,7 +133,9 @@ failure mode without classifying the query. Entity nodes are useful search
 routes, but an entity-name match does not establish that its full source passage
 supports the queried state. This policy skips entity anchors and lets later
 non-entity evidence groups fill the configured quota. It remains experimental
-pending paired answer trials.
+after a paired two-conversation diagnostic fixed the observed contradiction
+regression but produced one win, one temporal loss and a -0.03000 combined mean
+delta. Use it as an explicit safety control, not as an assumed quality gain.
 
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously

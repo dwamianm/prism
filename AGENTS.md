@@ -221,6 +221,9 @@ augmentation; versions 1–10 mean augmentation was disabled and omit its fields
 Version 12 records the augmentation anchor policy; versions 1–11 mean `all`
 and omit the field. `non_entity` prevents entity-name matches from routing a
 whole source passage while backfilling the quota with non-entity evidence groups.
+It fixed the measured entity-routed contradiction regression but failed a
+two-conversation diagnostic with one different pass-level loss and a negative
+combined mean delta. Keep both anchor policies opt-in.
 Unconditional top-10 evidence augmentation improved one tuned BEAM development
 conversation but failed a preregistered untouched confirmation with one
 contradiction-resolution loss and a negative mean-score delta. Keep it disabled
