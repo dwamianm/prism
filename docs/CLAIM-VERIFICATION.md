@@ -229,3 +229,10 @@ improved WiCE balanced accuracy to 75.01%, recall to 57.27%, and F1 to 65.97%
 at its published 0.5 threshold, again with 0/32 fully unsupported accepts. It
 failed the fixed precision and recall gates, and no threshold over its frozen
 scores satisfies both. It is not integrated into `ClaimVerifier`.
+A second registered
+[MiniCheck Flan-T5 capacity trial](../benchmarks/results/research/2026-09-16/WICE-MINICHECK-FLAN-V1.md)
+improved recall to 72.73%, balanced accuracy to 81.52%, and F1 to 74.77%, again
+with 0/32 fully unsupported accepts. It failed only the 90% precision gate:
+every false support was a partially supported compound claim, and threshold
+tuning cannot meet precision and recall together. This isolates atomic claim
+decomposition as the next architectural test; Flan-T5 is not integrated.

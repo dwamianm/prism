@@ -144,6 +144,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   balanced accuracy to 75.01% with no fully unsupported accepts, but failed the
   fixed 90% precision and 60% recall gates. No frozen-score threshold meets both,
   so that model is not integrated as a standalone verifier.
+  The registered MIT MiniCheck Flan-T5 trial raised WiCE recall to 72.73%, F1 to
+  74.77%, and balanced accuracy to 81.52% with no fully unsupported accepts, but
+  failed the 90% precision gate on 24 partially supported compound claims. No
+  threshold meets both gates, isolating atomic claim decomposition as the next
+  experiment rather than another threshold change.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

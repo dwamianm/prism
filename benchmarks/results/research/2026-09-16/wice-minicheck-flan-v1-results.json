@@ -1,0 +1,4418 @@
+{
+  "schema_version": 1,
+  "kind": "wice-grounding-model-result",
+  "completed_at": "2026-09-16T15:52:49.346721+00:00",
+  "registration_sha256": "8b76a1b7550dff033da3db61e37b5a57e8082e9436b25b8697a1ba513e6dbf77",
+  "source": {
+    "prme_revision": "c3048fd5a570bb3919ddd6bcc8ef0078fd1199d0",
+    "files": {
+      "runner_sha256": "6f8deaa5b9448afb207721ac669a5d2314a0054848b314abfa73682d72887062"
+    }
+  },
+  "dataset": {
+    "name": "WiCE",
+    "repository": "https://github.com/ryokamoi/wice.git",
+    "revision": "ddeb6c183665e2a20c5f03c5aa07f03888b9870f",
+    "relative_path": "code_and_resources/entailment_inputs/oracle_chunks/claim/test.jsonl",
+    "sha256": "234bb8c2ca4511ca078e49e07c895a2db61a581d03237e7e1ecb7c48c8510a3e",
+    "expected_shape": {
+      "rows": 1070,
+      "claims": 358,
+      "labels": {
+        "not_supported": 32,
+        "partially_supported": 216,
+        "supported": 110
+      }
+    },
+    "annotation_license": "ODC-BY-1.0",
+    "source_text_terms": [
+      "Wikipedia CC-BY-SA",
+      "Common Crawl terms of use"
+    ]
+  },
+  "model": {
+    "name": "lytang/MiniCheck-Flan-T5-Large",
+    "revision": "5294ece54f6e7a4445bf86cd20250df6e1ce9548",
+    "license": "mit",
+    "weights_filename": "model.safetensors",
+    "weights_sha256": "d38bd7f79e74ba25dbeff988dfff32dd758a74ef389b746b982e984646d3d47c",
+    "architecture": "flan_t5_label_logits",
+    "unsupported_token_id": 3,
+    "support_token_id": 209,
+    "input_prefix": "predict: ",
+    "support_threshold": 0.5
+  },
+  "protocol": {
+    "task": "oracle_retrieval_binary_grounding",
+    "input_serialization": "document_eos_claim",
+    "empty_evidence_sentences": "omit",
+    "max_length": 2048,
+    "truncation": true,
+    "variant_aggregation": "maximum_support_probability",
+    "threshold_operator": "strictly_greater_than",
+    "batch_size": 4,
+    "device": "auto",
+    "emit_source_text": false
+  },
+  "runtime": {
+    "device": "mps",
+    "elapsed_seconds": 103.8890721659991,
+    "python": "3.11.6",
+    "torch": "2.10.0",
+    "transformers": "5.3.0",
+    "resolved_model_revision": "5294ece54f6e7a4445bf86cd20250df6e1ce9548",
+    "weights_sha256": "d38bd7f79e74ba25dbeff988dfff32dd758a74ef389b746b982e984646d3d47c",
+    "architecture": "flan_t5_label_logits"
+  },
+  "summary": {
+    "claims": 358,
+    "labels": {
+      "not_supported": 32,
+      "partially_supported": 216,
+      "supported": 110
+    },
+    "predicted_supported": 104,
+    "metrics": {
+      "true_positive": 80,
+      "false_positive": 24,
+      "true_negative": 224,
+      "false_negative": 30,
+      "accuracy": 0.8491620111731844,
+      "balanced_accuracy": 0.81524926686217,
+      "precision": 0.7692307692307693,
+      "recall": 0.7272727272727273,
+      "f1": 0.7476635514018691,
+      "false_support_rate": 0.0967741935483871
+    }
+  },
+  "quality_gates": {
+    "passed": false,
+    "results": {
+      "claims_evaluated_min": {
+        "required": 358,
+        "observed": 358,
+        "passed": true
+      },
+      "supported_precision_min": {
+        "required": 0.9,
+        "observed": 0.7692307692307693,
+        "passed": false
+      },
+      "supported_recall_min": {
+        "required": 0.6,
+        "observed": 0.7272727272727273,
+        "passed": true
+      },
+      "balanced_accuracy_min": {
+        "required": 0.7,
+        "observed": 0.81524926686217,
+        "passed": true
+      },
+      "false_support_rate_max": {
+        "required": 0.1,
+        "observed": 0.0967741935483871,
+        "passed": true
+      },
+      "not_supported_false_support_rate_max": {
+        "required": 0.1,
+        "observed": 0.0,
+        "passed": true
+      }
+    }
+  },
+  "samples": [
+    {
+      "id": "test00561",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03545065224170685,
+        0.03655612841248512,
+        0.03391413390636444
+      ],
+      "support_probability": 0.03655612841248512,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03787",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.005984350107610226,
+        0.005738598760217428,
+        0.005783892702311277
+      ],
+      "support_probability": 0.005984350107610226,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01962",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9721983671188354,
+        0.9635847210884094,
+        0.9636583924293518
+      ],
+      "support_probability": 0.9721983671188354,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04287",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008446605876088142,
+        0.010604151524603367,
+        0.008343437686562538
+      ],
+      "support_probability": 0.010604151524603367,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00912",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7726881504058838,
+        0.11284971982240677,
+        0.6662466526031494
+      ],
+      "support_probability": 0.7726881504058838,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02812",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01639975607395172,
+        0.01670493744313717,
+        0.015724405646324158
+      ],
+      "support_probability": 0.01670493744313717,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00064",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0064959400333464146,
+        0.006513538770377636,
+        0.005565733183175325
+      ],
+      "support_probability": 0.006513538770377636,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01029",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.017336418852210045,
+        0.0185988862067461,
+        0.02605401538312435
+      ],
+      "support_probability": 0.02605401538312435,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04328",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.3286019265651703,
+        0.35160717368125916,
+        0.5470312237739563
+      ],
+      "support_probability": 0.5470312237739563,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03444",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9603545665740967,
+        0.9570632576942444,
+        0.9567732214927673
+      ],
+      "support_probability": 0.9603545665740967,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04504",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.023327751085162163,
+        0.027204083278775215,
+        0.018056314438581467
+      ],
+      "support_probability": 0.027204083278775215,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02359",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.017962684854865074,
+        0.01413736678659916,
+        0.012728196568787098
+      ],
+      "support_probability": 0.017962684854865074,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01062",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05151384696364403,
+        0.0612943135201931,
+        0.08149924874305725
+      ],
+      "support_probability": 0.08149924874305725,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04259",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03000538796186447,
+        0.03976752609014511,
+        0.08536484837532043
+      ],
+      "support_probability": 0.08536484837532043,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02571",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03080063872039318,
+        0.029808444902300835,
+        0.02422587387263775
+      ],
+      "support_probability": 0.03080063872039318,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03809",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.024310750886797905,
+        0.025175724178552628,
+        0.03080045059323311
+      ],
+      "support_probability": 0.03080045059323311,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04310",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.4393484592437744,
+        0.9325831532478333,
+        0.9507846832275391
+      ],
+      "support_probability": 0.9507846832275391,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03749",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02936847321689129,
+        0.04197383671998978,
+        0.036707401275634766
+      ],
+      "support_probability": 0.04197383671998978,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01231",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.029451800510287285,
+        0.03178727254271507,
+        0.02820320799946785
+      ],
+      "support_probability": 0.03178727254271507,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04247",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04389672353863716,
+        0.025909513235092163,
+        0.0374070405960083
+      ],
+      "support_probability": 0.04389672353863716,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02993",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.013552584685385227,
+        0.02084537036716938,
+        0.01576581597328186
+      ],
+      "support_probability": 0.02084537036716938,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04499",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.010368647053837776,
+        0.012881780043244362,
+        0.01074641477316618
+      ],
+      "support_probability": 0.012881780043244362,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01901",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.015707364305853844,
+        0.025158444419503212,
+        0.02411492168903351
+      ],
+      "support_probability": 0.025158444419503212,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01064",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9107317328453064,
+        0.8917099237442017,
+        0.9295651912689209
+      ],
+      "support_probability": 0.9295651912689209,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04021",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9312471151351929,
+        0.9149709343910217,
+        0.9314752221107483
+      ],
+      "support_probability": 0.9314752221107483,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04027",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.018020091578364372,
+        0.009792763739824295,
+        0.018334150314331055
+      ],
+      "support_probability": 0.018334150314331055,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00879",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07760200649499893,
+        0.08240118622779846,
+        0.07862529903650284
+      ],
+      "support_probability": 0.08240118622779846,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02384",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.013451914303004742,
+        0.015001637861132622,
+        0.01017904095351696
+      ],
+      "support_probability": 0.015001637861132622,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00093",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011972164735198021,
+        0.013727787882089615,
+        0.011731862090528011
+      ],
+      "support_probability": 0.013727787882089615,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00115",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08618615567684174,
+        0.08943095058202744,
+        0.03482480347156525
+      ],
+      "support_probability": 0.08943095058202744,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03760",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.010109379887580872,
+        0.010054770857095718,
+        0.012327040545642376
+      ],
+      "support_probability": 0.012327040545642376,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02816",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.009010165929794312,
+        0.008035548962652683,
+        0.009216473437845707
+      ],
+      "support_probability": 0.009216473437845707,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00128",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.06491181999444962,
+        0.25331082940101624,
+        0.05865589156746864
+      ],
+      "support_probability": 0.25331082940101624,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00069",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.007899066433310509,
+        0.006506701000034809,
+        0.008725960738956928
+      ],
+      "support_probability": 0.008725960738956928,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02894",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05709870532155037,
+        0.027280716225504875,
+        0.04365894943475723
+      ],
+      "support_probability": 0.05709870532155037,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02342",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.09713961184024811,
+        0.291485995054245,
+        0.2417537122964859
+      ],
+      "support_probability": 0.291485995054245,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04460",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.11941437423229218,
+        0.12688490748405457,
+        0.10527101904153824
+      ],
+      "support_probability": 0.12688490748405457,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01762",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9453327655792236,
+        0.9454429745674133,
+        0.9471797943115234
+      ],
+      "support_probability": 0.9471797943115234,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01429",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.013414036482572556,
+        0.014035428874194622,
+        0.013779154978692532
+      ],
+      "support_probability": 0.014035428874194622,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04515",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9378644824028015,
+        0.7660000324249268,
+        0.816754937171936
+      ],
+      "support_probability": 0.9378644824028015,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03895",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01106253731995821,
+        0.00962643139064312,
+        0.012339656241238117
+      ],
+      "support_probability": 0.012339656241238117,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01448",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.032853879034519196,
+        0.027307087555527687,
+        0.035269223153591156
+      ],
+      "support_probability": 0.035269223153591156,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03771",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.010537599213421345,
+        0.015120500698685646,
+        0.012234663590788841
+      ],
+      "support_probability": 0.015120500698685646,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00726",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03827126324176788,
+        0.03667256608605385,
+        0.030299877747893333
+      ],
+      "support_probability": 0.03827126324176788,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03840",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0228648129850626,
+        0.021099766716361046,
+        0.020041702315211296
+      ],
+      "support_probability": 0.0228648129850626,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02072",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01599474623799324,
+        0.03627919778227806,
+        0.04920759052038193
+      ],
+      "support_probability": 0.04920759052038193,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00996",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.028660830110311508,
+        0.03186614438891411,
+        0.033543772995471954
+      ],
+      "support_probability": 0.033543772995471954,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02315",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.10694219917058945,
+        0.8908481001853943,
+        0.1756293922662735
+      ],
+      "support_probability": 0.8908481001853943,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03997",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.020481901243329048,
+        0.01694936864078045,
+        0.03803010284900665
+      ],
+      "support_probability": 0.03803010284900665,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02130",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.027697423473000526,
+        0.019432982429862022,
+        0.02505994215607643
+      ],
+      "support_probability": 0.027697423473000526,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01053",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08341510593891144,
+        0.10916467756032944,
+        0.06147681549191475
+      ],
+      "support_probability": 0.10916467756032944,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03602",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.043355103582143784,
+        0.048984263092279434,
+        0.0328274630010128
+      ],
+      "support_probability": 0.048984263092279434,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03437",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.00459548644721508,
+        0.005646655801683664,
+        0.006907925475388765
+      ],
+      "support_probability": 0.006907925475388765,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01425",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9760167002677917,
+        0.9755783677101135,
+        0.9635321497917175
+      ],
+      "support_probability": 0.9760167002677917,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04456",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.13316282629966736,
+        0.9491606950759888,
+        0.4606309235095978
+      ],
+      "support_probability": 0.9491606950759888,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04455",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.015709931030869484,
+        0.017659099772572517,
+        0.0184363704174757
+      ],
+      "support_probability": 0.0184363704174757,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01146",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.549367368221283,
+        0.22732417285442352,
+        0.027529144659638405
+      ],
+      "support_probability": 0.549367368221283,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00883",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08271025866270065,
+        0.026463259011507034,
+        0.07145538926124573
+      ],
+      "support_probability": 0.08271025866270065,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02428",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.027770953252911568,
+        0.021093174815177917,
+        0.023175332695245743
+      ],
+      "support_probability": 0.027770953252911568,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00965",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02534017525613308,
+        0.029156338423490524,
+        0.024064840748906136
+      ],
+      "support_probability": 0.029156338423490524,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01741",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.12079063802957535,
+        0.6755805611610413,
+        0.7490103840827942
+      ],
+      "support_probability": 0.7490103840827942,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03132",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01417086087167263,
+        0.017833365127444267,
+        0.012732462957501411
+      ],
+      "support_probability": 0.017833365127444267,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03098",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9226030707359314,
+        0.9323908686637878,
+        0.9478079080581665
+      ],
+      "support_probability": 0.9478079080581665,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02288",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.020134780555963516,
+        0.019875535741448402,
+        0.0196647010743618
+      ],
+      "support_probability": 0.020134780555963516,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01201",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.019251395016908646,
+        0.02013578824698925,
+        0.019380774348974228
+      ],
+      "support_probability": 0.02013578824698925,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02770",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9633857011795044,
+        0.957624077796936,
+        0.9553622603416443
+      ],
+      "support_probability": 0.9633857011795044,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03759",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.029551826417446136,
+        0.17832301557064056,
+        0.21178150177001953
+      ],
+      "support_probability": 0.21178150177001953,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03723",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.012413171119987965,
+        0.016943013295531273,
+        0.015561184845864773
+      ],
+      "support_probability": 0.016943013295531273,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00345",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04989924281835556,
+        0.061754241585731506,
+        0.07409115880727768
+      ],
+      "support_probability": 0.07409115880727768,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03017",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.10248169302940369,
+        0.089563749730587,
+        0.061827220022678375
+      ],
+      "support_probability": 0.10248169302940369,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00287",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.5444859266281128,
+        0.837498664855957,
+        0.8527625203132629
+      ],
+      "support_probability": 0.8527625203132629,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03084",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.043041080236434937,
+        0.03471515327692032,
+        0.18079738318920135
+      ],
+      "support_probability": 0.18079738318920135,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00901",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.024014506489038467,
+        0.023039735853672028,
+        0.030794724822044373
+      ],
+      "support_probability": 0.030794724822044373,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03137",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.012894058600068092,
+        0.01258144248276949,
+        0.013513842597603798
+      ],
+      "support_probability": 0.013513842597603798,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02292",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03970436006784439,
+        0.03446342796087265,
+        0.03388480469584465
+      ],
+      "support_probability": 0.03970436006784439,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01760",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.032146841287612915,
+        0.11908050626516342,
+        0.04809483885765076
+      ],
+      "support_probability": 0.11908050626516342,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01493",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9280138611793518,
+        0.9488697052001953,
+        0.882393479347229
+      ],
+      "support_probability": 0.9488697052001953,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00937",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03316918760538101,
+        0.05940152332186699,
+        0.052390821278095245
+      ],
+      "support_probability": 0.05940152332186699,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00874",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.024309128522872925,
+        0.035827312618494034,
+        0.03286430984735489
+      ],
+      "support_probability": 0.035827312618494034,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01697",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.956790030002594,
+        0.9589003324508667,
+        0.9692691564559937
+      ],
+      "support_probability": 0.9692691564559937,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02236",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.18009135127067566,
+        0.1338915079832077,
+        0.46117904782295227
+      ],
+      "support_probability": 0.46117904782295227,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02679",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7879444360733032,
+        0.7675713300704956,
+        0.7963123917579651
+      ],
+      "support_probability": 0.7963123917579651,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03001",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01022037398070097,
+        0.012963320128619671,
+        0.022534582763910294
+      ],
+      "support_probability": 0.022534582763910294,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03718",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03521722927689552,
+        0.08017975091934204,
+        0.056317541748285294
+      ],
+      "support_probability": 0.08017975091934204,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01035",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011854019947350025,
+        0.009238719940185547,
+        0.011209174990653992
+      ],
+      "support_probability": 0.011854019947350025,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02238",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0595674030482769,
+        0.05644587054848671,
+        0.04773538559675217
+      ],
+      "support_probability": 0.0595674030482769,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02553",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.018256234005093575,
+        0.009296423755586147,
+        0.00872575119137764
+      ],
+      "support_probability": 0.018256234005093575,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02877",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011911716312170029,
+        0.016274742782115936,
+        0.017646413296461105
+      ],
+      "support_probability": 0.017646413296461105,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01426",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.943365216255188,
+        0.30378174781799316,
+        0.867100179195404
+      ],
+      "support_probability": 0.943365216255188,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03777",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05049775168299675,
+        0.043751876801252365,
+        0.07736668735742569
+      ],
+      "support_probability": 0.07736668735742569,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04002",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.030848659574985504,
+        0.02103498950600624,
+        0.023962996900081635
+      ],
+      "support_probability": 0.030848659574985504,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01979",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08221515268087387,
+        0.13913993537425995,
+        0.1110723465681076
+      ],
+      "support_probability": 0.13913993537425995,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00017",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.17974147200584412,
+        0.8478981256484985,
+        0.92906254529953
+      ],
+      "support_probability": 0.92906254529953,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03225",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9768299460411072,
+        0.9662560820579529,
+        0.9585509300231934
+      ],
+      "support_probability": 0.9768299460411072,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01957",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02460731379687786,
+        0.018482806161046028,
+        0.01934099942445755
+      ],
+      "support_probability": 0.02460731379687786,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02661",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9699442982673645,
+        0.9031160473823547,
+        0.97718346118927
+      ],
+      "support_probability": 0.97718346118927,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04349",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.705223023891449,
+        0.4733315110206604,
+        0.762077271938324
+      ],
+      "support_probability": 0.762077271938324,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03394",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.019643420353531837,
+        0.013304831460118294,
+        0.015335841104388237
+      ],
+      "support_probability": 0.019643420353531837,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03788",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04588276892900467,
+        0.06145763024687767,
+        0.06875856220722198
+      ],
+      "support_probability": 0.06875856220722198,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02547",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07317326217889786,
+        0.08651236444711685,
+        0.06725344806909561
+      ],
+      "support_probability": 0.08651236444711685,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04279",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.022923780605196953,
+        0.017889326438307762,
+        0.0205775685608387
+      ],
+      "support_probability": 0.022923780605196953,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03432",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.06908032298088074,
+        0.05602171644568443,
+        0.060365941375494
+      ],
+      "support_probability": 0.06908032298088074,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02196",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.030421290546655655,
+        0.009693076834082603,
+        0.016079192981123924
+      ],
+      "support_probability": 0.030421290546655655,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02213",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01805032417178154,
+        0.02834399603307247,
+        0.035468701273202896
+      ],
+      "support_probability": 0.035468701273202896,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00231",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.028338050469756126,
+        0.01276521384716034,
+        0.018162861466407776
+      ],
+      "support_probability": 0.028338050469756126,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01572",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.13697558641433716,
+        0.3970474600791931,
+        0.1589973121881485
+      ],
+      "support_probability": 0.3970474600791931,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03215",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9724071025848389,
+        0.9769127368927002,
+        0.9823637008666992
+      ],
+      "support_probability": 0.9823637008666992,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01297",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.00785661768168211,
+        0.014899740926921368,
+        0.011808574199676514
+      ],
+      "support_probability": 0.014899740926921368,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04524",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.029387149959802628,
+        0.02967357262969017,
+        0.033825840801000595
+      ],
+      "support_probability": 0.033825840801000595,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03052",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9453384280204773,
+        0.4430345296859741,
+        0.8650088310241699
+      ],
+      "support_probability": 0.9453384280204773,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01608",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08852319419384003,
+        0.026192452758550644,
+        0.46274566650390625
+      ],
+      "support_probability": 0.46274566650390625,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02149",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05155187100172043,
+        0.04910880699753761,
+        0.04667596518993378
+      ],
+      "support_probability": 0.05155187100172043,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00228",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.4550120532512665,
+        0.4232754409313202,
+        0.47984710335731506
+      ],
+      "support_probability": 0.47984710335731506,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01606",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011973029002547264,
+        0.023697398602962494,
+        0.04520205035805702
+      ],
+      "support_probability": 0.04520205035805702,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01983",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.11181770265102386,
+        0.020862601697444916,
+        0.09900850057601929
+      ],
+      "support_probability": 0.11181770265102386,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03014",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.034573499113321304,
+        0.02283857762813568,
+        0.01611827313899994
+      ],
+      "support_probability": 0.034573499113321304,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00652",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.018523698672652245,
+        0.018523698672652245,
+        0.01676666922867298
+      ],
+      "support_probability": 0.018523698672652245,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02040",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04091450199484825,
+        0.030149461701512337,
+        0.042932916432619095
+      ],
+      "support_probability": 0.042932916432619095,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03321",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.009490571916103363,
+        0.005773068405687809,
+        0.005819418933242559
+      ],
+      "support_probability": 0.009490571916103363,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01656",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.962665319442749,
+        0.9729569554328918,
+        0.9644025564193726
+      ],
+      "support_probability": 0.9729569554328918,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04324",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008236877620220184,
+        0.0075155203230679035,
+        0.009085475467145443
+      ],
+      "support_probability": 0.009085475467145443,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02896",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.1342298984527588,
+        0.1373322457075119,
+        0.20360839366912842
+      ],
+      "support_probability": 0.20360839366912842,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01488",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.055692724883556366,
+        0.0886593908071518,
+        0.06981197744607925
+      ],
+      "support_probability": 0.0886593908071518,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00374",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02314876765012741,
+        0.03184732049703598,
+        0.024653194472193718
+      ],
+      "support_probability": 0.03184732049703598,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02744",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.009094326756894588,
+        0.007901630364358425,
+        0.009334402158856392
+      ],
+      "support_probability": 0.009334402158856392,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00606",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.1679585576057434,
+        0.15303607285022736,
+        0.15246570110321045
+      ],
+      "support_probability": 0.1679585576057434,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01005",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011031676083803177,
+        0.012526239268481731,
+        0.02035125531256199
+      ],
+      "support_probability": 0.02035125531256199,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01228",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.023495089262723923,
+        0.0133449612185359,
+        0.027850011363625526
+      ],
+      "support_probability": 0.027850011363625526,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00238",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.3970910906791687,
+        0.3108665347099304,
+        0.32455360889434814
+      ],
+      "support_probability": 0.3970910906791687,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03377",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9603078365325928,
+        0.9703776240348816,
+        0.9294424057006836
+      ],
+      "support_probability": 0.9703776240348816,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02578",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.027379225939512253,
+        0.03974420949816704,
+        0.04298941045999527
+      ],
+      "support_probability": 0.04298941045999527,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02018",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02736838161945343,
+        0.023442735895514488,
+        0.02720085345208645
+      ],
+      "support_probability": 0.02736838161945343,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00931",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.027528535574674606,
+        0.036280158907175064,
+        0.030377978459000587
+      ],
+      "support_probability": 0.036280158907175064,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00188",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.3229917883872986,
+        0.3229917883872986,
+        0.3229917883872986
+      ],
+      "support_probability": 0.3229917883872986,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00391",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.972501814365387,
+        0.9839718341827393,
+        0.9824329614639282
+      ],
+      "support_probability": 0.9839718341827393,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01734",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9506565928459167,
+        0.9724476933479309,
+        0.9631941318511963
+      ],
+      "support_probability": 0.9724476933479309,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03636",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.016162404790520668,
+        0.015842728316783905,
+        0.016162404790520668
+      ],
+      "support_probability": 0.016162404790520668,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04307",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8150268197059631,
+        0.15402643382549286,
+        0.442291796207428
+      ],
+      "support_probability": 0.8150268197059631,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03529",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.034787219017744064,
+        0.02782907336950302,
+        0.030385563150048256
+      ],
+      "support_probability": 0.034787219017744064,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03922",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.024922171607613564,
+        0.026196984574198723,
+        0.01913587376475334
+      ],
+      "support_probability": 0.026196984574198723,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03779",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.026024656370282173,
+        0.027298830449581146,
+        0.025517020374536514
+      ],
+      "support_probability": 0.027298830449581146,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03756",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.024043099954724312,
+        0.04101550206542015,
+        0.030923128128051758
+      ],
+      "support_probability": 0.04101550206542015,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01801",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07111108303070068,
+        0.11064574867486954,
+        0.10841761529445648
+      ],
+      "support_probability": 0.11064574867486954,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01620",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9354623556137085,
+        0.9283866286277771,
+        0.9377322793006897
+      ],
+      "support_probability": 0.9377322793006897,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02134",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07675480842590332,
+        0.01927279122173786,
+        0.019192606210708618
+      ],
+      "support_probability": 0.07675480842590332,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02823",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.020742855966091156,
+        0.029358871281147003,
+        0.03580832481384277
+      ],
+      "support_probability": 0.03580832481384277,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00846",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.003948830533772707,
+        0.003948830533772707,
+        0.003948830533772707
+      ],
+      "support_probability": 0.003948830533772707,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03334",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9327988624572754,
+        0.04222544655203819,
+        0.9598751664161682
+      ],
+      "support_probability": 0.9598751664161682,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04092",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.955725371837616,
+        0.8966382145881653,
+        0.9544385075569153
+      ],
+      "support_probability": 0.955725371837616,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00777",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9716030359268188,
+        0.9716030359268188,
+        0.9716030359268188
+      ],
+      "support_probability": 0.9716030359268188,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03722",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.018869085237383842,
+        0.01707584783434868,
+        0.00756215350702405
+      ],
+      "support_probability": 0.018869085237383842,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01938",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.023176806047558784,
+        0.08090262115001678,
+        0.02233501896262169
+      ],
+      "support_probability": 0.08090262115001678,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02879",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.023741338402032852,
+        0.024992993101477623,
+        0.02214091084897518
+      ],
+      "support_probability": 0.024992993101477623,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03497",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.909905195236206,
+        0.9130918979644775,
+        0.9083606600761414
+      ],
+      "support_probability": 0.9130918979644775,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03535",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04150407388806343,
+        0.05675525963306427,
+        0.05336689576506615
+      ],
+      "support_probability": 0.05675525963306427,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00585",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.06288168579339981,
+        0.07537247985601425,
+        0.06237607076764107
+      ],
+      "support_probability": 0.07537247985601425,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02497",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03500382974743843,
+        0.03031543269753456,
+        0.05594361945986748
+      ],
+      "support_probability": 0.05594361945986748,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03300",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07513236254453659,
+        0.0405949167907238,
+        0.06179403141140938
+      ],
+      "support_probability": 0.07513236254453659,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00772",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.970500111579895,
+        0.9745231866836548,
+        0.9697709679603577
+      ],
+      "support_probability": 0.9745231866836548,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01447",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.5286065936088562,
+        0.10519036650657654,
+        0.9066572785377502
+      ],
+      "support_probability": 0.9066572785377502,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02682",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07252024859189987,
+        0.1278303563594818,
+        0.09093764424324036
+      ],
+      "support_probability": 0.1278303563594818,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00056",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.6812372207641602,
+        0.011776304803788662,
+        0.019636429846286774
+      ],
+      "support_probability": 0.6812372207641602,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03102",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.010732236318290234,
+        0.010732236318290234,
+        0.021083325147628784
+      ],
+      "support_probability": 0.021083325147628784,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01749",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.058916278183460236,
+        0.039464402943849564,
+        0.04002770036458969
+      ],
+      "support_probability": 0.058916278183460236,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03564",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07444384694099426,
+        0.03397883102297783,
+        0.28281012177467346
+      ],
+      "support_probability": 0.28281012177467346,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02467",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01923138089478016,
+        0.01986357383430004,
+        0.022218167781829834
+      ],
+      "support_probability": 0.022218167781829834,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00515",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9549064636230469,
+        0.9514055252075195,
+        0.9509955644607544
+      ],
+      "support_probability": 0.9549064636230469,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04149",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.10713234543800354,
+        0.18999069929122925,
+        0.03174331411719322
+      ],
+      "support_probability": 0.18999069929122925,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03611",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.018240543082356453,
+        0.03448574244976044,
+        0.08493154495954514
+      ],
+      "support_probability": 0.08493154495954514,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03850",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04291367903351784,
+        0.10783980041742325,
+        0.09341152012348175
+      ],
+      "support_probability": 0.10783980041742325,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02139",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.979464054107666,
+        0.9126298427581787,
+        0.9625473618507385
+      ],
+      "support_probability": 0.979464054107666,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02281",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7627782225608826,
+        0.7262386083602905,
+        0.8157932162284851
+      ],
+      "support_probability": 0.8157932162284851,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03396",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.11622487753629684,
+        0.0747632086277008,
+        0.16510069370269775
+      ],
+      "support_probability": 0.16510069370269775,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00350",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.007811172399669886,
+        0.008150141686201096,
+        0.009250507690012455
+      ],
+      "support_probability": 0.009250507690012455,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00580",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9790158271789551,
+        0.983914852142334,
+        0.975263237953186
+      ],
+      "support_probability": 0.983914852142334,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02815",
+      "label": "not_supported",
+      "oracle_variants": 2,
+      "variant_support_probabilities": [
+        0.006844105198979378,
+        0.010677315294742584
+      ],
+      "support_probability": 0.010677315294742584,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00060",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.00903148390352726,
+        0.010591374710202217,
+        0.01123947836458683
+      ],
+      "support_probability": 0.01123947836458683,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00106",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.028941212221980095,
+        0.0371406152844429,
+        0.02482926845550537
+      ],
+      "support_probability": 0.0371406152844429,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03584",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9350436925888062,
+        0.9372184872627258,
+        0.7127174735069275
+      ],
+      "support_probability": 0.9372184872627258,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03587",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.6301864385604858,
+        0.15495260059833527,
+        0.053152043372392654
+      ],
+      "support_probability": 0.6301864385604858,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01842",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07196853309869766,
+        0.5295026302337646,
+        0.1641167551279068
+      ],
+      "support_probability": 0.5295026302337646,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03629",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05453293398022652,
+        0.05453293398022652,
+        0.058106016367673874
+      ],
+      "support_probability": 0.058106016367673874,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02405",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7166656851768494,
+        0.16110697388648987,
+        0.18421624600887299
+      ],
+      "support_probability": 0.7166656851768494,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04098",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05943050980567932,
+        0.07519103586673737,
+        0.048743415623903275
+      ],
+      "support_probability": 0.07519103586673737,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04229",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9852473735809326,
+        0.9781957864761353,
+        0.980201005935669
+      ],
+      "support_probability": 0.9852473735809326,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01985",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.012418240308761597,
+        0.015060896053910255,
+        0.014197289943695068
+      ],
+      "support_probability": 0.015060896053910255,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00342",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9557346105575562,
+        0.7246228456497192,
+        0.9727553129196167
+      ],
+      "support_probability": 0.9727553129196167,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01756",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.019316626712679863,
+        0.018165115267038345,
+        0.018151285126805305
+      ],
+      "support_probability": 0.019316626712679863,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04331",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.1768490970134735,
+        0.27834606170654297,
+        0.9740963578224182
+      ],
+      "support_probability": 0.9740963578224182,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03043",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008025710470974445,
+        0.008869091980159283,
+        0.010852690786123276
+      ],
+      "support_probability": 0.010852690786123276,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01037",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02006867527961731,
+        0.01522905845195055,
+        0.028544092550873756
+      ],
+      "support_probability": 0.028544092550873756,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00441",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.018931157886981964,
+        0.03141993656754494,
+        0.055235642939805984
+      ],
+      "support_probability": 0.055235642939805984,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03681",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.056828178465366364,
+        0.060051437467336655,
+        0.06646496057510376
+      ],
+      "support_probability": 0.06646496057510376,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00010",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04278907924890518,
+        0.0627489760518074,
+        0.037112392485141754
+      ],
+      "support_probability": 0.0627489760518074,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01701",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9543597102165222,
+        0.9592981934547424,
+        0.956828236579895
+      ],
+      "support_probability": 0.9592981934547424,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02729",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008703622035682201,
+        0.009233906865119934,
+        0.009972783736884594
+      ],
+      "support_probability": 0.009972783736884594,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04405",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.33599501848220825,
+        0.038197632879018784,
+        0.2359994649887085
+      ],
+      "support_probability": 0.33599501848220825,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03237",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.5968354940414429,
+        0.5395628809928894,
+        0.3138332962989807
+      ],
+      "support_probability": 0.5968354940414429,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01047",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.009265693835914135,
+        0.009307115338742733,
+        0.00897079985588789
+      ],
+      "support_probability": 0.009307115338742733,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02640",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8581486940383911,
+        0.8599128127098083,
+        0.9277734160423279
+      ],
+      "support_probability": 0.9277734160423279,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01467",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07597998529672623,
+        0.04057576134800911,
+        0.03668896481394768
+      ],
+      "support_probability": 0.07597998529672623,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04144",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.13049882650375366,
+        0.9704641699790955,
+        0.9758678674697876
+      ],
+      "support_probability": 0.9758678674697876,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04225",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.019605685025453568,
+        0.01995275355875492,
+        0.021676506847143173
+      ],
+      "support_probability": 0.021676506847143173,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02854",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9584315419197083,
+        0.4008479714393616,
+        0.38923442363739014
+      ],
+      "support_probability": 0.9584315419197083,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00185",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7880106568336487,
+        0.9129893183708191,
+        0.31655246019363403
+      ],
+      "support_probability": 0.9129893183708191,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00057",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8128187656402588,
+        0.8579145073890686,
+        0.6435824632644653
+      ],
+      "support_probability": 0.8579145073890686,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04273",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.06909596174955368,
+        0.13088206946849823,
+        0.9447290301322937
+      ],
+      "support_probability": 0.9447290301322937,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00308",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9479233622550964,
+        0.7002123594284058,
+        0.5008734464645386
+      ],
+      "support_probability": 0.9479233622550964,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03168",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7008585333824158,
+        0.9636046290397644,
+        0.941290020942688
+      ],
+      "support_probability": 0.9636046290397644,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03568",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.935692548751831,
+        0.9184336066246033,
+        0.9424088001251221
+      ],
+      "support_probability": 0.9424088001251221,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01537",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04179805517196655,
+        0.08096924424171448,
+        0.14943140745162964
+      ],
+      "support_probability": 0.14943140745162964,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00373",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8615992069244385,
+        0.926355242729187,
+        0.44625216722488403
+      ],
+      "support_probability": 0.926355242729187,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00784",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011880815029144287,
+        0.009270277805626392,
+        0.01405075378715992
+      ],
+      "support_probability": 0.01405075378715992,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03288",
+      "label": "not_supported",
+      "oracle_variants": 2,
+      "variant_support_probabilities": [
+        0.01619759202003479,
+        0.01887420006096363
+      ],
+      "support_probability": 0.01887420006096363,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00732",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.021344531327486038,
+        0.024660078808665276,
+        0.04343825578689575
+      ],
+      "support_probability": 0.04343825578689575,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03232",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9614897966384888,
+        0.9614897966384888,
+        0.9614897966384888
+      ],
+      "support_probability": 0.9614897966384888,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00276",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.023798402398824692,
+        0.024258235469460487,
+        0.0490431971848011
+      ],
+      "support_probability": 0.0490431971848011,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03989",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.037486281245946884,
+        0.04229592904448509,
+        0.030000226572155952
+      ],
+      "support_probability": 0.04229592904448509,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01296",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.035553228110075,
+        0.15460215508937836,
+        0.08359280228614807
+      ],
+      "support_probability": 0.15460215508937836,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00837",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01292540691792965,
+        0.012873088009655476,
+        0.014501044526696205
+      ],
+      "support_probability": 0.014501044526696205,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01299",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.009111195802688599,
+        0.009962910786271095,
+        0.00831686332821846
+      ],
+      "support_probability": 0.009962910786271095,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02272",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.019147155806422234,
+        0.014891008846461773,
+        0.014782240614295006
+      ],
+      "support_probability": 0.019147155806422234,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02672",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.293271005153656,
+        0.9013335108757019,
+        0.9072722792625427
+      ],
+      "support_probability": 0.9072722792625427,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01643",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01114441268146038,
+        0.012501507997512817,
+        0.014110767282545567
+      ],
+      "support_probability": 0.014110767282545567,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02423",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.014812021516263485,
+        0.01571783795952797,
+        0.014608907513320446
+      ],
+      "support_probability": 0.01571783795952797,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00258",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07058131694793701,
+        0.036059170961380005,
+        0.04956371709704399
+      ],
+      "support_probability": 0.07058131694793701,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01759",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.11980085074901581,
+        0.2542423903942108,
+        0.7908952832221985
+      ],
+      "support_probability": 0.7908952832221985,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00820",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.027477165684103966,
+        0.03948307782411575,
+        0.03646329790353775
+      ],
+      "support_probability": 0.03948307782411575,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01702",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7889207005500793,
+        0.8006621599197388,
+        0.47922128438949585
+      ],
+      "support_probability": 0.8006621599197388,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00265",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.024623079225420952,
+        0.028391527011990547,
+        0.02894112654030323
+      ],
+      "support_probability": 0.02894112654030323,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02220",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0581488311290741,
+        0.09664076566696167,
+        0.07578130811452866
+      ],
+      "support_probability": 0.09664076566696167,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01413",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0194763895124197,
+        0.017138129100203514,
+        0.016702089458703995
+      ],
+      "support_probability": 0.0194763895124197,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01486",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03307060897350311,
+        0.03180079907178879,
+        0.030809100717306137
+      ],
+      "support_probability": 0.03307060897350311,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00223",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.15768933296203613,
+        0.1367635428905487,
+        0.06700342148542404
+      ],
+      "support_probability": 0.15768933296203613,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01678",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.009890449233353138,
+        0.006740007549524307,
+        0.011735937558114529
+      ],
+      "support_probability": 0.011735937558114529,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02543",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.00793672539293766,
+        0.0072936019860208035,
+        0.008257688954472542
+      ],
+      "support_probability": 0.008257688954472542,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03456",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.10253769904375076,
+        0.1341719627380371,
+        0.18730831146240234
+      ],
+      "support_probability": 0.18730831146240234,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00164",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.051821187138557434,
+        0.05161843076348305,
+        0.06143854185938835
+      ],
+      "support_probability": 0.06143854185938835,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00224",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0647333562374115,
+        0.08806430548429489,
+        0.0826408863067627
+      ],
+      "support_probability": 0.08806430548429489,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01679",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02260449156165123,
+        0.01959061250090599,
+        0.020181503146886826
+      ],
+      "support_probability": 0.02260449156165123,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01645",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.030953241512179375,
+        0.03281771019101143,
+        0.04512134939432144
+      ],
+      "support_probability": 0.04512134939432144,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01459",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.013997736386954784,
+        0.010733826085925102,
+        0.009397760964930058
+      ],
+      "support_probability": 0.013997736386954784,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00329",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08045599609613419,
+        0.15725290775299072,
+        0.07432885468006134
+      ],
+      "support_probability": 0.15725290775299072,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01288",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.1224837452173233,
+        0.144953653216362,
+        0.07248056679964066
+      ],
+      "support_probability": 0.144953653216362,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02207",
+      "label": "not_supported",
+      "oracle_variants": 2,
+      "variant_support_probabilities": [
+        0.008514289744198322,
+        0.011697430163621902
+      ],
+      "support_probability": 0.011697430163621902,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01176",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.7564225196838379,
+        0.8894798755645752,
+        0.14773310720920563
+      ],
+      "support_probability": 0.8894798755645752,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03648",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01044510118663311,
+        0.02163286693394184,
+        0.019505087286233902
+      ],
+      "support_probability": 0.02163286693394184,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02730",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.41028937697410583,
+        0.5654636025428772,
+        0.5677385330200195
+      ],
+      "support_probability": 0.5677385330200195,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01374",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.19208744168281555,
+        0.05610014498233795,
+        0.09349119663238525
+      ],
+      "support_probability": 0.19208744168281555,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00454",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.020440557971596718,
+        0.022545959800481796,
+        0.01967974752187729
+      ],
+      "support_probability": 0.022545959800481796,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02789",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01992461271584034,
+        0.016188930720090866,
+        0.019641093909740448
+      ],
+      "support_probability": 0.01992461271584034,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03082",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01117391511797905,
+        0.01117391511797905,
+        0.011348973028361797
+      ],
+      "support_probability": 0.011348973028361797,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01371",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03809395059943199,
+        0.041068777441978455,
+        0.24464425444602966
+      ],
+      "support_probability": 0.24464425444602966,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00615",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.14024052023887634,
+        0.9450950622558594,
+        0.8690999150276184
+      ],
+      "support_probability": 0.9450950622558594,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03050",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9790701866149902,
+        0.9801667332649231,
+        0.9824987649917603
+      ],
+      "support_probability": 0.9824987649917603,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03107",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.016726484522223473,
+        0.012076737359166145,
+        0.021860981360077858
+      ],
+      "support_probability": 0.021860981360077858,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02052",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9729581475257874,
+        0.9635664224624634,
+        0.9706094861030579
+      ],
+      "support_probability": 0.9729581475257874,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00156",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05599474534392357,
+        0.061119407415390015,
+        0.08237896114587784
+      ],
+      "support_probability": 0.08237896114587784,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01052",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.007862722501158714,
+        0.010511822998523712,
+        0.012964203953742981
+      ],
+      "support_probability": 0.012964203953742981,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00601",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.009711976163089275,
+        0.0136818066239357,
+        0.012632952071726322
+      ],
+      "support_probability": 0.0136818066239357,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01846",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9504915475845337,
+        0.9477027654647827,
+        0.9029844403266907
+      ],
+      "support_probability": 0.9504915475845337,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00690",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01219955738633871,
+        0.022801997140049934,
+        0.013401195406913757
+      ],
+      "support_probability": 0.022801997140049934,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03887",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07018212229013443,
+        0.5979483723640442,
+        0.9209052920341492
+      ],
+      "support_probability": 0.9209052920341492,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02351",
+      "label": "not_supported",
+      "oracle_variants": 2,
+      "variant_support_probabilities": [
+        0.006890858057886362,
+        0.007578740362077951
+      ],
+      "support_probability": 0.007578740362077951,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03613",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02414407767355442,
+        0.01974225416779518,
+        0.02847898006439209
+      ],
+      "support_probability": 0.02847898006439209,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04541",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.28378090262413025,
+        0.08662506937980652,
+        0.21573825180530548
+      ],
+      "support_probability": 0.28378090262413025,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01191",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05275188386440277,
+        0.7565862536430359,
+        0.019146710634231567
+      ],
+      "support_probability": 0.7565862536430359,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00733",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01926901936531067,
+        0.022684641182422638,
+        0.017204979434609413
+      ],
+      "support_probability": 0.022684641182422638,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04131",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.00622141920030117,
+        0.008886141702532768,
+        0.008097744546830654
+      ],
+      "support_probability": 0.008886141702532768,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02480",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.020723318681120872,
+        0.02403218299150467,
+        0.017674392089247704
+      ],
+      "support_probability": 0.02403218299150467,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03553",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.013657638803124428,
+        0.009812207892537117,
+        0.01873651333153248
+      ],
+      "support_probability": 0.01873651333153248,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04216",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.6433291435241699,
+        0.909587025642395,
+        0.8107967972755432
+      ],
+      "support_probability": 0.909587025642395,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02264",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9836270809173584,
+        0.9807788133621216,
+        0.979699432849884
+      ],
+      "support_probability": 0.9836270809173584,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01181",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.027150308713316917,
+        0.06277807056903839,
+        0.09257254004478455
+      ],
+      "support_probability": 0.09257254004478455,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01375",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9164367914199829,
+        0.9800312519073486,
+        0.9731569290161133
+      ],
+      "support_probability": 0.9800312519073486,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00747",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9874000549316406,
+        0.9855303764343262,
+        0.9797897338867188
+      ],
+      "support_probability": 0.9874000549316406,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03549",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04702760651707649,
+        0.04702760651707649,
+        0.04702760651707649
+      ],
+      "support_probability": 0.04702760651707649,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03983",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.06735260784626007,
+        0.07352013885974884,
+        0.07275321334600449
+      ],
+      "support_probability": 0.07352013885974884,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04426",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.887982189655304,
+        0.9359226226806641,
+        0.9283284544944763
+      ],
+      "support_probability": 0.9359226226806641,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02996",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0317465104162693,
+        0.051784370094537735,
+        0.13225620985031128
+      ],
+      "support_probability": 0.13225620985031128,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04409",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011095623485744,
+        0.011176095344126225,
+        0.011103689670562744
+      ],
+      "support_probability": 0.011176095344126225,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02917",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.129724383354187,
+        0.14222460985183716,
+        0.09652947634458542
+      ],
+      "support_probability": 0.14222460985183716,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02958",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08049090206623077,
+        0.9036343097686768,
+        0.40130382776260376
+      ],
+      "support_probability": 0.9036343097686768,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03752",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02239988185465336,
+        0.02239988185465336,
+        0.021830445155501366
+      ],
+      "support_probability": 0.02239988185465336,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02743",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.1287904977798462,
+        0.27407822012901306,
+        0.14074690639972687
+      ],
+      "support_probability": 0.27407822012901306,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03774",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.023296969011425972,
+        0.02222568728029728,
+        0.022958122193813324
+      ],
+      "support_probability": 0.023296969011425972,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03960",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.022706732153892517,
+        0.06829656660556793,
+        0.05368576943874359
+      ],
+      "support_probability": 0.06829656660556793,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01913",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.07780986279249191,
+        0.05217709019780159,
+        0.04198171943426132
+      ],
+      "support_probability": 0.07780986279249191,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00655",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02142944000661373,
+        0.03911101445555687,
+        0.021497348323464394
+      ],
+      "support_probability": 0.03911101445555687,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02374",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.20554189383983612,
+        0.1749887466430664,
+        0.7610899209976196
+      ],
+      "support_probability": 0.7610899209976196,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02891",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.1062738299369812,
+        0.1230287104845047,
+        0.1120520755648613
+      ],
+      "support_probability": 0.1230287104845047,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02269",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.059419240802526474,
+        0.05081382021307945,
+        0.05540541931986809
+      ],
+      "support_probability": 0.059419240802526474,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02790",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.31209176778793335,
+        0.14456960558891296,
+        0.0680617019534111
+      ],
+      "support_probability": 0.31209176778793335,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01306",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.6662775874137878,
+        0.40742528438568115,
+        0.5219204425811768
+      ],
+      "support_probability": 0.6662775874137878,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02836",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04739350825548172,
+        0.09854666888713837,
+        0.04466342180967331
+      ],
+      "support_probability": 0.09854666888713837,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02918",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.24495384097099304,
+        0.15804632008075714,
+        0.4302312433719635
+      ],
+      "support_probability": 0.4302312433719635,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03214",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9747793674468994,
+        0.04674160107970238,
+        0.9780974984169006
+      ],
+      "support_probability": 0.9780974984169006,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01144",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9775238037109375,
+        0.9614856839179993,
+        0.9586565494537354
+      ],
+      "support_probability": 0.9775238037109375,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01184",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008162175305187702,
+        0.010178220458328724,
+        0.009888834320008755
+      ],
+      "support_probability": 0.010178220458328724,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00888",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.05672511085867882,
+        0.04011685773730278,
+        0.049864888191223145
+      ],
+      "support_probability": 0.05672511085867882,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01958",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008557193912565708,
+        0.008231962099671364,
+        0.004935158416628838
+      ],
+      "support_probability": 0.008557193912565708,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02535",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011605245992541313,
+        0.015200995840132236,
+        0.013425772078335285
+      ],
+      "support_probability": 0.015200995840132236,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01977",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8245730400085449,
+        0.12752020359039307,
+        0.12662416696548462
+      ],
+      "support_probability": 0.8245730400085449,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01115",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.022363321855664253,
+        0.016101030632853508,
+        0.020505204796791077
+      ],
+      "support_probability": 0.022363321855664253,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02119",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.1047397032380104,
+        0.05808764323592186,
+        0.1033720150589943
+      ],
+      "support_probability": 0.1047397032380104,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02715",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008304214105010033,
+        0.005611201282590628,
+        0.013616153039038181
+      ],
+      "support_probability": 0.013616153039038181,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03843",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9450602531433105,
+        0.10250832885503769,
+        0.08089051395654678
+      ],
+      "support_probability": 0.9450602531433105,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03451",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9645435214042664,
+        0.9715492725372314,
+        0.9726898074150085
+      ],
+      "support_probability": 0.9726898074150085,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00301",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.021068552508950233,
+        0.015652207657694817,
+        0.018551506102085114
+      ],
+      "support_probability": 0.021068552508950233,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03127",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.029490964487195015,
+        0.044492706656455994,
+        0.029788359999656677
+      ],
+      "support_probability": 0.044492706656455994,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03508",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.020102085545659065,
+        0.023557376116514206,
+        0.052149493247270584
+      ],
+      "support_probability": 0.052149493247270584,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04342",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02280692756175995,
+        0.01495871040970087,
+        0.017977967858314514
+      ],
+      "support_probability": 0.02280692756175995,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01464",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.6344175338745117,
+        0.5227415561676025,
+        0.4191291928291321
+      ],
+      "support_probability": 0.6344175338745117,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01932",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.027922634035348892,
+        0.028907781466841698,
+        0.03885280713438988
+      ],
+      "support_probability": 0.03885280713438988,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01654",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08368318527936935,
+        0.06458377093076706,
+        0.061056800186634064
+      ],
+      "support_probability": 0.08368318527936935,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02154",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9734662771224976,
+        0.9772900342941284,
+        0.9217823147773743
+      ],
+      "support_probability": 0.9772900342941284,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02217",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04980195313692093,
+        0.029930472373962402,
+        0.04339497908949852
+      ],
+      "support_probability": 0.04980195313692093,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01131",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04519794136285782,
+        0.04295609891414642,
+        0.052049554884433746
+      ],
+      "support_probability": 0.052049554884433746,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02785",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9087636470794678,
+        0.9746471643447876,
+        0.9760892987251282
+      ],
+      "support_probability": 0.9760892987251282,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02736",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9692699909210205,
+        0.9770495295524597,
+        0.9791808128356934
+      ],
+      "support_probability": 0.9791808128356934,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00638",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03533061593770981,
+        0.4256531000137329,
+        0.3545854985713959
+      ],
+      "support_probability": 0.4256531000137329,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02327",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03266241401433945,
+        0.028703927993774414,
+        0.027108579874038696
+      ],
+      "support_probability": 0.03266241401433945,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02515",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08411416411399841,
+        0.2617649435997009,
+        0.08260127156972885
+      ],
+      "support_probability": 0.2617649435997009,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02557",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.08543291687965393,
+        0.07856711000204086,
+        0.0617322102189064
+      ],
+      "support_probability": 0.08543291687965393,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00521",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8945465087890625,
+        0.9264296293258667,
+        0.9317288398742676
+      ],
+      "support_probability": 0.9317288398742676,
+      "predicted_supported": true
+    },
+    {
+      "id": "test01785",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.18294626474380493,
+        0.16506151854991913,
+        0.18294626474380493
+      ],
+      "support_probability": 0.18294626474380493,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02762",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.928148090839386,
+        0.8553059101104736,
+        0.14416073262691498
+      ],
+      "support_probability": 0.928148090839386,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00045",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.062424249947071075,
+        0.047239020466804504,
+        0.0625615194439888
+      ],
+      "support_probability": 0.0625615194439888,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02459",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.008409577421844006,
+        0.010496784932911396,
+        0.008816271089017391
+      ],
+      "support_probability": 0.010496784932911396,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00256",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.006623702589422464,
+        0.006077378522604704,
+        0.009561382234096527
+      ],
+      "support_probability": 0.009561382234096527,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02954",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.27267375588417053,
+        0.39829662442207336,
+        0.9169520139694214
+      ],
+      "support_probability": 0.9169520139694214,
+      "predicted_supported": true
+    },
+    {
+      "id": "test00330",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.28520020842552185,
+        0.5557483434677124,
+        0.11418111622333527
+      ],
+      "support_probability": 0.5557483434677124,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04454",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.007873240858316422,
+        0.007650147192180157,
+        0.006974953226745129
+      ],
+      "support_probability": 0.007873240858316422,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00612",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.14392012357711792,
+        0.08675742149353027,
+        0.021599719300866127
+      ],
+      "support_probability": 0.14392012357711792,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02950",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9456361532211304,
+        0.9386139512062073,
+        0.9176199436187744
+      ],
+      "support_probability": 0.9456361532211304,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04264",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9448366165161133,
+        0.9547330141067505,
+        0.9564768671989441
+      ],
+      "support_probability": 0.9564768671989441,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02095",
+      "label": "not_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.12896084785461426,
+        0.030489888042211533,
+        0.026870286092162132
+      ],
+      "support_probability": 0.12896084785461426,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04519",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.035176075994968414,
+        0.0430639423429966,
+        0.0837947428226471
+      ],
+      "support_probability": 0.0837947428226471,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04475",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9667834639549255,
+        0.9647630453109741,
+        0.945013701915741
+      ],
+      "support_probability": 0.9667834639549255,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02919",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02924199216067791,
+        0.03233030065894127,
+        0.06274163722991943
+      ],
+      "support_probability": 0.06274163722991943,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03717",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8763046860694885,
+        0.7881477475166321,
+        0.6897369027137756
+      ],
+      "support_probability": 0.8763046860694885,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02178",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.016474295407533646,
+        0.027748096734285355,
+        0.016474295407533646
+      ],
+      "support_probability": 0.027748096734285355,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02462",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.01688496768474579,
+        0.016648296266794205,
+        0.017231136560440063
+      ],
+      "support_probability": 0.017231136560440063,
+      "predicted_supported": false
+    },
+    {
+      "id": "test02574",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.03539456054568291,
+        0.025693748146295547,
+        0.038350049406290054
+      ],
+      "support_probability": 0.038350049406290054,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01084",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9633322954177856,
+        0.8772482872009277,
+        0.3035747706890106
+      ],
+      "support_probability": 0.9633322954177856,
+      "predicted_supported": true
+    },
+    {
+      "id": "test04469",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.0427313931286335,
+        0.06272665411233902,
+        0.0600847527384758
+      ],
+      "support_probability": 0.06272665411233902,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03920",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.012105808593332767,
+        0.011512174271047115,
+        0.009892234578728676
+      ],
+      "support_probability": 0.012105808593332767,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04305",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.028903886675834656,
+        0.02716442197561264,
+        0.030425943434238434
+      ],
+      "support_probability": 0.030425943434238434,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04024",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.018076015636324883,
+        0.02065807767212391,
+        0.015895266085863113
+      ],
+      "support_probability": 0.02065807767212391,
+      "predicted_supported": false
+    },
+    {
+      "id": "test04394",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.04819855839014053,
+        0.9579591751098633,
+        0.042925216257572174
+      ],
+      "support_probability": 0.9579591751098633,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02845",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.11643382906913757,
+        0.10544770210981369,
+        0.09576994925737381
+      ],
+      "support_probability": 0.11643382906913757,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00737",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.011899689212441444,
+        0.010697783902287483,
+        0.011382016353309155
+      ],
+      "support_probability": 0.011899689212441444,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01578",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.06560670584440231,
+        0.021235110238194466,
+        0.023323947563767433
+      ],
+      "support_probability": 0.06560670584440231,
+      "predicted_supported": false
+    },
+    {
+      "id": "test00780",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.022224105894565582,
+        0.031348876655101776,
+        0.031853530555963516
+      ],
+      "support_probability": 0.031853530555963516,
+      "predicted_supported": false
+    },
+    {
+      "id": "test01032",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.9637855291366577,
+        0.9555338621139526,
+        0.9682058095932007
+      ],
+      "support_probability": 0.9682058095932007,
+      "predicted_supported": true
+    },
+    {
+      "id": "test03525",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.045961763709783554,
+        0.06061107665300369,
+        0.06375883519649506
+      ],
+      "support_probability": 0.06375883519649506,
+      "predicted_supported": false
+    },
+    {
+      "id": "test03362",
+      "label": "supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.8897911310195923,
+        0.19429077208042145,
+        0.0387411043047905
+      ],
+      "support_probability": 0.8897911310195923,
+      "predicted_supported": true
+    },
+    {
+      "id": "test02326",
+      "label": "partially_supported",
+      "oracle_variants": 3,
+      "variant_support_probabilities": [
+        0.02749526873230934,
+        0.17911021411418915,
+        0.10955287516117096
+      ],
+      "support_probability": 0.17911021411418915,
+      "predicted_supported": false
+    }
+  ],
+  "result_sha256": "32878ba1b5cbe80e24e4aaac3520d7e80ad39a471f19ee108261757981532b0a"
+}
