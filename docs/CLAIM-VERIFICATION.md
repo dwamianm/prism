@@ -55,6 +55,16 @@ scores, not calibrated truth probabilities. Every evaluated group, exact model
 revision, thresholds, typed evidence identity, and input/output digest is retained
 in `ClaimVerification`.
 
+By default, a high model contradiction becomes `refuted` only when the exact
+claim/evidence group also contains an explicit negation or correction cue, or
+incompatible concrete numeric, weekday, or month values. A model contradiction
+without that independent signal remains `insufficient`, retains its raw score,
+and reports `uncorroborated_model_contradiction` in `limitations`. This guard
+prevents an intention such as “I want to deploy” from becoming evidence that a
+deployment did not happen. It is deliberately narrow: an implicit contradiction
+can remain unresolved. `refutation_policy="model_only"` restores raw
+threshold-based behavior for controlled experiments.
+
 `verify_bundle()` sees only packed candidates whose references occur in the exact
 rendered context. It uses `candidate.rendered_text`, so it does not verify against
 hidden full text after packing selected a lower-fidelity representation. Each
@@ -105,5 +115,8 @@ matched 17 cases and failed its all-cases gate. It produced zero unsafe support
 decisions, recovered both unseen two-passage claims, found every explicit
 refutation and conflict, and refused both exhaustive claims without a model call.
 It also overcalled two neutral passages as contradictions. Until refutation has
-independent corroboration, treat `refuted` as experimental rather than proof that
-the opposite claim is true.
+independent corroboration, treat `refuted` from that implementation as
+experimental rather than proof that the opposite claim is true. The default
+verifier now applies the deterministic corroboration guard described above; its
+same-cohort follow-up is reported separately so the failed first result remains
+immutable.

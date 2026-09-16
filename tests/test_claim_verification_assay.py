@@ -65,6 +65,65 @@ def test_machine_gates_reject_unsafe_support():
     assert result["results"]["unsafe_supported_count_max"]["observed"] == 1
 
 
+def test_guarded_refutation_gates_measure_false_refutations_and_minimal_groups():
+    registration = {
+        "evaluation": {
+            "gates": {
+                "unsafe_supported_count_max": 0,
+                "insufficient_refuted_count_max": 0,
+                "supported_correct_min": 2,
+                "minimal_group_correct_min": 1,
+                "refuted_correct_min": 1,
+                "insufficient_correct_min": 1,
+                "contested_correct_min": 1,
+                "incomplete_without_model_min": 1,
+            }
+        }
+    }
+    samples = [
+        _sample("support", "supported", "supported"),
+        {
+            **_sample("group", "supported", "supported"),
+            "category": "minimal_group",
+        },
+        _sample("refute", "refuted", "refuted"),
+        _sample("insufficient", "insufficient", "insufficient"),
+        _sample("contested", "contested", "contested"),
+        _sample("incomplete", "incomplete", "incomplete", model_called=False),
+    ]
+
+    result = assay._gate_results(registration, samples)
+
+    assert result["passed"] is True
+    assert result["results"]["insufficient_refuted_count_max"]["observed"] == 0
+    assert result["results"]["minimal_group_correct_min"]["observed"] == 1
+
+
+def test_guarded_refutation_gates_reject_model_only_false_refutation():
+    registration = {
+        "evaluation": {
+            "gates": {
+                "unsafe_supported_count_max": 0,
+                "insufficient_refuted_count_max": 0,
+                "supported_correct_min": 0,
+                "minimal_group_correct_min": 0,
+                "refuted_correct_min": 0,
+                "insufficient_correct_min": 0,
+                "contested_correct_min": 0,
+                "incomplete_without_model_min": 0,
+            }
+        }
+    }
+
+    result = assay._gate_results(
+        registration,
+        [_sample("false-refute", "insufficient", "refuted")],
+    )
+
+    assert result["passed"] is False
+    assert result["results"]["insufficient_refuted_count_max"]["observed"] == 1
+
+
 def test_registration_rejects_duplicate_case_ids(tmp_path: Path, monkeypatch):
     registration_path = tmp_path / "registration.json"
     registration_path.write_text("{}")

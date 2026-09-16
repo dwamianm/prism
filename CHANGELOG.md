@@ -97,8 +97,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   evaluations establish domain thresholds. Its first registered 20-case
   real-model assay matched 17 cases and failed the all-cases gate. It produced
   zero unsafe supports and recovered both unseen two-passage claims, but
-  overcalled two neutral passages as refutations; refutation therefore requires
-  another implementation pass before production enforcement.
+  overcalled two neutral passages as refutations. The default verifier now
+  requires an explicit correction cue or incompatible concrete value in the
+  exact evidence group before accepting a model contradiction; blocked raw
+  contradictions remain auditable and return `insufficient`.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

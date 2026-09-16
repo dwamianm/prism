@@ -18,6 +18,7 @@ import hashlib
 import itertools
 import json
 import math
+import re
 import threading
 from typing import Any, Literal
 from uuid import UUID
@@ -30,6 +31,28 @@ from prme.types import EpistemicType, LifecycleState, SourceType
 
 DEFAULT_NLI_MODEL = "cross-encoder/nli-deberta-v3-base"
 DEFAULT_NLI_REVISION = "6c749ce3425cd33b46d187e45b92bbf96ee12ec7"
+
+_REFUTATION_CUE_RE = re.compile(
+    r"\b(?:no|not|never|neither|nor|without|cannot|can't|isn't|aren't|"
+    r"wasn't|weren't|didn't|doesn't|don't|won't|instead|rather than|"
+    r"switched from|replaced|incorrect|false)\b",
+    re.IGNORECASE,
+)
+_NUMBER_RE = re.compile(r"(?<!\w)-?\d+(?:\.\d+)?(?!\w)")
+_WEEKDAY_RE = re.compile(
+    r"\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+    re.IGNORECASE,
+)
+_MONTH_RE = re.compile(
+    r"\b(?:january|february|march|april|may|june|july|august|september|"
+    r"october|november|december)\b",
+    re.IGNORECASE,
+)
+
+ClaimVerificationLimitation = Literal[
+    "complete_set_requires_structured_aggregation",
+    "uncorroborated_model_contradiction",
+]
 
 
 class ClaimVerificationStatus(str, Enum):
@@ -55,6 +78,9 @@ class ClaimVerificationConfig(BaseModel):
     max_evidence: int = Field(default=64, ge=1, le=256)
     max_group_size: int = Field(default=2, ge=1, le=3)
     group_candidate_limit: int = Field(default=8, ge=2, le=16)
+    refutation_policy: Literal["explicit_corroboration", "model_only"] = (
+        "explicit_corroboration"
+    )
 
     @field_validator("model", "revision")
     @classmethod
@@ -123,9 +149,7 @@ class ClaimVerification(BaseModel):
     supporting_group: tuple[UUID, ...] = ()
     refuting_group: tuple[UUID, ...] = ()
     group_scores: tuple[EvidenceGroupScore, ...] = ()
-    limitations: tuple[
-        Literal["complete_set_requires_structured_aggregation"], ...
-    ] = ()
+    limitations: tuple[ClaimVerificationLimitation, ...] = ()
     model: str
     requested_revision: str
     resolved_revision: str | None = None
@@ -162,6 +186,33 @@ def _group_text(group: Sequence[ClaimEvidence]) -> str:
         return group[0].text
     return "\n".join(
         f"[E{index}] {item.text}" for index, item in enumerate(group, start=1)
+    )
+
+
+def _explicit_values(text: str) -> tuple[set[str], set[str], set[str]]:
+    return (
+        set(_NUMBER_RE.findall(text)),
+        {match.casefold() for match in _WEEKDAY_RE.findall(text)},
+        {match.casefold() for match in _MONTH_RE.findall(text)},
+    )
+
+
+def _corroborates_refutation(
+    claim: str,
+    group: Sequence[ClaimEvidence],
+) -> bool:
+    evidence_text = "\n".join(item.text for item in group)
+    if _REFUTATION_CUE_RE.search(claim) or _REFUTATION_CUE_RE.search(evidence_text):
+        return True
+    claim_values = _explicit_values(claim)
+    evidence_values = _explicit_values(evidence_text)
+    return any(
+        claim_group and evidence_group and claim_group != evidence_group
+        for claim_group, evidence_group in zip(
+            claim_values,
+            evidence_values,
+            strict=True,
+        )
     )
 
 
@@ -348,6 +399,14 @@ class ClaimVerifier:
             )
 
         all_scores: list[EvidenceGroupScore] = []
+        evidence_by_id = {item.memory_id: item for item in unique}
+
+        def corroborates(score: EvidenceGroupScore) -> bool:
+            if self.config.refutation_policy == "model_only":
+                return True
+            group = tuple(evidence_by_id[memory_id] for memory_id in score.memory_ids)
+            return _corroborates_refutation(normalized_claim, group)
+
         groups = [(item,) for item in unique]
         single_scores = await self._score_groups(normalized_claim, groups)
         all_scores.extend(single_scores)
@@ -357,11 +416,13 @@ class ClaimVerifier:
             for item in single_scores
             if item.entailment >= self.config.entailment_threshold
         ]
-        refute = [
+        raw_refute = [
             item
             for item in single_scores
             if item.contradiction >= self.config.contradiction_threshold
         ]
+        refute = [item for item in raw_refute if corroborates(item)]
+        blocked_refutation = len(raw_refute) != len(refute)
 
         if not support and not refute and self.config.max_group_size > 1:
             ranked = sorted(
@@ -383,11 +444,15 @@ class ClaimVerifier:
                     for item in group_scores
                     if item.entailment >= self.config.entailment_threshold
                 ]
-                refute = [
+                raw_refute = [
                     item
                     for item in group_scores
                     if item.contradiction >= self.config.contradiction_threshold
                 ]
+                refute = [item for item in raw_refute if corroborates(item)]
+                blocked_refutation = blocked_refutation or len(raw_refute) != len(
+                    refute
+                )
                 if support or refute:
                     break
 
@@ -407,6 +472,9 @@ class ClaimVerifier:
             model_called=True,
             supporting=_best_group(support, probability="entailment"),
             refuting=_best_group(refute, probability="contradiction"),
+            limitations=(
+                ("uncorroborated_model_contradiction",) if blocked_refutation else ()
+            ),
         )
 
     async def verify_bundle(
@@ -482,9 +550,7 @@ class ClaimVerifier:
         model_called: bool,
         supporting: EvidenceGroupScore | None = None,
         refuting: EvidenceGroupScore | None = None,
-        limitations: tuple[
-            Literal["complete_set_requires_structured_aggregation"], ...
-        ] = (),
+        limitations: tuple[ClaimVerificationLimitation, ...] = (),
     ) -> ClaimVerification:
         config_sha = _configuration_sha256(self.config)
         claim_sha = _sha256(claim)
@@ -536,6 +602,7 @@ __all__ = [
     "ClaimVerification",
     "ClaimVerificationConfig",
     "ClaimVerificationError",
+    "ClaimVerificationLimitation",
     "ClaimVerificationStatus",
     "ClaimVerifier",
     "EvidenceGroupScore",

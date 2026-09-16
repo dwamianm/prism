@@ -52,8 +52,9 @@ def _validate_registration(
     registration_path: Path,
     project_root: Path,
 ) -> None:
-    if registration.get("schema_version") != 1:
-        raise ValueError("registration schema_version must be 1")
+    schema_version = registration.get("schema_version")
+    if isinstance(schema_version, bool) or schema_version not in {1, 2}:
+        raise ValueError("registration schema_version must be 1 or 2")
     if registration.get("kind") != "claim-verification-assay-registration":
         raise ValueError("registration kind is invalid")
     source = registration.get("source")
@@ -91,17 +92,30 @@ def _validate_registration(
             ClaimEvidence.model_validate(item)
 
     gates = registration.get("evaluation", {}).get("gates")
-    expected_gates = {
-        "all_expected_statuses",
-        "unsafe_supported_count_max",
-        "supported_correct_min",
-        "refuted_correct_min",
-        "contested_correct_min",
-        "incomplete_without_model_min",
-    }
+    expected_gates = (
+        {
+            "all_expected_statuses",
+            "unsafe_supported_count_max",
+            "supported_correct_min",
+            "refuted_correct_min",
+            "contested_correct_min",
+            "incomplete_without_model_min",
+        }
+        if schema_version == 1
+        else {
+            "unsafe_supported_count_max",
+            "insufficient_refuted_count_max",
+            "supported_correct_min",
+            "minimal_group_correct_min",
+            "refuted_correct_min",
+            "insufficient_correct_min",
+            "contested_correct_min",
+            "incomplete_without_model_min",
+        }
+    )
     if not isinstance(gates, dict) or set(gates) != expected_gates:
         raise ValueError("registration gates are incomplete")
-    if gates["all_expected_statuses"] is not True:
+    if schema_version == 1 and gates["all_expected_statuses"] is not True:
         raise ValueError("all_expected_statuses gate must be true")
     for name, value in gates.items():
         if name == "all_expected_statuses":
@@ -127,6 +141,9 @@ def _gate_results(
     expected_contested = [
         sample for sample in samples if sample["expected_status"] == "contested"
     ]
+    expected_insufficient = [
+        sample for sample in samples if sample["expected_status"] == "insufficient"
+    ]
     expected_incomplete = [
         sample for sample in samples if sample["expected_status"] == "incomplete"
     ]
@@ -147,6 +164,18 @@ def _gate_results(
         "incomplete_without_model_min": sum(
             sample["matched"] and not sample["assessment"]["model_called"]
             for sample in expected_incomplete
+        ),
+        "insufficient_refuted_count_max": sum(
+            sample["assessment"]["status"] == "refuted"
+            for sample in expected_insufficient
+        ),
+        "minimal_group_correct_min": sum(
+            sample["matched"]
+            for sample in samples
+            if sample["category"] == "minimal_group"
+        ),
+        "insufficient_correct_min": sum(
+            sample["matched"] for sample in expected_insufficient
         ),
     }
     results: dict[str, Any] = {}
@@ -217,7 +246,7 @@ async def run(
     samples = await _execute(registration)
     quality_gates = _gate_results(registration, samples)
     result = {
-        "schema_version": 1,
+        "schema_version": registration["schema_version"],
         "kind": "claim-verification-assay-result",
         "completed_at": datetime.now(timezone.utc).isoformat(),
         "registration": str(registration_path.resolve()),

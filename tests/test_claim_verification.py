@@ -95,6 +95,91 @@ async def test_entailing_and_refuting_groups_surface_contested(monkeypatch):
     assert result.refuting_group == (refute.memory_id,)
 
 
+async def test_model_contradiction_without_explicit_corroboration_fails_closed(
+    monkeypatch,
+):
+    evidence = _evidence("I want to deploy after the tests pass.", "m1")
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.001, 0.97, 0.029)],
+    )
+
+    result = await verifier.verify("The user deployed the release.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.refuting_group == ()
+    assert result.group_scores[0].contradiction == 0.97
+    assert result.limitations == ("uncorroborated_model_contradiction",)
+
+
+@pytest.mark.parametrize(
+    ("claim", "evidence_text"),
+    [
+        ("The launch is Tuesday.", "The launch is not Tuesday; it is Wednesday."),
+        ("The launch is Tuesday.", "The launch is Wednesday."),
+        ("The service listens on port 8443.", "The service listens on port 8080."),
+        ("The launch is not Tuesday.", "The launch is Tuesday."),
+    ],
+)
+async def test_explicit_cues_or_incompatible_values_corroborate_refutation(
+    monkeypatch,
+    claim,
+    evidence_text,
+):
+    evidence = _evidence(evidence_text, "m1")
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.001, 0.97, 0.029)],
+    )
+
+    result = await verifier.verify(claim, [evidence])
+
+    assert result.status == ClaimVerificationStatus.REFUTED
+    assert result.refuting_group == (evidence.memory_id,)
+    assert result.limitations == ()
+
+
+async def test_model_only_policy_preserves_raw_model_refutation(monkeypatch):
+    evidence = _evidence("I want to deploy after the tests pass.", "m1")
+    verifier = ClaimVerifier(ClaimVerificationConfig(refutation_policy="model_only"))
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.001, 0.97, 0.029)],
+    )
+
+    result = await verifier.verify("The user deployed the release.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.REFUTED
+    assert result.refuting_group == (evidence.memory_id,)
+    assert result.limitations == ()
+
+
+async def test_group_labels_do_not_count_as_concrete_evidence_values(monkeypatch):
+    verifier = ClaimVerifier()
+    evidence = [
+        _evidence("The release plan is under review.", "m1"),
+        _evidence("The team discussed deployment timing.", "m2"),
+    ]
+
+    def predict(pairs):
+        if len(pairs) == 2:
+            return [(0.01, 0.01, 0.98), (0.01, 0.01, 0.98)]
+        return [(0.001, 0.97, 0.029)]
+
+    monkeypatch.setattr(verifier, "_predict_sync", predict)
+
+    result = await verifier.verify("Release 4 was deployed.", evidence)
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.refuting_group == ()
+    assert result.limitations == ("uncorroborated_model_contradiction",)
+
+
 async def test_complete_set_claim_fails_closed_without_loading_model(monkeypatch):
     verifier = ClaimVerifier()
     monkeypatch.setattr(
