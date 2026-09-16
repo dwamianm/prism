@@ -142,7 +142,14 @@ def _select_new_cohort(
     selection_seed: str,
     per_label_per_dataset: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Select a balanced cohort after removing the previously observed cohort."""
+    """Select a label-balanced cohort after removing the observed cohort.
+
+    The original FactCG cohort takes an equal quota from every dataset/label
+    group.  Some development groups do not contain enough rows to repeat that
+    quota without overlap.  Allocate the same total target per label through a
+    deterministic max-min pass: every non-exhausted group receives one row per
+    round, so capacity shortfalls are redistributed as evenly as possible.
+    """
     excluded = factcg._select_cohort(
         rows,
         split="dev",
@@ -150,12 +157,30 @@ def _select_new_cohort(
         per_label_per_dataset=per_label_per_dataset,
     )
     excluded_ids = {row["contamination_identifier"] for row in excluded}
-    groups: dict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
+    group_keys = sorted({(row["dataset"], row["label"]) for row in rows})
+    groups: dict[tuple[str, int], list[dict[str, Any]]] = {
+        key: [] for key in group_keys
+    }
     for row in rows:
         if row["contamination_identifier"] not in excluded_ids:
             groups[(row["dataset"], row["label"])].append(row)
     selected: list[dict[str, Any]] = []
-    for key in sorted(groups):
+    quotas = {key: 0 for key in group_keys}
+    for label in sorted({key[1] for key in group_keys}):
+        label_keys = [key for key in group_keys if key[1] == label]
+        remaining = per_label_per_dataset * len(label_keys)
+        if sum(len(groups[key]) for key in label_keys) < remaining:
+            raise ValueError(f"unobserved cohort label {label!r} is too small")
+        while remaining:
+            available = [key for key in label_keys if quotas[key] < len(groups[key])]
+            if not available:
+                raise AssertionError("cohort capacity accounting is inconsistent")
+            for key in available:
+                quotas[key] += 1
+                remaining -= 1
+                if not remaining:
+                    break
+    for key in group_keys:
         candidates = sorted(
             groups[key],
             key=lambda row: (
@@ -165,12 +190,20 @@ def _select_new_cohort(
                 row["contamination_identifier"],
             ),
         )
-        if len(candidates) < per_label_per_dataset:
-            raise ValueError(f"unobserved cohort group {key!r} is too small")
-        selected.extend(candidates[:per_label_per_dataset])
+        selected.extend(candidates[: quotas[key]])
     if {row["contamination_identifier"] for row in selected} & excluded_ids:
         raise AssertionError("new development cohort overlaps the observed cohort")
     return excluded, selected
+
+
+def _group_counts(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    counts = Counter((str(row["dataset"]), str(row["label"])) for row in rows)
+    datasets = sorted({dataset for dataset, _label in counts})
+    labels = sorted({label for _dataset, label in counts})
+    return {
+        dataset: {label: counts.get((dataset, label), 0) for label in labels}
+        for dataset in datasets
+    }
 
 
 def _protocol_specification() -> dict[str, Any]:
@@ -310,10 +343,19 @@ def _validate_registration(
     expected_cohort = {
         "selection_seed": "prme-llm-aggrefact-typed-alignment-v1",
         "excluded_selection_seed": base_cohort["seed"],
-        "per_label_per_dataset": base_cohort["per_label_per_dataset"],
-        "sampling": "balanced_hash_after_excluding_factcg_v1_development_ids",
+        "excluded_per_label_per_dataset": base_cohort["per_label_per_dataset"],
+        "nominal_cases_per_label_per_dataset": base_cohort[
+            "per_label_per_dataset"
+        ],
+        "target_cases_by_label": {
+            str(label): base_cohort["per_label_per_dataset"]
+            * len({row["dataset"] for row in rows if row["label"] == label})
+            for label in sorted({row["label"] for row in rows})
+        },
+        "sampling": "balanced_hash_with_capacity_aware_max_min_redistribution_after_excluding_factcg_v1_development_ids",
         "excluded_identity_sha256": factcg._identity_sha256(excluded),
         "selected_identity_sha256": factcg._identity_sha256(selected),
+        "selected_counts_by_dataset_label": _group_counts(selected),
         "cases": len(selected),
         "overlap_cases": 0,
     }

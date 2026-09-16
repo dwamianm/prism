@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import Counter
+
 from benchmarks.integrations import run_llm_aggrefact_typed_alignment as subject
 
 
@@ -66,6 +68,37 @@ def test_new_cohort_excludes_every_previously_selected_identity() -> None:
     assert {row["contamination_identifier"] for row in excluded}.isdisjoint(
         row["contamination_identifier"] for row in selected
     )
+
+
+def test_new_cohort_redistributes_a_group_capacity_shortfall() -> None:
+    rows = []
+    for label in (0, 1):
+        for dataset, cases in (("small", 4), ("large", 10)):
+            for index in range(cases):
+                rows.append(
+                    {
+                        "dataset": dataset,
+                        "label": label,
+                        "doc": f"doc {dataset} {label} {index}",
+                        "claim": f"claim {dataset} {label} {index}",
+                        "contamination_identifier": f"{dataset}-{label}-{index}",
+                    }
+                )
+
+    excluded, selected = subject._select_new_cohort(
+        rows,
+        excluded_seed="old",
+        selection_seed="new",
+        per_label_per_dataset=3,
+    )
+
+    assert len(excluded) == len(selected) == 12
+    assert Counter((row["dataset"], row["label"]) for row in selected) == {
+        ("small", 0): 1,
+        ("large", 0): 5,
+        ("small", 1): 1,
+        ("large", 1): 5,
+    }
 
 
 def test_exact_span_validator_accepts_complete_atomic_decomposition() -> None:
