@@ -44,9 +44,11 @@ outside ordinary storage and retrieval. Set `model` and `revision` together in
 The verifier scores each passage alone before combining anything. If no
 individual passage reaches the configured entailment or contradiction threshold,
 it ranks a bounded candidate subset and evaluates combinations of two passages
-by default. It stops at the first group size with a decision. This avoids feeding
-an entire retrieved context through a short NLI window and produces the smallest
-observed evidence group rather than a long, redundant citation list.
+by default. Ranking selects the bounded subset but does not reorder it: group
+premises retain the caller's evidence order, which is also bound into the
+evidence digest. It stops at the first group size with a decision. This avoids
+feeding an entire retrieved context through a short NLI window and produces the
+smallest observed evidence group rather than a long, redundant citation list.
 
 Both an entailing and a contradicting group produce `contested`. An entailing
 group alone produces `supported`; a contradicting group alone produces

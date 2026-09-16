@@ -114,7 +114,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   verification remains opt-in. A registered same-cohort safety confirmation
   passed all eight gates: the raw scores were unchanged, exactly the two intended
   statuses changed, and unsafe supports fell from two to zero. Four implicit
-  contradictions and two relation-composition cases remain unresolved.
+  contradictions and two relation-composition cases remained unresolved. A
+  follow-up diagnosed that bounded candidate ranking had also reordered evidence
+  before NLI; group scoring now preserves caller order after selecting candidates.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

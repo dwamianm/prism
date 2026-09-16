@@ -63,14 +63,20 @@ async def test_searches_bounded_minimal_pair_when_singles_are_insufficient(monke
     verifier = ClaimVerifier(
         ClaimVerificationConfig(max_group_size=2, group_candidate_limit=3)
     )
+    captured = []
 
     def predict(pairs):
+        captured.extend(pairs)
         scores = []
         for premise, _claim in pairs:
             if "trip starts" in premise and "next stop" in premise:
                 scores.append((0.91, 0.02, 0.07))
-            else:
+            elif "Unrelated weather" in premise:
+                scores.append((0.01, 0.01, 0.98))
+            elif "trip starts" in premise:
                 scores.append((0.20, 0.05, 0.75))
+            else:
+                scores.append((0.25, 0.05, 0.70))
         return scores
 
     monkeypatch.setattr(verifier, "_predict_sync", predict)
@@ -83,6 +89,9 @@ async def test_searches_bounded_minimal_pair_when_singles_are_insufficient(monke
     assert result.status == ClaimVerificationStatus.SUPPORTED
     assert set(result.supporting_group) == {first.memory_id, second.memory_id}
     assert [len(item.memory_ids) for item in result.group_scores] == [1, 1, 1, 2, 2, 2]
+    assert captured[3][0] == (
+        "[E1] The trip starts in Austin.\n[E2] The next stop after Austin is Tulsa."
+    )
 
 
 async def test_entailing_and_refuting_groups_surface_contested(monkeypatch):

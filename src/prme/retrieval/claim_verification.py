@@ -655,7 +655,8 @@ class ClaimVerifier:
                     str(item[0].memory_id),
                 ),
             )[: self.config.group_candidate_limit]
-            candidates = [item[0] for item in ranked]
+            selected_ids = {item[0].memory_id for item in ranked}
+            candidates = [item for item in unique if item.memory_id in selected_ids]
             for size in range(2, self.config.max_group_size + 1):
                 grouped = list(itertools.combinations(candidates, size))
                 if not grouped:
