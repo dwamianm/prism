@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "kind": "beam-retrieval-ablation-registration",
+  "status": "preregistered",
+  "registered_at": "2026-09-16T03:52:13.725960Z",
+  "purpose": "Execute the candidate arm fixed before baseline ingestion in the untouched conversation-1 master registration, using the validated frozen pack and paired baseline artifacts",
+  "master_registration": {
+    "file": "beam-100k-evidence-augmentation-confirmation-v1-registration.json",
+    "sha256": "ca2da701d5055ba7fdce299adc777b72b7e791d1bef81acc227d449bc431678a",
+    "registered_before_baseline": true,
+    "candidate_policy_changed": false
+  },
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "f7ff32fc972fd957b448682284dfa59d0b594944",
+    "upstream_repository": "mem0ai/memory-benchmarks",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "files": {
+      "runner_sha256": "08b70c164fe5b3972f3f8e375bbb791a2d3d19f50b1e71765ddda0d1c114825a",
+      "dataset_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+      "baseline_result_sha256": "d2a6d8517010e54b055c7b6ccb5ed079d4ada53d441206f33546fea09bf6b419",
+      "pack_sha256": {
+        "beam_adapter_manifest.json": "f739e4a80c71f52a49f2fe94d38b81b7c1021b7f7038c16e898b9fce019e2aef",
+        "lexical/.managed.json": "476e96df5a9f73d16d668960e905fa7f5d66054b398d45bf72328797da22d4e7",
+        "lexical/.tantivy-meta.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "lexical/.tantivy-writer.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "lexical/4db248d9bf37417eae59d2b03232c464.fast": "ede931291fb38beab4821c4c2c4744bb82638c4e7e2e386b1dbfaf5240ff0205",
+        "lexical/4db248d9bf37417eae59d2b03232c464.fieldnorm": "8de9e9db7c1356923e6483bd63d79bf80a62afed909c62f7f82b1144d107674d",
+        "lexical/4db248d9bf37417eae59d2b03232c464.idx": "a66cf08c53e61cf4414f3ee4f1e8b12d1637c27f89dfb42bf60cbc63dd3c3f05",
+        "lexical/4db248d9bf37417eae59d2b03232c464.pos": "dda1cf67b357c86ac58c1a990a3e43a3b7f696aeabe054581e7bcc43037242d6",
+        "lexical/4db248d9bf37417eae59d2b03232c464.store": "69321ed56a2ab52d36315f198584ea0ec92331411d337d02919bc80896c1d2d8",
+        "lexical/4db248d9bf37417eae59d2b03232c464.term": "ec9af93680f59c6f1ebecb1d300989337df7679f4dc86c6ed5b8dfe817afc53d",
+        "lexical/915f7f10025844eb8f7d949cac400d7e.fast": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae",
+        "lexical/915f7f10025844eb8f7d949cac400d7e.fieldnorm": "56e33778845697cc6f1eabd17aaff28a1bc94e834d41770e90f14480e3c79e8f",
+        "lexical/915f7f10025844eb8f7d949cac400d7e.idx": "fb3902a4459bc41e2b3c8e1cf3c5eda6a385f21de36181f25394fb751409e5d7",
+        "lexical/915f7f10025844eb8f7d949cac400d7e.pos": "79f2d2c25420259e0d5240e81339e189eff236f84d6d4c4892576869290f2078",
+        "lexical/915f7f10025844eb8f7d949cac400d7e.store": "c885587c958d1a86ff057c341a77a27ea2414cfce5e177c2c44ee2d2731e35d2",
+        "lexical/915f7f10025844eb8f7d949cac400d7e.term": "4cb6d8f47ab205cb894125144d4c646ce0f092aad632c5ed41f78921c61b7ebc",
+        "lexical/meta.json": "99f3c3f7e9bdb85460f54c15dc7b123d98214b49f640e70d85c118d23b1e2fcb",
+        "memory.duckdb": "3dbf91d0205dccb83a385b86041059cedd4e925519bbe70487a764b155d0dc2a",
+        "vectors.usearch": "eb6c2aea8fa726efe6321a9596e1c8c63662e9d80c8972011501444ea79e6d31"
+      }
+    }
+  },
+  "baseline": {
+    "registration": "beam-100k-evidence-augmentation-confirmation-v1-registration.json",
+    "registration_sha256": "ca2da701d5055ba7fdce299adc777b72b7e791d1bef81acc227d449bc431678a",
+    "validation": "baseline-validation.json",
+    "validation_sha256": "09ffb5ba93c1cc42fd45eae9c15f1850512f7624b060e69b9e6e756732f7b485",
+    "result": "beam_results_20260915_225124.json",
+    "correct": 15,
+    "total": 20,
+    "average_score": 0.64125,
+    "pack_policy": {
+      "max_per_source": 1,
+      "max_per_evidence": null,
+      "evidence_projection_top_k": 0,
+      "evidence_augmentation_top_k": 0
+    },
+    "durable_state": {
+      "events": 200,
+      "materializations_complete": 200,
+      "extractions_complete": 200
+    }
+  },
+  "protocol": {
+    "profile": "frozen_extracted_pack_evidence_augmentation_confirmation",
+    "chat_size": "100K",
+    "conversation_index": 1,
+    "questions": 20,
+    "question_types": [
+      "abstention",
+      "contradiction_resolution",
+      "event_ordering",
+      "information_extraction",
+      "instruction_following",
+      "knowledge_update",
+      "multi_session_reasoning",
+      "preference_following",
+      "summarization",
+      "temporal_reasoning"
+    ],
+    "top_k": 50,
+    "top_k_cutoffs": [
+      50
+    ],
+    "max_per_source": 1,
+    "max_per_evidence": null,
+    "evidence_projection_top_k": 0,
+    "evidence_augmentation_top_k": 10,
+    "evidence_augmentation_max_sources": 1,
+    "evidence_augmentation_score_decay": 0.99,
+    "include_cross_scope": false,
+    "reference_time": "latest owner source event",
+    "passage_time": "latest cited source event",
+    "user_id": "beam_100K_1_prme-beam-100k-evidence-augmentation-confirmation-v1",
+    "max_workers": 1,
+    "rpm": 60,
+    "model_timeout_seconds": 120
+  },
+  "models": {
+    "answerer": {
+      "provider": "openai",
+      "model": "mistral-large-3:675b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "mistral-large-3:675b",
+      "parameter_size": "675B",
+      "quantization": "FP8",
+      "advertised_context_tokens": 262144,
+      "thinking": false,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    },
+    "judge": {
+      "provider": "openai",
+      "model": "gpt-oss:120b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "gpt-oss:120b",
+      "parameter_size": "117B",
+      "quantization": "MXFP4",
+      "advertised_context_tokens": 131072,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    }
+  },
+  "hypothesis": "The conversation-0 gain from bounded dual representation generalizes to untouched conversation 1 without a pass-level regression.",
+  "evaluation": {
+    "primary": "paired pass transitions at the 0.5 question threshold against the fresh validated conversation-1 baseline",
+    "secondary": "mean rubric-score delta and per-category scores",
+    "confirmation_rule": "Confirmed on this conversation only if the candidate has zero pass-level losses, at least one pass-level win, and a positive mean rubric-score delta.",
+    "default_rule": "A default change additionally requires no material regression in latency, context integrity, provenance, receipt replay, or the broader local test suite. One 20-question confirmation alone is insufficient for a universal superiority claim.",
+    "failure_rule": "Any pass-level loss, absence of a pass-level win, or nonpositive mean delta fails this registered confirmation rule; retain and report every regression.",
+    "stop_rule": "Run all 20 fixed questions once. Resume only from saved per-question checkpoints after infrastructure failure; do not change retrieval or model settings after viewing candidate outcomes."
+  },
+  "claim_boundary": "This is one preregistered untouched 100K conversation using mutable Ollama cloud aliases. It can confirm or reject the tuned retrieval policy on this conversation but is not an official-scale result, matched cross-product comparison, or proof of market leadership."
+}
