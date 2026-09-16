@@ -241,3 +241,17 @@ all-subclaim rule reconstructed 357/358 parent labels, but model errors produced
 76.04% precision and 66.36% recall, again with no viable frozen threshold.
 Atomic decomposition is a strong boundary on this cohort, but it does not make
 this verifier safe enough. Flan-T5 is not integrated.
+
+A balanced, preregistered LLM-AggreFact development program then compared three
+provider candidates under the same 90% precision and 60% recall calibration
+boundary. [FactCG](../benchmarks/results/research/2026-09-16/LLM-AGGREFACT-FACTCG-V1.md)
+reached 79.44% precision at 61.82% recall. An
+[evidence-local Mistral cascade](../benchmarks/results/research/2026-09-16/LLM-AGGREFACT-EVIDENCE-CASCADE-V2.md)
+reached 85.12% precision at 63.45% recall, but recall fell to 36.55% at 90%
+precision. A pinned 8B
+[Bespoke MiniCheck sentence-fusion trial](../benchmarks/results/research/2026-09-16/LLM-AGGREFACT-BESPOKE-SENTENCE-FUSION-V3C.md)
+reached 83.54% precision at 60.91% recall, and only 38.00% recall at 90%
+precision. It required a direct no-cache forward to finish locally after two
+registered MPS generation failures; the model weights are also CC-BY-NC-4.0.
+None passed calibration, none was integrated, and the separately selected
+1,100-claim test cohort remains sealed.
