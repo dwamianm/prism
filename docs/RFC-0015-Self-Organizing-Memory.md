@@ -167,7 +167,10 @@ LIMIT batch_size
 
 Default thresholds `[HYPOTHESIS]`:
 - `promotion_age_threshold`: 7 days
-- `promotion_evidence_threshold`: 2 evidence refs
+- `promotion_evidence_threshold`: 1 evidence ref. Normal `store()` creates one
+  provenance reference, so a higher default prevents ordinary memories from
+  ever reaching stable state unless the application separately reinforces them.
+  Deployments that require corroboration can raise this threshold.
 - `batch_size`: 50
 
 Nodes meeting both criteria are promoted to STABLE via the existing `promote()` transition. Each promotion is logged as a `PROMOTE` operation with `trigger: "opportunistic_auto"`.
@@ -575,7 +578,7 @@ class OrganizerConfig(BaseModel):
 
     # Auto-promotion thresholds [HYPOTHESIS]
     promotion_age_days: float = 7.0
-    promotion_evidence_count: int = 2
+    promotion_evidence_count: int = 1
 
     # Decay profile mapping (epistemic_type → DecayProfile)
     decay_profile_mapping: dict[str, str] = {

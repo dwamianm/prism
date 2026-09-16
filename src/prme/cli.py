@@ -7,6 +7,7 @@ async engine lifecycle internally.
 Commands:
     prme init [directory]    -- Initialize a new memory directory
     prme doctor [directory]  -- Check memory pack health
+    prme config-audit        -- Inspect provisional configuration policies
     prme info <db_path>      -- Show memory pack info
     prme nodes <db_path>     -- List nodes with filters
     prme edges <db_path>     -- List edges with filters
@@ -38,6 +39,7 @@ from urllib.parse import quote
 from uuid import UUID
 
 from prme.config import PRMEConfig
+from prme.config_audit import audit_hypotheses
 from prme.models import MemoryEdge, MemoryNode
 from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
@@ -984,6 +986,38 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+async def cmd_config_audit(args: argparse.Namespace) -> None:
+    """Report every hypothesis-tagged setting in the effective configuration."""
+    report = audit_hypotheses(PRMEConfig())
+    if args.format == "json":
+        print(report.model_dump_json(indent=2))
+        return
+
+    print(
+        "Provisional configuration: "
+        f"{report.hypothesis_count} hypothesis-tagged settings, "
+        f"{report.effective_count} effective, "
+        f"{report.customized_count} customized"
+    )
+    print()
+    rows = [
+        [
+            item.path,
+            "effective" if item.effective else "dormant",
+            "yes" if item.customized else "no",
+            _truncate(json.dumps(item.value, sort_keys=True), 44),
+            item.environment_variable,
+        ]
+        for item in report.settings
+    ]
+    print(_format_table(["SETTING", "STATE", "CUSTOM", "VALUE", "ENVIRONMENT"], rows))
+    print()
+    print(
+        "Effective means the governing feature is enabled; a setting may still "
+        "apply only to its documented query, ingestion, or organizer path."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -1194,6 +1228,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seconds to wait for --verify-extraction (default: 10)",
     )
     p_doctor.set_defaults(func=cmd_doctor)
+
+    # config-audit
+    p_config_audit = subparsers.add_parser(
+        "config-audit",
+        help="Inspect hypothesis-tagged configuration policies",
+    )
+    p_config_audit.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table)",
+    )
+    p_config_audit.set_defaults(func=cmd_config_audit)
 
     return parser
 

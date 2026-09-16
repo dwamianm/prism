@@ -794,6 +794,7 @@ PRME includes a command-line tool for setup and memory inspection:
 ```bash
 prme init ./my_memories            # Initialize a new memory directory
 prme doctor ./my_memories          # Check memory pack health
+prme config-audit                  # Inspect provisional policies in effect
 prme info ./memory.duckdb          # Memory pack statistics
 prme nodes ./memory.duckdb         # List nodes (--type, --state, --limit)
 prme search ./memory.duckdb "query" # Run hybrid retrieval
@@ -1156,6 +1157,20 @@ Provider response bodies and configured URLs are never printed. Use
 `--provider-timeout SECONDS` to change the 10-second limit. Hosted model metadata
 can remain available when generation credits are exhausted, so this check does
 not claim that completion quota is available.
+
+Run `prme config-audit` to list every setting whose model description is marked
+`[HYPOTHESIS]`. The report shows the effective value, its environment variable,
+whether it differs from the packaged default, and whether its governing feature
+is enabled. `prme config-audit --format json` emits the versioned report for
+deployment review or CI. The same report is available in Python:
+
+```python
+from prme import PRMEConfig, audit_hypotheses
+
+report = audit_hypotheses(PRMEConfig())
+for setting in report.settings:
+    print(setting.path, setting.effective, setting.value)
+```
 
 ```bash
 # Extraction provider

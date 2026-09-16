@@ -22,6 +22,11 @@ if TYPE_CHECKING:
     from prme.retrieval.pipeline import RetrievalPipeline
 
 from prme.config import PRMEConfig
+from prme.config_audit import (
+    HypothesisAudit as HypothesisAudit,
+    HypothesisSetting as HypothesisSetting,
+    audit_hypotheses as audit_hypotheses,
+)
 from prme.ingestion.errors import ExtractionError, MaterializationError
 from prme.models.aggregation import (
     AssertionAggregation,
