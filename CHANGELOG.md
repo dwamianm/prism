@@ -153,6 +153,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   limited parent precision to 76.04% and recall to 66.36%; no frozen threshold
   met both gates. This validates atomic decomposition as an architecture
   boundary on the named cohort while rejecting this verifier for integration.
+  A fresh registered 100-case SummEdits trial tested a 675B reasoning model
+  with exhaustive atoms and exact proof quotations across ten domains. It
+  failed at 75.00% precision, 6.00% recall, 52.00% balanced accuracy and 23.00%
+  quote integrity. The checks safely rejected paraphrased or invented proof,
+  but the model also decomposed facts from the document instead of only the
+  summary. This rejects free-form proof copying and motivates a separated,
+  segment-ID protocol; no provider verifier is integrated.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
