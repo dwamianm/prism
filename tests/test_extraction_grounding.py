@@ -284,6 +284,28 @@ def test_builtin_relationships_preserve_intention_too():
     assert preserved.relationships[0].relationship_type == "plans_to_use"
 
 
+def test_builtin_drops_component_relationship_inside_attempt_clause():
+    source = "I'm trying to set up ESLint with the Airbnb style guide."
+    payload = {
+        "entities": [
+            {"name": "ESLint", "entity_type": "product"},
+            {"name": "Airbnb style guide", "entity_type": "concept"},
+        ],
+        "relationships": [{
+            "source_entity": "ESLint",
+            "target_entity": "Airbnb style guide",
+            "relationship_type": "used_with",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "observed",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.relationships == []
+
+
 @pytest.mark.parametrize(
     "source",
     [

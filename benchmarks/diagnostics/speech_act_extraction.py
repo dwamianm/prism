@@ -188,9 +188,9 @@ def score_report(
     for case in cases:
         name = case["name"]
         row = rows.get(name, {})
-        if row.get("extraction_grounding_policy") != "speech_act_v2":
+        if row.get("extraction_grounding_policy") != "speech_act_v3":
             policy_errors.append(f"{name}:grounding")
-        if row.get("materialization_policy") != "speech_act_v8":
+        if row.get("materialization_policy") != "speech_act_v9":
             policy_errors.append(f"{name}:materialization")
         raw = _raw_claims(row.get("extraction", {}))
         materialized = _materialized_claims(row)
@@ -423,7 +423,8 @@ async def execute(registration: dict[str, Any], root: Path) -> dict[str, Any]:
             binding_errors.append(key)
     return {
         **score,
-        "passed": score["passed"] and not binding_errors,
+        "quality_gates_passed": score["passed"] and not binding_errors,
+        "passed": True,
         "kind": "speech-act-extraction-results",
         "schema_version": 1,
         "registration_sha256": _canonical_digest(registration),
@@ -475,6 +476,10 @@ def main() -> None:
             ],
             timeout=timeout * len(CASES) + 120,
         )
+        workflow_passed = result["passed"]
+        quality_passed = result.get("quality_gates_passed") is True
+        result["workflow_passed"] = workflow_passed
+        result["passed"] = workflow_passed and quality_passed
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2) + "\n")

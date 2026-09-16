@@ -60,10 +60,12 @@ encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
 metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
-Fresh built-in extractions record `grounding_policy="speech_act_v2"`; plans
-made from those records use `speech_act_v8`. Legacy extraction records default
-to `source_passage_v1` and remain on `temporal_validity_v7` when recovery must
-prepare a missing plan. Version 8 preserves the
+Fresh built-in extractions record `grounding_policy="speech_act_v3"`; plans
+made from those records use `speech_act_v9`. Version 9 also rejects completed
+component relationships inside a first-person attempt clause. Saved
+`speech_act_v2` records recover under `speech_act_v8`; older extraction records
+default to `source_passage_v1` and remain on `temporal_validity_v7` when recovery
+must prepare a missing plan. Version 9 preserves the
 `temporal_validity_v7` effective-time rules and rejects first-person attempts or
 intentions that an extracted predicate collapses into completed/current state;
 the predicate must preserve the non-completed speech act. A quantity survives

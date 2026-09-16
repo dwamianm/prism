@@ -19,12 +19,13 @@ same response, apart from those event-local personal references. A missing or
 ambiguous reference discards its claim while preserving grounded, closed
 siblings; it never creates or selects an identity to repair model output.
 
-Fresh built-in extractions record `speech_act_v2`; derivations prepared from
+Fresh built-in extractions record `speech_act_v3`; derivations prepared from
 those records identify qualifier-aware, quantity-preserving,
-speech-act-preserving, and source-effective validity rules as `speech_act_v8`.
+speech-act-preserving, and source-effective validity rules as `speech_act_v9`.
+Saved `speech_act_v2` records prepare missing plans under `speech_act_v8`.
 Legacy `source_passage_v1` extraction records prepare missing plans under
 `temporal_validity_v7`, so recovery never claims validation that did not run.
-Prepared plans using `temporal_validity_v7`, `grounded_quantities_v6`, `claim_qualifiers_v5`,
+Prepared plans using `speech_act_v8`, `temporal_validity_v7`, `grounded_quantities_v6`, `claim_qualifiers_v5`,
 `event_local_references_v4`, and earlier policies remain valid immutable replay
 inputs.
 Previously saved plans preserve their policy, node IDs and checksums and replay

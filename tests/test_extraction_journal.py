@@ -48,10 +48,10 @@ async def test_indexing_retry_reuses_saved_extraction_and_restart_can_read_it(co
         assert provider.await_count == 1
         assert len(await engine.query_nodes(user_id=user, node_type=NodeType.FACT)) == 1
         saved = await engine._event_store.get_extraction(event_id, user_id=user)
-        assert saved.grounding_policy == "speech_act_v2"
+        assert saved.grounding_policy == "speech_act_v3"
         assert saved.result["facts"][0]["object"] == "Python"
         plan = await engine._event_store.get_derivation_plan(event_id, user_id=user)
-        assert plan.materialization_policy == "speech_act_v8"
+        assert plan.materialization_policy == "speech_act_v9"
         assert await engine._event_store.get_extraction(event_id, user_id=user + "-other") is None
         assert (await engine.processing_status(event_id, user_id=user)).status == "pending"
     async with MemoryEngine.open(config) as engine:
@@ -63,7 +63,16 @@ async def test_indexing_retry_reuses_saved_extraction_and_restart_can_read_it(co
         assert len(await engine.query_nodes(user_id=user, node_type=NodeType.FACT)) == 1
 
 
-async def test_legacy_extraction_recovery_keeps_legacy_materialization_policy(config, user):  # noqa: F811
+@pytest.mark.parametrize(
+    ("grounding_policy", "materialization_policy"),
+    [
+        ("source_passage_v1", "temporal_validity_v7"),
+        ("speech_act_v2", "speech_act_v8"),
+    ],
+)
+async def test_legacy_extraction_recovery_keeps_legacy_materialization_policy(
+    config, user, grounding_policy, materialization_policy  # noqa: F811
+):
     async with MemoryEngine.open(config) as engine:
         event = Event(
             content="Alice uses Python.",
@@ -79,10 +88,11 @@ async def test_legacy_extraction_recovery_keeps_legacy_materialization_policy(co
             content_hash=event.content_hash,
             provider="legacy-test",
             model="legacy-test",
+            grounding_policy=grounding_policy,
             result=extraction().model_dump(mode="json"),
         )
         await engine._event_store.record_extraction(legacy)
-        assert legacy.grounding_policy == "source_passage_v1"
+        assert legacy.grounding_policy == grounding_policy
 
     async with MemoryEngine.open(config) as engine:
         source = await engine.get_event(str(event.id), user_id=user)
@@ -96,7 +106,7 @@ async def test_legacy_extraction_recovery_keeps_legacy_materialization_policy(co
         plan = await engine._event_store.get_derivation_plan(
             str(event.id), user_id=user
         )
-        assert plan.materialization_policy == "temporal_validity_v7"
+        assert plan.materialization_policy == materialization_policy
 
 
 async def test_journal_failure_prevents_graph_materialization(config, user, monkeypatch):  # noqa: F811

@@ -54,7 +54,7 @@ def _validate_dependencies(plan: DerivationPlan, current: dict[str, MemoryNode])
             raise ValueError("Only tentative or stable assertions can participate in replacement")
         if new.epistemic_type not in (EpistemicType.OBSERVED, EpistemicType.ASSERTED):
             raise ValueError("A hypothetical or unverified derivation cannot retire prior knowledge")
-        if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8"}:
+        if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8", "speech_act_v9"}:
             old_effective = old.event_time or old.valid_from
             new_effective = new.event_time or new.valid_from
             if new_effective < old_effective:
@@ -123,7 +123,7 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, claim: Extrac
                 store._create_edge_sync(edge)
             published_nodes = {node.id: node for node in plan.nodes}
             for edge in plan.replacements:
-                if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8"}:
+                if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8", "speech_act_v9"}:
                     replacement = published_nodes[edge.source_id]
                     conn.execute(
                         "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, "
@@ -201,7 +201,7 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: E
             await store._create_edge_on_connection(conn, edge)
         published_nodes = {node.id: node for node in plan.nodes}
         for edge in plan.replacements:
-            if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8"}:
+            if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8", "speech_act_v9"}:
                 replacement = published_nodes[edge.source_id]
                 await conn.execute(
                     "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, "

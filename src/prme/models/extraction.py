@@ -22,7 +22,9 @@ class ExtractionRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: Literal[1] = 1
-    grounding_policy: Literal["source_passage_v1", "speech_act_v2"] = (
+    grounding_policy: Literal[
+        "source_passage_v1", "speech_act_v2", "speech_act_v3"
+    ] = (
         "source_passage_v1"
     )
     event_id: UUID

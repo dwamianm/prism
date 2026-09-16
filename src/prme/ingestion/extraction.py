@@ -117,14 +117,17 @@ def _validate_modality(fact_type: str, epistemic_type: str, evidence_quote: str,
         and _EXPLICIT_DECISION_RE.search(evidence_quote) is None
     ):
         raise ValueError("a contingent future action is not a decision without an explicit choice or commitment")
-    if subject.strip().casefold() in {"i", "we"} and not _NONACTUAL_PREDICATE_RE.search(predicate):
+    if not _NONACTUAL_PREDICATE_RE.search(predicate):
         for match in _FIRST_PERSON_NONACTUAL_CLAUSE_RE.finditer(evidence_quote):
             body = match.group("body")
             boundary = _NONACTUAL_CLAUSE_BOUNDARY_RE.search(body)
             if boundary is not None:
                 body = body[:boundary.start()]
-            if (match.group("subject").casefold() == subject.strip().casefold()
-                    and _mentioned(object_value, body)):
+            subject_in_clause = (
+                match.group("subject").casefold() == subject.strip().casefold()
+                or _mentioned(subject, body)
+            )
+            if subject_in_clause and _mentioned(object_value, body):
                 raise ValueError(
                     "an attempt or intention requires a predicate that preserves "
                     "the non-completed speech act"
@@ -415,6 +418,11 @@ types when appropriate; do not turn a possible future into a current fact.
   can become trying_to_set_up, but it does not establish uses, adopted, configured, \
   or enforced. "I want/need/plan to use X" does not establish uses X. A pasted \
   example or a request for help does not establish adoption or completion.
+- Attempts, failed attempts, intentions, wants, needs, and plans are durable state. \
+  Do not omit them merely because the action is incomplete. "I've tried to install \
+  CUDA" should produce tried_to_install; "I would like to use Redis if X" should \
+  preserve wants_to_use and condition X. Relationships between tools inside an \
+  attempted setup are also non-completed; do not emit used_with or configured_with.
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.
 - Do NOT infer facts that are not grounded in the source text.

@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Built-in extraction now preserves literal first-person attempts and
   intentions instead of admitting them under completed or current-state
-  predicates. Fresh durable outputs record `speech_act_v2` and prepare
-  `speech_act_v8` plans; legacy extraction records recover under
-  `temporal_validity_v7`, so restart cannot claim a validator that did not run.
+  predicates, including component relationships inside the attempted action.
+  Fresh durable outputs record `speech_act_v3` and prepare `speech_act_v9`
+  plans. Saved v2 outputs remain v8, and legacy extraction records recover
+  under `temporal_validity_v7`, so restart cannot claim a validator that did
+  not run.
 
 - Registered extracted BEAM ingestion now completes both durable raw-source
   materialization and structured extraction before acknowledging a source.
