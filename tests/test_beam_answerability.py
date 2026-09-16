@@ -1,6 +1,12 @@
+import hashlib
+import json
+
 import pytest
 
+from benchmarks.integrations import run_beam_answerability
 from benchmarks.integrations.run_beam_answerability import (
+    _answerability_binding,
+    _evaluate_gates,
     _summarize,
     _verify_saved_sample,
 )
@@ -69,3 +75,92 @@ def test_answerability_resume_rejects_sample_from_another_artifact():
             artifact="q0.json",
             artifact_sha256="expected",
         )
+
+
+def test_answerability_binding_pins_implementation_prompt_and_schema(tmp_path):
+    source = tmp_path / "src/prme/retrieval"
+    source.mkdir(parents=True)
+    implementation = source / "answerability.py"
+    implementation.write_text("answerability implementation\n", encoding="utf-8")
+
+    binding = _answerability_binding(tmp_path)
+
+    assert binding == {
+        "implementation_sha256": hashlib.sha256(
+            implementation.read_bytes()
+        ).hexdigest(),
+        "prompt_version": run_beam_answerability.ANSWERABILITY_PROMPT_VERSION,
+        "prompt_sha256": run_beam_answerability.ANSWERABILITY_PROMPT_SHA256,
+        "response_schema_sha256": hashlib.sha256(
+            json.dumps(
+                run_beam_answerability._RawAssessment.model_json_schema(),
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode()
+        ).hexdigest(),
+    }
+
+
+def test_answerability_gates_are_derived_from_complete_summary():
+    samples = []
+    for question in range(4):
+        for repeat in range(3):
+            samples.append(
+                _sample(
+                    f"abstention-{question}",
+                    "abstention",
+                    repeat,
+                    "abstain",
+                    "insufficient",
+                )
+            )
+    for question in range(36):
+        for repeat in range(3):
+            samples.append(
+                _sample(
+                    f"ordinary-{question}",
+                    "factual",
+                    repeat,
+                    "answer",
+                    "answerable",
+                )
+            )
+
+    gates = _evaluate_gates(_summarize(samples))
+
+    assert gates["passed"]
+    assert all(result["passed"] for result in gates["results"].values())
+
+
+def test_answerability_gates_fail_unsafe_answer():
+    samples = []
+    for question in range(4):
+        for repeat in range(3):
+            action = "answer" if question == 0 and repeat == 0 else "abstain"
+            verdict = "answerable" if action == "answer" else "insufficient"
+            samples.append(
+                _sample(
+                    f"abstention-{question}",
+                    "abstention",
+                    repeat,
+                    action,
+                    verdict,
+                )
+            )
+    for question in range(36):
+        for repeat in range(3):
+            samples.append(
+                _sample(
+                    f"ordinary-{question}",
+                    "factual",
+                    repeat,
+                    "answer",
+                    "answerable",
+                )
+            )
+
+    gates = _evaluate_gates(_summarize(samples))
+
+    assert not gates["passed"]
+    assert not gates["results"]["unsafe_full_answer_count_max"]["passed"]

@@ -181,7 +181,11 @@ registered frozen question artifacts. It makes no retrieval or answer-generation
 calls, repeats each exact context to expose verifier variance, and reports unsafe
 full answers on abstention questions separately from unnecessary abstention on
 ordinary questions. This is a development diagnostic unless its registration
-binds a previously untouched cohort.
+binds a previously untouched cohort. Schema-2 registrations also bind the exact
+answerability implementation, prompt version and digest, and structured response
+schema. The runner also validates the registered gates and emits their verdict
+from the complete result. Schema-1 results remain readable as historical evidence
+but did not have those independent bindings.
 
 For a scored run, create a schema-2 registration and pass it to the same
 `run_beam` command. The current registered profile is intentionally narrow: one

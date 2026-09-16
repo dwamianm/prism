@@ -21,11 +21,24 @@ from uuid import UUID
 from pydantic import SecretStr
 
 from prme import AnswerabilityConfig, AnswerabilityEvaluator
+from prme.retrieval.answerability import (
+    ANSWERABILITY_PROMPT_SHA256,
+    ANSWERABILITY_PROMPT_VERSION,
+    _RawAssessment,
+)
 from prme.retrieval.models import MemoryBundle
 
 
 REGISTRATION_KIND = "beam-answerability-registration"
-REGISTRATION_SCHEMA = 1
+REGISTRATION_SCHEMA = 2
+SUPPORTED_REGISTRATION_SCHEMAS = frozenset({1, REGISTRATION_SCHEMA})
+REGISTERED_GATES = {
+    "unsafe_full_answer_count_max": 0,
+    "citation_errors_max": 0,
+    "ordinary_full_answer_count_min": 86,
+    "ordinary_abstention_count_max": 10,
+    "stable_action_questions_min": 32,
+}
 
 
 def _digest(path: Path) -> str:
@@ -41,6 +54,28 @@ def _load_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"JSON root must be an object: {path}")
     return value
+
+
+def _canonical_digest(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode()
+    ).hexdigest()
+
+
+def _answerability_binding(project_root: Path) -> dict[str, str]:
+    return {
+        "implementation_sha256": _digest(
+            project_root / "src/prme/retrieval/answerability.py"
+        ),
+        "prompt_version": ANSWERABILITY_PROMPT_VERSION,
+        "prompt_sha256": ANSWERABILITY_PROMPT_SHA256,
+        "response_schema_sha256": _canonical_digest(_RawAssessment.model_json_schema()),
+    }
 
 
 def _git_revision(root: Path) -> str:
@@ -81,7 +116,8 @@ def _verify_registration(
     project_root: Path,
     artifact_roots: dict[str, Path],
 ) -> dict[str, dict[str, Path]]:
-    if registration.get("schema_version") != REGISTRATION_SCHEMA:
+    schema_version = registration.get("schema_version")
+    if schema_version not in SUPPORTED_REGISTRATION_SCHEMAS:
         raise ValueError("unsupported answerability registration schema")
     if registration.get("kind") != REGISTRATION_KIND:
         raise ValueError("unexpected answerability registration kind")
@@ -126,6 +162,19 @@ def _verify_registration(
     model = registration.get("model")
     if not isinstance(model, dict):
         raise ValueError("registration is missing model identity")
+    if schema_version >= 2:
+        answerability = registration.get("answerability")
+        if answerability != _answerability_binding(project_root):
+            raise ValueError(
+                "answerability implementation, prompt, or response schema "
+                "differs from registration"
+            )
+        evaluation = registration.get("evaluation")
+        if (
+            not isinstance(evaluation, dict)
+            or evaluation.get("gates") != REGISTERED_GATES
+        ):
+            raise ValueError("answerability acceptance gates differ from registration")
     _verify_model(model)
     return resolved
 
@@ -224,6 +273,38 @@ def _summarize(samples: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "citation_errors": citation_errors,
         "per_question": per_question,
+    }
+
+
+def _evaluate_gates(summary: dict[str, Any]) -> dict[str, Any]:
+    observed = {
+        "unsafe_full_answer_count_max": summary["unanswerable"][
+            "unsafe_full_answer_count"
+        ],
+        "citation_errors_max": summary["citation_errors"],
+        "ordinary_full_answer_count_min": summary["answerable"]["full_answer_count"],
+        "ordinary_abstention_count_max": summary["answerable"][
+            "unnecessary_abstention_count"
+        ],
+        "stable_action_questions_min": summary["stability"][
+            "questions_with_identical_actions"
+        ],
+    }
+    results = {
+        name: {
+            "required": required,
+            "observed": observed[name],
+            "passed": (
+                observed[name] >= required
+                if name.endswith("_min")
+                else observed[name] <= required
+            ),
+        }
+        for name, required in REGISTERED_GATES.items()
+    }
+    return {
+        "passed": all(result["passed"] for result in results.values()),
+        "results": results,
     }
 
 
@@ -344,15 +425,26 @@ async def _run(args: argparse.Namespace) -> None:
                     flush=True,
                 )
 
+    summary = _summarize(samples)
     result = {
-        "schema_version": 1,
+        "schema_version": registration["schema_version"],
         "kind": "beam-answerability-execution",
         "registration": args.registration.name,
         "registration_sha256": _digest(args.registration),
         "source": registration["source"],
         "protocol": protocol,
         "model": model,
-        "summary": _summarize(samples),
+        **(
+            {"answerability": registration["answerability"]}
+            if registration["schema_version"] >= 2
+            else {}
+        ),
+        "summary": summary,
+        **(
+            {"quality_gates": _evaluate_gates(summary)}
+            if registration["schema_version"] >= 2
+            else {}
+        ),
         "samples": samples,
     }
     result_path = args.output / "beam-answerability-result.json"
