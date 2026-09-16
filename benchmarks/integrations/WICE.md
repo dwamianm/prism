@@ -5,7 +5,10 @@ human-annotated WiCE claim test set. It uses WiCE's **oracle retrieval** chunks,
 so it measures verification after perfect evidence retrieval. It does not
 measure PRME retrieval quality or the original full-document WiCE task.
 
-The registration binds the PRME revision, verifier and runner hashes, WiCE
+Commit and push the registration before inference. The runner accepts its bound
+PRME revision only when that revision is an ancestor of the execution checkout
+and the current verifier and runner bytes still match. The registration binds
+the PRME revision, verifier and runner hashes, WiCE
 revision, exact test-file hash, model revision, thresholds, policies, dataset
 shape, and quality gates before inference. The result contains IDs, labels,
 decisions, scores, and digests but does not copy claim or evidence text.

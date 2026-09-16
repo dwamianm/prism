@@ -60,6 +60,17 @@ def _git_clean(path: Path) -> bool:
     ).strip()
 
 
+def _git_is_ancestor(revision: str, path: Path) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", revision, "HEAD"],
+        cwd=path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
 def _finite_number(value: Any, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{name} must be a number")
@@ -143,8 +154,11 @@ def _validate_registration(
     source = registration.get("source")
     if not isinstance(source, dict):
         raise ValueError("registration source is required")
-    if source.get("prme_revision") != _git_head(project_root):
-        raise ValueError("registration PRME revision does not match HEAD")
+    prme_revision = source.get("prme_revision")
+    if not isinstance(prme_revision, str) or not _git_is_ancestor(
+        prme_revision, project_root
+    ):
+        raise ValueError("registered PRME revision is not an ancestor of HEAD")
     expected_files = {
         "runner_sha256": _sha256_file(Path(__file__).resolve()),
         "implementation_sha256": _sha256_file(
