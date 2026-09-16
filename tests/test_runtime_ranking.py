@@ -61,7 +61,7 @@ async def test_weight_trial_changes_session_expansion_and_preserves_owner_scope(
         assert proposed.metadata.ranking_multipliers == adjustment
         assert engine._config.scoring.model_dump_json() == original_weights
         saved = await engine.get_retrieval_receipt(str(proposed.metadata.request_id), user_id=user)
-        assert saved.schema_version == 9
+        assert saved.schema_version == 10
         assert saved.packing.multipath_ordering == "balanced"
         assert saved.execution.parameters["ranking_multipliers"] == adjustment.model_dump(mode="json")
         assert saved.replay_ranking() == tuple(c.node.id for c in proposed.results)

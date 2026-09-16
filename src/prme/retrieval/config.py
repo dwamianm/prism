@@ -288,6 +288,32 @@ class PackingConfig(BaseModel):
             "in that episode. [HYPOTHESIS]"
         ),
     )
+    evidence_projection_top_k: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Number of top-ranked exact evidence groups whose derived candidates "
+            "are replaced by their active direct source nodes. Zero disables "
+            "source projection. [HYPOTHESIS]"
+        ),
+    )
+    evidence_projection_max_sources: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "Maximum direct source nodes retained for each projected evidence "
+            "group. [HYPOTHESIS]"
+        ),
+    )
+    evidence_projection_score_decay: float = Field(
+        default=1.0,
+        gt=0,
+        le=1,
+        description=(
+            "Score inherited by a direct source from the strongest derived "
+            "candidate in its exact evidence group. [HYPOTHESIS]"
+        ),
+    )
     aggregation_k_multiplier: float = Field(
         default=3.0,
         description="Multiplier for candidate k values on aggregation/count queries",

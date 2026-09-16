@@ -126,7 +126,11 @@ class ScoreAdjustment(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
     kind: Literal[
-        "neural_blend", "session_decay", "episode_decay", "current_update"
+        "neural_blend",
+        "session_decay",
+        "episode_decay",
+        "evidence_projection",
+        "current_update",
     ]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
@@ -140,6 +144,8 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("Neural prior weight must be between zero and one")
         if self.kind == "current_update" and not 1 <= self.coefficient <= 2:
             raise ValueError("Current-update multiplier must be between one and two")
+        if self.kind == "evidence_projection" and not 0 < self.coefficient <= 1:
+            raise ValueError("Evidence projection coefficient must be in (0, 1]")
         return self
 
 

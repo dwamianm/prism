@@ -78,6 +78,30 @@ pool. The default `episode_context_top_k=0` keeps it disabled while the
 hypothesis is evaluated across workloads. Set session IDs to real episode
 boundaries before enabling it; reused, unrelated session IDs reduce precision.
 
+To use extracted claims for routing while returning complete direct evidence,
+enable bounded evidence projection:
+
+```python
+config = config.model_copy(update={
+    "packing": PackingConfig(
+        token_budget=4096,
+        evidence_projection_top_k=50,
+        evidence_projection_max_sources=1,
+        evidence_projection_score_decay=1.0,
+    )
+})
+```
+
+For each selected exact evidence group, PRME replaces derived siblings with an
+active source node whose own ID is cited by the group. Owner, scope, temporal,
+validity, lifecycle and epistemic checks all apply. The source inherits the
+strongest group score through replayable provenance and receives bounded packing
+priority. A group without an eligible direct source is unchanged. The default
+`evidence_projection_top_k=0` keeps this experimental policy disabled. A frozen
+BEAM development ablation showed that evidence diversity without source
+preservation caused a pass-level regression; projection is the follow-up design,
+not an established default.
+
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously
 examined 381-question regression partition, it increased from 65.04% to 90.55%,
@@ -95,15 +119,17 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Current retrievals produce version 9 receipts with explicit ordering,
+Current retrievals produce version 10 receipts with explicit ordering,
 context-guidance, context-format, and episode-routing policies and the same
-score-replay and execution requirements. Version 9 also records the explicit
-current-update scoring policy. Versions 1–7 keep their previous
+score-replay and execution requirements. Version 9 records the explicit
+current-update scoring policy, and version 10 records evidence projection.
+Versions 1–7 keep their previous
 canonical bytes and checksums and mean episode routing was disabled. Versions
 1–6 always mean auditable rendering; versions 1–5 also mean context guidance was
 off. Version 5 remains the historical balanced format, and versions 1–4 cannot
 claim balanced packing. Versions 1–8 mean current-update scoring was disabled.
-Older readers that lack version 9 support cannot consume
+Versions 1–9 mean evidence projection was disabled. Older readers that lack
+version 10 support cannot consume
 new receipts. Score replay reproduces the returned
 candidate ranking; it is not a reconstruction of packing or unseen candidates.
 Relevance feedback remains linked to the saved context exposure.

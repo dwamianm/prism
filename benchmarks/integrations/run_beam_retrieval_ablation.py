@@ -116,7 +116,13 @@ def _verify_models(registration: dict[str, Any]) -> None:
 
 
 class _FrozenPackRetriever:
-    def __init__(self, engine: Any, *, user_id: str, max_per_evidence: int):
+    def __init__(
+        self,
+        engine: Any,
+        *,
+        user_id: str,
+        max_per_evidence: int | None,
+    ):
         self.engine = engine
         self.user_id = user_id
         self.max_per_evidence = max_per_evidence
@@ -173,9 +179,10 @@ class _FrozenPackRetriever:
         ]
 
 
-def _build_config(pack: Path):
+def _build_config(pack: Path, protocol: dict[str, Any]):
     from prme import PRMEConfig
     from prme.config import EmbeddingConfig, OrganizerConfig
+    from prme.retrieval.config import PackingConfig
 
     return PRMEConfig(
         database_url=None,
@@ -195,6 +202,17 @@ def _build_config(pack: Path):
             dimension=384,
         ),
         organizer=OrganizerConfig(opportunistic_enabled=False),
+        packing=PackingConfig(
+            evidence_projection_top_k=protocol.get(
+                "evidence_projection_top_k", 0
+            ),
+            evidence_projection_max_sources=protocol.get(
+                "evidence_projection_max_sources", 1
+            ),
+            evidence_projection_score_decay=protocol.get(
+                "evidence_projection_score_decay", 1.0
+            ),
+        ),
     )
 
 
@@ -261,8 +279,14 @@ async def _run(args: argparse.Namespace) -> None:
     )
     _verify_models(registration)
     protocol = registration["protocol"]
-    if protocol.get("max_per_evidence") != 1 or protocol.get("top_k") != 50:
+    if protocol.get("max_per_source") != 1 or protocol.get("top_k") != 50:
         raise ValueError("unsupported registered treatment")
+    if protocol.get("max_per_evidence") is not None and (
+        isinstance(protocol["max_per_evidence"], bool)
+        or not isinstance(protocol["max_per_evidence"], int)
+        or protocol["max_per_evidence"] < 1
+    ):
+        raise ValueError("invalid registered evidence cap")
     output = args.output
     work_pack = output / "work-pack"
     questions_dir = output / "questions"
@@ -308,7 +332,7 @@ async def _run(args: argparse.Namespace) -> None:
         if isinstance(item.get("question_id"), str):
             existing[item["question_id"]] = item
 
-    async with MemoryEngine.open(_build_config(work_pack)) as engine:
+    async with MemoryEngine.open(_build_config(work_pack, protocol)) as engine:
         retriever = _FrozenPackRetriever(
             engine,
             user_id=protocol["user_id"],

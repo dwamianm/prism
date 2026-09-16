@@ -93,7 +93,7 @@ def test_version_nine_replays_current_update_adjustment():
         execution=RetrievalExecution(features={"test": True}, parameters={}),
     )
 
-    assert saved.schema_version == 9
+    assert saved.schema_version == 10
     assert saved.replay_ranking() == (update.node.id, old.node.id)
     operation = saved.score_provenance[update.node.id].adjustments[-1]
     assert operation.kind == "current_update"

@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -149,9 +149,9 @@ class RetrievalReceipt(BaseModel):
             if "context_format" not in packing:
                 if version in (1, 2, 3, 4, 5, 6):
                     updates["context_format"] = "auditable"
-                if version in (7, 8, 9):
+                if version in (7, 8, 9, 10):
                     raise ValueError(
-                        "Versions 7 through 9 require an explicit context format"
+                        "Versions 7 through 10 require an explicit context format"
                     )
             episode_fields = (
                 "episode_context_top_k",
@@ -168,9 +168,28 @@ class RetrievalReceipt(BaseModel):
                         episode_context_local_k=8,
                         episode_context_score_decay=0.95,
                     )
-                if version in (8, 9):
+                if version in (8, 9, 10):
                     raise ValueError(
-                        "Versions 8 and 9 require explicit episode context settings"
+                        "Versions 8 through 10 require explicit episode context settings"
+                    )
+            evidence_fields = (
+                "evidence_projection_top_k",
+                "evidence_projection_max_sources",
+                "evidence_projection_score_decay",
+            )
+            missing_evidence_fields = [
+                field for field in evidence_fields if field not in packing
+            ]
+            if missing_evidence_fields:
+                if version < 10:
+                    updates.update(
+                        evidence_projection_top_k=0,
+                        evidence_projection_max_sources=1,
+                        evidence_projection_score_decay=1.0,
+                    )
+                else:
+                    raise ValueError(
+                        "Version 10 requires explicit evidence projection settings"
                     )
             if updates:
                 updates_to_value["packing"] = {**packing, **updates}
@@ -206,12 +225,16 @@ class RetrievalReceipt(BaseModel):
                 for item in provenance.values():
                     if isinstance(item, dict) and isinstance(item.get("weights"), dict):
                         item["weights"].pop("current_update_multiplier", None)
+        if self.schema_version < 10 and isinstance(data.get("packing"), dict):
+            data["packing"].pop("evidence_projection_top_k", None)
+            data["packing"].pop("evidence_projection_max_sources", None)
+            data["packing"].pop("evidence_projection_score_decay", None)
         return data
 
     @model_validator(mode="after")
     def unique_candidates(self):
         if (self.schema_version >= 3) != (self.execution is not None):
-            raise ValueError("Versions 3 through 9 require an execution descriptor")
+            raise ValueError("Versions 3 through 10 require an execution descriptor")
         if self.schema_version < 4 and self.packing.multipath_ordering != "density":
             raise ValueError("Legacy receipts support only density packing")
         if self.schema_version < 5 and self.packing.multipath_ordering == "balanced":
@@ -222,6 +245,8 @@ class RetrievalReceipt(BaseModel):
             raise ValueError("Compact context requires a version 7 receipt")
         if self.schema_version < 8 and self.packing.episode_context_top_k != 0:
             raise ValueError("Episode context requires a version 8 receipt")
+        if self.schema_version < 10 and self.packing.evidence_projection_top_k != 0:
+            raise ValueError("Evidence projection requires a version 10 receipt")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -244,6 +269,12 @@ class RetrievalReceipt(BaseModel):
                 for adjustment in provenance.adjustments
             ):
                 raise ValueError("Current-update scoring requires a version 9 receipt")
+            if self.schema_version < 10 and any(
+                adjustment.kind == "evidence_projection"
+                for provenance in self.score_provenance.values()
+                for adjustment in provenance.adjustments
+            ):
+                raise ValueError("Evidence projection requires a version 10 receipt")
         return self
 
     def replay_ranking(self) -> tuple[UUID, ...]:
@@ -363,12 +394,14 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         raise ValueError("Compact context receipts require an execution descriptor")
     if packing.episode_context_top_k > 0 and execution is None:
         raise ValueError("Episode context receipts require an execution descriptor")
+    if packing.evidence_projection_top_k > 0 and execution is None:
+        raise ValueError("Evidence projection receipts require an execution descriptor")
     # Pre-guidance receipts mean guidance was off. Direct callers that omit an
     # execution descriptor retain that historical schema and exact semantics.
     receipt_packing = packing if execution is not None else packing.model_copy(
         update={"context_guidance_mode": "off", "context_format": "auditable"}
     )
-    version: Literal[2, 9] = 9 if execution is not None else 2
+    version: Literal[2, 10] = 10 if execution is not None else 2
     return RetrievalReceipt(schema_version=version, execution=execution,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,

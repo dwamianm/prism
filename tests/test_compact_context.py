@@ -100,7 +100,7 @@ def test_compact_context_receipt_is_versioned_and_binds_exact_output():
         execution=RetrievalExecution(features={"test": True}, parameters={}),
     )
 
-    assert receipt.schema_version == 9
+    assert receipt.schema_version == 10
     assert receipt.packing.context_format == "compact"
     assert receipt.context_sha256
     with pytest.raises(ValueError, match="execution descriptor"):

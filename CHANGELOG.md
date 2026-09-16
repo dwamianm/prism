@@ -74,6 +74,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in direct evidence projection lets extracted claims route retrieval while
+  returning the complete active source passage. It replaces bounded exact
+  evidence groups only after owner, scope, temporal, validity and epistemic
+  checks, records replayable score inheritance, and reserves projected sources
+  during packing. Receipt schema version 10 records the full disabled-by-default
+  policy while versions 1–9 preserve their canonical bytes and disabled meaning.
+
+- A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
+  evidence set held pass accuracy at 13/20 but reduced mean rubric score from
+  0.56750 to 0.54833, with one pass-level win and one loss. The failure blocks a
+  default cap and motivates the source-preserving projection policy.
+
 - The corrected schema-5 extracted-memory BEAM development run completed at
   13/20 pass (65.0%) with a 0.56750 mean rubric score. Fail-closed validation
   confirmed 188/188 durable raw materializations and 188/188 extractions. Exact

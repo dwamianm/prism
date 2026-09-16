@@ -217,6 +217,26 @@ instructions, pins, and active tasks and before the ordinary multi-path tier.
 Receipt schema version 8 records all three episode settings; versions 1–7 mean
 episode routing was disabled.
 
+### 4.7 Direct evidence projection
+
+`PackingConfig.evidence_projection_top_k` enables deterministic source
+projection. The default is `0`. PRME takes the strongest candidate in each of
+the top exact nonempty `evidence_refs` groups as a routing anchor, loads only the
+active graph nodes whose own IDs occur in that evidence set, and replaces the
+group with at most `evidence_projection_max_sources` direct sources. The source
+inherits the anchor score through a replayable `evidence_projection` operation
+and is marked `EVIDENCE_CONTEXT` for bounded packing priority.
+
+Projection performs no model calls. A source must match the request owner and
+anchor scope and pass the same ingestion, event-time, validity and epistemic
+filters as ordinary candidates. A group remains unchanged when no eligible
+direct source is available. This lets extracted claims route a source without
+allowing short siblings or entities to hide its complete wording. It can also
+replace a concise claim with a much longer passage, so it remains opt-in while
+answer trials establish workload-appropriate bounds. Receipt schema version 10
+records all three settings and the applied score lineage; versions 1–9 mean
+projection was disabled.
+
 ---
 
 ## 5. Stage 3: Candidate Merging

@@ -103,3 +103,21 @@ def test_version_nine_requires_explicit_current_update_policy():
 
     with pytest.raises(ValidationError, match="explicit current-update multiplier"):
         RetrievalReceipt.model_validate(payload)
+
+
+def test_version_ten_requires_explicit_evidence_projection_policy():
+    payload = json.loads((FIXTURES / "receipt-v4-score.json").read_text())
+    payload["schema_version"] = 10
+    payload["packing"].update(
+        context_guidance_mode="off",
+        context_format="auditable",
+        episode_context_top_k=0,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+    )
+    payload["scoring"]["current_update_multiplier"] = 1.0
+    for item in payload["score_provenance"].values():
+        item["weights"]["current_update_multiplier"] = 1.0
+
+    with pytest.raises(ValidationError, match="evidence projection settings"):
+        RetrievalReceipt.model_validate(payload)

@@ -10,6 +10,7 @@ Chains the stages in sequence:
 5. Scoring + Ranking (8-input composite score, deterministic sort)
 5.5b. Session Context Expansion (pull adjacent turns from same session)
 5.5c. Episode Context Expansion (route sessions, then select local evidence)
+5.5d. Evidence Projection (replace derived groups with bounded direct sources)
 6. Context Packing (deterministic priority packing within token budget)
 
 Each retrieval generates a RETRIEVAL_REQUEST operation record with a unique
@@ -44,6 +45,7 @@ from prme.retrieval.config import (
     ScoringWeights,
 )
 from prme.retrieval.context_formatter import build_context_guidance
+from prme.retrieval.evidence_context import project_evidence_context
 from prme.retrieval.episode_context import expand_episode_context
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
@@ -672,6 +674,37 @@ class RetrievalPipeline:
             except Exception:
                 logger.warning(
                     "Episode context expansion failed; continuing without expansion",
+                    exc_info=True,
+                )
+
+        # --- Stage 5.5d: Direct Evidence Projection ---
+        # Derived claims route an evidence group; its direct source carries the
+        # complete context. This opt-in stage replaces only groups with a visible,
+        # owner/scope/time/epistemic-eligible source node.
+        if effective_packing_config.evidence_projection_top_k > 0:
+            try:
+                projected = await project_evidence_context(
+                    scored,
+                    graph_store=self._graph_store,
+                    user_id=user_id,
+                    config=effective_packing_config,
+                    scopes=normalized_scope,
+                    retrieval_mode=analysis.retrieval_mode,
+                    unverified_confidence_threshold=(
+                        self._unverified_confidence_threshold
+                    ),
+                    knowledge_at=knowledge_at,
+                    event_time_from=event_time_from,
+                    event_time_to=event_time_to,
+                    time_from=effective_time_from,
+                    time_to=effective_time_to,
+                )
+                if projected is not scored:
+                    ranking_policy = "score_id"
+                scored = projected
+            except Exception:
+                logger.warning(
+                    "Evidence projection failed; continuing without projection",
                     exc_info=True,
                 )
 

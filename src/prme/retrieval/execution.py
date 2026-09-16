@@ -67,6 +67,7 @@ def feature_identity(
         "filtering",
         "session_context",
         "episode_context",
+        "evidence_context",
         "selection",
         "reranker",
         "packing",

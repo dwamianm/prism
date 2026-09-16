@@ -154,10 +154,12 @@ nonempty evidence set share this cap even when their text differs. Nodes without
 evidence are not grouped. Response metrics and receipts retain the applied value,
 and excluded candidates use reason `evidence_limit`.
 
-Current pipeline receipts use schema version 9 and explicitly retain packing
+Current pipeline receipts use schema version 10 and explicitly retain packing
 ordering, context guidance, context format, episode-routing settings, and the
 configured current-update multiplier. Version 9 score provenance records any
-applied `current_update` operation and its exact coefficient.
+applied `current_update` operation and its exact coefficient. Version 10 retains
+the evidence-projection policy and replayable `evidence_projection` operations;
+versions 1–9 mean projection was disabled.
 Historical schema versions 4 and 5 introduced density/score and balanced
 ordering; version 6 introduced guidance, and version 7 introduced context format.
 Their `score_provenance` map contains applied

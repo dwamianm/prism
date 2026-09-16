@@ -921,9 +921,9 @@ is ignored. The equivalent environment setting is
 Temporal context guidance is enabled by default; disable it with
 `PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
 experimental current-state and personalization prompts. Every current retrieval
-receipt uses schema version 9 and retains ordering, guidance, context format,
-episode settings in `receipt.packing`, and the current-update multiplier in
-`receipt.scoring`. Set
+receipt uses schema version 10 and retains ordering, guidance, context format,
+episode and evidence-projection settings in `receipt.packing`, and the
+current-update multiplier in `receipt.scoring`. Set
 `PRME_PACKING__CONTEXT_FORMAT=compact` to use
 schema-declared JSON arrays and bundle-local references; `auditable` remains the
 default. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
@@ -932,6 +932,8 @@ rendering. Versions 1–5 also mean context guidance was off. For source blocks 
 bounded dialogue episodes stored under meaningful session IDs, set
 `PRME_PACKING__EPISODE_CONTEXT_TOP_K=2` to trial deterministic episode routing;
 the default `0` disables it.
+Set `PRME_PACKING__EVIDENCE_PROJECTION_TOP_K=50` to trial source projection for
+the top exact evidence groups; its default `0` also disables it.
 
 Current-state retrieval gives the newest record that explicitly presents itself
 as an update a bounded, relevance-capped multiplier. Configure
