@@ -86,6 +86,13 @@ is enabled by default, because a threshold that suppresses noise in a small
 fact corpus can discard useful evidence in long conversations. Cross-scope
 hints remain separate; disable them with `include_cross_scope=False` when needed.
 
+For applications that must distinguish topical retrieval from evidence that
+actually supports the requested relation, the optional
+[`AnswerabilityEvaluator`](docs/ANSWERABILITY.md) decomposes compound questions,
+validates bundle-local citations, and returns `answerable`, `partial`,
+`insufficient`, or `conflicting`. It is a model-assisted post-retrieval check;
+provider failures are explicit and do not alter deterministic retrieval.
+
 The HTTP API accepts `limit`, `min_score`, `token_budget`, and `mode`, plus typed
 `filters` (`scope`, `time_from`, `time_to`, `knowledge_at`, `event_time_from`,
 `event_time_to`, `include_cross_scope`). Unknown keys are rejected. `mode="explicit"`

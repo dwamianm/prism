@@ -74,6 +74,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
+  abstention after retrieval. It decomposes compound questions and optional
+  draft answers into independent requirements, resolves cited compact refs to
+  exact packed memory IDs, fails closed on missing or invented citations, and
+  derives `answerable`, `partial`, `insufficient`, or `conflicting` in code.
+  Empty bundles avoid a model call; provider failures raise explicitly; every
+  result binds the prompt version and query/context/answer hashes, plus separate
+  fixed-input and actual-output digests, without changing retrieval receipts or
+  memory state.
+
 - Opt-in direct evidence projection lets extracted claims route retrieval while
   returning the complete active source passage. It replaces bounded exact
   evidence groups only after owner, scope, temporal, validity and epistemic

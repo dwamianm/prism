@@ -10,7 +10,12 @@ __version__ = "0.11.0"
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from prme.workspace import MemoryWorkspace, NamespaceInfo, NamespaceMemory, WorkspaceError
+    from prme.workspace import (
+        MemoryWorkspace,
+        NamespaceInfo,
+        NamespaceMemory,
+        WorkspaceError,
+    )
     from prme.client import MemoryClient, config_from_directory
     from prme.ingestion.pipeline import IngestionPipeline
     from prme.retrieval.models import RetrievalResponse
@@ -43,7 +48,12 @@ from prme.models.processing import (
 )
 from prme.storage.fast_ingest import FastIngestConflict
 from prme.models.credit import ContextAblation, ContextPresenceCredit
-from prme.models.profile import StaleProfileError, ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
+from prme.models.profile import (
+    StaleProfileError,
+    ProfileJobStatus,
+    ProfileProcessingResult,
+    ProfileCollectionResult,
+)
 from prme.models.relevance import (
     AnswerCitationRecord,
     AnswerCitationSubmission,
@@ -70,8 +80,23 @@ from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingRe
 from prme.storage.engine import MemoryEngine
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.ranking_profiles import StaleRankingProfileError
-from prme.storage.embedding import CachedEmbeddingProvider, EmbeddingProvider, QueryEmbeddingProvider
+from prme.storage.embedding import (
+    CachedEmbeddingProvider,
+    EmbeddingProvider,
+    QueryEmbeddingProvider,
+)
 from prme.retrieval.credit import ablate_context, assess_context_presence
+from prme.retrieval.answerability import (
+    AnswerabilityAction,
+    AnswerabilityAssessment,
+    AnswerabilityConfig,
+    AnswerabilityError,
+    AnswerabilityEvaluator,
+    AnswerabilityRequirement,
+    AnswerabilityStatus,
+    AnswerabilityVerdict,
+    assess_answerability,
+)
 from prme.retrieval.full_learning import evaluate_full_retrieval
 from prme.types import (
     ConditionEvaluationMethod,
@@ -91,8 +116,14 @@ from prme.types import (
 
 def __getattr__(name: str):
     """Lazy imports for heavy modules to avoid circular import chains."""
-    if name in {"MemoryWorkspace", "NamespaceInfo", "NamespaceMemory", "WorkspaceError"}:
+    if name in {
+        "MemoryWorkspace",
+        "NamespaceInfo",
+        "NamespaceMemory",
+        "WorkspaceError",
+    }:
         from prme import workspace
+
         return getattr(workspace, name)
     if name == "MemoryClient":
         from prme.client import MemoryClient
@@ -120,6 +151,14 @@ def __getattr__(name: str):
 __all__ = [
     "AnswerCitationRecord",
     "AnswerCitationSubmission",
+    "AnswerabilityAction",
+    "AnswerabilityAssessment",
+    "AnswerabilityConfig",
+    "AnswerabilityError",
+    "AnswerabilityEvaluator",
+    "AnswerabilityRequirement",
+    "AnswerabilityStatus",
+    "AnswerabilityVerdict",
     "AssertionAggregation",
     "AssertionGroup",
     "AssertionQuery",
@@ -194,6 +233,7 @@ __all__ = [
     "StoreReceipt",
     "ablate_context",
     "assess_context_presence",
+    "assess_answerability",
     "evaluate_full_retrieval",
     "config_from_directory",
 ]

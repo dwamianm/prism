@@ -48,6 +48,10 @@ lossless special-float snapshots for previously admitted graph metadata.
 [Context packing](PACKING.md) explains the default balanced policy plus density and score
 ordering, exact token budgets, evidence limits and receipt compatibility.
 
+[Answerability and grounded abstention](ANSWERABILITY.md) documents the optional
+post-retrieval evidence-sufficiency evaluator, partial answers, cited conflicts,
+provider configuration and audit boundary.
+
 ## RFC Listing
 
 ### Tier 0 — Foundation

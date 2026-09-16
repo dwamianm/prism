@@ -6,6 +6,17 @@ are importable from this package.
 """
 
 from prme.retrieval.abstention import should_abstain
+from prme.retrieval.answerability import (
+    AnswerabilityAction,
+    AnswerabilityAssessment,
+    AnswerabilityConfig,
+    AnswerabilityError,
+    AnswerabilityEvaluator,
+    AnswerabilityRequirement,
+    AnswerabilityStatus,
+    AnswerabilityVerdict,
+    assess_answerability,
+)
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
     DEFAULT_SCORING_WEIGHTS,
@@ -39,6 +50,14 @@ from prme.retrieval.snapshots import (
 
 __all__ = [
     "AggregationCoverage",
+    "AnswerabilityAction",
+    "AnswerabilityAssessment",
+    "AnswerabilityConfig",
+    "AnswerabilityError",
+    "AnswerabilityEvaluator",
+    "AnswerabilityRequirement",
+    "AnswerabilityStatus",
+    "AnswerabilityVerdict",
     "ContextAblation",
     "ContextPresenceCredit",
     "DEFAULT_PACKING_CONFIG",
@@ -58,6 +77,7 @@ __all__ = [
     "compute_composite_score",
     "build_context_guidance",
     "ablate_context",
+    "assess_answerability",
     "assess_context_presence",
     "filter_epistemic",
     "generate_all_entity_snapshots",

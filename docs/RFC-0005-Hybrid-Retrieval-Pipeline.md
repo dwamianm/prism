@@ -412,6 +412,15 @@ models, prompts, actual token budgets, category coverage, and errors. Compare
 techniques on development questions before a frozen held-out run. See
 [BENCHMARKS.md](../BENCHMARKS.md) for the current measurement contract.
 
+An optional post-retrieval answerability evaluator is separate from the six
+deterministic retrieval stages. It decomposes compound questions (and an
+optional draft answer) into requirements, validates model-selected citations
+against the exact packed bundle, and derives `answerable`, `partial`,
+`insufficient`, or `conflicting` in code. Empty bundles are deterministically
+insufficient; provider failures are errors rather than verdicts. Assessments
+record prompt/model identity and content hashes but do not mutate memory or the
+retrieval receipt. See [ANSWERABILITY.md](ANSWERABILITY.md).
+
 ---
 
 ## 10. Retrieval Logging
