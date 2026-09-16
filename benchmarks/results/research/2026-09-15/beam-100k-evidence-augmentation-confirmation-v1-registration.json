@@ -1,0 +1,200 @@
+{
+  "schema_version": 6,
+  "kind": "beam-scored-registration",
+  "registered_at_utc": "2026-09-16T02:28:53Z",
+  "status": "registered before conversation-1 ingestion, retrieval, answer generation, judging, or question inspection",
+  "purpose": "Confirm the tuned dual-representation evidence policy on a separately selected untouched BEAM 100K conversation using paired baseline and candidate retrieval from one fresh extracted pack",
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "f7ff32fc972fd957b448682284dfa59d0b594944",
+    "upstream_repository": "mem0ai/memory-benchmarks",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "files": {
+      "launcher_sha256": "693e4e6349653ccc2fbe50771e661e44dda829961bcda840a58e7c575cf1ccc1",
+      "service_sha256": "8f56878d3508aefca1876a6f33cb21772daef5b778feff271e34c80f4614a0cb",
+      "validator_sha256": "990ba28d8f43d5c16e0a2654fad228b3c93807cd2aa008f98bce33171ace5330",
+      "upstream_runner_sha256": "c13ed8464d28f0b09c1f6f3d1b703cb2be92dbc51dbdb3e91834e355ad5aad0c",
+      "upstream_mem0_client_sha256": "a3047e4113978c3b04c2635d53e85e0ac5e7a5d43aef530beccedf591df29b99",
+      "upstream_utils_sha256": "c49e85a0d0f846c7963261e7396995203ad9f0732fe8a64b2aea1decadeabdc4",
+      "upstream_requirements_sha256": "14cb7961cff56ba10fd9d1cbb18c7842c6a2377565f18ad538d2b439402fd007"
+    }
+  },
+  "dataset": {
+    "repository": "Mohammadta/BEAM",
+    "revision": "3205395e897e7318c7b094ef4e6047b9b82dbb03",
+    "split": "100K",
+    "source_parquet_sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "normalized_by": "Pinned upstream download_dataset field selection and probing-question parsing",
+    "cache_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "cache_bytes": 13661638,
+    "conversation_count": 20
+  },
+  "protocol": {
+    "profile": "extracted",
+    "chat_sizes": ["100K"],
+    "conversations": [1],
+    "question_types": [
+      "abstention",
+      "contradiction_resolution",
+      "event_ordering",
+      "information_extraction",
+      "instruction_following",
+      "knowledge_update",
+      "multi_session_reasoning",
+      "preference_following",
+      "summarization",
+      "temporal_reasoning"
+    ],
+    "top_k": 50,
+    "top_k_cutoffs": [50],
+    "predict_only": false,
+    "project_name": "prme-beam-100k-evidence-augmentation-confirmation-v1",
+    "run_id": "prme-beam-100k-evidence-augmentation-confirmation-v1",
+    "chunk_size": 2,
+    "max_workers": 1,
+    "rpm": 60
+  },
+  "models": {
+    "answerer": {
+      "provider": "openai",
+      "model": "mistral-large-3:675b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "mistral-large-3:675b",
+      "parameter_size": "675B",
+      "quantization": "FP8",
+      "advertised_context_tokens": 262144,
+      "thinking": false,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    },
+    "judge": {
+      "provider": "openai",
+      "model": "gpt-oss:120b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "gpt-oss:120b",
+      "parameter_size": "117B",
+      "quantization": "MXFP4",
+      "advertised_context_tokens": 131072,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    }
+  },
+  "runtime": {
+    "generation_temperature": 0,
+    "generation_max_tokens": 4096,
+    "llm_max_retries": 5,
+    "llm_timeout_seconds": 120,
+    "answerer_and_judge_share_endpoint": true,
+    "judge_family_is_distinct_from_answerer": true
+  },
+  "preflight": {
+    "performed_before_registration": true,
+    "used_conversation_1_content": false,
+    "selection_basis": "Conversation 1 is the first dataset conversation not used by the conversation-0 development series. Only the published dataset count and cache digest were inspected before registration.",
+    "development_disclosure": "The augmentation policy was selected on conversation 0 after evidence-cap and source-projection ablations. No conversation-1 questions, rubrics, memories, or answers were examined before this registration.",
+    "model_identity_reused_from_development": true
+  },
+  "system": {
+    "id": "prme",
+    "version": "0.11.0",
+    "profile": "extracted",
+    "adapter_schema": 4,
+    "duckdb_threads": 1,
+    "embedding": {
+      "provider": "fastembed",
+      "model": "BAAI/bge-small-en-v1.5",
+      "dimension": 384
+    },
+    "scoring_version": "95f3ec502933",
+    "packing": {
+      "multipath_ordering": "balanced",
+      "context_guidance_mode": "temporal",
+      "context_format": "auditable",
+      "token_budget": 4096,
+      "tokenizer": "cl100k_base",
+      "min_fidelity": "reference",
+      "overhead_tokens": 100,
+      "chars_per_token": 4.2,
+      "graph_max_candidates": 150,
+      "vector_k": 500,
+      "lexical_k": 500,
+      "graph_max_hops": 3,
+      "cross_scope_top_n": 5,
+      "cross_scope_token_budget": 512,
+      "session_context_window": 3,
+      "session_context_top_k": 20,
+      "session_context_score_decay": 0.85,
+      "episode_context_top_k": 0,
+      "episode_context_local_k": 8,
+      "episode_context_score_decay": 0.95,
+      "evidence_projection_top_k": 0,
+      "evidence_projection_max_sources": 1,
+      "evidence_projection_score_decay": 1.0,
+      "evidence_augmentation_top_k": 0,
+      "evidence_augmentation_max_sources": 1,
+      "evidence_augmentation_score_decay": 0.99,
+      "aggregation_k_multiplier": 3.0,
+      "aggregation_k_max": 2000
+    },
+    "extraction": {
+      "provider": "ollama",
+      "model": "deepseek-v4.1-flash:cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "reasoning_effort": "none",
+      "max_retries": 3,
+      "temperature": 0.0,
+      "timeout": 180.0,
+      "lease_seconds": 60.0
+    },
+    "retrieval": {
+      "max_per_source": 1,
+      "passage_time": "latest_evidence_event"
+    },
+    "admission": {
+      "raw_materialization_before_ack": true,
+      "extraction_before_ack": true
+    }
+  },
+  "confirmation": {
+    "design": "Run the registered baseline through the pinned upstream harness, freeze and hash the completely admitted pack, then replay the same 20 questions with the same answerer and judge while changing only the candidate retrieval packing policy.",
+    "baseline": {
+      "max_per_source": 1,
+      "max_per_evidence": null,
+      "evidence_projection_top_k": 0,
+      "evidence_augmentation_top_k": 0
+    },
+    "candidate": {
+      "max_per_source": 1,
+      "max_per_evidence": null,
+      "evidence_projection_top_k": 0,
+      "evidence_augmentation_top_k": 10,
+      "evidence_augmentation_max_sources": 1,
+      "evidence_augmentation_score_decay": 0.99
+    },
+    "paired_primary_metrics": [
+      "pass-level wins, losses, and ties at score >= 0.5",
+      "mean rubric-score delta"
+    ],
+    "confirmation_rule": "Confirmed on this conversation only if the candidate has zero pass-level losses, at least one pass-level win, and a positive mean rubric-score delta.",
+    "default_rule": "A default change additionally requires no material regression in latency, context integrity, provenance, receipt replay, or the broader local test suite. One 20-question confirmation alone is insufficient for a universal superiority claim."
+  },
+  "reporting": {
+    "expected_ingestion_checkpoints": 1,
+    "expected_questions_per_arm": 20,
+    "expected_questions_per_ability_per_arm": 2,
+    "require_zero_failed_chunks": true,
+    "require_no_partial_progress": true,
+    "require_complete_raw_materializations": true,
+    "require_complete_extractions": true,
+    "require_nonempty_answers": true,
+    "require_complete_nugget_verdicts": true,
+    "preserve_every_retrieval_answer_and_verdict": true,
+    "hash_final_duckdb_pack": true,
+    "claim_boundary": "This is one preregistered untouched 100K conversation using mutable Ollama cloud aliases. It can confirm or reject the tuned retrieval policy on this conversation but is not an official-scale result, matched cross-product comparison, or proof of market leadership."
+  }
+}
