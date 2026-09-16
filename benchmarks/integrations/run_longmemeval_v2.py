@@ -20,13 +20,16 @@ import sys
 import tempfile
 from types import ModuleType
 from typing import Any, Sequence
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit, urlunsplit
+from urllib.request import Request, urlopen
 
 from benchmarks.integrations import install_longmemeval_v2 as installer
 
 
 CHECKPOINT_SCHEMA_VERSION = 1
 DEFAULT_CHECKPOINT_FILENAME = "reader_outputs.checkpoint.jsonl"
-EXECUTION_MANIFEST_SCHEMA_VERSION = 2
+EXECUTION_MANIFEST_SCHEMA_VERSION = 3
 EXECUTION_MANIFEST_FILENAME = "execution_manifest.json"
 _LEGACY_OUTPUT_NAMES = (
     "prompt_rows.jsonl",
@@ -133,12 +136,113 @@ def _git_identity(root: Path) -> tuple[str, list[str]]:
     return revision, sorted(set(tracked) | set(untracked))
 
 
+def _ollama_endpoint(
+    api_base_url: str,
+    path: str,
+    payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    parsed = urlsplit(api_base_url)
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in {"", "/"}
+    ):
+        raise RuntimeError(
+            "Ollama API base URL must be an HTTP(S) origin without credentials or a path"
+        )
+    origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", "")).rstrip("/")
+    body = _canonical_json(payload) if payload is not None else None
+    request = Request(
+        f"{origin}{path}",
+        data=body,
+        method="POST" if body is not None else "GET",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=10) as response:  # noqa: S310
+            value = json.load(response)
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"could not resolve Ollama reader identity at {origin}") from error
+    if not isinstance(value, dict):
+        raise RuntimeError(f"Ollama returned an invalid identity response at {origin}")
+    return value
+
+
+def _ollama_reader_identity(api_base_url: str, model: str) -> dict[str, Any]:
+    """Resolve the exact Ollama server and immutable model artifact in use."""
+    version = _ollama_endpoint(api_base_url, "/api/version")
+    tags = _ollama_endpoint(api_base_url, "/api/tags")
+    show = _ollama_endpoint(
+        api_base_url,
+        "/api/show",
+        {"model": model, "verbose": False},
+    )
+    models = tags.get("models")
+    matches = (
+        [
+            item
+            for item in models
+            if isinstance(item, dict)
+            and (item.get("name") == model or item.get("model") == model)
+        ]
+        if isinstance(models, list)
+        else []
+    )
+    if len(matches) != 1:
+        raise RuntimeError(f"Ollama model identity is unavailable or ambiguous: {model}")
+    installed = matches[0]
+    digest = installed.get("digest")
+    size = installed.get("size")
+    server_version = version.get("version")
+    resolved_model = installed.get("model")
+    details = installed.get("details")
+    capabilities = show.get("capabilities")
+    requires = show.get("requires")
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+        or not isinstance(size, int)
+        or size <= 0
+        or not isinstance(server_version, str)
+        or not server_version
+        or not isinstance(resolved_model, str)
+        or not resolved_model
+        or not isinstance(details, dict)
+        or not isinstance(capabilities, list)
+        or any(not isinstance(value, str) for value in capabilities)
+        or not isinstance(requires, str)
+    ):
+        raise RuntimeError(f"Ollama returned incomplete identity for model: {model}")
+    parsed = urlsplit(api_base_url)
+    origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", "")).rstrip("/")
+    return {
+        "provider": "ollama",
+        "api_base_url": origin,
+        "server_version": server_version,
+        "model": model,
+        "resolved_model": resolved_model,
+        "model_digest_sha256": digest,
+        "model_size_bytes": size,
+        "details": details,
+        "capabilities": sorted(set(capabilities)),
+        "requires": requires,
+    }
+
+
 def _build_execution_manifest(
     upstream_root: Path,
     install_status: dict[str, str],
     registration_path: Path | None,
     memory_config_path: str | os.PathLike[str],
     load_memory_dir: str | os.PathLike[str] | None,
+    *,
+    reader_model: str | None = None,
+    ollama_api_base_url: str | None = None,
 ) -> dict[str, Any]:
     memory_config_value = os.fspath(memory_config_path)
     project_root = Path(install_status["project_root"]).resolve()
@@ -198,6 +302,14 @@ def _build_execution_manifest(
         if payload_root.is_dir():
             memory_payload_artifact = _directory_identity(payload_root)
 
+    if ollama_api_base_url is not None and not reader_model:
+        raise RuntimeError("Ollama reader identity requires a reader model")
+    reader_runtime = (
+        _ollama_reader_identity(ollama_api_base_url, reader_model)
+        if ollama_api_base_url is not None and reader_model is not None
+        else None
+    )
+
     registration_sha256 = None
     if registration_path is not None:
         registration_path = registration_path.expanduser().resolve()
@@ -226,12 +338,23 @@ def _build_execution_manifest(
                 "registered launch found unexpected LongMemEval-V2 worktree changes: "
                 + ", ".join(upstream_changes)
             )
+        registered_reader = registration.get("reader")
+        registered_runtime = (
+            registered_reader.get("runtime_identity")
+            if isinstance(registered_reader, dict)
+            else None
+        )
+        if registered_runtime is not None and reader_runtime != registered_runtime:
+            raise RuntimeError(
+                "reader runtime identity does not match the registered model artifact"
+            )
         registration_sha256 = _digest(registration_path)
 
     return {
         "schema_version": EXECUTION_MANIFEST_SCHEMA_VERSION,
         "kind": "longmemeval-v2-execution",
         "registration_sha256": registration_sha256,
+        "reader_runtime": reader_runtime,
         "source": {
             "prme_revision": project_revision,
             "prme_worktree_changes": project_changes,
@@ -554,6 +677,13 @@ def _parse_launcher_args(argv: Sequence[str] | None) -> tuple[argparse.Namespace
             "upstream revision before any output is generated"
         ),
     )
+    parser.add_argument(
+        "--ollama-api-base-url",
+        help=(
+            "Ollama native API origin used to bind the installed model digest and "
+            "server version into the execution manifest"
+        ),
+    )
     parsed, harness_args = parser.parse_known_args(argv)
     if harness_args and harness_args[0] == "--":
         harness_args = harness_args[1:]
@@ -624,6 +754,8 @@ def run(argv: Sequence[str] | None = None) -> None:
             launcher_args.registration,
             preview_args.memory_config_path,
             preview_args.load_memory_dir,
+            reader_model=preview_args.model,
+            ollama_api_base_url=launcher_args.ollama_api_base_url,
         )
         _write_or_verify_execution_manifest(
             Path(preview_args.output_dir).resolve(),

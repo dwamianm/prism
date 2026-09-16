@@ -166,6 +166,8 @@ def test_launcher_parses_none_reasoning_and_plain_checkpoint_name() -> None:
             "reader.jsonl",
             "--registration",
             "/tmp/registration.json",
+            "--ollama-api-base-url",
+            "http://127.0.0.1:11434",
             "--",
             "--domain",
             "web",
@@ -175,6 +177,7 @@ def test_launcher_parses_none_reasoning_and_plain_checkpoint_name() -> None:
     assert args.reader_reasoning_effort == "none"
     assert args.checkpoint_filename == "reader.jsonl"
     assert args.registration == Path("/tmp/registration.json")
+    assert args.ollama_api_base_url == "http://127.0.0.1:11434"
     assert harness_args == ["--domain", "web"]
 
     with pytest.raises(SystemExit):
@@ -239,6 +242,18 @@ def test_registered_execution_manifest_binds_clean_source_trees(
 
     prme_revision = "a" * 40
     upstream_revision = "b" * 40
+    reader_runtime = {
+        "provider": "ollama",
+        "api_base_url": "http://127.0.0.1:11434",
+        "server_version": "0.34.1",
+        "model": "reader",
+        "resolved_model": "reader",
+        "model_digest_sha256": "c" * 64,
+        "model_size_bytes": 1024,
+        "details": {"format": "gguf"},
+        "capabilities": ["completion"],
+        "requires": "0.17.1",
+    }
     monkeypatch.setattr(runner.installer, "_ADAPTER_SOURCE", adapter_source)
     monkeypatch.setattr(runner.installer, "_CONFIG_SOURCE", config_source)
     monkeypatch.setattr(
@@ -270,6 +285,7 @@ def test_registered_execution_manifest_binds_clean_source_trees(
                     "prme_revision": prme_revision,
                     "upstream_revision": upstream_revision,
                 },
+                "reader": {"runtime_identity": reader_runtime},
             }
         )
     )
@@ -277,6 +293,11 @@ def test_registered_execution_manifest_binds_clean_source_trees(
     (saved_memory / "prme_pack").mkdir(parents=True)
     (saved_memory / "memory_config.json").write_text("{}\n")
     (saved_memory / "prme_pack" / "index.bin").write_bytes(b"index")
+    monkeypatch.setattr(
+        runner,
+        "_ollama_reader_identity",
+        lambda api_base_url, model: reader_runtime,
+    )
 
     manifest = runner._build_execution_manifest(
         upstream,
@@ -284,10 +305,13 @@ def test_registered_execution_manifest_binds_clean_source_trees(
         registration,
         "evaluation/memory_configs/prme_compact.json",
         saved_memory,
+        reader_model="reader",
+        ollama_api_base_url="http://127.0.0.1:11434",
     )
 
-    assert manifest["schema_version"] == 2
+    assert manifest["schema_version"] == 3
     assert manifest["registration_sha256"] == runner._digest(registration)
+    assert manifest["reader_runtime"] == reader_runtime
     assert manifest["source"]["prme_worktree_changes"] == []
     assert (
         manifest["source"]["adapter_source_sha256"]
@@ -299,6 +323,67 @@ def test_registered_execution_manifest_binds_clean_source_trees(
         "load_memory_dir": str(saved_memory),
         "memory_artifact": runner._directory_identity(saved_memory),
         "memory_payload_artifact": runner._directory_identity(saved_memory / "prme_pack"),
+    }
+
+    changed = json.loads(registration.read_text())
+    changed["reader"]["runtime_identity"]["model_digest_sha256"] = "d" * 64
+    registration.write_text(json.dumps(changed))
+    with pytest.raises(RuntimeError, match="reader runtime identity"):
+        runner._build_execution_manifest(
+            upstream,
+            {"project_root": str(project), "revision": upstream_revision},
+            registration,
+            "evaluation/memory_configs/prme_compact.json",
+            saved_memory,
+            reader_model="reader",
+            ollama_api_base_url="http://127.0.0.1:11434",
+        )
+
+
+def test_ollama_reader_identity_binds_server_and_model(monkeypatch) -> None:
+    def endpoint(_base_url, path, payload=None):
+        if path == "/api/version":
+            return {"version": "0.34.1"}
+        if path == "/api/tags":
+            return {
+                "models": [
+                    {
+                        "name": "reader:latest",
+                        "model": "reader:latest",
+                        "digest": "a" * 64,
+                        "size": 123,
+                        "details": {
+                            "format": "gguf",
+                            "parameter_size": "1B",
+                            "quantization_level": "Q4_K_M",
+                        },
+                    }
+                ]
+            }
+        assert payload == {"model": "reader:latest", "verbose": False}
+        return {"capabilities": ["vision", "completion"], "requires": "0.17.1"}
+
+    monkeypatch.setattr(runner, "_ollama_endpoint", endpoint)
+
+    identity = runner._ollama_reader_identity(
+        "http://127.0.0.1:11434/", "reader:latest"
+    )
+
+    assert identity == {
+        "provider": "ollama",
+        "api_base_url": "http://127.0.0.1:11434",
+        "server_version": "0.34.1",
+        "model": "reader:latest",
+        "resolved_model": "reader:latest",
+        "model_digest_sha256": "a" * 64,
+        "model_size_bytes": 123,
+        "details": {
+            "format": "gguf",
+            "parameter_size": "1B",
+            "quantization_level": "Q4_K_M",
+        },
+        "capabilities": ["completion", "vision"],
+        "requires": "0.17.1",
     }
 
 

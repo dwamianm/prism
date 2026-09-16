@@ -77,6 +77,14 @@ registered per-arm invocation hashes for schema-2 registrations. Schema-1
 registrations remain readable for studies that were already running when source
 manifests were introduced.
 
+For a local Ollama reader, pass its native origin with
+`--ollama-api-base-url http://127.0.0.1:11434`. The launcher resolves the exact
+installed model digest, size, architecture details, capabilities, required
+runtime, and Ollama server version before prompt construction. A registration
+can bind that object as `reader.runtime_identity`; a changed tag or runtime then
+fails before any generation, and execution-manifest schema 3 preserves the
+observed identity for comparison.
+
 Loaded PRME runs also record a separate identity for the `prme_pack/` payload.
 This lets a registered multi-budget curve prove that every arm started from the
 same graph, indexes, attachments, and adapter manifest even though each clone's

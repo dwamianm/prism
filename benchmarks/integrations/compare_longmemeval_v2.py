@@ -327,7 +327,7 @@ def _validate_registered_execution(
         raise ValueError("schema-2 registered runs require execution manifests")
     for manifest in (left_manifest, right_manifest):
         if (
-            manifest.get("schema_version") != 2
+            manifest.get("schema_version") not in {2, 3}
             or manifest.get("kind") != "longmemeval-v2-execution"
             or manifest.get("registration_sha256") != registration_sha256
         ):

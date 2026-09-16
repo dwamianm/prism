@@ -16,6 +16,26 @@ def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _runtime_identity() -> dict[str, object]:
+    return {
+        "provider": "ollama",
+        "api_base_url": "http://127.0.0.1:11434",
+        "server_version": "0.34.1",
+        "model": "reader-model",
+        "resolved_model": "reader-model",
+        "model_digest_sha256": "d" * 64,
+        "model_size_bytes": 1024,
+        "details": {
+            "format": "gguf",
+            "family": "reader",
+            "parameter_size": "1B",
+            "quantization_level": "Q4_K_M",
+        },
+        "capabilities": ["completion"],
+        "requires": "0.17.1",
+    }
+
+
 def _fixture(
     root: Path,
 ) -> tuple[dict[str, Path], Path, dict[str, dict[str, object]]]:
@@ -129,6 +149,7 @@ def _fixture(
             "max_completion_tokens": args["max_completion_tokens"],
             "max_concurrent_requests": args["reader_max_concurrent_requests"],
             "prompt_build_max_workers": args["prompt_build_max_workers"],
+            "runtime_identity": _runtime_identity(),
         },
         "systems": systems,
     }
@@ -159,9 +180,10 @@ def _fixture(
     for label, run in runs.items():
         system = systems[label]
         manifest = {
-            "schema_version": 2,
+            "schema_version": 3,
             "kind": "longmemeval-v2-execution",
             "registration_sha256": registration_sha256,
+            "reader_runtime": _runtime_identity(),
             "source": execution_source,
             "invocation": {
                 "memory_config_path": system["memory_config"],
@@ -226,6 +248,17 @@ def test_curve_rejects_execution_source_drift(tmp_path: Path) -> None:
     path.write_text(json.dumps(manifest))
 
     with pytest.raises(ValueError, match="do not share one execution source"):
+        subject.compare_curve(runs, registration_path=registration, samples=10)
+
+
+def test_curve_rejects_reader_runtime_drift(tmp_path: Path) -> None:
+    runs, registration, _ = _fixture(tmp_path)
+    path = runs["16k"] / "execution_manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["reader_runtime"]["model_digest_sha256"] = "0" * 64
+    path.write_text(json.dumps(manifest))
+
+    with pytest.raises(ValueError, match="do not share one reader runtime"):
         subject.compare_curve(runs, registration_path=registration, samples=10)
 
 

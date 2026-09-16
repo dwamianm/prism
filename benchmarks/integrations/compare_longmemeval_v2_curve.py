@@ -208,7 +208,7 @@ def _validate_execution_source(
         manifest = run.get("execution")
         if (
             not isinstance(manifest, dict)
-            or manifest.get("schema_version") != 2
+            or manifest.get("schema_version") != 3
             or manifest.get("kind") != "longmemeval-v2-execution"
             or manifest.get("registration_sha256") != registration_sha256
         ):
@@ -256,6 +256,29 @@ def _validate_execution_source(
     ):
         raise ValueError("installed budget-curve source differs from registration")
     return expected_source
+
+
+def _validate_reader_runtime(
+    runs: dict[str, dict[str, Any]],
+    registration: dict[str, Any],
+) -> dict[str, Any]:
+    reader = registration.get("reader")
+    registered = reader.get("runtime_identity") if isinstance(reader, dict) else None
+    if not isinstance(registered, dict):
+        raise ValueError("registration is missing reader runtime identity")
+    observed: dict[str, Any] | None = None
+    for label, run in runs.items():
+        manifest = run.get("execution")
+        identity = manifest.get("reader_runtime") if isinstance(manifest, dict) else None
+        if not isinstance(identity, dict):
+            raise ValueError(f"arm {label} has no reader runtime identity")
+        if observed is None:
+            observed = identity
+        elif identity != observed:
+            raise ValueError("budget-curve arms do not share one reader runtime")
+    if observed != registered:
+        raise ValueError("budget-curve reader runtime does not match registration")
+    return registered
 
 
 def _validate_system(
@@ -410,6 +433,7 @@ def compare_curve(
     execution_source = _validate_execution_source(
         runs, registration, registration_sha256
     )
+    reader_runtime = _validate_reader_runtime(runs, registration)
     bindings = {
         label: _validate_system(label, runs[label], system)
         for label, system in systems.items()
@@ -463,6 +487,7 @@ def compare_curve(
         "reader_settings": {
             field: reference["args"].get(field) for field in paired._READER_FIELDS
         },
+        "reader_runtime": reader_runtime,
         "bootstrap": {"samples": samples, "seed": 42, "unit": "question"},
         "bindings": bindings,
         "arms": {label: _arm_summary(runs[label]) for label in ordered_labels},
