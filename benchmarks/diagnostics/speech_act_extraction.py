@@ -121,7 +121,11 @@ def _normalized(value: str) -> str:
 
 def _matches_object(value: str, aliases: tuple[str, ...]) -> bool:
     normalized = _normalized(value)
-    return normalized in {_normalized(alias) for alias in aliases}
+    return any(
+        re.search(rf"(?:^|_){re.escape(_normalized(alias))}(?:_|$)", normalized)
+        is not None
+        for alias in aliases
+    )
 
 
 def _matches_predicate(value: str, stems: tuple[str, ...]) -> bool:

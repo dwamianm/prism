@@ -20,12 +20,17 @@ CASE = ({
 },)
 
 
-def _report(*, raw_predicate: str, materialized_predicate: str | None) -> dict:
+def _report(
+    *,
+    raw_predicate: str,
+    materialized_predicate: str | None,
+    object_value: str = "Redis",
+) -> dict:
     nodes = []
     if materialized_predicate is not None:
         nodes.append({
             "node_type": "fact",
-            "metadata": {"predicate": materialized_predicate, "object": "Redis"},
+            "metadata": {"predicate": materialized_predicate, "object": object_value},
         })
     return {
         "cases": [{
@@ -33,7 +38,7 @@ def _report(*, raw_predicate: str, materialized_predicate: str | None) -> dict:
             "extraction_grounding_policy": "speech_act_v6",
             "materialization_policy": "speech_act_v12",
             "extraction": {
-                "facts": [{"predicate": raw_predicate, "object": "Redis"}],
+                "facts": [{"predicate": raw_predicate, "object": object_value}],
                 "relationships": [],
             },
             "evaluated_nodes": nodes,
@@ -61,6 +66,34 @@ def test_speech_act_score_recognizes_irregular_tried_inflection():
     assert score["passed"]
     assert score["targets_preserved"] == 1
     assert score["unsafe_nonactual_claims"] == 0
+
+
+def test_speech_act_score_accepts_token_bounded_target_in_composite_object():
+    score = score_report(
+        _report(
+            raw_predicate="trying_to_use",
+            materialized_predicate="trying_to_use",
+            object_value="Redis for session storage",
+        ),
+        CASE,
+    )
+
+    assert score["passed"]
+    assert score["targets_preserved"] == 1
+
+
+def test_speech_act_score_detects_unsafe_composite_target_too():
+    score = score_report(
+        _report(
+            raw_predicate="uses",
+            materialized_predicate="uses",
+            object_value="Redis for session storage",
+        ),
+        CASE,
+    )
+
+    assert not score["passed"]
+    assert score["unsafe_nonactual_claims"] == 1
 
 
 def test_speech_act_score_rejects_completed_claim_even_if_safe_sibling_survives():
