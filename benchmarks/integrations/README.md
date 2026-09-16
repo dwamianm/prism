@@ -16,6 +16,9 @@ consolidation, temporal lineage, and retrieval through an independent lifecycle
 harness. The [BEAM adapter](BEAM.md) exposes the two-call OSS boundary used by
 the pinned official 100K-to-10M conversation benchmark, with separate raw and
 product-extraction profiles and restart-safe source retries.
+The [WiCE assay](WICE.md) evaluates the local claim verifier on an external,
+human-annotated oracle-retrieval test set with revision-pinned inputs and no
+copied source text in result artifacts.
 
 ## PrecisionMemBench diagnostic adapter
 
