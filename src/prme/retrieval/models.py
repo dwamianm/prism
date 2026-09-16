@@ -425,6 +425,13 @@ class RetrievalMetadata(BaseModel):
             "set and byte-identical source passage"
         ),
     )
+    max_per_evidence: int | None = Field(
+        default=None,
+        description=(
+            "Optional maximum returned nodes for one exact nonempty evidence set, "
+            "regardless of whether their content differs"
+        ),
+    )
     candidates_included: int = Field(
         default=0, description="Candidates included in final response"
     )

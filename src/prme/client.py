@@ -346,6 +346,7 @@ class MemoryClient:
         min_score: float | None = None,
         limit: int | None = None,
         max_per_source: int | None = None,
+        max_per_evidence: int | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -372,6 +373,7 @@ class MemoryClient:
                 token_budget=token_budget,
                 min_score=min_score, limit=limit,
                 max_per_source=max_per_source,
+                max_per_evidence=max_per_evidence,
                 weights=weights, ranking_multipliers=ranking_multipliers, min_fidelity=min_fidelity,
                 retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope,
             )

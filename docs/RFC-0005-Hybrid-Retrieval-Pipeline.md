@@ -241,6 +241,13 @@ different events and different passages from one event remain distinct. The
 default is disabled until answer trials establish a broadly safe value. Applied
 values and `source_limit` exclusions are retained in retrieval telemetry.
 
+Callers that need stronger source diversity may also set `max_per_evidence` to
+a positive integer. This caps every candidate with the same exact nonempty
+`evidence_refs` set even when candidate content differs, while leaving nodes
+without evidence independent. It fills the requested limit from later evidence
+groups and records `evidence_limit` exclusions. It is opt-in because a single
+source can contain several independently useful extracted claims.
+
 ---
 
 ## 6. Stage 4: Epistemic Filtering

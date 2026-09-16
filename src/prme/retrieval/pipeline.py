@@ -208,6 +208,7 @@ class RetrievalPipeline:
         min_score: float | None = None,
         limit: int | None = None,
         max_per_source: int | None = None,
+        max_per_evidence: int | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         ranking_profile: dict | None = None,
@@ -250,6 +251,8 @@ class RetrievalPipeline:
             limit: Maximum primary results before context packing. Zero returns none.
             max_per_source: Optional maximum results with the same exact source
                 passage and evidence set.
+            max_per_evidence: Optional maximum results with the same exact
+                nonempty evidence set, including differently worded siblings.
             weights: Override default scoring weights for this request.
             ranking_multipliers: Explicit bounded adjustment after query-specific
                 weight redistribution, before reranking and session expansion.
@@ -265,7 +268,7 @@ class RetrievalPipeline:
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
-        validate_selection(min_score, limit, max_per_source)
+        validate_selection(min_score, limit, max_per_source, max_per_evidence)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
         execution_features = self.execution_features()
@@ -753,6 +756,7 @@ class RetrievalPipeline:
             min_score=min_score,
             limit=limit,
             max_per_source=max_per_source,
+            max_per_evidence=max_per_evidence,
         )
         excluded.extend(selection_excluded)
         cross_scope_hints, _ = select_candidates(cross_scope_hints, min_score=min_score, limit=None)
@@ -825,6 +829,7 @@ class RetrievalPipeline:
                 "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
                 "ranking_profile": ranking_profile,
                 "max_per_source": max_per_source,
+                "max_per_evidence": max_per_evidence,
                 "time_from": time_from.isoformat() if time_from else None,
                 "time_to": time_to.isoformat() if time_to else None,
                 "knowledge_at": knowledge_at.isoformat() if knowledge_at else None,
@@ -868,6 +873,7 @@ class RetrievalPipeline:
                 "scoring_config_version": effective_weights.version_id,
                 "min_score": min_score, "result_limit": limit,
                 "max_per_source": max_per_source,
+                "max_per_evidence": max_per_evidence,
                 "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
@@ -915,6 +921,7 @@ class RetrievalPipeline:
             reference_time=scoring_now,
             min_score=min_score, result_limit=limit,
             max_per_source=max_per_source,
+            max_per_evidence=max_per_evidence,
             candidates_generated=candidate_counts,
             candidates_filtered=len(excluded),
             candidates_included=bundle.included_count,

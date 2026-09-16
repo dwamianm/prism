@@ -242,6 +242,12 @@ class RetrieveRequest(BaseModel):
         strict=True,
         description="Max results sharing one exact source passage and evidence set",
     )
+    max_per_evidence: int | None = Field(
+        default=None,
+        ge=1,
+        strict=True,
+        description="Max results sharing one exact nonempty evidence set",
+    )
     min_score: float | None = Field(default=None, ge=0, allow_inf_nan=False, description="Inclusive ranking score floor, not a probability")
     mode: RetrievalMode | None = Field(default=None, description="Epistemic filtering mode within generated candidates")
     filters: RetrievalFilters | None = None

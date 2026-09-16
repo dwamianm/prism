@@ -149,6 +149,11 @@ share that cap; later source groups fill the requested `limit`. Equal text from
 distinct events remains distinct. The response metrics report the applied value,
 and excluded candidates use reason `source_limit`.
 
+`max_per_evidence` is the broader optional bound. Candidates with the same exact
+nonempty evidence set share this cap even when their text differs. Nodes without
+evidence are not grouped. Response metrics and receipts retain the applied value,
+and excluded candidates use reason `evidence_limit`.
+
 Current pipeline receipts use schema version 9 and explicitly retain packing
 ordering, context guidance, context format, episode-routing settings, and the
 configured current-update multiplier. Version 9 score provenance records any

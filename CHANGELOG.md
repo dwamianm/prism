@@ -90,12 +90,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   seconds and DeepSeek V4.1 Flash in 106.42 seconds, identifying hosted latency
   variance and the registered timeout as the failure boundary.
 
-- Python, HTTP, and MCP retrieval now accept an optional `max_per_source`
-  result-selection bound. It collapses only byte-identical passages with the
-  same exact nonempty evidence set, fills the requested count from later source
-  groups, records every exclusion, and leaves equal text from distinct events
-  untouched. This prevents one extracted passage from occupying dozens of LLM
-  context slots while remaining opt-in pending broader answer trials.
+- Python, HTTP, and MCP retrieval now accept optional `max_per_source` and
+  `max_per_evidence` result-selection bounds. The first collapses only
+  byte-identical passages with the same exact nonempty evidence set. The second
+  can cap differently worded nodes that cite the same exact evidence set. Both
+  fill the requested count from later groups, record every exclusion, leave
+  nodes without evidence untouched, and remain opt-in pending broader answer
+  trials.
 
 - The first scored extracted-memory BEAM execution produced 12/20 pass (60.0%)
   with a 0.51875 mean rubric score, but a later pack audit found only 66 of 188

@@ -49,6 +49,16 @@ async def test_selection_filters_context_and_records_exclusions(config, user):  
         assert receipt is not None
         assert receipt.execution is not None
         assert receipt.execution.parameters["max_per_source"] == 1
+        evidence_limited = await engine.retrieve(
+            "telescope Saturn rings", max_per_evidence=1, **kwargs
+        )
+        assert evidence_limited.metadata.max_per_evidence == 1
+        receipt = await engine.get_retrieval_receipt(
+            str(evidence_limited.metadata.request_id), user_id=user
+        )
+        assert receipt is not None
+        assert receipt.execution is not None
+        assert receipt.execution.parameters["max_per_evidence"] == 1
         for bounds in ({"limit": 0}, {"min_score": 2}):
             empty = await engine.retrieve("telescope Saturn rings", **kwargs, **bounds)
             assert empty.results == [] and empty.bundle.included_count == 0
@@ -94,6 +104,42 @@ def test_source_limit_fills_result_cap_from_distinct_exact_sources():
     ]
 
 
+def test_evidence_limit_fills_result_cap_from_distinct_evidence_sets():
+    evidence_a = UUID(int=100)
+    evidence_b = UUID(int=200)
+
+    def candidate(identifier, content, evidence):
+        return RetrievalCandidate(
+            node=MemoryNode(
+                id=UUID(int=identifier),
+                content=content,
+                user_id="owner",
+                node_type=NodeType.FACT,
+                evidence_refs=evidence,
+            ),
+            composite_score=1 - identifier / 100,
+        )
+
+    ranked = [
+        candidate(1, "first claim", [evidence_a]),
+        candidate(2, "differently worded sibling", [evidence_a]),
+        candidate(3, "second source", [evidence_b]),
+        candidate(4, "no provenance one", []),
+        candidate(5, "no provenance two", []),
+    ]
+    selected, excluded = select_candidates(
+        ranked,
+        min_score=None,
+        limit=4,
+        max_per_evidence=1,
+    )
+
+    assert [item.node.id for item in selected] == [UUID(int=i) for i in (1, 3, 4, 5)]
+    assert [(item.node_id, item.reason) for item in excluded] == [
+        (UUID(int=2), "evidence_limit")
+    ]
+
+
 async def test_source_limit_preserves_identical_text_from_distinct_events(config, user):  # noqa: F811
     source_text = "A repeated source passage about the launch window"
     async with MemoryEngine.open(config) as engine:
@@ -116,9 +162,16 @@ def test_invalid_source_limit_is_rejected(value):
         validate_selection(None, None, value)
 
 
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_evidence_limit_is_rejected(value):
+    with pytest.raises(ValueError, match="max_per_evidence"):
+        validate_selection(None, None, None, value)
+
+
 @pytest.mark.parametrize("bounds", [{"min_score": -1}, {"min_score": float("nan")},
                                      {"min_score": float("inf")}, {"limit": -1}, {"limit": 1.5}, {"limit": True},
-                                     {"max_per_source": 0}, {"max_per_source": True}])
+                                     {"max_per_source": 0}, {"max_per_source": True},
+                                     {"max_per_evidence": 0}, {"max_per_evidence": True}])
 async def test_invalid_selection_cannot_drain_pending_work(config, user, bounds):  # noqa: F811
     async with MemoryEngine.open(config) as engine:
         event = await engine.ingest_fast("A pending source", user_id=user)
@@ -137,11 +190,13 @@ async def test_http_filters_mode_and_limit_are_applied(config, user):  # noqa: F
         app.state.engine = engine
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://test") as client:
             body = {"query": "telescope", "user_id": user, "max_per_source": 1,
+                    "max_per_evidence": 1,
                     "filters": {"scope": "project", "include_cross_scope": False}}
             response = await client.post("/v1/retrieve", json=body)
             assert response.status_code == 200
             assert [r["content"] for r in response.json()["results"]] == ["Project telescope"]
             assert response.json()["metrics"]["max_per_source"] == 1
+            assert response.json()["metrics"]["max_per_evidence"] == 1
             response = await client.post("/v1/retrieve", json={**body, "mode": "explicit"})
             assert response.status_code == 200 and len(response.json()["results"]) == 2
             for override in ({"limit": 0}, {"min_score": 2}, {"filters": {"knowledge_at": "2000-01-01T00:00:00Z"}}):
@@ -150,6 +205,7 @@ async def test_http_filters_mode_and_limit_are_applied(config, user):  # noqa: F
                 assert response.json()["bundle"]["included_count"] == 0
             for override in ({"limit": -1}, {"min_score": -1}, {"mode": "typo"},
                              {"max_per_source": 0}, {"max_per_source": True},
+                             {"max_per_evidence": 0}, {"max_per_evidence": True},
                              {"filters": {"scpoe": "project"}}, {"filters": {"user_id": "foreign"}},
                              {"filters": {"knowledge_at": "yesterday"}}, {"min_socre": 0.5}):
                 assert (await client.post("/v1/retrieve", json={**body, **override})).status_code == 422
@@ -172,3 +228,7 @@ async def test_mcp_selection_contract(config, user):  # noqa: F811
             "memory_retrieve", {"query": "telescope", "max_per_source": 0}
         )
         assert "max_per_source" in json.loads(response.content[0].text)["error"]
+        response = await session.call_tool(
+            "memory_retrieve", {"query": "telescope", "max_per_evidence": 0}
+        )
+        assert "max_per_evidence" in json.loads(response.content[0].text)["error"]

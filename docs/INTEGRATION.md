@@ -1008,6 +1008,13 @@ with the same exact nonempty evidence set and byte-identical content, so sibling
 claims cannot consume the result budget with repeated source text. The default
 is disabled while answer-quality trials establish when to promote it.
 
+Use `max_per_evidence=1` when that surface needs one ranked representative per
+exact cited evidence set even if extracted sibling nodes have different text.
+This broader option fills the requested result limit from later evidence groups.
+Nodes without evidence remain independent, and identical text citing distinct
+events remains distinct. The result metadata and retrieval receipt record the
+applied value; exclusions use `evidence_limit`.
+
 ### Stage 4: Epistemic Filtering
 
 **Input:** Merged candidates, retrieval mode.

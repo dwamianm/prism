@@ -1716,6 +1716,7 @@ class MemoryEngine:
         min_score: float | None = None,
         limit: int | None = None,
         max_per_source: int | None = None,
+        max_per_evidence: int | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -1758,6 +1759,9 @@ class MemoryEngine:
             max_per_source: Optional maximum results with the same exact source
                 passage and evidence set. Use 1 to prevent extracted sibling
                 claims from consuming a fixed result count with duplicate text.
+            max_per_evidence: Optional maximum results with the same exact
+                nonempty evidence set. Use 1 for one ranked representative per
+                cited source group, including differently worded siblings.
             weights: Override default scoring weights.
             ranking_multipliers: Explicit request-only adjustment for full-pipeline
                 trials; does not activate or persist a learned profile.
@@ -1773,7 +1777,7 @@ class MemoryEngine:
         Raises:
             NotImplementedError: If no retrieval pipeline is configured.
         """
-        validate_selection(min_score, limit, max_per_source)
+        validate_selection(min_score, limit, max_per_source, max_per_evidence)
         scope = normalize_scope(scope)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
@@ -1839,6 +1843,7 @@ class MemoryEngine:
             token_budget=token_budget,
             min_score=min_score, limit=limit,
             max_per_source=max_per_source,
+            max_per_evidence=max_per_evidence,
             weights=weights,
             ranking_multipliers=ranking_multipliers,
             ranking_profile=profile_application,

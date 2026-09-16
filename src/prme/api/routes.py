@@ -411,6 +411,7 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
     for name in (
         "limit",
         "max_per_source",
+        "max_per_evidence",
         "min_score",
         "token_budget",
         "ranking_multipliers",
