@@ -88,7 +88,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adding bounded direct sources under the same owner, scope, temporal, validity,
   lifecycle and epistemic checks. Projection and augmentation are mutually
   exclusive. Receipt schema version 11 records augmentation settings and exact
-  score inheritance; versions 1–10 retain disabled semantics.
+  score inheritance; versions 1–10 retain disabled semantics. A registered
+  tuned BEAM ablation improved the accepted result from 13/20 to 14/20 with one
+  pass-level win, zero losses and a +0.02916 mean-score delta. It remains opt-in
+  pending an untouched confirmation.
 
 - A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
   evidence set held pass accuracy at 13/20 but reduced mean rubric score from

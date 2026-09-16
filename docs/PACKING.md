@@ -118,7 +118,10 @@ config = config.model_copy(update={
 
 Augmentation applies the same owner, scope, time, validity and epistemic checks,
 but adds sources beside derived candidates. Projection and augmentation cannot
-both be enabled. Both remain disabled by default pending matched answer trials.
+both be enabled. A registered tuned BEAM ablation at `top_k=10` improved the
+accepted result from 13/20 to 14/20 with one pass-level win, no losses and a
++0.02916 mean-score delta. Augmentation remains disabled by default pending a
+separately registered untouched confirmation.
 
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously
