@@ -99,8 +99,26 @@ strongest group score through replayable provenance and receives bounded packing
 priority. A group without an eligible direct source is unchanged. The default
 `evidence_projection_top_k=0` keeps this experimental policy disabled. A frozen
 BEAM development ablation showed that evidence diversity without source
-preservation caused a pass-level regression; projection is the follow-up design,
-not an established default.
+preservation caused a pass-level regression. A second trial found that replacing
+all top-50 groups improved event ordering to 2/2 but caused three pass-level
+losses. Wholesale projection is therefore rejected as a default.
+
+Use augmentation when both the concise claim and direct wording are needed:
+
+```python
+config = config.model_copy(update={
+    "packing": PackingConfig(
+        token_budget=4096,
+        evidence_augmentation_top_k=10,
+        evidence_augmentation_max_sources=1,
+        evidence_augmentation_score_decay=0.99,
+    )
+})
+```
+
+Augmentation applies the same owner, scope, time, validity and epistemic checks,
+but adds sources beside derived candidates. Projection and augmentation cannot
+both be enabled. Both remain disabled by default pending matched answer trials.
 
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously
@@ -119,17 +137,18 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Current retrievals produce version 10 receipts with explicit ordering,
+Current retrievals produce version 11 receipts with explicit ordering,
 context-guidance, context-format, and episode-routing policies and the same
 score-replay and execution requirements. Version 9 records the explicit
-current-update scoring policy, and version 10 records evidence projection.
+current-update scoring policy, version 10 records evidence projection, and
+version 11 records evidence augmentation.
 Versions 1–7 keep their previous
 canonical bytes and checksums and mean episode routing was disabled. Versions
 1–6 always mean auditable rendering; versions 1–5 also mean context guidance was
 off. Version 5 remains the historical balanced format, and versions 1–4 cannot
 claim balanced packing. Versions 1–8 mean current-update scoring was disabled.
 Versions 1–9 mean evidence projection was disabled. Older readers that lack
-version 10 support cannot consume
+version 11 support cannot consume
 new receipts. Score replay reproduces the returned
 candidate ranking; it is not a reconstruction of packing or unseen candidates.
 Relevance feedback remains linked to the saved context exposure.

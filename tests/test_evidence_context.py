@@ -8,7 +8,10 @@ import pytest
 
 from prme.models.nodes import MemoryNode
 from prme.retrieval.config import PackingConfig
-from prme.retrieval.evidence_context import project_evidence_context
+from prme.retrieval.evidence_context import (
+    augment_evidence_context,
+    project_evidence_context,
+)
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context
 from prme.retrieval.scoring import score_and_rank
@@ -196,3 +199,56 @@ def test_packing_reserves_projected_source_context():
         item.node.id for values in packed.sections.values() for item in values
     }
     assert included == {source_id}
+
+
+@pytest.mark.asyncio
+async def test_augmentation_keeps_claims_and_adds_a_replayable_direct_source():
+    source_id = UUID(int=1)
+    source = node(
+        1,
+        "The complete schedule ends transaction work January 15 and deploys March 15.",
+        node_type=NodeType.NOTE,
+        evidence=(source_id,),
+    )
+    derived = RetrievalCandidate(
+        node=node(
+            2,
+            "Transaction work ends January 15.",
+            node_type=NodeType.FACT,
+            evidence=(source_id,),
+        ),
+        semantic_score=0.9,
+        lexical_score=0.8,
+    )
+    scored, _ = score_and_rank([derived], now=NOW)
+
+    async def get_nodes(_ids):
+        return [source]
+
+    augmented = await augment_evidence_context(
+        scored,
+        graph_store=SimpleNamespace(get_nodes=get_nodes),
+        user_id="owner",
+        config=PackingConfig(
+            evidence_augmentation_top_k=1,
+            evidence_augmentation_score_decay=0.9,
+        ),
+        scopes=[Scope.PROJECT],
+        retrieval_mode=RetrievalMode.DEFAULT,
+        unverified_confidence_threshold=None,
+    )
+
+    assert {candidate.node.id for candidate in augmented} == {derived.node.id, source_id}
+    direct = next(candidate for candidate in augmented if candidate.node.id == source_id)
+    assert direct.composite_score == scored[0].composite_score * 0.9
+    assert direct.score_provenance is not None
+    assert direct.score_provenance.adjustments[-1].kind == "evidence_augmentation"
+    assert direct.score_provenance.replay_score() == direct.composite_score
+
+
+def test_projection_and_augmentation_are_mutually_exclusive():
+    with pytest.raises(ValueError, match="cannot both be enabled"):
+        PackingConfig(
+            evidence_projection_top_k=1,
+            evidence_augmentation_top_k=1,
+        )

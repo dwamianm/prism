@@ -921,7 +921,7 @@ is ignored. The equivalent environment setting is
 Temporal context guidance is enabled by default; disable it with
 `PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
 experimental current-state and personalization prompts. Every current retrieval
-receipt uses schema version 10 and retains ordering, guidance, context format,
+receipt uses schema version 11 and retains ordering, guidance, context format,
 episode and evidence-projection settings in `receipt.packing`, and the
 current-update multiplier in `receipt.scoring`. Set
 `PRME_PACKING__CONTEXT_FORMAT=compact` to use
@@ -934,6 +934,9 @@ bounded dialogue episodes stored under meaningful session IDs, set
 the default `0` disables it.
 Set `PRME_PACKING__EVIDENCE_PROJECTION_TOP_K=50` to trial source projection for
 the top exact evidence groups; its default `0` also disables it.
+Set `PRME_PACKING__EVIDENCE_AUGMENTATION_TOP_K=10` to retain the derived claims
+and add bounded direct sources beside them. Projection and augmentation are
+mutually exclusive and disabled by default.
 
 Current-state retrieval gives the newest record that explicitly presents itself
 as an update a bounded, relevance-capped multiplier. Configure

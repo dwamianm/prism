@@ -45,7 +45,10 @@ from prme.retrieval.config import (
     ScoringWeights,
 )
 from prme.retrieval.context_formatter import build_context_guidance
-from prme.retrieval.evidence_context import project_evidence_context
+from prme.retrieval.evidence_context import (
+    augment_evidence_context,
+    project_evidence_context,
+)
 from prme.retrieval.episode_context import expand_episode_context
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
@@ -705,6 +708,36 @@ class RetrievalPipeline:
             except Exception:
                 logger.warning(
                     "Evidence projection failed; continuing without projection",
+                    exc_info=True,
+                )
+
+        # Preserve concise semantic candidates while adding a bounded direct
+        # source layer. PackingConfig rejects simultaneous replacement and
+        # augmentation policies.
+        if effective_packing_config.evidence_augmentation_top_k > 0:
+            try:
+                augmented = await augment_evidence_context(
+                    scored,
+                    graph_store=self._graph_store,
+                    user_id=user_id,
+                    config=effective_packing_config,
+                    scopes=normalized_scope,
+                    retrieval_mode=analysis.retrieval_mode,
+                    unverified_confidence_threshold=(
+                        self._unverified_confidence_threshold
+                    ),
+                    knowledge_at=knowledge_at,
+                    event_time_from=event_time_from,
+                    event_time_to=event_time_to,
+                    time_from=effective_time_from,
+                    time_to=effective_time_to,
+                )
+                if augmented is not scored:
+                    ranking_policy = "score_id"
+                scored = augmented
+            except Exception:
+                logger.warning(
+                    "Evidence augmentation failed; continuing without augmentation",
                     exc_info=True,
                 )
 

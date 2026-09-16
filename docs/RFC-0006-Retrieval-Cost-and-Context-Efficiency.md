@@ -383,7 +383,7 @@ delimiters as data. The default `"auditable"` object format is unchanged.
 `resolve_context_ref()` provides checked lookup for citation handling. Token
 accounting covers the schema declaration and complete arrays. Version 7
 introduced the selected format and exact rendered-context binding. Current
-version 10 receipts retain that contract, the version 8 episode-routing settings,
-version 9 current-update scoring policy, and the explicit evidence-projection
-policy. Versions 1–6 retain their canonical bytes and always mean
+version 11 receipts retain that contract, the version 8 episode-routing settings,
+version 9 current-update scoring policy, version 10 evidence projection, and
+version 11 evidence augmentation. Versions 1–6 retain their canonical bytes and always mean
 `"auditable"`; versions 1–7 always mean episode routing was disabled.

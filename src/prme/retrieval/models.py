@@ -130,6 +130,7 @@ class ScoreAdjustment(BaseModel):
         "session_decay",
         "episode_decay",
         "evidence_projection",
+        "evidence_augmentation",
         "current_update",
     ]
     coefficient: float = Field(allow_inf_nan=False)
@@ -144,8 +145,10 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("Neural prior weight must be between zero and one")
         if self.kind == "current_update" and not 1 <= self.coefficient <= 2:
             raise ValueError("Current-update multiplier must be between one and two")
-        if self.kind == "evidence_projection" and not 0 < self.coefficient <= 1:
-            raise ValueError("Evidence projection coefficient must be in (0, 1]")
+        if self.kind in {"evidence_projection", "evidence_augmentation"} and not (
+            0 < self.coefficient <= 1
+        ):
+            raise ValueError("Evidence-context coefficient must be in (0, 1]")
         return self
 
 

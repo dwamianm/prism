@@ -212,6 +212,15 @@ def _build_config(pack: Path, protocol: dict[str, Any]):
             evidence_projection_score_decay=protocol.get(
                 "evidence_projection_score_decay", 1.0
             ),
+            evidence_augmentation_top_k=protocol.get(
+                "evidence_augmentation_top_k", 0
+            ),
+            evidence_augmentation_max_sources=protocol.get(
+                "evidence_augmentation_max_sources", 1
+            ),
+            evidence_augmentation_score_decay=protocol.get(
+                "evidence_augmentation_score_decay", 0.99
+            ),
         ),
     )
 

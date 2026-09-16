@@ -121,3 +121,50 @@ def test_version_ten_requires_explicit_evidence_projection_policy():
 
     with pytest.raises(ValidationError, match="evidence projection settings"):
         RetrievalReceipt.model_validate(payload)
+
+
+def test_version_ten_defaults_to_disabled_evidence_augmentation():
+    payload = json.loads((FIXTURES / "receipt-v4-score.json").read_text())
+    payload["schema_version"] = 10
+    payload["packing"].update(
+        context_guidance_mode="off",
+        context_format="auditable",
+        episode_context_top_k=0,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+        evidence_projection_top_k=0,
+        evidence_projection_max_sources=1,
+        evidence_projection_score_decay=1.0,
+    )
+    payload["scoring"]["current_update_multiplier"] = 1.0
+    for item in payload["score_provenance"].values():
+        item["weights"]["current_update_multiplier"] = 1.0
+
+    receipt = RetrievalReceipt.model_validate(payload)
+
+    assert receipt.packing.evidence_augmentation_top_k == 0
+    serialized = receipt.model_dump()
+    assert "evidence_augmentation_top_k" not in serialized["packing"]
+    assert "evidence_augmentation_max_sources" not in serialized["packing"]
+    assert "evidence_augmentation_score_decay" not in serialized["packing"]
+
+
+def test_version_eleven_requires_explicit_evidence_augmentation_policy():
+    payload = json.loads((FIXTURES / "receipt-v4-score.json").read_text())
+    payload["schema_version"] = 11
+    payload["packing"].update(
+        context_guidance_mode="off",
+        context_format="auditable",
+        episode_context_top_k=0,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+        evidence_projection_top_k=0,
+        evidence_projection_max_sources=1,
+        evidence_projection_score_decay=1.0,
+    )
+    payload["scoring"]["current_update_multiplier"] = 1.0
+    for item in payload["score_provenance"].values():
+        item["weights"]["current_update_multiplier"] = 1.0
+
+    with pytest.raises(ValidationError, match="evidence augmentation settings"):
+        RetrievalReceipt.model_validate(payload)

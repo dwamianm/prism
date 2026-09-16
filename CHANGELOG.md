@@ -84,6 +84,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   but regressed three previously passing questions and reduced overall score to
   11/20, so wholesale projection is explicitly rejected as a default.
 
+- Opt-in evidence augmentation preserves concise derived candidates while
+  adding bounded direct sources under the same owner, scope, temporal, validity,
+  lifecycle and epistemic checks. Projection and augmentation are mutually
+  exclusive. Receipt schema version 11 records augmentation settings and exact
+  score inheritance; versions 1–10 retain disabled semantics.
+
 - A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
   evidence set held pass accuracy at 13/20 but reduced mean rubric score from
   0.56750 to 0.54833, with one pass-level win and one loss. The failure blocks a

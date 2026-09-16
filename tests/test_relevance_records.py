@@ -47,7 +47,7 @@ async def test_pipeline_adds_only_evidence_backed_guidance_by_default(config, us
         saved = await engine.get_retrieval_receipt(
             str(temporal.metadata.request_id), user_id=user
         )
-        assert saved.schema_version == 10
+        assert saved.schema_version == 11
         assert saved.packing.context_guidance_mode == "temporal"
         assert saved.context_sha256 == hashlib.sha256(temporal.bundle.render().encode()).hexdigest()
 
@@ -79,7 +79,7 @@ async def test_pipeline_context_guidance_can_be_disabled(config, user):
         saved = await engine.get_retrieval_receipt(
             str(response.metadata.request_id), user_id=user
         )
-        assert saved.schema_version == 10
+        assert saved.schema_version == 11
         assert saved.packing.context_guidance_mode == "off"
 
 
@@ -112,7 +112,7 @@ async def test_saved_receipt_and_labels_survive_graph_change_and_restart(config,
         assert receipt.scoring.version_id == response.metadata.scoring_config_version
         assert receipt.reference_time == response.metadata.reference_time
         assert receipt.scopes == (Scope.PROJECT,)
-        assert receipt.schema_version == 10
+        assert receipt.schema_version == 11
         assert receipt.packing.multipath_ordering == ordering
         assert receipt.replay_ranking() == tuple(r.node.id for r in response.results)
         assert [(c.node_id, c.score, c.trace) for c in receipt.candidates] == [

@@ -314,6 +314,32 @@ class PackingConfig(BaseModel):
             "candidate in its exact evidence group. [HYPOTHESIS]"
         ),
     )
+    evidence_augmentation_top_k: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Number of top-ranked exact evidence groups whose active direct "
+            "sources are added beside derived candidates. Zero disables dual "
+            "representation. [HYPOTHESIS]"
+        ),
+    )
+    evidence_augmentation_max_sources: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "Maximum direct sources added for each augmented evidence group. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    evidence_augmentation_score_decay: float = Field(
+        default=0.99,
+        gt=0,
+        le=1,
+        description=(
+            "Score inherited by an augmented direct source from the strongest "
+            "derived candidate in its exact evidence group. [HYPOTHESIS]"
+        ),
+    )
     aggregation_k_multiplier: float = Field(
         default=3.0,
         description="Multiplier for candidate k values on aggregation/count queries",
@@ -353,6 +379,17 @@ class PackingConfig(BaseModel):
                     stacklevel=2,
                 )
         return value
+
+    @model_validator(mode="after")
+    def exclusive_evidence_representation(self) -> PackingConfig:
+        if (
+            self.evidence_projection_top_k > 0
+            and self.evidence_augmentation_top_k > 0
+        ):
+            raise ValueError(
+                "Evidence projection and augmentation cannot both be enabled"
+            )
+        return self
 
 
 # Module-level default instances.

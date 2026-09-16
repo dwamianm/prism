@@ -237,6 +237,16 @@ answer trials establish workload-appropriate bounds. Receipt schema version 10
 records all three settings and the applied score lineage; versions 1–9 mean
 projection was disabled.
 
+`PackingConfig.evidence_augmentation_top_k` provides the dual-representation
+variant. It uses the same eligibility rules but adds each bounded source beside
+the derived group instead of replacing the claims. The source inherits a
+replayable `evidence_augmentation` score and the packer uses the same
+`EVIDENCE_CONTEXT` priority. Projection and augmentation are mutually exclusive.
+Augmentation keeps current-state and contradiction abstractions available while
+adding full wording for omitted details; its additional candidates and tokens
+still require workload evaluation. Receipt schema version 11 records all three
+augmentation settings; versions 1–10 mean augmentation was disabled.
+
 ---
 
 ## 5. Stage 3: Candidate Merging
