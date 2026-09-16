@@ -228,3 +228,11 @@ trials are reported in
 The first frozen-context repeated answer trial and its hosted-model stability
 boundary are reported in
 [`BEAM-Q19-ANSWER-STABILITY.md`](../results/research/2026-09-16/BEAM-Q19-ANSWER-STABILITY.md).
+
+The first registered 40-question, three-repeat answerability development trial
+failed every promotion gate: 3/12 unsafe full answers on abstention samples,
+60/108 full answers and 31/108 abstentions on ordinary samples, 8 citation
+errors, and stable actions on 27/40 questions. See the
+[report](../results/research/2026-09-16/BEAM-ANSWERABILITY-DEV-V1.md). The
+question-only evaluator remains opt-in; this examined prompt does not advance to
+an untouched confirmation cohort.
