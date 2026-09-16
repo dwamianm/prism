@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from benchmarks.integrations import run_llm_aggrefact_bespoke as subject
@@ -52,3 +54,50 @@ def test_answer_token_ids_bind_all_single_token_forms() -> None:
 
     assert subject._answer_token_ids(tokenizer, "yes") == [10, 11, 12, 13, 14]
     assert subject._answer_token_ids(tokenizer, "no") == [20, 21, 22, 23, 24]
+
+
+def test_checkpoint_round_trip_is_bound_and_private(tmp_path) -> None:
+    path = tmp_path / "checkpoint.json"
+    payload = subject._checkpoint_payload(
+        identity="registration",
+        phase="development",
+        expected_ids_sha256="identities",
+        samples=[{"id": "case", "dataset": "set", "label": 1}],
+        pairs_scored=2,
+        seconds=1.5,
+    )
+
+    subject._write_checkpoint(path, payload)
+    loaded = subject._load_checkpoint(
+        path,
+        identity="registration",
+        phase="development",
+        expected_ids_sha256="identities",
+    )
+
+    assert loaded == payload
+    assert path.stat().st_mode & 0o777 == 0o600
+
+
+def test_checkpoint_rejects_tampered_progress(tmp_path) -> None:
+    path = tmp_path / "checkpoint.json"
+    payload = subject._checkpoint_payload(
+        identity="registration",
+        phase="development",
+        expected_ids_sha256="identities",
+        samples=[],
+        pairs_scored=0,
+        seconds=0.0,
+    )
+    subject._write_checkpoint(path, payload)
+    tampered = json.loads(path.read_text())
+    tampered["pairs_scored"] = 1
+    path.write_text(json.dumps(tampered))
+
+    with pytest.raises(ValueError, match="checksum"):
+        subject._load_checkpoint(
+            path,
+            identity="registration",
+            phase="development",
+            expected_ids_sha256="identities",
+        )

@@ -123,7 +123,7 @@ def _validate_registration(
         "sentence_fusion": "minimum_over_claim_sentences_of_maximum_over_source_chunks",
         "max_model_length": 8192,
         "source_chunk_tokens": 7800,
-        "batch_size": 2,
+        "batch_size": 1,
         "max_new_tokens": 1,
         "temperature": 0,
         "seed": 2024,
@@ -131,6 +131,9 @@ def _validate_registration(
         "einops_version": "0.8.1",
         "sentencepiece_version": "0.2.1",
         "accelerate_version": "1.10.1",
+        "checkpoint_policy": "source_free_completed_cases_v1",
+        "progress_every_cases": 25,
+        "mps_cache_release": "after_each_pair",
         "support_probability": "sum_full_vocabulary_probability_of_registered_yes_tokens",
         "threshold_operator": "strictly_greater_than",
         "device": "auto",
@@ -242,6 +245,79 @@ def _fuse_sentence_probabilities(
     return min(sentence_scores), sentence_scores
 
 
+def _checkpoint_payload(
+    *,
+    identity: str,
+    phase: str,
+    expected_ids_sha256: str,
+    samples: list[dict[str, Any]],
+    pairs_scored: int,
+    seconds: float,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "kind": "llm-aggrefact-bespoke-case-checkpoint",
+        "identity": identity,
+        "phase": phase,
+        "expected_ids_sha256": expected_ids_sha256,
+        "samples": samples,
+        "pairs_scored": pairs_scored,
+        "seconds": seconds,
+    }
+    payload["checkpoint_sha256"] = factcg._canonical_sha256(payload)
+    return payload
+
+
+def _write_checkpoint(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    temporary.chmod(0o600)
+    temporary.replace(path)
+
+
+def _load_checkpoint(
+    path: Path,
+    *,
+    identity: str,
+    phase: str,
+    expected_ids_sha256: str,
+) -> dict[str, Any]:
+    if not path.exists():
+        return _checkpoint_payload(
+            identity=identity,
+            phase=phase,
+            expected_ids_sha256=expected_ids_sha256,
+            samples=[],
+            pairs_scored=0,
+            seconds=0.0,
+        )
+    payload = json.loads(path.read_text())
+    if not isinstance(payload, dict):
+        raise ValueError("checkpoint is malformed")
+    checksum = payload.pop("checkpoint_sha256", None)
+    if checksum != factcg._canonical_sha256(payload):
+        raise ValueError("checkpoint checksum does not match")
+    payload["checkpoint_sha256"] = checksum
+    expected = {
+        "schema_version": 1,
+        "kind": "llm-aggrefact-bespoke-case-checkpoint",
+        "identity": identity,
+        "phase": phase,
+        "expected_ids_sha256": expected_ids_sha256,
+    }
+    if any(payload.get(name) != value for name, value in expected.items()):
+        raise ValueError("checkpoint identity does not match")
+    if (
+        not isinstance(payload.get("samples"), list)
+        or isinstance(payload.get("pairs_scored"), bool)
+        or not isinstance(payload.get("pairs_scored"), int)
+        or not isinstance(payload.get("seconds"), (int, float))
+    ):
+        raise ValueError("checkpoint progress is malformed")
+    return payload
+
+
 def _select_device(torch_module: Any) -> str:
     if torch_module.cuda.is_available():
         return "cuda"
@@ -255,6 +331,9 @@ def _score_rows(
     *,
     model_spec: dict[str, Any],
     protocol: dict[str, Any],
+    checkpoint_path: Path,
+    checkpoint_identity: str,
+    phase: str,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     import accelerate
     import einops
@@ -275,6 +354,41 @@ def _score_rows(
         if observed != protocol[name]:
             package = name.removesuffix("_version")
             raise ValueError(f"installed {package} version does not match registration")
+
+    expected_ids_sha256 = factcg._identity_sha256(rows)
+    checkpoint = _load_checkpoint(
+        checkpoint_path,
+        identity=checkpoint_identity,
+        phase=phase,
+        expected_ids_sha256=expected_ids_sha256,
+    )
+    row_by_id = {row["contamination_identifier"]: row for row in rows}
+    completed: dict[str, dict[str, Any]] = {}
+    for sample in checkpoint["samples"]:
+        if not isinstance(sample, dict) or not isinstance(sample.get("id"), str):
+            raise ValueError("checkpoint sample is malformed")
+        row = row_by_id.get(sample["id"])
+        if row is None or sample["id"] in completed:
+            raise ValueError("checkpoint sample identity is invalid")
+        if sample.get("dataset") != row["dataset"] or sample.get("label") != row["label"]:
+            raise ValueError("checkpoint sample metadata does not match")
+        completed[sample["id"]] = sample
+    resumed_cases = len(completed)
+    if resumed_cases == len(rows):
+        return [completed[row["contamination_identifier"]] for row in rows], {
+            "device": "checkpoint",
+            "dtype": None,
+            "seconds": checkpoint["seconds"],
+            "pairs_scored": checkpoint["pairs_scored"],
+            "resumed_cases": resumed_cases,
+            "torch": torch.__version__,
+            "transformers": transformers.__version__,
+            "einops": einops.__version__,
+            "sentencepiece": sentencepiece.__version__,
+            "accelerate": accelerate.__version__,
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        }
 
     model_path = Path(
         snapshot_download(
@@ -317,16 +431,20 @@ def _score_rows(
     model.to(device)
     model.eval()
 
-    tasks: list[tuple[int, int, int, str]] = []
-    row_shapes: list[tuple[int, int]] = []
+    yes_ids = torch.tensor(model_spec["yes_token_ids"], device=device)
+    started = time.perf_counter()
+    pairs_scored_run = 0
     for row_index, row in enumerate(rows):
+        row_id = row["contamination_identifier"]
+        if row_id in completed:
+            continue
         chunks = _sentence_chunks(
             row["doc"],
             tokenizer=tokenizer,
             max_tokens=protocol["source_chunk_tokens"],
         )
         claim_sentences = nltk.sent_tokenize(row["claim"]) or [row["claim"]]
-        row_shapes.append((len(chunks), len(claim_sentences)))
+        tasks: list[tuple[int, int, str]] = []
         for chunk_index, chunk in enumerate(chunks):
             for sentence_index, claim_sentence in enumerate(claim_sentences):
                 messages = [
@@ -344,62 +462,87 @@ def _score_rows(
                     add_generation_prompt=True,
                     tokenize=False,
                 )
-                tasks.append((row_index, chunk_index, sentence_index, prompt))
+                tasks.append((chunk_index, sentence_index, prompt))
 
-    yes_ids = torch.tensor(model_spec["yes_token_ids"], device=device)
-    observed: list[list[tuple[int, int, float]]] = [[] for _ in rows]
-    started = time.perf_counter()
-    batch_size = protocol["batch_size"]
-    with torch.inference_mode():
-        for offset in range(0, len(tasks), batch_size):
-            batch = tasks[offset : offset + batch_size]
-            encoded = tokenizer(
-                [task[3] for task in batch],
-                padding=True,
-                return_tensors="pt",
-            )
-            if encoded["input_ids"].shape[1] > protocol["max_model_length"]:
-                raise ValueError("Bespoke prompt exceeds registered model length")
-            encoded = {name: value.to(device) for name, value in encoded.items()}
-            generated = model.generate(
-                **encoded,
-                do_sample=False,
-                max_new_tokens=protocol["max_new_tokens"],
-                output_scores=True,
-                return_dict_in_generate=True,
-                pad_token_id=tokenizer.pad_token_id,
-            )
-            probabilities = torch.softmax(generated.scores[0].float(), dim=-1)
-            support = probabilities.index_select(1, yes_ids).sum(dim=1)
-            for task, probability in zip(batch, support.cpu().tolist(), strict=True):
-                row_index, chunk_index, sentence_index, _prompt = task
-                observed[row_index].append(
-                    (chunk_index, sentence_index, float(probability))
+        observed: list[tuple[int, int, float]] = []
+        batch_size = protocol["batch_size"]
+        with torch.inference_mode():
+            for offset in range(0, len(tasks), batch_size):
+                batch = tasks[offset : offset + batch_size]
+                encoded = tokenizer(
+                    [task[2] for task in batch],
+                    padding=True,
+                    return_tensors="pt",
                 )
-    elapsed = time.perf_counter() - started
+                if encoded["input_ids"].shape[1] > protocol["max_model_length"]:
+                    raise ValueError("Bespoke prompt exceeds registered model length")
+                encoded = {name: value.to(device) for name, value in encoded.items()}
+                generated = model.generate(
+                    **encoded,
+                    do_sample=False,
+                    max_new_tokens=protocol["max_new_tokens"],
+                    output_scores=True,
+                    return_dict_in_generate=True,
+                    pad_token_id=tokenizer.pad_token_id,
+                )
+                probabilities = torch.softmax(generated.scores[0].float(), dim=-1)
+                support_values = (
+                    probabilities.index_select(1, yes_ids).sum(dim=1).cpu().tolist()
+                )
+                for task, probability in zip(batch, support_values, strict=True):
+                    chunk_index, sentence_index, _prompt = task
+                    observed.append((chunk_index, sentence_index, float(probability)))
+                pairs_scored_run += len(batch)
+                del encoded, generated, probabilities
+                if device == "mps":
+                    torch.mps.synchronize()
+                    torch.mps.empty_cache()
 
-    samples: list[dict[str, Any]] = []
-    for row, shape, probabilities in zip(rows, row_shapes, observed, strict=True):
         score, sentence_scores = _fuse_sentence_probabilities(
-            probabilities,
-            claim_sentence_count=shape[1],
+            observed,
+            claim_sentence_count=len(claim_sentences),
         )
-        samples.append(
-            {
-                "id": row["contamination_identifier"],
-                "dataset": row["dataset"],
-                "label": row["label"],
-                "support_probability": score,
-                "source_chunks": shape[0],
-                "claim_sentences": shape[1],
-                "sentence_support_probabilities": sentence_scores,
-            }
+        completed[row_id] = {
+            "id": row_id,
+            "dataset": row["dataset"],
+            "label": row["label"],
+            "support_probability": score,
+            "source_chunks": len(chunks),
+            "claim_sentences": len(claim_sentences),
+            "sentence_support_probabilities": sentence_scores,
+        }
+        elapsed = checkpoint["seconds"] + (time.perf_counter() - started)
+        _write_checkpoint(
+            checkpoint_path,
+            _checkpoint_payload(
+                identity=checkpoint_identity,
+                phase=phase,
+                expected_ids_sha256=expected_ids_sha256,
+                samples=[
+                    completed[item["contamination_identifier"]]
+                    for item in rows
+                    if item["contamination_identifier"] in completed
+                ],
+                pairs_scored=checkpoint["pairs_scored"] + pairs_scored_run,
+                seconds=elapsed,
+            ),
         )
+        finished = len(completed)
+        if finished % protocol["progress_every_cases"] == 0 or finished == len(rows):
+            print(
+                f"bespoke.progress phase={phase} cases={finished}/{len(rows)} "
+                f"pairs={checkpoint['pairs_scored'] + pairs_scored_run}",
+                flush=True,
+            )
+
+    elapsed = checkpoint["seconds"] + (time.perf_counter() - started)
+    samples = [completed[row["contamination_identifier"]] for row in rows]
     runtime = {
         "device": device,
         "dtype": str(dtype),
         "seconds": elapsed,
-        "pairs_scored": len(tasks),
+        "pairs_scored": checkpoint["pairs_scored"] + pairs_scored_run,
+        "resumed_cases": resumed_cases,
         "torch": torch.__version__,
         "transformers": transformers.__version__,
         "einops": einops.__version__,
@@ -429,9 +572,11 @@ def run(
     dev_path: Path,
     test_path: Path,
     output_path: Path,
+    checkpoint_dir: Path,
     project_root: Path,
 ) -> dict[str, Any]:
     registration = json.loads(registration_path.read_text())
+    registration_sha256 = factcg._sha256_file(registration_path)
     dev_rows, test_rows = _validate_registration(
         registration,
         project_root=project_root,
@@ -443,6 +588,9 @@ def run(
         dev_rows,
         model_spec=registration["model"],
         protocol=registration["protocol"],
+        checkpoint_path=checkpoint_dir / f"{registration_sha256}-dev.json",
+        checkpoint_identity=registration_sha256,
+        phase="development",
     )
     calibration = registration["evaluation"]["calibration"]
     threshold, calibration_metrics = factcg._calibrate_threshold(
@@ -460,6 +608,9 @@ def run(
             test_rows,
             model_spec=registration["model"],
             protocol=registration["protocol"],
+            checkpoint_path=checkpoint_dir / f"{registration_sha256}-test.json",
+            checkpoint_identity=registration_sha256,
+            phase="test",
         )
         test_metrics = factcg._metrics(test_samples, threshold)
         gate_results.update(
@@ -470,7 +621,7 @@ def run(
         "schema_version": 1,
         "kind": "llm-aggrefact-bespoke-result",
         "completed_at": datetime.now(timezone.utc).isoformat(),
-        "registration_sha256": factcg._sha256_file(registration_path),
+        "registration_sha256": registration_sha256,
         "dataset": registration["dataset"],
         "cohort": registration["cohort"],
         "model": registration["model"],
@@ -504,6 +655,7 @@ def main() -> None:
     parser.add_argument("--dev", type=Path, required=True)
     parser.add_argument("--test", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--checkpoint-dir", type=Path, required=True)
     args = parser.parse_args()
     result = run(
         registration_path=args.registration.resolve(),
@@ -511,6 +663,7 @@ def main() -> None:
         dev_path=args.dev.resolve(),
         test_path=args.test.resolve(),
         output_path=args.output.resolve(),
+        checkpoint_dir=args.checkpoint_dir.resolve(),
         project_root=Path(__file__).resolve().parents[2],
     )
     print(
