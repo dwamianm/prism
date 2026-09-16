@@ -119,7 +119,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before NLI; group scoring now preserves caller order after selecting
   candidates. Its registered same-cohort confirmation passed all eight gates,
   recovered all 6/6 minimal groups and changed exactly the two intended
-  statuses, reaching 44/48 with zero unsafe supports.
+  statuses, reaching 44/48 with zero unsafe supports. A later 44-case
+  previously unexecuted guard assay failed: four negative distractors about a
+  different relation were treated as refutations or conflicts. The result is
+  preserved and blocks promotion of claim verification.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

@@ -172,3 +172,12 @@ passed all eight gates and recovered 6/6 minimal groups, with exactly those two
 statuses changed. This is same-cohort evidence after an order diagnostic. It
 does not make the NLI model order-invariant, and the four implicit
 contradictions remain deliberately unresolved without an exclusivity contract.
+
+A new, previously unexecuted
+[44-case guard assay](../benchmarks/results/research/2026-09-16/CLAIM-VERIFICATION-GUARD-GENERALIZATION-V1.md)
+then failed two safety gates. Four negative sentences about a different relation
+were accepted as refuting or conflicting evidence because a broad negation cue
+and shared nouns were treated as corroboration. This blocks promotion despite
+zero plain unsafe `supported` decisions. The failed result remains the current
+untouched evidence until a stricter relation-alignment rule is separately
+confirmed.
