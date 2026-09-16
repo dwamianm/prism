@@ -223,4 +223,9 @@ supported recall from 10.91% to 30.91%, F1 from 19.35% to 43.59%, and balanced
 accuracy from 55.05% to 63.04%. It still failed the unchanged precision, recall,
 and balanced-accuracy requirements. Fully unsupported false support remained
 0/32; all 12 false supports were partial claims. The generic base NLI model is
-now the measured limit, so schema 3 remains opt-in.
+now the measured limit, so schema 3 remains opt-in. A separately registered
+[MiniCheck DeBERTa capacity trial](../benchmarks/results/research/2026-09-16/WICE-MINICHECK-DEBERTA-V1.md)
+improved WiCE balanced accuracy to 75.01%, recall to 57.27%, and F1 to 65.97%
+at its published 0.5 threshold, again with 0/32 fully unsupported accepts. It
+failed the fixed precision and recall gates, and no threshold over its frozen
+scores satisfies both. It is not integrated into `ClaimVerifier`.

@@ -140,6 +140,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gates and improved WiCE supported recall from 10.91% to 30.91% and F1 from
   19.35% to 43.59%, with no fully unsupported accepts. It still failed the fixed
   precision, recall and balanced-accuracy gates, so verification remains opt-in.
+  A pinned MIT MiniCheck DeBERTa capacity trial improved WiCE F1 to 65.97% and
+  balanced accuracy to 75.01% with no fully unsupported accepts, but failed the
+  fixed 90% precision and 60% recall gates. No frozen-score threshold meets both,
+  so that model is not integrated as a standalone verifier.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
