@@ -176,6 +176,13 @@ bindings, makes no retrieval calls, and retains every generated answer and
 judge verdict. This measures answerer/judge repeatability for one fixed question;
 it does not turn a post-hoc question selection into confirmation evidence.
 
+`run_beam_answerability.py` evaluates the separate cited answerability API over
+registered frozen question artifacts. It makes no retrieval or answer-generation
+calls, repeats each exact context to expose verifier variance, and reports unsafe
+full answers on abstention questions separately from unnecessary abstention on
+ordinary questions. This is a development diagnostic unless its registration
+binds a previously untouched cohort.
+
 For a scored run, create a schema-2 registration and pass it to the same
 `run_beam` command. The current registered profile is intentionally narrow: one
 100K conversation, every ability, top-50 recall, one cutoff, raw source storage,
