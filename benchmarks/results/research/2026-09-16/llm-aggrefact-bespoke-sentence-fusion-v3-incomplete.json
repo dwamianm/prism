@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-bespoke-infrastructure-failure",
+  "completed_at": "2026-09-16T18:46:45Z",
+  "registration_sha256": "4884c7c8e6f42b5ab88ef04fa03ce37ccccafeb1bf5468910e06d0ccd7d9859c",
+  "phase": "development",
+  "status": "failed",
+  "error": {
+    "type": "MPSOutOfMemory",
+    "message": "MPS allocated 54.54 GiB and could not allocate a further 14.94 GiB; the fixed batch-size-two run terminated during a long-context attention operation."
+  },
+  "observations": {
+    "elapsed_lower_bound_seconds": 2700,
+    "selected_scores_exposed": false,
+    "result_file_written": false,
+    "test_unlocked": false,
+    "checkpoint_available": false
+  },
+  "conclusion": "The v3 execution is incomplete and supports no quality claim. Preserve it and register a source-identical runtime follow-up with bounded memory and resumable progress before another attempt."
+}
