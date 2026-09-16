@@ -169,8 +169,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   collapsed recall to 30.00%. A balanced 1,100-claim LLM-AggreFact development
   trial then rejected direct FactCG classification: the best threshold retaining
   60% recall reached 79.44% precision, while 90% precision retained only 28.73%
-  recall. Its bound test cohort remains untouched. No provider verifier is
-  integrated.
+  recall. A registered FactCG-ranked local-evidence Mistral cascade raised the
+  corresponding operating point to 85.12% precision at 63.45% recall, but 90%
+  precision still retained only 36.55% recall. Seven structured responses
+  remained fail-closed, and the bound test cohort remains untouched. No provider
+  verifier is integrated.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
