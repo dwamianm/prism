@@ -80,6 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checks, records replayable score inheritance, and reserves projected sources
   during packing. Receipt schema version 10 records the full disabled-by-default
   policy while versions 1–9 preserve their canonical bytes and disabled meaning.
+  A registered all-top-50 development ablation improved event ordering to 2/2
+  but regressed three previously passing questions and reduced overall score to
+  11/20, so wholesale projection is explicitly rejected as a default.
 
 - A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
   evidence set held pass accuracy at 13/20 but reduced mean rubric score from
