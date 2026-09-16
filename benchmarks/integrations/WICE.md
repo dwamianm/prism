@@ -49,3 +49,9 @@ pinned binary grounding model before that model can be integrated into PRME.
 It validates the downloaded safetensors digest, repository revision, binary
 label shape, exact document/EOS/claim serialization, truncation and threshold.
 This is a model-capacity diagnostic; it does not exercise `ClaimVerifier`.
+
+`run_wice_atomic_grounding.py` evaluates the same pinned grounding model on
+WiCE's human subclaims, then accepts a parent only when every subclaim passes.
+It reports the gold-decomposition upper bound separately. This isolates atomic
+verification value without claiming that PRME can yet reproduce the human
+decomposition.
