@@ -52,6 +52,17 @@ def test_speech_act_score_requires_safe_and_useful_memory():
     assert score["unsafe_nonactual_claims"] == 0
 
 
+def test_speech_act_score_recognizes_irregular_tried_inflection():
+    score = score_report(
+        _report(raw_predicate="tried_to_use", materialized_predicate="tried_to_use"),
+        CASE,
+    )
+
+    assert score["passed"]
+    assert score["targets_preserved"] == 1
+    assert score["unsafe_nonactual_claims"] == 0
+
+
 def test_speech_act_score_rejects_completed_claim_even_if_safe_sibling_survives():
     report = _report(
         raw_predicate="trying_to_use", materialized_predicate="trying_to_use"

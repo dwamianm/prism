@@ -126,7 +126,18 @@ def _matches_object(value: str, aliases: tuple[str, ...]) -> bool:
 
 def _matches_predicate(value: str, stems: tuple[str, ...]) -> bool:
     normalized = _normalized(value)
-    return any(_normalized(stem) in normalized for stem in stems)
+    tokens = normalized.split("_")
+    for stem in stems:
+        expected = _normalized(stem)
+        if expected == "try" and any(
+            token in {"try", "tried", "tries", "trying"} for token in tokens
+        ):
+            return True
+        if "_" in expected and expected in normalized:
+            return True
+        if any(token.startswith(expected) for token in tokens):
+            return True
+    return False
 
 
 def _raw_claims(extraction: dict[str, Any]) -> list[dict[str, str]]:
