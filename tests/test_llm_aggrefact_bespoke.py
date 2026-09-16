@@ -65,6 +65,8 @@ def test_checkpoint_round_trip_is_bound_and_private(tmp_path) -> None:
         samples=[{"id": "case", "dataset": "set", "label": 1}],
         pairs_scored=2,
         seconds=1.5,
+        peak_mps_allocated_bytes=100,
+        peak_mps_driver_allocated_bytes=200,
     )
 
     subject._write_checkpoint(path, payload)
@@ -88,6 +90,8 @@ def test_checkpoint_rejects_tampered_progress(tmp_path) -> None:
         samples=[],
         pairs_scored=0,
         seconds=0.0,
+        peak_mps_allocated_bytes=0,
+        peak_mps_driver_allocated_bytes=0,
     )
     subject._write_checkpoint(path, payload)
     tampered = json.loads(path.read_text())

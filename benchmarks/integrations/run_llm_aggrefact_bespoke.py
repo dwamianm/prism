@@ -124,14 +124,14 @@ def _validate_registration(
         "max_model_length": 8192,
         "source_chunk_tokens": 7800,
         "batch_size": 1,
-        "max_new_tokens": 1,
+        "scoring_forward": "direct_next_token_logits_without_kv_cache",
         "temperature": 0,
         "seed": 2024,
         "transformers_version": "4.43.3",
         "einops_version": "0.8.1",
         "sentencepiece_version": "0.2.1",
         "accelerate_version": "1.10.1",
-        "checkpoint_policy": "source_free_completed_cases_v1",
+        "checkpoint_policy": "source_free_completed_cases_v2_with_mps_peaks",
         "progress_every_cases": 25,
         "mps_cache_release": "after_each_pair",
         "support_probability": "sum_full_vocabulary_probability_of_registered_yes_tokens",
@@ -253,9 +253,11 @@ def _checkpoint_payload(
     samples: list[dict[str, Any]],
     pairs_scored: int,
     seconds: float,
+    peak_mps_allocated_bytes: int,
+    peak_mps_driver_allocated_bytes: int,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "llm-aggrefact-bespoke-case-checkpoint",
         "identity": identity,
         "phase": phase,
@@ -263,6 +265,8 @@ def _checkpoint_payload(
         "samples": samples,
         "pairs_scored": pairs_scored,
         "seconds": seconds,
+        "peak_mps_allocated_bytes": peak_mps_allocated_bytes,
+        "peak_mps_driver_allocated_bytes": peak_mps_driver_allocated_bytes,
     }
     payload["checkpoint_sha256"] = factcg._canonical_sha256(payload)
     return payload
@@ -291,6 +295,8 @@ def _load_checkpoint(
             samples=[],
             pairs_scored=0,
             seconds=0.0,
+            peak_mps_allocated_bytes=0,
+            peak_mps_driver_allocated_bytes=0,
         )
     payload = json.loads(path.read_text())
     if not isinstance(payload, dict):
@@ -300,7 +306,7 @@ def _load_checkpoint(
         raise ValueError("checkpoint checksum does not match")
     payload["checkpoint_sha256"] = checksum
     expected = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "llm-aggrefact-bespoke-case-checkpoint",
         "identity": identity,
         "phase": phase,
@@ -313,6 +319,12 @@ def _load_checkpoint(
         or isinstance(payload.get("pairs_scored"), bool)
         or not isinstance(payload.get("pairs_scored"), int)
         or not isinstance(payload.get("seconds"), (int, float))
+        or isinstance(payload.get("peak_mps_allocated_bytes"), bool)
+        or not isinstance(payload.get("peak_mps_allocated_bytes"), int)
+        or payload["peak_mps_allocated_bytes"] < 0
+        or isinstance(payload.get("peak_mps_driver_allocated_bytes"), bool)
+        or not isinstance(payload.get("peak_mps_driver_allocated_bytes"), int)
+        or payload["peak_mps_driver_allocated_bytes"] < 0
     ):
         raise ValueError("checkpoint progress is malformed")
     return payload
@@ -388,6 +400,11 @@ def _score_rows(
             "accelerate": accelerate.__version__,
             "python": platform.python_version(),
             "platform": platform.platform(),
+            "peak_mps_allocated_bytes": checkpoint["peak_mps_allocated_bytes"] or None,
+            "peak_mps_driver_allocated_bytes": checkpoint[
+                "peak_mps_driver_allocated_bytes"
+            ]
+            or None,
         }
 
     model_path = Path(
@@ -434,6 +451,8 @@ def _score_rows(
     yes_ids = torch.tensor(model_spec["yes_token_ids"], device=device)
     started = time.perf_counter()
     pairs_scored_run = 0
+    peak_mps_allocated_bytes = checkpoint["peak_mps_allocated_bytes"]
+    peak_mps_driver_allocated_bytes = checkpoint["peak_mps_driver_allocated_bytes"]
     for row_index, row in enumerate(rows):
         row_id = row["contamination_identifier"]
         if row_id in completed:
@@ -477,15 +496,15 @@ def _score_rows(
                 if encoded["input_ids"].shape[1] > protocol["max_model_length"]:
                     raise ValueError("Bespoke prompt exceeds registered model length")
                 encoded = {name: value.to(device) for name, value in encoded.items()}
-                generated = model.generate(
+                outputs = model(
                     **encoded,
-                    do_sample=False,
-                    max_new_tokens=protocol["max_new_tokens"],
-                    output_scores=True,
-                    return_dict_in_generate=True,
-                    pad_token_id=tokenizer.pad_token_id,
+                    use_cache=False,
+                    return_dict=True,
                 )
-                probabilities = torch.softmax(generated.scores[0].float(), dim=-1)
+                probabilities = torch.softmax(
+                    outputs.logits[:, -1, :].float(),
+                    dim=-1,
+                )
                 support_values = (
                     probabilities.index_select(1, yes_ids).sum(dim=1).cpu().tolist()
                 )
@@ -493,9 +512,18 @@ def _score_rows(
                     chunk_index, sentence_index, _prompt = task
                     observed.append((chunk_index, sentence_index, float(probability)))
                 pairs_scored_run += len(batch)
-                del encoded, generated, probabilities
                 if device == "mps":
                     torch.mps.synchronize()
+                    peak_mps_allocated_bytes = max(
+                        peak_mps_allocated_bytes,
+                        torch.mps.current_allocated_memory(),
+                    )
+                    peak_mps_driver_allocated_bytes = max(
+                        peak_mps_driver_allocated_bytes,
+                        torch.mps.driver_allocated_memory(),
+                    )
+                del encoded, outputs, probabilities
+                if device == "mps":
                     torch.mps.empty_cache()
 
         score, sentence_scores = _fuse_sentence_probabilities(
@@ -525,6 +553,8 @@ def _score_rows(
                 ],
                 pairs_scored=checkpoint["pairs_scored"] + pairs_scored_run,
                 seconds=elapsed,
+                peak_mps_allocated_bytes=peak_mps_allocated_bytes,
+                peak_mps_driver_allocated_bytes=peak_mps_driver_allocated_bytes,
             ),
         )
         finished = len(completed)
@@ -550,6 +580,8 @@ def _score_rows(
         "accelerate": accelerate.__version__,
         "python": platform.python_version(),
         "platform": platform.platform(),
+        "peak_mps_allocated_bytes": peak_mps_allocated_bytes or None,
+        "peak_mps_driver_allocated_bytes": peak_mps_driver_allocated_bytes or None,
     }
     return samples, runtime
 
