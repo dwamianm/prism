@@ -136,7 +136,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   within multi-sentence passages and rechecks the retained exact text with the
   same model. It records one-based retained sentence numbers, premise digests,
   probabilities and a distinct `localized_model_entailment` basis; schemas 1 and
-  2 remain readable.
+  2 remain readable. The registered confirmation preserved all eight authored
+  gates and improved WiCE supported recall from 10.91% to 30.91% and F1 from
+  19.35% to 43.59%, with no fully unsupported accepts. It still failed the fixed
+  precision, recall and balanced-accuracy gates, so verification remains opt-in.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

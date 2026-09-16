@@ -216,4 +216,11 @@ claims and limited false support to 0.81%, but supported recall was only 10.91%
 and balanced accuracy was 55.05%. Applying speech-act and negation guards to an
 entire multi-sentence passage let unrelated sentences veto support elsewhere in
 the passage. Keep the verifier opt-in; document-sized evidence needs localized
-guarding and another external confirmation.
+guarding and another external confirmation. The registered
+[localized confirmation](../benchmarks/results/research/2026-09-16/WICE-CLAIM-VERIFICATION-LOCALIZED-V2.md)
+then preserved all eight authored safety and coverage gates and improved WiCE
+supported recall from 10.91% to 30.91%, F1 from 19.35% to 43.59%, and balanced
+accuracy from 55.05% to 63.04%. It still failed the unchanged precision, recall,
+and balanced-accuracy requirements. Fully unsupported false support remained
+0/32; all 12 false supports were partial claims. The generic base NLI model is
+now the measured limit, so schema 3 remains opt-in.
