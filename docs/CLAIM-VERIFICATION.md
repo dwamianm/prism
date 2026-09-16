@@ -195,3 +195,13 @@ question became `supported`. Every true explicit refutation, completed-action
 refusal, composition chain, conflict and completeness boundary was retained.
 This was a causal same-cohort confirmation; the sole typed-unverified paraphrase
 remains a model recall miss, and the feature remains opt-in.
+
+The first external
+[WiCE oracle-retrieval assay](../benchmarks/results/research/2026-09-16/WICE-CLAIM-VERIFICATION-V1.md)
+evaluated all 358 human-annotated claim test cases and failed three of five
+quality thresholds. The guarded result accepted none of 32 fully unsupported
+claims and limited false support to 0.81%, but supported recall was only 10.91%
+and balanced accuracy was 55.05%. Applying speech-act and negation guards to an
+entire multi-sentence passage let unrelated sentences veto support elsewhere in
+the passage. Keep the verifier opt-in; document-sized evidence needs localized
+guarding and another external confirmation.
