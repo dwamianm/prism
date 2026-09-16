@@ -116,7 +116,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   statuses changed, and unsafe supports fell from two to zero. Four implicit
   contradictions and two relation-composition cases remained unresolved. A
   follow-up diagnosed that bounded candidate ranking had also reordered evidence
-  before NLI; group scoring now preserves caller order after selecting candidates.
+  before NLI; group scoring now preserves caller order after selecting
+  candidates. Its registered same-cohort confirmation passed all eight gates,
+  recovered all 6/6 minimal groups and changed exactly the two intended
+  statuses, reaching 44/48 with zero unsafe supports.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

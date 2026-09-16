@@ -164,3 +164,11 @@ the two intended statuses changed, removing both unsafe supports. Four implicit
 contradictions and two weak relation-composition pairs remain unresolved, and
 the confirmation cohort was already observed, so verification remains opt-in
 pending a new untouched cohort.
+
+The two composition misses were then traced to candidate ranking reordering the
+selected premise passages. A registered
+[caller-order confirmation](../benchmarks/results/research/2026-09-16/CLAIM-VERIFICATION-BROAD-ORDER-V3.md)
+passed all eight gates and recovered 6/6 minimal groups, with exactly those two
+statuses changed. This is same-cohort evidence after an order diagnostic. It
+does not make the NLI model order-invariant, and the four implicit
+contradictions remain deliberately unresolved without an exclusivity contract.
