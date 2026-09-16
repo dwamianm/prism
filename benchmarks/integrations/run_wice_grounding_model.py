@@ -81,15 +81,26 @@ def _validate_registration(
     model = registration.get("model")
     if not isinstance(model, dict):
         raise ValueError("registration model is required")
-    required_model_fields = {
+    common_model_fields = {
         "name",
         "revision",
         "license",
         "weights_filename",
         "weights_sha256",
-        "support_label_index",
         "support_threshold",
+        "architecture",
     }
+    architecture = model.get("architecture")
+    if architecture == "sequence_classification":
+        required_model_fields = common_model_fields | {"support_label_index"}
+    elif architecture == "flan_t5_label_logits":
+        required_model_fields = common_model_fields | {
+            "unsupported_token_id",
+            "support_token_id",
+            "input_prefix",
+        }
+    else:
+        raise ValueError("registration model architecture is invalid")
     if set(model) != required_model_fields:
         raise ValueError("registration model fields are invalid")
     for name in (
@@ -102,8 +113,21 @@ def _validate_registration(
         value = model[name]
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"model {name} must be nonempty")
-    if model["support_label_index"] not in {0, 1}:
-        raise ValueError("support_label_index must be zero or one")
+    if architecture == "sequence_classification":
+        if model["support_label_index"] not in {0, 1}:
+            raise ValueError("support_label_index must be zero or one")
+    else:
+        if any(
+            isinstance(model[name], bool)
+            or not isinstance(model[name], int)
+            or model[name] < 0
+            for name in ("unsupported_token_id", "support_token_id")
+        ):
+            raise ValueError("label token IDs must be nonnegative integers")
+        if model["unsupported_token_id"] == model["support_token_id"]:
+            raise ValueError("label token IDs must be distinct")
+        if not isinstance(model["input_prefix"], str):
+            raise ValueError("input_prefix must be a string")
     threshold = model["support_threshold"]
     if (
         isinstance(threshold, bool)
@@ -121,11 +145,22 @@ def _validate_registration(
         "truncation": True,
         "variant_aggregation": "maximum_support_probability",
         "threshold_operator": "strictly_greater_than",
-        "batch_size": 8,
         "device": "auto",
         "emit_source_text": False,
     }
-    if registration.get("protocol") != expected_protocol:
+    protocol = registration.get("protocol")
+    if not isinstance(protocol, dict):
+        raise ValueError("registration protocol is required")
+    batch_size = protocol.get("batch_size")
+    protocol_without_batch = {
+        name: value for name, value in protocol.items() if name != "batch_size"
+    }
+    if (
+        protocol_without_batch != expected_protocol
+        or isinstance(batch_size, bool)
+        or not isinstance(batch_size, int)
+        or not 1 <= batch_size <= 32
+    ):
         raise ValueError("registration protocol is invalid")
 
     gates = registration.get("evaluation", {}).get("gates")
@@ -171,7 +206,11 @@ def _score_variants(
     import torch
     import transformers
     from huggingface_hub import hf_hub_download
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    from transformers import (
+        AutoModelForSeq2SeqLM,
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+    )
 
     weight_path = Path(
         hf_hub_download(
@@ -191,18 +230,29 @@ def _score_variants(
     )
     if not tokenizer.eos_token:
         raise ValueError("grounding tokenizer must define an EOS token")
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_spec["name"],
-        revision=model_spec["revision"],
-        trust_remote_code=False,
-        use_safetensors=True,
-    )
+    if model_spec["architecture"] == "sequence_classification":
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_spec["name"],
+            revision=model_spec["revision"],
+            trust_remote_code=False,
+            use_safetensors=True,
+        )
+    else:
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_spec["name"],
+            revision=model_spec["revision"],
+            trust_remote_code=False,
+            use_safetensors=True,
+        )
     resolved_revision = getattr(model.config, "_commit_hash", None)
     if resolved_revision != model_spec["revision"]:
         raise ValueError(
             "resolved grounding model revision does not match registration"
         )
-    if model.config.num_labels != 2:
+    if (
+        model_spec["architecture"] == "sequence_classification"
+        and model.config.num_labels != 2
+    ):
         raise ValueError("grounding model must expose exactly two labels")
     device = _select_device(torch)
     model.to(device)
@@ -221,18 +271,44 @@ def _score_variants(
     started = time.perf_counter()
     with torch.inference_mode():
         for start in range(0, len(serialized), batch_size):
+            batch_text = serialized[start : start + batch_size]
+            if model_spec["architecture"] == "flan_t5_label_logits":
+                batch_text = [model_spec["input_prefix"] + text for text in batch_text]
             encoded = tokenizer(
-                serialized[start : start + batch_size],
+                batch_text,
                 max_length=protocol["max_length"],
                 truncation=protocol["truncation"],
                 padding=True,
                 return_tensors="pt",
             )
             encoded = {name: value.to(device) for name, value in encoded.items()}
-            logits = model(**encoded).logits
-            batch_probabilities = torch.softmax(logits, dim=1)[
-                :, model_spec["support_label_index"]
-            ]
+            if model_spec["architecture"] == "sequence_classification":
+                logits = model(**encoded).logits
+                batch_probabilities = torch.softmax(logits, dim=1)[
+                    :, model_spec["support_label_index"]
+                ]
+            else:
+                decoder_input_ids = torch.zeros(
+                    (encoded["input_ids"].size(0), 1),
+                    dtype=torch.long,
+                    device=device,
+                )
+                logits = model(
+                    input_ids=encoded["input_ids"],
+                    attention_mask=encoded["attention_mask"],
+                    decoder_input_ids=decoder_input_ids,
+                ).logits.squeeze(1)
+                label_logits = logits[
+                    :,
+                    torch.tensor(
+                        [
+                            model_spec["unsupported_token_id"],
+                            model_spec["support_token_id"],
+                        ],
+                        device=device,
+                    ),
+                ]
+                batch_probabilities = torch.softmax(label_logits, dim=1)[:, 1]
             probabilities.extend(float(value) for value in batch_probabilities.cpu())
     elapsed_seconds = time.perf_counter() - started
     if len(probabilities) != len(row_identity) or any(
@@ -268,6 +344,7 @@ def _score_variants(
         "transformers": transformers.__version__,
         "resolved_model_revision": resolved_revision,
         "weights_sha256": wice._sha256_file(weight_path),
+        "architecture": model_spec["architecture"],
     }
     return samples, runtime
 
