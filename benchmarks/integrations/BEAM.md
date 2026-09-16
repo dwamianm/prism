@@ -218,3 +218,6 @@ reported in
 The first accepted scored raw development execution and its rejected precursor
 trials are reported in
 [`BEAM-100K-RAW-SCORED.md`](../results/research/2026-09-15/BEAM-100K-RAW-SCORED.md).
+The first frozen-context repeated answer trial and its hosted-model stability
+boundary are reported in
+[`BEAM-Q19-ANSWER-STABILITY.md`](../results/research/2026-09-16/BEAM-Q19-ANSWER-STABILITY.md).

@@ -223,7 +223,10 @@ and omit the field. `non_entity` prevents entity-name matches from routing a
 whole source passage while backfilling the quota with non-entity evidence groups.
 It fixed the measured entity-routed contradiction regression but failed a
 two-conversation diagnostic with one different pass-level loss and a negative
-combined mean delta. Keep both anchor policies opt-in.
+combined mean delta. A preregistered frozen-context repeat found the temporal
+loss unstable: the baseline passed 3/5, the candidate passed 4/5, and both mean
+scores were 0.40. The policy still lacks positive confirmation and remains
+opt-in; do not treat single hosted-model score transitions as causal evidence.
 Unconditional top-10 evidence augmentation improved one tuned BEAM development
 conversation but failed a preregistered untouched confirmation with one
 contradiction-resolution loss and a negative mean-score delta. Keep it disabled

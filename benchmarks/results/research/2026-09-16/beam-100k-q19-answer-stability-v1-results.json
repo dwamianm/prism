@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "kind": "beam-answer-stability-result",
+  "status": "complete; rejects a stable q19 retrieval regression under the registered rule",
+  "source": {
+    "prme_revision": "ee0361fdf48302a6be9e6c43a868e2b235b8d6c5",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "registration": "beam-100k-q19-answer-stability-v1-registration.json",
+  "registration_sha256": "cb015397eee0585889de6c13ba600c1fb47eceebe66696910a2443ac32eccf91",
+  "execution_sha256": "d5e8d721d3b96f87a26875755ea5fca94381d229d84ddd97d3603abad4387b81",
+  "protocol": {
+    "chat_size": "100K",
+    "conversation_index": 0,
+    "question_index": 19,
+    "top_k": 50,
+    "repeats": 5,
+    "arm_order": [
+      [
+        "baseline",
+        "candidate"
+      ],
+      [
+        "candidate",
+        "baseline"
+      ],
+      [
+        "baseline",
+        "candidate"
+      ],
+      [
+        "candidate",
+        "baseline"
+      ],
+      [
+        "baseline",
+        "candidate"
+      ]
+    ],
+    "rpm": 60,
+    "model_timeout_seconds": 120,
+    "generation_temperature": 0,
+    "no_retrieval_calls": true
+  },
+  "models": {
+    "answerer": {
+      "provider": "openai",
+      "model": "mistral-large-3:675b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "mistral-large-3:675b",
+      "parameter_size": "675B",
+      "quantization": "FP8",
+      "advertised_context_tokens": 262144,
+      "thinking": false,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    },
+    "judge": {
+      "provider": "openai",
+      "model": "gpt-oss:120b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "gpt-oss:120b",
+      "parameter_size": "117B",
+      "quantization": "MXFP4",
+      "advertised_context_tokens": 131072,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    }
+  },
+  "summary": {
+    "arms": {
+      "baseline": {
+        "scores": [
+          1.0,
+          0.0,
+          0.5,
+          0.5,
+          0.0
+        ],
+        "mean_score": 0.4,
+        "pass_count": 3,
+        "repeats": 5
+      },
+      "candidate": {
+        "scores": [
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.0
+        ],
+        "mean_score": 0.4,
+        "pass_count": 4,
+        "repeats": 5
+      }
+    },
+    "candidate_mean_delta": 0.0,
+    "paired": [
+      {
+        "repeat": 0,
+        "baseline_score": 1.0,
+        "candidate_score": 0.5,
+        "score_delta": -0.5,
+        "pass_transition": "True->True"
+      },
+      {
+        "repeat": 1,
+        "baseline_score": 0.0,
+        "candidate_score": 0.5,
+        "score_delta": 0.5,
+        "pass_transition": "False->True"
+      },
+      {
+        "repeat": 2,
+        "baseline_score": 0.5,
+        "candidate_score": 0.5,
+        "score_delta": 0.0,
+        "pass_transition": "True->True"
+      },
+      {
+        "repeat": 3,
+        "baseline_score": 0.5,
+        "candidate_score": 0.5,
+        "score_delta": 0.0,
+        "pass_transition": "True->True"
+      },
+      {
+        "repeat": 4,
+        "baseline_score": 0.0,
+        "candidate_score": 0.0,
+        "score_delta": 0.0,
+        "pass_transition": "False->False"
+      }
+    ],
+    "score_ranges": {
+      "baseline": 1.0,
+      "candidate": 0.5
+    }
+  },
+  "registered_decision": {
+    "supports_retrieval_regression": false,
+    "rejects_stable_regression": true,
+    "reason": "The candidate passed more repeats than baseline, both arms contained pass and fail outcomes, and both mean scores were 0.40."
+  },
+  "interpretation": "The same frozen baseline context produced scores from 0.0 through 1.0 as the answerer alternated between March 29 and March 31 and sometimes performed inconsistent date arithmetic. The earlier single 0.5-to-0.0 transition cannot be causally attributed to retrieval. This does not promote non-entity augmentation: its registered two-pack combined mean remained negative, and the other single-call transitions have not received repeatability trials.",
+  "samples": [
+    {
+      "repeat": 0,
+      "arm": "baseline",
+      "score": 1.0,
+      "judgment": "PASS",
+      "generated_answer": "Based on the retrieved memories, here are the key dates and calculations:\n\n1. **First sprint end date**: March 29, 2024 (from memory 2, 10, 11, 23)\n   - *Note*: There was an initial mention of March 29, then an update to March 31 (memory 1), but memory 23 confirms the first sprint was completed on March 29.\n\n2. **Sprint 2 analytics features deadline**: April 19, 2024 (from memory 23)\n\n### Calculation:\n- **Days between March 29 and April 19**:\n  - March 30 to March 31: 2 days\n  - April 1 to April 19: 19 days\n  - **Total**: 2 + 19 = **21 days**\n\n### Final Answer:\nThere were **21 days** between the end of your first sprint (March 29, 2024) and the deadline for completing the analytics features in sprint 2 (April 19, 2024).",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 1.0,
+          "reason": "The response explicitly states that there were 21 days between the two dates, matching the required element accurately."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 1.0,
+          "reason": "The response explicitly mentions both March 29 and April 19, stating the interval between those dates, thus fully satisfying the required statement."
+        }
+      ]
+    },
+    {
+      "repeat": 0,
+      "arm": "candidate",
+      "score": 0.5,
+      "judgment": "PASS",
+      "generated_answer": "Based on the retrieved memories, here's the answer to your question:\n\n**There were 19 days between the end of your first sprint and the deadline for completing the analytics features in sprint 2.**\n\nDetails:\n- First sprint ended on **March 29, 2024** (Memory 2, 10, 11)\n- Analytics features deadline was **April 19, 2024** (Memory 23)\n- Calculation: April 19 - March 29 = 21 days total, minus 2 days (March 30-31) = 19 days between the dates\n\nThe first sprint was extended to March 31 (Memory 1, 6), but the original end date was March 29, and the analytics deadline was April 19, so the gap is calculated from the original end date.",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days, but the rubric requires stating 21 days."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 1.0,
+          "reason": "The response explicitly mentions March 29 as the start and April 19 as the end, effectively stating the period from March 29 till April 19."
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "arm": "candidate",
+      "score": 0.5,
+      "judgment": "PASS",
+      "generated_answer": "Based on the retrieved memories, here's the answer to your question:\n\n**There were 19 days between the end of your first sprint and the deadline for completing the analytics features in sprint 2.**\n\nDetails:\n- First sprint ended on **March 29, 2024** (confirmed in memories 2, 10, 11, and 23)\n- Analytics features deadline for sprint 2 was **April 19, 2024** (confirmed in memory 23)\n- Calculation: April 19 - March 29 = 21 days total, minus 2 days (March 30-31) = **19 days** between the end of sprint 1 and the sprint 2 deadline.",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days, which does not match the required 21 days."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 1.0,
+          "reason": "The response explicitly states the period from March 29 to April 19, fully meeting the required statement."
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "arm": "baseline",
+      "score": 0.0,
+      "judgment": "FAIL",
+      "generated_answer": "Based on the retrieved memories, here's the calculation:\n\n1. **First sprint end date**: March 31, 2024 (extended from original March 29 deadline)\n   - Memory 1 confirms the new deadline of March 31\n   - Memory 6 shows the extended timeline to March 31\n\n2. **Sprint 2 analytics features deadline**: April 19, 2024\n   - Memory 23 explicitly states \"sprint 2 which targets analytics by April 19\"\n\n**Calculation**:\n- March 31 to April 19\n- Days between: 19 days (April 1-19) + 0 days (since March 31 is the end date)\n- Total: 19 days\n\nThe exact count is:\n- March 31 to April 1 = 1 day\n- April 1 to April 19 = 18 days\n- Total = 19 days\n\nAnswer: There were **19 days** between the end of your first sprint (March 31) and the deadline for completing the analytics features in sprint 2 (April 19).",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days, but the rubric requires stating 21 days."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 0.0,
+          "reason": "The response states the period as March 31 to April 19, not the required March 29 to April 19."
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "arm": "baseline",
+      "score": 0.5,
+      "judgment": "PASS",
+      "generated_answer": "Based on the retrieved memories, here are the key dates and calculations:\n\n1. **First sprint end date**: March 29, 2024 (from memory 2, 10, 23)\n2. **Sprint 2 analytics features deadline**: April 19, 2024 (from memory 23)\n\n**Calculation**:\n- March 30 to March 31: 2 days (first sprint was extended to March 31, but the original end was March 29)\n- April 1 to April 19: 19 days\n- Total days between March 29 and April 19: 21 days\n\nHowever, since the first sprint was extended to March 31, the days between the *actual* end of sprint 1 (March 31) and the sprint 2 deadline (April 19) are:\n- April 1 to April 19: 19 days\n\n**Final Answer**:\nThere were **19 days** between the end of your first sprint (March 31, 2024) and the deadline for completing the analytics features in sprint 2 (April 19, 2024).",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response ultimately states 19 days instead of the required 21 days, failing to meet the positive requirement."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 1.0,
+          "reason": "The response explicitly mentions the period between March 29 and April 19, satisfying the required statement."
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "arm": "candidate",
+      "score": 0.5,
+      "judgment": "PASS",
+      "generated_answer": "Based on the retrieved memories, here's the answer to your question:\n\n**There were 19 days between the end of your first sprint and the deadline for completing the analytics features in sprint 2.**\n\nDetails:\n- First sprint ended on **March 29, 2024** (Memory 2, 10, 11)\n- Analytics features deadline was **April 19, 2024** (Memory 23)\n- Calculation: April 19 - March 29 = 21 days total, minus 2 days (March 30-31) = 19 days\n\nThe first sprint was extended to March 31 (Memory 1, 6), but the original end date was March 29, and the analytics deadline was April 19, so the gap is calculated from the original end date.",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days, but the rubric requires stating 21 days."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 1.0,
+          "reason": "The response explicitly mentions March 29 as the start and April 19 as the end, thereby stating the required period."
+        }
+      ]
+    },
+    {
+      "repeat": 3,
+      "arm": "candidate",
+      "score": 0.5,
+      "judgment": "PASS",
+      "generated_answer": "Based on the retrieved memories, here's the answer to your question:\n\n**There were 19 days between the end of your first sprint and the deadline for completing the analytics features in sprint 2.**\n\nDetails:\n- First sprint ended on **March 29, 2024** (Memory 2, 10, 11)\n- Analytics features deadline was **April 19, 2024** (Memory 23)\n- Calculation: April 19 - March 29 = 21 days total, minus 2 days (March 30-31) = **19 days** between the end of sprint 1 and the sprint 2 deadline.",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days, not the required 21 days."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 1.0,
+          "reason": "The response explicitly mentions March 29 as the start and April 19 as the end, thereby stating the period from March 29 till April 19."
+        }
+      ]
+    },
+    {
+      "repeat": 3,
+      "arm": "baseline",
+      "score": 0.5,
+      "judgment": "PASS",
+      "generated_answer": "Based on the retrieved memories, here's the answer to your question:\n\n**There were 19 days between the end of your first sprint and the deadline for completing the analytics features in sprint 2.**\n\nDetails:\n- First sprint ended on **March 29, 2024** (Memory 2, 10, 11, 23)\n- Analytics features deadline for sprint 2 was **April 19, 2024** (Memory 23)\n- Calculation: April 19 - March 29 = 21 days, minus 2 days (since March 29 is included) = **19 days** between the dates.",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days, but the rubric requires stating 21 days."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 1.0,
+          "reason": "The response includes both March 29 and April 19 as the start and end dates, effectively stating the required range."
+        }
+      ]
+    },
+    {
+      "repeat": 4,
+      "arm": "baseline",
+      "score": 0.0,
+      "judgment": "FAIL",
+      "generated_answer": "Based on the retrieved memories, here's the calculation:\n\n1. **First sprint end date**: March 31, 2024 (extended from original March 29 deadline)\n   - Memory 1 confirms the new deadline of March 31\n   - Memory 6 shows the extended timeline to March 31\n\n2. **Sprint 2 analytics features deadline**: April 19, 2024\n   - Memory 23 explicitly states \"sprint 2 which targets analytics by April 19\"\n\n**Calculation**:\n- March 31 to April 19\n- March 31 → April 1 = 1 day\n- April 1 → April 19 = 18 days\n- Total = 19 days\n\nThere were **19 days** between the end of your first sprint (March 31) and the deadline for completing the analytics features in sprint 2 (April 19).",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days, but the rubric requires stating 21 days."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 0.0,
+          "reason": "The response gives the period as March 31 to April 19, not the required March 29 to April 19."
+        }
+      ]
+    },
+    {
+      "repeat": 4,
+      "arm": "candidate",
+      "score": 0.0,
+      "judgment": "FAIL",
+      "generated_answer": "Based on the retrieved memories, here's the calculation:\n\n1. **First sprint end date**: March 31, 2024 (from memory 1, which supersedes the earlier March 29 date in memory 2)\n2. **Sprint 2 analytics features deadline**: April 19, 2024 (from memory 23)\n\n**Days between**:\n- March 31 to April 19 = 19 days\n\nThe exact calculation:\n- March 31 to April 1 = 1 day\n- April 1 to April 19 = 18 days\n- Total = 19 days\n\nThere were **19 days** between the end of your first sprint (March 31) and the deadline for completing the analytics features in sprint 2 (April 19).",
+      "memories_evaluated": 50,
+      "nugget_scores": [
+        {
+          "nugget": "LLM response should state: 21 days",
+          "score": 0.0,
+          "reason": "The response states 19 days instead of the required 21 days, failing the positive requirement."
+        },
+        {
+          "nugget": "LLM response should state: from March 29 till April 19",
+          "score": 0.0,
+          "reason": "The response states the period as March 31 to April 19, not March 29 to April 19 as required."
+        }
+      ]
+    }
+  ],
+  "claim_boundary": "Post-hoc stability diagnostic for one examined question, with exact frozen retrieval inputs and mutable hosted model aliases. It measures reader/judge repeatability, not retrieval quality or generalization."
+}

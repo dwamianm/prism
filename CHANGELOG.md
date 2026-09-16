@@ -100,7 +100,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   versions 1–11 preserve `all` semantics and their canonical bytes. A registered
   two-conversation diagnostic fixed the observed contradiction regression but
   produced one win, one temporal loss and a -0.03000 combined mean delta, so the
-  policy remains opt-in and is not a default candidate.
+  policy remains opt-in and is not a default candidate. A preregistered
+  frozen-context follow-up rejected a stable interpretation of that temporal
+  loss: the identical baseline context passed 3/5 repeats, the candidate passed
+  4/5, and both mean scores were 0.40. The BEAM integration now includes an
+  answer-stability runner that pins both retrieval artifacts and alternates
+  repeated answer/judge calls without retrieving again.
 
 - A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
   evidence set held pass accuracy at 13/20 but reduced mean rubric score from

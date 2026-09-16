@@ -46,6 +46,12 @@ both plausible. A stronger harness should rerun baseline and candidate
 contemporaneously, interleave their order, and collect repeated samples before
 attributing small score changes to retrieval.
 
+That follow-up is now complete. The
+[preregistered frozen-context trial](../2026-09-16/BEAM-Q19-ANSWER-STABILITY.md)
+gave the baseline 3/5 passes and the candidate 4/5, with the same 0.40 mean
+score. It rejects a stable causal interpretation of the q19 loss. The broader
+policy still fails this diagnostic's combined-mean rule and remains opt-in.
+
 ## Scope
 
 These are two examined 100K conversations and forty questions. The result
