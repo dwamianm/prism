@@ -95,9 +95,13 @@ also failed all five machine-evaluated gates: it produced 2 unsafe full answers
 in 12 abstention samples, only 62 full answers in 108 ordinary samples, 5
 citation errors, and stable actions for 26/40 questions. This API therefore
 remains explicit and experimental. These trials flattened frozen integration
-results to text and IDs. The next registered evaluation must test the draft-answer
-claim-verification path; future end-to-end trials must also preserve PRME's typed
-time, lifecycle, and epistemic fields.
+results to text and IDs. The subsequent
+[frozen-draft trial](../benchmarks/results/research/2026-09-16/BEAM-ANSWERABILITY-DRAFT-DEV-V1.md)
+also failed all four gates: it fully accepted 5/36 samples from incorrect drafts,
+fully accepted only 13/84 samples from correct drafts, produced 7 citation errors,
+and returned stable actions for 22/40 questions. A future implementation must
+preserve PRME's typed speaker, time, lifecycle, validity, and epistemic fields
+and treat exhaustive counts as a separate completeness problem.
 
 The design follows the distinction between retrieval and evidence verification
 studied by [SURE-RAG](https://arxiv.org/abs/2605.03534), the corrective retrieval

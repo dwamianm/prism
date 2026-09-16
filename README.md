@@ -46,7 +46,13 @@ failed every preregistered gate. A separately registered
 on the same 120 fixed assessments still failed all five machine-evaluated gates:
 2/12 unsafe full answers, 62/108 ordinary full answers, 5 citation errors, and
 stable actions on 26/40 questions. The evaluator remains an explicit experiment;
-it is not automatic retrieval behavior or a production default.
+it is not automatic retrieval behavior or a production default. A subsequent
+[frozen-draft trial](benchmarks/results/research/2026-09-16/BEAM-ANSWERABILITY-DRAFT-DEV-V1.md)
+also failed every gate: 5/36 samples from incorrect drafts were fully accepted,
+only 13/84 samples from correct drafts were fully accepted, 7 citation errors
+remained, and actions were stable for 22/40 questions. The next design must
+separate claim extraction, evidence selection, entailment, and answer refinement
+while preserving typed context and explicit completeness boundaries.
 
 On the first corrected matched MemoryAgentBench task, PRME scored 20/20 versus
 BM25 at 17/20 on 20 Banking77 development questions while using 90.52% fewer

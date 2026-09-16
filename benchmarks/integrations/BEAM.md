@@ -194,6 +194,13 @@ incorrect drafts. This evaluates claim verification without making new answer
 generation or retrieval calls; the saved rubric label remains an external task
 judgment rather than proof of claim entailment.
 
+The first registered schema-3 development trial failed all four gates: 5/36
+samples from incorrect drafts were fully accepted, only 13/84 samples from
+correct drafts were fully accepted, 7 citation errors remained, and actions were
+stable for 22/40 questions. The two fully accepted incorrect drafts exposed a
+temporal rubric/evidence disagreement and an exhaustive-count error. Do not use
+the current evaluator as an automatic answer gate.
+
 For a scored run, create a schema-2 registration and pass it to the same
 `run_beam` command. The current registered profile is intentionally narrow: one
 100K conversation, every ability, top-50 recall, one cutoff, raw source storage,

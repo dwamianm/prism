@@ -100,7 +100,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failed every promotion gate. A speech-act-aware same-cohort rerun with exact
   evaluator and machine-gate bindings also failed all five gates, including 2
   unsafe full answers and stable actions on only 26/40 questions, so it remains
-  explicit and opt-in.
+  explicit and opt-in. A registered frozen-draft follow-up also failed all four
+  gates: it fully accepted 5/36 samples from incorrect drafts, fully accepted
+  only 13/84 samples from correct drafts, produced 7 citation errors, and was
+  action-stable on 22/40 questions. Its systematic failures separate temporal
+  task-label disagreement from exhaustive-count verification and block automatic
+  enforcement of the current single-call architecture.
 
 - Opt-in direct evidence projection lets extracted claims route retrieval while
   returning the complete active source passage. It replaces bounded exact
