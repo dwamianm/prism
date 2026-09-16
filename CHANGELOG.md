@@ -164,7 +164,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rose from 23.00% to 99.00%, supported recall from 6.00% to 72.00%, and
   balanced accuracy from 52.00% to 76.00%. It still failed safety at 78.26%
   precision and a 20.00% false-support rate, chiefly on entity changes and
-  antonym swaps. No provider verifier is integrated.
+  antonym swaps. A different-family DeepSeek critic over all 46 primary support
+  candidates reduced false support to 8.00% but left precision at 78.95% and
+  collapsed recall to 30.00%. This rejects general-model unanimity as the
+  high-assurance path. No provider verifier is integrated.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

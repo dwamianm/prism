@@ -1,0 +1,1808 @@
+{
+  "schema_version": 1,
+  "kind": "summedits-critic-verification-result",
+  "completed_at": "2026-09-16T16:37:30.848308+00:00",
+  "registration_sha256": "bc6202d34e6cdfdf9bfc79dd4350ec212191ac93679082c686c75c0044587a6f",
+  "source": {
+    "prme_revision": "c9c9383302cac6d418d7e6db124238d804432c73",
+    "files": {
+      "runner_sha256": "610dbaac6ba9d8ea63737c469ef14bfe8744b9752a03643c2a2c76c30a8364e0",
+      "segment_runner_sha256": "09f66e2b05f14fe8c9258d8a82aab974dc9fe3dd16b698cf8aff3e84b7289864",
+      "cohort_runner_sha256": "4a1909a4cf4682de453b0e8029de41563879e3d8e021ce1ad0466ff3fe0151a7"
+    }
+  },
+  "dataset": {
+    "name": "SummEdits",
+    "repository": "https://github.com/salesforce/factualNLG.git",
+    "revision": "b95184aba5f3bd2a3eb36fb1897c9b6394ca0207",
+    "files": {
+      "billsum": {
+        "relative_path": "data/summedits/summedits_billsum.json",
+        "sha256": "b9d28cda470febc83f654f9520e0db11296849df9d2eb0351c75573a898be2ab",
+        "expected_shape": {
+          "rows": 853,
+          "evaluation_labels": {
+            "0": 83,
+            "1": 44
+          }
+        }
+      },
+      "ectsum": {
+        "relative_path": "data/summedits/summedits_ectsum.json",
+        "sha256": "dc255beb81ff1194b9069dfe03c1f888e0c5357c117e304bb44baaaa381a718b",
+        "expected_shape": {
+          "rows": 668,
+          "evaluation_labels": {
+            "0": 71,
+            "1": 46
+          }
+        }
+      },
+      "news": {
+        "relative_path": "data/summedits/summedits_news.json",
+        "sha256": "aa06a1998cf7bfe6e40f8a79e0c10a1f77528165d8659056202c0ed679191c8e",
+        "expected_shape": {
+          "rows": 819,
+          "evaluation_labels": {
+            "0": 82,
+            "1": 51
+          }
+        }
+      },
+      "podcast": {
+        "relative_path": "data/summedits/summedits_podcast.json",
+        "sha256": "3d6c777190ff1cad633fed48b52856774e078d8a8b78ae00189df7abb506f8dc",
+        "expected_shape": {
+          "rows": 500,
+          "evaluation_labels": {
+            "0": 69,
+            "1": 55
+          }
+        }
+      },
+      "qmsumm": {
+        "relative_path": "data/summedits/summedits_qmsumm.json",
+        "sha256": "011e2b70ba291d1a75d14526fcacb156f70cb6ed66b375143768389b6db67bff",
+        "expected_shape": {
+          "rows": 431,
+          "evaluation_labels": {
+            "0": 58,
+            "1": 55
+          }
+        }
+      },
+      "sales_call": {
+        "relative_path": "data/summedits/summedits_sales_call.json",
+        "sha256": "81381ad89c8e3dd8450ee6355f847e8b76cbb134e126d5568a79a33334bb1fef",
+        "expected_shape": {
+          "rows": 520,
+          "evaluation_labels": {
+            "0": 80,
+            "1": 51
+          }
+        }
+      },
+      "sales_email": {
+        "relative_path": "data/summedits/summedits_sales_email.json",
+        "sha256": "8267fffdd318e513bde0f7efbd9226f908f1a5a2944f783902fdd0d6b0b8ccef",
+        "expected_shape": {
+          "rows": 613,
+          "evaluation_labels": {
+            "0": 97,
+            "1": 35
+          }
+        }
+      },
+      "samsum": {
+        "relative_path": "data/summedits/summedits_samsum.json",
+        "sha256": "1d65ca667e646c7cc1cde9e6b35bdf43531eeea9191c692a9ac9ec0aa84eb5b5",
+        "expected_shape": {
+          "rows": 664,
+          "evaluation_labels": {
+            "0": 73,
+            "1": 48
+          }
+        }
+      },
+      "scitldr": {
+        "relative_path": "data/summedits/summedits_scitldr.json",
+        "sha256": "b4d359277bafa11587505f0332797266b69c316c713db17376f0d99413e4b350",
+        "expected_shape": {
+          "rows": 466,
+          "evaluation_labels": {
+            "0": 87,
+            "1": 28
+          }
+        }
+      },
+      "shakespeare": {
+        "relative_path": "data/summedits/summedits_shakespeare.json",
+        "sha256": "fab3a53e1c98bc4419cedd1363a53a3ff983ea4d5982ce0414e9956031437e62",
+        "expected_shape": {
+          "rows": 814,
+          "evaluation_labels": {
+            "0": 75,
+            "1": 67
+          }
+        }
+      }
+    },
+    "source_text_policy": "External checkout only; results contain IDs, labels, decisions, integrity facts and hashes without document, summary, claims, quotations or explanations."
+  },
+  "cohort": {
+    "split": "evaluation",
+    "seed": "prme-summedits-proof-v1",
+    "per_label_per_domain": 5,
+    "excluded_prototype_ids": [
+      "63f9455b8d931ba6e664fb89_21"
+    ],
+    "max_document_chars": 48000,
+    "max_summary_chars": 4000,
+    "max_cases_per_document": 3,
+    "document_identity": "sha256_exact_utf8_text",
+    "selected_ids": [
+      "billsum_train_14480_13",
+      "billsum_train_14480_10",
+      "billsum_train_15801_20",
+      "billsum_train_14480_12",
+      "billsum_train_10541_32",
+      "billsum_train_10541_25",
+      "billsum_train_10541_11",
+      "billsum_train_15801_9",
+      "billsum_train_15801_32",
+      "billsum_train_18540_4",
+      "ectsum_SNA_q1_2021_17",
+      "ectsum_DLB_q2_2021_3",
+      "ectsum_SNA_q1_2021_21",
+      "ectsum_SNA_q1_2021_35",
+      "ectsum_COF_q3_2021_21",
+      "ectsum_OXY_q4_2021_28",
+      "ectsum_OXY_q4_2021_23",
+      "ectsum_COF_q3_2021_og",
+      "ectsum_COF_q3_2021_17",
+      "ectsum_OXY_q4_2021_17",
+      "63f9455b8d931ba6e664fb89_29",
+      "63f9455b8d931ba6e664fb89_5",
+      "63f9455b8d931ba6e664fb89_30",
+      "63f9455b8d931ba6e664fb88_2",
+      "63f9455b8d931ba6e664fb88_20",
+      "63f9455b8d931ba6e664fb84_8",
+      "63f9455b8d931ba6e664fb88_10",
+      "63f9455b8d931ba6e664fb85_5",
+      "63f9455b8d931ba6e664fb85_11",
+      "63f9455b8d931ba6e664fb84_29",
+      "spotify_podcast_2_12",
+      "spotify_podcast_4_20",
+      "spotify_podcast_3_14",
+      "spotify_podcast_3_18",
+      "spotify_podcast_4_22",
+      "spotify_podcast_4_9",
+      "spotify_podcast_7_25",
+      "spotify_podcast_3_3",
+      "spotify_podcast_2_18",
+      "spotify_podcast_7_11",
+      "q_test_18_0",
+      "q_test_17_13",
+      "q_test_16_29",
+      "q_test_18_9",
+      "q_test_16_5",
+      "q_test_16_0",
+      "q_test_15_33",
+      "q_test_15_og",
+      "q_test_18_17",
+      "q_test_15_10",
+      "sales_call_2_8",
+      "sales_call_3_16",
+      "sales_call_2_33",
+      "sales_call_1_7",
+      "sales_call_3_0",
+      "sales_call_1_3",
+      "sales_call_2_30",
+      "sales_call_1_0",
+      "sales_call_3_11",
+      "sales_call_0_5",
+      "sales_email_4_12",
+      "sales_email_2_4",
+      "sales_email_2_28",
+      "sales_email_2_8",
+      "sales_email_4_19",
+      "sales_email_3_3",
+      "sales_email_4_25",
+      "sales_email_1_13",
+      "sales_email_3_og",
+      "sales_email_3_10",
+      "samsum_train_13716074_16",
+      "samsum_train_13820270_8",
+      "samsum_train_13716074_1",
+      "samsum_train_13731241_10",
+      "samsum_train_13820270_25",
+      "samsum_train_13716509_26",
+      "samsum_train_13731241_25",
+      "samsum_train_13716509_13",
+      "samsum_train_13820270_21",
+      "samsum_train_13716074_5",
+      "B1gtK0NKwr_18",
+      "ryeT47FIIS_19",
+      "ryeT47FIIS_29",
+      "B1gtK0NKwr_37",
+      "rJIN_4lA-_14",
+      "B1gtK0NKwr_og",
+      "rJgMlhRctm_7",
+      "ryeT47FIIS_11",
+      "rJIN_4lA-_16",
+      "rJIN_4lA-_10",
+      "shakespeare_2_23",
+      "shakespeare_3_11",
+      "shakespeare_0_7",
+      "shakespeare_1_25",
+      "shakespeare_2_5",
+      "shakespeare_0_19",
+      "shakespeare_3_2",
+      "shakespeare_2_22",
+      "shakespeare_3_23",
+      "shakespeare_1_37"
+    ],
+    "selected_identity_sha256": "573c9d8d15fb95d68b0acb03d4cb5fde651beacc3fe02b66bd5b947b6990bd04"
+  },
+  "primary_artifacts": {
+    "result_file_sha256": "adc52ae235ce15f80cb2a25d0c5cd2e2c3d37db5de12cdce62c89a48808f4f15",
+    "result_canonical_sha256": "8848fe7d40b6b3114d1f7c023e897fe31c6a29596c34cbe1ababe004f242f384",
+    "primary_registration_sha256": "5728a079e1bd3daaf2d2b60b80bb805ce2a2a8ac5c4207b663d95b1f2cf35460",
+    "state_file_sha256": "1cf4c8400ceff3abeefb5b3656b85ace6c0e7053d99afda5d1354160ca9518d3",
+    "state_policy": "Private local generated-atom state; exact hash required; never committed because it contains generated claim text.",
+    "candidate_ids": [
+      "billsum_train_14480_13",
+      "billsum_train_14480_12",
+      "billsum_train_10541_32",
+      "billsum_train_10541_25",
+      "billsum_train_10541_11",
+      "billsum_train_15801_9",
+      "billsum_train_15801_32",
+      "billsum_train_18540_4",
+      "ectsum_SNA_q1_2021_17",
+      "ectsum_SNA_q1_2021_35",
+      "ectsum_OXY_q4_2021_28",
+      "ectsum_OXY_q4_2021_23",
+      "ectsum_COF_q3_2021_og",
+      "ectsum_COF_q3_2021_17",
+      "ectsum_OXY_q4_2021_17",
+      "63f9455b8d931ba6e664fb88_10",
+      "63f9455b8d931ba6e664fb85_5",
+      "63f9455b8d931ba6e664fb85_11",
+      "63f9455b8d931ba6e664fb84_29",
+      "spotify_podcast_2_12",
+      "spotify_podcast_4_9",
+      "spotify_podcast_7_25",
+      "spotify_podcast_3_3",
+      "spotify_podcast_2_18",
+      "q_test_17_13",
+      "q_test_18_9",
+      "q_test_18_17",
+      "sales_call_1_3",
+      "sales_call_2_30",
+      "sales_call_3_11",
+      "sales_email_2_4",
+      "sales_email_2_8",
+      "sales_email_3_3",
+      "sales_email_4_25",
+      "sales_email_1_13",
+      "sales_email_3_og",
+      "sales_email_3_10",
+      "samsum_train_13716509_26",
+      "B1gtK0NKwr_og",
+      "rJgMlhRctm_7",
+      "ryeT47FIIS_11",
+      "rJIN_4lA-_16",
+      "rJIN_4lA-_10",
+      "shakespeare_3_2",
+      "shakespeare_2_22",
+      "shakespeare_1_37"
+    ],
+    "candidate_ids_sha256": "256148f2786a8c3126468fe1f1ec81a1ad314f2ca378a8f98645535660206e65"
+  },
+  "critic_model": {
+    "provider": "ollama",
+    "name": "deepseek-v4.1-flash:cloud",
+    "manifest_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+    "remote_model": "deepseek-v4.1-flash",
+    "parameter_size": "763B",
+    "quantization": "FP8",
+    "base_url": "http://127.0.0.1:11434"
+  },
+  "protocol": {
+    "task": "independent_fixed_atom_adversarial_critic",
+    "critic_prompt_sha256": "a03f76e9d90c0f08700080a57c9eba0b83e6344c4f6ad336537fffb34b6d0bea",
+    "input": "primary_support_candidates_with_fixed_atoms_and_numbered_document_segments",
+    "temperature": 0,
+    "seed": 17,
+    "schema_retries": 1,
+    "timeout_seconds": 180,
+    "concurrency": 4,
+    "acceptance": "primary_and_critic_support_every_fixed_atom_with_valid_segment_ids",
+    "emit_source_text": false
+  },
+  "runtime": {
+    "invocation_elapsed_seconds": 306.6251091250451,
+    "critic_call_seconds_sum": 1094.5729795400403,
+    "ollama_version": "ollama version is 0.34.1",
+    "critic_model_manifest_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8"
+  },
+  "summary": {
+    "cases": 100,
+    "critic_calls": 46,
+    "predicted_supported": 19,
+    "metrics": {
+      "true_positive": 15,
+      "false_positive": 4,
+      "true_negative": 46,
+      "false_negative": 35,
+      "accuracy": 0.61,
+      "balanced_accuracy": 0.61,
+      "precision": 0.7894736842105263,
+      "recall": 0.3,
+      "f1": 0.4347826086956521,
+      "false_support_rate": 0.08
+    }
+  },
+  "quality_gates": {
+    "passed": false,
+    "results": {
+      "cases_evaluated_min": {
+        "required": 100,
+        "observed": 100,
+        "passed": true
+      },
+      "supported_precision_min": {
+        "required": 0.9,
+        "observed": 0.7894736842105263,
+        "passed": false
+      },
+      "supported_recall_min": {
+        "required": 0.6,
+        "observed": 0.3,
+        "passed": false
+      },
+      "balanced_accuracy_min": {
+        "required": 0.75,
+        "observed": 0.61,
+        "passed": false
+      },
+      "false_support_rate_max": {
+        "required": 0.1,
+        "observed": 0.08,
+        "passed": true
+      },
+      "critic_reference_integrity_rate_min": {
+        "required": 0.98,
+        "observed": 1.0,
+        "passed": true
+      }
+    }
+  },
+  "samples": [
+    {
+      "id": "billsum_train_14480_13",
+      "domain": "billsum",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 1,
+        "unsupported": 2
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "ef72138c30fd75dd07aeb207203d9b8df102e5ae88894bb6f3710e509916f78d",
+      "critic_elapsed_seconds": 14.185512124968227
+    },
+    {
+      "id": "billsum_train_14480_10",
+      "domain": "billsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "billsum_train_15801_20",
+      "domain": "billsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "billsum_train_14480_12",
+      "domain": "billsum",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 1,
+        "unsupported": 2
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "065188af302b9a8b56b91c3c8e8aaf50914206acbb0595c852ec614f37377c07",
+      "critic_elapsed_seconds": 6.813551041006576
+    },
+    {
+      "id": "billsum_train_10541_32",
+      "domain": "billsum",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 1,
+        "uncertain": 2
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "9a696ab5499ce641a8c075716b5965a91aad8dcb1b7ecf4d83a5138ae9648a07",
+      "critic_elapsed_seconds": 14.698373041988816
+    },
+    {
+      "id": "billsum_train_10541_25",
+      "domain": "billsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 3
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "0a42f95a6e60da8c49180f5dd277060e31157944e056884093cf848b618f10d8",
+      "critic_elapsed_seconds": 8.860972333000973
+    },
+    {
+      "id": "billsum_train_10541_11",
+      "domain": "billsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 2,
+      "critic_status_counts": {
+        "supported": 2
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "14511563f8854b574f1acd850510547f11f56e1b9cdc6e07ef45f8bcd8b83fe4",
+      "critic_elapsed_seconds": 4.5517847500159405
+    },
+    {
+      "id": "billsum_train_15801_9",
+      "domain": "billsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 3,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "8355c0297c932938ef9637233900c64e80d745136d5cf758dadd409391f9dcd4",
+      "critic_elapsed_seconds": 15.459884040988982
+    },
+    {
+      "id": "billsum_train_15801_32",
+      "domain": "billsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 4,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "6087cb68b6a56594ded2f5fb0f34df25bfca2945a2637bfa8fa5168f709a384a",
+      "critic_elapsed_seconds": 12.443607166002039
+    },
+    {
+      "id": "billsum_train_18540_4",
+      "domain": "billsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 3
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "73f3d9861ad1daf5316a0e18ce9b242197fc47a9b092494494c50f356699a16e",
+      "critic_elapsed_seconds": 8.443045000021812
+    },
+    {
+      "id": "ectsum_SNA_q1_2021_17",
+      "domain": "ectsum",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 4
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "7f5e529f6fedc83e0dd82fab3a1a53e56fab8c01a3096773fbb58d89deb4305c",
+      "critic_elapsed_seconds": 7.5437060840195045
+    },
+    {
+      "id": "ectsum_DLB_q2_2021_3",
+      "domain": "ectsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "ectsum_SNA_q1_2021_21",
+      "domain": "ectsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "ectsum_SNA_q1_2021_35",
+      "domain": "ectsum",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 4
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "8513241b46080f58993be6dce3f7b556046914c707ed3236ad4b8d1178f89a44",
+      "critic_elapsed_seconds": 5.57223570800852
+    },
+    {
+      "id": "ectsum_COF_q3_2021_21",
+      "domain": "ectsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "ectsum_OXY_q4_2021_28",
+      "domain": "ectsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 4
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "71314f46b331765898e7742fe109d8c575de65c74326c956bdb8ef4ee4078f32",
+      "critic_elapsed_seconds": 15.312764125003014
+    },
+    {
+      "id": "ectsum_OXY_q4_2021_23",
+      "domain": "ectsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 3,
+        "uncertain": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "349351c66121cbab87b9986ee2e36b2bb9e9480c061acfa28128d4b0bab51048",
+      "critic_elapsed_seconds": 27.18500945798587
+    },
+    {
+      "id": "ectsum_COF_q3_2021_og",
+      "domain": "ectsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {
+        "supported": 5,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "4c6b9d0e72297f68b7864b3789ca1b642b12e8ed905f3cf310d5b56c18e3b0e5",
+      "critic_elapsed_seconds": 22.297929666005075
+    },
+    {
+      "id": "ectsum_COF_q3_2021_17",
+      "domain": "ectsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {
+        "supported": 5,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "611a3da1634d3054e6f4dd10e20224409e649fd9ae88ced0a5f9ea81b94b20b2",
+      "critic_elapsed_seconds": 27.224860499962233
+    },
+    {
+      "id": "ectsum_OXY_q4_2021_17",
+      "domain": "ectsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 3,
+        "uncertain": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "60282bc8a671c99661491aa9abc06641828946de68d8ac9345549a94604c50f7",
+      "critic_elapsed_seconds": 16.084546291967854
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb89_29",
+      "domain": "news",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb89_5",
+      "domain": "news",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb89_30",
+      "domain": "news",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb88_2",
+      "domain": "news",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb88_20",
+      "domain": "news",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb84_8",
+      "domain": "news",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 2,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb88_10",
+      "domain": "news",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 6,
+      "critic_status_counts": {
+        "supported": 6
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "a9225825d863352e050bbde0da2f31e075696ea34d4730254a3f33241bb57a4c",
+      "critic_elapsed_seconds": 9.752205625001807
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb85_5",
+      "domain": "news",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 5
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "4fd4bfa67cb953dcd6677c3a6b271f909a52a59dc0f34bf4358e8ee324f9a053",
+      "critic_elapsed_seconds": 10.905158083012793
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb85_11",
+      "domain": "news",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 5
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "69267ec66f75585648495b076a9286ffb8864bd600bacda874f5792d227b4ff6",
+      "critic_elapsed_seconds": 7.87884004204534
+    },
+    {
+      "id": "63f9455b8d931ba6e664fb84_29",
+      "domain": "news",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 3,
+        "uncertain": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "29d74708000007e415b4d5d760299fc70f4e2d70ade598e1cc921b28fb0837d2",
+      "critic_elapsed_seconds": 43.007149041979574
+    },
+    {
+      "id": "spotify_podcast_2_12",
+      "domain": "podcast",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 3,
+        "unsupported": 2
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "151997ecec6721e218b079cfd1e3cf73219f5883e5ee32bb1236d5a5a232ecf4",
+      "critic_elapsed_seconds": 47.94778375001624
+    },
+    {
+      "id": "spotify_podcast_4_20",
+      "domain": "podcast",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "spotify_podcast_3_14",
+      "domain": "podcast",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "spotify_podcast_3_18",
+      "domain": "podcast",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "spotify_podcast_4_22",
+      "domain": "podcast",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "spotify_podcast_4_9",
+      "domain": "podcast",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {
+        "supported": 5,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "f5c397629676f113b5f593fae9c656b5d4071ae31fd6d183bea0762e97d9b095",
+      "critic_elapsed_seconds": 16.920120541995857
+    },
+    {
+      "id": "spotify_podcast_7_25",
+      "domain": "podcast",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 6,
+      "critic_status_counts": {
+        "supported": 6
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "6ac4a081e7fe2847b44d80873852d13383e938960f395961d4a64a680e2b32c2",
+      "critic_elapsed_seconds": 23.752191250037868
+    },
+    {
+      "id": "spotify_podcast_3_3",
+      "domain": "podcast",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 10,
+      "critic_status_counts": {
+        "supported": 10
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "84efd3a7598f7b24b6eac4ebdac734e73f24fb608a84546663c59ef1d481f0a8",
+      "critic_elapsed_seconds": 44.09035954205319
+    },
+    {
+      "id": "spotify_podcast_2_18",
+      "domain": "podcast",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {
+        "supported": 9,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "f19b4f4ec84a92244a8f1662e504ee92a402e7e928f026b16175f943acfb2e76",
+      "critic_elapsed_seconds": 24.97080583398929
+    },
+    {
+      "id": "spotify_podcast_7_11",
+      "domain": "podcast",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "q_test_18_0",
+      "domain": "qmsumm",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "q_test_17_13",
+      "domain": "qmsumm",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 5
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "2bf6b22272aed3a2fcca605be93430ec132551950b1ee4f43911fd985fa8c1f0",
+      "critic_elapsed_seconds": 40.87123858300038
+    },
+    {
+      "id": "q_test_16_29",
+      "domain": "qmsumm",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "q_test_18_9",
+      "domain": "qmsumm",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 4,
+        "uncertain": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "5b715c3ea51a21fa82ec69086b0969089e9b72e040f46cfc8ebd9b7cc35538e2",
+      "critic_elapsed_seconds": 49.16060808300972
+    },
+    {
+      "id": "q_test_16_5",
+      "domain": "qmsumm",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "q_test_16_0",
+      "domain": "qmsumm",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 7,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "q_test_15_33",
+      "domain": "qmsumm",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "q_test_15_og",
+      "domain": "qmsumm",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "q_test_18_17",
+      "domain": "qmsumm",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 5
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "902851066e2e1ea86c0c20720d84a5384d74b99e2084b6d54b5d9fb9b90dabe4",
+      "critic_elapsed_seconds": 52.60195999999996
+    },
+    {
+      "id": "q_test_15_10",
+      "domain": "qmsumm",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_call_2_8",
+      "domain": "sales_call",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 8,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_call_3_16",
+      "domain": "sales_call",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 11,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_call_2_33",
+      "domain": "sales_call",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_call_1_7",
+      "domain": "sales_call",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 9,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_call_3_0",
+      "domain": "sales_call",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 12,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_call_1_3",
+      "domain": "sales_call",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {
+        "supported": 8,
+        "uncertain": 1,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "4db395329ebe7a268413119754fbe8588c372cae6eeb9d16bf22590555da0542",
+      "critic_elapsed_seconds": 24.117586457985453
+    },
+    {
+      "id": "sales_call_2_30",
+      "domain": "sales_call",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 9,
+      "critic_status_counts": {
+        "supported": 9
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "6f49229439f5e2c7246cb197c978bba81f60bd7545dea676f169ba57cfd31bce",
+      "critic_elapsed_seconds": 13.711502416990697
+    },
+    {
+      "id": "sales_call_1_0",
+      "domain": "sales_call",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_call_3_11",
+      "domain": "sales_call",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 11,
+      "critic_status_counts": {
+        "supported": 11
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "6b2ab86edec2037eb4bedc022cb47cf5425c0bdfd41476b678daa5f2c4431157",
+      "critic_elapsed_seconds": 9.58677437499864
+    },
+    {
+      "id": "sales_call_0_5",
+      "domain": "sales_call",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 11,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_email_4_12",
+      "domain": "sales_email",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 9,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_email_2_4",
+      "domain": "sales_email",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {
+        "supported": 9,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "8d7d7567b0786f8d98f46f619ed395e407c30905fa08db7ba8ec31d82795e2d7",
+      "critic_elapsed_seconds": 31.54758612497244
+    },
+    {
+      "id": "sales_email_2_28",
+      "domain": "sales_email",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_email_2_8",
+      "domain": "sales_email",
+      "label": 0,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 9,
+      "critic_status_counts": {
+        "supported": 9
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "9f480511c6387efe626e2f9335ea526ecd417addfe0d76c04dce7418c45b786f",
+      "critic_elapsed_seconds": 11.532840124971699
+    },
+    {
+      "id": "sales_email_4_19",
+      "domain": "sales_email",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 9,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "sales_email_3_3",
+      "domain": "sales_email",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 7,
+      "critic_status_counts": {
+        "supported": 6,
+        "uncertain": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "30dfd12d788bbb71993434a5e8bdff47ecac731bd26bc7309ab10bf587f61380",
+      "critic_elapsed_seconds": 36.56975758401677
+    },
+    {
+      "id": "sales_email_4_25",
+      "domain": "sales_email",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {
+        "supported": 6,
+        "uncertain": 1,
+        "unsupported": 3
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "6ee5363bb95cc282ae4ef5958f4ac4709c8cfc7d7aabf240cf55714bb75613bb",
+      "critic_elapsed_seconds": 33.79599066701485
+    },
+    {
+      "id": "sales_email_1_13",
+      "domain": "sales_email",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 10,
+      "critic_status_counts": {
+        "supported": 8,
+        "uncertain": 1,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "a49555f9703a925c75b8a5598bb007068f25f05ea988cef1e2ae5628a72ef8ed",
+      "critic_elapsed_seconds": 49.79953304200899
+    },
+    {
+      "id": "sales_email_3_og",
+      "domain": "sales_email",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 7,
+      "critic_status_counts": {
+        "supported": 6,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "1b6d1fb3a0ce2efde55816a9944594d06da64f2f9822d2a678c251b698b1195b",
+      "critic_elapsed_seconds": 40.29173512500711
+    },
+    {
+      "id": "sales_email_3_10",
+      "domain": "sales_email",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 7,
+      "critic_status_counts": {
+        "supported": 6,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "093471818dbafa63524cc14778a71c18ef1d1ea175734f67a77e1a664fe35c54",
+      "critic_elapsed_seconds": 43.02604137500748
+    },
+    {
+      "id": "samsum_train_13716074_16",
+      "domain": "samsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13820270_8",
+      "domain": "samsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13716074_1",
+      "domain": "samsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13731241_10",
+      "domain": "samsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13820270_25",
+      "domain": "samsum",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13716509_26",
+      "domain": "samsum",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 2,
+        "unsupported": 3
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "53b14c9759a9041eeceb7cf8a18a9b24f2fa9ed9280fe917c82b8a0d963f4431",
+      "critic_elapsed_seconds": 49.48458433302585
+    },
+    {
+      "id": "samsum_train_13731241_25",
+      "domain": "samsum",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13716509_13",
+      "domain": "samsum",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13820270_21",
+      "domain": "samsum",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "samsum_train_13716074_5",
+      "domain": "samsum",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 6,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "B1gtK0NKwr_18",
+      "domain": "scitldr",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "ryeT47FIIS_19",
+      "domain": "scitldr",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 2,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "ryeT47FIIS_29",
+      "domain": "scitldr",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 2,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "B1gtK0NKwr_37",
+      "domain": "scitldr",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 2,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "rJIN_4lA-_14",
+      "domain": "scitldr",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "B1gtK0NKwr_og",
+      "domain": "scitldr",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 4,
+      "critic_status_counts": {
+        "supported": 4
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "2fc3c0a320e54387dc7457aafacaf467a8eb23f78c554c362d588653960b1b10",
+      "critic_elapsed_seconds": 3.1999060829984955
+    },
+    {
+      "id": "rJgMlhRctm_7",
+      "domain": "scitldr",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 7,
+      "critic_status_counts": {
+        "supported": 5,
+        "unsupported": 2
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "b530827ddf3ab6ee8febe8c781cbd371c9367ce359250128283b7320f3fa8c6e",
+      "critic_elapsed_seconds": 5.9912067909608595
+    },
+    {
+      "id": "ryeT47FIIS_11",
+      "domain": "scitldr",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 2,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "45d31a3cb4d8606c8e5503028e94b38c974f7e3361a7e845337787c97015ea7e",
+      "critic_elapsed_seconds": 3.7839459590031765
+    },
+    {
+      "id": "rJIN_4lA-_16",
+      "domain": "scitldr",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 3
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "67f289f779891b3147a44816eefa10dbaf74a9664ebf2b3c21ae5dcba40d4556",
+      "critic_elapsed_seconds": 15.999327207973693
+    },
+    {
+      "id": "rJIN_4lA-_10",
+      "domain": "scitldr",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": true,
+      "atomic_claims": 3,
+      "critic_status_counts": {
+        "supported": 3
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "b9ef160f4ddc4af3d9ad647ccdcac6535824e391f41e04ad7cb141ce583d967b",
+      "critic_elapsed_seconds": 9.149509750015568
+    },
+    {
+      "id": "shakespeare_2_23",
+      "domain": "shakespeare",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 14,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "shakespeare_3_11",
+      "domain": "shakespeare",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "shakespeare_0_7",
+      "domain": "shakespeare",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 4,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "shakespeare_1_25",
+      "domain": "shakespeare",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 9,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "shakespeare_2_5",
+      "domain": "shakespeare",
+      "label": 0,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 12,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "shakespeare_0_19",
+      "domain": "shakespeare",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 7,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "shakespeare_3_2",
+      "domain": "shakespeare",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {
+        "supported": 3,
+        "uncertain": 1,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "250c0d9a2ef515eee6c501c8945e1edbac2d1210819513f73796894c268935f2",
+      "critic_elapsed_seconds": 37.26021366601344
+    },
+    {
+      "id": "shakespeare_2_22",
+      "domain": "shakespeare",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 12,
+      "critic_status_counts": {
+        "supported": 11,
+        "uncertain": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "30d817504ee062f05830851a5dda3ffea696a915664d5efca8f30e10b0c7aa01",
+      "critic_elapsed_seconds": 31.048132374999113
+    },
+    {
+      "id": "shakespeare_3_23",
+      "domain": "shakespeare",
+      "label": 1,
+      "primary_supported": false,
+      "critic_called": false,
+      "predicted_supported": false,
+      "atomic_claims": 5,
+      "critic_status_counts": {},
+      "critic_reference_integrity": true,
+      "critic_response_sha256": null,
+      "critic_elapsed_seconds": 0.0
+    },
+    {
+      "id": "shakespeare_1_37",
+      "domain": "shakespeare",
+      "label": 1,
+      "primary_supported": true,
+      "critic_called": true,
+      "predicted_supported": false,
+      "atomic_claims": 8,
+      "critic_status_counts": {
+        "supported": 7,
+        "unsupported": 1
+      },
+      "critic_reference_integrity": true,
+      "critic_response_sha256": "789909c7711db012748fc057ae87341ed1412ee477277b89f6eee1b5af6f5408",
+      "critic_elapsed_seconds": 66.14060437498847
+    }
+  ],
+  "result_sha256": "0420c884549d358402301b38a7188347b75f5ad01b8ad2fe4a4e89f7e2704bc3"
+}
