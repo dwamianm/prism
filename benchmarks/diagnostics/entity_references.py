@@ -178,6 +178,7 @@ async def run(args, *, cases=None):
                                 for edge in plan.edges
                             ),
                             "extraction": saved.result,
+                            "extraction_grounding_policy": saved.grounding_policy,
                             "fact_epistemic_types": [
                                 node.epistemic_type.value for node in facts
                             ],
