@@ -9,7 +9,6 @@ import pytest
 
 from research.vsa.core import (
     DEFAULT_DIM,
-    HV,
     bind,
     bundle,
     hard_quantize,

@@ -7,12 +7,26 @@ to avoid blocking the event loop.
 
 import asyncio
 import json
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from uuid import UUID
 
 import duckdb
 
-from prme.models import Event
+from prme.models import Event, MemoryNode, ProcessingStatus
+from prme.models.direct_store import DirectStoreRecord, direct_store_operation_id
+from prme.models.extraction import ExtractionRecord, extraction_operation_id
+from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
+from prme.storage._threading import run_to_completion
+from prme.storage.fast_ingest import (
+    FastIngestAdmission,
+    FastIngestBatchRecord,
+    fast_ingest_payload,
+    replay_fast_ingest,
+    validate_fast_ingest_record,
+)
+from prme.storage.extraction_work import ExtractionWorkRepository, insert_duck_work, validate_duck_claim
+from prme.models.extraction_work import ExtractionClaim
 from prme.types import Scope
 
 # Explicit column list used in all SELECT queries to avoid positional
@@ -39,10 +53,150 @@ class EventStore:
     ) -> None:
         self._conn = conn
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
+        self.extraction_work = ExtractionWorkRepository(conn=conn, conn_lock=self._conn_lock)
 
     # --- Public async API ---
 
-    async def append(self, event: Event) -> str:
+    async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
+        """Read verified completion through the immutable source owner's scope."""
+        async with self._conn_lock:
+            return await run_to_completion(self._get_derivation_receipt_sync, event_id, user_id)
+
+    def _get_derivation_receipt_sync(self, event_id: str, user_id: str) -> DerivationReceipt | None:
+        from prme.storage.derivation import _receipt
+
+        event_id = str(UUID(event_id))
+        plan = self._get_derivation_plan_sync(event_id, user_id)
+        if plan is None:
+            return None
+        row = self._conn.execute(
+            "SELECT payload FROM operations WHERE id = ? AND target_id = ? "
+            "AND op_type = 'DERIVATION_COMMITTED'", [plan.receipt_operation_id, event_id],
+        ).fetchone()
+        return _receipt(plan, row[0] if row else None)
+
+    async def get_derivation_plan(self, event_id: str, *, user_id: str, revision: int | None = None) -> DerivationPlan | None:
+        """Read the immutable prepared derivation through the source owner."""
+        async with self._conn_lock:
+            return await run_to_completion(self._get_derivation_plan_sync, event_id, user_id, revision)
+
+    def _get_derivation_plan_sync(self, event_id: str, user_id: str, revision: int | None = None) -> DerivationPlan | None:
+        if revision is None:
+            work = self._conn.execute("SELECT plan_revision FROM event_extractions WHERE event_id = ?", [event_id]).fetchone()
+            revision = work[0] if work else 1
+        row = self._conn.execute(
+            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            "ON o.target_id = e.id::VARCHAR WHERE o.id = ? AND e.id = ? "
+            "AND e.user_id = ? AND o.op_type = 'DERIVATION_PREPARED'",
+            [derivation_operation_id(event_id, revision=revision), event_id, user_id],
+        ).fetchone()
+        if row is None:
+            return None
+        payload = json.loads(row[0])
+        plan = (DerivationPlan.model_validate_json(payload["plan"]) if isinstance(payload["plan"], str)
+                else DerivationPlan.model_validate(payload["plan"]))
+        plan.verify_source(user_id, row[1], row[2])
+        if plan.event_id != UUID(event_id) or plan.revision != revision or plan.checksum != payload["checksum"]:
+            raise ValueError("Prepared derivation identity or checksum does not match")
+        return plan
+
+    async def record_derivation_plan(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationPlan:
+        """Save the first prepared plan; same-ID payload changes are rejected."""
+        snapshot = DerivationPlan.model_validate_json(plan.model_dump_json())
+        async with self._conn_lock:
+            return await run_to_completion(self._record_derivation_plan_sync, snapshot, claim)
+
+    def _record_derivation_plan_sync(self, plan: DerivationPlan, claim: ExtractionClaim | None = None) -> DerivationPlan:
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            managed = validate_duck_claim(self._conn, str(plan.event_id), plan.user_id, claim)
+            source = self._conn.execute(
+                "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(plan.event_id)],
+            ).fetchone()
+            if source is None:
+                raise ValueError("A derivation requires a persisted source event")
+            plan.verify_source(*source)
+            if plan.revision != (managed["plan_revision"] if managed else 1):
+                raise ValueError("Prepared plan does not match the current work revision")
+            self._conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                "VALUES (?, 'DERIVATION_PREPARED', ?, ?, 'derivation', ?, ?) ON CONFLICT (id) DO NOTHING",
+                [plan.prepared_operation_id, str(plan.event_id),
+                 json.dumps({"plan": plan.model_dump_json(), "checksum": plan.checksum}),
+                 plan.scope.value, plan.created_at],
+            )
+            saved = self._get_derivation_plan_sync(str(plan.event_id), plan.user_id)
+            if saved is None or (saved.id == plan.id and saved.checksum != plan.checksum):
+                raise ValueError("Prepared derivation ID conflicts with a different payload")
+            from prme.storage.derivation_registry import register_duck
+            register_duck(self._conn, saved)
+            if managed is not None:
+                self._conn.execute("UPDATE event_extractions SET plan_id = ? WHERE event_id = ?",
+                                   [str(saved.id), str(plan.event_id)])
+            validate_duck_claim(self._conn, str(plan.event_id), plan.user_id, claim)
+            self._conn.execute("COMMIT")
+            return saved
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
+    async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
+        """Read the saved extraction only through its source owner's boundary."""
+        async with self._conn_lock:
+            return await run_to_completion(self._get_extraction_sync, event_id, user_id)
+
+    def _get_extraction_sync(self, event_id: str, user_id: str) -> ExtractionRecord | None:
+        row = self._conn.execute(
+            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            "ON o.target_id = e.id::VARCHAR WHERE o.id = ? AND e.id = ? "
+            "AND e.user_id = ? AND o.op_type = 'EXTRACTION_VALIDATED'",
+            [extraction_operation_id(event_id), event_id, user_id],
+        ).fetchone()
+        if row is None:
+            return None
+        record = ExtractionRecord.model_validate_json(row[0])
+        record.verify_source(user_id, row[1], row[2])
+        if str(record.event_id) != str(UUID(event_id)):
+            raise ValueError("Extraction record does not match its source event")
+        return record
+
+    async def record_extraction(self, record: ExtractionRecord, *, claim: ExtractionClaim | None = None) -> ExtractionRecord:
+        """Append once; concurrent attempts reuse the first durable extraction."""
+        # Serialize before yielding so mutation of a caller's nested dict cannot
+        # change the durable payload while a worker thread is waiting to run.
+        snapshot = ExtractionRecord.model_validate_json(record.model_dump_json())
+        async with self._conn_lock:
+            return await run_to_completion(self._record_extraction_sync, snapshot, claim)
+
+    def _record_extraction_sync(self, record: ExtractionRecord, claim: ExtractionClaim | None = None) -> ExtractionRecord:
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            validate_duck_claim(self._conn, str(record.event_id), record.user_id, claim)
+            source = self._conn.execute(
+                "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(record.event_id)],
+            ).fetchone()
+            if source is None:
+                raise ValueError("Extraction requires a matching persisted source event")
+            record.verify_source(*source)
+            self._conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, "
+                "namespace_id, created_at) VALUES (?, 'EXTRACTION_VALIDATED', ?, ?, ?, ?, ?) "
+                "ON CONFLICT (id) DO NOTHING",
+                [record.operation_id, str(record.event_id), record.model_dump_json(),
+                 "extraction", record.scope.value, record.created_at],
+            )
+            saved = self._get_extraction_sync(str(record.event_id), record.user_id)
+            if saved is None:
+                raise ValueError("Extraction operation ID conflicts with another operation")
+            validate_duck_claim(self._conn, str(record.event_id), record.user_id, claim)
+            self._conn.execute("COMMIT")
+            return saved
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
+    async def append(self, event: Event, *, defer_materialization: bool = False,
+                     defer_extraction: bool = False, store_node: MemoryNode | None = None) -> str:
         """Append an event to the immutable event log.
 
         Args:
@@ -51,9 +205,224 @@ class EventStore:
         Returns:
             The string representation of the event's UUID.
         """
+        from prme.storage.metadata import snapshot_metadata
+        event = event.model_copy(update={"metadata": snapshot_metadata(event.metadata)})
+        if store_node is not None:
+            store_node = store_node.model_copy(update={"metadata": snapshot_metadata(store_node.metadata)})
+        record = None
+        if store_node is not None:
+            if defer_extraction:
+                raise ValueError("Direct store work cannot also request LLM extraction")
+            record = DirectStoreRecord.model_validate_json(DirectStoreRecord(
+                event_id=event.id, content_hash=event.content_hash, node=store_node,
+            ).model_dump_json())
+            record.verify_source(event)
+            defer_materialization = True
         async with self._conn_lock:
-            await asyncio.to_thread(self._append_sync, event)
+            await run_to_completion(self._append_with_work_sync, event, defer_materialization, defer_extraction, record)
         return str(event.id)
+
+    async def append_many(
+        self,
+        events: Sequence[Event],
+        *,
+        defer_materialization: bool = False,
+        record: FastIngestBatchRecord | None = None,
+    ) -> FastIngestAdmission:
+        """Atomically append an ordered raw-event batch and optional repair work.
+
+        This admission path intentionally excludes direct-store snapshots and
+        extraction work. It backs ``ingest_fast_many()``, whose raw NOTE
+        materialization is deterministic from each immutable event.
+        """
+        from prme.storage.metadata import snapshot_metadata
+
+        snapshots = tuple(
+            event.model_copy(update={"metadata": snapshot_metadata(event.metadata)})
+            for event in events
+        )
+        event_ids = [str(event.id) for event in snapshots]
+        if len(event_ids) != len(set(event_ids)):
+            raise ValueError("A raw event batch cannot contain duplicate IDs")
+        if record is not None:
+            validate_fast_ingest_record(record, snapshots)
+        if record is not None and not defer_materialization:
+            raise ValueError("Fast-ingest retry identity requires durable materialization")
+        if not snapshots:
+            return FastIngestAdmission(event_ids=())
+        async with self._conn_lock:
+            return await run_to_completion(
+                self._append_many_sync,
+                snapshots,
+                defer_materialization,
+                record,
+            )
+
+    def _append_many_sync(
+        self,
+        events: tuple[Event, ...],
+        defer_materialization: bool,
+        record: FastIngestBatchRecord | None,
+    ) -> FastIngestAdmission:
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            if record is not None:
+                row = self._conn.execute(
+                    "SELECT op_type,payload FROM operations WHERE id=?",
+                    [str(record.operation_id)],
+                ).fetchone()
+                replayed = replay_fast_ingest(row, record)
+                if replayed is not None:
+                    self._validate_fast_ingest_replay_sync(replayed, record.user_id)
+                    self._conn.execute("COMMIT")
+                    return replayed
+                self._conn.execute(
+                    """INSERT INTO operations
+                    (id, op_type, target_id, payload, actor_id, created_at)
+                    VALUES (?, 'FAST_INGEST_BATCH', ?, ?, ?, ?)""",
+                    [
+                        str(record.operation_id),
+                        str(record.request_id),
+                        fast_ingest_payload(record),
+                        record.user_id,
+                        record.admitted_at,
+                    ],
+                )
+            self._conn.executemany(
+                """
+                INSERT INTO events (
+                    id, timestamp, role, content, content_hash,
+                    user_id, session_id, scope, metadata, created_at,
+                    event_time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [self._event_values(event) for event in events],
+            )
+            if defer_materialization:
+                self._conn.executemany(
+                    "INSERT INTO event_materializations (event_id) VALUES (?)",
+                    [(str(event.id),) for event in events],
+                )
+            self._conn.execute("COMMIT")
+            return FastIngestAdmission(
+                event_ids=tuple(event.id for event in events)
+            )
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
+    def _validate_fast_ingest_replay_sync(
+        self,
+        admission: FastIngestAdmission,
+        user_id: str,
+    ) -> None:
+        for event_id in admission.event_ids:
+            row = self._conn.execute(
+                """SELECT e.id FROM events e
+                JOIN event_materializations m ON m.event_id=e.id
+                WHERE e.id=? AND e.user_id=?""",
+                [str(event_id), user_id],
+            ).fetchone()
+            if row is None:
+                raise ValueError("Fast-ingest journal references unavailable work")
+
+    def _append_with_work_sync(self, event: Event, deferred: bool, extraction: bool = False, record: DirectStoreRecord | None = None) -> None:
+        if not deferred and not extraction:
+            self._append_sync(event)
+            return
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._append_sync(event)
+            if deferred:
+                self._conn.execute(
+                    "INSERT INTO event_materializations (event_id) VALUES (?)", [str(event.id)],
+                )
+            if extraction:
+                insert_duck_work(self._conn, str(event.id))
+            if record is not None:
+                self._conn.execute(
+                    "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                    "VALUES (?, 'DIRECT_STORE_REQUESTED', ?, ?, 'store', ?, ?)",
+                    [record.operation_id, str(event.id), record.operation_payload(), event.scope.value, event.created_at],
+                )
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
+    async def get_direct_store(self, event_id: str, *, user_id: str) -> DirectStoreRecord | None:
+        """Read initial typed values only through their source owner's scope."""
+        async with self._conn_lock:
+            row = await run_to_completion(lambda: self._conn.execute(
+                "SELECT o.payload FROM operations o JOIN events e ON o.target_id = e.id::VARCHAR "
+                "WHERE o.id = ? AND o.op_type = 'DIRECT_STORE_REQUESTED' AND e.id = ? AND e.user_id = ?",
+                [direct_store_operation_id(event_id), event_id, user_id],
+            ).fetchone())
+        if row is None:
+            return None
+        record = DirectStoreRecord.from_operation_payload(row[0])
+        event = await self.get(event_id)
+        if event is None:
+            raise ValueError("Direct store source is missing")
+        record.verify_source(event)
+        return record
+
+    async def pending_materializations(
+        self, *, user_id: str | None = None, limit: int = 500,
+    ) -> list[Event]:
+        """Read a bounded batch of durable work, oldest/retried-last first."""
+        def read() -> list[Event]:
+            columns = ", ".join(f"e.{c.strip()}" for c in _EVENT_COLUMNS.split(","))
+            scoped = " AND e.user_id = ?" if user_id is not None else ""
+            params = [user_id, limit] if user_id is not None else [limit]
+            rows = self._conn.execute(
+                f"SELECT {columns} FROM events e JOIN event_materializations m "
+                "ON e.id = m.event_id WHERE m.status = 'pending'" + scoped +
+                " ORDER BY m.attempts, e.timestamp, e.id LIMIT ?", params,
+            ).fetchall()
+            return [self._row_to_event(row) for row in rows]
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
+
+    async def materialization_count(self) -> int:
+        async with self._conn_lock:
+            return await run_to_completion(lambda: self._conn.execute(
+                "SELECT count(*) FROM event_materializations WHERE status = 'pending'"
+            ).fetchone()[0])
+
+    async def finish_materialization(self, event_id: str, *, error: str | None = None) -> None:
+        """Acknowledge durable completion or retain a failed item for retry."""
+        async with self._conn_lock:
+            await run_to_completion(
+                self._conn.execute,
+                "UPDATE event_materializations SET status = ?, attempts = attempts + 1, "
+                "last_error = ?, updated_at = current_timestamp WHERE event_id = ? "
+                "AND status = 'pending'",
+                ["complete" if error is None else "pending", error, event_id],
+            )
+
+    async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
+        async with self._conn_lock:
+            row = await run_to_completion(lambda: self._conn.execute(
+                "SELECT m.event_id, m.status, m.attempts, m.last_error, m.updated_at "
+                "FROM event_materializations m JOIN events e ON e.id = m.event_id "
+                "WHERE m.event_id = ? AND e.user_id = ?", [event_id, user_id],
+            ).fetchone())
+        if row is None:
+            return None
+        return ProcessingStatus(**dict(zip(
+            ("event_id", "status", "attempts", "last_error", "updated_at"), row,
+        )))
+
+    async def processing_counts(self, *, user_id: str) -> tuple[int, int]:
+        async with self._conn_lock:
+            row = await run_to_completion(lambda: self._conn.execute(
+                "SELECT count(*), count(m.last_error) FROM event_materializations m "
+                "JOIN events e ON e.id = m.event_id WHERE m.status = 'pending' AND e.user_id = ?",
+                [user_id],
+            ).fetchone())
+        return row[0], row[1]
 
     async def get(self, event_id: str) -> Event | None:
         """Retrieve an event by its ID.
@@ -65,7 +434,7 @@ class EventStore:
             The Event if found, None otherwise.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(self._get_sync, event_id)
+            return await run_to_completion(self._get_sync, event_id)
 
     async def get_by_user(
         self,
@@ -90,7 +459,7 @@ class EventStore:
             List of Events ordered by timestamp descending.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_by_user_sync, user_id, session_id, scopes, limit, offset
             )
 
@@ -113,7 +482,7 @@ class EventStore:
             List of Events matching the content hash.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_by_hash_sync, content_hash, user_id, scopes
             )
 
@@ -121,9 +490,6 @@ class EventStore:
 
     def _append_sync(self, event: Event) -> None:
         """Insert an event into the events table (sync)."""
-        metadata_json = (
-            json.dumps(event.metadata) if event.metadata is not None else None
-        )
         self._conn.execute(
             """
             INSERT INTO events (
@@ -132,20 +498,27 @@ class EventStore:
                 event_time
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            [
-                str(event.id),
-                event.timestamp,
-                event.role,
-                event.content,
-                event.content_hash,
-                event.user_id,
-                event.session_id,
-                event.scope.value,
-                metadata_json,
-                event.created_at,
-                event.event_time,
-            ],
+            self._event_values(event),
         )
+
+    @staticmethod
+    def _event_values(event: Event) -> list[object]:
+        metadata_json = (
+            json.dumps(event.metadata) if event.metadata is not None else None
+        )
+        return [
+            str(event.id),
+            event.timestamp,
+            event.role,
+            event.content,
+            event.content_hash,
+            event.user_id,
+            event.session_id,
+            event.scope.value,
+            metadata_json,
+            event.created_at,
+            event.event_time,
+        ]
 
     def _get_sync(self, event_id: str) -> Event | None:
         """Retrieve a single event by ID (sync)."""
@@ -185,7 +558,7 @@ class EventStore:
         query = (
             f"SELECT {_EVENT_COLUMNS} FROM events "
             f"WHERE {where_clause} "
-            f"ORDER BY timestamp DESC "
+            f"ORDER BY timestamp DESC, id DESC "
             f"LIMIT ? OFFSET ?"
         )
         params.extend([limit, offset])
@@ -212,7 +585,7 @@ class EventStore:
         query = (
             f"SELECT {_EVENT_COLUMNS} FROM events "
             f"WHERE {where_clause} "
-            f"ORDER BY timestamp DESC"
+            f"ORDER BY timestamp DESC, id DESC"
         )
 
         result = self._conn.execute(query, params).fetchall()

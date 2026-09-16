@@ -20,6 +20,46 @@ The confidence model is designed to:
 
 ---
 
+### Implemented instruction repetition policy
+
+Automatic direct-store instruction reinforcement is conservative: a new explicit
+user/human `INSTRUCTION` must repeat the exact text of an active instruction in
+the same user and scope. Both records must be user-stated and observed/asserted.
+A source effective earlier than the existing instruction cannot confirm it.
+Vector similarity proposes up to five candidates; it is never itself credited
+as support. Ordinary facts/notes, negated or paraphrased rules, assistant echoes,
+speculation, and cross-scope content cannot automatically boost a rule. Index
+unavailability can leave a valid repetition unreinforced. This is a bounded
+repetition heuristic, not independent corroboration or calibrated confidence.
+Opt-in semantic re-mention reinforcement excludes instructions and stays within
+the source owner/scope, so it cannot bypass this instruction policy.
+Explicit `reinforce()` remains a caller-driven operation with its existing
+capped increments. It preserves values already above the increment caps.
+An explicit evidence ID must identify an existing event in the node's owner
+and scope, even for an unscoped operator; invalid evidence changes neither
+confidence, salience, timestamps nor references. Omitting evidence remains a
+caller confirmation, not external corroboration. This check does not establish
+that the event semantically supports the node. New reinforcement is atomic and
+journals complete before/after nodes; successful concurrent confirmations
+accumulate. An optional owner-scoped `request_id` UUID makes identical retries
+idempotent across restart, while changed node/evidence requests using that key
+fail. Unkeyed calls remain separate signals. Full historical operation replay
+remains incomplete; see [confirmation and retry semantics](REINFORCEMENT.md).
+The general update formula and correlation controls below
+remain design requirements rather than claims about this heuristic. Historical
+incorrect reinforcement is not retroactively undone.
+
+Store-time oscillation dampening is also a narrower implemented policy. It runs
+only with opt-in store supersedence, revalidates the complete bounded chain and
+its `SUPERSEDES` edges under lock, and atomically commits the confidence change
+with a deterministic, checksummed `PENALTY` record. The record retains complete
+before/after state and all chain inputs; concurrent and restarted attempts do
+not apply it twice. `oscillation_subtractive_v1` preserves the pre-existing
+absolute 0.1-per-cycle adjustment capped at 0.3. It is not the general
+multiplicative penalty policy proposed below, has no salience effect, and is not
+evidence that the lexical heuristic is calibrated. Historical unjournaled
+penalties are not reconstructed.
+
 ## 2. Reinforcement Update Rule
 
 When a positive signal is received for a memory object:

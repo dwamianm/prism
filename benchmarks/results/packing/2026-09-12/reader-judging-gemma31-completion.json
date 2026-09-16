@@ -1,0 +1,347 @@
+{
+  "report": "data/benchmarks/reader-judgments-gemma31-2611be7.json",
+  "report_sha256": "4e0f307f99dcfabf123a6c9a910c74544194582199f33e8511ca750ae6facbb9",
+  "raw_state_sha256": "356db814c82b79effdf7d000ac9b68072d9b64314991883a2838d2b0f24ff99e",
+  "native_process_exit_code": 0,
+  "complete": true,
+  "passed": true,
+  "unique_calls": 230,
+  "judgments": 238,
+  "prior_failed_attempts": [],
+  "metrics": {
+    "categories": {
+      "abstention": {
+        "after": 0.875,
+        "before": 1.0,
+        "delta": -0.125,
+        "interval_95": [
+          -0.375,
+          0.0
+        ],
+        "losses": 1,
+        "queries": 8,
+        "ties": 7,
+        "wins": 0
+      },
+      "knowledge-update": {
+        "after": 0.6,
+        "before": 0.55,
+        "delta": 0.05,
+        "interval_95": [
+          -0.15,
+          0.25
+        ],
+        "losses": 2,
+        "queries": 20,
+        "ties": 15,
+        "wins": 3
+      },
+      "multi-session": {
+        "after": 0.4,
+        "before": 0.2,
+        "delta": 0.2,
+        "interval_95": [
+          0.0,
+          0.43333333333333335
+        ],
+        "losses": 3,
+        "queries": 30,
+        "ties": 18,
+        "wins": 9
+      },
+      "single-session-assistant": {
+        "after": 1.0,
+        "before": 0.0,
+        "delta": 1.0,
+        "interval_95": [
+          1.0,
+          1.0
+        ],
+        "losses": 0,
+        "queries": 9,
+        "ties": 0,
+        "wins": 9
+      },
+      "single-session-preference": {
+        "after": 0.42857142857142855,
+        "before": 0.2857142857142857,
+        "delta": 0.14285714285714285,
+        "interval_95": [
+          0.0,
+          0.42857142857142855
+        ],
+        "losses": 0,
+        "queries": 7,
+        "ties": 6,
+        "wins": 1
+      },
+      "single-session-user": {
+        "after": 1.0,
+        "before": 0.8235294117647058,
+        "delta": 0.17647058823529413,
+        "interval_95": [
+          0.0,
+          0.35294117647058826
+        ],
+        "losses": 0,
+        "queries": 17,
+        "ties": 14,
+        "wins": 3
+      },
+      "temporal-reasoning": {
+        "after": 0.32142857142857145,
+        "before": 0.2857142857142857,
+        "delta": 0.03571428571428571,
+        "interval_95": [
+          -0.14285714285714285,
+          0.21428571428571427
+        ],
+        "losses": 3,
+        "queries": 28,
+        "ties": 21,
+        "wins": 4
+      }
+    },
+    "overall": {
+      "after": 0.5798319327731093,
+      "before": 0.4117647058823529,
+      "delta": 0.16806722689075632,
+      "interval_95": [
+        0.06722689075630252,
+        0.2605042016806723
+      ],
+      "losses": 9,
+      "queries": 119,
+      "ties": 81,
+      "wins": 29
+    }
+  },
+  "blinded_review": {
+    "clear_cases": 23,
+    "agreements": 23,
+    "rows": [
+      {
+        "id": "08a0f480bf8e0f97cdf954fd210902006b17111809dc0c201be7ea9c0ef3c1af",
+        "category": "single-session-user",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response accurately reflects the information provided in the reference answer.",
+        "agreement": true
+      },
+      {
+        "id": "100dfd029e56a3190016a3c57531021cf61557f57ef36169dc0472cc62cc6cb9",
+        "category": "single-session-assistant",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response fails to identify the app (Memrise) and instead claims the information is missing from the context.",
+        "agreement": true
+      },
+      {
+        "id": "171dce248150f79e21c0170958e749e11c76f8bab610c68f84e15a0be2e62355",
+        "category": "abstention",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies that the information is missing and explains why by referencing the available data about Dr. Smith.",
+        "agreement": true
+      },
+      {
+        "id": "190eb6ac73dcca3b106fa1dd33ee8dd711a06031326906145dd0f17cc4f932cf",
+        "category": "abstention",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response provides a specific calculation and estimated costs, whereas the reference states that the provided information is insufficient to answer the question.",
+        "agreement": true
+      },
+      {
+        "id": "1c8dae33690f12681a1e12b3aa0e043e59cc3e0cc17d5aabbacb968e81048569",
+        "category": "single-session-preference",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly incorporates the user's personal information regarding their success with beef stew and their interest in making yogurt.",
+        "agreement": true
+      },
+      {
+        "id": "2701b73c4a669cc649b4e197ddf9f098c34f3ee034efd1e6e0dc935271746d0e",
+        "category": "single-session-assistant",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies Pennsylvania as the state mentioned in the reference.",
+        "agreement": true
+      },
+      {
+        "id": "346e3ead2f4b4a48deba0e4d9f8b896626a9c01513e647456cf5afed5127de4b",
+        "category": "abstention",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies that the information is missing and explains why, matching the reference answer.",
+        "agreement": true
+      },
+      {
+        "id": "3df900373c659add9ff1b472a3b62828ab71672c02e500b7e5af6c62bbbf2bc1",
+        "category": "multi-session",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response states the user re-watched 1 movie, whereas the reference answer is 2.",
+        "agreement": true
+      },
+      {
+        "id": "4516d20fe198ee6fb983351ef8283215ca27405125efa90a559c6562eea811ce",
+        "category": "single-session-assistant",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies Memrise as the app that uses mnemonics.",
+        "agreement": true
+      },
+      {
+        "id": "645f1a9504414f3c782ad51f05a1780097d9e3f6221cb162770b329336ba1a2e",
+        "category": "single-session-user",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response accurately provides the color mentioned in the reference answer.",
+        "agreement": true
+      },
+      {
+        "id": "6e12d443d26a0db2a1f8bfe577ce30d6968ad4e44361cdbb72c2fb64c262c60c",
+        "category": "single-session-preference",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response fails to provide the requested tips and instead focuses on the absence of the specific plan in its memory, ignoring the user's personal preference for comparing Stratocasters and Les Pauls.",
+        "agreement": true
+      },
+      {
+        "id": "8a5adb18585b318d53a42c250895f0f62963e09fb5fb10d6801f563a4955bb10",
+        "category": "single-session-assistant",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response states it does not know the answer, whereas the reference answer identifies Pennsylvania.",
+        "agreement": true
+      },
+      {
+        "id": "8c17f5d2ba758214a8bc8c5f68f0007503594e6306dd49844f22ed60accee658",
+        "category": "knowledge-update",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response accurately identifies the highest score as 132 points, matching the reference answer.",
+        "agreement": true
+      },
+      {
+        "id": "8d67cd9c1cb51fd29adb02c02f126336deceac22e808c3f8bca403b328ace2b1",
+        "category": "temporal-reasoning",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response states it does not know the answer and claims there is no record of the workshop, whereas the reference provides a definitive answer.",
+        "agreement": true
+      },
+      {
+        "id": "97e11e7cab324edbe3772ede3a3ffb7588eb0254e0c4460433e10b408e48e219",
+        "category": "knowledge-update",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response provides the outdated count of 1250, whereas the reference answer indicates the current count is 1300.",
+        "agreement": true
+      },
+      {
+        "id": "98c0d27b4170eb3e296245f5c57ad2ed4101638310e81c6c41cf993d64004c1e",
+        "category": "knowledge-update",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies the current highest score as 132 points, matching the reference answer.",
+        "agreement": true
+      },
+      {
+        "id": "9d50fbe16d6b743eab51acc0cb39d2abc43342115539d09cd1ae772e2feb914a",
+        "category": "abstention",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies that the information is missing and avoids guessing, which aligns with the reference answer.",
+        "agreement": true
+      },
+      {
+        "id": "aca6bc391ac938e3e63352d799cf0486f311351b40b21745e003adc95a6f77dd",
+        "category": "single-session-preference",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response provides specific advice tailored to the user's interest in making yogurt in the slow cooker.",
+        "agreement": true
+      },
+      {
+        "id": "b589f754851297867f4520184b56eb20d2a1acff218d31a9e1a9b6d83a327898",
+        "category": "knowledge-update",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response fails to provide the current count of 1300, instead stating that the context does not provide a specific count for the current date.",
+        "agreement": true
+      },
+      {
+        "id": "c65d7ab27b0aef7830b8a931a1015b760d831dd72f7e60c9e35b5dc422637289",
+        "category": "single-session-preference",
+        "review": "reject",
+        "judge_correct": false,
+        "judge_reason": "The response fails to provide the requested tips and instead focuses on the absence of the visit in the memory context, ignoring the user's current intent.",
+        "agreement": true
+      },
+      {
+        "id": "d41c8d25d4df62cad749ca96f0764d8e37c24542e04b44b2e92dda92edfaefae",
+        "category": "temporal-reasoning",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies the persistent cough as the first health issue dealt with.",
+        "agreement": true
+      },
+      {
+        "id": "eebaf2a7702a6fdc18609bc40ab6c4ab6edf1460ea4db7d794b0eb9584c57a09",
+        "category": "single-session-user",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response accurately reflects the information provided in the reference.",
+        "agreement": true
+      },
+      {
+        "id": "f6fff1451253c49783d7be18ba0767517de181d86de138c2e9fa1d2bd6d64312",
+        "category": "temporal-reasoning",
+        "review": "accept",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies the persistent cough as the first health issue dealt with.",
+        "agreement": true
+      }
+    ],
+    "ambiguous": [
+      {
+        "id": "206fc106afc6ec9e6539900aef0bb1bc841c92c67e148ef3111bde468b3176a7",
+        "category": "single-session-user",
+        "review": "ambiguous",
+        "judge_correct": true,
+        "judge_reason": "The response correctly identifies the color mentioned in the memory records."
+      },
+      {
+        "id": "45f30c8fb56f1df22f7386de8961740349be16a1358922522d8c1ab67b708c75",
+        "category": "multi-session",
+        "review": "ambiguous",
+        "judge_correct": false,
+        "judge_reason": "The response concludes with 'I don't know', failing to provide the correct answer of 12 minutes despite calculating it correctly in the thought process."
+      },
+      {
+        "id": "6c908b3bb40ce93a18345851d794f78f1b0633f6b2c09e95733909830c4bb0f8",
+        "category": "multi-session",
+        "review": "ambiguous",
+        "judge_correct": true,
+        "judge_reason": "The response correctly calculates the difference as 12 minutes based on the provided data, matching the reference answer."
+      },
+      {
+        "id": "86d6f85939708b29e92edf6edfa10a3645146db4f680c57b562ec437c9c2e801",
+        "category": "multi-session",
+        "review": "ambiguous",
+        "judge_correct": false,
+        "judge_reason": "The response claims it does not know the exact number, whereas the reference answer is '2'. The response identifies the two specific movies but fails to provide the final count."
+      },
+      {
+        "id": "aebb07e5cb919ece178fa8ebdeccc5b0b1d39b7fd7cb60ada8fcd207cbead1cd",
+        "category": "temporal-reasoning",
+        "review": "ambiguous",
+        "judge_correct": false,
+        "judge_reason": "The response claims it is impossible to determine the order, but the provided context (two months ago vs. last Saturday) clearly indicates the webinar happened first."
+      }
+    ]
+  },
+  "limits": "One local Qwen3.5 4B reader and control-selected Gemma4 31B judge on 119 development questions. Custom category rubric; not official GPT-4o, independent human review, confirmation or comparative leadership. Report passed indicates workflow completion, not a quality gate."
+}

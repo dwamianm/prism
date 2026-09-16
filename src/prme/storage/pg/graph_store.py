@@ -13,10 +13,16 @@ import uuid as _uuid
 from datetime import datetime, timezone
 from uuid import UUID
 
-import asyncpg
+import asyncpg  # type: ignore[import-untyped]
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
+from prme.storage.organizer_merge import MergeResult
+from prme.storage.alias_proposal import AliasProposalResult
+from prme.models.derivation import DerivationPlan, DerivationReceipt
+from prme.models.extraction_work import ExtractionClaim
+from prme.models.profile import ProfilePublication
+from prme.models.consolidation import ConsolidationPublication
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -36,7 +42,7 @@ _NODE_COLUMNS = (
     "valid_from, valid_to, superseded_by, evidence_refs, "
     "created_at, updated_at, epistemic_type, source_type, "
     "decay_profile, last_reinforced_at, reinforcement_boost, "
-    "salience_base, confidence_base, pinned"
+    "salience_base, confidence_base, pinned, event_time, ttl_days"
 )
 
 # Node columns qualified with the "n." alias for queries that join
@@ -65,8 +71,47 @@ class PgGraphStore:
 
     # --- Node Operations ---
 
+    async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
+        """Publish graph state, vectors and a receipt in one transaction."""
+        from prme.storage.derivation import commit_postgres
+        return await commit_postgres(self, plan, claim=claim)
+
+    async def profile_generation(self, key: str) -> int:
+        from prme.storage.profile_publication import generation_postgres
+        return await generation_postgres(self, key)
+
+    async def publish_profile(self, plan: ProfilePublication) -> str:
+        """Atomically replace a generated profile after index preparation."""
+        from prme.storage.profile_publication import commit_postgres
+        return await commit_postgres(self, plan)
+
+    async def consolidation_generation(self, key: str) -> int:
+        from prme.storage.consolidation_publication import generation_postgres
+        return await generation_postgres(self, key)
+
+    async def prepare_consolidation(
+        self, plan: ConsolidationPublication
+    ) -> ConsolidationPublication:
+        from prme.storage.consolidation_publication import prepare_postgres
+        return await prepare_postgres(self, plan)
+
+    async def get_prepared_consolidation(
+        self, node_id: str, *, user_id: str
+    ) -> ConsolidationPublication | None:
+        from prme.storage.consolidation_publication import get_prepared_postgres
+        return await get_prepared_postgres(self, node_id, user_id=user_id)
+
+    async def publish_consolidation(self, plan: ConsolidationPublication) -> str:
+        from prme.storage.consolidation_publication import commit_postgres
+        return await commit_postgres(self, plan)
+
     async def create_node(self, node: MemoryNode) -> str:
         """Create a new node in the graph store."""
+        async with self._pool.acquire() as conn:
+            return await self._create_node_on_connection(conn, node)
+
+    async def _create_node_on_connection(self, conn, node: MemoryNode) -> str:
+        """Insert a node using the caller's connection and transaction."""
         evidence_json = (
             json.dumps([str(ref) for ref in node.evidence_refs])
             if node.evidence_refs
@@ -76,45 +121,46 @@ class PgGraphStore:
             json.dumps(node.metadata) if node.metadata is not None else None
         )
 
-        async with self._pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO nodes (
-                    id, node_type, user_id, session_id, scope, content,
-                    metadata, confidence, salience, lifecycle_state,
-                    valid_from, valid_to, superseded_by, evidence_refs,
-                    created_at, updated_at, epistemic_type, source_type,
-                    decay_profile, last_reinforced_at, reinforcement_boost,
-                    salience_base, confidence_base, pinned
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10,
-                          $11, $12, $13, $14::jsonb, $15, $16, $17, $18,
-                          $19, $20, $21, $22, $23, $24)
-                """,
-                str(node.id),
-                node.node_type.value,
-                node.user_id,
-                node.session_id,
-                node.scope.value,
-                node.content,
-                metadata_json,
-                node.confidence,
-                node.salience,
-                node.lifecycle_state.value,
-                node.valid_from,
-                node.valid_to,
-                str(node.superseded_by) if node.superseded_by else None,
-                evidence_json,
-                node.created_at,
-                node.updated_at,
-                node.epistemic_type.value,
-                node.source_type.value,
-                node.decay_profile.value,
-                node.last_reinforced_at,
-                node.reinforcement_boost,
-                node.salience_base,
-                node.confidence_base,
-                node.pinned,
-            )
+        await conn.execute(
+            """
+            INSERT INTO nodes (
+                id, node_type, user_id, session_id, scope, content,
+                metadata, confidence, salience, lifecycle_state,
+                valid_from, valid_to, superseded_by, evidence_refs,
+                created_at, updated_at, epistemic_type, source_type,
+                decay_profile, last_reinforced_at, reinforcement_boost,
+                salience_base, confidence_base, pinned, event_time, ttl_days
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10,
+                      $11, $12, $13, $14::jsonb, $15, $16, $17, $18,
+                      $19, $20, $21, $22, $23, $24, $25, $26)
+            """,
+            str(node.id),
+            node.node_type.value,
+            node.user_id,
+            node.session_id,
+            node.scope.value,
+            node.content,
+            metadata_json,
+            node.confidence,
+            node.salience,
+            node.lifecycle_state.value,
+            node.valid_from,
+            node.valid_to,
+            str(node.superseded_by) if node.superseded_by else None,
+            evidence_json,
+            node.created_at,
+            node.updated_at,
+            node.epistemic_type.value,
+            node.source_type.value,
+            node.decay_profile.value,
+            node.last_reinforced_at,
+            node.reinforcement_boost,
+            node.salience_base,
+            node.confidence_base,
+            node.pinned,
+            node.event_time,
+            node.ttl_days,
+        )
         return str(node.id)
 
     async def get_node(
@@ -133,7 +179,7 @@ class PgGraphStore:
             else:
                 row = await conn.fetchrow(
                     f"SELECT {_NODE_COLUMNS} FROM nodes "
-                    "WHERE id = $1 AND lifecycle_state IN ('tentative', 'stable')",
+                    "WHERE id = $1 AND lifecycle_state IN ('tentative', 'stable', 'contested')",
                     node_id,
                 )
         if row is None:
@@ -162,7 +208,7 @@ class PgGraphStore:
             query = (
                 f"SELECT {_NODE_COLUMNS} FROM nodes "
                 "WHERE id = ANY($1::uuid[]) "
-                "AND lifecycle_state IN ('tentative', 'stable')"
+                "AND lifecycle_state IN ('tentative', 'stable', 'contested')"
             )
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, node_ids)
@@ -176,6 +222,80 @@ class PgGraphStore:
             .replace("%", "\\%")
             .replace("_", "\\_")
         )
+
+    async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Resolve scoped evidence references without a newest-node heuristic."""
+        if not user_id:
+            raise ValueError("get_event_nodes requires user_id")
+        evidence = json.dumps([str(UUID(event_id))])
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                f"SELECT {_NODE_COLUMNS} FROM nodes WHERE user_id = $1 "
+                "AND evidence_refs @> $2::jsonb ORDER BY id", user_id, evidence,
+            )
+        return [self._record_to_node(row) for row in rows]
+
+    async def get_session_neighbors(
+        self,
+        trigger_ids: list[str],
+        *,
+        user_id: str,
+        window: int,
+        scopes: list[Scope] | None = None,
+    ) -> dict[str, list[MemoryNode]]:
+        """Fetch exact bounded neighborhoods without hydrating whole sessions."""
+        if not user_id or window < 0:
+            raise ValueError("get_session_neighbors requires user_id and a non-negative window")
+        ids = list(dict.fromkeys(str(UUID(node_id)) for node_id in trigger_ids))
+        if not ids:
+            return {}
+        active = [state.value for state in ACTIVE_LIFECYCLE_STATES]
+        scope_clause = ""
+        params: list = [ids, user_id, window, active]
+        if scopes:
+            params.append([scope.value for scope in scopes])
+            scope_clause = " AND scope = ANY($5::text[])"
+        query = f"""
+            WITH anchor_sessions AS (
+                SELECT DISTINCT session_id, scope
+                FROM nodes
+                WHERE id = ANY($1::uuid[])
+                  AND user_id = $2
+                  AND session_id IS NOT NULL
+                  AND lifecycle_state = ANY($4::text[])
+                  {scope_clause}
+            ), ranked AS (
+                SELECT n.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY n.session_id, n.scope
+                           ORDER BY n.created_at, n.id
+                       ) AS session_rank
+                FROM nodes n
+                JOIN anchor_sessions a
+                  ON n.session_id = a.session_id AND n.scope = a.scope
+                WHERE n.user_id = $2
+                  AND n.lifecycle_state = ANY($4::text[])
+            ), anchor_ranks AS (
+                SELECT id AS trigger_id, session_id, scope, session_rank
+                FROM ranked
+                WHERE id = ANY($1::uuid[])
+            )
+            SELECT a.trigger_id, {_NODE_COLUMNS_QUALIFIED}
+            FROM anchor_ranks a
+            JOIN ranked n
+              ON a.session_id = n.session_id
+             AND a.scope = n.scope
+             AND ABS(n.session_rank - a.session_rank) <= $3
+            ORDER BY a.trigger_id, n.session_rank, n.id
+        """
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+        windows: dict[str, list[MemoryNode]] = {}
+        for row in rows:
+            windows.setdefault(str(row["trigger_id"]), []).append(
+                self._record_to_node(row)
+            )
+        return windows
 
     async def query_nodes(
         self,
@@ -312,8 +432,46 @@ class PgGraphStore:
 
     # --- Node Update ---
 
+    async def scan_nodes(
+        self, *, user_id: str | None, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+        after_id: str | None = None, limit: int = 100,
+        operator_unscoped: bool = False,
+    ) -> list[MemoryNode]:
+        """Read one tenant or explicit operator page in immutable UUID order."""
+        if (
+            limit < 1
+            or user_id == ""
+            or (user_id is None and not operator_unscoped)
+        ):
+            raise ValueError("scan_nodes requires user_id and a positive limit")
+        states = list(ACTIVE_LIFECYCLE_STATES) if lifecycle_states is None else lifecycle_states
+        if not states:
+            return []
+        params: list = [[state.value for state in states]]
+        conditions = ["lifecycle_state = ANY($1::text[])"]
+        if user_id:
+            params.append(user_id)
+            conditions.append(f"user_id = ${len(params)}")
+        for field, value in (("scope", scope), ("node_type", node_type)):
+            if value is not None:
+                params.append(value.value)
+                conditions.append(f"{field} = ${len(params)}")
+        if after_id is not None:
+            params.append(str(UUID(after_id)))
+            conditions.append(f"id > ${len(params)}::uuid")
+        params.append(limit)
+        query = (f"SELECT {_NODE_COLUMNS} FROM nodes WHERE " + " AND ".join(conditions)
+                 + f" ORDER BY id ASC LIMIT ${len(params)}")
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+        return [self._record_to_node(row) for row in rows]
+
     # Fields allowed for update_node. Maps Python field name -> SQL column name.
     _UPDATE_ALLOWED_FIELDS: set[str] = {
+        "event_time",
+        "ttl_days",
         "reinforcement_boost",
         "last_reinforced_at",
         "confidence_base",
@@ -328,6 +486,22 @@ class PgGraphStore:
         "salience",
         "updated_at",
     }
+
+    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None, request_id: str | UUID | None = None) -> None:
+        from prme.storage.reinforcement import reinforce_postgres
+        await reinforce_postgres(self, node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id)
+
+    async def apply_oscillation_penalty(
+        self, node_id: str, chain_node_ids: list[str], *, user_id: str,
+    ) -> bool:
+        from prme.storage.oscillation_penalty import apply_postgres
+        return await apply_postgres(
+            self, node_id, chain_node_ids, user_id=user_id
+        )
+
+    async def evaluate_condition(self, node_id: str, state, **kwargs):
+        from prme.storage.condition_evaluation import evaluate_condition_postgres
+        return await evaluate_condition_postgres(self, node_id, state, **kwargs)
 
     async def update_node(self, node_id: str, **updates) -> None:
         """Update specific fields on an existing node.
@@ -404,32 +578,52 @@ class PgGraphStore:
 
     # --- Edge Operations ---
 
+    async def merge_nodes(self, node_a_id: str, node_b_id: str, *, user_id: str, kind: str, score: float) -> MergeResult | None:
+        """Atomically publish a compatible organizer merge and its journal."""
+        from prme.storage.organizer_merge import merge_postgres
+        return await merge_postgres(self, node_a_id, node_b_id, user_id=user_id, kind=kind, score=score)
+
+    async def propose_alias(
+        self, node_a_id: str, node_b_id: str, *, user_id: str,
+        alias_type: str, score: float,
+    ) -> AliasProposalResult | None:
+        """Atomically publish an unverified alias link and its journal."""
+        from prme.storage.alias_proposal import propose_postgres
+        return await propose_postgres(
+            self, node_a_id, node_b_id, user_id=user_id,
+            alias_type=alias_type, score=score,
+        )
+
     async def create_edge(self, edge: MemoryEdge) -> str:
         """Create a new edge between two nodes."""
+        async with self._pool.acquire() as conn:
+            return await self._create_edge_on_connection(conn, edge)
+
+    async def _create_edge_on_connection(self, conn, edge: MemoryEdge) -> str:
+        """Insert an edge using the caller's connection and transaction."""
         metadata_json = (
             json.dumps(edge.metadata) if edge.metadata is not None else None
         )
-        async with self._pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO edges (
-                    id, source_id, target_id, edge_type, user_id,
-                    confidence, valid_from, valid_to, provenance_event_id,
-                    metadata, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11)
-                """,
-                str(edge.id),
-                str(edge.source_id),
-                str(edge.target_id),
-                edge.edge_type.value,
-                edge.user_id,
-                edge.confidence,
-                edge.valid_from,
-                edge.valid_to,
-                str(edge.provenance_event_id) if edge.provenance_event_id else None,
-                metadata_json,
-                edge.created_at,
-            )
+        await conn.execute(
+            """
+            INSERT INTO edges (
+                id, source_id, target_id, edge_type, user_id,
+                confidence, valid_from, valid_to, provenance_event_id,
+                metadata, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11)
+            """,
+            str(edge.id),
+            str(edge.source_id),
+            str(edge.target_id),
+            edge.edge_type.value,
+            edge.user_id,
+            edge.confidence,
+            edge.valid_from,
+            edge.valid_to,
+            str(edge.provenance_event_id) if edge.provenance_event_id else None,
+            metadata_json,
+            edge.created_at,
+        )
         return str(edge.id)
 
     async def get_edges(
@@ -495,29 +689,15 @@ class PgGraphStore:
 
     # --- Lifecycle Transitions ---
 
-    async def promote(self, node_id: str) -> None:
-        """Promote a tentative node to stable."""
-        async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", node_id
-            )
-            if row is None:
-                raise ValueError(f"Node {node_id} not found")
-
-            current_state = LifecycleState(row["lifecycle_state"])
-            target_state = LifecycleState.STABLE
-
-            if not validate_transition(current_state, target_state):
-                raise ValueError(
-                    f"Cannot promote: node is {current_state.value}, "
-                    f"only Tentative nodes can be promoted"
-                )
-
-            await conn.execute(
-                "UPDATE nodes SET lifecycle_state = $1, updated_at = now() WHERE id = $2",
-                target_state.value,
-                node_id,
-            )
+    async def promote(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
+        """Atomically validate, apply and journal the promote transition."""
+        from prme.storage.lifecycle import transition_postgres
+        await transition_postgres(
+            self, node_id, "promote", request_id=request_id, actor_id=actor_id,
+        )
 
     async def supersede(
         self,
@@ -525,60 +705,30 @@ class PgGraphStore:
         new_node_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
-        """Mark a node as superseded by another."""
-        async with self._pool.acquire() as conn:
-            old_row = await conn.fetchrow(
-                "SELECT lifecycle_state, user_id FROM nodes WHERE id = $1",
-                old_node_id,
-            )
-            if old_row is None:
-                raise ValueError(f"Old node {old_node_id} not found")
-
-            new_row = await conn.fetchrow(
-                "SELECT id, user_id FROM nodes WHERE id = $1", new_node_id
-            )
-            if new_row is None:
-                raise ValueError(f"New node {new_node_id} not found")
-
-            current_state = LifecycleState(old_row["lifecycle_state"])
-            target_state = LifecycleState.SUPERSEDED
-
-            if not validate_transition(current_state, target_state):
-                raise ValueError(
-                    f"Cannot supersede: node is {current_state.value}, "
-                    f"only Tentative or Stable nodes can be superseded"
-                )
-
-            await conn.execute(
-                "UPDATE nodes SET lifecycle_state = $1, superseded_by = $2::uuid, "
-                "updated_at = now() WHERE id = $3",
-                target_state.value,
-                new_node_id,
-                old_node_id,
-            )
-
-        # Create SUPERSEDES edge: new_node -> old_node
-        provenance_uuid = None
-        if evidence_id is not None:
-            try:
-                provenance_uuid = UUID(evidence_id)
-            except ValueError:
-                logger.warning(
-                    "evidence_id %r is not a valid UUID, storing edge "
-                    "without provenance reference",
-                    evidence_id,
-                )
-
-        edge = MemoryEdge(
-            source_id=UUID(new_node_id),
-            target_id=UUID(old_node_id),
-            edge_type=EdgeType.SUPERSEDES,
-            user_id=old_row["user_id"],
-            confidence=1.0,
-            provenance_event_id=provenance_uuid,
+        """Atomically update replacement state, provenance edge and journal."""
+        await self.supersede_many(
+            [(old_node_id, new_node_id, evidence_id)], actor_id=actor_id,
         )
-        await self.create_edge(edge)
+
+    async def retire_consolidated(self, source_id: str, summary_id: str, **policy) -> bool:
+        """Lock source and summary, then validate coverage and commit retirement."""
+        from prme.storage.consolidation_retirement import retire_postgres
+        return await retire_postgres(self, source_id, summary_id, **policy)
+
+    async def supersede_many(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        *,
+        actor_id: str = "system",
+    ) -> None:
+        """Commit all replacements and journals with ordered row locks."""
+        if not replacements:
+            return
+        from prme.storage.supersedence import supersede_many_postgres
+
+        await supersede_many_postgres(self, replacements, actor_id=actor_id)
 
     async def contradict(
         self,
@@ -586,25 +736,80 @@ class PgGraphStore:
         node_b_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark two nodes as contradicting each other."""
-        async with self._pool.acquire() as conn:
+        node_a_id, node_b_id = str(UUID(node_a_id)), str(UUID(node_b_id))
+        async with self._pool.acquire() as conn, conn.transaction():
+            await conn.fetch(
+                "SELECT id FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
+                [node_a_id, node_b_id],
+            )
             row_a = await conn.fetchrow(
-                "SELECT lifecycle_state, user_id FROM nodes WHERE id = $1",
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1",
                 node_a_id,
             )
             if row_a is None:
                 raise ValueError(f"Node {node_a_id} not found")
 
             row_b = await conn.fetchrow(
-                "SELECT lifecycle_state, user_id FROM nodes WHERE id = $1",
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1",
                 node_b_id,
             )
             if row_b is None:
                 raise ValueError(f"Node {node_b_id} not found")
 
+            if UUID(node_a_id) == UUID(node_b_id):
+                raise ValueError("A node cannot contradict itself")
+            if (row_a["user_id"], row_a["scope"]) != (row_b["user_id"], row_b["scope"]):
+                raise ValueError("Contradiction nodes must have the same user and scope")
+
             state_a = LifecycleState(row_a["lifecycle_state"])
             state_b = LifecycleState(row_b["lifecycle_state"])
+
+            from prme.storage.transition_evidence import validate_postgres
+            provenance_uuid = await validate_postgres(
+                conn, evidence_id, row_a["user_id"], row_a["scope"]
+            )
+            evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
+            existing_edge = await conn.fetchrow(
+                """SELECT provenance_event_id FROM edges
+                WHERE edge_type='contradicts'
+                AND ((source_id=$1::uuid AND target_id=$2::uuid)
+                  OR (source_id=$2::uuid AND target_id=$1::uuid)) LIMIT 1""",
+                node_a_id, node_b_id,
+            )
+            if (
+                state_a == LifecycleState.CONTESTED
+                and state_b == LifecycleState.CONTESTED
+                and existing_edge is not None
+            ):
+                existing_evidence = (
+                    str(existing_edge["provenance_event_id"])
+                    if existing_edge["provenance_event_id"] is not None else None
+                )
+                prior = await conn.fetchrow(
+                    """SELECT payload,actor_id FROM operations
+                    WHERE op_type='CONTRADICTION_NOTED' AND target_id=$1
+                    ORDER BY created_at DESC,id DESC LIMIT 1""",
+                    node_a_id,
+                )
+                payload = prior["payload"] if prior else None
+                if isinstance(payload, str):
+                    payload = json.loads(payload)
+                if (
+                    existing_evidence == evidence_id
+                    and payload
+                    and payload.get("node_a_id") == node_a_id
+                    and payload.get("node_b_id") == node_b_id
+                    and prior["actor_id"] == actor_id
+                ):
+                    return
+                raise ValueError("Contradiction already exists with different inputs")
+            if existing_edge is not None:
+                raise ValueError(
+                    "Contradiction edge exists without matching contested state"
+                )
 
             if not validate_transition(state_a, LifecycleState.CONTESTED):
                 raise ValueError(
@@ -628,18 +833,6 @@ class PgGraphStore:
                 LifecycleState.CONTESTED.value,
                 node_b_id,
             )
-
-            # Create CONTRADICTS edge: node_b -> node_a
-            provenance_uuid = None
-            if evidence_id is not None:
-                try:
-                    provenance_uuid = UUID(evidence_id)
-                except ValueError:
-                    logger.warning(
-                        "evidence_id %r is not a valid UUID, storing edge "
-                        "without provenance reference",
-                        evidence_id,
-                    )
 
             edge = MemoryEdge(
                 source_id=UUID(node_b_id),
@@ -679,10 +872,11 @@ class PgGraphStore:
             })
             await conn.execute(
                 "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
-                "VALUES ($1, 'CONTRADICTION_NOTED', $2, $3::jsonb, 'system', now())",
+                "VALUES ($1, 'CONTRADICTION_NOTED', $2, $3::jsonb, $4, now())",
                 op_id,
                 node_a_id,
                 payload,
+                actor_id,
             )
 
     async def resolve_contradiction(
@@ -694,34 +888,32 @@ class PgGraphStore:
         evidence_id: str | None = None,
     ) -> None:
         """Resolve a contradiction by declaring a winner and loser."""
-        async with self._pool.acquire() as conn:
+        winner_id, loser_id = str(UUID(winner_id)), str(UUID(loser_id))
+        async with self._pool.acquire() as conn, conn.transaction():
+            await conn.fetch(
+                "SELECT id FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
+                [winner_id, loser_id],
+            )
             winner_row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", winner_id
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1", winner_id
             )
             if winner_row is None:
                 raise ValueError(f"Winner node {winner_id} not found")
 
             loser_row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", loser_id
+                "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = $1", loser_id
             )
             if loser_row is None:
                 raise ValueError(f"Loser node {loser_id} not found")
 
+            if UUID(winner_id) == UUID(loser_id):
+                raise ValueError("A node cannot resolve a contradiction with itself")
+            if (winner_row["user_id"], winner_row["scope"]) != (loser_row["user_id"], loser_row["scope"]):
+                raise ValueError("Contradiction nodes must have the same user and scope")
+
             winner_state = LifecycleState(winner_row["lifecycle_state"])
             loser_state = LifecycleState(loser_row["lifecycle_state"])
 
-            if winner_state != LifecycleState.CONTESTED:
-                raise ValueError(
-                    f"Winner node {winner_id} is not CONTESTED "
-                    f"(current: {winner_state.value})"
-                )
-            if loser_state != LifecycleState.CONTESTED:
-                raise ValueError(
-                    f"Loser node {loser_id} is not CONTESTED "
-                    f"(current: {loser_state.value})"
-                )
-
-            # Validate CONTRADICTS edge exists
             edge_row = await conn.fetchrow(
                 """
                 SELECT id FROM edges
@@ -736,6 +928,48 @@ class PgGraphStore:
                 winner_id,
                 loser_id,
             )
+            from prme.storage.transition_evidence import validate_postgres
+            evidence = await validate_postgres(
+                conn, evidence_id, winner_row["user_id"], winner_row["scope"]
+            )
+            evidence_id = str(evidence) if evidence is not None else None
+            if (
+                winner_state == LifecycleState.STABLE
+                and loser_state == LifecycleState.DEPRECATED
+                and edge_row is not None
+            ):
+                prior = await conn.fetchrow(
+                    """SELECT payload,actor_id FROM operations
+                    WHERE op_type='CONTRADICTION_RESOLVED' AND target_id=$1
+                    ORDER BY created_at DESC,id DESC LIMIT 1""",
+                    winner_id,
+                )
+                payload = prior["payload"] if prior else None
+                if isinstance(payload, str):
+                    payload = json.loads(payload)
+                if (
+                    payload
+                    and payload.get("winner_id") == winner_id
+                    and payload.get("loser_id") == loser_id
+                    and payload.get("evidence_event_id") == evidence_id
+                    and prior["actor_id"] == resolver_actor_id
+                ):
+                    return
+                raise ValueError(
+                    "Contradiction was already resolved with different inputs"
+                )
+
+            if winner_state != LifecycleState.CONTESTED:
+                raise ValueError(
+                    f"Winner node {winner_id} is not CONTESTED "
+                    f"(current: {winner_state.value})"
+                )
+            if loser_state != LifecycleState.CONTESTED:
+                raise ValueError(
+                    f"Loser node {loser_id} is not CONTESTED "
+                    f"(current: {loser_state.value})"
+                )
+
             if edge_row is None:
                 raise ValueError(
                     f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
@@ -799,29 +1033,34 @@ class PgGraphStore:
                 resolver_actor_id,
             )
 
-    async def archive(self, node_id: str) -> None:
-        """Archive a node (terminal state)."""
-        async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT lifecycle_state FROM nodes WHERE id = $1", node_id
-            )
-            if row is None:
-                raise ValueError(f"Node {node_id} not found")
+    async def deprecate(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
+        """Atomically deprecate a contested node, preserving transition provenance."""
+        from prme.storage.lifecycle import transition_postgres
+        await transition_postgres(
+            self, node_id, "deprecate", request_id=request_id, actor_id=actor_id,
+        )
 
-            current_state = LifecycleState(row["lifecycle_state"])
-            target_state = LifecycleState.ARCHIVED
+    async def archive(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
+        """Atomically validate, apply and journal the archive transition."""
+        from prme.storage.lifecycle import transition_postgres
+        await transition_postgres(
+            self, node_id, "archive", request_id=request_id, actor_id=actor_id,
+        )
 
-            if not validate_transition(current_state, target_state):
-                raise ValueError(
-                    f"Cannot archive: node is {current_state.value}, "
-                    f"Archived nodes cannot be transitioned"
-                )
-
-            await conn.execute(
-                "UPDATE nodes SET lifecycle_state = $1, updated_at = now() WHERE id = $2",
-                target_state.value,
-                node_id,
-            )
+    async def archive_expired(
+        self, node_id: str, *, user_id: str, evaluated_at: datetime,
+    ) -> bool:
+        """Atomically archive an expired node with its retention tombstone."""
+        from prme.storage.retention import expire_postgres
+        return await expire_postgres(
+            self, node_id, user_id=user_id, evaluated_at=evaluated_at
+        )
 
     # --- Graph Traversal ---
 
@@ -890,7 +1129,7 @@ class PgGraphStore:
 
         if not include_superseded:
             node_filter_parts.append(
-                "n.lifecycle_state IN ('tentative', 'stable')"
+                "n.lifecycle_state IN ('tentative', 'stable', 'contested')"
             )
 
         if valid_at is not None:
@@ -1171,6 +1410,8 @@ class PgGraphStore:
             salience_base=raw_salience_base if raw_salience_base is not None else 0.5,
             confidence_base=raw_confidence_base if raw_confidence_base is not None else 0.5,
             pinned=bool(raw_pinned),
+            event_time=ensure_tz(row.get("event_time")),
+            ttl_days=row.get("ttl_days"),
         )
 
     @staticmethod

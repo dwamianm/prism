@@ -1,0 +1,57 @@
+{
+  "reference_release_revision": "ec51d5d36e87f7665d1337f3a88cbde95fc2a964",
+  "reference_dataset_sha256": "8ef9ec8589eccb86f63ab3a819a9180217405351a8d5846866721ea74babe092",
+  "matches_reference_dataset": true,
+  "dataset_sha256": "8ef9ec8589eccb86f63ab3a819a9180217405351a8d5846866721ea74babe092",
+  "profiles": 30,
+  "sessions": 1579,
+  "usable_messages": 142093,
+  "skipped_messages": 36,
+  "questions": 3750,
+  "conflict_types": {
+    "dynamic_conflict": 2946,
+    "static_conflict": 360,
+    "conditional_conflict": 444
+  },
+  "split_seed": "prme-memconflict-v1",
+  "profile_splits": {
+    "dev": [
+      "3c2e5fe5-a0fc-7e3c-b05c-7104ad748705",
+      "c2efaebe-0dd4-c0dc-23a5-7d713b14c99f",
+      "f398d596-a91e-2afd-605f-be545475deca",
+      "d65aae82-db00-00c3-3714-6eb500f83f5b",
+      "575f4af8-5ca4-716c-dfed-0f495c945e0b"
+    ],
+    "test": [
+      "9841f645-49ad-3de3-9010-cef938781102",
+      "75b15745-6d32-726b-be79-d765808bbfe7",
+      "2e62aacf-70e2-3d5a-b6bd-6f9ad776893d",
+      "5a40c38b-61aa-afc0-1837-4367df2efbc1",
+      "14e41890-5b2d-7ce4-ca5c-ea5768f827a9",
+      "5c2a85a4-05a5-5a54-5f50-8029bff79f8f",
+      "9dffc5de-d0bd-280b-45af-5c18080403f2",
+      "bb30a4e6-6a50-79c4-5c45-ca6d0b4f97be",
+      "75345e85-6427-eb51-0834-32d7463852e9",
+      "8cb3c9c6-2e91-777f-99bd-0578ece6cf0e",
+      "90e98aa7-1d5d-0a8f-55d8-0b0886897dd3",
+      "e02dd733-a7b5-a87b-522d-5119f87c158d",
+      "8518c87c-259c-a0e4-2213-06f338928767",
+      "737e8d59-3789-bead-c328-51faed940aef",
+      "4cbe1c3d-78c2-df45-ba61-72ebc35b4d40",
+      "e57c356a-de02-6905-4be7-5d8b289fb03f",
+      "fc1726f1-d6b0-4871-1828-bebe0e7517db",
+      "d337564c-6bd4-9b35-2eee-af123b2ca631",
+      "40f2307d-0db0-8a7b-8187-c4162af0dad9",
+      "cafa273c-a897-fbd1-2990-f1865a0fbc27",
+      "f5f6c655-7d8d-8774-340d-97d99f861da1",
+      "4f76dbf9-4a2f-5790-c6e0-7278de3b8ad8",
+      "a7850e51-3930-284d-9277-af9a69605355",
+      "40a79d0c-6a9e-9eec-a9d7-7b99ec26c489",
+      "f47bb65a-6e84-11f7-37f7-1f02b89d3ddf"
+    ]
+  },
+  "exposed_development_ids": [
+    "3c2e5fe5-a0fc-7e3c-b05c-7104ad748705"
+  ],
+  "limits": "Structural audit only; does not establish that answer labels are supported by dialogues."
+}

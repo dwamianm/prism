@@ -1,7 +1,7 @@
 """Alias resolution logic for the organizer (issue #11).
 
 Detects entity aliases (abbreviations, case variations, known synonyms)
-and either merges them (high confidence) or links them with RELATES_TO
+and either merges compatible known name variants or links them with RELATES_TO
 edges annotated with alias metadata. No LLM required -- uses string
 matching and vector similarity only.
 
@@ -16,10 +16,9 @@ from __future__ import annotations
 import logging
 import time
 from typing import TYPE_CHECKING
-from uuid import UUID
 
-from prme.models.edges import MemoryEdge
-from prme.types import EdgeType, LifecycleState, NodeType
+from prme.organizer.merge_policy import alias_pair_allowed
+from prme.types import LifecycleState, NodeType
 
 if TYPE_CHECKING:
     from prme.config import OrganizerConfig
@@ -190,9 +189,8 @@ async def find_aliases(
             return candidates
 
         for j in range(i + 1, len(entities)):
-            # An unscoped run sees every tenant's entities; two tenants both
-            # holding "PostgreSQL" and "postgres" must not be paired (#66).
-            if entities[i].user_id != entities[j].user_id:
+            # Names alone do not authorize combining owners or scopes.
+            if not alias_pair_allowed(entities[i], entities[j]):
                 continue
 
             a_id = str(entities[i].id)
@@ -229,6 +227,7 @@ async def find_aliases(
                 entity.content,
                 entity.user_id,
                 k=10,
+                scope=[entity.scope.value],
             )
         except Exception:
             logger.debug(
@@ -250,9 +249,9 @@ async def find_aliases(
             if pair_key in seen_pairs:
                 continue
 
-            # Verify the other node is also an ENTITY owned by the same user
+            # Verify the durable node is an ENTITY in the same namespace
             other_node = await engine.get_node(other_id, user_id=entity.user_id)
-            if other_node is None or other_node.node_type != NodeType.ENTITY:
+            if other_node is None or not alias_pair_allowed(entity, other_node):
                 continue
 
             seen_pairs.add(pair_key)
@@ -277,11 +276,12 @@ async def resolve_aliases(
 ) -> int:
     """Resolve alias relationships between entity nodes.
 
-    For high-confidence aliases (>= 0.90): merge the entities (archive
-    the shorter/less-evidenced one, transfer edges, create SUPERSEDES).
+    For compatible, known name variants with confidence >= 0.90: merge
+    the entities (archive the shorter/less-evidenced one and transfer edges).
 
-    For lower-confidence aliases: create RELATES_TO edge with alias
-    metadata linking the entities (non-destructive).
+    Other compatible candidates, including arbitrarily high semantic scores,
+    create RELATES_TO links marked identity_verified=False. Similarity does
+    not establish identity. Incompatible provenance/type pairs are retained.
 
     Args:
         engine: The MemoryEngine for storage operations.
@@ -303,13 +303,17 @@ async def resolve_aliases(
         if node_a is None or node_b is None:
             continue
 
-        # Never merge or link across owners (issue #66).
-        if node_a.user_id != node_b.user_id:
+        # Revalidate before merging evidence/edges or creating an alias link.
+        if (node_a.user_id, node_a.scope) != (node_b.user_id, node_b.scope):
             logger.warning(
-                "Refusing to resolve cross-user alias pair (%s, %s)",
+                "Refusing to resolve cross-namespace alias pair (%s, %s)",
                 alias.entity_a_id,
                 alias.entity_b_id,
             )
+            continue
+
+        if not alias_pair_allowed(node_a, node_b):
+            logger.debug("Retaining incompatible alias candidates (%s, %s)", alias.entity_a_id, alias.entity_b_id)
             continue
 
         if node_a.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
@@ -318,43 +322,18 @@ async def resolve_aliases(
             continue
 
         try:
-            if alias.confidence >= _MERGE_CONFIDENCE_THRESHOLD:
-                # High confidence: merge entities
-                canonical, duplicate = _pick_canonical_entity(node_a, node_b)
-                canonical_id = str(canonical.id)
-                duplicate_id = str(duplicate.id)
-
-                # Transfer evidence_refs
-                new_refs = list(canonical.evidence_refs)
-                for ref in duplicate.evidence_refs:
-                    if ref not in new_refs:
-                        new_refs.append(ref)
-                if len(new_refs) > len(canonical.evidence_refs):
-                    await engine._graph_store.update_node(
-                        canonical_id, evidence_refs=new_refs
-                    )
-
-                # Transfer edges
-                from prme.organizer.deduplication import _transfer_edges
-                await _transfer_edges(engine, duplicate_id, canonical_id)
-
-                # Create SUPERSEDES edge
-                supersedes_edge = MemoryEdge(
-                    source_id=UUID(canonical_id),
-                    target_id=UUID(duplicate_id),
-                    edge_type=EdgeType.SUPERSEDES,
-                    user_id=canonical.user_id,
-                    confidence=1.0,
-                    metadata={
-                        "reason": "alias_resolution",
-                        "alias_type": alias.alias_type,
-                        "confidence": alias.confidence,
-                    },
+            name_match = (_is_abbreviation_match(node_a.content, node_b.content)
+                          or _is_case_variation(node_a.content, node_b.content)
+                          or node_a.content.strip().casefold() == node_b.content.strip().casefold())
+            if alias.confidence >= _MERGE_CONFIDENCE_THRESHOLD and name_match:
+                result = await engine._graph_store.merge_nodes(
+                    alias.entity_a_id, alias.entity_b_id, user_id=node_a.user_id,
+                    kind="alias", score=alias.confidence,
                 )
-                await engine._graph_store.create_edge(supersedes_edge)
-
-                # Supersede the duplicate
-                await engine.supersede(duplicate_id, canonical_id)
+                if result is None or not result.applied:
+                    continue
+                canonical_id, duplicate_id = result.canonical_id, result.retired_id
+                await engine._evict_from_indexes(duplicate_id)
 
                 merged_ids.add(duplicate_id)
                 resolved_count += 1
@@ -367,19 +346,15 @@ async def resolve_aliases(
                     alias.confidence,
                 )
             else:
-                # Lower confidence: create RELATES_TO link
-                link_edge = MemoryEdge(
-                    source_id=UUID(alias.entity_a_id),
-                    target_id=UUID(alias.entity_b_id),
-                    edge_type=EdgeType.RELATES_TO,
+                result = await engine._graph_store.propose_alias(
+                    alias.entity_a_id,
+                    alias.entity_b_id,
                     user_id=node_a.user_id,
-                    confidence=alias.confidence,
-                    metadata={
-                        "relation": "alias",
-                        "alias_type": alias.alias_type,
-                    },
+                    alias_type=alias.alias_type,
+                    score=alias.confidence,
                 )
-                await engine._graph_store.create_edge(link_edge)
+                if result is None or not result.applied:
+                    continue
                 resolved_count += 1
 
                 logger.info(

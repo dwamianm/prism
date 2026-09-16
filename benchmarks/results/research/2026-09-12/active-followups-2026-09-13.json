@@ -1,0 +1,36 @@
+{
+  "focused_checks": {
+    "conditional_prompt": {
+      "log": "/tmp/prme-conditional-prompt-tests-corrected.log",
+      "native_exit_code": 0,
+      "passed": 44,
+      "skipped": 9
+    },
+    "packing_head": {
+      "log": "/tmp/prme-packing-head-tests.log",
+      "native_exit_code": 0,
+      "passed": 3
+    }
+  },
+  "jobs": [
+    {
+      "kind": "conditional-extraction-followup",
+      "limits": "Individual model exit 1 is retained as failure; no completed two-model result claimed.",
+      "log": "/tmp/prme-conditional-extraction-followup.log",
+      "native_session_id": 88798,
+      "plan": "conditional-extraction-followup-plan.json",
+      "plan_sha256": "96a7e04f0625062f2fb2f2b2a0572d2ae83a3b43df8b96d52860871cca0e9f17",
+      "status": "running; Qwen model complete, Gemma active"
+    },
+    {
+      "kind": "packing-head1-development",
+      "limits": "Exploratory fixed one-head policy; no default promotion or answer quality claim.",
+      "log": "/tmp/prme-packing-head1-dev.log",
+      "native_session_id": 81878,
+      "plan": "packing-head1-dev-plan.json",
+      "plan_sha256": "792a21539aa77f1d6862a9eac39c0a58581c680c9490671a64cd29b7e0f1ab5d",
+      "status": "running"
+    }
+  ],
+  "recorded_at": "2026-09-13T17:33:32.234390+00:00"
+}

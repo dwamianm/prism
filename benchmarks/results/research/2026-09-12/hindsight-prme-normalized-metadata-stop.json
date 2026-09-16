@@ -1,0 +1,64 @@
+{
+  "recorded_at": "2026-09-13T00:17:24.702516+00:00",
+  "kind": "strict-custom-metadata-gate-failure",
+  "quality_inspected": false,
+  "case_id": "case-0046",
+  "failed_public_capture": {
+    "path": "data/benchmarks/hindsight-normalized-dev-f5a2a69/case-0046.public.json",
+    "sha256": "859a9698fd77fa27f8800a6021d588fd145db6d1e74178da9b27ef9657bbb478"
+  },
+  "missing_metadata_units": 5,
+  "unit_checks": [
+    {
+      "source_id": "s29:t6",
+      "unit_id": "b520400c-a26d-4b02-8f6d-190de937dae2",
+      "text_is_source_substring": true,
+      "native_context_matches_supplied_role": true,
+      "native_mentioned_at_matches_source_date": true
+    },
+    {
+      "source_id": "s29:t4",
+      "unit_id": "7bbb9e6f-21e8-4a1b-a607-f0e7a6ac48f7",
+      "text_is_source_substring": true,
+      "native_context_matches_supplied_role": true,
+      "native_mentioned_at_matches_source_date": true
+    },
+    {
+      "source_id": "s34:t10",
+      "unit_id": "85a6197c-3db5-4c07-9f24-2e1f23983318",
+      "text_is_source_substring": true,
+      "native_context_matches_supplied_role": true,
+      "native_mentioned_at_matches_source_date": true
+    },
+    {
+      "source_id": "s25:t11",
+      "unit_id": "276695d9-99fb-4e42-a862-a6657ebea7f2",
+      "text_is_source_substring": true,
+      "native_context_matches_supplied_role": true,
+      "native_mentioned_at_matches_source_date": true
+    },
+    {
+      "source_id": "s34:t11",
+      "unit_id": "ff4bb5d9-6db3-451e-8f6e-92b7f2596004",
+      "text_is_source_substring": true,
+      "native_context_matches_supplied_role": true,
+      "native_mentioned_at_matches_source_date": true
+    }
+  ],
+  "prme": {
+    "native_exit_code": 130,
+    "cases_completed_before_stop": 9,
+    "errors": 0,
+    "report": {
+      "path": "data/benchmarks/prme-normalized-dev-f5a2a69.json",
+      "sha256": "9dbc9220f0aded9b52b5e0685486675bf5dbcd51fe9007fd818e4b246dcd1b44"
+    }
+  },
+  "hindsight": {
+    "status": "continuing full operational failure audit",
+    "tool_session_id": 86712,
+    "native_exit_code": null
+  },
+  "replacement_preflight_commit": "f7e86a1",
+  "limits": "No source-quality or answer-quality scores inspected; original failed captures remain ineligible and are not merged into a replacement."
+}

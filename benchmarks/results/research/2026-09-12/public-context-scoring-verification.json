@@ -1,0 +1,29 @@
+{
+  "recorded_at": "2026-09-13T00:24:14.282867+00:00",
+  "commit": "0270a01",
+  "kind": "authored-scoring-contracts",
+  "passed": 99,
+  "native_exit_code": 0,
+  "command": "pytest tests/test_public_context_scores.py tests/test_public_context_judging.py tests/test_public_context_reader.py tests/test_public_capture_analysis.py tests/test_hindsight_capture_protocol.py tests/test_packing_reader.py tests/test_reader_judge.py -q",
+  "log": {
+    "path": "/tmp/prme-public-context-scoring-chain-tests.log",
+    "sha256": "83d67fd3ec7f29d11635699d011fe96fa999bff9c4000d089b8771acc6e1602c"
+  },
+  "covers": [
+    "Exact full-chain raw reader and judge reproduction without provider calls",
+    "Native failure, altered hypotheses/verdicts, incomplete coverage and changed product mapping rejection",
+    "Failed judge request preservation and retry rejection",
+    "Separate reader-family totals, explicit category regressions and abstention results"
+  ],
+  "limits": "Controlled authored fixtures and mocked service for scoring contracts; not dataset accuracy.",
+  "capture_binding_checks": {
+    "passed": 101,
+    "native_exit_code": 0,
+    "scorer_sha256": "2c82f30a0e74d938464e88cea3b9d8071331f2d8109fa2d3da312c90fd74f997",
+    "log": {
+      "path": "/tmp/prme-public-context-capture-binding-tests-final.log",
+      "sha256": "ac9ac20b7542bc7b3a59c3f97b9bd0f5bcb1b6d02364198ae4dcd58ca45511dc"
+    },
+    "covers": "Final scores reject native-failed capture analysis, different registered capture plans, or contexts bound to a different analysis. The judge worker must also match its registration."
+  }
+}

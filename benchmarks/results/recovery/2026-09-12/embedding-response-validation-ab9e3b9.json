@@ -1,0 +1,71 @@
+{
+  "source_commit": "ab9e3b9",
+  "reproduction": {
+    "failed": 11,
+    "seconds": 0.11,
+    "native_exit_code": 1,
+    "log_sha256": "abdaa87a0dfcb62b11bcce4e6e42dc64e0298b6515fd26c894cc2edb91426a85"
+  },
+  "source_regression": {
+    "invocations": [
+      {
+        "scope": "tests/",
+        "passed": 2548,
+        "skipped": 81,
+        "failed": 0,
+        "seconds": 357.22,
+        "native_exit_code": 0,
+        "log_sha256": "5b0d73cf1f0f68ff83feba85cad8013dc479eec3872e9756742626a6137c8e66"
+      },
+      {
+        "scope": "research/tests and examples",
+        "passed": 115,
+        "skipped": 0,
+        "failed": 0,
+        "seconds": 6.31,
+        "native_exit_code": 0,
+        "log_sha256": "8f8b4feb63913759f6d27cdb5fb859f261b2d2c2f893b7d7382943faf80d5f81"
+      }
+    ],
+    "total_passed": 2663,
+    "total_skipped": 81,
+    "limits": "Full collection coverage in two invocations; not one combined-order invocation. Local and live PostgreSQL backends."
+  },
+  "installed_tests": {
+    "passed": 154,
+    "skipped": 15,
+    "failed": 0,
+    "seconds": 51.12,
+    "native_exit_code": 0,
+    "source_files_verified": 116,
+    "log_sha256": "9ba6a6719dc5fe57c0a961d41bde5160cd5acaac087056d6b1fc7ee76f6f2477"
+  },
+  "wheel_sha256": "5cbe5c5d455804c496a360434d6e22f3a6c1b376964a692258cc6c994f1d5809",
+  "installed_real_model_workflow": {
+    "complete": true,
+    "python": "3.13.3",
+    "prme_import_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+    "runner_sha256": "d2ee2f409c03a79e7810e18f3aa4623e7b3d5d8a353440971863bf3833d0aa85",
+    "limits": "Authored real-model provider integration, not evidence that the query instruction improves answer quality.",
+    "embedding": {
+      "provider": "prme.storage.embedding.CachedEmbeddingProvider",
+      "model": "BAAI/bge-small-en-v1.5",
+      "version": "fastembed-0.8.0:bge-query-instruction-v1",
+      "dimension": 384,
+      "query_encoding": "embed_query"
+    },
+    "sync_store_and_retrieve": true,
+    "async_reopen_and_retrieve": true,
+    "source_preserved": true,
+    "original_config_unchanged": true,
+    "encoding_identity_preserved": true
+  },
+  "workflow_native_exit_code": 0,
+  "workflow_sha256": "a63bc9312f0cc684c552efab63340d4bc7b12107d389ce0efbf822d9d1f23f7b",
+  "type_check": {
+    "scope": "src/prme/storage/embedding.py --follow-imports=silent",
+    "native_exit_code": 0,
+    "initial_failure": "mypy did not accept Real absolute-value comparison; converting validated numeric values to float before range checks resolves typing."
+  },
+  "limits": "Malformed responses fail before cache/index admission. Tests establish response and retry contracts, not semantic correctness, response ordering or a memory-quality gain."
+}

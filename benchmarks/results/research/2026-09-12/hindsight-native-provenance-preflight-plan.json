@@ -1,0 +1,40 @@
+{
+  "registered_at": "2026-09-13T00:15:45.763939+00:00",
+  "kind": "native-provenance-operational-preflight",
+  "hindsight_commit": "bde55237f53bf55aacd048b01e29d7dc23b83a85",
+  "inputs_sha256": "695e5ba5eb072a56c7b1c271dab349564f92d7a3667cc46e735e2045ab976de6",
+  "runner_sha256": "ef8d8f081bf3f7a622654ae7561ac35d4e3c204817493283d141a9cd1f94288d",
+  "case_ids": [
+    "authored-0",
+    "authored-1",
+    "authored-2",
+    "case-0046"
+  ],
+  "embedding_assets": {
+    "config.json": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd",
+    "model_optimized.onnx": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+    "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+    "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+    "tokenizer_config.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+  },
+  "versions": {
+    "hindsight-api-slim": "0.9.2",
+    "fastembed": "0.8.0",
+    "onnxruntime": "1.24.2",
+    "numpy": "2.4.2",
+    "tiktoken": "0.14.0"
+  },
+  "retain_batch_size": 64,
+  "recall_budget": "high",
+  "recall_max_text_tokens": 65536,
+  "candidate_limit": 100,
+  "context_budgets": [
+    2048,
+    4096,
+    8192
+  ],
+  "reference_sha256": "32ae446d05896eae1c5f793331fe7a8ca1320e4842bdc7594d7f8965a5e28139",
+  "protocol_sha256": "d25e4a9dcedf3ffe4574575e1809d5f51654c6d8e9403a05c093e9b1fb2ecb0c",
+  "allow_missing_metadata": true,
+  "context_renderer": "native_fields_v2"
+}

@@ -1,0 +1,23 @@
+{
+  "kind": "read-only-competitor-protocol-audit",
+  "runtime_executed": false,
+  "repositories": [
+    {
+      "name": "hindsight",
+      "commit": "bde55237f53bf55aacd048b01e29d7dc23b83a85",
+      "files": {
+        "hindsight-dev/benchmarks/longmemeval/longmemeval_benchmark.py": "52eb8a5e8d36025dfac51b2cda707c6814057d80f19e001faefbcd8209ebdf0f",
+        "hindsight-dev/benchmarks/common/benchmark_runner.py": "c848ba870b6229b218c20b7607ad286fe1d1f867f15cf81b47b9deba1e5d4a46",
+        "hindsight-api-slim/hindsight_api/engine/memory_engine.py": "dc6ec5ea820bf9eae81d8dc86929d75f9a720c1519ad9023e1e191333ce3b4c8"
+      }
+    },
+    {
+      "name": "graphiti",
+      "commit": "c035afb7990b6077331a81e98b04efcfd9bf8184",
+      "files": {
+        "README.md": "ce1628c02b3c6fd5b59e3e48dc61c958f07824033b4d0b989bb8d433932b6b3f",
+        "tests/evals/eval_e2e_graph_building.py": "dac255243f805a2657e9f6d27760ca3fc3a18bb1ca519b9b46ea0b01dd9026ab"
+      }
+    }
+  ]
+}

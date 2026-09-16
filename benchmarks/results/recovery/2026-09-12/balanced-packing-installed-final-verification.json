@@ -1,0 +1,15 @@
+{
+  "installed_package": "/private/tmp/prme-balanced-packing-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 129,
+  "package_manifest_sha256": "9afb395e14195595c2d37f2122600614930b744c06d0dd03f8ec5787bfb1c168",
+  "pytest_exit_code": 0,
+  "source_commit": "7009326",
+  "test_files": [
+    "tests/test_balanced_packing.py",
+    "tests/test_packing_order_option.py",
+    "tests/test_packing_receipt_compatibility.py",
+    "tests/test_relevance_records.py",
+    "tests/test_runtime_ranking.py"
+  ],
+  "wheel_sha256": "0da1d433147557c471e83a02cf53a0325f27bc1c37da0435e3e857b46236b789"
+}

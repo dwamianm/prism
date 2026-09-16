@@ -142,6 +142,23 @@ class TestNodeTypeBoost:
             event_trace.composite_score * 1.15, rel=1e-6,
         )
 
+    @pytest.mark.parametrize("node_type", [NodeType.DECISION, NodeType.INSTRUCTION])
+    def test_actionable_semantic_nodes_receive_full_default_boost(self, node_type):
+        now = datetime.now(timezone.utc)
+        candidate = _make_candidate(node=_make_node(node_type=node_type))
+        event = _make_candidate(node=_make_node(node_type=NodeType.EVENT))
+
+        candidate_trace = compute_composite_score(
+            candidate, DEFAULT_SCORING_WEIGHTS, now=now
+        )
+        event_trace = compute_composite_score(
+            event, DEFAULT_SCORING_WEIGHTS, now=now
+        )
+
+        assert candidate_trace.composite_score == pytest.approx(
+            event_trace.composite_score * 1.15, rel=1e-6
+        )
+
     def test_event_node_no_boost(self):
         """EVENT node gets 1.0x (no boost)."""
         now = datetime.now(timezone.utc)
@@ -217,7 +234,7 @@ class TestNodeTypeBoost:
         event_trace = compute_composite_score(event_cand, DEFAULT_SCORING_WEIGHTS, now=now)
 
         assert fact_trace.node_type_boost == 1.15
-        assert decision_trace.node_type_boost == 1.10
+        assert decision_trace.node_type_boost == 1.15
         assert event_trace.node_type_boost == 1.0
 
     def test_version_id_changes_with_boost(self):
@@ -348,7 +365,7 @@ class TestProfilePreamble:
         result, _ = _build_profile_preamble([fact_cand, pref_cand])
 
         assert "## User Profile" in result
-        assert "### Known Facts" in result
+        assert "### Recorded Facts" in result
         assert "### Preferences" in result
         assert "User is from New York" in result
         assert "User prefers dark mode" in result
@@ -374,13 +391,13 @@ class TestProfilePreamble:
         result, _ = _build_profile_preamble([fact_cand, pref_cand, instr_cand])
 
         pref_idx = result.index("### Preferences")
-        fact_idx = result.index("### Known Facts")
+        fact_idx = result.index("### Recorded Facts")
         instr_idx = result.index("### Learned Rules")
 
         assert pref_idx < fact_idx < instr_idx
 
     def test_tentative_tag(self):
-        """TENTATIVE nodes get '(tentative)' suffix."""
+        """TENTATIVE is explicitly labeled as memory lifecycle, separately from epistemic status."""
         tentative_cand = _make_candidate(
             node_type=NodeType.FACT,
             content="User might be vegan",
@@ -389,8 +406,10 @@ class TestProfilePreamble:
 
         result, _ = _build_profile_preamble([tentative_cand])
 
-        assert "(tentative)" in result
-        assert "User might be vegan (tentative)" in result
+        assert "memory_lifecycle=tentative" in result
+        assert "epistemic=asserted" in result
+        assert "User might be vegan" in result
+        assert "(tentative)" not in result
 
     def test_stable_only(self):
         """Only STABLE and TENTATIVE included (not SUPERSEDED, CONTESTED, etc.)."""
@@ -514,8 +533,11 @@ class TestConflictAnnotations:
         result = _build_conflict_annotations([newer_cand, older_cand])
 
         assert "## Conflicting Information" in result
-        assert 'NEWER: "User now lives in Boston"' in result
-        assert 'OLDER: "User lives in New York"' in result
+        newer, older = result.split("NEWER:", 1)[1].split(" vs OLDER:", 1)
+        assert '"User now lives in Boston"' in newer
+        assert '"User lives in New York"' in older
+        assert all("memory_lifecycle=contested" in item for item in (newer, older))
+        assert all("source_type=user_stated" in item for item in (newer, older))
 
     def test_no_conflicts_empty(self):
         """No conflicted nodes returns empty string."""
@@ -604,8 +626,10 @@ class TestConflictAnnotations:
 
         result = _build_conflict_annotations([old_cand, new_cand])
 
-        assert 'NEWER: "new value"' in result
-        assert 'OLDER: "old value"' in result
+        newer, older = result.split("NEWER:", 1)[1].split(" vs OLDER:", 1)
+        assert '"new value"' in newer
+        assert '"old value"' in older
+        assert all("epistemic=asserted" in item for item in (newer, older))
 
 
 # ---------------------------------------------------------------------------

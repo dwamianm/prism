@@ -1,184 +1,310 @@
-# Research Agenda: Toward 98%+ Memory Accuracy
+# Research agenda: demonstrated memory quality and developer experience
 
-## Failure Analysis (v0.6.0 baseline)
+Updated 2026-09-15. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
+Its historical scores and projected “98%+” target do not establish today's
+performance. GSD completion states and RFC proposals are not acceptance evidence.
+The aim is a leading memory package whose advantages survive reproducible
+comparisons and whose ordinary APIs preserve user data and isolation.
 
-### LME: 93.8% → 98% (need to fix ~20 of 23 failures)
+## What the evidence currently supports
 
-| Root Cause | Count | Examples |
+| Area | Verified result | Boundary |
 |---|---|---|
-| **Aggregation impossible with top-k** | 10 | "How many cuisines?", "Total money spent on workshops?" |
-| **Knowledge update staleness** | 6 | Retrieves old value ("Chicago") when newest is "suburbs" |
-| **Temporal computation errors** | 3 | Miscounts weeks between two events |
-| **Retrieval miss** | 2 | Relevant fact exists but wasn't retrieved |
-| **Abstention false negative** | 2 | Should have abstained, didn't |
+| Product context packing | The default balanced policy improved a fixed 35B reader from 67/119 to 83/119 on the development cohort and from 185/381 to 250/381 on a separately registered answer confirmation. It improved every category or tied. | Both source partitions had already been inspected; one local reader and one custom calibrated local judge. This is not an independent test set or competitor result. |
+| Profile fidelity and publication | Complete qualified source excerpts, explicit inference/provenance, exact token budgets, atomic publication and complete scoped source scans. | Profiles are source collections; this does not prove semantic synthesis, exhaustive facts or automatic freshness. |
+| Storage and developer workflow | [Latest PostgreSQL workspace validation](../benchmarks/results/recovery/2026-09-12/PG-WORKSPACES.md) at `b7521bc`: full regression passed 2,877 tests with 81 skips, including live PostgreSQL, research and examples. The installed selection passed 143 tests with 13 skips. The real-BGE 100-project concurrent retrieval and native backup/restore workflow completed; a separate verifier checked all source and merged-entity evidence in both retained dumps. | Separate overlapping invocations at recorded commits. Authored recovery, eligibility and namespace contracts do not establish answer quality, hosted project grants or all deployment environments. Client resource samples exclude database-server memory. |
+| Identity and maintenance | Unresolved personal references stay event-local; merging preserves type/provenance/validity, including copied relationships. Default maintenance no longer consumes anonymous feedback to change global weights. New merges and unverified alias proposals atomically journal complete inputs and outputs with deterministic retry identities. | These are reproduced storage contracts. General coreference, equal-name disambiguation and full historical organizer replay remain incomplete. |
+| Hierarchical summary maintenance | Daily, weekly and monthly source excerpts now use durable prepared publications with deterministic period lineages and complete stable-ID source paging. Unchanged, concurrent and restarted runs converge on one active identity; changed selected inputs and legacy excerpts are replaced atomically. | Authored consistency, recovery, 501-source scoped pagination and explicit operator-scan tests. This does not establish that extractive summaries improve answer quality or provide exhaustive coverage. |
+| Claim qualifiers | Built-in extraction preserves typed polarity and exact explicit conditions, rejects common modality collapses, and excludes unresolved conditions from default retrieval. Explicit condition evaluation is atomic, evidence-aware, idempotent across restarts, and available on Python, HTTP, and MCP; confirmed conditions receive asserted retrieval weight. | Authored local probes, not held-out accuracy. Qwen still exhausted strict citation retries on one mixed claim; PRME records caller evaluations but does not automatically decide condition truth. |
+| Retrieval semantics | Present-state ranking recognizes ordinary “what does” and “who is” queries without applying inferred recency when no explicit update exists. Decisions and instructions share the full semantic-node boost. Two consecutive full simulation runs passed 74/74; the complete live-PostgreSQL suite passed 3,268 tests. | Authored causal scenarios and regression tests. They do not establish held-out answer quality or optimal default weights. |
+| Deferred raw-source throughput | Local processing now shares a durable lexical commit before acknowledging sources. A frozen 32-source real-model workflow reduced 32 commits to one, with identical candidates and contexts across serial/batch trials. | Small authored histories with warmed embeddings on one host under concurrent load; no competitive speed claim. Direct `store()` still indexes immediately. |
+| Local embedding consistency | Cache residency and text grouping no longer change tested BGE vectors after `e297d08`; installed real-model and focused regression checks passed. | Individual inference costs throughput on short-text batches. No cross-hardware bitwise guarantee. |
+| Matched raw retrieval | All 119 development questions completed against pinned Mem0 OSS. At 4K shared whole-turn packing, PRME source recall was 96.49% versus 93.27%; Mem0 led preferences. | Raw mode, frozen older PRME reference, shared evaluator packer and no answer generation. The 4K interval touches zero; no end-to-end leadership claim. |
+| Matched raw-context answers | [Complete PRME–Hindsight comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-RESULTS.md): Qwen 53/119 versus 52/119, Gemma 71/119 versus 56/119. All 714 logical judgments and native artifact chains verified. | Qwen's paired group interval includes zero. Both readers answer only 1/9 assistant questions correctly with PRME. Development cohort, custom local judge, raw profiles; no consistent overall leadership or default-promotion claim. |
+| Held-out agent-trajectory answers | [Registered LongMemEval-V2 web-small comparison](../benchmarks/results/research/2026-09-14/LONGMEMEVAL-V2-WEB-UNSEEN-DETERMINISTIC-V1.md): PRME scored 80/149 (53.69%) versus 10/149 (6.71%) without memory, with 75 paired wins, 5 losses and a +37.58 to +55.70 point question-bootstrap interval. All rows, official deterministic scores, inputs, reader settings, pack/config bindings and zero-memory baseline behavior passed the fail-closed comparator. | One local Qwen 9B reader and one saved PRME artifact versus no memory. The filtered web-small cohort excludes judge-dependent categories, enterprise and eight previously inspected questions. Mean PRME context was 43,195 tokens. This establishes memory utility on the named cohort, not competitive leadership. |
+| Agent-trajectory context efficiency | [Registered 4K-budget development study](../benchmarks/results/research/2026-09-14/LONGMEMEVAL-V2-WEB-COMPACT4K-DEVELOPMENT.md): PRME scored 49/149 versus 10/149 without memory, with 45 paired wins and 6 losses, while mean reader memory context fell 83.05% from the 32K reference. | The same 149 questions and earlier outcomes were known. The 4K arm lost 31 correct answers versus the earlier arm. Both use auditable rendering, but PRME revision and generation time also differ, so this is not a strict single-variable ablation. Keep the 4K preset explicit and measure an intermediate budget curve before changing defaults. |
+| PersonaMem-v2 pilot | All 96 questions completed and independently verified. Alpha .25 packing answered 42 correctly, density 36, score 41 and no memory 33. | Primary cluster interval includes zero; losses on other-person and health questions. Custom persona-hidden variant, one local reader, no default promotion. |
+| Scoped retrieval learning | Explicit labels feed a deterministic observed-candidate proposal gate; fresh paired receipts with complete gold identities feed a separate full-retrieval gate. Immutable owner/exact-scope profiles persist and apply across restart with inspected activation, deactivation and rollback on both backends. | Authored functional and concurrency validation proves the gate and lifecycle contracts. No learned profile has yet passed a representative task holdout or established answer-quality improvement. |
+| External lifecycle and scale workflows | The registered MELT run completed five seeds and all 20 lifecycle checkpoints at recall@12 and NDCG@12 of 1.000. The corrected [BEAM extracted-memory run](../benchmarks/results/research/2026-09-15/BEAM-100K-EXTRACTED-SCORED.md) scored 13/20 with a 0.56750 mean rubric score after schema-5 validation confirmed 188/188 raw materializations and extractions. A paired [dual-representation ablation](../benchmarks/results/research/2026-09-15/BEAM-EVIDENCE-AUGMENTATION-ABLATION.md) scored 14/20 and 0.59667, with one pass-level win and no losses. | MELT uses four held-out lifecycle cases and a deterministic embedding profile. BEAM covers one repeatedly examined 100K conversation with mutable hosted model aliases; augmentation remains opt-in pending an untouched confirmation, abstention remains 0/2, and no cross-product leadership is established. |
+| AgentMemBench operational behavior | The preregistered official-size run returned the new fact first for 250/250 explicit updates, leaked no facts across 100 users, retired 200/200 archived memories from retrieval, and materialized 200/200 writes with zero errors at each of 1, 4, 8 and 16 workers. Recall@3 was 100% at both 100 and 1,000 records. | Synthetic operational workloads with local timings. Archive means retrieval retirement backed by immutable events, not physical erasure. The run exposed and led to a fixed USearch 2.23 native deletion stall. |
+| AgentMemBench judged retrieval | The preregistered official-size run scored 979/1,000 recall@5 with a 97.0% to 98.7% bootstrap interval, including 98.8% personal-fact and 97.0% task-request recall. All 1,000 writes materialized. The fail-closed verifier bound the clean PRME/upstream revisions, dataset, operation journal, invocation, judge controls and exact local model digest. | One synthetic dataset and one local Qwen 35B A3B judge. Published system results use another judge setup, so their headline totals are not controlled comparisons. A post hoc audit found all 21 missed sources in the top ten; three rank-one sources did not literally state the reference answer and 18 ranked sixth through tenth. |
+| MemoryAgentBench test-time learning | [Matched Banking77 development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md): PRME scored 20/20 versus BM25 at 17/20 under the official strict metric, while using 90.52% fewer retrieved-context tokens. The [episode regression](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EPISODE-REGRESSIONS-DEV20.md) preserved PRME at 20/20 with all 220 routed promotions packed. | Twenty previously inspected development questions, one reader and one lexical control. The paired interval includes zero. The 5,897-record episode pack took 463.112 seconds to construct, so bulk typed ingestion remains a material cost. |
+| MemoryAgentBench accurate retrieval | The initial [matched EventQA development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-SESSION-DEV20.md) scored PRME at 16/20 versus BM25 at 20/20. The subsequent [two-stage episode-routing trial](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-EPISODE-DEV20.md) scored 19/20 versus 20/20 while retaining the 90.48% context reduction. It changed three prior PRME failures to successes with no losses, and every durable artifact chain verified. | Twenty previously inspected development questions, one reader and one lexical control. The new paired interval versus BM25 is -15 to 0 points; the before/after interval is 0 to +30. The remaining miss had routed evidence but no verbatim answer. Cross-task development regressions passed; keep episode routing opt-in pending a larger cohort and another reader. |
+| MemoryAgentBench conflict resolution | [Matched FactConsolidation development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md): PRME scored 1/20 versus BM25 at 0/20 under the shared answer-only contract. Reference-answer text appeared in 19 PRME contexts and all 20 BM25 contexts. A separately registered Qwen 35B A3B check produced the same scores; all artifact chains verified. | Twenty previously inspected development questions, two related local readers and one lexical control. Near-zero accuracy in both arms makes this a reader-interface failure, not a retrieval or conflict-resolution quality result. Audit numbered-source reasoning and evaluate PRME's actual correction lifecycle directly. |
+| MemoryAgentBench long-range understanding | [Matched DetectiveQA development comparison](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-DETECTIVE-CHOICE-DEV20.md): PRME and BM25 each scored 13/20 under the official exact metric. The [episode regression](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EPISODE-REGRESSIONS-DEV20.md) scored 15/20, with three gains and one loss against flat PRME while mean context stayed below 4K; every receipt verified. | Twenty previously inspected development questions, one local reader and separate revisions/query clocks. The episode before/after interval is -10 to +30 points. This supports broader testing of episodic routing, not a default or leadership claim. |
 
-### LoCoMo: 81.8% → 98% (need to fix ~25 of 27 failures)
+See the [reader study](../benchmarks/results/packing/2026-09-12/READER-STUDY.md),
+[recovery evidence](../benchmarks/results/recovery/2026-09-12/README.md),
+[identity and maintenance report](../benchmarks/results/recovery/2026-09-12/IDENTITY-AND-MAINTENANCE.md),
+[entity profile guide](ENTITY-PROFILES.md), and
+[comparative protocol audit](../benchmarks/results/research/2026-09-12/COMPARATIVE-EVALUATION.md).
+These records preserve commit identities, raw-output hashes, failures and limits.
 
-| Root Cause | Count | Examples |
-|---|---|---|
-| **Fact buried in noise** | 8+ | "How many children?" — fact is incidental in a long turn |
-| **Similar-but-wrong event** | 5+ | Retrieves a *different* painting project |
-| **Entity fact not consolidated** | 5+ | "Where did Caroline move from?" — never extracted to fact |
-| **Temporal reasoning** | 3 | Imprecise date inference from conversation context |
-| **Inference across signals** | 1 | "Is Caroline religious?" — requires holistic synthesis |
+## Immediate decisions and their gates
 
-### The Core Problem
+1. **Preserve the failed score-only gate and use the separately tested balanced
+   policy.** All 381 frozen score-ordering questions and controls completed. At
+   4K, labelled-source recall rose 65.04% → 85.77%, but preference recall fell
+   78.26% → 68.12%, violating the preregistered category guard. Score remains
+   opt-in. The later balanced policy is a distinct algorithm with its own complete
+   source and answer evidence and is now the default; it does not rewrite the
+   failed score-only gate. The
+   [complete record](../benchmarks/results/packing/2026-09-12/CONFIRMATION.md)
+   preserves both gains and regressions. This is source retention, not test-set
+   answer accuracy.
+2. **Extend the completed external baseline carefully.** The
+   [registered Mem0 comparison](../benchmarks/results/research/2026-09-12/mem0-raw-dev-completion-b384095.json)
+   completed all 119 questions without errors. Keep its raw-turn, shared-packer
+   result distinct from future extraction and actual product-context arms. The
+   next protocol must match reader, total rendered tokens and ingestion costs,
+   and explicitly support each product's temporal API. Hindsight and Graphiti
+   have been source-audited. Hindsight's subsequent authored public-API preflight
+   passed retain/reopen/recall, bank isolation and seven matched embedding inputs;
+   the first strict dataset capture stopped when native ingress removed control
+   characters. A [fresh normalized comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NORMALIZED-DEV-PROTOCOL.md)
+   began all 119 development questions against installed PRME `b7521bc`.
+   Both use FastEmbed 0.8.0 and identical numerical dependencies/model assets.
+   Complete source readback and returned-text validation precede analysis; actual
+   returned contexts remain separate from shared whole-turn reconstruction.
+   Its strict metadata-preservation gate rejected missing optional custom metadata
+   in two cases. The full 119-case operational audit completed with native exit 1;
+   all seven affected units retained native role and timestamp fields. PRME was
+   stopped after nine cases. The [native-provenance preflight](../benchmarks/results/research/2026-09-12/native-provenance-preflight-verification.json)
+   passed both products and all 24 context reproductions without quality labels.
+   A [fresh complete comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NATIVE-DEV-PROTOCOL.md)
+   completed both 119-case captures with zero errors and native exit zero; failed
+   captures are excluded. The [source comparison](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-NATIVE-SOURCE-RESULTS.md)
+   verified all 714 contexts. At 4K shared whole-turn packing, PRME retained
+   96.35% of labelled sources versus 52.27%; actual document-hit recall was
+   74.85% versus 45.91%. PRME lost all nine assistant evidence sources from its
+   actual bundle, while Hindsight retained seven. These are source metrics only.
+   The [common-reader protocol](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-PROTOCOL.md)
+   is frozen for Qwen/Gemma plus fresh empty controls. Its authored live reader
+   check passed; the separate judge passed 41/42 calibration controls with zero
+   false accepts. Final scoring verifies native capture, reader and judge chains,
+   keeps reader families separate and reports category losses. Dataset reader
+   input and plans are frozen at `f1a0b64`; Qwen completed all 357 predictions
+   with native exit zero and offline reproduction of every saved response.
+   Gemma also completed all 357 predictions with native exit zero. The
+   [complete judged results](../benchmarks/results/research/2026-09-12/HINDSIGHT-PRME-READER-RESULTS.md)
+   verify all 714 logical judgments: PRME versus Hindsight is 53/52 correct with
+   Qwen and 71/56 with Gemma. Assistant memory is a consistent loss, 1/9 for
+   PRME versus 8/9 and 7/9. A stronger source-recall total has not solved packing.
+   Timing under concurrent load cannot support a speed ratio.
+3. **Explain remaining failures before adding techniques.** Use completed results
+   to separate missing sources, lost qualifiers, insufficient context, incorrect
+   temporal or episode associations, arithmetic and task-completion errors.
+   Preserve ambiguous annotations and reader/judge disagreements. Improvements
+   must work beyond the examples used to discover them.
+   The [completed lexical ablation](../benchmarks/results/research/2026-09-12/LEXICAL-QUERY-STUDY.md)
+   improved preference evidence at 4K but lost other evidence and reduced the
+   overall 2K mean. PostgreSQL's all-term query semantics
+   also need deliberate evaluation; its duplicate-before-limit defect is fixed. The
+   [PostgreSQL vector study](../benchmarks/results/recovery/2026-09-12/PG-VECTOR-SEARCH.md)
+   separately reproduced filtered HNSW starvation. Both backends now honor the
+   exact-search default; PostgreSQL materializes eligible rows before ordering.
+   Broad-query cost is higher in the synthetic probe, and approximate search
+   remains an explicit recall/cost tradeoff. Named PostgreSQL projects now use
+   identity-checked schemas and a shared pool; hosted grants remain separate.
+   The [completed full-hybrid development study](../benchmarks/results/research/2026-09-12/HYBRID-LEXICAL-STUDY.md)
+   ran both lexical policies through actual retrieval, both packing orders and
+   three budgets on all 119 development questions, with zero errors. All 1,428
+   saved contexts reproduced exactly. Stopword removal improved default-density
+   4K recall by 11.11 points, but reduced score-packing recall by 2.56 points,
+   including multi-session and assistant regressions. It remains experimental.
+   Density still retained none of the nine assistant evidence sources at 4K.
+   The [completed length-penalty diagnostic](../benchmarks/results/research/2026-09-12/PACKING-LENGTH-STUDY.md)
+   evaluated all 30 registered arms and 3,570 contexts. Native-parser alpha .25
+   improved 4K recall to 95.03%, but retained less assistant evidence than score
+   ordering. Carry that single-comparator hypothesis into broader evaluation;
+   production defaults and the failed confirmation gate remain unchanged.
+   The [completed PersonaMem pilot](../benchmarks/results/research/2026-09-12/PERSONAMEM-PACKING-STUDY.md)
+   is inconclusive: alpha .25 improves by six correct answers, with a cluster
+   interval that includes zero and category regressions. Post-hoc annotated
+   snippet coverage exposes substantial packing loss, but errors remain even
+   when annotated snippets are complete. Test an explicitly annotation-selected
+   reader control before attributing those errors to retrieval or adding more
+   scoring heuristics. The subsequently [completed annotation-selected control](../benchmarks/results/research/2026-09-12/PERSONAMEM-ANNOTATED-READER.md)
+   answered 66/96 versus a fresh no-memory control's 34/96, with a positive
+   persona-cluster interval. It still answered 0/10 other-person questions
+   correctly; two inspected cases assign a colleague's preferences/condition to
+   the user. Audit subject attribution and merge semantics alongside evidence
+   selection. This control is not product retrieval or an independent holdout.
 
-The current architecture is **retrieve-and-present**: find relevant text chunks, stuff them into context, and hope the LLM generates the right answer. This hits a ceiling because:
+The [fixed one-head packing experiment](../benchmarks/results/research/2026-09-12/PACKING-HEAD-STUDY.md)
+retains the top-scored ordinary multi-path candidate before density packing. On
+the examined 119-question development cohort, 4K whole-source recall rose from
+74.85% to 81.51%, recovering seven assistant sources with no per-question source
+loss at 4K. One multi-session question regressed at 2K. All 714 contexts passed
+independent measurement checks. Answer-reader validation and broader regression
+evidence remain necessary; this does not change the product default.
 
-1. **Raw content is noisy** — A 200-word conversation turn might contain one 10-word fact. Token budget fills with noise before critical facts surface.
-2. **Top-k can't do exhaustive queries** — "How many X?" requires ALL instances, not the best 10.
-3. **No temporal state tracking** — "What is X now?" requires finding the latest value, but retrieval scores by relevance, not recency.
-4. **No reconstruction** — Humans don't replay memories verbatim; they reconstruct from schemas + cues. We should too.
+The [first one-head answer trial](../benchmarks/results/research/2026-09-12/PACKING-HEAD-READER-INCOMPLETE.md)
+stopped before judging when Gemma timed out after logging 245 of 357 predictions.
+Qwen completed all 357. Saved responses and native exits are verified, but this
+incomplete trial has no comparative answer score. A follow-up must register a
+fresh complete trial; failed outcomes cannot be selectively replaced.
 
----
+The [fresh 600-second-timeout follow-up](../benchmarks/results/research/2026-09-12/PACKING-HEAD-READER-TIMEOUT-FOLLOWUP.md)
+also stopped, during Qwen at 315/357 logged predictions. All 275 saved unique
+responses passed structural/checksum checks, but Gemma and judging never
+started. Neither incomplete trial supports comparative answer scores.
+Time-correlated local server logs include a model-loading timeout and a closed
+client connection. The service responds and all three model digests remain
+available; this does not establish a hardware or model-capacity cause. Diagnose
+execution before another complete reader run or a larger model download.
 
-## Research Theories
+The [fixed packing composition study](../benchmarks/results/research/2026-09-12/PACKING-COMPOSITION-STUDY.md)
+completed all 1,428 contexts with independent verification and exact reproduction
+of 714 prior controls. Combining one reserved head with the quarter-length rule
+retains 95.91% of labelled sources at 4K, versus 95.03% for quarter-length and
+74.85% for density. Its primary gain over quarter-length is one question, with
+a cluster interval touching zero; at 2K it also loses one question against that
+simpler rule. This reused development cohort supports further testing, not a
+default change. Source recall remains distinct from answer correctness.
 
-### Theory 1: Memory Consolidation Pipeline (MCP)
+The [larger fixed packing regression](../benchmarks/results/research/2026-09-12/PACKING-REGRESSION-STUDY.md)
+then verified all 4,572 contexts on the already examined 381-question partition,
+including exact reproduction of 2,286 original controls. At 4K, quarter-length
+retains 89.37% of labelled evidence and the combined policy 90.55%, versus 65.04%
+for density. Both improve every category mean, including preferences, but each
+loses on two questions. The combination improves assistant retention while
+losing on two multi-session questions versus quarter-length. The public
+`balanced` policy now reproduces all 4,500 saved density/score/balanced contexts
+over 500 questions and three budgets. Installed receipt compatibility and the
+guide workflow pass. See
+the [implementation verification](../benchmarks/results/recovery/2026-09-12/BALANCED-PACKING.md).
+The original failed score-only policy gate remains unchanged.
 
-**Inspiration**: Hippocampal replay during sleep — the brain consolidates episodic memories into semantic knowledge through repeated reactivation.
+The [complete balanced answer trial](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
+then retained all 119 development questions across density, balanced and empty
+contexts. A fixed 35B Qwen reader and separately calibrated 31B Gemma judge
+scored balanced at 83/119 versus density at 67/119, with 26 paired wins, 10
+losses and no lower category total. The first registered run failed at a
+512-token generation ceiling and remains recorded; a separately registered
+short-answer replacement completed all 714 reader and judge outcomes without a
+provider failure. This answer evidence, together with the two source-retention
+studies, promotes balanced to the default while preserving explicit density and
+score options. The examined cohort and custom local judge still require an
+independent answer holdout before any competitive leadership claim.
 
-**Proposal**: Multi-level memory hierarchy with automatic consolidation:
+The [381-question answer confirmation](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-REGRESSION.md)
+then used different questions with the same registered reader and judge controls.
+Balanced scored 250/381 versus density at 185/381, with 88 paired wins, 23 losses,
+and no lower category total. All 762 reader calls and 762 judged outcomes
+completed without a failed call. The source partition had already been examined,
+so this is an out-of-development answer confirmation rather than an independent
+benchmark holdout. Auditing all losses found one clear source omission, six clear judge
+inconsistencies, and a concentration of remaining errors in reader temporal
+arithmetic and conflict interpretation. Future packing changes should use new
+questions rather than tune to these outcomes.
 
-```
-Level 0: Raw Events (append-only log)
-    ↓ [extraction]
-Level 1: Session Distillation (every fact/preference/decision per session)
-    ↓ [entity consolidation]  
-Level 2: Entity Knowledge Cards (structured, always-current view per entity)
-    ↓ [schema abstraction]
-Level 3: User Schema (habits, routines, relationships, compact profile)
-```
+The [simulation clock correction](../benchmarks/results/recovery/2026-09-12/SIMULATION-CLOCK.md)
+fixed real-time leakage into maintenance age checks and native mutation
+timestamps, but its full run still passed only 70/74. Consolidation publication
+is now checksummed, atomic and restart-safe; unchanged and concurrent attempts
+reuse one active summary. Current-state and actionable-memory scoring then
+reproduced the remaining four failures before correction and passed the complete
+gate twice at 74/74. See the
+[current scoring evidence](../benchmarks/results/recovery/2026-09-13/SCORING-SEMANTICS.md).
+The separate owned-service head1 answer trial failed before judging after a
+logged GPU out-of-memory error; no partial answer scores were inspected.
+All original prompts fit the existing conservative headroom check at 32K,
+suggesting a fresh bounded-memory probe before another registered trial, with
+the existing model assets. See the
+[failure record](../benchmarks/results/research/2026-09-12/packing-head-reader-owned-incomplete.json)
+and [context bounds](../benchmarks/results/research/2026-09-12/ollama-owned-context-headroom.json).
 
-**How it helps**:
-- Aggregation queries hit Level 2: "How many cuisines?" → count entity→cuisine edges
-- Knowledge update queries hit Level 2: entity card always has the LATEST value
-- Single-hop queries hit Level 2: "How many children does Melanie have?" → `Melanie.children.count = 3`
-- Multi-hop queries combine Level 2 cards: "What inspired Caroline's painting for the art show?" → look up `Caroline.art_show_painting.inspiration`
+## Capability work still required
 
-**Key innovation**: Level 2 Knowledge Cards are **living documents** — every new event that mentions an entity triggers a card update. The card is never stale.
+The [current provenance research review](../benchmarks/results/research/2026-09-12/PROVENANCE-RESEARCH-UPDATE.md)
+adds MemIR, Agent Zero Memory and AttriMem as hypotheses/comparison candidates.
+It distinguishes claim support, source opening and credit assignment from
+reproduced product improvements; no published total replaces the checks here.
 
-**Expected impact**: Fixes knowledge_update (6), aggregation (10), single_hop buried-fact (8) = ~24 failures across both benchmarks.
+The [current local extraction diagnostics](../benchmarks/results/extraction/2026-09-13/README.md)
+supersede the earlier prompt-only candidate. They preserve typed polarity and
+exact conditions, use configurable temperature-zero extraction, and reject
+uncertain or contingent actions mislabeled as completed decisions. Equal-context
+Qwen 9B and 35B-A3B profiles each passed 12/12; the 35B-A3B profile repeated the
+result with byte-identical structured outputs and lower observed latency. These
+authored probes still require held-out and provider-diverse validation.
 
-### Theory 2: Reconstructive Retrieval
+| Gap | Next implementation/evaluation requirement |
+|---|---|
+| Named projects and domains | `MemoryWorkspace` manages identity-checked local packs and PostgreSQL schemas with shared embeddings and a bounded lease cache. PostgreSQL projects share a bounded connection pool; the installed 100-project backup/restore workflow passed. The [workspace guide](WORKSPACES.md) states cancellation, background-extraction and operator boundaries. Next: hosted credential-to-project grants, larger realistic partition benchmarks, explicit legacy import and lifecycle operations. A metadata filter alone is insufficient, and the full grant hierarchy remains unimplemented. |
+| Organizer replay coverage | Duplicate/alias merges, unverified alias proposals, TTL expiration, explicit reinforcement, single-node lifecycle transitions, explicit supersedence and consolidation retirement now atomically retain complete records on both backends. Deterministic pair/correction/retention identities survive retries; pairwise transitions reject unavailable owner/scope evidence. Legacy non-finite metadata has an explicit lossless snapshot encoding. Preexisting alias links are reused without invented history. Other organizer/manual mutations and historical data still lack complete replay inputs; extend coverage without inventing past events. External index cleanup remains a separate repairable step. |
+| Consolidation quality | [Publication is now durable, atomic and idempotent](../benchmarks/results/recovery/2026-09-13/CONSOLIDATION-PUBLICATION.md), with deterministic request generations, restart recovery and cross-engine concurrency checks on both backends. Next: compare source-backed summaries with raw episodes under matched reader, token and ingestion-cost conditions. Atomic publication proves consistency, not summary usefulness. |
+| Reliable compact semantic memory | Hierarchical source excerpts now publish atomically, recover without repeated embedding work, and refresh when selected period inputs change. Next: compare grounded extraction and source-backed summaries with raw-turn baselines under the same reader and token/cost conditions. Retain qualifiers, temporal boundaries, contradictions and provenance; consistency and compression ratio alone are insufficient. |
+| Profile maintenance recovery | Durable prepared inputs, owner-scoped Python recovery, journal reconstruction and fenced replacement are implemented. Explicit abandonment and fenced collection of unpublished staging are implemented. Next: evaluated scheduled maintenance policy. No automatic profile scheduler is present. |
+| Temporal and aggregate questions | Present-state and dated-history routing pass the causal simulation gate. Semantic counts/lists now expose non-exhaustive coverage, every observed cap/failure/selection limit, and a token-counted model warning; stored-record enumeration remains explicit. Next: evaluate semantic qualification, real-item deduplication, multi-session updates and abstention together. |
+| Adaptive retrieval and memory credit | Immutable owner-scoped receipts, explicit relevance labels and answer-time citations preserve returned, packed and cited memory identities across restart. Exact packed-context ablation removes one cited entry without mutation or fill-in and assigns citation-checked signed presence credit under a named fixed evaluation protocol. The registered source-anchored development diagnostic produced 23 correct-to-wrong flips in 37 singly annotated contexts; its six redundant non-flips and one reference inconsistency show why missing flips cannot become negative labels. Scoped ranking profiles now require positive observed-candidate and fresh full-retrieval gates, bind exact owner/scope and runtime feature identity, and support append-only activation and rollback. Next: reproduce [Hindsight Memory-PRM](https://arxiv.org/abs/2608.29605) bank deletion and re-retrieval on fixed readers and held-out tasks, persist accepted interventions, and establish task-level gains before consuming intervention credit. A context ablation is narrower than a retrieval-invariant bank deletion. Global weights and retention must not silently consume one tenant's observations. See RFC-0017 and [the learning guide](LEARNING.md). |
+| Developer experience | Installed-wheel sync/async workflows cover confirmation and lifecycle retries and [explicit corrections](MEMORY-CORRECTIONS.md), including retained sources, scoped evidence, full audit records, HTTP/MCP parity and exact retry safety. [Metadata admission](METADATA.md) rejects nonportable values and ambiguous JSON key collisions consistently, and preserves legacy values in journals. Built-in embedding configuration now infers registered model dimensions and rejects unknown dimensions before index startup. The unreplayed, unevaluated QA-pair heuristic is now explicit opt-in. Keep testing first write, restart, retrieval, recovery and migration without repository-only imports; these checks do not establish end-to-end memory quality. |
+| Interactive task completion | The [MemoryArena adapter](../benchmarks/results/research/2026-09-12/AGENTIC-MEMORY-INTEGRATION.md) passed the unmodified upstream client with installed PRME, real embeddings, task isolation and restart provenance. The authored travel scorer audit exposes omitted-failure denominator changes and prefix false accepts. Require exact registered cohort coverage and validate task scoring before interpreting any travel success rate. No interactive dataset task has been scored. |
 
-**Inspiration**: Bartlett's Schema Theory — human memory is reconstructive, not reproductive. We don't replay; we rebuild from schemas + cues + semantic knowledge.
+The first registered held-out LongMemEval-V2 answer comparison is complete. Its
+large gain over no memory clears the memory-utility gate for this cohort, while
+its 43K-token mean context makes context compression an immediate product and
+evaluation priority. A registered same-cohort 4K-budget development arm scored
+49/149 versus 10/149 without memory and reduced mean memory context from 43,195
+to 7,321 tokens, but lost 31 correct answers against the 32K arm. Measure
+intermediate budgets and selection policies before changing either retrieval
+default. Add matched current memory baselines, a second reader family and the
+excluded judge-dependent categories before generalizing answer quality.
 
-**Proposal**: Replace retrieve-and-present with a multi-phase reconstruction:
+A pinned [MemoryAgentBench integration](../benchmarks/integrations/MEMORYAGENTBENCH.md)
+now supports the benchmark's four incremental competency families using the 4K
+product packer, complete source manifests, stable query clocks, and exact context
+capture. The fail-closed workflow preregisters every prepared source, query,
+reference and context assignment, then verifies complete result metrics against
+bounded recounted contexts, durable receipts and the exact source manifests.
+Final 20-question paired registrations for all four families bind identical
+source chunks, questions, reader prompts and model settings across PRME and BM25,
+as well as exact preprocessing dependencies. The BM25 verifier independently
+reconstructs every ranking and captured source list. Contract tests, pinned-tree
+installation, a real-data 500-query EventQA registration dry run, and one-context
+real-data ingress smoke across all four families pass. The first corrected
+[Banking77 result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-BANKING-STRICT-DEV20.md)
+scored PRME at 20/20 versus BM25 at 17/20 while reducing mean retrieved context
+from 41,925 to 3,975 tokens. Its three paired wins and zero losses are encouraging,
+but its interval includes zero and the 468-second PRME pack build exposes a bulk
+ingestion gap. The subsequent matched
+[EventQA result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-EVENTQA-SESSION-DEV20.md)
+scored PRME at 16/20 versus BM25 at 20/20 despite a 90.48% retrieved-context
+reduction. Its missing packed evidence and failed larger-budget diagnostic make
+source-cited episodic reconstruction the next retrieval-quality experiment. The
+matched [Conflict Resolution result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-CONFLICT-ANSWERONLY-DEV20.md)
+scored 1/20 versus 0/20 despite reference-answer text appearing in 19/20 and
+20/20 contexts, respectively. The installed Qwen 35B A3B reader produced the
+same scores in a separately registered check, ruling out capacity alone. Audit
+the numbered-source interface and evaluate PRME's actual correction lifecycle.
+The matched [DetectiveQA result](../benchmarks/results/research/2026-09-14/MEMORYAGENTBENCH-DETECTIVE-CHOICE-DEV20.md)
+completed the first four-family development pass: both arms scored 13/20 while
+PRME reduced retrieved context by 90.52%. Expand the preregistered cohorts and
+reader families, add evidence-aware retrieval diagnostics, and improve typed
+bulk ingestion before broadening any claim. Treat the test-time-learning arm as
+retrieved in-context demonstrations and its conflict arm as numbered-source
+resolution; separate experiments are still required for scoped ranking-profile
+learning and transactional graph supersedence.
 
-```
-Phase 1: Query Analysis → What answer SHAPE do I need?
-    - count → need exhaustive list + counting
-    - entity attribute → need entity card lookup
-    - temporal → need timeline + date arithmetic
-    - comparison → need two entities' attributes
-    
-Phase 2: Schema Activation → What knowledge structure fits?
-    - Activate the right retrieval strategy per shape
-    
-Phase 3: Cue Retrieval → Get DISTILLED cues, not raw text
-    - Retrieve from Level 2 (entity cards) first
-    - Only drill to Level 0 (raw events) for detail/verification
-    
-Phase 4: Reconstruction → Build the answer from cues + schema
-    - LLM reconstructs with structured cues, not raw context
-    
-Phase 5: Verification → Spot-check against raw events
-    - For high-stakes answers, verify key facts against source events
-```
+The existing [namespace RFC](RFC-0004-Namespace-and-Scope-Isolation.md),
+[derivation RFC](RFC-0016-Durable-Derivation-Commits.md), and
+[learning RFC](RFC-0017-Scoped-Retrieval-Learning.md) describe their respective
+constraints and implementation boundaries. Their status does not replace the
+observed gaps or task-level evidence above.
 
-**How it helps**:
-- Aggregation: Schema says "count" → do exhaustive entity query, not top-k text search
-- Knowledge updates: Schema says "current state" → look up entity card, not search events
-- Multi-hop: Schema says "chain" → traverse entity graph, not text similarity
+## Evidence needed for a leadership claim
 
-**Expected impact**: Fundamentally changes the retrieval→generation interface from "here's text, figure it out" to "here's structured knowledge, reconstruct the answer."
+A credible claim must name the versions, tasks and resource constraints where
+PRME leads. Require independently reproducible runs against current, correctly
+configured alternatives, fixed ingestion/reader/judge conditions, more than one
+reader family, measured ingestion and retrieval costs, and held-out task data.
+Include updates, abstention, conflicting claims, multi-session reasoning and
+interactive task completion rather than relying on one static QA total.
 
-### Theory 3: Exhaustive Retrieval for Aggregation Queries
-
-**The problem**: "How many cuisines have I tried?" with top-k retrieval might find 3 of 4 cuisine mentions. The system confidently answers "3" when the answer is "4". Worse, it might retrieve adjacent events and hallucinate "5".
-
-**Proposal**: When query intent = AGGREGATION:
-1. Extract the aggregation target entity/type ("cuisines", "properties viewed", "workshops attended")
-2. Do a graph traversal: find ALL nodes connected to the target via relevant edges
-3. Return the complete set to the LLM, not a relevance-ranked subset
-4. Use Level 2 entity cards which already have pre-aggregated counts
-
-**Key insight**: Aggregation queries don't need the "best" results; they need ALL results. This is a fundamentally different retrieval mode.
-
-### Theory 4: Temporal State Machine
-
-**The problem**: "Where does Rachel live now?" requires finding the LATEST mention of Rachel's location, not the highest-scoring one. If Rachel moved 3 times, the system might return the most semantically similar mention (the one with the best embedding match), which could be any of the three.
-
-**Proposal**: For each entity attribute that changes over time, maintain a **state timeline**:
-```
-Rachel.location: [
-    {value: "New York", valid_from: 2023-01-01, valid_to: 2023-06-15},
-    {value: "Chicago", valid_from: 2023-06-15, valid_to: 2023-09-01},
-    {value: "suburbs", valid_from: 2023-09-01, valid_to: null},  ← CURRENT
-]
-```
-
-Queries about "current" state simply look up `valid_to = null`. No retrieval needed.
-
-**Key insight**: This already exists partially in the graph store (valid_from/valid_to on edges). But it's not being leveraged for retrieval. The retrieval pipeline should check entity state timelines BEFORE doing embedding search.
-
-### Theory 5: Context Compression via Fact Distillation
-
-**The problem**: A 200-word conversation turn like "Hey, I went to the store today and picked up some groceries. Oh, I also redeemed that $5 coupon on coffee creamer at Target. The cashier was so nice..." contains one retrievable fact: "Redeemed $5 coupon on coffee creamer at Target."
-
-**Proposal**: At ingestion time, extract facts into compressed form:
-- Raw: 200 words → Distilled: 10 words per fact
-- Store both, but retrieve distilled facts by default
-- This means a 4000-token budget fits ~400 facts instead of ~20 raw events
-- 20x more knowledge per token
-
-**How it helps**:
-- single_hop "Where did Caroline move from?" → "Caroline moved from Sweden" is retrievable
-- Context packing: 400 facts > 20 raw events for information density
-- Aggregation: scan 400 distilled facts for all cuisine mentions in one pass
-
-### Theory 6: Contrastive Memory Encoding
-
-**The problem**: "tennis" and "table tennis" have embedding similarity ~0.85. The system can't distinguish them via vector search. Similarly, "vintage cameras" vs "vintage films", "San Francisco" vs "Sacramento".
-
-**Proposal**: Store contrastive features alongside each fact:
-- When a new fact is similar to an existing one (cosine > 0.8), compute and store what DISTINGUISHES them
-- At retrieval time, verify the retrieved fact matches the query's distinguishing features
-- This is "elaborative encoding" from cognitive psychology
-
----
-
-## Implementation Roadmap
-
-### Phase A: Memory Consolidation (highest impact)
-1. Enhance ingestion to always extract distilled facts (not just when organizer runs)
-2. Build Entity Knowledge Cards (Level 2) — auto-updating structured summaries
-3. Build aggregation indexes on entity cards
-
-### Phase B: Reconstructive Retrieval
-4. Implement answer-shape classification in query analysis
-5. Build schema-driven retrieval strategies (entity lookup, graph traversal, timeline query)
-6. Replace context-stuffing with structured cue packing
-
-### Phase C: Temporal State Machine  
-7. Implement entity attribute timelines with valid_from/valid_to
-8. Add "current state" fast-path in retrieval for knowledge-update queries
-
-### Phase D: Context Compression
-9. Dual storage: raw events + distilled facts with cross-references
-10. Fact-first context packing (facts fill budget before raw events)
-
-### Phase E: Contrastive Encoding
-11. Near-duplicate detection at ingestion
-12. Contrastive feature storage and verification at retrieval
-
----
-
-## Success Criteria
-
-- LME ≥ 98% (470 queries, gpt-5-mini)
-- LoCoMo ≥ 98% (152 queries, gpt-5-mini)  
-- No regression on synthetic benchmarks
-- Retrieval latency < 500ms p95
+Publish failure coverage and category regressions beside aggregate changes.
+Pin datasets, model assets, code/configuration and token accounting. Keep raw
+source and extraction costs visible, distinguish public product behavior from
+adapter-added behavior, and make comparisons runnable from an installed package.
+The current local studies advance that evidence; they do not establish that PRME
+is the best memory system available.

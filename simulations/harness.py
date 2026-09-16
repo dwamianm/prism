@@ -7,11 +7,10 @@ uses engine.store() directly.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -30,13 +29,29 @@ from simulations.evaluation import (
 
 logger = logging.getLogger(__name__)
 
-# Modules that call datetime.now() and affect scoring determinism.
+# Modules that create memory timestamps or make age/validity decisions.
+# Include native mutation helpers: freezing only the engine leaves their
+# reinforcement/lifecycle timestamps in real time. Budgets still use monotonic.
 # Each uses ``from datetime import datetime`` so we patch the local name.
 _DATETIME_PATCH_TARGETS = [
+    "prme.models.base.datetime",
+    "prme.models.events.datetime",
+    "prme.models.nodes.datetime",
+    "prme.models.edges.datetime",
+    "prme.models.derivation.datetime",
+    "prme.models.extraction.datetime",
+    "prme.storage.engine.datetime",
+    "prme.storage.duckpgq_graph.datetime",
+    "prme.storage.lifecycle.datetime",
+    "prme.storage.reinforcement.datetime",
+    "prme.storage.organizer_merge.datetime",
+    "prme.storage.extraction_work.datetime",
     "prme.retrieval.pipeline.datetime",
     "prme.retrieval.scoring.datetime",
+    "prme.retrieval.snapshots.datetime",
     "prme.organizer.jobs.datetime",
     "prme.organizer.maintenance.datetime",
+    "prme.organizer.consolidation.datetime",
     "simulations.harness.datetime",
 ]
 
@@ -56,16 +71,15 @@ class _FrozenDatetime(datetime):
 @contextmanager
 def _freeze_time(instant: datetime):
     """Context manager that freezes datetime.now() across scoring modules."""
+    previous = _FrozenDatetime._frozen_now
     _FrozenDatetime._frozen_now = instant
-    patches = [patch(target, _FrozenDatetime) for target in _DATETIME_PATCH_TARGETS]
-    for p in patches:
-        p.start()
     try:
-        yield
+        with ExitStack() as stack:
+            for target in _DATETIME_PATCH_TARGETS:
+                stack.enter_context(patch(target, _FrozenDatetime))
+            yield
     finally:
-        for p in patches:
-            p.stop()
-        _FrozenDatetime._frozen_now = None
+        _FrozenDatetime._frozen_now = previous
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +145,7 @@ class CheckpointResult:
 
     checkpoint: SimCheckpoint
     passed: bool
-    top_results: list[dict]  # [{content, score, node_type, lifecycle_state}]
+    top_results: list[dict]  # Ranked content plus component scores and provenance paths.
     expected_found: list[str]  # expected keywords that were found
     expected_missing: list[str]  # expected keywords that were NOT found
     excluded_found: list[str]  # excluded keywords that appeared (bad)
@@ -142,6 +156,7 @@ class CheckpointResult:
     lifecycle_counts: dict[str, int] = field(default_factory=dict)
     # Actual counts of each lifecycle state
     eval_metrics: EvalMetrics | None = None
+    rendered_context: str = ""  # Actual token-packed context for reader diagnostics.
     # IR evaluation metrics (populated when ground_truth is present)
 
 
@@ -309,21 +324,39 @@ class SimulationRunner:
             # Apply scenario-level config overrides (e.g., enable_surprise_gating)
             if scenario.config_overrides:
                 config_kwargs.update(scenario.config_overrides)
+            config_kwargs["database_url"] = None
             config = PRMEConfig(**config_kwargs)
+        else:
+            # A simulation must never write to the caller's actual memory pack.
+            config = config.model_copy(update={
+                "db_path": str(Path(tmp) / "memory.duckdb"),
+                "vector_path": str(Path(tmp) / "vectors.usearch"),
+                "lexical_path": str(lexical_dir), "database_url": None,
+            })
 
         engine = await MemoryEngine.create(config)
 
         try:
-            # Phase 1: Store all messages
-            node_ids = await self._store_messages(engine, scenario.messages)
-
-            # Phase 2: Evaluate checkpoints
+            # Advance the timeline: future messages must not exist at earlier
+            # checkpoints. Source timestamps are assigned once on append.
+            last_day = max([m.day for m in scenario.messages] + [c.day for c in scenario.checkpoints] + [0])
+            origin = datetime.now(timezone.utc) - timedelta(days=last_day)
+            pending = iter(sorted(scenario.messages, key=lambda message: message.day))
+            next_message = next(pending, None)
+            visible_messages: list[SimMessage] = []
+            node_ids: list[str] = []
             checkpoint_results = []
             for checkpoint in sorted(scenario.checkpoints, key=lambda c: c.day):
-                result = await self._evaluate_checkpoint(
-                    engine, checkpoint, scenario.messages, node_ids,
-                    organize=organize_at_checkpoints,
-                )
+                while next_message is not None and next_message.day <= checkpoint.day:
+                    with _freeze_time(origin + timedelta(days=next_message.day)):
+                        node_ids.extend(await self._store_messages(engine, [next_message]))
+                    visible_messages.append(next_message)
+                    next_message = next(pending, None)
+                with _freeze_time(origin + timedelta(days=checkpoint.day)):
+                    result = await self._evaluate_checkpoint(
+                        engine, checkpoint, visible_messages, node_ids,
+                        organize=organize_at_checkpoints,
+                    )
                 checkpoint_results.append(result)
 
             # Compute stats
@@ -344,7 +377,11 @@ class SimulationRunner:
                 duration_ms=duration_ms,
             )
         finally:
-            await engine.close()
+            try:
+                await engine.close()
+            finally:
+                import shutil
+                shutil.rmtree(tmp)
 
     async def run_deterministic_check(
         self,
@@ -449,7 +486,7 @@ class SimulationRunner:
             if msg.epistemic_type is not None:
                 kwargs["epistemic_type"] = EpistemicType(msg.epistemic_type)
 
-            eid = await engine.store(msg.content, **kwargs)
+            eid = await engine.store(msg.content, event_time=datetime.now(timezone.utc), **kwargs)
             event_ids.append(eid)
         return event_ids
 
@@ -461,50 +498,21 @@ class SimulationRunner:
         node_ids: list[str],
         organize: bool = False,
     ) -> CheckpointResult:
-        """Evaluate a single checkpoint by adjusting timestamps and retrieving.
+        """Evaluate the visible history at the runner's frozen checkpoint time.
 
-        For each checkpoint at day N:
-        1. Compute now = datetime.now(UTC)
-        2. For each stored node, compute simulated age: age_days = N - message.day
-        3. Set node timestamps to now - timedelta(days=age_days)
-        4. Call engine.retrieve() -- it uses datetime.now() internally
+        Events retain their original append timestamps. No future source has
+        been ingested, and earlier lifecycle changes remain part of history.
         """
         now = datetime.now(timezone.utc)
 
-        # Adjust timestamps in DuckDB for time simulation
-        conn = engine._conn
-        for i, msg in enumerate(messages):
-            if i >= len(node_ids):
-                break
-            age_days = max(checkpoint.day - msg.day, 0)
-            simulated_ts = now - timedelta(days=age_days)
-            ts_str = simulated_ts.strftime("%Y-%m-%d %H:%M:%S.%f+00")
-
-            # Update both nodes and events tables (including last_reinforced_at
-            # so virtual decay computes correct elapsed time)
-            conn.execute(
-                "UPDATE nodes SET created_at = ?::TIMESTAMPTZ, "
-                "updated_at = ?::TIMESTAMPTZ, "
-                "valid_from = ?::TIMESTAMPTZ, "
-                "last_reinforced_at = ?::TIMESTAMPTZ "
-                "WHERE content = ? AND user_id = ?",
-                [ts_str, ts_str, ts_str, ts_str, msg.content, self.USER_ID],
-            )
-            conn.execute(
-                "UPDATE events SET created_at = ?::TIMESTAMPTZ, "
-                "timestamp = ?::TIMESTAMPTZ "
-                "WHERE content = ? AND user_id = ?",
-                [ts_str, ts_str, msg.content, self.USER_ID],
-            )
-
         # Run organize to apply maintenance (promotion, archival, etc.)
         if organize:
-            await engine.organize()
+            await engine.organize(user_id=self.USER_ID)
 
         # Run retrieval
         response = await engine.retrieve(
             checkpoint.query,
-            user_id=self.USER_ID,
+            user_id=self.USER_ID, reference_time=now,
         )
 
         # Extract top results
@@ -515,6 +523,15 @@ class SimulationRunner:
                 "score": r.composite_score,
                 "node_type": r.node.node_type.value,
                 "lifecycle_state": r.node.lifecycle_state.value,
+                "paths": list(r.paths),
+                "path_count": r.path_count,
+                "semantic_score": r.semantic_score,
+                "lexical_score": r.lexical_score,
+                "graph_proximity": r.graph_proximity,
+                "score_trace": (
+                    r.score_trace.model_dump(mode="json")
+                    if r.score_trace is not None else None
+                ),
             })
 
         # Check keywords against top result content
@@ -616,4 +633,5 @@ class SimulationRunner:
             lifecycle_failures=lifecycle_failures,
             lifecycle_counts=lifecycle_counts,
             eval_metrics=eval_metrics,
+            rendered_context=response.bundle.rendered_context,
         )

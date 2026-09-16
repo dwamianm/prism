@@ -1,0 +1,31 @@
+{
+  "source_tests": {
+    "passed": 16,
+    "failed": 0,
+    "native_exit_code": 0,
+    "seconds": 0.32
+  },
+  "authored_reader": {
+    "native_exit_code": 0,
+    "model": "gemma4:26b",
+    "digest": "08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68",
+    "server": {
+      "version": "0.34.0"
+    },
+    "parsed": "B",
+    "expected": "B",
+    "output_sha256": "3d62aa6725976c44d2a5f5d599e02ff266b4ac63d753e6c07148559d18a8b875"
+  },
+  "data_audit": {
+    "downloaded_histories": 24,
+    "source_messages": 5523,
+    "initial_system_personas_excluded": 24,
+    "messages_with_extra_generation_keys": 1,
+    "handling": "Keep exact role/content, ignore all other metadata; preserve original cohort."
+  },
+  "retained_preflight_failures": [
+    "Initial guessed persona-0 file timestamp returned HTTP 404; resolved authoritative inventory before download.",
+    "Initial strict two-key message parser rejected one message with extra generation metadata. Replaced exact-key check with role/content whitelist and added a leakage regression before any outcome run."
+  ],
+  "limits": "Authored checks and structural dataset audit, not benchmark outcome evidence."
+}

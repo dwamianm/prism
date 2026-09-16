@@ -1,0 +1,14 @@
+{
+  "focused_tests": {
+    "log_sha256": "185fee9ff5fe0f86ce14ba73a8a6f0801271e441c85f8c36f5c8d80abd930bab",
+    "native_exit_code": 0,
+    "passed": 12,
+    "seconds": 0.11
+  },
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "native_exit_code": 0,
+  "native_session_id": 48566,
+  "observed_at": "2026-09-13T19:03:00.409766+00:00",
+  "report_sha256": "f9572562920a47a780a627b9399ddd3ea90c5e17f9940cca7fae03ed97dd755b",
+  "source_commit": "bfa0eec"
+}

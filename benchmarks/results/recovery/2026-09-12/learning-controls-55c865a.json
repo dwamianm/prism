@@ -1,0 +1,103 @@
+{
+  "passed": true,
+  "positive_control": {
+    "algorithm": "pairwise_weight_multipliers_v1",
+    "config": {
+      "seed": 42,
+      "validation_fraction": 0.3,
+      "min_training_queries": 20,
+      "min_validation_queries": 20,
+      "regularization": 0.01,
+      "margin_scale": 5.0,
+      "passes_per_step": 4,
+      "ndcg_k": 10,
+      "bootstrap_samples": 2000,
+      "min_ndcg_gain": 0.01,
+      "max_pairs_per_request": 10000
+    },
+    "input_checksum": "635e4597544023dd82f958c40380ec0bef07fccc41eb00beccd68fb24f9351a7",
+    "multipliers": {
+      "semantic": 0.2661236147294649,
+      "lexical": 4.0,
+      "graph": 0.2661236147294649,
+      "recency": 0.6065306597126334,
+      "salience": 0.6065306597126334,
+      "confidence": 0.502831577970941
+    },
+    "decision": "improved_on_observed_candidates",
+    "training_loss_before": 1.3968222599721862,
+    "training_loss_after": 0.1425888621200349,
+    "validation_ndcg_gain": 0.36907024642854247,
+    "validation_pairwise_gain": 1.0,
+    "validation_gain_interval": [
+      0.36907024642854247,
+      0.36907024642854247
+    ],
+    "coverage": {
+      "feedback_records": 100,
+      "requests_with_pairs": 100,
+      "training_queries": 68,
+      "validation_queries": 32,
+      "explicit_pairs": 100
+    },
+    "exclusions": {
+      "conflicting_candidate_labels": 0
+    }
+  },
+  "reversed_validation_control": {
+    "algorithm": "pairwise_weight_multipliers_v1",
+    "config": {
+      "seed": 42,
+      "validation_fraction": 0.3,
+      "min_training_queries": 20,
+      "min_validation_queries": 20,
+      "regularization": 0.01,
+      "margin_scale": 5.0,
+      "passes_per_step": 4,
+      "ndcg_k": 10,
+      "bootstrap_samples": 2000,
+      "min_ndcg_gain": 0.01,
+      "max_pairs_per_request": 10000
+    },
+    "input_checksum": "b54553aa27eebdd4afaa3210ffd9dcf087430e1ca59d46d8b2e5a3baa38f80d7",
+    "multipliers": {
+      "semantic": 0.2661236147294649,
+      "lexical": 4.0,
+      "graph": 0.2661236147294649,
+      "recency": 0.6065306597126334,
+      "salience": 0.6065306597126334,
+      "confidence": 0.502831577970941
+    },
+    "decision": "no_improvement",
+    "training_loss_before": 1.3968222599721862,
+    "training_loss_after": 0.1425888621200349,
+    "validation_ndcg_gain": -0.36907024642854247,
+    "validation_pairwise_gain": -1.0,
+    "validation_gain_interval": [
+      -0.36907024642854247,
+      -0.36907024642854247
+    ],
+    "coverage": {
+      "feedback_records": 100,
+      "requests_with_pairs": 100,
+      "training_queries": 68,
+      "validation_queries": 32,
+      "explicit_pairs": 100
+    },
+    "exclusions": {
+      "conflicting_candidate_labels": 0
+    }
+  },
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/retrieval/learning.py",
+  "learner_sha256": "07c324783347bf580858d1951bc8989f149cb030a67b64084303ac64afcfb7c1",
+  "fixture_sha256": "08f8eca2c78188a6f1cc01333831b5fb72c9bb37f7381e68aa6e073364c409e9",
+  "checks": [
+    "learnable pairwise mechanism",
+    "validation labels do not change fitted weights",
+    "negative holdout rejects proposal",
+    "input receipt snapshots remain unchanged"
+  ],
+  "limits": "100 authored query IDs share a constructed feature pattern. This tests fitting and rejection mechanics, not task generalization or product retrieval improvement.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0
+}

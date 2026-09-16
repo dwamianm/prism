@@ -1,0 +1,319 @@
+{
+  "completed_at": "2026-09-12T18:46:12.416727+00:00",
+  "run_id": "064f30ad-6caa-487d-ac32-b67a9e6464cf",
+  "native_process_exit_code": 0,
+  "complete": true,
+  "errors": 0,
+  "questions": 119,
+  "report": "data/benchmarks/mem0-raw-dev-b384095.json",
+  "report_sha256": "0e6995c309e587b3f2a9a99f5facb331d3d9ee914a8b1c0fa56118bcdb1de7de",
+  "plan": "benchmarks/results/research/2026-09-12/mem0-raw-dev-plan.json",
+  "plan_sha256": "54f830b9d8cee82535821ed4984e7369c2de1fff7805fade109fbccff8ea2302",
+  "comparison": {
+    "direction": "before=Mem0 raw; after=PRME raw; shared whole-turn evaluator packer",
+    "overall": {
+      "2048": {
+        "queries": 114,
+        "before": 0.8757309941520468,
+        "after": 0.9195906432748538,
+        "delta": 0.04385964912280702,
+        "interval_95": [
+          0.0058479532163742695,
+          0.08187134502923976
+        ],
+        "wins": 15,
+        "losses": 3,
+        "ties": 96
+      },
+      "4096": {
+        "queries": 114,
+        "before": 0.9327485380116959,
+        "after": 0.9649122807017544,
+        "delta": 0.03216374269005848,
+        "interval_95": [
+          2.434699615406045e-19,
+          0.06871345029239766
+        ],
+        "wins": 10,
+        "losses": 3,
+        "ties": 101
+      },
+      "8192": {
+        "queries": 114,
+        "before": 0.9590643274853801,
+        "after": 0.97953216374269,
+        "delta": 0.02046783625730994,
+        "interval_95": [
+          0.005847953216374269,
+          0.0402046783625731
+        ],
+        "wins": 6,
+        "losses": 0,
+        "ties": 108
+      }
+    },
+    "categories": {
+      "knowledge-update": {
+        "2048": {
+          "queries": 20,
+          "before": 0.9083333333333333,
+          "after": 0.975,
+          "delta": 0.06666666666666667,
+          "interval_95": [
+            -0.041666666666666664,
+            0.2
+          ],
+          "wins": 3,
+          "losses": 1,
+          "ties": 16
+        },
+        "4096": {
+          "queries": 20,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 20
+        },
+        "8192": {
+          "queries": 20,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 20
+        }
+      },
+      "multi-session": {
+        "2048": {
+          "queries": 32,
+          "before": 0.734375,
+          "after": 0.8229166666666666,
+          "delta": 0.08854166666666667,
+          "interval_95": [
+            0.020833333333333336,
+            0.16145833333333334
+          ],
+          "wins": 8,
+          "losses": 1,
+          "ties": 23
+        },
+        "4096": {
+          "queries": 32,
+          "before": 0.8385416666666666,
+          "after": 0.921875,
+          "delta": 0.08333333333333333,
+          "interval_95": [
+            -0.002604166666666666,
+            0.17708333333333334
+          ],
+          "wins": 8,
+          "losses": 2,
+          "ties": 22
+        },
+        "8192": {
+          "queries": 32,
+          "before": 0.8854166666666666,
+          "after": 0.9583333333333334,
+          "delta": 0.07291666666666667,
+          "interval_95": [
+            0.020833333333333332,
+            0.13541666666666669
+          ],
+          "wins": 6,
+          "losses": 0,
+          "ties": 26
+        }
+      },
+      "single-session-assistant": {
+        "2048": {
+          "queries": 9,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 9
+        },
+        "4096": {
+          "queries": 9,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 9
+        },
+        "8192": {
+          "queries": 9,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 9
+        }
+      },
+      "single-session-preference": {
+        "2048": {
+          "queries": 7,
+          "before": 1.0,
+          "after": 0.8571428571428571,
+          "delta": -0.14285714285714285,
+          "interval_95": [
+            -0.42857142857142855,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 1,
+          "ties": 6
+        },
+        "4096": {
+          "queries": 7,
+          "before": 1.0,
+          "after": 0.9285714285714286,
+          "delta": -0.07142857142857142,
+          "interval_95": [
+            -0.21428571428571427,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 1,
+          "ties": 6
+        },
+        "8192": {
+          "queries": 7,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 7
+        }
+      },
+      "single-session-user": {
+        "2048": {
+          "queries": 17,
+          "before": 0.9411764705882353,
+          "after": 0.9411764705882353,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 17
+        },
+        "4096": {
+          "queries": 17,
+          "before": 0.9411764705882353,
+          "after": 1.0,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 16
+        },
+        "8192": {
+          "queries": 17,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 17
+        }
+      },
+      "temporal-reasoning": {
+        "2048": {
+          "queries": 29,
+          "before": 0.9022988505747126,
+          "after": 0.9655172413793104,
+          "delta": 0.06321839080459771,
+          "interval_95": [
+            0.01149425287356322,
+            0.12643678160919541
+          ],
+          "wins": 4,
+          "losses": 0,
+          "ties": 25
+        },
+        "4096": {
+          "queries": 29,
+          "before": 0.9482758620689655,
+          "after": 0.9655172413793104,
+          "delta": 0.017241379310344827,
+          "interval_95": [
+            0.0,
+            0.05172413793103448
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 28
+        },
+        "8192": {
+          "queries": 29,
+          "before": 0.9655172413793104,
+          "after": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 29
+        }
+      }
+    }
+  },
+  "limits": [
+    "119 development questions, selected after PRME development results were observed. No competitor outcomes observed before registration.",
+    "Raw-turn static mode in both products: Mem0 infer=False and PRME NOTE store with pairing, reformulation, supersedence, gating, reranker and organizer disabled. Not default end-to-end memory systems.",
+    "One matched BGE model/runtime. Mem0 recommended spaCy NLP and Qdrant BM25 support verified; neither raw profile populates inferred entity relationships.",
+    "Shared whole-turn evaluator packer at matched token budgets isolates ranking; neither product context renderer is measured.",
+    "Question and neutral source positions, dates, roles and content only enter the adapter; gold labels and original dataset session IDs are excluded.",
+    "PRME uses question reference_time. Mem0 OSS has no supported reference_date argument; original dates are supplied as created_at metadata, without pretending this implements temporal semantics.",
+    "Reference PRME run is frozen at 1f5375a, predating later reliability fixes. This compares recorded raw retrieval behavior, not a fresh latest-version product release.",
+    "No answer generation or judging. Unlabelled questions have null evidence scores, not successful abstention. Query bootstrap does not account for overlapping conversation histories.",
+    "Ingestion and retrieval timing is retained but not compared as a speed ratio: separate runs and concurrent host workloads differ. Model preflight and source validation are outside timed operations; startup time is separate.",
+    "Embedding call/character counts exclude model identity preflight; LLM calls forbidden. Temporary memory packs are isolated per question.",
+    "Every failure is retained; no retries or exclusions to improve scores. Complete comparison requires all selected questions and observed native exit zero.",
+    "No superiority gate or production-default decision is attached to this exploratory cross-product result."
+  ],
+  "interpretation": "Exploratory development raw-turn retrieval only, using shared evaluator contexts. No extraction, product-context, answer-quality or speed leadership claim. Treat the near-zero 4K interval lower endpoint as zero at reporting precision."
+}

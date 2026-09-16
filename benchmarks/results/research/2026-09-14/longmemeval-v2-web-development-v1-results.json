@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "registration": "longmemeval-v2-web-development-v1-registration.json",
+  "schema_1_frozen_cohort": {
+    "question_count": 7,
+    "context_truncated_count": 0,
+    "query_latency_seconds": {
+      "min": 0.246,
+      "max": 0.751
+    },
+    "reader_usage": {
+      "prompt_tokens": 310489,
+      "completion_tokens": 36548,
+      "total_tokens": 347037
+    },
+    "official_deterministic": {
+      "eligible_count": 3,
+      "correct_count": 1,
+      "scores_by_question": {
+        "05cce9b3": true,
+        "06a5a25f": false,
+        "07ab3723": false
+      }
+    },
+    "official_llm_judge": {
+      "eligible_count": 4,
+      "scored_count": 0,
+      "status": "HTTP 429 insufficient_quota on the first judge call"
+    },
+    "local_35b_substitute_judge": {
+      "eligible_count": 4,
+      "correct_count": 0,
+      "scores_by_question": {
+        "01f6e679": false,
+        "0382ed92": false,
+        "0401f0c8": false,
+        "0574c69a": false
+      },
+      "combined_with_official_deterministic_for_development_only": "1/7"
+    }
+  },
+  "post_failure_diagnosis": {
+    "06a5a25f": {
+      "classification": "reader_failure",
+      "evidence": "The exact reference phrase was present in the schema-1 packed context, but the 9B reader returned UNKNOWN."
+    },
+    "07ab3723": {
+      "classification": "retrieval_and_packing_failure",
+      "schema_1_before_normalization": {
+        "best_support_rank": 148,
+        "support_packed": false
+      },
+      "schema_1_after_normalization": {
+        "best_support_rank": 34,
+        "support_packed": false
+      },
+      "cause": "Entity-focused and aggregation lexical fan-out admitted raw unbounded BM25 scores, and long raw states had poor packing density."
+    }
+  },
+  "schema_2_targeted_recovery": {
+    "question_count": 2,
+    "official_deterministic_correct_count": 2,
+    "scores_by_question": {
+      "06a5a25f": true,
+      "07ab3723": true
+    },
+    "context_truncated_count": 0,
+    "reader_generation_seconds": 877,
+    "reader_usage": {
+      "prompt_tokens": 84946,
+      "completion_tokens": 25038,
+      "total_tokens": 109984
+    },
+    "memory_query": {
+      "average_seconds": 0.6100868124922272,
+      "max_seconds": 0.7148921249900013
+    },
+    "procedure_retrieval": {
+      "procedure_trace_rank": 7,
+      "procedure_trace_packed": true,
+      "required_ordered_transitions_present": 3,
+      "context_tokens_before": 44037,
+      "context_tokens_after": 40208
+    },
+    "dynamic_retrieval": {
+      "procedure_trace_rank": 1,
+      "procedure_trace_packed": true,
+      "exact_reference_phrase_present": true,
+      "context_tokens_before": 43406,
+      "context_tokens_after": 43556
+    }
+  },
+  "schema_2_ollama_no_reasoning_profile": {
+    "classification": "development-speed profile on the same two seen failures",
+    "reasoning_effort": "none",
+    "official_deterministic_correct_count": 2,
+    "scores_by_question": {
+      "06a5a25f": true,
+      "07ab3723": true
+    },
+    "reader_generation_seconds": 108,
+    "exact_resume_seconds": 5.06,
+    "exact_resume_reader_requests": 0,
+    "reader_usage": {
+      "prompt_tokens": 84950,
+      "completion_tokens": 1253,
+      "total_tokens": 86203
+    },
+    "completion_token_reduction_fraction": 0.9499560667784967,
+    "generation_time_reduction_fraction": 0.8768529076396807,
+    "context_truncated_count": 0
+  },
+  "pack_cost": {
+    "schema_1": {
+      "nodes": 9477,
+      "size_kib": 738028,
+      "indexing_seconds": 1134
+    },
+    "schema_2": {
+      "nodes": 9713,
+      "size_kib": 748032,
+      "indexing_seconds": 1179
+    },
+    "delta": {
+      "nodes": 236,
+      "size_kib": 10004,
+      "indexing_seconds": 45
+    }
+  },
+  "artifact_sha256": {
+    "schema_1_prompt_rows": "6e6aa14997d9a05128b1575e2ef921cd8bb413f43971bbb357fdd66583f720b4",
+    "schema_1_checkpointed_reader_outputs": "ad2cfc68e553d7b1c129b0e0c413ec2f5eb047555bb5b381317dd57c9760dce4",
+    "schema_1_local_judge_outputs": "5667157dd34b2583511bf13f63d5b75d85dd22f7099ae30b23041f6837acf1a0",
+    "schema_2_pack_manifest": "14046b5a6310aaac30f974b3c4b2408b6ce4e588593a5559153ccfe997560644",
+    "schema_2_question_file": "781b22caaa6a65be9408cbdc9b9a7fd4003870cc1813ce77a5958d4cfeb00648",
+    "schema_2_haystack_file": "45803ac363febae15597e9840505c2ad8a21bcba05dd720f61dcc8753f6414b6",
+    "schema_2_prompt_rows": "f330986ac96bdf0099cd7b93ca52f933dca0d84a28eb47a9719834cb05b57e72",
+    "schema_2_per_question": "e245021bd18c3a7411d74fb644ee7ef6a110129438246ddb7d622871978d6248",
+    "schema_2_aggregate": "f4edb02f38a5343acd439b158c03b1df2b23c4423ffcb081516b15d7d73715a4",
+    "schema_2_no_reasoning_prompt_rows": "15afba69ebffa3fe50affa8603281f5b49f28b6ec48c68d20ecccd5cf24b8fe2",
+    "schema_2_no_reasoning_reader_checkpoint": "a3f422a97a0fa1a9bb8e8462a0a762217fb4f59064ecbd4b012d40c08c91fce8"
+  },
+  "limitations": [
+    "Seven development questions are not an accuracy estimate.",
+    "The schema-2 confirmation targets two previously observed failures and is not held out.",
+    "The four LLM-judged questions do not have official scores because the configured OpenAI account returned insufficient quota.",
+    "The local 35B substitute judge is diagnostic and not leaderboard compatible.",
+    "The faster no-reasoning reader profile changes the prescribed reader configuration and is development evidence only.",
+    "Visual query content still does not influence retrieval selection."
+  ]
+}

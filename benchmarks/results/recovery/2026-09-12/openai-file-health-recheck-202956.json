@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-09-12T20:29:56.492776+00:00",
+  "credential_source": "explicit root .env credential",
+  "inherited_credential_differs": true,
+  "file_endpoint_present": false,
+  "selected_endpoint_matches_file": null,
+  "max_retries": 0,
+  "max_output_tokens": 1,
+  "timeout_seconds": 15,
+  "models": [
+    {
+      "model": "gpt-4o-mini",
+      "http_status": 429,
+      "error_type": "RateLimitError",
+      "recognized_code": null
+    },
+    {
+      "model": "gpt-4o-2024-08-06",
+      "http_status": 429,
+      "error_type": "RateLimitError",
+      "recognized_code": null
+    }
+  ]
+}

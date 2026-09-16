@@ -1,15 +1,12 @@
 """Organizer job registry and execution for explicit organize() calls.
 
-Implements RFC-0015 Layer 3 jobs. Each job is an async function that takes
-the engine, config, and time budget, and returns a JobResult. Implemented
-jobs: promote, decay_sweep, archive, feedback_apply, tombstone_sweep.
-Remaining jobs are stubs that return empty results pending future RFC
-implementations.
+Implements RFC-0015 Layer 3 jobs. Each registered job is an async function that
+takes the engine, config, and time budget, and performs its documented work.
+Proposed jobs are not advertised until they have an implementation and evidence.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -33,12 +30,15 @@ ALL_JOBS: list[str] = [
     "alias_resolve",
     "summarize",
     "feedback_apply",
-    "centrality_boost",
     "tombstone_sweep",
     "snapshot_generation",
     "consolidate",
     "index_compaction",
 ]
+
+# Anonymous legacy feedback cannot update one tenant's ranking profile. Require
+# an explicitly selected unscoped operator job; ordinary maintenance never tunes.
+DEFAULT_JOBS: tuple[str, ...] = tuple(name for name in ALL_JOBS if name != "feedback_apply")
 
 
 async def run_job(
@@ -75,7 +75,6 @@ async def run_job(
         "deduplicate": _job_deduplicate,
         "alias_resolve": _job_alias_resolve,
         "summarize": _job_summarize,
-        "centrality_boost": _job_stub,
         "tombstone_sweep": _job_tombstone_sweep,
         "snapshot_generation": _job_snapshot_generation,
         "consolidate": _job_consolidate,
@@ -352,13 +351,14 @@ async def _job_feedback_apply(
     This implements the feedback loop described in RFC-0009, extended by
     issue #24 with gradient-free weight auto-tuning.
 
-    ``user_id`` is accepted but cannot be honoured: the feedback tracker and
-    the scoring weights are both engine-global and FeedbackSignal carries no
-    user, so there is no per-tenant slice to apply. A scoped run still tunes
-    weights for everyone. Per-tenant tuning needs a user dimension on the
-    signal itself (issue #66).
+    This legacy operator job requires an explicit unscoped invocation. Both
+    signals and weights are engine-global, so a scoped invocation fails before
+    reading or consuming any signals. It is excluded from default maintenance.
     """
     start = time.monotonic()
+
+    if user_id is not None:
+        raise ValueError("feedback_apply requires an explicit unscoped operator call; it changes engine-global weights")
 
     tracker = engine._feedback_tracker
     signals = tracker.get_signals(window_days=30)
@@ -370,13 +370,6 @@ async def _job_feedback_apply(
                 "status": "no_signals", "note": "No pending feedback signals",
                 "scope": "global",
             },
-        )
-
-    if user_id is not None:
-        logger.warning(
-            "feedback_apply ignores its %r scope: scoring weights are "
-            "engine-global and apply to every user",
-            user_id,
         )
 
     # Run weight tuner
@@ -463,6 +456,8 @@ async def _job_deduplicate(
         details={
             "duplicates_found": len(duplicates),
             "nodes_merged": merged_count,
+            "pairs_not_applied": len(duplicates) - merged_count,
+            "merge_policy": "exact_content_provenance_validity_v1",
         },
     )
 
@@ -477,7 +472,7 @@ async def _job_alias_resolve(
     """Find and resolve entity alias relationships (issue #11).
 
     Detects abbreviations, case variations, and semantic aliases among
-    ENTITY nodes, then merges high-confidence aliases or links them
+    ENTITY nodes, then merges compatible known name variants or links them
     with RELATES_TO edges.
     """
     from prme.organizer.alias_resolution import find_aliases, resolve_aliases
@@ -617,9 +612,6 @@ async def _job_tombstone_sweep(
 
     Logs a TOMBSTONE_SWEEP operation for each archived node.
     """
-    import json
-    import uuid
-
     start = time.monotonic()
     now = datetime.now(timezone.utc)
 
@@ -659,57 +651,14 @@ async def _job_tombstone_sweep(
         if expiry >= now:
             continue  # not yet expired
 
-        # Archive the expired node
+        # Archive and retain the triggering policy in one graph transaction.
         try:
-            await engine.archive(str(node.id), user_id=user_id)
-            modified += 1
-
-            # Log a TOMBSTONE_SWEEP operation via write queue
-            try:
-                op_id = str(uuid.uuid4())
-                payload = json.dumps({
-                    "target_id": str(node.id),
-                    "target_type": "memory_object",
-                    "reason": "retention_policy_expiry",
-                    "ttl_days": node.ttl_days,
-                    "created_at": node.created_at.isoformat(),
-                    "expired_at": expiry.isoformat(),
-                    "tombstone_ts": now.isoformat(),
-                })
-                conn = getattr(engine, "_conn", None)
-                if conn is not None:
-                    # The write queue awaits what the factory returns, so the
-                    # insert has to be wrapped rather than handed over as a
-                    # bare conn.execute() (which returns a connection).
-                    async def _log(
-                        c=conn,
-                        oid=op_id,
-                        nid=str(node.id),
-                        aid=node.user_id,
-                        p=payload,
-                        n=now,
-                    ) -> None:
-                        # The queue serializes writes only; retrieval reads
-                        # also use this connection and share the graph lock.
-                        async with engine._graph_store._conn_lock:
-                            await asyncio.to_thread(
-                                c.execute,
-                                "INSERT INTO operations "
-                                "(id, op_type, target_id, actor_id, payload, created_at) "
-                                "VALUES (?, 'TOMBSTONE_SWEEP', ?, ?, ?::JSON, ?)",
-                                [oid, nid, aid, p, n],
-                            )
-
-                    await engine._write_queue.submit(
-                        _log,
-                        label=f"tombstone_sweep.log:{node.id}",
-                    )
-            except Exception:
-                logger.warning(
-                    "Failed to log TOMBSTONE_SWEEP operation for node %s",
-                    node.id,
-                    exc_info=True,
-                )
+            changed = await engine._graph_store.archive_expired(
+                str(node.id), user_id=node.user_id, evaluated_at=now
+            )
+            if changed:
+                modified += 1
+                await engine._evict_from_indexes(str(node.id))
         except ValueError:
             errors += 1
 
@@ -818,6 +767,12 @@ async def _job_index_compaction(
     Under a user scope only that user's stale entries are evicted. Rows whose
     node has vanished from the graph entirely can no longer be attributed to
     a user, so they are left for an unscoped run to collect.
+
+    Current prepared plans remain retryable. Replaced revisions with uniquely
+    reserved identities and no graph nodes can be collected in batches of 500.
+    Their immutable source journals remain intact. Incomplete or invalid
+    ownership registration blocks stage reclamation. Lexical deletion commits
+    before vector metadata removal, preserving a durable retry anchor.
     """
     start = time.monotonic()
 
@@ -855,25 +810,31 @@ async def _job_index_compaction(
         rows = conn.execute(
             "SELECT DISTINCT vm.node_id FROM vector_metadata vm "
             "LEFT JOIN nodes n ON vm.node_id = n.id "
-            "WHERE n.id IS NULL "
+            "WHERE (n.id IS NULL AND NOT EXISTS "
+            "(SELECT 1 FROM vector_staging vs WHERE vs.node_id = vm.node_id)) "
             f"OR COALESCE(n.lifecycle_state, 'tentative') NOT IN ({placeholders})",
             active,
         ).fetchall()
         return [row[0] for row in rows]
 
+    from prme.storage._threading import run_to_completion
+
+    from prme.storage.derivation_registry import retired_staging
     async with engine._graph_store._conn_lock:
-        stale_ids = await asyncio.to_thread(_find_stale)
+        stale_ids = await run_to_completion(_find_stale)
+        retired_ids, cleanup_reason = await run_to_completion(retired_staging, conn, user_id=user_id)
+    candidates = list(dict.fromkeys(stale_ids + retired_ids))
 
     processed = 0
     modified = 0
     errors = 0
-    for node_id in stale_ids:
+    for node_id in candidates:
         elapsed_ms = (time.monotonic() - start) * 1000.0
         if elapsed_ms >= budget_ms:
             break
         processed += 1
         try:
-            await engine._evict_from_indexes(node_id)
+            await engine._delete_from_indexes(node_id)
             modified += 1
         except Exception:
             logger.warning(
@@ -890,22 +851,6 @@ async def _job_index_compaction(
         nodes_modified=modified,
         errors=errors,
         duration_ms=round(duration_ms, 2),
-        details={"stale_found": len(stale_ids)},
-    )
-
-
-async def _job_stub(
-    job_name: str,
-    engine: MemoryEngine,
-    config: OrganizerConfig,
-    budget_ms: float,
-    user_id: str | None = None,
-) -> JobResult:
-    """Stub job returning an empty result.
-
-    Used for jobs whose full implementation depends on future RFCs.
-    """
-    return JobResult(
-        job=job_name,
-        details={"status": "stub", "note": f"Job '{job_name}' not yet implemented"},
+        details={"stale_found": len(stale_ids), "retired_staging_found": len(retired_ids),
+                 "stage_cleanup_blocked": cleanup_reason is not None, "stage_cleanup_reason": cleanup_reason},
     )

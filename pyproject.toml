@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "duckdb>=1.2.0",
-    "usearch>=2.16.0",
+    "usearch>=2.26.2",
     "tantivy>=0.22.0",
     "pydantic>=2.12",
     "pydantic-settings>=2.9",
@@ -34,6 +34,8 @@ dependencies = [
     "ollama>=0.6",
     "dateparser>=1.2",
     "cryptography>=43.0",
+    "filelock>=3.16",
+    "tiktoken>=0.12",
 ]
 
 [project.urls]
@@ -57,7 +59,7 @@ api = [
     "uvicorn[standard]>=0.30",
 ]
 mcp = [
-    "mcp>=1.0.0",
+    "mcp>=1.26.0,<2",
 ]
 reranker = [
     "sentence-transformers>=4.0",
@@ -67,6 +69,9 @@ langchain = [
 ]
 llamaindex = [
     "llama-index-core>=0.12",
+]
+evaluation = [
+    "tiktoken>=0.12",
 ]
 
 [dependency-groups]

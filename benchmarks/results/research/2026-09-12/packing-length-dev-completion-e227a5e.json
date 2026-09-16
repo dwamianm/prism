@@ -1,0 +1,6070 @@
+{
+  "complete": true,
+  "errors": 0,
+  "process_exit_code": 0,
+  "runtime": {
+    "commit": "e227a5e8d7d457c536d0c84ef8854794770f3d25",
+    "dependencies": {
+      "numpy": "2.4.2",
+      "pydantic": "2.12.5",
+      "tiktoken": "0.12.0"
+    },
+    "dirty": false,
+    "modules": {
+      "__main__": "32a315095add5f060f158297e29cfc79075d77376bbd1415b868293b04969155",
+      "benchmarks.compare_evidence": "8c0d145fb2a2b17c872b91e4142d9caa02557fdedecf4f8a6ecd4ae22eac8395",
+      "benchmarks.diagnostics.product_packing": "eab5a838c076736ae2e6a34fded218f20ea5934ba86382a8e8626dfeda337324",
+      "prme.retrieval.config": "4549daebe864fe04b4f31b349fff64b74dfb709a61963620c63dcf12f82e4e15",
+      "prme.retrieval.models": "44b7388264772bdd4b3bc2eb57125854bfc84c96a197c008a2998846dc03ff14",
+      "prme.retrieval.packing": "b606ac5dceea45ea6399ef757e614e6a0c3d34dc9fa5f938de20a3612ea95ec6",
+      "prme.retrieval.tokenization": "838f1f1b3f1bfb1d9b2e315472fed5bd02334c59f92b9518243caca2eb5036e2"
+    },
+    "python": "3.11.6 | packaged by conda-forge | (main, Oct  3 2023, 10:37:07) [Clang 15.0.7 ]"
+  },
+  "plan_sha256": "35c0f3144234e50f045c48368eead4fbef730f348ededfbd0c2ca90eae892589",
+  "source": {
+    "dataset": {
+      "name": "longmemeval_s_cleaned.json",
+      "selected_question_ids": [
+        "1b9b7252",
+        "gpt4_8279ba02",
+        "e982271f",
+        "ef66a6e5",
+        "6aeb4375",
+        "6aeb4375_abs",
+        "5d3d2817",
+        "d905b33f",
+        "e56a43b9",
+        "d23cf73b",
+        "67e0d0f2",
+        "545bd2b5",
+        "4dfccbf7",
+        "gpt4_af6db32f",
+        "a9f6b44c",
+        "95228167",
+        "dad224aa",
+        "gpt4_4ef30696",
+        "c9f37c46",
+        "gpt4_d12ceb0e",
+        "28bcfaac",
+        "4100d0a0",
+        "0e4e4c46",
+        "982b5123",
+        "982b5123_abs",
+        "2b8f3739",
+        "gpt4_31ff4165",
+        "dfde3500",
+        "gpt4_7fce9456",
+        "c960da58",
+        "e4e14d04",
+        "gpt4_385a5000",
+        "caf03d32",
+        "gpt4_7ca326fa",
+        "6f9b354f",
+        "95bcc1c8",
+        "5809eb10",
+        "c8f1aeed",
+        "f4f1d8a4",
+        "f4f1d8a4_abs",
+        "75f70248",
+        "0e5e2d1a",
+        "gpt4_2f91af09",
+        "51c32626",
+        "118b2229",
+        "a89d7624",
+        "gpt4_d31cdae3",
+        "6a27ffc2",
+        "a346bb18",
+        "8a137a7f",
+        "993da5e2",
+        "d7c942c3",
+        "852ce960",
+        "caf9ead2",
+        "89941a94",
+        "2318644b",
+        "f0e564bc",
+        "ef9cf60a",
+        "a4996e51",
+        "b01defab",
+        "ad7109d1",
+        "gpt4_b4a80587",
+        "4dfccbf8",
+        "0862e8bf",
+        "0862e8bf_abs",
+        "58bf7951",
+        "eaca4986",
+        "681a1674",
+        "gpt4_7ddcf75f",
+        "6c49646a",
+        "gpt4_2487a7cb",
+        "e66b632c",
+        "bc149d6b",
+        "gpt4_2f8be40d",
+        "09ba9854",
+        "09ba9854_abs",
+        "8ebdbe50",
+        "2a1811e2",
+        "2698e78f",
+        "2698e78f_abs",
+        "c2ac3c61",
+        "b9cfe692",
+        "gpt4_2c50253f",
+        "25e5aa4f",
+        "d6233ab6",
+        "gpt4_fa19884c",
+        "d24813b1",
+        "gpt4_68e94288",
+        "eac54adc",
+        "06db6396",
+        "2133c1b5",
+        "2133c1b5_abs",
+        "e3fc4d6e",
+        "gpt4_8e165409",
+        "gpt4_e414231e",
+        "gpt4_1e4a8aeb",
+        "edced276",
+        "edced276_abs",
+        "fca762bc",
+        "129d1232",
+        "b5ef892d",
+        "72e3ee87",
+        "gpt4_5501fe77",
+        "a2f3aa27",
+        "0f05491a",
+        "fca70973",
+        "dccbc061",
+        "ed4ddc30",
+        "099778bb",
+        "77eafa52",
+        "gpt4_7de946e7",
+        "gpt4_a2d1d1f6",
+        "gpt4_2312f94c",
+        "830ce83f",
+        "cf22b7bf",
+        "gpt4_4929293a",
+        "10e09553",
+        "51a45a95",
+        "d851d5ba"
+      ],
+      "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+      "split": "dev",
+      "split_seed": "prme-evidence-v1",
+      "total_questions": 500,
+      "variant": "s"
+    },
+    "output_sha256": "046a800f5eb5f36be06b160d65e48f17a32ca43ba82ceb8615b410e39348e75b",
+    "snapshots_sha256": "0811c7053cd7158d285feed5e54147c23636e201fdbb2304dc10d9da698e3842",
+    "source_plan_sha256": "183f21a7864afda77f34f376d0654277772aa13667c88510f88584cc8697b9c0",
+    "verification_sha256": "78561f13593f57c0d899c8c8762f0c4a67fcde8b18b01fce11ad890034bf6fa8"
+  },
+  "endpoint_controls_reproduced": 1428,
+  "contexts_evaluated": 3570,
+  "summary": {
+    "literal_stopwords:0.25:2048": {
+      "all_evidence_retained": {
+        "after": 0.8771929824561403,
+        "before": 0.7456140350877193,
+        "delta": 0.13157894736842105,
+        "interval_95": [
+          0.07017543859649122,
+          0.20175438596491227
+        ],
+        "losses": 1,
+        "queries": 114,
+        "ties": 97,
+        "wins": 16
+      },
+      "evidence_recall": {
+        "after": 0.9247076023391813,
+        "before": 0.8216374269005848,
+        "delta": 0.10307017543859649,
+        "interval_95": [
+          0.054824561403508776,
+          0.1527777777777778
+        ],
+        "losses": 1,
+        "queries": 114,
+        "ties": 94,
+        "wins": 19
+      }
+    },
+    "literal_stopwords:0.25:4096": {
+      "all_evidence_retained": {
+        "after": 0.9210526315789473,
+        "before": 0.8070175438596491,
+        "delta": 0.11403508771929824,
+        "interval_95": [
+          0.06140350877192982,
+          0.17543859649122806
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 101,
+        "wins": 13
+      },
+      "evidence_recall": {
+        "after": 0.9546783625730995,
+        "before": 0.8596491228070176,
+        "delta": 0.09502923976608187,
+        "interval_95": [
+          0.049707602339181284,
+          0.14473684210526316
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 98,
+        "wins": 16
+      }
+    },
+    "literal_stopwords:0.25:8192": {
+      "all_evidence_retained": {
+        "after": 0.9385964912280702,
+        "before": 0.9035087719298246,
+        "delta": 0.03508771929824561,
+        "interval_95": [
+          -0.008771929824561403,
+          0.07894736842105263
+        ],
+        "losses": 1,
+        "queries": 114,
+        "ties": 108,
+        "wins": 5
+      },
+      "evidence_recall": {
+        "after": 0.9605263157894737,
+        "before": 0.9181286549707602,
+        "delta": 0.04239766081871345,
+        "interval_95": [
+          0.007309941520467837,
+          0.08187134502923976
+        ],
+        "losses": 1,
+        "queries": 114,
+        "ties": 107,
+        "wins": 6
+      }
+    },
+    "literal_stopwords:0.5:2048": {
+      "all_evidence_retained": {
+        "after": 0.8508771929824561,
+        "before": 0.7456140350877193,
+        "delta": 0.10526315789473684,
+        "interval_95": [
+          0.05263157894736842,
+          0.16666666666666666
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 102,
+        "wins": 12
+      },
+      "evidence_recall": {
+        "after": 0.89546783625731,
+        "before": 0.8216374269005848,
+        "delta": 0.07383040935672515,
+        "interval_95": [
+          0.03728070175438597,
+          0.11403508771929825
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 100,
+        "wins": 14
+      }
+    },
+    "literal_stopwords:0.5:4096": {
+      "all_evidence_retained": {
+        "after": 0.8859649122807017,
+        "before": 0.8070175438596491,
+        "delta": 0.07894736842105263,
+        "interval_95": [
+          0.03508771929824561,
+          0.13157894736842105
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 105,
+        "wins": 9
+      },
+      "evidence_recall": {
+        "after": 0.9181286549707602,
+        "before": 0.8596491228070176,
+        "delta": 0.058479532163742694,
+        "interval_95": [
+          0.023391812865497078,
+          0.097953216374269
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 104,
+        "wins": 10
+      }
+    },
+    "literal_stopwords:0.5:8192": {
+      "all_evidence_retained": {
+        "after": 0.9473684210526315,
+        "before": 0.9035087719298246,
+        "delta": 0.043859649122807015,
+        "interval_95": [
+          0.008771929824561403,
+          0.07894736842105263
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 109,
+        "wins": 5
+      },
+      "evidence_recall": {
+        "after": 0.9619883040935673,
+        "before": 0.9181286549707602,
+        "delta": 0.043859649122807015,
+        "interval_95": [
+          0.008771929824561403,
+          0.07894736842105263
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 109,
+        "wins": 5
+      }
+    },
+    "literal_stopwords:0.75:2048": {
+      "all_evidence_retained": {
+        "after": 0.7719298245614035,
+        "before": 0.7456140350877193,
+        "delta": 0.02631578947368421,
+        "interval_95": [
+          0.0,
+          0.06140350877192982
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 111,
+        "wins": 3
+      },
+      "evidence_recall": {
+        "after": 0.8399122807017544,
+        "before": 0.8216374269005848,
+        "delta": 0.01827485380116959,
+        "interval_95": [
+          0.0021929824561403508,
+          0.03728070175438596
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 109,
+        "wins": 5
+      }
+    },
+    "literal_stopwords:0.75:4096": {
+      "all_evidence_retained": {
+        "after": 0.8333333333333334,
+        "before": 0.8070175438596491,
+        "delta": 0.02631578947368421,
+        "interval_95": [
+          0.0,
+          0.06140350877192982
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 111,
+        "wins": 3
+      },
+      "evidence_recall": {
+        "after": 0.8793859649122807,
+        "before": 0.8596491228070176,
+        "delta": 0.019736842105263157,
+        "interval_95": [
+          0.0029239766081871348,
+          0.041666666666666664
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 109,
+        "wins": 5
+      }
+    },
+    "literal_stopwords:0.75:8192": {
+      "all_evidence_retained": {
+        "after": 0.9122807017543859,
+        "before": 0.9035087719298246,
+        "delta": 0.008771929824561403,
+        "interval_95": [
+          0.0,
+          0.02631578947368421
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 113,
+        "wins": 1
+      },
+      "evidence_recall": {
+        "after": 0.9269005847953217,
+        "before": 0.9181286549707602,
+        "delta": 0.008771929824561403,
+        "interval_95": [
+          0.0,
+          0.02631578947368421
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 113,
+        "wins": 1
+      }
+    },
+    "literal_stopwords:0:2048": {
+      "all_evidence_retained": {
+        "after": 0.7807017543859649,
+        "before": 0.7456140350877193,
+        "delta": 0.03508771929824561,
+        "interval_95": [
+          -0.043859649122807015,
+          0.11403508771929824
+        ],
+        "losses": 8,
+        "queries": 114,
+        "ties": 94,
+        "wins": 12
+      },
+      "evidence_recall": {
+        "after": 0.868421052631579,
+        "before": 0.8216374269005848,
+        "delta": 0.04678362573099415,
+        "interval_95": [
+          -0.01754385964912281,
+          0.11403508771929824
+        ],
+        "losses": 8,
+        "queries": 114,
+        "ties": 92,
+        "wins": 14
+      }
+    },
+    "literal_stopwords:0:4096": {
+      "all_evidence_retained": {
+        "after": 0.8508771929824561,
+        "before": 0.8070175438596491,
+        "delta": 0.043859649122807015,
+        "interval_95": [
+          -0.02631578947368421,
+          0.11403508771929824
+        ],
+        "losses": 6,
+        "queries": 114,
+        "ties": 97,
+        "wins": 11
+      },
+      "evidence_recall": {
+        "after": 0.9093567251461988,
+        "before": 0.8596491228070176,
+        "delta": 0.049707602339181284,
+        "interval_95": [
+          -0.008771929824561405,
+          0.10964912280701754
+        ],
+        "losses": 7,
+        "queries": 114,
+        "ties": 94,
+        "wins": 13
+      }
+    },
+    "literal_stopwords:0:8192": {
+      "all_evidence_retained": {
+        "after": 0.9298245614035088,
+        "before": 0.9035087719298246,
+        "delta": 0.02631578947368421,
+        "interval_95": [
+          -0.03508771929824561,
+          0.08771929824561403
+        ],
+        "losses": 4,
+        "queries": 114,
+        "ties": 103,
+        "wins": 7
+      },
+      "evidence_recall": {
+        "after": 0.9641812865497076,
+        "before": 0.9181286549707602,
+        "delta": 0.046052631578947366,
+        "interval_95": [
+          -0.0007309941520467839,
+          0.097953216374269
+        ],
+        "losses": 4,
+        "queries": 114,
+        "ties": 102,
+        "wins": 8
+      }
+    },
+    "literal_stopwords:1:2048": {
+      "all_evidence_retained": {
+        "after": 0.7456140350877193,
+        "before": 0.7456140350877193,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      },
+      "evidence_recall": {
+        "after": 0.8216374269005848,
+        "before": 0.8216374269005848,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      }
+    },
+    "literal_stopwords:1:4096": {
+      "all_evidence_retained": {
+        "after": 0.8070175438596491,
+        "before": 0.8070175438596491,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      },
+      "evidence_recall": {
+        "after": 0.8596491228070176,
+        "before": 0.8596491228070176,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      }
+    },
+    "literal_stopwords:1:8192": {
+      "all_evidence_retained": {
+        "after": 0.9035087719298246,
+        "before": 0.9035087719298246,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      },
+      "evidence_recall": {
+        "after": 0.9181286549707602,
+        "before": 0.9181286549707602,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      }
+    },
+    "parser:0.25:2048": {
+      "all_evidence_retained": {
+        "after": 0.8947368421052632,
+        "before": 0.5,
+        "delta": 0.39473684210526316,
+        "interval_95": [
+          0.30701754385964913,
+          0.4824561403508772
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 69,
+        "wins": 45
+      },
+      "evidence_recall": {
+        "after": 0.9254385964912281,
+        "before": 0.6513157894736842,
+        "delta": 0.2741228070175439,
+        "interval_95": [
+          0.20760233918128657,
+          0.3406432748538012
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 66,
+        "wins": 48
+      }
+    },
+    "parser:0.25:4096": {
+      "all_evidence_retained": {
+        "after": 0.9210526315789473,
+        "before": 0.6403508771929824,
+        "delta": 0.2807017543859649,
+        "interval_95": [
+          0.20175438596491227,
+          0.3684210526315789
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 82,
+        "wins": 32
+      },
+      "evidence_recall": {
+        "after": 0.9502923976608187,
+        "before": 0.7485380116959064,
+        "delta": 0.20175438596491227,
+        "interval_95": [
+          0.1425438596491228,
+          0.26169590643274854
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 78,
+        "wins": 36
+      }
+    },
+    "parser:0.25:8192": {
+      "all_evidence_retained": {
+        "after": 0.9385964912280702,
+        "before": 0.7368421052631579,
+        "delta": 0.20175438596491227,
+        "interval_95": [
+          0.13157894736842105,
+          0.2807017543859649
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 91,
+        "wins": 23
+      },
+      "evidence_recall": {
+        "after": 0.9605263157894737,
+        "before": 0.8201754385964912,
+        "delta": 0.14035087719298245,
+        "interval_95": [
+          0.0891812865497076,
+          0.19736842105263158
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 88,
+        "wins": 26
+      }
+    },
+    "parser:0.5:2048": {
+      "all_evidence_retained": {
+        "after": 0.8070175438596491,
+        "before": 0.5,
+        "delta": 0.30701754385964913,
+        "interval_95": [
+          0.21929824561403508,
+          0.39473684210526316
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 79,
+        "wins": 35
+      },
+      "evidence_recall": {
+        "after": 0.8603801169590644,
+        "before": 0.6513157894736842,
+        "delta": 0.20906432748538012,
+        "interval_95": [
+          0.15570175438596492,
+          0.27046783625730997
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 72,
+        "wins": 42
+      }
+    },
+    "parser:0.5:4096": {
+      "all_evidence_retained": {
+        "after": 0.868421052631579,
+        "before": 0.6403508771929824,
+        "delta": 0.22807017543859648,
+        "interval_95": [
+          0.15789473684210525,
+          0.30701754385964913
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 88,
+        "wins": 26
+      },
+      "evidence_recall": {
+        "after": 0.9005847953216374,
+        "before": 0.7485380116959064,
+        "delta": 0.15204678362573099,
+        "interval_95": [
+          0.10014619883040936,
+          0.20760233918128657
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 85,
+        "wins": 29
+      }
+    },
+    "parser:0.5:8192": {
+      "all_evidence_retained": {
+        "after": 0.8859649122807017,
+        "before": 0.7368421052631579,
+        "delta": 0.14912280701754385,
+        "interval_95": [
+          0.08771929824561403,
+          0.21929824561403508
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 97,
+        "wins": 17
+      },
+      "evidence_recall": {
+        "after": 0.9137426900584795,
+        "before": 0.8201754385964912,
+        "delta": 0.0935672514619883,
+        "interval_95": [
+          0.054824561403508776,
+          0.13742690058479531
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 94,
+        "wins": 20
+      }
+    },
+    "parser:0.75:2048": {
+      "all_evidence_retained": {
+        "after": 0.6754385964912281,
+        "before": 0.5,
+        "delta": 0.17543859649122806,
+        "interval_95": [
+          0.10526315789473684,
+          0.24561403508771928
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 94,
+        "wins": 20
+      },
+      "evidence_recall": {
+        "after": 0.7792397660818713,
+        "before": 0.6513157894736842,
+        "delta": 0.12792397660818713,
+        "interval_95": [
+          0.08333333333333333,
+          0.17616959064327486
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 86,
+        "wins": 28
+      }
+    },
+    "parser:0.75:4096": {
+      "all_evidence_retained": {
+        "after": 0.7543859649122807,
+        "before": 0.6403508771929824,
+        "delta": 0.11403508771929824,
+        "interval_95": [
+          0.06140350877192982,
+          0.17543859649122806
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 101,
+        "wins": 13
+      },
+      "evidence_recall": {
+        "after": 0.8267543859649122,
+        "before": 0.7485380116959064,
+        "delta": 0.07821637426900585,
+        "interval_95": [
+          0.04239766081871345,
+          0.12207602339181287
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 98,
+        "wins": 16
+      }
+    },
+    "parser:0.75:8192": {
+      "all_evidence_retained": {
+        "after": 0.8596491228070176,
+        "before": 0.7368421052631579,
+        "delta": 0.12280701754385964,
+        "interval_95": [
+          0.07017543859649122,
+          0.18421052631578946
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 100,
+        "wins": 14
+      },
+      "evidence_recall": {
+        "after": 0.8874269005847953,
+        "before": 0.8201754385964912,
+        "delta": 0.06725146198830409,
+        "interval_95": [
+          0.03654970760233918,
+          0.1023391812865497
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 98,
+        "wins": 16
+      }
+    },
+    "parser:0:2048": {
+      "all_evidence_retained": {
+        "after": 0.8157894736842105,
+        "before": 0.5,
+        "delta": 0.3157894736842105,
+        "interval_95": [
+          0.21052631578947367,
+          0.41228070175438597
+        ],
+        "losses": 4,
+        "queries": 114,
+        "ties": 70,
+        "wins": 40
+      },
+      "evidence_recall": {
+        "after": 0.881578947368421,
+        "before": 0.6513157894736842,
+        "delta": 0.23026315789473684,
+        "interval_95": [
+          0.1564327485380117,
+          0.3033625730994152
+        ],
+        "losses": 4,
+        "queries": 114,
+        "ties": 66,
+        "wins": 44
+      }
+    },
+    "parser:0:4096": {
+      "all_evidence_retained": {
+        "after": 0.8859649122807017,
+        "before": 0.6403508771929824,
+        "delta": 0.24561403508771928,
+        "interval_95": [
+          0.16666666666666666,
+          0.32456140350877194
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 86,
+        "wins": 28
+      },
+      "evidence_recall": {
+        "after": 0.9349415204678363,
+        "before": 0.7485380116959064,
+        "delta": 0.18640350877192982,
+        "interval_95": [
+          0.12573099415204678,
+          0.24707602339181287
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 83,
+        "wins": 31
+      }
+    },
+    "parser:0:8192": {
+      "all_evidence_retained": {
+        "after": 0.9385964912280702,
+        "before": 0.7368421052631579,
+        "delta": 0.20175438596491227,
+        "interval_95": [
+          0.13157894736842105,
+          0.2807017543859649
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 91,
+        "wins": 23
+      },
+      "evidence_recall": {
+        "after": 0.9634502923976608,
+        "before": 0.8201754385964912,
+        "delta": 0.14327485380116958,
+        "interval_95": [
+          0.09137426900584796,
+          0.20321637426900585
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 89,
+        "wins": 25
+      }
+    },
+    "parser:1:2048": {
+      "all_evidence_retained": {
+        "after": 0.5,
+        "before": 0.5,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      },
+      "evidence_recall": {
+        "after": 0.6513157894736842,
+        "before": 0.6513157894736842,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      }
+    },
+    "parser:1:4096": {
+      "all_evidence_retained": {
+        "after": 0.6403508771929824,
+        "before": 0.6403508771929824,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      },
+      "evidence_recall": {
+        "after": 0.7485380116959064,
+        "before": 0.7485380116959064,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      }
+    },
+    "parser:1:8192": {
+      "all_evidence_retained": {
+        "after": 0.7368421052631579,
+        "before": 0.7368421052631579,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      },
+      "evidence_recall": {
+        "after": 0.8201754385964912,
+        "before": 0.8201754385964912,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 114,
+        "ties": 114,
+        "wins": 0
+      }
+    }
+  },
+  "categories": {
+    "knowledge-update": {
+      "literal_stopwords:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            -0.15,
+            0.15
+          ],
+          "losses": 1,
+          "queries": 20,
+          "ties": 18,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.95,
+          "delta": 0.0,
+          "interval_95": [
+            -0.075,
+            0.075
+          ],
+          "losses": 1,
+          "queries": 20,
+          "ties": 18,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.9,
+          "delta": 0.1,
+          "interval_95": [
+            0.0,
+            0.25
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 18,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.95,
+          "delta": 0.05,
+          "interval_95": [
+            0.0,
+            0.125
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 18,
+          "wins": 2
+        }
+      },
+      "literal_stopwords:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.95,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.95,
+          "before": 0.9,
+          "delta": 0.05,
+          "interval_95": [
+            0.0,
+            0.15
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 19,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.975,
+          "before": 0.95,
+          "delta": 0.025,
+          "interval_95": [
+            0.0,
+            0.075
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 19,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.95,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.95,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            -0.15,
+            0.15
+          ],
+          "losses": 1,
+          "queries": 20,
+          "ties": 18,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.95,
+          "delta": 0.0,
+          "interval_95": [
+            -0.075,
+            0.075
+          ],
+          "losses": 1,
+          "queries": 20,
+          "ties": 18,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.95,
+          "before": 0.9,
+          "delta": 0.05,
+          "interval_95": [
+            0.0,
+            0.15
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 19,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.975,
+          "before": 0.95,
+          "delta": 0.025,
+          "interval_95": [
+            0.0,
+            0.075
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 19,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.95,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.95,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "parser:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.95,
+          "before": 0.6,
+          "delta": 0.35,
+          "interval_95": [
+            0.15,
+            0.55
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 13,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.975,
+          "before": 0.775,
+          "delta": 0.2,
+          "interval_95": [
+            0.075,
+            0.325
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 13,
+          "wins": 7
+        }
+      },
+      "parser:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.95,
+          "before": 0.7,
+          "delta": 0.25,
+          "interval_95": [
+            0.1,
+            0.45
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 15,
+          "wins": 5
+        },
+        "evidence_recall": {
+          "after": 0.975,
+          "before": 0.85,
+          "delta": 0.125,
+          "interval_95": [
+            0.05,
+            0.225
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 15,
+          "wins": 5
+        }
+      },
+      "parser:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8,
+          "delta": 0.2,
+          "interval_95": [
+            0.05,
+            0.4
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 16,
+          "wins": 4
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9,
+          "delta": 0.1,
+          "interval_95": [
+            0.025,
+            0.2
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 16,
+          "wins": 4
+        }
+      },
+      "parser:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.6,
+          "delta": 0.3,
+          "interval_95": [
+            0.1,
+            0.5
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 14,
+          "wins": 6
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.775,
+          "delta": 0.175,
+          "interval_95": [
+            0.075,
+            0.3
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 14,
+          "wins": 6
+        }
+      },
+      "parser:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.7,
+          "delta": 0.2,
+          "interval_95": [
+            0.05,
+            0.4
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 16,
+          "wins": 4
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.85,
+          "delta": 0.1,
+          "interval_95": [
+            0.025,
+            0.2
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 16,
+          "wins": 4
+        }
+      },
+      "parser:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.95,
+          "before": 0.8,
+          "delta": 0.15,
+          "interval_95": [
+            0.0,
+            0.3
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 17,
+          "wins": 3
+        },
+        "evidence_recall": {
+          "after": 0.975,
+          "before": 0.9,
+          "delta": 0.075,
+          "interval_95": [
+            0.0,
+            0.15
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 17,
+          "wins": 3
+        }
+      },
+      "parser:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.75,
+          "before": 0.6,
+          "delta": 0.15,
+          "interval_95": [
+            0.0,
+            0.3
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 17,
+          "wins": 3
+        },
+        "evidence_recall": {
+          "after": 0.875,
+          "before": 0.775,
+          "delta": 0.1,
+          "interval_95": [
+            0.0,
+            0.225
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 17,
+          "wins": 3
+        }
+      },
+      "parser:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.85,
+          "before": 0.7,
+          "delta": 0.15,
+          "interval_95": [
+            0.0,
+            0.3
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 17,
+          "wins": 3
+        },
+        "evidence_recall": {
+          "after": 0.925,
+          "before": 0.85,
+          "delta": 0.075,
+          "interval_95": [
+            0.0,
+            0.15
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 17,
+          "wins": 3
+        }
+      },
+      "parser:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.8,
+          "delta": 0.1,
+          "interval_95": [
+            0.0,
+            0.25
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 18,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.9,
+          "delta": 0.05,
+          "interval_95": [
+            0.0,
+            0.125
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 18,
+          "wins": 2
+        }
+      },
+      "parser:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.9,
+          "before": 0.6,
+          "delta": 0.3,
+          "interval_95": [
+            0.05,
+            0.55
+          ],
+          "losses": 1,
+          "queries": 20,
+          "ties": 12,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.95,
+          "before": 0.775,
+          "delta": 0.175,
+          "interval_95": [
+            0.05,
+            0.325
+          ],
+          "losses": 1,
+          "queries": 20,
+          "ties": 12,
+          "wins": 7
+        }
+      },
+      "parser:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.95,
+          "before": 0.7,
+          "delta": 0.25,
+          "interval_95": [
+            0.1,
+            0.45
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 15,
+          "wins": 5
+        },
+        "evidence_recall": {
+          "after": 0.975,
+          "before": 0.85,
+          "delta": 0.125,
+          "interval_95": [
+            0.05,
+            0.225
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 15,
+          "wins": 5
+        }
+      },
+      "parser:0:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8,
+          "delta": 0.2,
+          "interval_95": [
+            0.05,
+            0.4
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 16,
+          "wins": 4
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9,
+          "delta": 0.1,
+          "interval_95": [
+            0.025,
+            0.2
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 16,
+          "wins": 4
+        }
+      },
+      "parser:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.6,
+          "before": 0.6,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.775,
+          "before": 0.775,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "parser:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.7,
+          "before": 0.7,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.85,
+          "before": 0.85,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      },
+      "parser:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.8,
+          "before": 0.8,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9,
+          "before": 0.9,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 20,
+          "ties": 20,
+          "wins": 0
+        }
+      }
+    },
+    "multi-session": {
+      "literal_stopwords:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.71875,
+          "before": 0.5625,
+          "delta": 0.15625,
+          "interval_95": [
+            0.03125,
+            0.28125
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 27,
+          "wins": 5
+        },
+        "evidence_recall": {
+          "after": 0.8567708333333334,
+          "before": 0.7552083333333334,
+          "delta": 0.1015625,
+          "interval_95": [
+            0.041666666666666664,
+            0.171875
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 24,
+          "wins": 8
+        }
+      },
+      "literal_stopwords:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.8125,
+          "before": 0.71875,
+          "delta": 0.09375,
+          "interval_95": [
+            0.0,
+            0.21875
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 29,
+          "wins": 3
+        },
+        "evidence_recall": {
+          "after": 0.9322916666666666,
+          "before": 0.859375,
+          "delta": 0.07291666666666667,
+          "interval_95": [
+            0.020833333333333336,
+            0.13541666666666666
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 26,
+          "wins": 6
+        }
+      },
+      "literal_stopwords:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 0.875,
+          "before": 0.90625,
+          "delta": -0.03125,
+          "interval_95": [
+            -0.09375,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 32,
+          "ties": 31,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.953125,
+          "before": 0.9583333333333334,
+          "delta": -0.005208333333333332,
+          "interval_95": [
+            -0.03125,
+            0.015625000000000007
+          ],
+          "losses": 1,
+          "queries": 32,
+          "ties": 30,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.75,
+          "before": 0.5625,
+          "delta": 0.1875,
+          "interval_95": [
+            0.0625,
+            0.3125
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 26,
+          "wins": 6
+        },
+        "evidence_recall": {
+          "after": 0.8619791666666666,
+          "before": 0.7552083333333334,
+          "delta": 0.10677083333333334,
+          "interval_95": [
+            0.044270833333333336,
+            0.1796875
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 24,
+          "wins": 8
+        }
+      },
+      "literal_stopwords:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.8125,
+          "before": 0.71875,
+          "delta": 0.09375,
+          "interval_95": [
+            0.0,
+            0.21875
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 29,
+          "wins": 3
+        },
+        "evidence_recall": {
+          "after": 0.9114583333333334,
+          "before": 0.859375,
+          "delta": 0.052083333333333336,
+          "interval_95": [
+            0.010416666666666668,
+            0.109375
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 28,
+          "wins": 4
+        }
+      },
+      "literal_stopwords:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.90625,
+          "before": 0.90625,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9583333333333334,
+          "before": 0.9583333333333334,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.625,
+          "before": 0.5625,
+          "delta": 0.0625,
+          "interval_95": [
+            0.0,
+            0.15625
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 30,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.8046875,
+          "before": 0.7552083333333334,
+          "delta": 0.04947916666666667,
+          "interval_95": [
+            0.005208333333333333,
+            0.10677083333333334
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 28,
+          "wins": 4
+        }
+      },
+      "literal_stopwords:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.78125,
+          "before": 0.71875,
+          "delta": 0.0625,
+          "interval_95": [
+            0.0,
+            0.15625
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 30,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.8984375,
+          "before": 0.859375,
+          "delta": 0.0390625,
+          "interval_95": [
+            0.0078125,
+            0.0859375
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 28,
+          "wins": 4
+        }
+      },
+      "literal_stopwords:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.90625,
+          "before": 0.90625,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9583333333333334,
+          "before": 0.9583333333333334,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.4375,
+          "before": 0.5625,
+          "delta": -0.125,
+          "interval_95": [
+            -0.28125,
+            0.0
+          ],
+          "losses": 5,
+          "queries": 32,
+          "ties": 26,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.703125,
+          "before": 0.7552083333333334,
+          "delta": -0.052083333333333336,
+          "interval_95": [
+            -0.15625,
+            0.03645833333333333
+          ],
+          "losses": 5,
+          "queries": 32,
+          "ties": 24,
+          "wins": 3
+        }
+      },
+      "literal_stopwords:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.59375,
+          "before": 0.71875,
+          "delta": -0.125,
+          "interval_95": [
+            -0.28125,
+            0.0
+          ],
+          "losses": 5,
+          "queries": 32,
+          "ties": 26,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.7864583333333334,
+          "before": 0.859375,
+          "delta": -0.07291666666666667,
+          "interval_95": [
+            -0.16666666666666666,
+            0.005208333333333334
+          ],
+          "losses": 6,
+          "queries": 32,
+          "ties": 23,
+          "wins": 3
+        }
+      },
+      "literal_stopwords:0:8192": {
+        "all_evidence_retained": {
+          "after": 0.78125,
+          "before": 0.90625,
+          "delta": -0.125,
+          "interval_95": [
+            -0.25,
+            -0.03125
+          ],
+          "losses": 4,
+          "queries": 32,
+          "ties": 28,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9036458333333334,
+          "before": 0.9583333333333334,
+          "delta": -0.0546875,
+          "interval_95": [
+            -0.125,
+            0.0
+          ],
+          "losses": 4,
+          "queries": 32,
+          "ties": 27,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.5625,
+          "before": 0.5625,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.7552083333333334,
+          "before": 0.7552083333333334,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.71875,
+          "before": 0.71875,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.859375,
+          "before": 0.859375,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.90625,
+          "before": 0.90625,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9583333333333334,
+          "before": 0.9583333333333334,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      },
+      "parser:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.78125,
+          "before": 0.28125,
+          "delta": 0.5,
+          "interval_95": [
+            0.3125,
+            0.65625
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 16,
+          "wins": 16
+        },
+        "evidence_recall": {
+          "after": 0.875,
+          "before": 0.5494791666666666,
+          "delta": 0.32552083333333337,
+          "interval_95": [
+            0.22395833333333334,
+            0.42708333333333337
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 13,
+          "wins": 19
+        }
+      },
+      "parser:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.875,
+          "before": 0.46875,
+          "delta": 0.40625,
+          "interval_95": [
+            0.25,
+            0.5625
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 19,
+          "wins": 13
+        },
+        "evidence_recall": {
+          "after": 0.9479166666666666,
+          "before": 0.6822916666666666,
+          "delta": 0.265625,
+          "interval_95": [
+            0.1640625,
+            0.375
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 16,
+          "wins": 16
+        }
+      },
+      "parser:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 0.90625,
+          "before": 0.59375,
+          "delta": 0.3125,
+          "interval_95": [
+            0.15625,
+            0.46875
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 22,
+          "wins": 10
+        },
+        "evidence_recall": {
+          "after": 0.96875,
+          "before": 0.796875,
+          "delta": 0.171875,
+          "interval_95": [
+            0.09114583333333333,
+            0.2708333333333333
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 20,
+          "wins": 12
+        }
+      },
+      "parser:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.65625,
+          "before": 0.28125,
+          "delta": 0.375,
+          "interval_95": [
+            0.21875,
+            0.5625
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 20,
+          "wins": 12
+        },
+        "evidence_recall": {
+          "after": 0.8151041666666666,
+          "before": 0.5494791666666666,
+          "delta": 0.265625,
+          "interval_95": [
+            0.1796875,
+            0.3619791666666667
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 13,
+          "wins": 19
+        }
+      },
+      "parser:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.84375,
+          "before": 0.46875,
+          "delta": 0.375,
+          "interval_95": [
+            0.21875,
+            0.53125
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 20,
+          "wins": 12
+        },
+        "evidence_recall": {
+          "after": 0.9114583333333334,
+          "before": 0.6822916666666666,
+          "delta": 0.22916666666666669,
+          "interval_95": [
+            0.13020833333333334,
+            0.3385416666666667
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 18,
+          "wins": 14
+        }
+      },
+      "parser:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.875,
+          "before": 0.59375,
+          "delta": 0.28125,
+          "interval_95": [
+            0.125,
+            0.4375
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 23,
+          "wins": 9
+        },
+        "evidence_recall": {
+          "after": 0.9427083333333334,
+          "before": 0.796875,
+          "delta": 0.14583333333333334,
+          "interval_95": [
+            0.07291666666666667,
+            0.234375
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 21,
+          "wins": 11
+        }
+      },
+      "parser:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.5,
+          "before": 0.28125,
+          "delta": 0.21875,
+          "interval_95": [
+            0.09375,
+            0.375
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 25,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.7447916666666666,
+          "before": 0.5494791666666666,
+          "delta": 0.1953125,
+          "interval_95": [
+            0.11458333333333333,
+            0.2838541666666667
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 17,
+          "wins": 15
+        }
+      },
+      "parser:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.625,
+          "before": 0.46875,
+          "delta": 0.15625,
+          "interval_95": [
+            0.03125,
+            0.28125
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 27,
+          "wins": 5
+        },
+        "evidence_recall": {
+          "after": 0.8046875,
+          "before": 0.6822916666666666,
+          "delta": 0.12239583333333333,
+          "interval_95": [
+            0.04427083333333333,
+            0.20833333333333334
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 24,
+          "wins": 8
+        }
+      },
+      "parser:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.875,
+          "before": 0.59375,
+          "delta": 0.28125,
+          "interval_95": [
+            0.125,
+            0.4375
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 23,
+          "wins": 9
+        },
+        "evidence_recall": {
+          "after": 0.9270833333333334,
+          "before": 0.796875,
+          "delta": 0.13020833333333334,
+          "interval_95": [
+            0.059895833333333336,
+            0.21614583333333334
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 22,
+          "wins": 10
+        }
+      },
+      "parser:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.5625,
+          "before": 0.28125,
+          "delta": 0.28125,
+          "interval_95": [
+            0.09375,
+            0.46875
+          ],
+          "losses": 2,
+          "queries": 32,
+          "ties": 19,
+          "wins": 11
+        },
+        "evidence_recall": {
+          "after": 0.75,
+          "before": 0.5494791666666666,
+          "delta": 0.20052083333333334,
+          "interval_95": [
+            0.09895833333333334,
+            0.30989583333333337
+          ],
+          "losses": 2,
+          "queries": 32,
+          "ties": 15,
+          "wins": 15
+        }
+      },
+      "parser:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.71875,
+          "before": 0.46875,
+          "delta": 0.25,
+          "interval_95": [
+            0.125,
+            0.40625
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 24,
+          "wins": 8
+        },
+        "evidence_recall": {
+          "after": 0.8463541666666666,
+          "before": 0.6822916666666666,
+          "delta": 0.1640625,
+          "interval_95": [
+            0.07291666666666667,
+            0.26302083333333337
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 22,
+          "wins": 10
+        }
+      },
+      "parser:0:8192": {
+        "all_evidence_retained": {
+          "after": 0.84375,
+          "before": 0.59375,
+          "delta": 0.25,
+          "interval_95": [
+            0.125,
+            0.40625
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 24,
+          "wins": 8
+        },
+        "evidence_recall": {
+          "after": 0.9166666666666666,
+          "before": 0.796875,
+          "delta": 0.11979166666666667,
+          "interval_95": [
+            0.046875,
+            0.21354166666666669
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 23,
+          "wins": 9
+        }
+      },
+      "parser:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.28125,
+          "before": 0.28125,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.5494791666666666,
+          "before": 0.5494791666666666,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      },
+      "parser:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.46875,
+          "before": 0.46875,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.6822916666666666,
+          "before": 0.6822916666666666,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      },
+      "parser:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.59375,
+          "before": 0.59375,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.796875,
+          "before": 0.796875,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 32,
+          "ties": 32,
+          "wins": 0
+        }
+      }
+    },
+    "single-session-assistant": {
+      "literal_stopwords:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        }
+      },
+      "literal_stopwords:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        }
+      },
+      "literal_stopwords:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 0.7777777777777778,
+          "before": 0.2222222222222222,
+          "delta": 0.5555555555555556,
+          "interval_95": [
+            0.2222222222222222,
+            0.8888888888888888
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 4,
+          "wins": 5
+        },
+        "evidence_recall": {
+          "after": 0.7777777777777778,
+          "before": 0.2222222222222222,
+          "delta": 0.5555555555555556,
+          "interval_95": [
+            0.2222222222222222,
+            0.8888888888888888
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 4,
+          "wins": 5
+        }
+      },
+      "literal_stopwords:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.4444444444444444,
+          "before": 0.0,
+          "delta": 0.4444444444444444,
+          "interval_95": [
+            0.1111111111111111,
+            0.7777777777777778
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 5,
+          "wins": 4
+        },
+        "evidence_recall": {
+          "after": 0.4444444444444444,
+          "before": 0.0,
+          "delta": 0.4444444444444444,
+          "interval_95": [
+            0.1111111111111111,
+            0.7777777777777778
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 5,
+          "wins": 4
+        }
+      },
+      "literal_stopwords:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.4444444444444444,
+          "before": 0.0,
+          "delta": 0.4444444444444444,
+          "interval_95": [
+            0.1111111111111111,
+            0.7777777777777778
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 5,
+          "wins": 4
+        },
+        "evidence_recall": {
+          "after": 0.4444444444444444,
+          "before": 0.0,
+          "delta": 0.4444444444444444,
+          "interval_95": [
+            0.1111111111111111,
+            0.7777777777777778
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 5,
+          "wins": 4
+        }
+      },
+      "literal_stopwords:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.7777777777777778,
+          "before": 0.2222222222222222,
+          "delta": 0.5555555555555556,
+          "interval_95": [
+            0.2222222222222222,
+            0.8888888888888888
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 4,
+          "wins": 5
+        },
+        "evidence_recall": {
+          "after": 0.7777777777777778,
+          "before": 0.2222222222222222,
+          "delta": 0.5555555555555556,
+          "interval_95": [
+            0.2222222222222222,
+            0.8888888888888888
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 4,
+          "wins": 5
+        }
+      },
+      "literal_stopwords:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.1111111111111111,
+          "before": 0.0,
+          "delta": 0.1111111111111111,
+          "interval_95": [
+            0.0,
+            0.3333333333333333
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 8,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.1111111111111111,
+          "before": 0.0,
+          "delta": 0.1111111111111111,
+          "interval_95": [
+            0.0,
+            0.3333333333333333
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 8,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.3333333333333333,
+          "before": 0.2222222222222222,
+          "delta": 0.1111111111111111,
+          "interval_95": [
+            0.0,
+            0.3333333333333333
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 8,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.3333333333333333,
+          "before": 0.2222222222222222,
+          "delta": 0.1111111111111111,
+          "interval_95": [
+            0.0,
+            0.3333333333333333
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 8,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.8888888888888888,
+          "before": 0.0,
+          "delta": 0.8888888888888888,
+          "interval_95": [
+            0.6666666666666666,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 1,
+          "wins": 8
+        },
+        "evidence_recall": {
+          "after": 0.8888888888888888,
+          "before": 0.0,
+          "delta": 0.8888888888888888,
+          "interval_95": [
+            0.6666666666666666,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 1,
+          "wins": 8
+        }
+      },
+      "literal_stopwords:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.8888888888888888,
+          "before": 0.0,
+          "delta": 0.8888888888888888,
+          "interval_95": [
+            0.6666666666666666,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 1,
+          "wins": 8
+        },
+        "evidence_recall": {
+          "after": 0.8888888888888888,
+          "before": 0.0,
+          "delta": 0.8888888888888888,
+          "interval_95": [
+            0.6666666666666666,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 1,
+          "wins": 8
+        }
+      },
+      "literal_stopwords:0:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.2222222222222222,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.2222222222222222,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        }
+      },
+      "literal_stopwords:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.2222222222222222,
+          "before": 0.2222222222222222,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.2222222222222222,
+          "before": 0.2222222222222222,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "parser:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        }
+      },
+      "parser:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        }
+      },
+      "parser:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        },
+        "evidence_recall": {
+          "after": 0.7777777777777778,
+          "before": 0.0,
+          "delta": 0.7777777777777778,
+          "interval_95": [
+            0.4444444444444444,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 2,
+          "wins": 7
+        }
+      },
+      "parser:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.2222222222222222,
+          "before": 0.0,
+          "delta": 0.2222222222222222,
+          "interval_95": [
+            0.0,
+            0.5555555555555556
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 7,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.2222222222222222,
+          "before": 0.0,
+          "delta": 0.2222222222222222,
+          "interval_95": [
+            0.0,
+            0.5555555555555556
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 7,
+          "wins": 2
+        }
+      },
+      "parser:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.3333333333333333,
+          "before": 0.0,
+          "delta": 0.3333333333333333,
+          "interval_95": [
+            0.0,
+            0.6666666666666666
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 6,
+          "wins": 3
+        },
+        "evidence_recall": {
+          "after": 0.3333333333333333,
+          "before": 0.0,
+          "delta": 0.3333333333333333,
+          "interval_95": [
+            0.0,
+            0.6666666666666666
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 6,
+          "wins": 3
+        }
+      },
+      "parser:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.3333333333333333,
+          "before": 0.0,
+          "delta": 0.3333333333333333,
+          "interval_95": [
+            0.0,
+            0.6666666666666666
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 6,
+          "wins": 3
+        },
+        "evidence_recall": {
+          "after": 0.3333333333333333,
+          "before": 0.0,
+          "delta": 0.3333333333333333,
+          "interval_95": [
+            0.0,
+            0.6666666666666666
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 6,
+          "wins": 3
+        }
+      },
+      "parser:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "parser:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "parser:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.1111111111111111,
+          "before": 0.0,
+          "delta": 0.1111111111111111,
+          "interval_95": [
+            0.0,
+            0.3333333333333333
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 8,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.1111111111111111,
+          "before": 0.0,
+          "delta": 0.1111111111111111,
+          "interval_95": [
+            0.0,
+            0.3333333333333333
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 8,
+          "wins": 1
+        }
+      },
+      "parser:0:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 0,
+          "wins": 9
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 0,
+          "wins": 9
+        }
+      },
+      "parser:0:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 0,
+          "wins": 9
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 0,
+          "wins": 9
+        }
+      },
+      "parser:0:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 0,
+          "wins": 9
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 0,
+          "wins": 9
+        }
+      },
+      "parser:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "parser:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      },
+      "parser:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.0,
+          "before": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 9,
+          "ties": 9,
+          "wins": 0
+        }
+      }
+    },
+    "single-session-preference": {
+      "literal_stopwords:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8571428571428571,
+          "delta": 0.14285714285714285,
+          "interval_95": [
+            0.0,
+            0.42857142857142855
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9285714285714286,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8571428571428571,
+          "delta": 0.14285714285714285,
+          "interval_95": [
+            0.0,
+            0.42857142857142855
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9285714285714286,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.9285714285714286,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8571428571428571,
+          "delta": 0.14285714285714285,
+          "interval_95": [
+            0.0,
+            0.42857142857142855
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9285714285714286,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.9285714285714286,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.9285714285714286,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.9285714285714286,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8571428571428571,
+          "delta": 0.14285714285714285,
+          "interval_95": [
+            0.0,
+            0.42857142857142855
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9285714285714286,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.9285714285714286,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.9285714285714286,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "parser:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "parser:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.8571428571428571,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "parser:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.8571428571428571,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "parser:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "parser:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.8571428571428571,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "parser:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.8571428571428571,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "parser:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "parser:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "parser:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.8571428571428571,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "parser:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.7142857142857143,
+          "before": 0.8571428571428571,
+          "delta": -0.14285714285714285,
+          "interval_95": [
+            -0.42857142857142855,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 7,
+          "ties": 6,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.7142857142857143,
+          "before": 0.8571428571428571,
+          "delta": -0.14285714285714285,
+          "interval_95": [
+            -0.42857142857142855,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 7,
+          "ties": 6,
+          "wins": 0
+        }
+      },
+      "parser:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.8571428571428571,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "parser:0:8192": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9285714285714286,
+          "before": 0.8571428571428571,
+          "delta": 0.07142857142857142,
+          "interval_95": [
+            0.0,
+            0.21428571428571427
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 6,
+          "wins": 1
+        }
+      },
+      "parser:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "parser:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      },
+      "parser:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8571428571428571,
+          "before": 0.8571428571428571,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 7,
+          "ties": 7,
+          "wins": 0
+        }
+      }
+    },
+    "single-session-user": {
+      "literal_stopwords:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.9411764705882353,
+          "before": 1.0,
+          "delta": -0.058823529411764705,
+          "interval_95": [
+            -0.17647058823529413,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 17,
+          "ties": 16,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9411764705882353,
+          "before": 1.0,
+          "delta": -0.058823529411764705,
+          "interval_95": [
+            -0.17647058823529413,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 17,
+          "ties": 16,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.9411764705882353,
+          "before": 1.0,
+          "delta": -0.058823529411764705,
+          "interval_95": [
+            -0.17647058823529413,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 17,
+          "ties": 16,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9411764705882353,
+          "before": 1.0,
+          "delta": -0.058823529411764705,
+          "interval_95": [
+            -0.17647058823529413,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 17,
+          "ties": 16,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "parser:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8823529411764706,
+          "delta": 0.11764705882352941,
+          "interval_95": [
+            0.0,
+            0.29411764705882354
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 15,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.8823529411764706,
+          "delta": 0.11764705882352941,
+          "interval_95": [
+            0.0,
+            0.29411764705882354
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 15,
+          "wins": 2
+        }
+      },
+      "parser:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        }
+      },
+      "parser:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "parser:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.8823529411764706,
+          "delta": 0.11764705882352941,
+          "interval_95": [
+            0.0,
+            0.29411764705882354
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 15,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.8823529411764706,
+          "delta": 0.11764705882352941,
+          "interval_95": [
+            0.0,
+            0.29411764705882354
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 15,
+          "wins": 2
+        }
+      },
+      "parser:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        }
+      },
+      "parser:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "parser:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.9411764705882353,
+          "before": 0.8823529411764706,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.9411764705882353,
+          "before": 0.8823529411764706,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        }
+      },
+      "parser:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        }
+      },
+      "parser:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "parser:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.9411764705882353,
+          "before": 0.8823529411764706,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.9411764705882353,
+          "before": 0.8823529411764706,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        }
+      },
+      "parser:0:4096": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 0.9411764705882353,
+          "delta": 0.058823529411764705,
+          "interval_95": [
+            0.0,
+            0.17647058823529413
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 16,
+          "wins": 1
+        }
+      },
+      "parser:0:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "parser:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.8823529411764706,
+          "before": 0.8823529411764706,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8823529411764706,
+          "before": 0.8823529411764706,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "parser:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.9411764705882353,
+          "before": 0.9411764705882353,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9411764705882353,
+          "before": 0.9411764705882353,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      },
+      "parser:1:8192": {
+        "all_evidence_retained": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 1.0,
+          "before": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 17,
+          "ties": 17,
+          "wins": 0
+        }
+      }
+    },
+    "temporal-reasoning": {
+      "literal_stopwords:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.896551724137931,
+          "delta": 0.06896551724137931,
+          "interval_95": [
+            0.0,
+            0.1724137931034483
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9310344827586207,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            0.0,
+            0.08620689655172414
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        }
+      },
+      "literal_stopwords:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.896551724137931,
+          "delta": 0.06896551724137931,
+          "interval_95": [
+            0.0,
+            0.1724137931034483
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9310344827586207,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            0.0,
+            0.08620689655172414
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        }
+      },
+      "literal_stopwords:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.9310344827586207,
+          "before": 0.896551724137931,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            0.0,
+            0.10344827586206896
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 28,
+          "wins": 1
+        },
+        "evidence_recall": {
+          "after": 0.9482758620689655,
+          "before": 0.9310344827586207,
+          "delta": 0.017241379310344827,
+          "interval_95": [
+            0.0,
+            0.05172413793103448
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 28,
+          "wins": 1
+        }
+      },
+      "literal_stopwords:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.9310344827586207,
+          "before": 0.896551724137931,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            -0.06896551724137931,
+            0.13793103448275862
+          ],
+          "losses": 1,
+          "queries": 29,
+          "ties": 26,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.9310344827586207,
+          "before": 0.9310344827586207,
+          "delta": 0.0,
+          "interval_95": [
+            -0.10344827586206896,
+            0.06896551724137931
+          ],
+          "losses": 1,
+          "queries": 29,
+          "ties": 26,
+          "wins": 2
+        }
+      },
+      "literal_stopwords:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:0:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.896551724137931,
+          "before": 0.896551724137931,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9310344827586207,
+          "before": 0.9310344827586207,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "literal_stopwords:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9655172413793104,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "parser:0.25:2048": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.5172413793103449,
+          "delta": 0.4482758620689655,
+          "interval_95": [
+            0.27586206896551724,
+            0.6206896551724138
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 16,
+          "wins": 13
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.6954022988505747,
+          "delta": 0.27011494252873564,
+          "interval_95": [
+            0.15517241379310345,
+            0.40229885057471265
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 16,
+          "wins": 13
+        }
+      },
+      "parser:0.25:4096": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.7586206896551724,
+          "delta": 0.20689655172413793,
+          "interval_95": [
+            0.06896551724137931,
+            0.3448275862068966
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 23,
+          "wins": 6
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.8448275862068966,
+          "delta": 0.1206896551724138,
+          "interval_95": [
+            0.034482758620689655,
+            0.22413793103448276
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 23,
+          "wins": 6
+        }
+      },
+      "parser:0.25:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.896551724137931,
+          "delta": 0.06896551724137931,
+          "interval_95": [
+            0.0,
+            0.1724137931034483
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9310344827586207,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            0.0,
+            0.08620689655172414
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        }
+      },
+      "parser:0.5:2048": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.5172413793103449,
+          "delta": 0.4482758620689655,
+          "interval_95": [
+            0.27586206896551724,
+            0.6206896551724138
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 16,
+          "wins": 13
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.6954022988505747,
+          "delta": 0.27011494252873564,
+          "interval_95": [
+            0.15517241379310345,
+            0.40229885057471265
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 16,
+          "wins": 13
+        }
+      },
+      "parser:0.5:4096": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.7586206896551724,
+          "delta": 0.20689655172413793,
+          "interval_95": [
+            0.06896551724137931,
+            0.3448275862068966
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 23,
+          "wins": 6
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.8448275862068966,
+          "delta": 0.1206896551724138,
+          "interval_95": [
+            0.034482758620689655,
+            0.22413793103448276
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 23,
+          "wins": 6
+        }
+      },
+      "parser:0.5:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.896551724137931,
+          "delta": 0.06896551724137931,
+          "interval_95": [
+            0.0,
+            0.1724137931034483
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9310344827586207,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            0.0,
+            0.08620689655172414
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        }
+      },
+      "parser:0.75:2048": {
+        "all_evidence_retained": {
+          "after": 0.8275862068965517,
+          "before": 0.5172413793103449,
+          "delta": 0.3103448275862069,
+          "interval_95": [
+            0.13793103448275862,
+            0.4827586206896552
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 20,
+          "wins": 9
+        },
+        "evidence_recall": {
+          "after": 0.8793103448275862,
+          "before": 0.6954022988505747,
+          "delta": 0.1839080459770115,
+          "interval_95": [
+            0.08045977011494253,
+            0.3045977011494253
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 20,
+          "wins": 9
+        }
+      },
+      "parser:0.75:4096": {
+        "all_evidence_retained": {
+          "after": 0.896551724137931,
+          "before": 0.7586206896551724,
+          "delta": 0.13793103448275862,
+          "interval_95": [
+            0.034482758620689655,
+            0.27586206896551724
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 25,
+          "wins": 4
+        },
+        "evidence_recall": {
+          "after": 0.9310344827586207,
+          "before": 0.8448275862068966,
+          "delta": 0.08620689655172414,
+          "interval_95": [
+            0.017241379310344827,
+            0.1724137931034483
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 25,
+          "wins": 4
+        }
+      },
+      "parser:0.75:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.896551724137931,
+          "delta": 0.06896551724137931,
+          "interval_95": [
+            0.0,
+            0.1724137931034483
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9310344827586207,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            0.0,
+            0.08620689655172414
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        }
+      },
+      "parser:0:2048": {
+        "all_evidence_retained": {
+          "after": 0.9310344827586207,
+          "before": 0.5172413793103449,
+          "delta": 0.41379310344827586,
+          "interval_95": [
+            0.2413793103448276,
+            0.5862068965517241
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 17,
+          "wins": 12
+        },
+        "evidence_recall": {
+          "after": 0.9482758620689655,
+          "before": 0.6954022988505747,
+          "delta": 0.25287356321839083,
+          "interval_95": [
+            0.13218390804597702,
+            0.38505747126436785
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 17,
+          "wins": 12
+        }
+      },
+      "parser:0:4096": {
+        "all_evidence_retained": {
+          "after": 0.9310344827586207,
+          "before": 0.7586206896551724,
+          "delta": 0.1724137931034483,
+          "interval_95": [
+            0.034482758620689655,
+            0.3103448275862069
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 24,
+          "wins": 5
+        },
+        "evidence_recall": {
+          "after": 0.9482758620689655,
+          "before": 0.8448275862068966,
+          "delta": 0.10344827586206896,
+          "interval_95": [
+            0.017241379310344827,
+            0.1896551724137931
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 24,
+          "wins": 5
+        }
+      },
+      "parser:0:8192": {
+        "all_evidence_retained": {
+          "after": 0.9655172413793104,
+          "before": 0.896551724137931,
+          "delta": 0.06896551724137931,
+          "interval_95": [
+            0.0,
+            0.1724137931034483
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        },
+        "evidence_recall": {
+          "after": 0.9655172413793104,
+          "before": 0.9310344827586207,
+          "delta": 0.034482758620689655,
+          "interval_95": [
+            0.0,
+            0.08620689655172414
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 27,
+          "wins": 2
+        }
+      },
+      "parser:1:2048": {
+        "all_evidence_retained": {
+          "after": 0.5172413793103449,
+          "before": 0.5172413793103449,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.6954022988505747,
+          "before": 0.6954022988505747,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "parser:1:4096": {
+        "all_evidence_retained": {
+          "after": 0.7586206896551724,
+          "before": 0.7586206896551724,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.8448275862068966,
+          "before": 0.8448275862068966,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      },
+      "parser:1:8192": {
+        "all_evidence_retained": {
+          "after": 0.896551724137931,
+          "before": 0.896551724137931,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        },
+        "evidence_recall": {
+          "after": 0.9310344827586207,
+          "before": 0.9310344827586207,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "queries": 29,
+          "ties": 29,
+          "wins": 0
+        }
+      }
+    }
+  },
+  "output_sha256": "bcf9640c01ce9e5be032defa1fb0ace4309676e1079173cfc521e1e3c4c4066f",
+  "questions": 119,
+  "labelled_questions": 114,
+  "all_credit_and_summaries_recomputed": true,
+  "limits": [
+    "Previously examined development cohort; exploratory, no promotion gate.",
+    "Whole-source evidence retention, not answer accuracy or competitive quality.",
+    "All 30 arms reported after full native exit; no selective retries.",
+    "Question intervals ignore shared histories and multiple comparisons.",
+    "Candidate snapshots fixed; retrieval, embedding and extraction are not re-executed.",
+    "The failed 381-question confirmation gate remains unchanged."
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "name": "longmemeval-v2-web-development-v1",
+  "status": "development_only",
+  "upstream": {
+    "repository": "xiaowu0162/LongMemEval-V2",
+    "revision": "2cc8c540bdb87fe6761629b585e727e1c4704520",
+    "dataset": "xiaowu0162/longmemeval-v2",
+    "dataset_revision": "f152293e235517d504809563c833d7190b8c713b",
+    "domain": "web",
+    "tier": "small"
+  },
+  "cohort": {
+    "selection_rule": "First released web question of each question_type after excluding the prior 00aa905a integration smoke; selected and hashed before reading answers.",
+    "question_ids": [
+      "01f6e679",
+      "0382ed92",
+      "0401f0c8",
+      "0574c69a",
+      "05cce9b3",
+      "06a5a25f",
+      "07ab3723"
+    ],
+    "question_types": [
+      "static-environment-abs",
+      "procedure-abs",
+      "dynamic-environment-abs",
+      "errors-gotchas",
+      "static-environment",
+      "dynamic-environment",
+      "procedure"
+    ],
+    "question_sha256": "d504b81157a108ad6c353a9b3d25be424b0e84878102fe23ca348b6d887b61ec",
+    "haystack_sha256": "9e64d0077ea4a5d6e05ecba2181bc10e208251e4902fc96b9e8c8829f238f41d",
+    "shared_haystack_trajectories": 100
+  },
+  "schema_1_arm": {
+    "prme_commit": "963bdf43edf5b33edf2b90f82b32270d01361f62",
+    "adapter_schema_version": 1,
+    "adapter_sha256": "468b175e4dc58b46da382eee201824b5508652669f5dfbe02de6020ef6a0c80a",
+    "saved_pack_nodes": 9477,
+    "saved_pack_kib": 738028,
+    "indexing_seconds": 1134
+  },
+  "schema_2_recovery_arm": {
+    "retrieval_normalization_commit": "477c7fbc07f5c2c9df5a63658dffcf5f70dcbba3",
+    "hierarchy_commit": "4d86b4fd524659485325fa120c54e5985ea67078",
+    "adapter_schema_version": 2,
+    "adapter_build_sha256": "cecb0faf7e38f2e15645e4bcaa4bad04c242158a23e2c76ef5228f832cb7e5a5",
+    "adapter_final_sha256": "668cac29c851ebda4026ec9c6a5881dac8b3bcf0adecb99c578e090867a8e106",
+    "saved_pack_nodes": 9713,
+    "saved_pack_kib": 748032,
+    "indexing_seconds": 1179,
+    "targeted_question_ids": [
+      "06a5a25f",
+      "07ab3723"
+    ],
+    "targeting_disclosure": "The recovery arm contains the two deterministic questions that failed in the frozen schema-1 cohort. It is a development confirmation, not a held-out estimate."
+  },
+  "retrieval": {
+    "embedding_provider": "fastembed",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "embedding_dimension": 384,
+    "internal_token_budget": 32768,
+    "result_limit": 100,
+    "source_image_limit": 8,
+    "downstream_context_ceiling": 65536
+  },
+  "reader": {
+    "server": "ollama 0.34.0",
+    "model": "qwen3.5:9b",
+    "digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+    "context_tokens": 262144,
+    "thinking_enabled": true,
+    "max_completion_tokens": 20000,
+    "concurrent_requests": 1
+  },
+  "evaluation": {
+    "official_deterministic_functions": [
+      "norm_phrase_set_match"
+    ],
+    "official_llm_judge_model": "gpt-5.2",
+    "official_llm_judge_status": "unavailable_insufficient_quota_http_429",
+    "diagnostic_substitute_judge": {
+      "model": "qwen3.5:35b-a3b",
+      "digest": "3460ffeede5453ead027dbd2f821b12ad0aa3de54630971993babdb2165221f7",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "official_prompts_used": true,
+      "leaderboard_compatible": false
+    }
+  },
+  "leakage_controls": {
+    "answers_or_question_metadata_entered_memory_pack": false,
+    "support_trajectories_identified_before_initial_scoring": false,
+    "recovery_used_seen_failures": true
+  }
+}

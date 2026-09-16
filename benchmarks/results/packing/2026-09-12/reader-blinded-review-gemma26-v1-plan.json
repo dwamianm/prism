@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-09-12T17:25:05.595333+00:00",
+  "study": "gemma26 arm-blinded review before judged scoring",
+  "reader_plan": {
+    "path": "benchmarks/results/packing/2026-09-12/reader-plan-gemma26-a89cfe1.json",
+    "sha256": "92c4d32bdd8860468aebbc14a64f5e8331c666f268779440b6e052efbe6a3415"
+  },
+  "references": {
+    "path": "data/benchmarks/packing-reader-gemma26-a89cfe1-references.json",
+    "sha256": "06bcdc9ba0e19d7144163862ecfcbd7658e67c8a4d884693509f0b102b55d180"
+  },
+  "selection_seed": "prme-reader-review-v1",
+  "blinding_seed": "prme-reader-gemma26-review-v1",
+  "selection": "Two lowest SHA256(selection_seed + colon + question_id) values per category",
+  "selected_questions": [
+    {
+      "question_id": "2698e78f_abs",
+      "category": "abstention"
+    },
+    {
+      "question_id": "09ba9854_abs",
+      "category": "abstention"
+    },
+    {
+      "question_id": "0e4e4c46",
+      "category": "knowledge-update"
+    },
+    {
+      "question_id": "a2f3aa27",
+      "category": "knowledge-update"
+    },
+    {
+      "question_id": "a346bb18",
+      "category": "multi-session"
+    },
+    {
+      "question_id": "681a1674",
+      "category": "multi-session"
+    },
+    {
+      "question_id": "c8f1aeed",
+      "category": "single-session-assistant"
+    },
+    {
+      "question_id": "fca762bc",
+      "category": "single-session-assistant"
+    },
+    {
+      "question_id": "95228167",
+      "category": "single-session-preference"
+    },
+    {
+      "question_id": "caf03d32",
+      "category": "single-session-preference"
+    },
+    {
+      "question_id": "6f9b354f",
+      "category": "single-session-user"
+    },
+    {
+      "question_id": "dccbc061",
+      "category": "single-session-user"
+    },
+    {
+      "question_id": "gpt4_2487a7cb",
+      "category": "temporal-reasoning"
+    },
+    {
+      "question_id": "gpt4_7de946e7",
+      "category": "temporal-reasoning"
+    }
+  ],
+  "expected_responses": 28,
+  "opaque_id": "SHA256(blinding_seed + colon + question_id + colon + arm)",
+  "packet_order": "opaque ID ascending",
+  "packet_fields": [
+    "id",
+    "category",
+    "question",
+    "reference",
+    "hypothesis"
+  ],
+  "labels": [
+    "accept",
+    "reject",
+    "ambiguous"
+  ],
+  "packet_path": "data/benchmarks/reader-blinded-review-gemma26-v1.json",
+  "limits": "Current Codex session, not independent human annotation. Reusing question selection but changing opaque IDs avoids direct cross-study arm mapping. Create and hash the complete packet only after reader native exit zero; review before local judging."
+}

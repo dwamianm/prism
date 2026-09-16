@@ -1,0 +1,57 @@
+{
+  "passed": true,
+  "embedding_provider_sha256": "1fb3d1b9eb12b693187dbee4e1b20a6e27c51561af5d4fb2d90b59b950495a0c",
+  "onnxruntime_version": "1.30.0",
+  "onnx_telemetry_disabled": "1",
+  "pipeline_sha256": "ba99c71de8751d5d58d2fe220e9a6b91299a3699ee6466f98c7a95c18a5aa9a8",
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/ingestion/pipeline.py",
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "old_revision": 1,
+  "committed_revision": 2,
+  "facts": 1,
+  "prepared_nodes": 2,
+  "reclaimed_old_nodes": 2,
+  "compaction": {
+    "job": "index_compaction",
+    "nodes_processed": 2,
+    "nodes_modified": 2,
+    "errors": 0,
+    "duration_ms": 71.64,
+    "details": {
+      "stale_found": 0,
+      "retired_staging_found": 2,
+      "stage_cleanup_blocked": false,
+      "stage_cleanup_reason": null
+    }
+  },
+  "elapsed_seconds": 29.087,
+  "checks": [
+    "real local extraction with reused entity",
+    "changed dependency rejects publication",
+    "public replan after restart without repeated extraction",
+    "immutable original plan and extraction",
+    "scoped revision status",
+    "receipt and exact artifact identities",
+    "retrieval finds database fact",
+    "foreign maintenance retains staging",
+    "owner maintenance reclaims old indexes",
+    "new indexes and immutable journals survive cleanup"
+  ],
+  "limits": "One synthetic workflow. Replanning may recompute embeddings. No extraction accuracy or comparative claim.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0,
+  "production_commit": "7c53645",
+  "diagnostic_sha256": "c24eefcb222af2a73bd54ac33e1671f8bdfcf3def599e89744b7bbcf443b238f",
+  "python": "3.13.3",
+  "ollama_model_digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd",
+  "dependencies": {
+    "duckdb": "1.5.5",
+    "tantivy": "0.26.0",
+    "usearch": "2.26.2",
+    "fastembed": "0.8.0",
+    "onnxruntime": "1.30.0",
+    "instructor": "1.17.0",
+    "openai": "3.3.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "adapter_commit": "b4f3d32",
+  "checks": [
+    "native loopback server ready",
+    "unmodified upstream client initializes/adds/wraps",
+    "real BGE retrieval returns exact source",
+    "complete memory block fits 4096 tokens",
+    "other task cannot retrieve source",
+    "reinitialization starts fresh memory"
+  ],
+  "client_sha256": "9efc1c037c9b94d4b17e5d69c4ed80bd5ad7c7f982688b56903b7e0116d62bff",
+  "context_sha256": "ce24ea87c442916321c67f721afe990a76e0b1f66c4f08a33732f9d64bc0a442",
+  "error_type": "AssertionError",
+  "memory_block_tokens": 132,
+  "passed": false,
+  "server_native_exit_code": -15,
+  "source_commit": "f9665fb",
+  "upstream_commit": "6cd9de14b71915e39ac742a20dc33785e14b6aab",
+  "parent_native_exit_code": 1,
+  "tool_session_id": 59465,
+  "raw_report_sha256": "4dccc179a7027c45dba7831faae076285d8d953c921c826b81bd0803eb41f9a9"
+}

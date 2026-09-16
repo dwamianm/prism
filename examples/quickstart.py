@@ -34,7 +34,7 @@ logging.basicConfig(
 
 sys.stdout.reconfigure(line_buffering=True)
 
-from prme import MemoryEngine, NodeType, PRMEConfig, Scope
+from prme import MemoryEngine, NodeType, PRMEConfig, Scope  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -236,10 +236,10 @@ async def main() -> None:
             if p.is_file():
                 total_size += p.stat().st_size
                 file_count += 1
-        print(f"  memory.duckdb       (event store + graph)")
-        print(f"  vectors.usearch     (HNSW vector index)")
-        print(f"  lexical_index/      (tantivy full-text index)")
-        print(f"  ---")
+        print("  memory.duckdb       (event store + graph)")
+        print("  vectors.usearch     (HNSW vector index)")
+        print("  lexical_index/      (tantivy full-text index)")
+        print("  ---")
         print(f"  {file_count} files, {total_size:,} bytes total")
 
     finally:

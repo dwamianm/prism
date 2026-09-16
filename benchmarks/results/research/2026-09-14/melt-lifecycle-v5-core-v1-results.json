@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "kind": "melt-lifecycle-v5-core-result",
+  "status": "complete",
+  "registration": {
+    "path": "melt-lifecycle-v5-core-v1-registration.json",
+    "sha256": "c2f92598bcb5d1af67d2c8b2ebff834f2a11604de61def76cd4ff2d2ca9f84ff"
+  },
+  "source": {
+    "prme_revision": "aa1f41c86d2389056ad4fa9be9c7972bc7591cf4",
+    "upstream_repository": "shisa-ai/melt",
+    "upstream_revision": "47c819f417b0d81a57f781ec54d8a5cf84e0c833",
+    "melt_version": "0.3.1",
+    "melt_schema_version": "2",
+    "report_schema_version": "5"
+  },
+  "protocol": {
+    "suite": "lifecycle",
+    "suite_version": "lifecycle-v5",
+    "fixture": "stress",
+    "split": "held_out",
+    "score_profile": "lifecycle-v5-core",
+    "top_k": 12,
+    "runs": 5,
+    "seed_schedule": [
+      1103,
+      2207,
+      3301,
+      4409,
+      5501
+    ],
+    "answer_mode": "retrieval_only"
+  },
+  "system": {
+    "id": "prme",
+    "version": "0.11.0",
+    "contract_version": "b2",
+    "embedding_provider": "fastembed",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "model_calls_per_operation": {
+      "ingest": 0,
+      "memory_write": 0,
+      "query": 0
+    }
+  },
+  "coverage": {
+    "runs": 5,
+    "cases_per_run": 4,
+    "case_checkpoints": 20,
+    "upstream_loader_valid": true,
+    "independent_validation_errors": []
+  },
+  "metrics": {
+    "retrieval_recall_at_k": {
+      "mean": 1.0,
+      "stddev": 0.0
+    },
+    "retrieval_ndcg_at_k": {
+      "mean": 1.0,
+      "stddev": 0.0
+    },
+    "lifecycle_pass_rate": {
+      "mean": 1.0,
+      "stddev": 0.0
+    },
+    "axes": {
+      "write_quality": {
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      },
+      "correction": {
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      },
+      "contradiction": {
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      },
+      "maintenance": {
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      }
+    },
+    "per_run": [
+      {
+        "run_id": "run-001",
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      },
+      {
+        "run_id": "run-002",
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      },
+      {
+        "run_id": "run-003",
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      },
+      {
+        "run_id": "run-004",
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      },
+      {
+        "run_id": "run-005",
+        "retrieval_recall_at_k": 1.0,
+        "retrieval_ndcg_at_k": 1.0,
+        "lifecycle_pass_rate": 1.0
+      }
+    ]
+  },
+  "artifacts": {
+    "summary_sha256": "b63eddcdf38f2e246335c10668fada4eea9d83e5ad7cbf7215563fb6588da85e",
+    "execution_manifest_sha256": "0e730e2f8952bbafedabaedba629172d0542165726088ccf8041fce0301c7144",
+    "registered_config_sha256": "dc73e64cdccb9c687ccefc2a269e84fc3b54373f1122a4b6bebc5a4132f428b0",
+    "resolved_config_sha256": "d33f428bd8479a890881ed6a87e5063318ec722eea89ae51b1b8d760877b931d",
+    "envelope_sha256": "83f881980d1fbdf10155ea1964b328aec767ba7cd9ef61f86f916e6e52a7df64",
+    "per_run_report_sha256": {
+      "run-001": "267bc0cea17797f9f66b0ac4aca55ed0c9abec42d99014f4cc58b7da343e8184",
+      "run-002": "3a02d9f8288d01942fba92d269c523e51be0c95d97b0494b4e08ef47b4a4b951",
+      "run-003": "f8f6f74e1325aed61ec9a1aa848854f7bde2344b0904fc0232c4c324aab674c5",
+      "run-004": "341e016f7847b1c1151f55fa74a58f1c5555a23be7d5266fced00441d44f9617",
+      "run-005": "72adfb4ca063b1d038380af25542790a55b2fc0127ee71f78802dfb1a49504ea"
+    }
+  },
+  "warnings": [
+    "retrieval bypass: top_k is greater than or equal to session_count (12 >= 1)"
+  ],
+  "claim_boundary": "This result independently confirms PRME on MELT's four deterministic B2 core lifecycle cases. It does not measure generated-answer quality, B3 scoped memory, autonomous memory creation, or superiority over every competing memory system."
+}

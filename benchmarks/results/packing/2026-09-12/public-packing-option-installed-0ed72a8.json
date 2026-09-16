@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "questions": 119,
+  "contexts_verified": 714,
+  "budgets": [
+    2048,
+    4096,
+    8192
+  ],
+  "default_ordering": "density",
+  "source_sha256": "eae041dcf768412ce11d9fca94075983a0076ce3bcefbc788abff540c16bd0d4",
+  "comparison_sha256": "3439c6e45d5d02da3d20be0470dbf9debef444c8d114f808ad08904dbdde9433",
+  "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/retrieval/packing.py",
+  "packing_module_sha256": "b606ac5dceea45ea6399ef757e614e6a0c3d34dc9fa5f938de20a3612ea95ec6",
+  "config_module_sha256": "4549daebe864fe04b4f31b349fff64b74dfb709a61963620c63dcf12f82e4e15",
+  "diagnostic_sha256": "18717a6eaf918ae8371d8de7e0307322c14d024559342ee3ddd382cf99c487e9",
+  "limits": "Exact reproduction of frozen experimental contexts and measurements, not new quality evidence. No provider calls or changes to the confirmation study.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0
+}

@@ -1,0 +1,83 @@
+# Named memory partitions: implementation review
+
+Reviewed 2026-09-12 against code and primary documentation. The initial comparison
+below led to the [implemented local workspace API](WORKSPACES.md) at `217facb`.
+The PostgreSQL schema/pool implementation followed at `b7521bc`; hosted grants
+remain a design requirement. See [PostgreSQL workspace evidence](../benchmarks/results/recovery/2026-09-12/PG-WORKSPACES.md).
+
+PRME's owner and scope filters within one engine cannot distinguish two named
+projects with the same owner and `Scope.PROJECT`. A `project_id` in metadata is
+not a mandatory boundary for entity resolution, organizer merges, receipts or
+recovery. `MemoryWorkspace` now manages separate local packs by stable project
+identity with bounded, cancellation-safe leases. The catalog collision fixed at `afc35ad`
+also shows why adding a PostgreSQL search-path setting alone is insufficient.
+
+[Hindsight's memory-bank API](https://hindsight.vectorize.io/developer/api/memory-banks)
+describes a partition covering memories, documents, entities and relationships.
+[LangChain's long-term-memory API](https://docs.langchain.com/oss/python/langchain/long-term-memory)
+addresses stored items through namespaces and keys. These are useful developer
+contracts to compare; they do not by themselves prove PRME's isolation or
+establish a winning storage implementation.
+
+| Approach | Useful properties | Costs and unresolved requirements |
+|---|---|---|
+| Bind one engine to one local pack or PostgreSQL schema | Naturally covers unscoped maintenance, receipts, recovery and all derived data in that engine; local indexes remain physically separate. | More engines/indexes/connections as partition count grows. PostgreSQL type/operator resolution and every pool connection need explicit handling. Copy/open must verify partition identity. |
+| Add a partition ID throughout shared tables and indexes | Supports many partitions with shared pools and storage; a natural basis for cross-partition administrative operations. | Requires migrations and mandatory checks on every read, write, edge, queue, receipt and replay path. Approximate vector search must preserve authorized recall and avoid post-limit filtering. Owner and partition must remain distinct. |
+| Filter a metadata key after retrieval | Small initial API change. | Rejected: ingestion and maintenance can combine projects before retrieval, and omitted filters expose mixed state. |
+
+The [local resource experiment](../benchmarks/results/recovery/2026-09-12/PARTITION-RESOURCE-PROTOCOL.md)
+tests cold open, memory, threads and retrieval across 1, 10 and 100 separate
+packs with one shared caller-owned embedding provider. It compares keeping every
+engine open with leasing one at a time. Default DuckDB workers crossed the
+experiment's 1,000-thread budget at 54 open packs, while all three leased
+100-pack runs completed. This rejects an unbounded resident-engine design as an
+unexamined default on this host. It does not reject physical partitions.
+
+`duckdb_threads` now allows an explicit per-instance worker count, with the old
+default retained. The [completed follow-up](../benchmarks/results/recovery/2026-09-12/PARTITION-RESOURCES.md)
+passed all three 100-pack resident runs at 167 sampled threads, but median peak
+sampled RSS was 2,437.6 MiB. Database/index memory and open/close ownership still
+need a bounded lease/cache design. Compare that with
+a shared-table PostgreSQL prototype before choosing a scalable hosted default.
+Do not introduce two incomplete production namespace implementations at once.
+
+The PostgreSQL prototype must exclude fallback to a different schema when a
+private relation is missing. Extension types and operators need explicit safe
+resolution; arbitrary schema text must not be interpolated as SQL. PostgreSQL
+documents both schema privileges and the trust implications of search paths in
+its [schema documentation](https://www.postgresql.org/docs/current/ddl-schemas.html).
+A schema boundary is not a substitute for application authorization or database
+roles, and privileged direct database access remains privileged.
+
+Before promotion, the same-owner/two-project workflow must preserve distinct
+entities, contradictory claims, feedback receipts and pending work through
+ingestion, retrieval, maintenance, restart, failure recovery and copying. Foreign
+IDs must not reveal content or mutate another partition. Historical packs and
+journal checksums must keep their existing interpretation. Tenant HTTP/MCP
+credentials must bind allowed partitions explicitly; a request-supplied name is
+not an access grant. The full RFC-0004 hierarchy and grant model remains separate
+from this initial partition contract.
+
+The subsequent [workspace validation](../benchmarks/results/recovery/2026-09-12/WORKSPACES.md)
+exercises those local source/identity/lease contracts, including controlled
+structured ingestion, pending-work recovery, receipts, encrypted copying and
+real process exits. The full suite and installed public 100-project workflow
+passed. These local results do not prove PostgreSQL isolation or the hosted
+grant requirements above, which remain the next platform boundaries to implement.
+
+
+The PostgreSQL implementation reuses the local lease/cache lifecycle. One root
+pool serves all open project engines; each facade verifies identity, removes
+leftover temporary relations and sets a private-only search path. pgvector's
+schema-qualified symbols let extension types/functions/operators remain visible
+without permitting public-table fallback. Registry and initial schema creation
+publish atomically, and initialized missing relations fail before migration.
+Concurrent workspace instances converge on the same registered project identity.
+
+The installed authored 100-project workflow completed with four cached engines,
+three connections and a native database backup/restore. Sampled client RSS peaked
+at 315.2 MiB; this excludes database-server memory, so it is not comparable to the
+local-process RSS figures above as total resource cost. These results support an
+opt-in PostgreSQL workspace API, not a universal hosted scalability choice.
+Hosted grants, shared-table comparison at larger realistic corpora, namespace
+lifecycle/import, and the full RFC conformance gates remain open.

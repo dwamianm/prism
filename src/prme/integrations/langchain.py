@@ -36,6 +36,7 @@ try:
         BaseMessage,
         HumanMessage,
         SystemMessage,
+        messages_from_dict,
     )
     from langchain_core.retrievers import BaseRetriever
 except ImportError as e:
@@ -48,7 +49,40 @@ from pydantic import PrivateAttr
 
 from prme.client import MemoryClient
 from prme.config import PRMEConfig
+from prme.integrations._chat_history import (
+    append_chat_control,
+    chat_message_metadata,
+    serialized_chat_message,
+    visible_chat_events,
+)
 from prme.types import NodeType, Scope
+
+_LANGCHAIN_MESSAGE_FORMAT = "langchain-v1"
+
+
+def _message_text(message: BaseMessage) -> str:
+    """Extract indexable text while the full message stays in metadata."""
+    if isinstance(message.content, str):
+        return message.content
+    parts: list[str] = []
+    for block in message.content:
+        if isinstance(block, str):
+            parts.append(block)
+        elif isinstance(block, dict) and isinstance(block.get("text"), str):
+            parts.append(block["text"])
+    return "".join(parts)
+
+
+def _message_role(message: BaseMessage) -> str:
+    """Map LangChain message classes to PRME provenance roles."""
+    if isinstance(message, AIMessage):
+        return "assistant"
+    if isinstance(message, SystemMessage):
+        return "system"
+    if message.type in {"tool", "function"}:
+        return "tool"
+    role = getattr(message, "role", None)
+    return role if isinstance(role, str) and role else "user"
 
 
 class PRMERetriever(BaseRetriever):
@@ -136,7 +170,7 @@ class PRMEChatMessageHistory(BaseChatMessageHistory):
     """Chat message history backed by PRME event store.
 
     Stores messages via :meth:`~prme.client.MemoryClient.store` and
-    retrieves them via :meth:`~prme.client.MemoryClient.query_nodes`.
+    retrieves them via :meth:`~prme.client.MemoryClient.get_events`.
 
     Args:
         directory: Path to the PRME memory directory.
@@ -163,13 +197,25 @@ class PRMEChatMessageHistory(BaseChatMessageHistory):
     @property
     def messages(self) -> list[BaseMessage]:
         """Retrieve all messages for this session."""
-        events = self._client.get_events(
-            self._user_id,
+        events = visible_chat_events(
+            self._client,
+            user_id=self._user_id,
             session_id=self._session_id,
-            limit=1000,
+            scope=self._scope,
         )
         msgs: list[BaseMessage] = []
-        for event in sorted(events, key=lambda e: e.timestamp):
+        for event in events:
+            serialized = serialized_chat_message(
+                event, format_name=_LANGCHAIN_MESSAGE_FORMAT
+            )
+            if serialized is not None:
+                try:
+                    msgs.append(messages_from_dict([serialized])[0])
+                    continue
+                except (KeyError, NotImplementedError, TypeError, ValueError):
+                    # Retain readability if a future LangChain release cannot
+                    # deserialize an older message envelope.
+                    pass
             role = event.role if hasattr(event, "role") else "user"
             content = event.content
             if role == "assistant":
@@ -180,32 +226,42 @@ class PRMEChatMessageHistory(BaseChatMessageHistory):
                 msgs.append(HumanMessage(content=content))
         return msgs
 
+    @messages.setter
+    def messages(self, messages: list[BaseMessage]) -> None:
+        """Replace the logical history while retaining immutable source events."""
+        self.clear()
+        self.add_messages(messages)
+
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         """Store messages in PRME."""
         for msg in messages:
-            if isinstance(msg, AIMessage):
-                role = "assistant"
-            elif isinstance(msg, SystemMessage):
-                role = "system"
-            else:
-                role = "user"
+            role = _message_role(msg)
+            serialized = {
+                "type": msg.type,
+                "data": msg.model_dump(mode="json"),
+            }
             self._client.store(
-                msg.content,
+                _message_text(msg),
                 user_id=self._user_id,
                 session_id=self._session_id,
                 role=role,
                 node_type=NodeType.NOTE,
                 scope=self._scope,
-                metadata={"role": role},
+                metadata=chat_message_metadata(
+                    format_name=_LANGCHAIN_MESSAGE_FORMAT,
+                    message=serialized,
+                ),
             )
 
     def clear(self) -> None:
-        """Clear is not supported (PRME is append-only).
-
-        Per PRME's append-only design, messages cannot be deleted.
-        This is a no-op to satisfy the interface contract.
-        """
-        pass
+        """Logically clear this history while retaining immutable source events."""
+        append_chat_control(
+            self._client,
+            user_id=self._user_id,
+            session_id=self._session_id,
+            scope=self._scope,
+            operation="clear",
+        )
 
     def close(self) -> None:
         """Close the underlying MemoryClient."""

@@ -1,0 +1,85 @@
+{
+  "before": {
+    "behavior": "DuckDB accepted nonfinite values; PostgreSQL raised lower-level JSON errors.",
+    "failed": 12,
+    "log_sha256": "128d788e0b0a73acab763feb1aa6e341fe017b94d99f10da6d1856a6c274ac01",
+    "native_exit_code": 1,
+    "seconds": 1.62
+  },
+  "focused_source": {
+    "log_sha256": "f4d3deb1217610c1c3631dc1b82abde3ae1ee1642fd9285daee26b032ebac942",
+    "native_exit_code": 0,
+    "passed": 142,
+    "seconds": 32.89,
+    "skipped": 4
+  },
+  "frozen_source_commit": "82ea929",
+  "full_postgres_suite": {
+    "isolated_database": "prme_metadata_admission_20260913",
+    "log": "/tmp/prme-metadata-admission-full-pg.log",
+    "log_sha256": "e41e7a3aebac6e9250a00e1523bf3891682fde90bd92a82c0c8702e4df1a89fb",
+    "native_exit_code": 0,
+    "native_exit_observed_at": "2026-09-13T18:58:02.762700+00:00",
+    "native_session_id": 13519,
+    "passed": 3136,
+    "seconds": 811.1,
+    "skipped": 85,
+    "source_commit": "82ea929",
+    "status": "complete"
+  },
+  "installed": {
+    "log_sha256": "c48b4ec342a44fffbffb9ae890dd804ad1cccdb880c52c6ec44943ce39aedfbc",
+    "native_exit_code": 0,
+    "passed": 142,
+    "seconds": 33.8,
+    "skipped": 4,
+    "verification_sha256": "e6cd050940a8f96b78b083e767fa3f33b6f36a40cadb7502b17e274401166819"
+  },
+  "installed_legacy_probe": {
+    "installed_package_probe": true,
+    "log_sha256": "3a8cb8f85b3f1d0d2dc5f84313bc0295bdd49cfd2e1b85317648b676e1c46578",
+    "native_exit_code": 0,
+    "results": [
+      {
+        "archive_succeeded": true,
+        "method": "store",
+        "node_metadata_is_nan": false,
+        "node_metadata_is_null": true,
+        "source_metadata_is_nan": true
+      },
+      {
+        "archive_error_type": "ValueError",
+        "archive_succeeded": false,
+        "method": "ingest_fast",
+        "node_metadata_is_nan": true,
+        "node_metadata_is_null": false,
+        "nonfinite_json_rejection": true,
+        "source_metadata_is_nan": true
+      }
+    ],
+    "source_commit": "c6023c7"
+  },
+  "limits": [
+    "New event admission does not validate arbitrary low-level graph/table changes.",
+    "Old direct-store null conversion is not retroactively repaired.",
+    "Special-float snapshots preserve numeric kinds, not platform-specific NaN payload bits.",
+    "Older snapshot readers do not understand the new special-float wrapper.",
+    "Full historical replay remains incomplete."
+  ],
+  "observed_at": "2026-09-13T18:44:46.667870+00:00",
+  "prior_focused_attempt": {
+    "failed": 3,
+    "log_sha256": "0f4141af40f283e342c681ef5fdc38fcabeebd40d7342c7526a868ebc29e04ce",
+    "native_exit_code": 1,
+    "passed": 137,
+    "reason": "Prior nonfinite-merge tests required rejection. Updated assertions require strict JSON, restored numeric kinds, and a readable retry record under the new lossless codec.",
+    "seconds": 29.65,
+    "skipped": 4
+  },
+  "runtime_commit": "7b21af5",
+  "skip_reasons": [
+    "PostgreSQL never admitted nonfinite numeric JSON metadata.",
+    "PostgreSQL inter-connection race does not apply to DuckDB.",
+    "Two native DuckDB cancellation tests do not apply to PostgreSQL."
+  ]
+}

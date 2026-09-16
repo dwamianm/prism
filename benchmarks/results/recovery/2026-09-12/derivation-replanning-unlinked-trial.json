@@ -1,0 +1,8 @@
+{
+  "passed": false,
+  "error_type": "AssertionError",
+  "limits": "Incomplete workflow; no success claim.",
+  "source_commit": "d73f326 plus uncommitted telemetry default",
+  "process_exit_code": 1,
+  "cause": "Second extraction reused entity names but emitted unmatched relationship/fact subjects, leaving no plan references for the intended fault."
+}

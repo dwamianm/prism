@@ -65,6 +65,15 @@ async def create_engine(config: PRMEConfig) -> MemoryEngine:
     return await MemoryEngine.create(config)
 
 
+async def create_fact_copies(engine, content):
+    """Two graph copies of one effective assertion, not two dated observations."""
+    for _ in range(2):
+        node = MemoryNode(user_id="test-user", node_type=NodeType.FACT, content=content,
+                          valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc), evidence_refs=[uuid4()])
+        await engine._graph_store.create_node(node)
+        await engine._vector_index.index(str(node.id), node.content, node.user_id)
+
+
 # ---------------------------------------------------------------------------
 # Unit tests: _pick_canonical
 # ---------------------------------------------------------------------------
@@ -266,17 +275,7 @@ class TestMergeDuplicates:
     async def test_merge_creates_supersedes_edge(self, config):
         engine = await create_engine(config)
         try:
-            # Store duplicate content
-            _eid1 = await engine.store(
-                "JavaScript is used for web development",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
-            _eid2 = await engine.store(
-                "JavaScript is used for web development",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
+            await create_fact_copies(engine, "JavaScript is used for web development")
 
             # Find the node IDs
             nodes = await engine.query_nodes(
@@ -310,16 +309,7 @@ class TestMergeDuplicates:
     async def test_merge_archives_duplicate(self, config):
         engine = await create_engine(config)
         try:
-            await engine.store(
-                "Rust is a systems programming language",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
-            await engine.store(
-                "Rust is a systems programming language",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
+            await create_fact_copies(engine, "Rust is a systems programming language")
 
             nodes = await engine.query_nodes(
                 lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
@@ -353,16 +343,7 @@ class TestMergeDuplicates:
     async def test_merge_transfers_evidence(self, config):
         engine = await create_engine(config)
         try:
-            await engine.store(
-                "Go is created by Google",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
-            await engine.store(
-                "Go is created by Google",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
+            await create_fact_copies(engine, "Go is created by Google")
 
             nodes = await engine.query_nodes(
                 lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
@@ -395,17 +376,7 @@ class TestMergeDuplicates:
         """Higher confidence node should be kept as canonical."""
         engine = await create_engine(config)
         try:
-            # Store the same content twice
-            await engine.store(
-                "Docker containers are lightweight",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
-            await engine.store(
-                "Docker containers are lightweight",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
+            await create_fact_copies(engine, "Docker containers are lightweight")
 
             nodes = await engine.query_nodes(
                 lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
@@ -687,16 +658,7 @@ class TestOrganizeJobPipeline:
     async def test_deduplicate_job_runs(self, config):
         engine = await create_engine(config)
         try:
-            await engine.store(
-                "TypeScript extends JavaScript with types",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
-            await engine.store(
-                "TypeScript extends JavaScript with types",
-                user_id="test-user",
-                node_type=NodeType.FACT,
-            )
+            await create_fact_copies(engine, "TypeScript extends JavaScript with types")
 
             result = await engine.organize(
                 jobs=["deduplicate"],

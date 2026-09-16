@@ -8,7 +8,7 @@ question" problem in conversational data.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -192,6 +192,112 @@ class TestSessionContextExpansion:
 
         for nid, count in id_counts.items():
             assert count == 1, f"Node {nid} appeared {count} times (expected 1)"
+
+    @pytest.mark.asyncio
+    async def test_existing_candidates_receive_session_signal(self):
+        """Broad candidate generation must not disable session expansion."""
+        base_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        session_nodes = [
+            _make_node(
+                session_id="s1",
+                content=f"turn {i}",
+                created_at=base_time + timedelta(minutes=i),
+            )
+            for i in range(5)
+        ]
+        scored = [
+            _make_candidate(session_nodes[2], composite_score=0.8),
+            _make_candidate(session_nodes[0], composite_score=0.4),
+            _make_candidate(session_nodes[1], composite_score=0.3),
+            _make_candidate(session_nodes[3], composite_score=0.2),
+            _make_candidate(session_nodes[4], composite_score=0.1),
+        ]
+        original_scores = [candidate.composite_score for candidate in scored]
+
+        expanded = await expand_session_context(
+            scored,
+            FakeGraphStore(session_nodes),
+            user_id="user-1",
+            config=PackingConfig(
+                session_context_window=1,
+                session_context_top_k=1,
+                session_context_score_decay=0.85,
+            ),
+        )
+
+        assert len(expanded) == len(scored)
+        assert expanded is not scored
+        by_content = {candidate.node.content: candidate for candidate in expanded}
+        for content in ("turn 1", "turn 3"):
+            candidate = by_content[content]
+            assert candidate.composite_score == pytest.approx(0.8 * 0.85)
+            assert "SESSION_CONTEXT" in candidate.paths
+        assert by_content["turn 0"].composite_score == 0.4
+        assert by_content["turn 4"].composite_score == 0.1
+        assert [candidate.composite_score for candidate in scored] == original_scores
+
+    @pytest.mark.asyncio
+    async def test_path_only_signal_preserves_reranked_order(self):
+        """Context annotation alone must not undo a neural prefix order."""
+        base_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        trigger = _make_node(session_id="s1", created_at=base_time)
+        adjacent = _make_node(
+            session_id="s1", created_at=base_time + timedelta(minutes=1)
+        )
+        scored = [
+            _make_candidate(trigger, composite_score=0.8),
+            _make_candidate(adjacent, composite_score=0.9),
+        ]
+
+        expanded = await expand_session_context(
+            scored,
+            FakeGraphStore([trigger, adjacent]),
+            user_id="user-1",
+            config=PackingConfig(
+                session_context_window=1,
+                session_context_top_k=1,
+                session_context_score_decay=0.85,
+            ),
+        )
+
+        assert expanded is not scored
+        assert [candidate.node.id for candidate in expanded] == [
+            trigger.id,
+            adjacent.id,
+        ]
+        assert expanded[1].composite_score == 0.9
+        assert "SESSION_CONTEXT" in expanded[1].paths
+
+    @pytest.mark.asyncio
+    async def test_reused_session_id_does_not_cross_scope(self):
+        base_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        personal = [
+            _make_node(
+                session_id="shared",
+                content=f"personal {i}",
+                created_at=base_time + timedelta(minutes=i * 2),
+            )
+            for i in range(3)
+        ]
+        project = _make_node(
+            session_id="shared",
+            content="project interloper",
+            created_at=base_time + timedelta(minutes=3),
+        ).model_copy(update={"scope": Scope.PROJECT})
+
+        expanded = await expand_session_context(
+            [_make_candidate(personal[1], composite_score=0.8)],
+            FakeGraphStore([*personal, project]),
+            user_id="user-1",
+            config=PackingConfig(session_context_window=1),
+            scope=[Scope.PERSONAL, Scope.PROJECT],
+        )
+
+        assert {candidate.node.content for candidate in expanded} == {
+            "personal 0",
+            "personal 1",
+            "personal 2",
+        }
 
     @pytest.mark.asyncio
     async def test_window_size_respected(self):
@@ -524,3 +630,85 @@ class TestSessionContextExpansion:
         )
 
         assert expanded == []
+
+
+@pytest.mark.asyncio
+async def test_duckdb_session_neighbors_have_no_whole_session_cap(
+    isolated_graph_store,
+):
+    """An old trigger still receives its exact window after 2,000 later turns."""
+    base_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    rows = [
+        (
+            str(UUID(int=i + 1)),
+            NodeType.EVENT.value,
+            "long-session-owner",
+            "long-session",
+            Scope.PERSONAL.value,
+            f"turn {i}",
+            base_time + timedelta(seconds=i),
+            base_time + timedelta(seconds=i),
+        )
+        for i in range(2_105)
+    ]
+    isolated_graph_store._conn.executemany(
+        """
+        INSERT INTO nodes (
+            id, node_type, user_id, session_id, scope, content,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    isolated_graph_store._conn.executemany(
+        """
+        INSERT INTO nodes (
+            id, node_type, user_id, session_id, scope, content,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                str(UUID(int=3_000)),
+                NodeType.EVENT.value,
+                "long-session-owner",
+                "long-session",
+                Scope.PROJECT.value,
+                "project interloper",
+                base_time + timedelta(seconds=50, microseconds=500_000),
+                base_time + timedelta(seconds=50, microseconds=500_000),
+            ),
+            (
+                str(UUID(int=3_001)),
+                NodeType.EVENT.value,
+                "foreign-owner",
+                "long-session",
+                Scope.PERSONAL.value,
+                "foreign interloper",
+                base_time + timedelta(seconds=50, microseconds=500_000),
+                base_time + timedelta(seconds=50, microseconds=500_000),
+            ),
+        ],
+    )
+
+    trigger_id = str(UUID(int=51))
+    later_trigger_id = str(UUID(int=2_051))
+    foreign_trigger_id = str(UUID(int=3_001))
+    windows = await isolated_graph_store.get_session_neighbors(
+        [trigger_id, later_trigger_id, foreign_trigger_id],
+        user_id="long-session-owner",
+        window=1,
+        scopes=[Scope.PERSONAL, Scope.PROJECT],
+    )
+
+    assert [node.content for node in windows[trigger_id]] == [
+        "turn 49",
+        "turn 50",
+        "turn 51",
+    ]
+    assert [node.content for node in windows[later_trigger_id]] == [
+        "turn 2049",
+        "turn 2050",
+        "turn 2051",
+    ]
+    assert foreign_trigger_id not in windows

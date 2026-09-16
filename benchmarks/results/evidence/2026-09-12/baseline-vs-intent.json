@@ -1,0 +1,7265 @@
+{
+  "kind": "paired-source-evidence-comparison",
+  "selected_queries": 119,
+  "before": {
+    "run_id": "acc4fe17-f7a7-42a0-8314-d23da4807e6a",
+    "provenance": {
+      "commit": "168fa0e2d8ede898eeafd29f7eddf020bba6640b",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.11.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.23.0",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "db_path": "./memory.duckdb",
+        "vector_path": "./vectors.usearch",
+        "lexical_path": "./lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.1,
+            "summary": 1.1,
+            "instruction": 1.1
+          },
+          "relevance_floor": 0.35
+        },
+        "packing": {
+          "token_budget": 4096,
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "enable_query_reformulation": false,
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      }
+    },
+    "query_clock": "wall",
+    "concurrency": 1
+  },
+  "after": {
+    "run_id": "97e97958-dfdb-4353-9aa6-73076d1cad1c",
+    "provenance": {
+      "commit": "a4780279102f08d4078183d0deb43a9be22fb3db",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.11.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.23.0",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "db_path": "./memory.duckdb",
+        "vector_path": "./vectors.usearch",
+        "lexical_path": "./lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.1,
+            "summary": 1.1,
+            "instruction": 1.1
+          },
+          "relevance_floor": 0.35
+        },
+        "packing": {
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "enable_query_reformulation": false,
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      }
+    },
+    "query_clock": "question",
+    "concurrency": 4
+  },
+  "dataset": {
+    "name": "longmemeval_s_cleaned.json",
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "variant": "s",
+    "total_questions": 500,
+    "split": "dev",
+    "split_seed": "prme-evidence-v1",
+    "selected_question_ids": [
+      "1b9b7252",
+      "gpt4_8279ba02",
+      "e982271f",
+      "ef66a6e5",
+      "6aeb4375",
+      "6aeb4375_abs",
+      "5d3d2817",
+      "d905b33f",
+      "e56a43b9",
+      "d23cf73b",
+      "67e0d0f2",
+      "545bd2b5",
+      "4dfccbf7",
+      "gpt4_af6db32f",
+      "a9f6b44c",
+      "95228167",
+      "dad224aa",
+      "gpt4_4ef30696",
+      "c9f37c46",
+      "gpt4_d12ceb0e",
+      "28bcfaac",
+      "4100d0a0",
+      "0e4e4c46",
+      "982b5123",
+      "982b5123_abs",
+      "2b8f3739",
+      "gpt4_31ff4165",
+      "dfde3500",
+      "gpt4_7fce9456",
+      "c960da58",
+      "e4e14d04",
+      "gpt4_385a5000",
+      "caf03d32",
+      "gpt4_7ca326fa",
+      "6f9b354f",
+      "95bcc1c8",
+      "5809eb10",
+      "c8f1aeed",
+      "f4f1d8a4",
+      "f4f1d8a4_abs",
+      "75f70248",
+      "0e5e2d1a",
+      "gpt4_2f91af09",
+      "51c32626",
+      "118b2229",
+      "a89d7624",
+      "gpt4_d31cdae3",
+      "6a27ffc2",
+      "a346bb18",
+      "8a137a7f",
+      "993da5e2",
+      "d7c942c3",
+      "852ce960",
+      "caf9ead2",
+      "89941a94",
+      "2318644b",
+      "f0e564bc",
+      "ef9cf60a",
+      "a4996e51",
+      "b01defab",
+      "ad7109d1",
+      "gpt4_b4a80587",
+      "4dfccbf8",
+      "0862e8bf",
+      "0862e8bf_abs",
+      "58bf7951",
+      "eaca4986",
+      "681a1674",
+      "gpt4_7ddcf75f",
+      "6c49646a",
+      "gpt4_2487a7cb",
+      "e66b632c",
+      "bc149d6b",
+      "gpt4_2f8be40d",
+      "09ba9854",
+      "09ba9854_abs",
+      "8ebdbe50",
+      "2a1811e2",
+      "2698e78f",
+      "2698e78f_abs",
+      "c2ac3c61",
+      "b9cfe692",
+      "gpt4_2c50253f",
+      "25e5aa4f",
+      "d6233ab6",
+      "gpt4_fa19884c",
+      "d24813b1",
+      "gpt4_68e94288",
+      "eac54adc",
+      "06db6396",
+      "2133c1b5",
+      "2133c1b5_abs",
+      "e3fc4d6e",
+      "gpt4_8e165409",
+      "gpt4_e414231e",
+      "gpt4_1e4a8aeb",
+      "edced276",
+      "edced276_abs",
+      "fca762bc",
+      "129d1232",
+      "b5ef892d",
+      "72e3ee87",
+      "gpt4_5501fe77",
+      "a2f3aa27",
+      "0f05491a",
+      "fca70973",
+      "dccbc061",
+      "ed4ddc30",
+      "099778bb",
+      "77eafa52",
+      "gpt4_7de946e7",
+      "gpt4_a2d1d1f6",
+      "gpt4_2312f94c",
+      "830ce83f",
+      "cf22b7bf",
+      "gpt4_4929293a",
+      "10e09553",
+      "51a45a95",
+      "d851d5ba"
+    ]
+  },
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "limitations": [
+    "Evidence retrieval only; no generated-answer accuracy or cross-product superiority claim.",
+    "Paired bootstrap resamples questions; shared source histories can make queries dependent.",
+    "Development-set improvements require a frozen held-out confirmation.",
+    "Timing is not compared because concurrent workloads and warm caches affect it."
+  ],
+  "methods": {
+    "bm25": {
+      "metrics": {
+        "mrr": {
+          "queries": 114,
+          "before": 0.7470283347257032,
+          "after": 0.7470283347257032,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@10": {
+          "queries": 114,
+          "before": 0.7326264215044875,
+          "after": 0.7326264215044875,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@20": {
+          "queries": 114,
+          "before": 0.7439362106934316,
+          "after": 0.7439362106934316,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@5": {
+          "queries": 114,
+          "before": 0.6956511369483889,
+          "after": 0.6956511369483889,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@50": {
+          "queries": 114,
+          "before": 0.7512870708731157,
+          "after": 0.7512870708731157,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@10": {
+          "queries": 114,
+          "before": 0.868421052631579,
+          "after": 0.868421052631579,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@20": {
+          "queries": 114,
+          "before": 0.9057017543859649,
+          "after": 0.9057017543859649,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@5": {
+          "queries": 114,
+          "before": 0.7733918128654971,
+          "after": 0.7733918128654971,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@50": {
+          "queries": 114,
+          "before": 0.9327485380116959,
+          "after": 0.9327485380116959,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      },
+      "packed_evidence_recall": {
+        "2048": {
+          "queries": 114,
+          "before": 0.8669590643274854,
+          "after": 0.8669590643274854,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "4096": {
+          "queries": 114,
+          "before": 0.89546783625731,
+          "after": 0.89546783625731,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "8192": {
+          "queries": 114,
+          "before": 0.9269005847953217,
+          "after": 0.9269005847953217,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      }
+    },
+    "none": {
+      "metrics": {
+        "mrr": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@10": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@20": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@5": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@50": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@10": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@20": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@5": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@50": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      },
+      "packed_evidence_recall": {
+        "2048": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "4096": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "8192": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      }
+    },
+    "prme": {
+      "metrics": {
+        "mrr": {
+          "queries": 114,
+          "before": 0.8042157160578213,
+          "after": 0.8134718108402319,
+          "delta": 0.009256094782410572,
+          "interval_95": [
+            -0.00957254246727931,
+            0.029062555378344856
+          ],
+          "wins": 7,
+          "losses": 1,
+          "ties": 106
+        },
+        "ndcg@10": {
+          "queries": 114,
+          "before": 0.7817578806330672,
+          "after": 0.7890940069335501,
+          "delta": 0.007336126300483045,
+          "interval_95": [
+            -0.008582631847505623,
+            0.021842696349982954
+          ],
+          "wins": 10,
+          "losses": 2,
+          "ties": 102
+        },
+        "ndcg@20": {
+          "queries": 114,
+          "before": 0.7980079610477067,
+          "after": 0.805732501566175,
+          "delta": 0.007724540518468357,
+          "interval_95": [
+            -0.008373354084177408,
+            0.02241658881210923
+          ],
+          "wins": 12,
+          "losses": 2,
+          "ties": 100
+        },
+        "ndcg@5": {
+          "queries": 114,
+          "before": 0.7508115100771073,
+          "after": 0.7606321803112944,
+          "delta": 0.009820670234187062,
+          "interval_95": [
+            -0.007022596704143667,
+            0.026881045777263718
+          ],
+          "wins": 9,
+          "losses": 2,
+          "ties": 103
+        },
+        "ndcg@50": {
+          "queries": 114,
+          "before": 0.8059957230005825,
+          "after": 0.8127028448866396,
+          "delta": 0.006707121886057096,
+          "interval_95": [
+            -0.009098638868940818,
+            0.020301984705561826
+          ],
+          "wins": 13,
+          "losses": 2,
+          "ties": 99
+        },
+        "recall@10": {
+          "queries": 114,
+          "before": 0.8976608187134503,
+          "after": 0.9049707602339181,
+          "delta": 0.007309941520467837,
+          "interval_95": [
+            -0.01023391812865497,
+            0.029239766081871347
+          ],
+          "wins": 2,
+          "losses": 1,
+          "ties": 111
+        },
+        "recall@20": {
+          "queries": 114,
+          "before": 0.9480994152046783,
+          "after": 0.9568713450292398,
+          "delta": 0.008771929824561403,
+          "interval_95": [
+            -0.008771929824561403,
+            0.03070175438596491
+          ],
+          "wins": 2,
+          "losses": 1,
+          "ties": 111
+        },
+        "recall@5": {
+          "queries": 114,
+          "before": 0.8252923976608187,
+          "after": 0.8369883040935673,
+          "delta": 0.011695906432748537,
+          "interval_95": [
+            -0.004385964912280702,
+            0.03070175438596491
+          ],
+          "wins": 4,
+          "losses": 1,
+          "ties": 109
+        },
+        "recall@50": {
+          "queries": 114,
+          "before": 0.9788011695906432,
+          "after": 0.9809941520467836,
+          "delta": 0.0021929824561403508,
+          "interval_95": [
+            -0.013157894736842105,
+            0.015350877192982455
+          ],
+          "wins": 2,
+          "losses": 1,
+          "ties": 111
+        }
+      },
+      "packed_evidence_recall": {
+        "2048": {
+          "queries": 114,
+          "before": 0.9078947368421053,
+          "after": 0.9152046783625731,
+          "delta": 0.007309941520467836,
+          "interval_95": [
+            -0.01023391812865497,
+            0.029239766081871343
+          ],
+          "wins": 2,
+          "losses": 1,
+          "ties": 111
+        },
+        "4096": {
+          "queries": 114,
+          "before": 0.9495614035087719,
+          "after": 0.9605263157894737,
+          "delta": 0.010964912280701754,
+          "interval_95": [
+            -0.008771929824561403,
+            0.03289473684210526
+          ],
+          "wins": 3,
+          "losses": 1,
+          "ties": 110
+        },
+        "8192": {
+          "queries": 114,
+          "before": 0.9685672514619883,
+          "after": 0.9751461988304093,
+          "delta": 0.006578947368421052,
+          "interval_95": [
+            -0.008771929824561403,
+            0.02412280701754386
+          ],
+          "wins": 3,
+          "losses": 1,
+          "ties": 110
+        }
+      }
+    },
+    "recent": {
+      "metrics": {
+        "mrr": {
+          "queries": 114,
+          "before": 0.01406057672663537,
+          "after": 0.01406057672663537,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@10": {
+          "queries": 114,
+          "before": 0.004090386957034523,
+          "after": 0.004090386957034523,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@20": {
+          "queries": 114,
+          "before": 0.020830914523016154,
+          "after": 0.020830914523016154,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@5": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@50": {
+          "queries": 114,
+          "before": 0.03433061837067636,
+          "after": 0.03433061837067636,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@10": {
+          "queries": 114,
+          "before": 0.013157894736842105,
+          "after": 0.013157894736842105,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@20": {
+          "queries": 114,
+          "before": 0.07163742690058479,
+          "after": 0.07163742690058479,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@5": {
+          "queries": 114,
+          "before": 0.0,
+          "after": 0.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@50": {
+          "queries": 114,
+          "before": 0.12646198830409355,
+          "after": 0.12646198830409355,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      },
+      "packed_evidence_recall": {
+        "2048": {
+          "queries": 114,
+          "before": 0.04824561403508772,
+          "after": 0.04824561403508772,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "4096": {
+          "queries": 114,
+          "before": 0.07017543859649122,
+          "after": 0.07017543859649122,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "8192": {
+          "queries": 114,
+          "before": 0.11842105263157894,
+          "after": 0.11842105263157894,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      }
+    },
+    "rrf": {
+      "metrics": {
+        "mrr": {
+          "queries": 114,
+          "before": 0.7748222273989818,
+          "after": 0.7748222273989818,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@10": {
+          "queries": 114,
+          "before": 0.7600369533927893,
+          "after": 0.7600369533927893,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@20": {
+          "queries": 114,
+          "before": 0.7743283291876405,
+          "after": 0.7743283291876405,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@5": {
+          "queries": 114,
+          "before": 0.7102257138542155,
+          "after": 0.7102257138542155,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@50": {
+          "queries": 114,
+          "before": 0.7831348380529789,
+          "after": 0.7831348380529789,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@10": {
+          "queries": 114,
+          "before": 0.9035087719298246,
+          "after": 0.9035087719298246,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@20": {
+          "queries": 114,
+          "before": 0.9466374269005848,
+          "after": 0.9466374269005848,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@5": {
+          "queries": 114,
+          "before": 0.7821637426900585,
+          "after": 0.7821637426900585,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@50": {
+          "queries": 114,
+          "before": 0.9824561403508771,
+          "after": 0.9824561403508771,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      },
+      "packed_evidence_recall": {
+        "2048": {
+          "queries": 114,
+          "before": 0.9042397660818714,
+          "after": 0.9042397660818714,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "4096": {
+          "queries": 114,
+          "before": 0.9451754385964912,
+          "after": 0.9451754385964912,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "8192": {
+          "queries": 114,
+          "before": 0.9678362573099415,
+          "after": 0.9678362573099415,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      }
+    },
+    "vector": {
+      "metrics": {
+        "mrr": {
+          "queries": 114,
+          "before": 0.6546630241676681,
+          "after": 0.6546630241676681,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@10": {
+          "queries": 114,
+          "before": 0.6571743147973248,
+          "after": 0.6571743147973248,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@20": {
+          "queries": 114,
+          "before": 0.6780913865794683,
+          "after": 0.6780913865794683,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@5": {
+          "queries": 114,
+          "before": 0.5948089929564124,
+          "after": 0.5948089929564124,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "ndcg@50": {
+          "queries": 114,
+          "before": 0.686465309844335,
+          "after": 0.686465309844335,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@10": {
+          "queries": 114,
+          "before": 0.8808479532163742,
+          "after": 0.8808479532163742,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@20": {
+          "queries": 114,
+          "before": 0.9415204678362573,
+          "after": 0.9415204678362573,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@5": {
+          "queries": 114,
+          "before": 0.722953216374269,
+          "after": 0.722953216374269,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "recall@50": {
+          "queries": 114,
+          "before": 0.9707602339181286,
+          "after": 0.9707602339181286,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      },
+      "packed_evidence_recall": {
+        "2048": {
+          "queries": 114,
+          "before": 0.8823099415204678,
+          "after": 0.8823099415204678,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "4096": {
+          "queries": 114,
+          "before": 0.9502923976608187,
+          "after": 0.9502923976608187,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        },
+        "8192": {
+          "queries": 114,
+          "before": 0.97953216374269,
+          "after": 0.97953216374269,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 114
+        }
+      }
+    }
+  },
+  "categories": {
+    "knowledge-update": {
+      "bm25": {
+        "metrics": {
+          "mrr": {
+            "queries": 20,
+            "before": 0.9016666666666666,
+            "after": 0.9016666666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@10": {
+            "queries": 20,
+            "before": 0.8481787004060517,
+            "after": 0.8481787004060517,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@20": {
+            "queries": 20,
+            "before": 0.8535207406191412,
+            "after": 0.8535207406191412,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@5": {
+            "queries": 20,
+            "before": 0.8385073802251881,
+            "after": 0.8385073802251881,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@50": {
+            "queries": 20,
+            "before": 0.8535207406191412,
+            "after": 0.8535207406191412,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@10": {
+            "queries": 20,
+            "before": 0.9583333333333334,
+            "after": 0.9583333333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@20": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@5": {
+            "queries": 20,
+            "before": 0.9333333333333333,
+            "after": 0.9333333333333333,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@50": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "4096": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "8192": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        }
+      },
+      "none": {
+        "metrics": {
+          "mrr": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@10": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@20": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@5": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@50": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@10": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@20": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@5": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@50": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "4096": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "8192": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        }
+      },
+      "prme": {
+        "metrics": {
+          "mrr": {
+            "queries": 20,
+            "before": 0.8766666666666667,
+            "after": 0.8516666666666667,
+            "delta": -0.025,
+            "interval_95": [
+              -0.1,
+              0.01666666666666667
+            ],
+            "wins": 1,
+            "losses": 1,
+            "ties": 18
+          },
+          "ndcg@10": {
+            "queries": 20,
+            "before": 0.8365345382028266,
+            "after": 0.8021604632908388,
+            "delta": -0.03437407491198777,
+            "interval_95": [
+              -0.09799606386834757,
+              0.013434726293769173
+            ],
+            "wins": 2,
+            "losses": 2,
+            "ties": 16
+          },
+          "ndcg@20": {
+            "queries": 20,
+            "before": 0.844819326491088,
+            "after": 0.8182922487979968,
+            "delta": -0.02652707769309127,
+            "interval_95": [
+              -0.09143192870916324,
+              0.025599268120437946
+            ],
+            "wins": 3,
+            "losses": 2,
+            "ties": 15
+          },
+          "ndcg@5": {
+            "queries": 20,
+            "before": 0.8083316978395026,
+            "after": 0.7841767428069392,
+            "delta": -0.024154955032563465,
+            "interval_95": [
+              -0.09124573816959491,
+              0.03465471925295996
+            ],
+            "wins": 2,
+            "losses": 2,
+            "ties": 16
+          },
+          "ndcg@50": {
+            "queries": 20,
+            "before": 0.8505415965897911,
+            "after": 0.8182922487979968,
+            "delta": -0.03224934779179438,
+            "interval_95": [
+              -0.09715365223755282,
+              0.015559453413962565
+            ],
+            "wins": 3,
+            "losses": 2,
+            "ties": 15
+          },
+          "recall@10": {
+            "queries": 20,
+            "before": 0.95,
+            "after": 0.925,
+            "delta": -0.025,
+            "interval_95": [
+              -0.075,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 1,
+            "ties": 19
+          },
+          "recall@20": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              -0.075,
+              0.075
+            ],
+            "wins": 1,
+            "losses": 1,
+            "ties": 18
+          },
+          "recall@5": {
+            "queries": 20,
+            "before": 0.8833333333333333,
+            "after": 0.8833333333333333,
+            "delta": 0.0,
+            "interval_95": [
+              -0.075,
+              0.075
+            ],
+            "wins": 1,
+            "losses": 1,
+            "ties": 18
+          },
+          "recall@50": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 0.975,
+            "delta": -0.025,
+            "interval_95": [
+              -0.075,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 1,
+            "ties": 19
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.95,
+            "delta": -0.025,
+            "interval_95": [
+              -0.075,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 1,
+            "ties": 19
+          },
+          "4096": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              -0.075,
+              0.075
+            ],
+            "wins": 1,
+            "losses": 1,
+            "ties": 18
+          },
+          "8192": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              -0.075,
+              0.075
+            ],
+            "wins": 1,
+            "losses": 1,
+            "ties": 18
+          }
+        }
+      },
+      "recent": {
+        "metrics": {
+          "mrr": {
+            "queries": 20,
+            "before": 0.023585586561677304,
+            "after": 0.023585586561677304,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@10": {
+            "queries": 20,
+            "before": 0.008861964339202387,
+            "after": 0.008861964339202387,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@20": {
+            "queries": 20,
+            "before": 0.030796335432891404,
+            "after": 0.030796335432891404,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@5": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@50": {
+            "queries": 20,
+            "before": 0.05292809529424373,
+            "after": 0.05292809529424373,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@10": {
+            "queries": 20,
+            "before": 0.025,
+            "after": 0.025,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@20": {
+            "queries": 20,
+            "before": 0.1,
+            "after": 0.1,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@5": {
+            "queries": 20,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@50": {
+            "queries": 20,
+            "before": 0.19166666666666665,
+            "after": 0.19166666666666665,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 20,
+            "before": 0.05,
+            "after": 0.05,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "4096": {
+            "queries": 20,
+            "before": 0.1,
+            "after": 0.1,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "8192": {
+            "queries": 20,
+            "before": 0.175,
+            "after": 0.175,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        }
+      },
+      "rrf": {
+        "metrics": {
+          "mrr": {
+            "queries": 20,
+            "before": 0.7821428571428571,
+            "after": 0.7821428571428571,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@10": {
+            "queries": 20,
+            "before": 0.7889756382475639,
+            "after": 0.7889756382475639,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@20": {
+            "queries": 20,
+            "before": 0.7966399781571322,
+            "after": 0.7966399781571322,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@5": {
+            "queries": 20,
+            "before": 0.7083536138842856,
+            "after": 0.7083536138842856,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@50": {
+            "queries": 20,
+            "before": 0.7966399781571322,
+            "after": 0.7966399781571322,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@10": {
+            "queries": 20,
+            "before": 0.975,
+            "after": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@20": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@5": {
+            "queries": 20,
+            "before": 0.7833333333333333,
+            "after": 0.7833333333333333,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@50": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "4096": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "8192": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        }
+      },
+      "vector": {
+        "metrics": {
+          "mrr": {
+            "queries": 20,
+            "before": 0.6107142857142858,
+            "after": 0.6107142857142858,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@10": {
+            "queries": 20,
+            "before": 0.638123239012867,
+            "after": 0.638123239012867,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@20": {
+            "queries": 20,
+            "before": 0.6621862303447177,
+            "after": 0.6621862303447177,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@5": {
+            "queries": 20,
+            "before": 0.5454047087777406,
+            "after": 0.5454047087777406,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "ndcg@50": {
+            "queries": 20,
+            "before": 0.6621862303447177,
+            "after": 0.6621862303447177,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@10": {
+            "queries": 20,
+            "before": 0.925,
+            "after": 0.925,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@20": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@5": {
+            "queries": 20,
+            "before": 0.6833333333333333,
+            "after": 0.6833333333333333,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "recall@50": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 20,
+            "before": 0.9,
+            "after": 0.9,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "4096": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          },
+          "8192": {
+            "queries": 20,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 20
+          }
+        }
+      }
+    },
+    "multi-session": {
+      "bm25": {
+        "metrics": {
+          "mrr": {
+            "queries": 32,
+            "before": 0.5689422123015873,
+            "after": 0.5689422123015873,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@10": {
+            "queries": 32,
+            "before": 0.5331568844102768,
+            "after": 0.5331568844102768,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@20": {
+            "queries": 32,
+            "before": 0.5549402047200016,
+            "after": 0.5549402047200016,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@5": {
+            "queries": 32,
+            "before": 0.44337822028235085,
+            "after": 0.44337822028235085,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@50": {
+            "queries": 32,
+            "before": 0.5770512489379959,
+            "after": 0.5770512489379959,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@10": {
+            "queries": 32,
+            "before": 0.7291666666666666,
+            "after": 0.7291666666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@20": {
+            "queries": 32,
+            "before": 0.7890625,
+            "after": 0.7890625,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@5": {
+            "queries": 32,
+            "before": 0.515625,
+            "after": 0.515625,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@50": {
+            "queries": 32,
+            "before": 0.8697916666666666,
+            "after": 0.8697916666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 32,
+            "before": 0.6822916666666666,
+            "after": 0.6822916666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "4096": {
+            "queries": 32,
+            "before": 0.7682291666666666,
+            "after": 0.7682291666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "8192": {
+            "queries": 32,
+            "before": 0.8489583333333334,
+            "after": 0.8489583333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        }
+      },
+      "none": {
+        "metrics": {
+          "mrr": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@10": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@20": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@5": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@50": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@10": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@20": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@5": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@50": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "4096": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "8192": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        }
+      },
+      "prme": {
+        "metrics": {
+          "mrr": {
+            "queries": 32,
+            "before": 0.6951388888888889,
+            "after": 0.7205492424242425,
+            "delta": 0.02541035353535354,
+            "interval_95": [
+              0.0,
+              0.07141729797979798
+            ],
+            "wins": 3,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@10": {
+            "queries": 32,
+            "before": 0.6534232642149839,
+            "after": 0.6744049429707026,
+            "delta": 0.020981678755718762,
+            "interval_95": [
+              0.0,
+              0.04905964409236585
+            ],
+            "wins": 3,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@20": {
+            "queries": 32,
+            "before": 0.6874510108367323,
+            "after": 0.7049120419822135,
+            "delta": 0.01746103114548113,
+            "interval_95": [
+              0.00014559243681515083,
+              0.04187275643507543
+            ],
+            "wins": 4,
+            "losses": 0,
+            "ties": 28
+          },
+          "ndcg@5": {
+            "queries": 32,
+            "before": 0.5769882515274827,
+            "after": 0.6040733649625197,
+            "delta": 0.027085113435037042,
+            "interval_95": [
+              0.0,
+              0.061094059643900724
+            ],
+            "wins": 3,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@50": {
+            "queries": 32,
+            "before": 0.7023886019678169,
+            "after": 0.726234211561411,
+            "delta": 0.023845609593594025,
+            "interval_95": [
+              0.002731726647514369,
+              0.04985515760696052
+            ],
+            "wins": 5,
+            "losses": 0,
+            "ties": 27
+          },
+          "recall@10": {
+            "queries": 32,
+            "before": 0.8072916666666666,
+            "after": 0.8177083333333334,
+            "delta": 0.010416666666666668,
+            "interval_95": [
+              0.0,
+              0.03125
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 31
+          },
+          "recall@20": {
+            "queries": 32,
+            "before": 0.9088541666666666,
+            "after": 0.9088541666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@5": {
+            "queries": 32,
+            "before": 0.6380208333333334,
+            "after": 0.6640625,
+            "delta": 0.026041666666666664,
+            "interval_95": [
+              0.0,
+              0.06770833333333333
+            ],
+            "wins": 2,
+            "losses": 0,
+            "ties": 30
+          },
+          "recall@50": {
+            "queries": 32,
+            "before": 0.9557291666666666,
+            "after": 0.9791666666666666,
+            "delta": 0.0234375,
+            "interval_95": [
+              0.0,
+              0.0625
+            ],
+            "wins": 2,
+            "losses": 0,
+            "ties": 30
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 32,
+            "before": 0.8125,
+            "after": 0.8229166666666666,
+            "delta": 0.010416666666666666,
+            "interval_95": [
+              0.0,
+              0.03125
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 31
+          },
+          "4096": {
+            "queries": 32,
+            "before": 0.9140625,
+            "after": 0.921875,
+            "delta": 0.0078125,
+            "interval_95": [
+              0.0,
+              0.0234375
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 31
+          },
+          "8192": {
+            "queries": 32,
+            "before": 0.9348958333333334,
+            "after": 0.9583333333333334,
+            "delta": 0.0234375,
+            "interval_95": [
+              0.0,
+              0.0625
+            ],
+            "wins": 2,
+            "losses": 0,
+            "ties": 30
+          }
+        }
+      },
+      "recent": {
+        "metrics": {
+          "mrr": {
+            "queries": 32,
+            "before": 0.014970161233297443,
+            "after": 0.014970161233297443,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@10": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@20": {
+            "queries": 32,
+            "before": 0.011842227484144112,
+            "after": 0.011842227484144112,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@5": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@50": {
+            "queries": 32,
+            "before": 0.033376176857223015,
+            "after": 0.033376176857223015,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@10": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@20": {
+            "queries": 32,
+            "before": 0.03645833333333333,
+            "after": 0.03645833333333333,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@5": {
+            "queries": 32,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@50": {
+            "queries": 32,
+            "before": 0.1171875,
+            "after": 0.1171875,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 32,
+            "before": 0.03125,
+            "after": 0.03125,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "4096": {
+            "queries": 32,
+            "before": 0.03125,
+            "after": 0.03125,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "8192": {
+            "queries": 32,
+            "before": 0.09895833333333333,
+            "after": 0.09895833333333333,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        }
+      },
+      "rrf": {
+        "metrics": {
+          "mrr": {
+            "queries": 32,
+            "before": 0.7359107905982906,
+            "after": 0.7359107905982906,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@10": {
+            "queries": 32,
+            "before": 0.6503487721445266,
+            "after": 0.6503487721445266,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@20": {
+            "queries": 32,
+            "before": 0.6873504705022561,
+            "after": 0.6873504705022561,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@5": {
+            "queries": 32,
+            "before": 0.5743846121515784,
+            "after": 0.5743846121515784,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@50": {
+            "queries": 32,
+            "before": 0.706028206433553,
+            "after": 0.706028206433553,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@10": {
+            "queries": 32,
+            "before": 0.796875,
+            "after": 0.796875,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@20": {
+            "queries": 32,
+            "before": 0.9036458333333334,
+            "after": 0.9036458333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@5": {
+            "queries": 32,
+            "before": 0.6197916666666666,
+            "after": 0.6197916666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@50": {
+            "queries": 32,
+            "before": 0.96875,
+            "after": 0.96875,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 32,
+            "before": 0.7838541666666666,
+            "after": 0.7838541666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "4096": {
+            "queries": 32,
+            "before": 0.8984375,
+            "after": 0.8984375,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "8192": {
+            "queries": 32,
+            "before": 0.9166666666666666,
+            "after": 0.9166666666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        }
+      },
+      "vector": {
+        "metrics": {
+          "mrr": {
+            "queries": 32,
+            "before": 0.6944196428571429,
+            "after": 0.6944196428571429,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@10": {
+            "queries": 32,
+            "before": 0.6426639919234953,
+            "after": 0.6426639919234953,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@20": {
+            "queries": 32,
+            "before": 0.6771528058316211,
+            "after": 0.6771528058316211,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@5": {
+            "queries": 32,
+            "before": 0.5520744169786514,
+            "after": 0.5520744169786514,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "ndcg@50": {
+            "queries": 32,
+            "before": 0.696192104598535,
+            "after": 0.696192104598535,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@10": {
+            "queries": 32,
+            "before": 0.8359375,
+            "after": 0.8359375,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@20": {
+            "queries": 32,
+            "before": 0.9270833333333334,
+            "after": 0.9270833333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@5": {
+            "queries": 32,
+            "before": 0.6223958333333334,
+            "after": 0.6223958333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "recall@50": {
+            "queries": 32,
+            "before": 0.9895833333333334,
+            "after": 0.9895833333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 32,
+            "before": 0.8255208333333334,
+            "after": 0.8255208333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "4096": {
+            "queries": 32,
+            "before": 0.9322916666666666,
+            "after": 0.9322916666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          },
+          "8192": {
+            "queries": 32,
+            "before": 0.9895833333333334,
+            "after": 0.9895833333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 32
+          }
+        }
+      }
+    },
+    "single-session-assistant": {
+      "bm25": {
+        "metrics": {
+          "mrr": {
+            "queries": 9,
+            "before": 0.9444444444444444,
+            "after": 0.9444444444444444,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@10": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@20": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@5": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@50": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@10": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@20": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@5": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@50": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "4096": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "8192": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        }
+      },
+      "none": {
+        "metrics": {
+          "mrr": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@10": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@20": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@5": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@50": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@10": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@20": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@5": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@50": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "4096": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "8192": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        }
+      },
+      "prme": {
+        "metrics": {
+          "mrr": {
+            "queries": 9,
+            "before": 0.8888888888888888,
+            "after": 0.8888888888888888,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@10": {
+            "queries": 9,
+            "before": 0.9179843896825461,
+            "after": 0.9179843896825461,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@20": {
+            "queries": 9,
+            "before": 0.9179843896825461,
+            "after": 0.9179843896825461,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@5": {
+            "queries": 9,
+            "before": 0.9179843896825461,
+            "after": 0.9179843896825461,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@50": {
+            "queries": 9,
+            "before": 0.9179843896825461,
+            "after": 0.9179843896825461,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@10": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@20": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@5": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@50": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "4096": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "8192": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        }
+      },
+      "recent": {
+        "metrics": {
+          "mrr": {
+            "queries": 9,
+            "before": 0.010597947344935296,
+            "after": 0.010597947344935296,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@10": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@20": {
+            "queries": 9,
+            "before": 0.03002646160303553,
+            "after": 0.03002646160303553,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@5": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@50": {
+            "queries": 9,
+            "before": 0.03002646160303553,
+            "after": 0.03002646160303553,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@10": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@20": {
+            "queries": 9,
+            "before": 0.1111111111111111,
+            "after": 0.1111111111111111,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@5": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@50": {
+            "queries": 9,
+            "before": 0.1111111111111111,
+            "after": 0.1111111111111111,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 9,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "4096": {
+            "queries": 9,
+            "before": 0.1111111111111111,
+            "after": 0.1111111111111111,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "8192": {
+            "queries": 9,
+            "before": 0.1111111111111111,
+            "after": 0.1111111111111111,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        }
+      },
+      "rrf": {
+        "metrics": {
+          "mrr": {
+            "queries": 9,
+            "before": 0.9444444444444444,
+            "after": 0.9444444444444444,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@10": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@20": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@5": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@50": {
+            "queries": 9,
+            "before": 0.9589921948412731,
+            "after": 0.9589921948412731,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@10": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@20": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@5": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@50": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "4096": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "8192": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        }
+      },
+      "vector": {
+        "metrics": {
+          "mrr": {
+            "queries": 9,
+            "before": 0.6574074074074074,
+            "after": 0.6574074074074074,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@10": {
+            "queries": 9,
+            "before": 0.7436151183573676,
+            "after": 0.7436151183573676,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@20": {
+            "queries": 9,
+            "before": 0.7436151183573676,
+            "after": 0.7436151183573676,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@5": {
+            "queries": 9,
+            "before": 0.7436151183573676,
+            "after": 0.7436151183573676,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "ndcg@50": {
+            "queries": 9,
+            "before": 0.7436151183573676,
+            "after": 0.7436151183573676,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@10": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@20": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@5": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "recall@50": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "4096": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          },
+          "8192": {
+            "queries": 9,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 9
+          }
+        }
+      }
+    },
+    "single-session-preference": {
+      "bm25": {
+        "metrics": {
+          "mrr": {
+            "queries": 7,
+            "before": 0.3689795918367347,
+            "after": 0.3689795918367347,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@10": {
+            "queries": 7,
+            "before": 0.3859568488333829,
+            "after": 0.3859568488333829,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@20": {
+            "queries": 7,
+            "before": 0.4216711345476686,
+            "after": 0.4216711345476686,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@5": {
+            "queries": 7,
+            "before": 0.3119698445315398,
+            "after": 0.3119698445315398,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@50": {
+            "queries": 7,
+            "before": 0.4403060839059792,
+            "after": 0.4403060839059792,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@10": {
+            "queries": 7,
+            "before": 0.5714285714285714,
+            "after": 0.5714285714285714,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@20": {
+            "queries": 7,
+            "before": 0.7142857142857143,
+            "after": 0.7142857142857143,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@5": {
+            "queries": 7,
+            "before": 0.35714285714285715,
+            "after": 0.35714285714285715,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@50": {
+            "queries": 7,
+            "before": 0.7857142857142857,
+            "after": 0.7857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 7,
+            "before": 0.7142857142857143,
+            "after": 0.7142857142857143,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "4096": {
+            "queries": 7,
+            "before": 0.7857142857142857,
+            "after": 0.7857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "8192": {
+            "queries": 7,
+            "before": 0.7857142857142857,
+            "after": 0.7857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        }
+      },
+      "none": {
+        "metrics": {
+          "mrr": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@10": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@20": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@5": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@50": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@10": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@20": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@5": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@50": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "4096": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "8192": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        }
+      },
+      "prme": {
+        "metrics": {
+          "mrr": {
+            "queries": 7,
+            "before": 0.6143475572047,
+            "after": 0.6143475572047,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@10": {
+            "queries": 7,
+            "before": 0.5900384911170815,
+            "after": 0.5900384911170815,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@20": {
+            "queries": 7,
+            "before": 0.651785597380295,
+            "after": 0.651785597380295,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@5": {
+            "queries": 7,
+            "before": 0.5424194434980338,
+            "after": 0.5424194434980338,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@50": {
+            "queries": 7,
+            "before": 0.6678298419515302,
+            "after": 0.6678298419515302,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@10": {
+            "queries": 7,
+            "before": 0.7142857142857143,
+            "after": 0.7142857142857143,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@20": {
+            "queries": 7,
+            "before": 0.9285714285714286,
+            "after": 0.9285714285714286,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@5": {
+            "queries": 7,
+            "before": 0.5714285714285714,
+            "after": 0.5714285714285714,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@50": {
+            "queries": 7,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 7,
+            "before": 0.8571428571428571,
+            "after": 0.8571428571428571,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "4096": {
+            "queries": 7,
+            "before": 0.9285714285714286,
+            "after": 0.9285714285714286,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "8192": {
+            "queries": 7,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        }
+      },
+      "recent": {
+        "metrics": {
+          "mrr": {
+            "queries": 7,
+            "before": 0.022575493612078976,
+            "after": 0.022575493612078976,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@10": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@20": {
+            "queries": 7,
+            "before": 0.08065503741691125,
+            "after": 0.08065503741691125,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@5": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@50": {
+            "queries": 7,
+            "before": 0.08065503741691125,
+            "after": 0.08065503741691125,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@10": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@20": {
+            "queries": 7,
+            "before": 0.2857142857142857,
+            "after": 0.2857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@5": {
+            "queries": 7,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@50": {
+            "queries": 7,
+            "before": 0.2857142857142857,
+            "after": 0.2857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 7,
+            "before": 0.21428571428571427,
+            "after": 0.21428571428571427,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "4096": {
+            "queries": 7,
+            "before": 0.2857142857142857,
+            "after": 0.2857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "8192": {
+            "queries": 7,
+            "before": 0.2857142857142857,
+            "after": 0.2857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        }
+      },
+      "rrf": {
+        "metrics": {
+          "mrr": {
+            "queries": 7,
+            "before": 0.6413690476190477,
+            "after": 0.6413690476190477,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@10": {
+            "queries": 7,
+            "before": 0.6590210275379226,
+            "after": 0.6590210275379226,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@20": {
+            "queries": 7,
+            "before": 0.6792880135187789,
+            "after": 0.6792880135187789,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@5": {
+            "queries": 7,
+            "before": 0.6313886841640268,
+            "after": 0.6313886841640268,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@50": {
+            "queries": 7,
+            "before": 0.7076079939717161,
+            "after": 0.7076079939717161,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@10": {
+            "queries": 7,
+            "before": 0.7857142857142857,
+            "after": 0.7857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@20": {
+            "queries": 7,
+            "before": 0.8571428571428571,
+            "after": 0.8571428571428571,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@5": {
+            "queries": 7,
+            "before": 0.7142857142857143,
+            "after": 0.7142857142857143,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@50": {
+            "queries": 7,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 7,
+            "before": 0.8571428571428571,
+            "after": 0.8571428571428571,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "4096": {
+            "queries": 7,
+            "before": 0.8571428571428571,
+            "after": 0.8571428571428571,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "8192": {
+            "queries": 7,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        }
+      },
+      "vector": {
+        "metrics": {
+          "mrr": {
+            "queries": 7,
+            "before": 0.5587301587301587,
+            "after": 0.5587301587301587,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@10": {
+            "queries": 7,
+            "before": 0.6002968408007439,
+            "after": 0.6002968408007439,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@20": {
+            "queries": 7,
+            "before": 0.6202390370671368,
+            "after": 0.6202390370671368,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@5": {
+            "queries": 7,
+            "before": 0.5572925557058894,
+            "after": 0.5572925557058894,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "ndcg@50": {
+            "queries": 7,
+            "before": 0.6370531728241187,
+            "after": 0.6370531728241187,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@10": {
+            "queries": 7,
+            "before": 0.8571428571428571,
+            "after": 0.8571428571428571,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@20": {
+            "queries": 7,
+            "before": 0.9285714285714286,
+            "after": 0.9285714285714286,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@5": {
+            "queries": 7,
+            "before": 0.7142857142857143,
+            "after": 0.7142857142857143,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "recall@50": {
+            "queries": 7,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 7,
+            "before": 0.9285714285714286,
+            "after": 0.9285714285714286,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "4096": {
+            "queries": 7,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          },
+          "8192": {
+            "queries": 7,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 7
+          }
+        }
+      }
+    },
+    "single-session-user": {
+      "bm25": {
+        "metrics": {
+          "mrr": {
+            "queries": 17,
+            "before": 0.8091503267973856,
+            "after": 0.8091503267973856,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@10": {
+            "queries": 17,
+            "before": 0.8399789451734655,
+            "after": 0.8399789451734655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@20": {
+            "queries": 17,
+            "before": 0.8538265283126796,
+            "after": 0.8538265283126796,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@5": {
+            "queries": 17,
+            "before": 0.8399789451734655,
+            "after": 0.8399789451734655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@50": {
+            "queries": 17,
+            "before": 0.8538265283126796,
+            "after": 0.8538265283126796,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@10": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@20": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@5": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@50": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "4096": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "8192": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        }
+      },
+      "none": {
+        "metrics": {
+          "mrr": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@10": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@20": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@5": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@50": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@10": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@20": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@5": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@50": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "4096": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "8192": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        }
+      },
+      "prme": {
+        "metrics": {
+          "mrr": {
+            "queries": 17,
+            "before": 0.8549019607843137,
+            "after": 0.8549019607843137,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@10": {
+            "queries": 17,
+            "before": 0.8911007243751445,
+            "after": 0.8911007243751445,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@20": {
+            "queries": 17,
+            "before": 0.8911007243751445,
+            "after": 0.8911007243751445,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@5": {
+            "queries": 17,
+            "before": 0.8911007243751445,
+            "after": 0.8911007243751445,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@50": {
+            "queries": 17,
+            "before": 0.8911007243751445,
+            "after": 0.8911007243751445,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@10": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@20": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@5": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@50": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "4096": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "8192": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        }
+      },
+      "recent": {
+        "metrics": {
+          "mrr": {
+            "queries": 17,
+            "before": 0.012103987404204847,
+            "after": 0.012103987404204847,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@10": {
+            "queries": 17,
+            "before": 0.017003813312816935,
+            "after": 0.017003813312816935,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@20": {
+            "queries": 17,
+            "before": 0.032060167713394316,
+            "after": 0.032060167713394316,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@5": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@50": {
+            "queries": 17,
+            "before": 0.032060167713394316,
+            "after": 0.032060167713394316,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@10": {
+            "queries": 17,
+            "before": 0.058823529411764705,
+            "after": 0.058823529411764705,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@20": {
+            "queries": 17,
+            "before": 0.11764705882352941,
+            "after": 0.11764705882352941,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@5": {
+            "queries": 17,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@50": {
+            "queries": 17,
+            "before": 0.11764705882352941,
+            "after": 0.11764705882352941,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 17,
+            "before": 0.11764705882352941,
+            "after": 0.11764705882352941,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "4096": {
+            "queries": 17,
+            "before": 0.11764705882352941,
+            "after": 0.11764705882352941,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "8192": {
+            "queries": 17,
+            "before": 0.11764705882352941,
+            "after": 0.11764705882352941,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        }
+      },
+      "rrf": {
+        "metrics": {
+          "mrr": {
+            "queries": 17,
+            "before": 0.7570806100217865,
+            "after": 0.7570806100217865,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@10": {
+            "queries": 17,
+            "before": 0.8010627467206434,
+            "after": 0.8010627467206434,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@20": {
+            "queries": 17,
+            "before": 0.8010627467206434,
+            "after": 0.8010627467206434,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@5": {
+            "queries": 17,
+            "before": 0.7801093827731127,
+            "after": 0.7801093827731127,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@50": {
+            "queries": 17,
+            "before": 0.8132988995251439,
+            "after": 0.8132988995251439,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@10": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@20": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@5": {
+            "queries": 17,
+            "before": 0.8823529411764706,
+            "after": 0.8823529411764706,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@50": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "4096": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "8192": {
+            "queries": 17,
+            "before": 1.0,
+            "after": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        }
+      },
+      "vector": {
+        "metrics": {
+          "mrr": {
+            "queries": 17,
+            "before": 0.6323529411764706,
+            "after": 0.6323529411764706,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@10": {
+            "queries": 17,
+            "before": 0.7087496030779018,
+            "after": 0.7087496030779018,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@20": {
+            "queries": 17,
+            "before": 0.7087496030779018,
+            "after": 0.7087496030779018,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@5": {
+            "queries": 17,
+            "before": 0.687796239130371,
+            "after": 0.687796239130371,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "ndcg@50": {
+            "queries": 17,
+            "before": 0.7087496030779018,
+            "after": 0.7087496030779018,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@10": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@20": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@5": {
+            "queries": 17,
+            "before": 0.8823529411764706,
+            "after": 0.8823529411764706,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "recall@50": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "4096": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          },
+          "8192": {
+            "queries": 17,
+            "before": 0.9411764705882353,
+            "after": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 17
+          }
+        }
+      }
+    },
+    "temporal-reasoning": {
+      "bm25": {
+        "metrics": {
+          "mrr": {
+            "queries": 29,
+            "before": 0.8304597701149425,
+            "after": 0.8304597701149425,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@10": {
+            "queries": 29,
+            "before": 0.8235361372037118,
+            "after": 0.8235361372037118,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@20": {
+            "queries": 29,
+            "before": 0.8235361372037118,
+            "after": 0.8235361372037118,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@5": {
+            "queries": 29,
+            "before": 0.801779938804696,
+            "after": 0.801779938804696,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@50": {
+            "queries": 29,
+            "before": 0.8235361372037118,
+            "after": 0.8235361372037118,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@10": {
+            "queries": 29,
+            "before": 0.9482758620689655,
+            "after": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@20": {
+            "queries": 29,
+            "before": 0.9482758620689655,
+            "after": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@5": {
+            "queries": 29,
+            "before": 0.8793103448275862,
+            "after": 0.8793103448275862,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@50": {
+            "queries": 29,
+            "before": 0.9482758620689655,
+            "after": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 29,
+            "before": 0.9482758620689655,
+            "after": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "4096": {
+            "queries": 29,
+            "before": 0.9482758620689655,
+            "after": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "8192": {
+            "queries": 29,
+            "before": 0.9482758620689655,
+            "after": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        }
+      },
+      "none": {
+        "metrics": {
+          "mrr": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@10": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@20": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@5": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@50": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@10": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@20": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@5": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@50": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "4096": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "8192": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        }
+      },
+      "prme": {
+        "metrics": {
+          "mrr": {
+            "queries": 29,
+            "before": 0.8644499178981938,
+            "after": 0.8900383141762452,
+            "delta": 0.02558839627805145,
+            "interval_95": [
+              0.0,
+              0.06841817186644773
+            ],
+            "wins": 3,
+            "losses": 0,
+            "ties": 26
+          },
+          "ndcg@10": {
+            "queries": 29,
+            "before": 0.8254938590997826,
+            "after": 0.8548864858691557,
+            "delta": 0.029392626769373174,
+            "interval_95": [
+              0.004233954643515541,
+              0.0631022086994372
+            ],
+            "wins": 5,
+            "losses": 0,
+            "ties": 24
+          },
+          "ndcg@20": {
+            "queries": 29,
+            "before": 0.8312075061951353,
+            "after": 0.8606001329645085,
+            "delta": 0.029392626769373174,
+            "interval_95": [
+              0.004233954643515541,
+              0.0631022086994372
+            ],
+            "wins": 5,
+            "losses": 0,
+            "ties": 24
+          },
+          "ndcg@5": {
+            "queries": 29,
+            "before": 0.8191291799004872,
+            "after": 0.8445061411910875,
+            "delta": 0.02537696129060031,
+            "interval_95": [
+              0.001465705993453043,
+              0.06473156259786376
+            ],
+            "wins": 4,
+            "losses": 0,
+            "ties": 25
+          },
+          "ndcg@50": {
+            "queries": 29,
+            "before": 0.838305672831702,
+            "after": 0.8606001329645085,
+            "delta": 0.02229446013280647,
+            "interval_95": [
+              0.004233954643515541,
+              0.04787715185406369
+            ],
+            "wins": 5,
+            "losses": 0,
+            "ties": 24
+          },
+          "recall@10": {
+            "queries": 29,
+            "before": 0.9137931034482759,
+            "after": 0.9482758620689655,
+            "delta": 0.034482758620689655,
+            "interval_95": [
+              0.0,
+              0.10344827586206896
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 28
+          },
+          "recall@20": {
+            "queries": 29,
+            "before": 0.9310344827586207,
+            "after": 0.9655172413793104,
+            "delta": 0.034482758620689655,
+            "interval_95": [
+              0.0,
+              0.10344827586206896
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 28
+          },
+          "recall@5": {
+            "queries": 29,
+            "before": 0.896551724137931,
+            "after": 0.9137931034482759,
+            "delta": 0.017241379310344827,
+            "interval_95": [
+              0.0,
+              0.05172413793103448
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 28
+          },
+          "recall@50": {
+            "queries": 29,
+            "before": 0.9655172413793104,
+            "after": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 29,
+            "before": 0.9310344827586207,
+            "after": 0.9655172413793104,
+            "delta": 0.034482758620689655,
+            "interval_95": [
+              0.0,
+              0.10344827586206896
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 28
+          },
+          "4096": {
+            "queries": 29,
+            "before": 0.9310344827586207,
+            "after": 0.9655172413793104,
+            "delta": 0.034482758620689655,
+            "interval_95": [
+              0.0,
+              0.10344827586206896
+            ],
+            "wins": 1,
+            "losses": 0,
+            "ties": 28
+          },
+          "8192": {
+            "queries": 29,
+            "before": 0.9655172413793104,
+            "after": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        }
+      },
+      "recent": {
+        "metrics": {
+          "mrr": {
+            "queries": 29,
+            "before": 0.006654175478514308,
+            "after": 0.006654175478514308,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@10": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@20": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@5": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@50": {
+            "queries": 29,
+            "before": 0.014042919360954888,
+            "after": 0.014042919360954888,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@10": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@20": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@5": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@50": {
+            "queries": 29,
+            "before": 0.06321839080459771,
+            "after": 0.06321839080459771,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "4096": {
+            "queries": 29,
+            "before": 0.0,
+            "after": 0.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "8192": {
+            "queries": 29,
+            "before": 0.06321839080459771,
+            "after": 0.06321839080459771,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        }
+      },
+      "rrf": {
+        "metrics": {
+          "mrr": {
+            "queries": 29,
+            "before": 0.8026819923371648,
+            "after": 0.8026819923371648,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@10": {
+            "queries": 29,
+            "before": 0.7997032956073792,
+            "after": 0.7997032956073792,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@20": {
+            "queries": 29,
+            "before": 0.8048759436455977,
+            "after": 0.8048759436455977,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@5": {
+            "queries": 29,
+            "before": 0.762270395275234,
+            "after": 0.762270395275234,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@50": {
+            "queries": 29,
+            "before": 0.8048759436455977,
+            "after": 0.8048759436455977,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@10": {
+            "queries": 29,
+            "before": 0.9482758620689655,
+            "after": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@20": {
+            "queries": 29,
+            "before": 0.9655172413793104,
+            "after": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@5": {
+            "queries": 29,
+            "before": 0.8505747126436781,
+            "after": 0.8505747126436781,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@50": {
+            "queries": 29,
+            "before": 0.9655172413793104,
+            "after": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 29,
+            "before": 0.9310344827586207,
+            "after": 0.9310344827586207,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "4096": {
+            "queries": 29,
+            "before": 0.9655172413793104,
+            "after": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "8192": {
+            "queries": 29,
+            "before": 0.9655172413793104,
+            "after": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        }
+      },
+      "vector": {
+        "metrics": {
+          "mrr": {
+            "queries": 29,
+            "before": 0.6764859548835208,
+            "after": 0.6764859548835208,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@10": {
+            "queries": 29,
+            "before": 0.6429931779979308,
+            "after": 0.6429931779979308,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@20": {
+            "queries": 29,
+            "before": 0.665753486191123,
+            "after": 0.665753486191123,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@5": {
+            "queries": 29,
+            "before": 0.5844010226822592,
+            "after": 0.5844010226822592,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "ndcg@50": {
+            "queries": 29,
+            "before": 0.6736042014102497,
+            "after": 0.6736042014102497,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@10": {
+            "queries": 29,
+            "before": 0.8333333333333334,
+            "after": 0.8333333333333334,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@20": {
+            "queries": 29,
+            "before": 0.9022988505747126,
+            "after": 0.9022988505747126,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@5": {
+            "queries": 29,
+            "before": 0.6839080459770115,
+            "after": 0.6839080459770115,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "recall@50": {
+            "queries": 29,
+            "before": 0.9310344827586207,
+            "after": 0.9310344827586207,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        },
+        "packed_evidence_recall": {
+          "2048": {
+            "queries": 29,
+            "before": 0.8505747126436781,
+            "after": 0.8505747126436781,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "4096": {
+            "queries": 29,
+            "before": 0.9137931034482759,
+            "after": 0.9137931034482759,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          },
+          "8192": {
+            "queries": 29,
+            "before": 0.9655172413793104,
+            "after": 0.9655172413793104,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 29
+          }
+        }
+      }
+    }
+  }
+}

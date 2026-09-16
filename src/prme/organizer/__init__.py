@@ -20,7 +20,7 @@ from prme.organizer.decay import (
     compute_effective_confidence,
     compute_effective_salience,
 )
-from prme.organizer.jobs import ALL_JOBS, run_job
+from prme.organizer.jobs import ALL_JOBS, DEFAULT_JOBS, run_job
 from prme.organizer.maintenance import MaintenanceRunner
 from prme.organizer.models import (
     ConsolidationResult,
@@ -31,6 +31,7 @@ from prme.organizer.models import (
 
 __all__ = [
     "ALL_JOBS",
+    "DEFAULT_JOBS",
     "ConsolidationResult",
     "MemoryCluster",
     "REINFORCEMENT_DECAY_RATE",

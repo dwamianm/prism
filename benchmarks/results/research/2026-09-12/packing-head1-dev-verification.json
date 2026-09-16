@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Exact complete context tokens and reserved budget",
+    "Whole content and pointer-only non-credit",
+    "Every per-case source recall reproduced independently from JSON entries",
+    "All 357 density controls match original captures"
+  ],
+  "complete": true,
+  "contexts_verified": 714,
+  "limits": [
+    "This independently checks measurements, not answer accuracy or relevance annotations."
+  ],
+  "output_sha256": "10343d74697a18d07320677aeb13b9f3c58ac3f8989cb642aec086639cc3617a",
+  "verification_script_sha256": "3fad43861f9605407933416ed86ca40af2273206712b7e02f5c4aa79823eeea4"
+}

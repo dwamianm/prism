@@ -13,13 +13,22 @@ path), and supersedence chain traversal.
 import asyncio
 import json
 import logging
+from collections.abc import Callable
+from typing import Any
 from datetime import datetime, timezone
 from uuid import UUID
 
 import duckdb
 
 from prme.models.edges import MemoryEdge
+from prme.storage._threading import run_to_completion
 from prme.models.nodes import MemoryNode
+from prme.storage.organizer_merge import MergeResult
+from prme.storage.alias_proposal import AliasProposalResult
+from prme.models.derivation import DerivationPlan, DerivationReceipt
+from prme.models.extraction_work import ExtractionClaim
+from prme.models.profile import ProfilePublication
+from prme.models.consolidation import ConsolidationPublication
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
     DecayProfile,
@@ -38,7 +47,7 @@ class DuckPGQGraphStore:
 
     Uses parameterized queries for all user data to prevent SQL injection.
     All queries enforce user_id scoping. Query defaults filter to active
-    lifecycle states (tentative + stable).
+    lifecycle states (tentative + stable + contested).
     """
 
     def __init__(
@@ -51,6 +60,56 @@ class DuckPGQGraphStore:
 
     # --- Node Operations ---
 
+    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None, request_id: str | UUID | None = None) -> None:
+        from prme.storage.reinforcement import reinforce_duckdb
+        await reinforce_duckdb(self, node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id)
+
+    async def apply_oscillation_penalty(
+        self, node_id: str, chain_node_ids: list[str], *, user_id: str,
+    ) -> bool:
+        from prme.storage.oscillation_penalty import apply_duckdb
+        return await apply_duckdb(
+            self, node_id, chain_node_ids, user_id=user_id
+        )
+
+    async def evaluate_condition(self, node_id: str, state, **kwargs):
+        from prme.storage.condition_evaluation import evaluate_condition_duckdb
+        return await evaluate_condition_duckdb(self, node_id, state, **kwargs)
+
+    async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
+        """Publish a journaled graph derivation and its receipt atomically."""
+        from prme.storage.derivation import commit_duckdb
+        return await commit_duckdb(self, plan, claim=claim)
+
+    async def profile_generation(self, key: str) -> int:
+        from prme.storage.profile_publication import generation_duckdb
+        return await generation_duckdb(self, key)
+
+    async def publish_profile(self, plan: ProfilePublication) -> str:
+        """Atomically replace a generated profile after index preparation."""
+        from prme.storage.profile_publication import commit_duckdb
+        return await commit_duckdb(self, plan)
+
+    async def consolidation_generation(self, key: str) -> int:
+        from prme.storage.consolidation_publication import generation_duckdb
+        return await generation_duckdb(self, key)
+
+    async def prepare_consolidation(
+        self, plan: ConsolidationPublication
+    ) -> ConsolidationPublication:
+        from prme.storage.consolidation_publication import prepare_duckdb
+        return await prepare_duckdb(self, plan)
+
+    async def get_prepared_consolidation(
+        self, node_id: str, *, user_id: str
+    ) -> ConsolidationPublication | None:
+        from prme.storage.consolidation_publication import get_prepared_duckdb
+        return await get_prepared_duckdb(self, node_id, user_id=user_id)
+
+    async def publish_consolidation(self, plan: ConsolidationPublication) -> str:
+        from prme.storage.consolidation_publication import commit_duckdb
+        return await commit_duckdb(self, plan)
+
     async def create_node(self, node: MemoryNode) -> str:
         """Create a new node in the graph store.
 
@@ -61,7 +120,7 @@ class DuckPGQGraphStore:
             String UUID of the created node.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._create_node_sync, node)
+            await run_to_completion(self._create_node_sync, node)
         return str(node.id)
 
     async def get_node(
@@ -81,7 +140,7 @@ class DuckPGQGraphStore:
             The MemoryNode if found and visible, None otherwise.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_node_sync, node_id, include_superseded
             )
 
@@ -107,9 +166,94 @@ class DuckPGQGraphStore:
         if not node_ids:
             return []
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_nodes_sync, node_ids, include_superseded
             )
+
+    async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Resolve provenance directly, independent of creation order and ranking."""
+        if not user_id:
+            raise ValueError("get_event_nodes requires user_id")
+        evidence = json.dumps(str(UUID(event_id)))
+        async with self._conn_lock:
+            rows = await run_to_completion(lambda: self._conn.execute(
+                "SELECT * FROM nodes WHERE user_id = ? AND json_contains(evidence_refs, ?::JSON) ORDER BY id",
+                [user_id, evidence],
+            ).fetchall())
+        return [self._row_to_node(row) for row in rows]
+
+    async def get_session_neighbors(
+        self,
+        trigger_ids: list[str],
+        *,
+        user_id: str,
+        window: int,
+        scopes: list[Scope] | None = None,
+    ) -> dict[str, list[MemoryNode]]:
+        """Fetch exact bounded neighborhoods without hydrating whole sessions."""
+        if not user_id or window < 0:
+            raise ValueError("get_session_neighbors requires user_id and a non-negative window")
+        ids = list(dict.fromkeys(str(UUID(node_id)) for node_id in trigger_ids))
+        if not ids:
+            return {}
+
+        id_slots = ",".join("?" for _ in ids)
+        active = [state.value for state in ACTIVE_LIFECYCLE_STATES]
+        state_slots = ",".join("?" for _ in active)
+        scope_clause = ""
+        anchor_params: list[Any] = [*ids, user_id, *active]
+        if scopes:
+            scope_slots = ",".join("?" for _ in scopes)
+            scope_clause = f" AND scope IN ({scope_slots})"
+            anchor_params.extend(scope.value for scope in scopes)
+        sql = f"""
+            WITH anchor_sessions AS (
+                SELECT DISTINCT session_id, scope
+                FROM nodes
+                WHERE id IN ({id_slots})
+                  AND user_id = ?
+                  AND session_id IS NOT NULL
+                  AND lifecycle_state IN ({state_slots})
+                  {scope_clause}
+            ), ranked AS (
+                SELECT n.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY n.session_id, n.scope
+                           ORDER BY n.created_at, n.id
+                       ) AS session_rank
+                FROM nodes n
+                JOIN anchor_sessions a
+                  ON n.session_id = a.session_id AND n.scope = a.scope
+                WHERE n.user_id = ?
+                  AND n.lifecycle_state IN ({state_slots})
+            ), anchor_ranks AS (
+                SELECT id AS trigger_id, session_id, scope, session_rank
+                FROM ranked
+                WHERE id IN ({id_slots})
+            )
+            SELECT a.trigger_id, r.* EXCLUDE (session_rank)
+            FROM anchor_ranks a
+            JOIN ranked r
+              ON a.session_id = r.session_id
+             AND a.scope = r.scope
+             AND ABS(r.session_rank - a.session_rank) <= ?
+            ORDER BY a.trigger_id, r.session_rank, r.id
+        """
+        params = [
+            *anchor_params,
+            user_id,
+            *active,
+            *ids,
+            window,
+        ]
+        async with self._conn_lock:
+            rows = await run_to_completion(
+                lambda: self._conn.execute(sql, params).fetchall()
+            )
+        windows: dict[str, list[MemoryNode]] = {}
+        for row in rows:
+            windows.setdefault(str(row[0]), []).append(self._row_to_node(row[1:]))
+        return windows
 
     async def query_nodes(
         self,
@@ -130,7 +274,7 @@ class DuckPGQGraphStore:
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters.
 
-        Defaults to filtering for active states (tentative + stable).
+        Defaults to filtering for active states (tentative + stable + contested).
 
         Args:
             node_type: Filter by node type.
@@ -152,7 +296,7 @@ class DuckPGQGraphStore:
             List of matching MemoryNodes.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._query_nodes_sync,
                 node_type,
                 user_id,
@@ -188,7 +332,7 @@ class DuckPGQGraphStore:
             Number of matching nodes.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._count_nodes_sync, user_id, lifecycle_states
             )
 
@@ -205,9 +349,25 @@ class DuckPGQGraphStore:
             ValueError: If node_id does not exist or no valid fields provided.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._update_node_sync, node_id, updates)
+            await run_to_completion(self._update_node_sync, node_id, updates)
 
     # --- Edge Operations ---
+
+    async def merge_nodes(self, node_a_id: str, node_b_id: str, *, user_id: str, kind: str, score: float) -> MergeResult | None:
+        """Atomically publish a compatible organizer merge and its journal."""
+        from prme.storage.organizer_merge import merge_duckdb
+        return await merge_duckdb(self, node_a_id, node_b_id, user_id=user_id, kind=kind, score=score)
+
+    async def propose_alias(
+        self, node_a_id: str, node_b_id: str, *, user_id: str,
+        alias_type: str, score: float,
+    ) -> AliasProposalResult | None:
+        """Atomically publish an unverified alias link and its journal."""
+        from prme.storage.alias_proposal import propose_duckdb
+        return await propose_duckdb(
+            self, node_a_id, node_b_id, user_id=user_id,
+            alias_type=alias_type, score=score,
+        )
 
     async def create_edge(self, edge: MemoryEdge) -> str:
         """Create a new edge between two nodes.
@@ -219,7 +379,7 @@ class DuckPGQGraphStore:
             String UUID of the created edge.
         """
         async with self._conn_lock:
-            await asyncio.to_thread(self._create_edge_sync, edge)
+            await run_to_completion(self._create_edge_sync, edge)
         return str(edge.id)
 
     async def get_edges(
@@ -247,7 +407,7 @@ class DuckPGQGraphStore:
             List of matching MemoryEdges.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_edges_sync,
                 source_id,
                 target_id,
@@ -259,7 +419,10 @@ class DuckPGQGraphStore:
 
     # --- Lifecycle Transitions ---
 
-    async def promote(self, node_id: str) -> None:
+    async def promote(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Promote a tentative node to stable.
 
         Args:
@@ -268,8 +431,10 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If the node doesn't exist or the transition is invalid.
         """
-        async with self._conn_lock:
-            await asyncio.to_thread(self._promote_sync, node_id)
+        from prme.storage.lifecycle import transition_duckdb
+        await transition_duckdb(
+            self, node_id, "promote", request_id=request_id, actor_id=actor_id,
+        )
 
     async def supersede(
         self,
@@ -277,6 +442,7 @@ class DuckPGQGraphStore:
         new_node_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark a node as superseded by another.
 
@@ -294,10 +460,74 @@ class DuckPGQGraphStore:
             ValueError: If either node doesn't exist or the transition
                 is invalid.
         """
+        await self.supersede_many(
+            [(old_node_id, new_node_id, evidence_id)], actor_id=actor_id,
+        )
+
+    async def scan_nodes(
+        self, *, user_id: str | None, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+        after_id: str | None = None, limit: int = 100,
+        operator_unscoped: bool = False,
+    ) -> list[MemoryNode]:
+        """Read a stable-ID page within a tenant or explicit operator scope."""
+        if (
+            limit < 1
+            or user_id == ""
+            or (user_id is None and not operator_unscoped)
+        ):
+            raise ValueError("scan_nodes requires user_id and a positive limit")
+        states = list(ACTIVE_LIFECYCLE_STATES) if lifecycle_states is None else lifecycle_states
+        if not states:
+            return []
+        conditions = ["lifecycle_state IN (" + ",".join("?" for _ in states) + ")"]
+        params: list = [state.value for state in states]
+        if user_id:
+            conditions.append("user_id = ?")
+            params.append(user_id)
+        for field, value in (("scope", scope), ("node_type", node_type)):
+            if value is not None:
+                conditions.append(f"{field} = ?")
+                params.append(value.value)
+        if after_id is not None:
+            conditions.append("id > ?::UUID")
+            params.append(str(UUID(after_id)))
+        params.append(limit)
+        sql = "SELECT * FROM nodes WHERE " + " AND ".join(conditions) + " ORDER BY id ASC LIMIT ?"
         async with self._conn_lock:
-            await asyncio.to_thread(
-                self._supersede_sync, old_node_id, new_node_id, evidence_id
-            )
+            rows = await run_to_completion(lambda: self._conn.execute(sql, params).fetchall())
+        return [self._row_to_node(row) for row in rows]
+
+    async def retire_consolidated(self, source_id: str, summary_id: str, **policy: Any) -> bool:
+        """Retire only current, eligible sources covered by an active summary."""
+        from prme.storage.consolidation_retirement import retire_duckdb
+        return await retire_duckdb(self, source_id, summary_id, **policy)
+
+    async def supersede_many(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        *,
+        actor_id: str = "system",
+    ) -> None:
+        """Commit all replacement states, edges and journals together."""
+        if not replacements:
+            return
+        async with self._conn_lock:
+            await run_to_completion(self._supersede_many_sync, replacements, actor_id)
+
+    def _supersede_many_sync(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        actor_id: str = "system",
+    ) -> None:
+        from prme.storage.supersedence import _request, _supersede_many_duckdb
+
+        requests = [
+            _request(old, new, evidence, actor_id)
+            for old, new, evidence in replacements
+        ]
+        _supersede_many_duckdb(self, requests)
 
     async def contradict(
         self,
@@ -305,6 +535,7 @@ class DuckPGQGraphStore:
         node_b_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark two nodes as contradicting each other.
 
@@ -320,9 +551,11 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If either node is not found or not in an active state.
         """
+        node_a_id, node_b_id = str(UUID(node_a_id)), str(UUID(node_b_id))
         async with self._conn_lock:
-            await asyncio.to_thread(
-                self._contradict_sync, node_a_id, node_b_id, evidence_id
+            await run_to_completion(
+                self._atomic_sync, self._contradict_sync, node_a_id, node_b_id,
+                evidence_id, actor_id,
             )
 
     async def resolve_contradiction(
@@ -349,8 +582,10 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If nodes are not CONTESTED or no CONTRADICTS edge exists.
         """
+        winner_id, loser_id = str(UUID(winner_id)), str(UUID(loser_id))
         async with self._conn_lock:
-            await asyncio.to_thread(
+            await run_to_completion(
+                self._atomic_sync,
                 self._resolve_contradiction_sync,
                 winner_id,
                 loser_id,
@@ -358,7 +593,10 @@ class DuckPGQGraphStore:
                 evidence_id,
             )
 
-    async def archive(self, node_id: str) -> None:
+    async def archive(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Archive a node (terminal state).
 
         Any non-archived node can be archived. Archived is terminal --
@@ -370,10 +608,24 @@ class DuckPGQGraphStore:
         Raises:
             ValueError: If the node doesn't exist or is already archived.
         """
-        async with self._conn_lock:
-            await asyncio.to_thread(self._archive_sync, node_id)
+        from prme.storage.lifecycle import transition_duckdb
+        await transition_duckdb(
+            self, node_id, "archive", request_id=request_id, actor_id=actor_id,
+        )
 
-    async def deprecate(self, node_id: str) -> None:
+    async def archive_expired(
+        self, node_id: str, *, user_id: str, evaluated_at: datetime,
+    ) -> bool:
+        """Atomically archive an expired node with its retention tombstone."""
+        from prme.storage.retention import expire_duckdb
+        return await expire_duckdb(
+            self, node_id, user_id=user_id, evaluated_at=evaluated_at
+        )
+
+    async def deprecate(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Deprecate a node (mark as confirmed incorrect).
 
         Valid transitions to DEPRECATED: CONTESTED -> DEPRECATED.
@@ -387,8 +639,10 @@ class DuckPGQGraphStore:
             ValueError: If the node doesn't exist or the transition
                 is invalid.
         """
-        async with self._conn_lock:
-            await asyncio.to_thread(self._deprecate_sync, node_id)
+        from prme.storage.lifecycle import transition_duckdb
+        await transition_duckdb(
+            self, node_id, "deprecate", request_id=request_id, actor_id=actor_id,
+        )
 
     # --- Graph Traversal ---
 
@@ -420,7 +674,7 @@ class DuckPGQGraphStore:
             List of reachable MemoryNodes (excluding the starting node).
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_neighborhood_sync,
                 node_id,
                 max_hops,
@@ -459,7 +713,7 @@ class DuckPGQGraphStore:
             starting node.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_neighborhood_with_depth_sync,
                 node_id,
                 max_hops,
@@ -491,7 +745,7 @@ class DuckPGQGraphStore:
             source and target), or None if no path exists.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._find_shortest_path_sync, source_id, target_id, edge_types
             )
 
@@ -517,7 +771,7 @@ class DuckPGQGraphStore:
             Ordered list of MemoryNodes in the chain.
         """
         async with self._conn_lock:
-            return await asyncio.to_thread(
+            return await run_to_completion(
                 self._get_supersedence_chain_sync, node_id, direction
             )
 
@@ -534,7 +788,7 @@ class DuckPGQGraphStore:
         """
         # Defense-in-depth: primary write serialization is via WriteQueue
         async with self._conn_lock:
-            await asyncio.to_thread(self._delete_node_sync, node_id)
+            await run_to_completion(self._delete_node_sync, node_id)
 
     async def delete_edge(self, edge_id: str) -> None:
         """Delete an edge by ID for rollback cleanup.
@@ -547,7 +801,7 @@ class DuckPGQGraphStore:
         """
         # Defense-in-depth: primary write serialization is via WriteQueue
         async with self._conn_lock:
-            await asyncio.to_thread(self._delete_edge_sync, edge_id)
+            await run_to_completion(self._delete_edge_sync, edge_id)
 
     # --- Internal sync methods ---
 
@@ -701,7 +955,7 @@ class DuckPGQGraphStore:
                 """
                 SELECT * FROM nodes
                 WHERE id = ?
-                AND lifecycle_state IN ('tentative', 'stable')
+                AND lifecycle_state IN ('tentative', 'stable', 'contested')
                 """,
                 [node_id],
             ).fetchone()
@@ -721,7 +975,7 @@ class DuckPGQGraphStore:
             query = f"""
                 SELECT * FROM nodes
                 WHERE id IN ({placeholders})
-                AND lifecycle_state IN ('tentative', 'stable')
+                AND lifecycle_state IN ('tentative', 'stable', 'contested')
             """
         rows = self._conn.execute(query, list(node_ids)).fetchall()
         return [self._row_to_node(row) for row in rows]
@@ -944,155 +1198,22 @@ class DuckPGQGraphStore:
 
     # --- Lifecycle sync methods ---
 
-    def _promote_sync(self, node_id: str) -> None:
-        """Promote a tentative node to stable (sync)."""
-        row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
-        ).fetchone()
-        if row is None:
-            raise ValueError(f"Node {node_id} not found")
-
-        current_state = LifecycleState(row[0])
-        target_state = LifecycleState.STABLE
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot promote: node is {current_state.value}, "
-                f"only Tentative nodes can be promoted"
-            )
-
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?, updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, node_id],
-        )
-
-    def _supersede_sync(
-        self,
-        old_node_id: str,
-        new_node_id: str,
-        evidence_id: str | None,
-    ) -> None:
-        """Mark a node as superseded by another (sync)."""
-        # Validate both nodes exist
-        old_row = self._conn.execute(
-            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
-            [old_node_id],
-        ).fetchone()
-        if old_row is None:
-            raise ValueError(f"Old node {old_node_id} not found")
-
-        new_row = self._conn.execute(
-            "SELECT id, user_id FROM nodes WHERE id = ?", [new_node_id]
-        ).fetchone()
-        if new_row is None:
-            raise ValueError(f"New node {new_node_id} not found")
-
-        # Validate transition
-        current_state = LifecycleState(old_row[0])
-        target_state = LifecycleState.SUPERSEDED
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot supersede: node is {current_state.value}, "
-                f"only Tentative or Stable nodes can be superseded"
-            )
-
-        # Update old node
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?,
-                superseded_by = ?,
-                updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, new_node_id, old_node_id],
-        )
-
-        # Create SUPERSEDES edge: new_node -> old_node
-        # Parse evidence_id as UUID if valid, otherwise store None
-        provenance_uuid = None
-        if evidence_id is not None:
-            try:
-                provenance_uuid = UUID(evidence_id)
-            except ValueError:
-                logger.warning(
-                    "evidence_id %r is not a valid UUID, storing edge "
-                    "without provenance reference",
-                    evidence_id,
-                )
-
-        edge = MemoryEdge(
-            source_id=UUID(new_node_id),
-            target_id=UUID(old_node_id),
-            edge_type=EdgeType.SUPERSEDES,
-            user_id=old_row[1],  # Use the old node's user_id
-            confidence=1.0,
-            provenance_event_id=provenance_uuid,
-        )
-        self._create_edge_sync(edge)
-
-    def _archive_sync(self, node_id: str) -> None:
-        """Archive a node (sync)."""
-        row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
-        ).fetchone()
-        if row is None:
-            raise ValueError(f"Node {node_id} not found")
-
-        current_state = LifecycleState(row[0])
-        target_state = LifecycleState.ARCHIVED
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot archive: node is {current_state.value}, "
-                f"Archived nodes cannot be transitioned"
-            )
-
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?, updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, node_id],
-        )
-
-    def _deprecate_sync(self, node_id: str) -> None:
-        """Deprecate a node (sync)."""
-        row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?", [node_id]
-        ).fetchone()
-        if row is None:
-            raise ValueError(f"Node {node_id} not found")
-
-        current_state = LifecycleState(row[0])
-        target_state = LifecycleState.DEPRECATED
-
-        if not validate_transition(current_state, target_state):
-            raise ValueError(
-                f"Cannot deprecate: node is {current_state.value}, "
-                f"transition to DEPRECATED not allowed"
-            )
-
-        self._conn.execute(
-            """
-            UPDATE nodes
-            SET lifecycle_state = ?, updated_at = current_timestamp
-            WHERE id = ?
-            """,
-            [target_state.value, node_id],
-        )
+    def _atomic_sync(self, operation: Callable[..., None], *args: Any) -> None:
+        """Keep a multi-write lifecycle operation and its audit trail inseparable."""
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            operation(*args)
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
 
     def _contradict_sync(
         self,
         node_a_id: str,
         node_b_id: str,
         evidence_id: str | None,
+        actor_id: str,
     ) -> None:
         """Mark two nodes as contradicting each other (sync).
 
@@ -1104,21 +1225,65 @@ class DuckPGQGraphStore:
 
         # Validate both nodes exist and are in active state
         row_a = self._conn.execute(
-            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [node_a_id],
         ).fetchone()
         if row_a is None:
             raise ValueError(f"Node {node_a_id} not found")
 
         row_b = self._conn.execute(
-            "SELECT lifecycle_state, user_id FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [node_b_id],
         ).fetchone()
         if row_b is None:
             raise ValueError(f"Node {node_b_id} not found")
 
+        if UUID(node_a_id) == UUID(node_b_id):
+            raise ValueError("A node cannot contradict itself")
+        if row_a[1:] != row_b[1:]:
+            raise ValueError("Contradiction nodes must have the same user and scope")
+
         state_a = LifecycleState(row_a[0])
         state_b = LifecycleState(row_b[0])
+
+        from prme.storage.transition_evidence import validate_duckdb
+        provenance_uuid = validate_duckdb(self._conn, evidence_id, row_a[1], row_a[2])
+        evidence_id = str(provenance_uuid) if provenance_uuid is not None else None
+        existing_edge = self._conn.execute(
+            """SELECT provenance_event_id FROM edges WHERE edge_type='contradicts'
+            AND ((source_id=CAST(? AS UUID) AND target_id=CAST(? AS UUID))
+              OR (source_id=CAST(? AS UUID) AND target_id=CAST(? AS UUID)))
+            LIMIT 1""",
+            [node_a_id, node_b_id, node_b_id, node_a_id],
+        ).fetchone()
+        if (
+            state_a == LifecycleState.CONTESTED
+            and state_b == LifecycleState.CONTESTED
+            and existing_edge is not None
+        ):
+            existing_evidence = (
+                str(existing_edge[0]) if existing_edge[0] is not None else None
+            )
+            prior = self._conn.execute(
+                """SELECT payload,actor_id FROM operations
+                WHERE op_type='CONTRADICTION_NOTED' AND target_id=?
+                ORDER BY created_at DESC,id DESC LIMIT 1""",
+                [node_a_id],
+            ).fetchone()
+            payload = json.loads(prior[0]) if prior and isinstance(prior[0], str) else (
+                prior[0] if prior else None
+            )
+            if (
+                existing_evidence == evidence_id
+                and payload
+                and payload.get("node_a_id") == node_a_id
+                and payload.get("node_b_id") == node_b_id
+                and prior[1] == actor_id
+            ):
+                return
+            raise ValueError("Contradiction already exists with different inputs")
+        if existing_edge is not None:
+            raise ValueError("Contradiction edge exists without matching contested state")
 
         if not validate_transition(state_a, LifecycleState.CONTESTED):
             raise ValueError(
@@ -1149,18 +1314,6 @@ class DuckPGQGraphStore:
             [LifecycleState.CONTESTED.value, node_b_id],
         )
 
-        # Create CONTRADICTS edge: node_b (newer) -> node_a (older)
-        provenance_uuid = None
-        if evidence_id is not None:
-            try:
-                provenance_uuid = UUID(evidence_id)
-            except ValueError:
-                logger.warning(
-                    "evidence_id %r is not a valid UUID, storing edge "
-                    "without provenance reference",
-                    evidence_id,
-                )
-
         edge = MemoryEdge(
             source_id=UUID(node_b_id),
             target_id=UUID(node_a_id),
@@ -1181,9 +1334,9 @@ class DuckPGQGraphStore:
         self._conn.execute(
             """
             INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at)
-            VALUES (?, 'CONTRADICTION_NOTED', ?, ?, 'system', now())
+            VALUES (?, 'CONTRADICTION_NOTED', ?, ?, ?, now())
             """,
-            [op_id, node_a_id, payload],
+            [op_id, node_a_id, payload, actor_id],
         )
 
     def _resolve_contradiction_sync(
@@ -1204,34 +1357,27 @@ class DuckPGQGraphStore:
 
         # Validate both nodes exist and are CONTESTED
         winner_row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [winner_id],
         ).fetchone()
         if winner_row is None:
             raise ValueError(f"Winner node {winner_id} not found")
 
         loser_row = self._conn.execute(
-            "SELECT lifecycle_state FROM nodes WHERE id = ?",
+            "SELECT lifecycle_state, user_id, scope FROM nodes WHERE id = ?",
             [loser_id],
         ).fetchone()
         if loser_row is None:
             raise ValueError(f"Loser node {loser_id} not found")
 
+        if UUID(winner_id) == UUID(loser_id):
+            raise ValueError("A node cannot resolve a contradiction with itself")
+        if winner_row[1:] != loser_row[1:]:
+            raise ValueError("Contradiction nodes must have the same user and scope")
+
         winner_state = LifecycleState(winner_row[0])
         loser_state = LifecycleState(loser_row[0])
 
-        if winner_state != LifecycleState.CONTESTED:
-            raise ValueError(
-                f"Winner node {winner_id} is not CONTESTED "
-                f"(current: {winner_state.value})"
-            )
-        if loser_state != LifecycleState.CONTESTED:
-            raise ValueError(
-                f"Loser node {loser_id} is not CONTESTED "
-                f"(current: {loser_state.value})"
-            )
-
-        # Validate a CONTRADICTS edge exists between them (either direction)
         edge_row = self._conn.execute(
             """
             SELECT id FROM edges
@@ -1245,6 +1391,45 @@ class DuckPGQGraphStore:
             """,
             [winner_id, loser_id, loser_id, winner_id],
         ).fetchone()
+
+        from prme.storage.transition_evidence import validate_duckdb
+        evidence = validate_duckdb(self._conn, evidence_id, winner_row[1], winner_row[2])
+        evidence_id = str(evidence) if evidence is not None else None
+        if (
+            winner_state == LifecycleState.STABLE
+            and loser_state == LifecycleState.DEPRECATED
+            and edge_row is not None
+        ):
+            prior = self._conn.execute(
+                """SELECT payload,actor_id FROM operations
+                WHERE op_type='CONTRADICTION_RESOLVED' AND target_id=?
+                ORDER BY created_at DESC,id DESC LIMIT 1""",
+                [winner_id],
+            ).fetchone()
+            payload = json.loads(prior[0]) if prior and isinstance(prior[0], str) else (
+                prior[0] if prior else None
+            )
+            if (
+                payload
+                and payload.get("winner_id") == winner_id
+                and payload.get("loser_id") == loser_id
+                and payload.get("evidence_event_id") == evidence_id
+                and prior[1] == resolver_actor_id
+            ):
+                return
+            raise ValueError("Contradiction was already resolved with different inputs")
+
+        if winner_state != LifecycleState.CONTESTED:
+            raise ValueError(
+                f"Winner node {winner_id} is not CONTESTED "
+                f"(current: {winner_state.value})"
+            )
+        if loser_state != LifecycleState.CONTESTED:
+            raise ValueError(
+                f"Loser node {loser_id} is not CONTESTED "
+                f"(current: {loser_state.value})"
+            )
+
         if edge_row is None:
             raise ValueError(
                 f"No CONTRADICTS edge exists between {winner_id} and {loser_id}"
@@ -1392,7 +1577,7 @@ class DuckPGQGraphStore:
 
         if not include_superseded:
             node_conditions.append(
-                "n.lifecycle_state IN ('tentative', 'stable')"
+                "n.lifecycle_state IN ('tentative', 'stable', 'contested')"
             )
 
         if valid_at is not None:

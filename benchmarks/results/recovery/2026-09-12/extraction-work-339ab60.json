@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "pipeline_sha256": "5fb23a798a0999f7b59c6c51ced65562e785458074416a613d78825155d89ad0",
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/ingestion/pipeline.py",
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "initial_provider_method_calls": {
+    "extract": 1,
+    "embed": 1,
+    "stage": 1
+  },
+  "facts": 2,
+  "prepared_nodes": 6,
+  "elapsed_seconds": 19.294,
+  "checks": [
+    "real local extraction and embeddings",
+    "journaled plan before injected staging failure",
+    "no partial graph publication",
+    "restart replays exact plan without either provider",
+    "scoped receipt and public work status",
+    "public retry and processing after restart without providers",
+    "retrieval finds grounded database fact",
+    "archived completion skips staging"
+  ],
+  "limits": "One synthetic workflow; explicit durable recovery, not extraction accuracy or comparative evidence.",
+  "source_commit": "339ab60",
+  "python": "3.13.3",
+  "packages": {
+    "prme": "0.11.0",
+    "duckdb": "1.5.5",
+    "usearch": "2.26.2",
+    "tantivy": "0.26.0",
+    "fastembed": "0.8.0",
+    "asyncpg": "0.31.0",
+    "pydantic": "2.13.5"
+  }
+}

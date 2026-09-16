@@ -1,0 +1,35 @@
+{
+  "artifacts": {
+    "prepared.json": "4d3b5bdf10272183a75319ac2c41cb01e878538947218ec7c8c114ecf1b007ad",
+    "reader-0-completion.json": "353c039a8dd758a369650d72d5b07173ef262f9293eccd8ba96a4edc52c27431",
+    "reader-0-plan.json": "ff25e4fa339582a924b6c4500bf07101d44afce2b026020afd4964d204135db3",
+    "reader-0-state.json": "52f0e660d07989f9f92b333647af50bd2a22aa5a3a42ebe6bc4a03d5ea9bf082",
+    "reader-0.json": "11d02f59f8643408ff4c61fd56935039e4a2dc7d0a4a76e8d0f31795081dd3bd",
+    "reader-0.log": "45fee23cc7669ba90828887b5d5786a561adf3b2a475b885382ebd8457076614",
+    "reader-1-plan.json": "f1285956f8b38bcd42e28da5531e993ebb4403b4f7d126e5119f790ff6da901c"
+  },
+  "complete": false,
+  "downstream_judging_started": false,
+  "gemma_started": false,
+  "limits": [
+    "Incomplete development study: no comparative answer score.",
+    "Partial responses checked structurally and by checksum; correctness not inspected.",
+    "This failed state is retained and must not be resumed or selectively repaired.",
+    "Timeout does not establish model capacity, server load, or a hardware cause."
+  ],
+  "native_driver_exit_code": 1,
+  "observed_at": "2026-09-13T18:58:32.610040+00:00",
+  "qwen": {
+    "failed_at": "2026-09-13T18:54:51.258494+00:00",
+    "failure_type": "TimeoutError",
+    "last_logged_logical_prediction": 315,
+    "native_exit_code": 1,
+    "request_timeout_seconds": 600,
+    "response_received": false,
+    "unique_saved_responses_verified": 275
+  },
+  "registered_module_hashes_still_match": true,
+  "registration_sha256": "d596bc188131735164f05861f59e38c20b953ada7e0f1468e792efdc44efe115",
+  "scores_available": false,
+  "source_commit": "9dd6a91"
+}

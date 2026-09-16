@@ -103,6 +103,10 @@ class WeightTuner:
             w_epistemic=w_epistemic,
             w_paths=w_paths,
             recency_lambda=recency_lambda,
+            temporal_boost=self.current_weights.temporal_boost,
+            node_type_boost=self.current_weights.node_type_boost,
+            relevance_floor=self.current_weights.relevance_floor,
+            current_update_multiplier=self.current_weights.current_update_multiplier,
         )
 
         self.current_weights = new_weights

@@ -365,6 +365,13 @@ async def test_e2e_contradiction_detection(backends):
 
         # Run supersedence detector with temporal_intent="assertion"
         # This is the path _materialize() follows after our GAP-02 fix
+        from prme.models.events import Event
+        from prme.storage.event_store import EventStore
+        evidence = Event(
+            user_id="user1", scope=Scope.PERSONAL, role="user",
+            content=new_fact.content,
+        )
+        await EventStore(conn, graph_store._conn_lock).append(evidence)
         detector = SupersedenceDetector(graph_store, graph_writer)
         result = await detector.detect_and_supersede(
             new_fact_node_id=str(new_fact.id),
@@ -372,7 +379,7 @@ async def test_e2e_contradiction_detection(backends):
             predicate="works_at",
             object_value="Meta",
             user_id="user1",
-            evidence_event_id=str(uuid4()),
+            evidence_event_id=str(evidence.id),
             temporal_intent="assertion",  # This is what GAP-02 now forwards
         )
 
@@ -396,6 +403,7 @@ async def test_e2e_contradiction_detection(backends):
             edge_type=EdgeType.CONTRADICTS
         )
         assert len(contradicts_edges) >= 1, "Expected CONTRADICTS edge"
+        assert any(edge.provenance_event_id == evidence.id for edge in contradicts_edges)
 
         supersedes_edges = await graph_store.get_edges(
             edge_type=EdgeType.SUPERSEDES

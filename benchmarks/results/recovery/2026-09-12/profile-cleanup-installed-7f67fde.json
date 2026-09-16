@@ -1,0 +1,47 @@
+{
+  "source_commit": "7f67fde",
+  "test_worktree_commit": "d4850b0",
+  "native_process_exit_code": 0,
+  "passed": 123,
+  "skipped": 23,
+  "failed": 0,
+  "seconds": 105.26,
+  "production_source_files_verified": 115,
+  "wheel_sha256": "97c1465d878e93f8d34e75413536e9d1cc71a7cf63f6716a59487d5f36389f1f",
+  "log_sha256": "aa8f50138feb834b0d760f52deae6d2f908e635b48abb6c440a9e454a579a0a6",
+  "production_imports_verified_in_site_packages": true,
+  "real_model_workflow": {
+    "complete": true,
+    "python": "3.13.3",
+    "duckdb": "1.5.5",
+    "prme": "0.11.0",
+    "prme_import_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+    "runner_sha256": "01e40b1aa344654ccac633d9b83329d984871d9c7430c8fde97f49d2ef55dd9a",
+    "limits": "Authored local failure/restart workflow using real BGE embeddings. No competitive quality claim.",
+    "embedding": {
+      "model": "BAAI/bge-small-en-v1.5",
+      "version": "fastembed-0.8.0",
+      "dimension": 384
+    },
+    "abandoned_stage_collected": true,
+    "cleanup": {
+      "collected": 1,
+      "failed": 0,
+      "remaining": 0,
+      "errors": {},
+      "blocked_reason": null
+    },
+    "recovery": {
+      "processed": 1,
+      "failed": 0,
+      "pending": 0,
+      "errors": {}
+    },
+    "exact_prepared_checksum": "c3ae273aa5dbd7060432949f8467902863989aab76f7d414549c8d1576d91b6a",
+    "model_free_recovery": true,
+    "retrieved_profile": true,
+    "completed_replay_preserves_archival": true,
+    "foreign_owner_isolated": true
+  },
+  "limits": "Installed Python 3.13, DuckDB 1.5.5 and PostgreSQL checks. Root full regression is running separately. No memory-quality or competitive performance claim."
+}

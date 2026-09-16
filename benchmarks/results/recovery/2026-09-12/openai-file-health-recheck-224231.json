@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-09-12T22:42:31.273771+00:00",
+  "credential_source": "explicit root .env credential",
+  "inherited_credential_differs": true,
+  "max_retries": 0,
+  "max_output_tokens": 1,
+  "timeout_seconds": 15,
+  "model": "gpt-4o-mini",
+  "http_status": 429,
+  "error_type": "RateLimitError"
+}

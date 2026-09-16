@@ -1,0 +1,16 @@
+{
+  "prepared_at": "2026-09-12T17:32:58.644483+00:00",
+  "responses": 28,
+  "packet_sha256": "67e0f588cb043f47f44ea64fa54d44b770c8417082bf7437184ac129b742502b",
+  "review_plan_sha256": "a441a87d256680a1e64fe389133d8d5df55ea0724a1f957a8ac7824a226af209",
+  "reader_completion_sha256": "13fbe9341b6afb138bf4d96c6917ffc957926dbc893fe5b84e94eb3bd8c8cfc7",
+  "fields": [
+    "id",
+    "category",
+    "question",
+    "reference",
+    "hypothesis"
+  ],
+  "reader_native_exit_code": 0,
+  "raw_generation_integrity_verified": true
+}

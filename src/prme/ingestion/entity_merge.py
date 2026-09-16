@@ -1,11 +1,12 @@
 """Conservative entity merge at ingestion time.
 
 EntityMerger deduplicates entity nodes by matching on both name AND
-entity_type (case-insensitive). Per user decision: "Entity merging at
+entity_type (case-insensitive name, exact type). Per user decision: "Entity merging at
 ingestion should be conservative -- better to create a duplicate than
 incorrectly merge two different entities."
 
-Match criteria: name.strip().lower() + entity_type exact match + same user_id.
+Named entities match name.strip().lower(), exact entity_type, owner and scope.
+Unresolved personal references additionally require the same source event.
 This prevents merging "Jordan" (person) with "Jordan" (country).
 """
 
@@ -17,6 +18,7 @@ import structlog
 
 from prme.ingestion.graph_writer import GraphWriter
 from prme.models.nodes import MemoryNode
+from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage.graph_store import GraphStore
 from prme.types import LifecycleState, NodeType, Scope
 
@@ -64,26 +66,39 @@ class EntityMerger:
             Tuple of (node_id, is_new). is_new is True if a new node
             was created, False if an existing match was reused.
         """
-        # Query all active ENTITY nodes for this user
-        existing_nodes = await self._graph_store.query_nodes(
-            node_type=NodeType.ENTITY,
-            user_id=user_id,
-        )
-
-        # Conservative match: exact name + entity_type
+        # A ranked/limited query can miss older entities and fragment their
+        # fact history. Walk scoped, stable-ID pages until an exact match or
+        # exhaustion; keep Python normalization identical on both backends.
         normalized_name = name.strip().lower()
-        for node in existing_nodes:
-            node_name = node.content.strip().lower()
-            node_entity_type = (node.metadata or {}).get("entity_type")
-            if node_name == normalized_name and node_entity_type == entity_type:
-                logger.debug(
-                    "Reusing existing entity",
-                    entity_id=str(node.id),
-                    name=name,
-                    entity_type=entity_type,
-                    user_id=user_id,
-                )
-                return (str(node.id), False)
+        unresolved = unresolved_personal_reference(name, entity_type)
+        after_id: str | None = None
+        while True:
+            existing_nodes = await self._graph_store.scan_nodes(
+                node_type=NodeType.ENTITY, user_id=user_id, scope=scope,
+                after_id=after_id, limit=256,
+            )
+            for node in existing_nodes:
+                node_name = node.content.strip().lower()
+                node_entity_type = (node.metadata or {}).get("entity_type")
+                if node_name == normalized_name and node_entity_type == entity_type:
+                    if unresolved and (evidence_event_id is None
+                            or node.metadata.get("identity_status") != "unresolved_reference"
+                            or node.metadata.get("reference_event_id") != evidence_event_id
+                            or node.evidence_refs != [UUID(evidence_event_id)]):
+                        # Literal "I" in two messages can refer to two quoted
+                        # speakers. An owner/scope is not a resolved referent.
+                        continue
+                    logger.debug(
+                        "Reusing existing entity",
+                        entity_id=str(node.id),
+                        name=name,
+                        entity_type=entity_type,
+                        user_id=user_id,
+                    )
+                    return (str(node.id), False)
+            if len(existing_nodes) < 256:
+                break
+            after_id = str(existing_nodes[-1].id)
 
         # No match found -- create new entity
         evidence_refs: list[UUID] = []
@@ -91,6 +106,8 @@ class EntityMerger:
             evidence_refs = [UUID(evidence_event_id)]
 
         metadata: dict = {"entity_type": entity_type}
+        if unresolved:
+            metadata.update(identity_status="unresolved_reference", reference_event_id=evidence_event_id)
         if description is not None:
             metadata["description"] = description
 

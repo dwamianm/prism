@@ -1,0 +1,16 @@
+{
+  "installed_package": "/private/tmp/prme-lifecycle-atomic-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 126,
+  "package_manifest_sha256": "b914267a5aa8431eda54e365a8db8aa3211d4d13a585b0f1f1a93b31db0bdf5a",
+  "pytest_exit_code": 0,
+  "source_commit": "e15bb40",
+  "test_files": [
+    "tests/test_atomic_lifecycle.py",
+    "tests/test_pg_graph_store.py",
+    "tests/test_organizer.py",
+    "tests/test_organizer_scope_boundaries.py",
+    "tests/test_organizer_tenancy.py",
+    "tests/test_atomic_organizer_merges.py"
+  ],
+  "wheel_sha256": "99f31f0eee8f16ffd16b01ee955653de6dca701e49e54460484f7c015731c684"
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "beam-raw-predict-only-registration",
+  "registered_at_utc": "2026-09-14T19:40:00Z",
+  "status": "registered before PRME ingestion or retrieval",
+  "purpose": "Official-client validation of PRME source-preserving ingestion and retrieval over one public 100K-token BEAM conversation",
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "670d603363aa235b60eb476c57996437b4d84547",
+    "upstream_repository": "mem0ai/memory-benchmarks",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "files": {
+      "launcher_sha256": "f8263b9df1a55aa5b9f1d8dba4e19980651762dc92e5d037f173a749857f2142",
+      "service_sha256": "115813504c5329d67274daa3a9bd5d10e777b7e3cfee2a79e751e009cbd2e00d",
+      "validator_sha256": "b5b53874596c18939891f3c19e83b5a516a0219902d94fd784fe6af507a49e1a",
+      "upstream_runner_sha256": "c13ed8464d28f0b09c1f6f3d1b703cb2be92dbc51dbdb3e91834e355ad5aad0c",
+      "upstream_mem0_client_sha256": "a3047e4113978c3b04c2635d53e85e0ac5e7a5d43aef530beccedf591df29b99",
+      "upstream_utils_sha256": "c49e85a0d0f846c7963261e7396995203ad9f0732fe8a64b2aea1decadeabdc4",
+      "upstream_requirements_sha256": "14cb7961cff56ba10fd9d1cbb18c7842c6a2377565f18ad538d2b439402fd007"
+    }
+  },
+  "dataset": {
+    "repository": "Mohammadta/BEAM",
+    "revision": "3205395e897e7318c7b094ef4e6047b9b82dbb03",
+    "split": "100K",
+    "source_parquet_sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "normalized_by": "Pinned upstream download_dataset field selection and probing-question parsing",
+    "cache_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "cache_bytes": 13661638,
+    "conversation_count": 20
+  },
+  "protocol": {
+    "profile": "raw",
+    "chat_sizes": [
+      "100K"
+    ],
+    "conversations": [
+      0
+    ],
+    "question_types": [
+      "abstention",
+      "contradiction_resolution",
+      "event_ordering",
+      "information_extraction",
+      "instruction_following",
+      "knowledge_update",
+      "multi_session_reasoning",
+      "preference_following",
+      "summarization",
+      "temporal_reasoning"
+    ],
+    "top_k": 50,
+    "top_k_cutoffs": [
+      50
+    ],
+    "predict_only": true,
+    "project_name": "prme-beam-100k-raw-v1",
+    "run_id": "prme-beam-100k-raw-v1",
+    "chunk_size": 2
+  },
+  "system": {
+    "id": "prme",
+    "version": "0.11.0",
+    "profile": "raw",
+    "adapter_schema": 2,
+    "duckdb_threads": 1,
+    "embedding": {
+      "provider": "fastembed",
+      "model": "BAAI/bge-small-en-v1.5",
+      "dimension": 384
+    },
+    "extraction": null,
+    "reranker": false,
+    "opportunistic_organizer": false
+  },
+  "reporting": {
+    "expected_ingestion_checkpoints": 1,
+    "expected_questions": 20,
+    "expected_questions_per_ability": 2,
+    "require_zero_failed_chunks": true,
+    "require_no_partial_progress": true,
+    "preserve_every_retrieval": true,
+    "claim_boundary": "This predict-only smoke validates complete official-client ingestion and retrieval plumbing for one public conversation. It produces no generated-answer or judged quality score and is not a matched comparison with Mem0's proprietary platform."
+  }
+}

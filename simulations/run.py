@@ -119,7 +119,7 @@ async def _run_deterministic(scenario_name: str) -> None:
 
     print()
     print(f"  Running deterministic check for: {scenario_name}")
-    print(f"  (executing scenario twice with independent state)")
+    print("  (executing scenario twice with independent state)")
     print()
 
     result = await runner.run_deterministic_check(scenario)

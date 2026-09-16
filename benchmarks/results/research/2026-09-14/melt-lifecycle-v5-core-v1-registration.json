@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "kind": "melt-lifecycle-v5-core-registration",
+  "registered_at_utc": "2026-09-14T19:22:00Z",
+  "status": "registered before PRME system execution",
+  "purpose": "Independent deterministic confirmation of PRME correction, contradiction, maintenance, temporal, and structured-write lifecycle behavior",
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "aa1f41c86d2389056ad4fa9be9c7972bc7591cf4",
+    "upstream_repository": "shisa-ai/melt",
+    "upstream_revision": "47c819f417b0d81a57f781ec54d8a5cf84e0c833",
+    "files": {
+      "launcher_sha256": "05331c4abbafc65626531e647011ec948ddcbe17013fc320fbd18016da72a214",
+      "bridge_sha256": "04a0e427a6b82484090c5c88981289f692640da2fc7b0809c8968c549213e7e5",
+      "upstream_lock_sha256": "f817c581d50ab1cd7d63852279050ac329dbd9b9bcdf02c8fb02fd1fdded234f",
+      "upstream_runner_sha256": "5edaf50fc1e12460106b51927d02aa8b8895355df7296727075dc6659a18207d",
+      "upstream_reports_sha256": "05968a8258c5b1de18a79f5f1059ea0c18f439f221cd37c6f4b583887c16d4d3",
+      "upstream_suite_manifest_sha256": "6f2d47354029a5b6d6ea19b6a3e49b9961b505e9b1d74d8c7b6fb405ca58d9de"
+    }
+  },
+  "benchmark_identity": {
+    "melt_version": "0.3.1",
+    "melt_schema_version": "2",
+    "report_schema_version": "5",
+    "canonical_fixture_sha256": "d34d7f2217deccac4d6225605bf4989a297e9c8e657689682b85af43e0c0f0dc",
+    "held_out_source_fixture_sha256": "bcc2c3faf0eaca4242fd5c177af1f29a01723aa517550e02541afa6523179cde",
+    "materialized_run_sha256": "d243450741416f5a990d758ce36186249d1254704c2c540a4dbb6477c2ac0434",
+    "score_protocol_id": "lifecycle-score",
+    "score_protocol_version": "2.1.0",
+    "score_profile_version": "1.0.0"
+  },
+  "protocol": {
+    "suite": "lifecycle",
+    "suite_version": "lifecycle-v5",
+    "fixture": "stress",
+    "split": "held_out",
+    "score_profile": "lifecycle-v5-core",
+    "top_k": 12,
+    "runs": 5,
+    "seed_schedule": [
+      1103,
+      2207,
+      3301,
+      4409,
+      5501
+    ],
+    "answer_mode": "retrieval_only",
+    "store_case_io": true,
+    "min_score": 0.05
+  },
+  "system": {
+    "id": "prme",
+    "version": "0.11.0",
+    "contract_version": "b2",
+    "embedding_provider": "fastembed",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "embedding_dimension": 384,
+    "model_calls_per_operation": {
+      "ingest": 0,
+      "memory_write": 0,
+      "query": 0
+    },
+    "historical_query_boundary": "Adapter-assisted B2 historical retrieval over retained active and superseded nodes; this does not claim exact historical replay in PRME's normal retrieve API."
+  },
+  "reporting": {
+    "expected_status": "final",
+    "required_run_count": 5,
+    "required_case_count_per_run": 4,
+    "required_checkpoint_count": 20,
+    "preserve_case_io": true,
+    "preserve_failures": true,
+    "validation": "Pinned MELT load_report plus independent source, protocol, SUT, run, case, and checkpoint checks",
+    "claim_boundary": "This profile measures MELT's four B2 core lifecycle cases with deterministic retrieval scoring. It does not establish B3 scoped memory, autonomous memory creation, generated-answer quality, or superiority over every competing system."
+  }
+}

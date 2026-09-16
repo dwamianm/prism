@@ -46,7 +46,10 @@ def store(
     scope: Scope = Scope.PERSONAL,
     metadata: dict | None = None,
     confidence: float | None = None,
+    epistemic_type: EpistemicType | None = None,
+    source_type: SourceType | None = None,
     event_time: datetime | None = None,
+    ttl_days: int | None = ...,
 ) -> str  # returns event UUID
 ```
 
@@ -63,6 +66,9 @@ def store(
 | `metadata` | `dict \| None` | `None` | Arbitrary key-value metadata |
 | `confidence` | `float \| None` | `None` | Override initial confidence (0.0-1.0) |
 | `event_time` | `datetime \| None` | `None` | When the event occurred (default: now) |
+| `epistemic_type` | `EpistemicType \| None` | `None` | Override inferred assertion status |
+| `source_type` | `SourceType \| None` | `None` | Override inferred source provenance |
+| `ttl_days` | `int \| None` | `...` | Omit for configured default; `None` disables expiry; an integer sets days |
 
 **Returns:** Event UUID as a string.
 
@@ -92,6 +98,7 @@ def retrieve(
     scope: Scope | list[Scope] | None = None,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    reference_time: datetime | None = None,
     knowledge_at: datetime | None = None,
     token_budget: int | None = None,
 ) -> RetrievalResponse
@@ -104,15 +111,22 @@ def retrieve(
 | `query` | `str` | required | Natural language search query |
 | `user_id` | `str` | required | User whose memories to search |
 | `scope` | `Scope \| list \| None` | `None` | Filter by scope(s) |
-| `time_from` | `datetime \| None` | `None` | Only memories created after this time |
-| `time_to` | `datetime \| None` | `None` | Only memories created before this time |
+| `time_from` | `datetime \| None` | `None` | Validity window start; excludes assertions expired at or before this time (ENTITY/PREFERENCE exempt) |
+| `time_to` | `datetime \| None` | `None` | Validity window end; excludes assertions that become valid after this time (ENTITY/PREFERENCE exempt) |
 | `knowledge_at` | `datetime \| None` | `None` | Point-in-time snapshot (bi-temporal) |
+| `reference_time` | `datetime \| None` | `None` | Timezone-aware clock for relative query dates and scoring; defaults to request time and is recorded in response metadata |
 | `token_budget` | `int \| None` | `None` | Max tokens for context packing |
+| `max_per_source` | `int \| None` | `None` | Max results sharing an exact source passage and evidence set |
 
 **Returns:** `RetrievalResponse` with:
 - `results` — list of `RetrievalCandidate` objects, each with `.node` (MemoryNode) and `.composite_score` (float)
 - `bundle` — packed context bundle for LLM consumption
 - `metadata` — retrieval timing, candidate counts, backends used
+
+Use `response.bundle.render()` for the exact context counted by
+`response.bundle.tokens_used`. The bundle records its tokenizer. Reconstructing
+text from the full node objects bypasses that budget. See
+[rendered context and budgets](async-engine.md#rendered-context-and-token-budgets).
 
 **Example:**
 
@@ -123,6 +137,22 @@ for result in response.results[:5]:
     node = result.node
     print(f"[{result.composite_score:.3f}] {node.node_type.value}: {node.content}")
 ```
+
+## Deferred raw ingestion
+
+For raw ingestion without an LLM, the synchronous client also supports durable
+deferred processing:
+
+```python
+event_id = client.ingest_fast("Alice prefers dark mode", user_id="alice")
+result = client.process_pending(user_id="alice", budget_ms=1000)
+status = client.processing_status(event_id, user_id="alice")
+```
+
+These methods have the same status, retry, scope, and cooperative-budget
+semantics as [the async processing API](async-engine.md#processing-deferred-events).
+They track new direct `store()` writes and raw-source indexing from both
+`ingest_fast()` and `ingest()`. LLM derivations use `extraction_status()`.
 
 ## ingest()
 

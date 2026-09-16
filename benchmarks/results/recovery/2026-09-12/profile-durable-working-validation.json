@@ -1,0 +1,56 @@
+{
+  "source_base_commit": "39babb8",
+  "source_state": "working tree before durable-profile commit",
+  "focused": {
+    "passed": 86,
+    "skipped": 12,
+    "failed": 0,
+    "native_process_exit_code": 0,
+    "seconds": 64.36,
+    "log_sha256": "5c8401f13aadb05d4e1c849b71c68d7dfc0687d674717f51e294972dcf020668"
+  },
+  "prior_attempts": [
+    {
+      "log_sha256": "448733fb6fc3854fc7854f39cb25fec1a8cef6c389b74ea3169cc10c35ae5e3e",
+      "native_process_exit_code": 1,
+      "passed": 24,
+      "failed": 4,
+      "skipped": 4,
+      "finding": "Native stage fence did not exclude concurrent replacement."
+    },
+    {
+      "log_sha256": "03cc715bf7ac30aced1cf0f96053191c1dde91431a815c499bc5d353538081d6",
+      "native_process_exit_code": 1,
+      "passed": 24,
+      "failed": 4,
+      "skipped": 4,
+      "finding": "No-op status update was also elided by DuckDB; a changing shared epoch is required."
+    }
+  ],
+  "real_model_workflow": {
+    "complete": true,
+    "python": "3.11.6",
+    "duckdb": "1.4.4",
+    "prme": "0.11.0",
+    "prme_import_path": "/Users/dwamianm/Sites/prism/src/prme/__init__.py",
+    "runner_sha256": "11c5945bc1ed3f6324cad46487e0fa867a88d92bf23ea0c5fe53dbc8906867c6",
+    "limits": "Authored local failure/restart workflow using real BGE embeddings. No competitive quality claim.",
+    "embedding": {
+      "model": "BAAI/bge-small-en-v1.5",
+      "version": "fastembed-0.7.4",
+      "dimension": 384
+    },
+    "recovery": {
+      "processed": 1,
+      "failed": 0,
+      "pending": 0,
+      "errors": {}
+    },
+    "exact_prepared_checksum": "4cc9a1a2851fabff14f0e79e6685c0a9b48beeb8f4838ee99b459c4eaf0373f1",
+    "model_free_recovery": true,
+    "retrieved_profile": true,
+    "completed_replay_preserves_archival": true,
+    "foreign_owner_isolated": true
+  },
+  "limits": "Authored recovery tests with DuckDB and live PostgreSQL; no comparative memory-quality claim. Full regression and installed-wheel checks recorded separately."
+}

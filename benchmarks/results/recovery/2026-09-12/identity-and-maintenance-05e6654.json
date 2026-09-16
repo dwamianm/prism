@@ -1,0 +1,314 @@
+{
+  "source_commit": "05e6654",
+  "changes": {
+    "b21f099": "Event-local references and conservative merge admission",
+    "e385702": "Explicit operator control of anonymous global feedback; corrected duplicate-copy fixture",
+    "afc35ad": "PostgreSQL relation-local vector initialization",
+    "05e6654": "Temporal/provenance-preserving edge copies with retry convergence"
+  },
+  "reproductions": {
+    "merge_admission": {
+      "source_commit": "fbac34a",
+      "native_exit_code": 1,
+      "log_sha256": "cfbb4168342bc2fbf01664a9677c17bafe766c917a4cce1eaa1e5a50225318cd",
+      "log_path": "/tmp/prme-merge-semantics-valid-reproduction.log",
+      "summary": "26 failed in 2.88s",
+      "passed": 0,
+      "failed": 26,
+      "skipped": 0,
+      "seconds": 2.88
+    },
+    "personal_references": {
+      "source_commit": "fbac34a",
+      "native_exit_code": 1,
+      "log_sha256": "bd305d7dffc6cda247b7c0de2b9ea7be1fc3aebb523d0ec37f9c464f1eee392e",
+      "log_path": "/tmp/prme-reference-identity-before.log",
+      "summary": "8 failed, 6 passed, 12 deselected in 0.91s",
+      "passed": 6,
+      "failed": 8,
+      "skipped": 0,
+      "seconds": 0.91
+    },
+    "implicit_feedback": {
+      "source_commit": "b21f099",
+      "native_exit_code": 1,
+      "log_sha256": "1aa11e0a73c3a19a55683976a78ecf964d29831eb972e93e530012449838e6c5",
+      "log_path": "/tmp/prme-legacy-feedback-before.log",
+      "summary": "10 failed, 2 passed in 4.75s",
+      "passed": 2,
+      "failed": 10,
+      "skipped": 0,
+      "seconds": 4.75
+    },
+    "pg_catalog": {
+      "source_commit": "e385702",
+      "native_exit_code": 1,
+      "log_sha256": "90fb8169fd7807a6f6772794529331de42c2910cfdb6c0f2bc168730b007c95d",
+      "log_path": "/tmp/prme-pg-catalog-before.log",
+      "summary": "2 failed in 0.58s",
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "seconds": 0.58
+    },
+    "edge_preservation": {
+      "source_commit": "afc35ad",
+      "native_exit_code": 1,
+      "log_sha256": "5349b1c8e753f31e72a91ad941769d7d06c7d9cae67feab6a9fdead1426d7049",
+      "log_path": "/tmp/prme-merge-edge-valid-before.log",
+      "summary": "8 failed, 2 passed in 1.22s",
+      "passed": 2,
+      "failed": 8,
+      "skipped": 0,
+      "seconds": 1.22
+    }
+  },
+  "intermediate_regressions": [
+    {
+      "source_commit": "b21f099",
+      "native_exit_code": 1,
+      "log_sha256": "9369fdc3b30e1b4055a35b822c4dbf6b2b1ef77dc18f1066ee189db66c5184ed",
+      "log_path": "/tmp/prme-identity-full-b21f099.log",
+      "summary": "1 failed, 2718 passed, 81 skipped in 362.13s (0:06:02)",
+      "passed": 2718,
+      "failed": 1,
+      "skipped": 81,
+      "seconds": 362.13
+    },
+    {
+      "source_commit": "afc35ad",
+      "native_exit_code": 0,
+      "log_sha256": "cd76bf1bf658f18d38540a74054573522bb0c84d5bdb0ce2ca49b17a24bc80a7",
+      "log_path": "/tmp/prme-identity-feedback-full-afc35ad.log",
+      "summary": "2733 passed, 81 skipped in 368.96s (0:06:08)",
+      "passed": 2733,
+      "failed": 0,
+      "skipped": 81,
+      "seconds": 368.96
+    }
+  ],
+  "focused_source": [
+    {
+      "source_commit": "b21f099",
+      "native_exit_code": 0,
+      "log_sha256": "944d168e5669ec3d2424274e7756c330183c328bf879fd732b929b8c3d908b4a",
+      "log_path": "/tmp/prme-identity-replay-focused.log",
+      "summary": "156 passed, 2 skipped in 20.94s",
+      "passed": 156,
+      "failed": 0,
+      "skipped": 2,
+      "seconds": 20.94
+    },
+    {
+      "source_commit": "e385702",
+      "native_exit_code": 0,
+      "log_sha256": "b9b30c0865a6f1c4fbdd03ceec894cc88594091c4d25e9fe4d6b4bab1134ce24",
+      "log_path": "/tmp/prme-legacy-feedback-final-focused.log",
+      "summary": "162 passed in 18.55s",
+      "passed": 162,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 18.55
+    },
+    {
+      "source_commit": "afc35ad",
+      "native_exit_code": 0,
+      "log_sha256": "6d6222799bcf026899bcc7682c1144a483d03bc38e17f7e12c069747062466fe",
+      "log_path": "/tmp/prme-pg-catalog-after.log",
+      "summary": "7 passed in 0.95s",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0.95
+    },
+    {
+      "source_commit": "05e6654",
+      "native_exit_code": 0,
+      "log_sha256": "1f966ea856e09f7d605171185ee4de245b6599cff89934af2560abbbedcd95b1",
+      "log_path": "/tmp/prme-merge-edge-final-focused.log",
+      "summary": "130 passed in 26.74s",
+      "passed": 130,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 26.74
+    }
+  ],
+  "installed_python_313": [
+    {
+      "source_commit": "b21f099",
+      "native_exit_code": 0,
+      "log_sha256": "de7ba16a2f31dffeefb8af9a90dabac9d644f23a7802bf7a73cd772db35d29ac",
+      "log_path": "/tmp/prme-identity-installed-focused.log",
+      "summary": "156 passed, 2 skipped in 27.66s",
+      "passed": 156,
+      "failed": 0,
+      "skipped": 2,
+      "seconds": 27.66
+    },
+    {
+      "source_commit": "e385702",
+      "native_exit_code": 0,
+      "log_sha256": "d5f210c8a06317e88e498b0669036e87b50b4af38f2ad809bf195914dd85afbc",
+      "log_path": "/tmp/prme-feedback-installed-focused.log",
+      "summary": "247 passed, 2 skipped in 27.14s",
+      "passed": 247,
+      "failed": 0,
+      "skipped": 2,
+      "seconds": 27.14
+    },
+    {
+      "source_commit": "afc35ad",
+      "native_exit_code": 0,
+      "log_sha256": "084fd0de0707d9c3395d993b7e09b57d55535bf685a413873d82535471fdf69e",
+      "log_path": "/tmp/prme-catalog-installed-afc35ad.log",
+      "summary": "7 passed in 0.99s",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0.99
+    },
+    {
+      "source_commit": "05e6654",
+      "native_exit_code": 0,
+      "log_sha256": "fcac46c72661e0dc0e546126385265da1a8e956e1ec8a70049c766fff9f7b0ff",
+      "log_path": "/tmp/prme-merge-edge-installed-focused.log",
+      "summary": "130 passed in 21.07s",
+      "passed": 130,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 21.07
+    }
+  ],
+  "final_installed_source_files_verified": 118,
+  "final_wheel_sha256": "1df63e403a784febb642b20f8083b2f740c115572c05f635e6dd26da7dfe13d7",
+  "real_model_workflows": {
+    "collision_baseline": {
+      "artifact_sha256": "f6c93ab59fa1dc67adb6ac8a7bfa6df1741f7b275d7fa66869ea9b05849a06e2",
+      "artifact_path": "data/benchmarks/merge-collision-baseline-fbac34a.json",
+      "native_exit_code": 1,
+      "result": {
+        "complete": false,
+        "python": "3.11.6",
+        "prme_import_path": "/private/tmp/prme-merge-semantics-baseline/src/prme/__init__.py",
+        "runner_sha256": "26b6dca4743b70e563e805c257a91b3d6dfdf4d37cde5ee68915f15887ea2a39",
+        "limits": "Authored component workflow; graph inputs are explicit. Not an extraction, rebuild or answer-quality benchmark.",
+        "embedding_model": "BAAI/bge-small-en-v1.5",
+        "embedding_version": "fastembed-0.7.4",
+        "max_absolute_vector_difference": 0.0,
+        "content_sha256": [
+          "03f0c298cc7e7311163425556768fd91814f7fa082f694ec308f9e768cc93fbf",
+          "a1a61bb88f8edab84c1af77eb5b5c0fc45a7c63d13a1b74554a759897c05cdf1"
+        ],
+        "organize": {
+          "jobs_run": [
+            "deduplicate"
+          ],
+          "jobs_skipped": [],
+          "duration_ms": 91.63,
+          "budget_remaining_ms": 29908.37,
+          "per_job": {
+            "deduplicate": {
+              "job": "deduplicate",
+              "nodes_processed": 1,
+              "nodes_modified": 1,
+              "errors": 0,
+              "duration_ms": 91.12,
+              "details": {
+                "duplicates_found": 1,
+                "nodes_merged": 1
+              }
+            }
+          }
+        },
+        "active_after_organize": 1
+      }
+    },
+    "collision_final": {
+      "artifact_sha256": "4bda37ddfec2eea59ca0847c6ca1e2f8080af84e722461d7694214029c5e0b5e",
+      "artifact_path": "data/benchmarks/merge-collision-installed-05e6654.json",
+      "native_exit_code": 0,
+      "result": {
+        "complete": true,
+        "python": "3.13.3",
+        "prme_import_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+        "runner_sha256": "26b6dca4743b70e563e805c257a91b3d6dfdf4d37cde5ee68915f15887ea2a39",
+        "limits": "Authored component workflow; graph inputs are explicit. Not an extraction, rebuild or answer-quality benchmark.",
+        "embedding_model": "BAAI/bge-small-en-v1.5",
+        "embedding_version": "fastembed-0.8.0",
+        "max_absolute_vector_difference": 0.0,
+        "content_sha256": [
+          "03f0c298cc7e7311163425556768fd91814f7fa082f694ec308f9e768cc93fbf",
+          "a1a61bb88f8edab84c1af77eb5b5c0fc45a7c63d13a1b74554a759897c05cdf1"
+        ],
+        "organize": {
+          "jobs_run": [
+            "deduplicate"
+          ],
+          "jobs_skipped": [],
+          "duration_ms": 85.54,
+          "budget_remaining_ms": 29914.46,
+          "per_job": {
+            "deduplicate": {
+              "job": "deduplicate",
+              "nodes_processed": 1,
+              "nodes_modified": 0,
+              "errors": 0,
+              "duration_ms": 84.95,
+              "details": {
+                "duplicates_found": 1,
+                "nodes_merged": 0,
+                "pairs_not_applied": 1,
+                "merge_policy": "exact_content_provenance_validity_v1"
+              }
+            }
+          }
+        },
+        "active_after_organize": 2,
+        "preserved_after_reopen": true,
+        "source_evidence_preserved": true
+      }
+    },
+    "sync_async_final": {
+      "artifact_sha256": "a63bc9312f0cc684c552efab63340d4bc7b12107d389ce0efbf822d9d1f23f7b",
+      "artifact_path": "data/benchmarks/identity-custom-provider-05e6654.json",
+      "native_exit_code": 0,
+      "result": {
+        "complete": true,
+        "python": "3.13.3",
+        "prme_import_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+        "runner_sha256": "d2ee2f409c03a79e7810e18f3aa4623e7b3d5d8a353440971863bf3833d0aa85",
+        "limits": "Authored real-model provider integration, not evidence that the query instruction improves answer quality.",
+        "embedding": {
+          "provider": "prme.storage.embedding.CachedEmbeddingProvider",
+          "model": "BAAI/bge-small-en-v1.5",
+          "version": "fastembed-0.8.0:bge-query-instruction-v1",
+          "dimension": 384,
+          "query_encoding": "embed_query"
+        },
+        "sync_store_and_retrieve": true,
+        "async_reopen_and_retrieve": true,
+        "source_preserved": true,
+        "original_config_unchanged": true,
+        "encoding_identity_preserved": true
+      }
+    }
+  },
+  "retained_failures": [
+    "Initial merge tests attempted immutable valid_from mutation; corrected explicit graph fixtures reproduced 26 failures independently.",
+    "Initial full b21f099 invocation was interrupted with native 143 because the local database setup was waiting for its test password; corrected invocation completed with one fixture failure.",
+    "The b21f099 full run failed one older fixture expecting separate observations to merge. The fixture now supplies copies sharing validity; afc35ad full regression passed.",
+    "Initial edge-copy comparison used pre-storage Python confidence .42 instead of durable float32 .41999998688697815. Corrected durable comparisons reproduced eight production failures; no confidence-rounding defect is claimed."
+  ],
+  "limits": "Covered storage/maintenance/installed workflows, not extraction accuracy, general coreference, full merge atomicity, namespace grants or comparative memory quality.",
+  "final_source_regression": {
+    "source_commit": "05e6654",
+    "native_exit_code": 0,
+    "log_sha256": "5e43d42114adb090569a34ba6ac239150b5810b7f07df7f8ea8aa5eeaba7b2cf",
+    "log_path": "/tmp/prme-merge-edge-full-05e6654.log",
+    "summary": "2745 passed, 81 skipped in 354.97s (0:05:54)",
+    "passed": 2745,
+    "failed": 0,
+    "skipped": 81,
+    "seconds": 354.97
+  }
+}

@@ -272,6 +272,89 @@ class TestKnowledgeAtQueries:
             assert not any("Rust" in c for c in result_contents), (
                 "Rust fact (ingested just now) should NOT be visible at 5 days ago"
             )
+            coverage = response.metadata.historical_coverage
+            assert coverage is not None
+            assert coverage.knowledge_at == knowledge_cutoff
+            assert coverage.semantics == "ingestion_cutoff"
+            assert coverage.exact_snapshot is False
+            assert coverage.limitations == (
+                "current_lifecycle_state",
+                "current_derived_indexes",
+                "mutations_not_replayed",
+            )
+            assert response.bundle.render().startswith("Historical coverage:")
+            assert "not treat this context as an exact historical snapshot" in (
+                response.bundle.render()
+            )
+
+            receipt = await engine.get_retrieval_receipt(
+                str(response.metadata.request_id), user_id="test-user",
+            )
+            assert receipt is not None
+            assert receipt.execution is not None
+            assert receipt.execution.parameters["historical_coverage"] == (
+                coverage.model_dump(mode="json")
+            )
+        finally:
+            await engine.close()
+
+    @pytest.mark.asyncio
+    async def test_knowledge_at_discloses_current_index_boundary(self, config):
+        """A cutoff must not claim lifecycle or index replay after retirement."""
+        engine = await create_engine(config)
+        try:
+            await engine.store(
+                "The project codename is Aurora",
+                user_id="test-user",
+                node_type=NodeType.FACT,
+                scope=Scope.PROJECT,
+            )
+            old_node = next(
+                node for node in await engine.query_nodes(user_id="test-user", limit=100)
+                if node.content == "The project codename is Aurora"
+            )
+            cutoff = datetime.now(timezone.utc)
+            await engine.store(
+                "The project codename is Borealis",
+                user_id="test-user",
+                node_type=NodeType.FACT,
+                scope=Scope.PROJECT,
+            )
+            new_node = next(
+                node for node in await engine.query_nodes(user_id="test-user", limit=100)
+                if node.content == "The project codename is Borealis"
+            )
+            await engine.supersede(str(old_node.id), str(new_node.id))
+
+            response = await engine.retrieve(
+                "project codename",
+                user_id="test-user",
+                scope=Scope.PROJECT,
+                knowledge_at=cutoff,
+                include_cross_scope=False,
+                min_score=0,
+            )
+
+            assert all(node.node.content != "The project codename is Aurora"
+                       for node in response.results)
+            assert response.metadata.historical_coverage is not None
+            assert response.metadata.historical_coverage.exact_snapshot is False
+            assert "current_derived_indexes" in (
+                response.metadata.historical_coverage.limitations
+            )
+        finally:
+            await engine.close()
+
+    @pytest.mark.asyncio
+    async def test_knowledge_at_rejects_naive_datetime(self, config):
+        engine = await create_engine(config)
+        try:
+            with pytest.raises(ValueError, match="knowledge_at must include a timezone"):
+                await engine.retrieve(
+                    "project codename",
+                    user_id="test-user",
+                    knowledge_at=datetime(2025, 1, 1),
+                )
         finally:
             await engine.close()
 

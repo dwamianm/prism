@@ -1,0 +1,9 @@
+{
+  "passed": false,
+  "error_type": "AttributeError",
+  "limits": "Incomplete end-to-end process; no success or accuracy claim.",
+  "workflow_assertions_passed": false,
+  "process_exit_code": 1,
+  "source_commit": "1461fb0",
+  "original_report_sha256": "0429c44cfc74c19466f2b688b2063eb9f4742f383a7e12386aaf916e19b6ef36"
+}

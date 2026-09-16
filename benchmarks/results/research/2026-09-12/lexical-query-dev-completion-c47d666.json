@@ -1,0 +1,615 @@
+{
+  "kind": "development-lexical-query-ablation",
+  "complete": true,
+  "process_exit_code": 0,
+  "errors": 0,
+  "comparison": {
+    "categories": {
+      "knowledge-update": {
+        "literal": {
+          "2048": {
+            "after": 0.975,
+            "before": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 20,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.975,
+            "before": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 20,
+            "wins": 0
+          },
+          "8192": {
+            "after": 0.975,
+            "before": 0.975,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 20,
+            "wins": 0
+          }
+        },
+        "literal_stopwords": {
+          "2048": {
+            "after": 0.95,
+            "before": 0.975,
+            "delta": -0.025,
+            "interval_95": [
+              -0.075,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 20,
+            "ties": 19,
+            "wins": 0
+          },
+          "4096": {
+            "after": 1.0,
+            "before": 0.975,
+            "delta": 0.025,
+            "interval_95": [
+              0.0,
+              0.075
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 19,
+            "wins": 1
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 0.975,
+            "delta": 0.025,
+            "interval_95": [
+              0.0,
+              0.075
+            ],
+            "losses": 0,
+            "queries": 20,
+            "ties": 19,
+            "wins": 1
+          }
+        }
+      },
+      "multi-session": {
+        "literal": {
+          "2048": {
+            "after": 0.6822916666666666,
+            "before": 0.6822916666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 32,
+            "ties": 32,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.7578125,
+            "before": 0.7682291666666666,
+            "delta": -0.010416666666666666,
+            "interval_95": [
+              -0.03125,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 32,
+            "ties": 31,
+            "wins": 0
+          },
+          "8192": {
+            "after": 0.859375,
+            "before": 0.8489583333333334,
+            "delta": 0.010416666666666668,
+            "interval_95": [
+              0.0,
+              0.03125
+            ],
+            "losses": 0,
+            "queries": 32,
+            "ties": 31,
+            "wins": 1
+          }
+        },
+        "literal_stopwords": {
+          "2048": {
+            "after": 0.6692708333333334,
+            "before": 0.6822916666666666,
+            "delta": -0.013020833333333336,
+            "interval_95": [
+              -0.07291666666666667,
+              0.046875
+            ],
+            "losses": 3,
+            "queries": 32,
+            "ties": 26,
+            "wins": 3
+          },
+          "4096": {
+            "after": 0.7760416666666666,
+            "before": 0.7682291666666666,
+            "delta": 0.007812499999999999,
+            "interval_95": [
+              -0.04947916666666667,
+              0.07291666666666667
+            ],
+            "losses": 3,
+            "queries": 32,
+            "ties": 26,
+            "wins": 3
+          },
+          "8192": {
+            "after": 0.8333333333333334,
+            "before": 0.8489583333333334,
+            "delta": -0.015625,
+            "interval_95": [
+              -0.052083333333333336,
+              0.020833333333333336
+            ],
+            "losses": 3,
+            "queries": 32,
+            "ties": 28,
+            "wins": 1
+          }
+        }
+      },
+      "single-session-assistant": {
+        "literal": {
+          "2048": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          },
+          "4096": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          }
+        },
+        "literal_stopwords": {
+          "2048": {
+            "after": 0.8888888888888888,
+            "before": 1.0,
+            "delta": -0.1111111111111111,
+            "interval_95": [
+              -0.3333333333333333,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 9,
+            "ties": 8,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.8888888888888888,
+            "before": 1.0,
+            "delta": -0.1111111111111111,
+            "interval_95": [
+              -0.3333333333333333,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 9,
+            "ties": 8,
+            "wins": 0
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 9,
+            "ties": 9,
+            "wins": 0
+          }
+        }
+      },
+      "single-session-preference": {
+        "literal": {
+          "2048": {
+            "after": 0.5714285714285714,
+            "before": 0.7142857142857143,
+            "delta": -0.14285714285714285,
+            "interval_95": [
+              -0.42857142857142855,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 7,
+            "ties": 6,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.7857142857142857,
+            "before": 0.7857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 7,
+            "wins": 0
+          },
+          "8192": {
+            "after": 0.7857142857142857,
+            "before": 0.7857142857142857,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 7,
+            "wins": 0
+          }
+        },
+        "literal_stopwords": {
+          "2048": {
+            "after": 0.7857142857142857,
+            "before": 0.7142857142857143,
+            "delta": 0.07142857142857142,
+            "interval_95": [
+              0.0,
+              0.21428571428571427
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 6,
+            "wins": 1
+          },
+          "4096": {
+            "after": 1.0,
+            "before": 0.7857142857142857,
+            "delta": 0.21428571428571427,
+            "interval_95": [
+              0.0,
+              0.5
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 5,
+            "wins": 2
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 0.7857142857142857,
+            "delta": 0.21428571428571427,
+            "interval_95": [
+              0.0,
+              0.5
+            ],
+            "losses": 0,
+            "queries": 7,
+            "ties": 5,
+            "wins": 2
+          }
+        }
+      },
+      "single-session-user": {
+        "literal": {
+          "2048": {
+            "after": 0.9411764705882353,
+            "before": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.9411764705882353,
+            "before": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          }
+        },
+        "literal_stopwords": {
+          "2048": {
+            "after": 0.9411764705882353,
+            "before": 0.9411764705882353,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          },
+          "4096": {
+            "after": 1.0,
+            "before": 0.9411764705882353,
+            "delta": 0.058823529411764705,
+            "interval_95": [
+              0.0,
+              0.17647058823529413
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 16,
+            "wins": 1
+          },
+          "8192": {
+            "after": 1.0,
+            "before": 1.0,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 17,
+            "ties": 17,
+            "wins": 0
+          }
+        }
+      },
+      "temporal-reasoning": {
+        "literal": {
+          "2048": {
+            "after": 0.9482758620689655,
+            "before": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 29,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.9482758620689655,
+            "before": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 29,
+            "wins": 0
+          },
+          "8192": {
+            "after": 0.9482758620689655,
+            "before": 0.9482758620689655,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 29,
+            "wins": 0
+          }
+        },
+        "literal_stopwords": {
+          "2048": {
+            "after": 0.9137931034482759,
+            "before": 0.9482758620689655,
+            "delta": -0.034482758620689655,
+            "interval_95": [
+              -0.10344827586206896,
+              0.0
+            ],
+            "losses": 1,
+            "queries": 29,
+            "ties": 28,
+            "wins": 0
+          },
+          "4096": {
+            "after": 0.9655172413793104,
+            "before": 0.9482758620689655,
+            "delta": 0.017241379310344827,
+            "interval_95": [
+              0.0,
+              0.05172413793103448
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 28,
+            "wins": 1
+          },
+          "8192": {
+            "after": 0.9655172413793104,
+            "before": 0.9482758620689655,
+            "delta": 0.017241379310344827,
+            "interval_95": [
+              0.0,
+              0.05172413793103448
+            ],
+            "losses": 0,
+            "queries": 29,
+            "ties": 28,
+            "wins": 1
+          }
+        }
+      }
+    },
+    "overall": {
+      "literal": {
+        "2048": {
+          "after": 0.8581871345029239,
+          "before": 0.8669590643274854,
+          "delta": -0.008771929824561403,
+          "interval_95": [
+            -0.02631578947368421,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 113,
+          "wins": 0
+        },
+        "4096": {
+          "after": 0.8925438596491229,
+          "before": 0.89546783625731,
+          "delta": -0.0029239766081871343,
+          "interval_95": [
+            -0.008771929824561403,
+            0.0
+          ],
+          "losses": 1,
+          "queries": 114,
+          "ties": 113,
+          "wins": 0
+        },
+        "8192": {
+          "after": 0.9298245614035088,
+          "before": 0.9269005847953217,
+          "delta": 0.0029239766081871348,
+          "interval_95": [
+            0.0,
+            0.008771929824561405
+          ],
+          "losses": 0,
+          "queries": 114,
+          "ties": 113,
+          "wins": 1
+        }
+      },
+      "literal_stopwords": {
+        "2048": {
+          "after": 0.8457602339181286,
+          "before": 0.8669590643274854,
+          "delta": -0.021198830409356724,
+          "interval_95": [
+            -0.05409356725146199,
+            0.008771929824561403
+          ],
+          "losses": 6,
+          "queries": 114,
+          "ties": 104,
+          "wins": 4
+        },
+        "4096": {
+          "after": 0.9195906432748538,
+          "before": 0.89546783625731,
+          "delta": 0.02412280701754386,
+          "interval_95": [
+            -0.013157894736842106,
+            0.06286549707602339
+          ],
+          "losses": 4,
+          "queries": 114,
+          "ties": 102,
+          "wins": 8
+        },
+        "8192": {
+          "after": 0.9444444444444444,
+          "before": 0.9269005847953217,
+          "delta": 0.017543859649122806,
+          "interval_95": [
+            -0.004385964912280702,
+            0.04532163742690058
+          ],
+          "losses": 3,
+          "queries": 114,
+          "ties": 106,
+          "wins": 5
+        }
+      }
+    }
+  },
+  "limits": [
+    "Post-hoc development exploration after preference failures; not independent confirmation.",
+    "Fresh shared en_stem lexical indexes, one buffered commit and stable source-ID ties. Historical index layouts are not reproduced.",
+    "Literal policies use OR over distinct stemmed terms, with or without the frozen PostgreSQL English stop list. Parser control retains query-language interpretation.",
+    "No model, hybrid scoring, temporal interpretation, product packing or answer judging. Unlabelled evidence scores are null, not successful abstention.",
+    "Query bootstrap ignores overlapping histories. No default-changing gate or speed claim."
+  ],
+  "versions": {
+    "tantivy": "0.25.1",
+    "tiktoken": "0.12.0"
+  },
+  "questions": 119,
+  "plan_sha256": "e188ee428bb2e47fad8d35b085951e53bb4c36e7f143d8ef4d9af547fd1fced6",
+  "report": "data/benchmarks/lexical-query-dev-c47d666.json",
+  "report_sha256": "9e93761011864fb7d9b195b7bbc7da0422b833399456134fd32ff134dccb8bdd",
+  "all_registered_identities_verified": true,
+  "decision": "Do not enable query stopword filtering globally. Preference improvements require full-hybrid validation and regression analysis."
+}

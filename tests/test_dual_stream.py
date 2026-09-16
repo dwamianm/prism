@@ -1,8 +1,8 @@
 """Tests for dual-stream ingestion: fast path + deferred materialization (issue #25).
 
 Validates that ingest_fast() persists events and updates the vector index
-immediately, while deferring graph materialization to subsequent retrieve()
-or organize() calls. Also tests the MaterializationQueue directly.
+only when deferred materialization runs during retrieve() or organize().
+Durability, retries, and isolation are covered in test_durable_ingestion.py.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ import pytest
 
 from prme.config import PRMEConfig
 from prme.storage.engine import MemoryEngine
-from prme.storage.materialization_queue import MaterializationQueue
 from prme.types import NodeType, Scope
 
 
@@ -50,94 +49,6 @@ def base_config(tmp_dir):
 async def create_engine(config: PRMEConfig) -> MemoryEngine:
     """Create a MemoryEngine from config."""
     return await MemoryEngine.create(config)
-
-
-# ---------------------------------------------------------------------------
-# MaterializationQueue unit tests
-# ---------------------------------------------------------------------------
-
-
-class TestMaterializationQueue:
-    """Unit tests for the MaterializationQueue class."""
-
-    @pytest.mark.asyncio
-    async def test_add_and_debt(self):
-        """Adding items should increase debt count."""
-        q = MaterializationQueue(max_size=10)
-        assert await q.debt() == 0
-
-        await q.add("event-1", "content 1", "user-1")
-        assert await q.debt() == 1
-
-        await q.add("event-2", "content 2", "user-1")
-        assert await q.debt() == 2
-
-    @pytest.mark.asyncio
-    async def test_debt_sync(self):
-        """debt_sync() should return approximate count without lock."""
-        q = MaterializationQueue(max_size=10)
-        assert q.debt_sync() == 0
-
-        await q.add("event-1", "content 1", "user-1")
-        assert q.debt_sync() == 1
-
-    @pytest.mark.asyncio
-    async def test_overflow_drops_oldest(self):
-        """When at max capacity, adding drops the oldest item."""
-        q = MaterializationQueue(max_size=2)
-
-        await q.add("event-1", "content 1", "user-1")
-        await q.add("event-2", "content 2", "user-1")
-        assert await q.debt() == 2
-
-        # This should drop event-1
-        await q.add("event-3", "content 3", "user-1")
-        assert await q.debt() == 2
-
-    @pytest.mark.asyncio
-    async def test_drain_processes_items(self, base_config):
-        """drain() should process pending items via engine.store()."""
-        engine = await create_engine(base_config)
-        try:
-            q = MaterializationQueue(max_size=10)
-            await q.add("event-1", "Python is great", "user-1")
-            await q.add("event-2", "Rust is fast", "user-1")
-
-            materialized = await q.drain(engine, budget_ms=5000)
-            assert materialized == 2
-            assert await q.debt() == 0
-        finally:
-            await engine.close()
-
-    @pytest.mark.asyncio
-    async def test_drain_respects_budget(self, base_config):
-        """drain() should stop when budget is exhausted."""
-        engine = await create_engine(base_config)
-        try:
-            q = MaterializationQueue(max_size=100)
-            # Add many items
-            for i in range(20):
-                await q.add(f"event-{i}", f"Content number {i}", "user-1")
-
-            # Drain with very small budget (1ms)
-            materialized = await q.drain(engine, budget_ms=1)
-            # Should have processed at least 1 but likely not all 20
-            # (depends on timing, but we verify the budget mechanism works)
-            remaining = await q.debt()
-            assert materialized + remaining == 20
-        finally:
-            await engine.close()
-
-    @pytest.mark.asyncio
-    async def test_drain_empty_queue(self, base_config):
-        """drain() on empty queue should return 0."""
-        engine = await create_engine(base_config)
-        try:
-            q = MaterializationQueue(max_size=10)
-            materialized = await q.drain(engine, budget_ms=1000)
-            assert materialized == 0
-        finally:
-            await engine.close()
 
 
 # ---------------------------------------------------------------------------
@@ -179,17 +90,10 @@ class TestIngestFast:
             await engine.close()
 
     @pytest.mark.asyncio
-    async def test_ingest_fast_vector_indexed_but_filtered_before_materialization(
+    async def test_ingest_fast_indexes_only_during_materialization(
         self, base_config
     ):
-        """Fast-ingested content is vector-indexed but filtered by node JOIN.
-
-        The vector index stores the embedding, but user-scoped search
-        requires a JOIN with the nodes table (for lifecycle_state filtering).
-        Since ingest_fast skips graph writes, the vector entry exists in
-        USearch but is filtered out during search. After materialization
-        drains, the node exists and the vector becomes searchable.
-        """
+        """Indexing is deferred along with graph materialization."""
         engine = await create_engine(base_config)
         try:
             _event_id = await engine.ingest_fast(
@@ -197,13 +101,13 @@ class TestIngestFast:
                 user_id="test-user",
             )
 
-            # Before materialization: vector is indexed but JOIN filters it
+            # Before materialization: no embedding work has run
             results = await engine._vector_index.search(
                 "container orchestration", "test-user", k=5
             )
             assert len(results) == 0  # Filtered by missing node row
 
-            # Drain materialization (creates graph node via store())
+            # Drain materialization from the original event
             await engine._materialization_queue.drain(engine, budget_ms=5000)
 
             # After materialization: vector search now finds the content
@@ -430,8 +334,10 @@ class TestQueueSizeLimits:
                     f"Content item {i}", user_id="test-user"
                 )
 
-            # Should be capped at max_size=3
-            assert engine.materialization_debt == 3
+            # Batch size bounds memory, not durable work. Nothing is dropped.
+            assert engine.materialization_debt == 5
+            await engine._materialization_queue.drain(engine, budget_ms=5000)
+            assert engine.materialization_debt == 2
         finally:
             await engine.close()
 

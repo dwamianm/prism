@@ -1,0 +1,40 @@
+{
+  "registered_at": "2026-09-12T17:35:48.908866+00:00",
+  "harness_commit": "2611be7",
+  "cases": 238,
+  "question_pairs": 119,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "calibration_gate_verified": true,
+  "files": {
+    "declaration": {
+      "path": "benchmarks/results/packing/2026-09-12/judge-declaration-gemma31-2611be7.json",
+      "sha256": "7c8f23dceb704dc93bbfdb2638580c63ef79ec7ba47b25858a4b4bb11f8c7a6a"
+    },
+    "calibration": {
+      "path": "benchmarks/results/packing/2026-09-12/judge-calibration-gemma31-2611be7.json",
+      "sha256": "1d59f1a1654006dc091c97a8987a450931483d50f47c20d2d43dd3d0a1ea58d2"
+    },
+    "reader_plan": {
+      "path": "benchmarks/results/packing/2026-09-12/reader-plan-gemma26-a89cfe1.json",
+      "sha256": "92c4d32bdd8860468aebbc14a64f5e8331c666f268779440b6e052efbe6a3415"
+    },
+    "reader_completion": {
+      "path": "benchmarks/results/packing/2026-09-12/reader-completion-gemma26-a89cfe1.json",
+      "sha256": "13fbe9341b6afb138bf4d96c6917ffc957926dbc893fe5b84e94eb3bd8c8cfc7"
+    },
+    "predictions": {
+      "path": "data/benchmarks/packing-reader-gemma26-a89cfe1-predictions.json",
+      "sha256": "86fc307573f1cdb8d7afe2db0f128bf40c350e96af091d0da9305457fc702fcf"
+    },
+    "raw_reader_state": {
+      "path": "data/benchmarks/packing-reader-gemma26-a89cfe1-state.json",
+      "sha256": "96e1e4df97096005b66496bd438dd040d3daf06198c1d8d95601c971d3d27557"
+    },
+    "blinded_review": {
+      "path": "benchmarks/results/packing/2026-09-12/reader-blinded-review-gemma26-v1.json",
+      "sha256": "07dca819d2ac1332f8a7e668f55adc42ee6848863784f415933c1122aef012b0"
+    }
+  },
+  "limits": "Development reader-family sensitivity. Gemma26 reader and control-selected Gemma31 judge share a model family; not independent confirmation, official GPT-4o protocol or leadership evidence. Preserve failures and task-completion ambiguity."
+}

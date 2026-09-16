@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Protocol, Callable
+from typing import Any, Protocol
 
 from research.narrative.document import NarrativeDocument, Section
-from research.vsa.memory import VSAMemory, MemoryRecord
+from research.vsa.memory import VSAMemory
 
 
 @dataclass

@@ -8,6 +8,9 @@ are exported as module-level constants.
 from __future__ import annotations
 
 import hashlib
+import math
+import warnings
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -25,7 +28,7 @@ class ScoringWeights(BaseModel):
     paths weight is a tiebreaker -- neither is included in the sum.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     w_semantic: float = Field(
         default=0.25, description="Semantic similarity weight"
@@ -67,9 +70,9 @@ class ScoringWeights(BaseModel):
         default={
             "fact": 1.15,
             "preference": 1.15,
-            "decision": 1.10,
+            "decision": 1.15,
             "summary": 1.10,
-            "instruction": 1.10,
+            "instruction": 1.15,
         },
         description=(
             "Per-node-type multiplicative boost to composite score. "
@@ -86,6 +89,16 @@ class ScoringWeights(BaseModel):
             "value. This prevents query-independent signals (recency, salience, "
             "confidence) from inflating scores for irrelevant candidates, "
             "enabling abstention. Set to 0.0 to disable."
+        ),
+    )
+    current_update_multiplier: float = Field(
+        default=1.30,
+        ge=1.0,
+        le=2.0,
+        description=(
+            "[HYPOTHESIS] Score multiplier for the newest explicit update on a "
+            "current-state query. The adjustment remains subject to the relevance "
+            "floor and is recorded in score provenance. Set to 1.0 to disable."
         ),
     )
 
@@ -128,7 +141,8 @@ class ScoringWeights(BaseModel):
             f"{self.w_semantic}:{self.w_lexical}:{self.w_graph}:"
             f"{self.w_recency}:{self.w_salience}:{self.w_confidence}:"
             f"{self.w_epistemic}:{self.w_paths}:{self.recency_lambda}:"
-            f"{self.temporal_boost}:{self.relevance_floor}:{ntb_sorted}"
+            f"{self.temporal_boost}:{self.relevance_floor}:"
+            f"{self.current_update_multiplier}:{ntb_sorted}"
         )
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 
@@ -140,8 +154,44 @@ class PackingConfig(BaseModel):
     candidate limits for the retrieval pipeline.
     """
 
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    multipath_ordering: Literal["density", "score", "balanced"] = Field(
+        default="balanced",
+        description=(
+            "Order multi-path candidates by score per token ('density'), "
+            "composite score ('score'), or reserve the highest-scored ordinary "
+            "multi-path candidate then use score / full_tokens**0.25 ('balanced'). "
+            "Balanced is the evidence-backed default; density and score remain "
+            "available for compatibility and workload-specific evaluation. "
+            "Other priority tiers and whole-output token limits are unchanged."
+        ),
+    )
+    context_guidance_mode: Literal["off", "temporal", "all"] = Field(
+        default="temporal",
+        description=(
+            "Add token-counted task guidance after memory selection. 'temporal' "
+            "is the evidence-backed default and guides only date arithmetic and "
+            "ordering queries; 'off' disables guidance; 'all' also enables "
+            "experimental current-state and personalization guidance. Guidance "
+            "is omitted when it cannot fit without displacing a memory record."
+        ),
+    )
+    context_format: Literal["auditable", "compact"] = Field(
+        default="auditable",
+        description=(
+            "Render packed records as self-describing JSON objects ('auditable') "
+            "or schema-declared JSON arrays with short bundle-local references "
+            "('compact'). Both formats retain type, scope, epistemic state, "
+            "lifecycle, source provenance, temporal fields, and the complete "
+            "selected representation text."
+        ),
+    )
     token_budget: int = Field(
-        default=4096, description="Default context budget in tokens"
+        default=4096, ge=0, description="Default context budget in tokens"
+    )
+    tokenizer: str = Field(
+        default="cl100k_base", description="Tiktoken encoding for the entire rendered memory context",
     )
     min_fidelity: RepresentationLevel = Field(
         default=RepresentationLevel.REFERENCE,
@@ -149,32 +199,44 @@ class PackingConfig(BaseModel):
     )
     overhead_tokens: int = Field(
         default=100,
-        description="Reserved tokens for JSON envelope and separators",
+        ge=0,
+        description="Additional caller-reserved tokens beyond the measured memory context",
     )
     chars_per_token: float = Field(
         default=4.2,
-        description="Character-based token estimation default [HYPOTHESIS]",
+        gt=0,
+        description=(
+            "Deprecated compatibility field. Context budgets use the configured "
+            "tiktoken tokenizer over the complete rendered output; changing this "
+            "value has no effect."
+        ),
     )
     graph_max_candidates: int = Field(
-        default=150,
+        default=150, ge=0,
         description="Max candidates from graph traversal",
     )
     vector_k: int = Field(
-        default=500, description="Max candidates from vector search"
+        default=500, ge=0, description="Max candidates from vector search"
     )
     lexical_k: int = Field(
-        default=500, description="Max candidates from lexical search"
+        default=500, ge=0, description="Max candidates from lexical search"
     )
     graph_max_hops: int = Field(
-        default=3, description="Max hops for graph neighborhood (1-3 per RFC)"
+        default=3, ge=1, le=3,
+        description="Max hops for graph neighborhood (1-3 per RFC)",
     )
     cross_scope_top_n: int = Field(
-        default=5,
+        default=5, ge=0,
         description="Top-N threshold for cross-scope hints [HYPOTHESIS]",
     )
     cross_scope_token_budget: int = Field(
         default=512,
-        description="Separate token budget for cross-scope hints [HYPOTHESIS]",
+        ge=0,
+        description=(
+            "Deprecated compatibility field. Cross-scope hints are separate "
+            "scored response records capped by cross_scope_top_n; changing this "
+            "value has no effect."
+        ),
     )
     session_context_window: int = Field(
         default=3,
@@ -200,6 +262,84 @@ class PackingConfig(BaseModel):
             "below the node that caused their inclusion."
         ),
     )
+    episode_context_top_k: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Number of session-scoped episodes to route with deterministic BM25 "
+            "before packing. Zero disables two-stage episode reconstruction. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    episode_context_local_k: int = Field(
+        default=8,
+        ge=1,
+        description=(
+            "Maximum query-relevant records promoted from each routed episode. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    episode_context_score_decay: float = Field(
+        default=0.95,
+        gt=0,
+        le=1,
+        description=(
+            "Score inherited by routed episode records from the strongest record "
+            "in that episode. [HYPOTHESIS]"
+        ),
+    )
+    evidence_projection_top_k: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Number of top-ranked exact evidence groups whose derived candidates "
+            "are replaced by their active direct source nodes. Zero disables "
+            "source projection. [HYPOTHESIS]"
+        ),
+    )
+    evidence_projection_max_sources: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "Maximum direct source nodes retained for each projected evidence "
+            "group. [HYPOTHESIS]"
+        ),
+    )
+    evidence_projection_score_decay: float = Field(
+        default=1.0,
+        gt=0,
+        le=1,
+        description=(
+            "Score inherited by a direct source from the strongest derived "
+            "candidate in its exact evidence group. [HYPOTHESIS]"
+        ),
+    )
+    evidence_augmentation_top_k: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Number of top-ranked exact evidence groups whose active direct "
+            "sources are added beside derived candidates. Zero disables dual "
+            "representation. [HYPOTHESIS]"
+        ),
+    )
+    evidence_augmentation_max_sources: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "Maximum direct sources added for each augmented evidence group. "
+            "[HYPOTHESIS]"
+        ),
+    )
+    evidence_augmentation_score_decay: float = Field(
+        default=0.99,
+        gt=0,
+        le=1,
+        description=(
+            "Score inherited by an augmented direct source from the strongest "
+            "derived candidate in its exact evidence group. [HYPOTHESIS]"
+        ),
+    )
     aggregation_k_multiplier: float = Field(
         default=3.0,
         description="Multiplier for candidate k values on aggregation/count queries",
@@ -208,6 +348,48 @@ class PackingConfig(BaseModel):
         default=2000,
         description="Hard cap on candidate k values after aggregation multiplier",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def warn_ignored_compatibility_fields(cls, value: Any) -> Any:
+        """Expose legacy settings that no longer affect packing behavior."""
+        if isinstance(value, dict):
+            ignored = []
+            chars_per_token = value.get("chars_per_token", 4.2)
+            if (
+                isinstance(chars_per_token, (int, float))
+                and math.isfinite(chars_per_token)
+                and chars_per_token > 0
+                and chars_per_token != 4.2
+            ):
+                ignored.append("chars_per_token")
+            cross_scope_token_budget = value.get("cross_scope_token_budget", 512)
+            if (
+                isinstance(cross_scope_token_budget, int)
+                and cross_scope_token_budget >= 0
+                and cross_scope_token_budget != 512
+            ):
+                ignored.append("cross_scope_token_budget")
+            if ignored:
+                warnings.warn(
+                    f"PackingConfig {', '.join(ignored)} is deprecated and ignored; "
+                    "context uses exact tokenizer counts and cross-scope hints use "
+                    "cross_scope_top_n.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+        return value
+
+    @model_validator(mode="after")
+    def exclusive_evidence_representation(self) -> PackingConfig:
+        if (
+            self.evidence_projection_top_k > 0
+            and self.evidence_augmentation_top_k > 0
+        ):
+            raise ValueError(
+                "Evidence projection and augmentation cannot both be enabled"
+            )
+        return self
 
 
 # Module-level default instances.

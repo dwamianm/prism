@@ -6,22 +6,18 @@ Applies context-type-specific formatting:
 - **temporal**: Chronological sorting, days-ago annotations on each entry,
   pre-computed date offsets for relative time references in the query.
 - **knowledge_update**: Chronological sorting with recency markers
-  ([MOST RECENT — USE THIS VALUE] / [RECENT] / [OLDER]) so the LLM
-  prioritizes the most recent values.
+  ([MOST RECENT] / [RECENT] / [OLDER]) without equating recency with truth.
 - **default**: Relevance-ranked entries with date annotations.
 
-Additionally, implements two enhancements from the PRIME dual-memory research
-(Zhang et al., EMNLP 2025):
+Optional sections organize additional evidence:
 
 - **Profile preamble**: Extracts stable/tentative Facts, Preferences, and
   Instructions and prepends them as a compact user profile section.
-  "Personalized thinking" (profile-aware reasoning) is the single biggest
-  performance driver for LLM personalization.
-- **Conflict annotations**: When CONTESTED nodes appear in results, explicit
-  conflict mediation annotations are added so the LLM can handle
-  contradictions between episodic and semantic memory.
+  Provenance and epistemic classifications remain visible.
+- **Conflict annotations**: Explicitly linked contradictions are presented as
+  unresolved evidence, with both records' classifications when available.
 
-Both enhancements are enabled by default (``include_profile=True``) and can
+Both sections are enabled by default (``include_profile=True``) and can
 be disabled for callers that need raw formatted results.
 
 Usage::
@@ -38,10 +34,14 @@ Usage::
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
+from uuid import UUID
 
 from prme.retrieval.packing import estimate_token_cost
+from prme.retrieval.time import as_utc
+from prme.types import EpistemicType
 
 if TYPE_CHECKING:
     from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
@@ -65,7 +65,7 @@ _DAY_NAMES: dict[str, int] = {
 # Time offset parsing
 # ---------------------------------------------------------------------------
 
-_OFFSET_PATTERNS: list[tuple[re.Pattern, str]] = [
+_OFFSET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(
         r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a|an)"
         r"\s+weeks?\s+ago", re.IGNORECASE,
@@ -128,6 +128,7 @@ _ZW = "​"  # zero-width space used to break forged markers
 _BRACKET = r"\[\s*"  # opening bracket plus any padding the forger added
 _MARKER_SPECS: tuple[tuple[str, str], ...] = (
     # Bracketed recency markers — break right after the opening bracket.
+    (_BRACKET + r"SOURCE_TYPE\s*=", "[" + _ZW + "source_type="),
     (_BRACKET + r"MOST\s+RECENT", "[" + _ZW + r"MOST RECENT"),
     (_BRACKET + r"RECENT\s*\]", "[" + _ZW + r"RECENT]"),
     (_BRACKET + r"OLDER\s*\]", "[" + _ZW + r"OLDER]"),
@@ -198,38 +199,98 @@ def _sanitize_content(content: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Cross-section deduplication
+# Cross-section record deduplication
 # ---------------------------------------------------------------------------
-#
-# Stored content reaches the formatter through several paths that overlap: a
-# Q-A merged pair node carries the full text of both turns while the individual
-# turn nodes are independently retrievable, and session expansion can pull the
-# same turn a third time. Profile-eligible nodes (Facts/Preferences/
-# Instructions) are additionally rendered in the ``## User Profile`` preamble.
-# Without dedup the same text appears two or three times in a single bundle,
-# inflating tokens ~20-30% with no added signal.
-#
-# ``_content_key`` is the canonical key used to collapse near-identical
-# entries. It mirrors the original aggregation-only heuristic (strip, lowercase,
-# first 100 chars) so behavior there is unchanged, and is now shared by every
-# format variant and the profile/body de-overlap.
+# Different records may share text while referring to separate episodes or
+# carrying different epistemic/provenance metadata. Only repeated node identity
+# proves a duplicate here; semantic consolidation belongs outside formatting.
 
-
-# Approximate token reserve for each entry's "[N] (YYYY-MM-DD, ~2 weeks ago) "
-# prefix when charging entries against a token budget. A deliberate rough
-# estimate (the exact prefix varies by format), kept as a named constant
-# matching the file's ``_*`` convention rather than an inline literal.
 _PER_ENTRY_PREFIX_TOKENS = 8
 
+_PERSONALIZATION_RE = re.compile(
+    r"\b(recommend|recommendation|suggest|suggestion|tips?\b|ideas?\b|what should i"
+    r"|what\b[^?.!]{0,60}\bshould i|what (?:could|can) i"
+    r"|help me (?:choose|pick|plan))",
+    re.IGNORECASE,
+)
 
-def _content_key(content: str) -> str:
-    """Canonical dedup key for a node's content.
+_TEMPORAL_REASONING_RE = re.compile(
+    r"(?:"
+    r"\bhow\s+many\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\s+"
+    r"(?:ago\b|(?:had\s+|have\s+)?passed\b|before\b|between\b|since\b)"
+    r"|\bhow\s+long\b"
+    r"|\b(?:which|what|who)\b[^?.!]{0,100}\b(?:first|earliest|latest|most\s+recently)\b"
+    r"|\b(?:order|sequence)\b[^?.!]{0,100}\b(?:first|last|earliest|latest)\b"
+    r")",
+    re.IGNORECASE,
+)
 
-    Strips surrounding whitespace, lowercases, and truncates to the first 100
-    characters so trivially different phrasings (case, trailing whitespace,
-    long-tail divergence) collapse to one entry.
+
+def _record_key(candidate: RetrievalCandidate) -> str:
+    return str(candidate.node.id)
+
+
+def _provenance_label(candidate: RetrievalCandidate) -> str:
+    node = candidate.node
+    fields = [
+        f"source_type={node.source_type.value}",
+        f"epistemic={node.epistemic_type.value}",
+        f"memory_lifecycle={node.lifecycle_state.value}",
+    ]
+    metadata = node.metadata or {}
+    polarity = metadata.get("polarity")
+    if polarity in {"positive", "negative"}:
+        fields.append(f"polarity={polarity}")
+    if node.epistemic_type == EpistemicType.CONDITIONAL:
+        state = metadata.get("condition_state", "unknown")
+        if state not in {"unknown", "true", "false", "expired"}:
+            state = "unknown"
+        fields.append(f"condition_state={state}")
+    return "[" + "; ".join(fields) + "]"
+
+
+def build_context_guidance(
+    query: str,
+    *,
+    query_analysis: QueryAnalysis | None = None,
+    reference_time: datetime | None = None,
+    mode: Literal["off", "temporal", "all"] = "temporal",
+) -> str | None:
+    """Build compact, token-countable reasoning guidance for packed records.
+
+    The text contains no query or memory content. It clarifies timestamp fields
+    for temporal questions. ``mode="all"`` additionally enables experimental
+    current-state and personalization guidance. Callers must count the result
+    inside the same context budget as memory records.
     """
-    return content.strip().lower()[:100]
+    if reference_time is not None and reference_time.utcoffset() is None:
+        raise ValueError("reference_time must be timezone-aware")
+    if mode not in {"off", "temporal", "all"}:
+        raise ValueError(f"Unsupported context guidance mode: {mode}")
+    if mode == "off":
+        return None
+    context_type = _detect_context_type(query, query_analysis)
+    reference = as_utc(reference_time) if reference_time is not None else None
+    if context_type == "temporal":
+        lines = [
+            "TEMPORAL TASK: For note text, resolve relative dates from that note's event_time. Subtract dates explicitly; answer relative to QUESTION TIME.",
+        ]
+        if reference is not None:
+            lines.insert(0, f"QUESTION TIME: {reference.isoformat()}")
+        return "\n".join(lines)
+    if mode == "all" and context_type == "knowledge_update":
+        lines = [
+            "CURRENT-STATE TASK: Prefer explicit supported updates. Recency alone cannot resolve contradictions; preserve unresolved conflicts.",
+        ]
+        if reference is not None:
+            lines.insert(0, f"QUESTION TIME: {reference.isoformat()}")
+        return "\n".join(lines)
+    if mode == "all" and _PERSONALIZATION_RE.search(query):
+        return (
+            "PERSONALIZATION TASK: Tailor the answer with relevant user-specific history. "
+            "Do not transfer another person's attributes to the user."
+        )
+    return None
 
 
 def compute_time_offsets(query: str, question_dt: datetime) -> str:
@@ -300,10 +361,10 @@ def format_days_ago(event_dt: datetime, question_dt: datetime) -> str:
     """Format the time difference between *event_dt* and *question_dt*.
 
     Returns a human-readable string like ``~2 weeks ago (14 days)``.
-    Uses date-level comparison to avoid same-day time-of-day artifacts.
+    Uses UTC date-level comparison to avoid host-offset and time-of-day artifacts.
     """
     # Compare dates, not datetimes, to avoid intra-day sign flips
-    diff = (question_dt.date() - event_dt.date()).days
+    diff = (as_utc(question_dt).date() - as_utc(event_dt).date()).days
     if diff < 0:
         return f"in {-diff} days"
     if diff == 0:
@@ -362,18 +423,24 @@ def _detect_context_type(
 
     Detection order:
 
-    0. **aggregation** — count/total/list-all queries. Needs all entries
-       visible with dedup guidance. Checked first because aggregation
-       keywords co-occur with temporal keywords.
-    1. **knowledge_update** — current-state queries that are NOT aggregation.
-    2. **temporal** — explicit TEMPORAL intent or time-oriented keywords.
-    3. **default** — relevance-ranked with date annotations.
+    0. **temporal** — explicit interval/order reasoning, even when phrased as
+       ``how many``.
+    1. **aggregation** — remaining count/total/list-all queries. Needs all
+       entries visible with dedup guidance.
+    2. **knowledge_update** — current-state queries that are NOT aggregation.
+    3. **temporal** — explicit TEMPORAL intent or other time-oriented keywords.
+    4. **default** — relevance-ranked with date annotations.
     """
     from prme.types import QueryIntent
 
     q = query.lower()
 
-    # Aggregation: count/total/list-all queries need exhaustive display.
+    # Duration arithmetic and sequence questions often begin with "how many"
+    # but need episode timestamps, not count aggregation formatting.
+    if _TEMPORAL_REASONING_RE.search(q):
+        return "temporal"
+
+    # Aggregation: count/total/list-all queries need a broad candidate display.
     if query_analysis and query_analysis.is_aggregation:
         return "aggregation"
     if _AGGREGATION_GUARD_RE.search(q):
@@ -423,7 +490,7 @@ def _build_profile_preamble(
     Returns:
         A ``(section, consumed_keys)`` tuple. ``section`` is the formatted
         profile string (empty if no semantic nodes are found), and
-        ``consumed_keys`` is the set of ``_content_key`` values rendered into
+        ``consumed_keys`` is the set of record IDs rendered into
         the preamble so the caller can exclude them from the retrieved-memory
         body (the same text appearing in both sections is pure redundancy).
     """
@@ -457,7 +524,7 @@ def _build_profile_preamble(
     type_order = ["preference", "fact", "instruction"]
     type_labels = {
         "preference": "Preferences",
-        "fact": "Known Facts",
+        "fact": "Recorded Facts",
         "instruction": "Learned Rules",
     }
 
@@ -470,11 +537,8 @@ def _build_profile_preamble(
         nodes = sorted(nodes, key=lambda r: r.node.confidence, reverse=True)
         lines.append(f"### {type_labels[ntype]}")
         for r in nodes:
-            confidence_tag = ""
-            if r.node.lifecycle_state == LifecycleState.TENTATIVE:
-                confidence_tag = " (tentative)"
-            lines.append(f"- {_sanitize_content(r.node.content)}{confidence_tag}")
-            consumed_keys.add(_content_key(r.node.content))
+            lines.append(f"- {_provenance_label(r)} {_sanitize_content(r.node.content)}")
+            consumed_keys.add(_record_key(r))
 
     return "\n".join(lines) + "\n", consumed_keys
 
@@ -496,22 +560,22 @@ def _build_reasoning_guidance(ctx_type: str) -> str:
     lines = ["## Reasoning Guidance"]
 
     lines.append(
-        "- Connect information across entries: if entry A says "
-        "\"grandma in Sweden\" and entry B says \"moved from home country\", "
-        "conclude \"moved from Sweden\"."
+        "- Use evidence actually stated in the records. Mark inferences and "
+        "do not invent relationships between people, places or events."
     )
     lines.append(
-        "- Combine evidence: mentions of \"son\", \"daughter\", "
-        "\"youngest child\" across entries may indicate 3 children total."
+        "- Resolve whether overlapping descriptions refer to the same person "
+        "or item before counting; do not assume they identify distinct items."
     )
-
     if ctx_type == "knowledge_update":
         lines.append(
-            "- When values change over time, ONLY the most recent is correct."
+            "- Distinguish supported updates from alternatives, guesses and "
+            "conditional plans. Preserve unresolved contradictions."
         )
     elif ctx_type == "aggregation":
         lines.append(
-            "- Count only items that EXACTLY match the question's criteria."
+            "- Count only items supported by the evidence that match the "
+            "question's criteria. State when the available evidence is incomplete."
         )
 
     return "\n".join(lines) + "\n"
@@ -543,16 +607,17 @@ def _build_conflict_annotations(
     lines: list[str] = ["## Conflicting Information"]
     lines.append(
         "The following items have unresolved contradictions. "
-        "Prefer the more recent or higher-confidence version."
+        "Explain the disagreement; recency or confidence alone does not establish which claim is correct."
     )
 
-    seen: set = set()
+    seen: set[UUID] = set()
     for r in conflicts:
         if r.node.id in seen:
             continue
         seen.add(r.node.id)
 
-        counterpart = node_lookup.get(r.contradicts_id)
+        contradicts_id = r.contradicts_id
+        counterpart = node_lookup.get(contradicts_id) if contradicts_id is not None else None
         if counterpart:
             seen.add(counterpart.node.id)
             # Determine which is newer
@@ -563,12 +628,12 @@ def _build_conflict_annotations(
             else:
                 newer, older = counterpart, r
             lines.append(
-                f"- NEWER: \"{_sanitize_content(newer.node.content)}\" vs "
-                f"OLDER: \"{_sanitize_content(older.node.content)}\""
+                f"- NEWER: {_provenance_label(newer)} \"{_sanitize_content(newer.node.content)}\" vs "
+                f"OLDER: {_provenance_label(older)} \"{_sanitize_content(older.node.content)}\""
             )
         else:
             lines.append(
-                f"- CONTESTED: \"{_sanitize_content(r.node.content)}\" "
+                f"- CONTESTED: {_provenance_label(r)} \"{_sanitize_content(r.node.content)}\" "
                 "(contradicting memory not in results)"
             )
 
@@ -590,6 +655,7 @@ def format_for_llm(
     max_results: int = 50,
     include_profile: bool = True,
     token_budget: int | None = None,
+    token_counter: Callable[[str], int] | None = None,
 ) -> str:
     """Format retrieval results as text optimized for LLM consumption.
 
@@ -599,39 +665,66 @@ def format_for_llm(
         query_analysis: Optional QueryAnalysis for intent-aware formatting.
         question_date: Reference date for temporal computations (e.g.
             "today" in the conversation). If ``None``, date-relative
-            annotations are skipped.
+            annotations are skipped. Aware dates are rendered in UTC, matching
+            stored event timestamps rather than the host's local timezone.
         context_hint: Override auto-detection with an explicit context type.
-            One of ``"temporal"``, ``"knowledge_update"``, ``"default"``.
+            One of ``"aggregation"``, ``"temporal"``,
+            ``"knowledge_update"``, ``"default"``.
         max_results: Maximum number of results to include.
         include_profile: When ``True`` (default), prepend a user profile
             preamble and conflict annotations derived from the PRIME
             dual-memory research. Set to ``False`` for raw formatted output.
-        token_budget: Approximate token ceiling for the retrieved-memory
-            body. When set, the lowest-ranked body entries are dropped until
-            the body fits, so a caller's configured budget (e.g.
-            ``PackingConfig.token_budget``) actually bounds what is sent to
-            the LLM instead of being silently ignored. ``None`` (default)
-            disables trimming and formats every (deduplicated) entry — this
-            preserves exhaustive aggregation, where every item must stay
-            visible for counting. The budget bounds the body entries only;
-            the always-kept profile preamble, conflict annotations, and
-            reasoning guidance are reserved against it but the per-format
-            headers are not, so the rendered string may exceed it by a small
-            header margin.
+        token_budget: Ceiling for the entire rendered context, including
+            profiles, conflicts, notices, headers, and separators. Candidates
+            are considered in relevance order and included whole when they
+            fit; an oversized first candidate is skipped. None disables the
+            budget. No memory is truncated to fit.
+        token_counter: Count tokens in the complete string using the consuming
+            model's tokenizer. Defaults to tiktoken cl100k_base. Supply a custom
+            counter for other models; the ceiling applies to this encoding.
 
     Returns:
         Formatted context string ready for injection into an LLM prompt.
     """
     # Operate on a private copy. The format variants sort and dedup in place,
     # so we must never mutate the caller's list (callers reuse ``response``).
-    display = list(results[:max_results])
+    if question_date is not None:
+        question_date = as_utc(question_date)
+    display = _select_entries(list(results[:max_results]), None, None)
+    ctx_type = context_hint or _detect_context_type(query, query_analysis)
+    if token_budget is not None:
+        if token_budget < 0:
+            raise ValueError("token_budget must be nonnegative")
+        from prme.retrieval.tokenization import count_tokens
+
+        counter = token_counter or count_tokens
+        selected: list[RetrievalCandidate] = []
+        rendered = ""
+        for candidate in display:
+            proposed = format_for_llm(
+                [*selected, candidate], query, query_analysis=query_analysis,
+                question_date=question_date, context_hint=context_hint,
+                max_results=max_results, include_profile=include_profile,
+            )
+            if counter(proposed) <= token_budget:
+                selected.append(candidate)
+                rendered = proposed
+        if not rendered and ctx_type == "aggregation":
+            coverage_only = format_for_llm(
+                [], query, query_analysis=query_analysis,
+                question_date=question_date, context_hint=context_hint,
+                max_results=max_results, include_profile=include_profile,
+            )
+            if counter(coverage_only) <= token_budget:
+                return coverage_only
+        return rendered
     if not display:
+        if ctx_type == "aggregation":
+            return _format_aggregation([], query, question_date)
         return ""
 
-    ctx_type = context_hint or _detect_context_type(query, query_analysis)
-
     parts: list[str] = []
-    # Content keys already rendered elsewhere (profile preamble) so the body
+    # Record IDs already rendered elsewhere (profile preamble) so the body
     # can skip them — the same text in two sections is pure redundancy.
     exclude_keys: set[str] = set()
 
@@ -684,9 +777,9 @@ def format_for_llm(
 # ---------------------------------------------------------------------------
 
 
-def _get_event_dt(candidate) -> datetime:
+def _get_event_dt(candidate: RetrievalCandidate) -> datetime:
     """Extract the best available datetime from a candidate."""
-    return candidate.node.event_time or candidate.node.created_at
+    return as_utc(candidate.node.event_time or candidate.node.created_at)
 
 
 def _select_entries(
@@ -709,7 +802,7 @@ def _select_entries(
 
     Args:
         results: Candidates in priority order (most relevant first).
-        exclude_keys: Content keys already rendered elsewhere (e.g. the profile
+        exclude_keys: Record IDs already rendered elsewhere (e.g. the profile
             preamble) to skip in the body. ``None`` means exclude nothing.
         token_budget: Approximate token ceiling for the rendered entries, or
             ``None`` for no ceiling. Estimated from each entry's content so the
@@ -722,7 +815,7 @@ def _select_entries(
     selected: list[RetrievalCandidate] = []
     used_tokens = 0
     for r in results:
-        key = _content_key(r.node.content)
+        key = _record_key(r)
         if key in seen:
             continue
         seen.add(key)
@@ -755,12 +848,12 @@ def _format_temporal(
             ago = format_days_ago(event_dt, question_date)
             lines.append(
                 f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}, {ago}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
         else:
             lines.append(
                 f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
 
     header = ""
@@ -780,7 +873,7 @@ def _format_knowledge_update(
     exclude_keys: set[str] | None = None,
     token_budget: int | None = None,
 ) -> str:
-    """Knowledge-update formatting: chronological sort, strong recency markers."""
+    """Knowledge-update formatting: chronological order without assuming truth."""
     # Select by relevance rank (dedup + budget), then display chronologically
     # so the recency markers ([MOST RECENT]/[OLDER]) line up with event order.
     selected = _select_entries(results, exclude_keys, token_budget)
@@ -791,7 +884,7 @@ def _format_knowledge_update(
     for i, r in enumerate(ordered):
         event_dt = _get_event_dt(r)
         if i == n - 1:
-            marker = " [MOST RECENT — USE THIS VALUE]"
+            marker = " [MOST RECENT]"
         elif i >= n - 3:
             marker = " [RECENT]"
         elif i < n - 5:
@@ -800,14 +893,14 @@ def _format_knowledge_update(
             marker = ""
         lines.append(
             f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}{marker}) "
-            f"{_sanitize_content(r.node.content)}"
+            f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
         )
 
     header = (
         "IMPORTANT: Entries are in chronological order (oldest first, newest last).\n"
-        "When the same attribute appears multiple times with different values, "
-        "the MOST RECENT entry supersedes all earlier ones. "
-        "ALWAYS use the latest value — earlier values are outdated.\n\n"
+        "Recency alone does not resolve contradictions. Use explicit supported "
+        "updates for current-state questions, respect conditions and the requested "
+        "time, and preserve unresolved conflicts.\n\n"
     )
     return header + "\n".join(lines)
 
@@ -819,7 +912,7 @@ def _format_aggregation(
     exclude_keys: set[str] | None = None,
     token_budget: int | None = None,
 ) -> str:
-    """Aggregation formatting: chronological, deduplicated, with counting guidance."""
+    """Format semantic aggregation candidates with an explicit coverage boundary."""
     # Dedup (incl. profile-overlap) and budget via the shared selector, then
     # display chronologically. ``sorted`` — never mutate the caller's list.
     selected = _select_entries(results, exclude_keys, token_budget)
@@ -835,18 +928,20 @@ def _format_aggregation(
             ago = format_days_ago(event_dt, question_date)
             lines.append(
                 f"[{unique_count}] ({event_dt.strftime('%Y-%m-%d')}, {ago}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
         else:
             lines.append(
                 f"[{unique_count}] ({event_dt.strftime('%Y-%m-%d')}) "
-                f"{_sanitize_content(r.node.content)}"
+                f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
             )
 
     header = (
         "AGGREGATION TASK: The question asks for a count, total, or list.\n"
-        f"Below are {unique_count} unique entries (duplicates removed) "
-        "in chronological order.\n"
+        f"Below are {unique_count} distinct memory records in chronological order "
+        "(repeated record IDs removed). Different records may describe the same item.\n"
+        "COVERAGE: These are semantic retrieval candidates, not an exhaustive "
+        "stored-record enumeration. Do not claim a complete count or list from them.\n"
         "IMPORTANT COUNTING RULES:\n"
         "- Count ONLY items that EXACTLY match the question's criteria.\n"
         "- Two mentions of the same item = 1 count (not 2).\n"
@@ -878,7 +973,7 @@ def _format_default(
         event_dt = _get_event_dt(r)
         lines.append(
             f"[{i+1}] ({event_dt.strftime('%Y-%m-%d')}) "
-            f"{_sanitize_content(r.node.content)}"
+            f"{_provenance_label(r)} {_sanitize_content(r.node.content)}"
         )
 
     header = ""

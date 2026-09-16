@@ -11,7 +11,6 @@ Uses real DuckDB + DuckPGQGraphStore (no mocks for graph store).
 from __future__ import annotations
 
 import asyncio
-from uuid import uuid4
 
 import duckdb
 import pytest
@@ -112,7 +111,13 @@ async def test_contradict_creates_edge_and_transitions_both_nodes(
     await graph_store.create_node(node_a)
     await graph_store.create_node(node_b)
 
-    event_id = str(uuid4())
+    from prme.models.events import Event
+    from prme.storage.event_store import EventStore
+    evidence = Event(
+        user_id=node_a.user_id, scope=node_a.scope, role="user",
+        content="Alice works at Meta, not Google",
+    )
+    event_id = await EventStore(conn, graph_store._conn_lock).append(evidence)
     await graph_store.contradict(
         str(node_a.id), str(node_b.id), evidence_id=event_id
     )
@@ -132,6 +137,7 @@ async def test_contradict_creates_edge_and_transitions_both_nodes(
     assert len(edges) == 1
     assert edges[0].target_id == node_a.id
     assert edges[0].source_id == node_b.id
+    assert str(edges[0].provenance_event_id) == event_id
 
     # CONTRADICTION_NOTED operation should be logged
     ops = conn.execute(

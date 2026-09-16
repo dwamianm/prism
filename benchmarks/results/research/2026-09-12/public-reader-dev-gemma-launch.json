@@ -1,0 +1,15 @@
+{
+  "kind": "reader-launch-not-completion",
+  "created_at": "2026-09-13T03:13:52.133948+00:00",
+  "worker_commit": "cff3b21",
+  "worker_checkout": "/tmp/prme-public-readers-dev",
+  "plan_commit": "f1a0b64",
+  "python": "/tmp/prme-hindsight-comparison-prme/bin/python",
+  "reader": "gemma4:26b",
+  "tool_session_id": 74152,
+  "native_exit_code": null,
+  "report": "data/benchmarks/public-reader-dev-gemma-cff3b21.json",
+  "state": "data/benchmarks/public-reader-dev-gemma-cff3b21-state.json",
+  "log": "/tmp/prme-public-reader-dev-gemma.log",
+  "concurrency": "Qwen reader still active at launch; protocol permits concurrent host load and makes no speed-ratio claim."
+}

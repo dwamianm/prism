@@ -398,7 +398,6 @@ class TestEngineIntegration:
 
             # Run feedback_apply job via organize
             result = await engine.organize(
-                user_id="test-user",
                 jobs=["feedback_apply"],
                 budget_ms=5000,
             )
@@ -423,7 +422,6 @@ class TestEngineIntegration:
         engine = await MemoryEngine.create(engine_config)
         try:
             result = await engine.organize(
-                user_id="test-user",
                 jobs=["feedback_apply"],
                 budget_ms=5000,
             )
@@ -451,7 +449,6 @@ class TestEngineIntegration:
                 )
 
             await engine.organize(
-                user_id="test-user",
                 jobs=["feedback_apply"],
                 budget_ms=5000,
             )
@@ -479,7 +476,6 @@ class TestEngineIntegration:
                 )
 
             await engine.organize(
-                user_id="test-user",
                 jobs=["feedback_apply"],
                 budget_ms=5000,
             )

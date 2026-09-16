@@ -1,0 +1,14 @@
+{
+  "installed_package": "/private/tmp/prme-metadata-keys-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 129,
+  "package_manifest_sha256": "f23f8dbf33f719b52c99683aeb6c676cad73a90528b0275f725c9f4c68a291b6",
+  "pytest_exit_code": 0,
+  "source_commit": "022a4c1",
+  "test_files": [
+    "tests/test_metadata_keys.py",
+    "tests/test_metadata_admission.py",
+    "tests/test_durable_ingestion.py",
+    "tests/test_snapshot_json.py"
+  ],
+  "wheel_sha256": "ca4fe3f075cf066c51454c571f097e0ddbbf1ae572bd8dca7b2a7766d3688e64"
+}

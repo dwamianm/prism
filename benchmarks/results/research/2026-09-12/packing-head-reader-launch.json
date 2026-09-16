@@ -1,0 +1,17 @@
+{
+  "directory": "data/benchmarks/packing-head-reader-70c4fa9",
+  "focused_tests": {
+    "log_sha256": "6dbf7b7f9b2eff2db68ac33e2b1751f64b29c1949ff48e06898f670050addd1f",
+    "native_exit_code": 0,
+    "passed": 38
+  },
+  "frozen_checkout": "/tmp/prme-head-reader-validation",
+  "interpreter": "/tmp/prme-hindsight-comparison-prme/bin/python",
+  "log": "/tmp/prme-head-reader-70c4fa9.log",
+  "native_session_id": 12739,
+  "protocol": "Two fixed readers sequentially, then calibrated separate judge, then independent complete artifact scoring; new states, all cases retained, stop on native failure.",
+  "recorded_at": "2026-09-13T17:46:27.491130+00:00",
+  "registration_sha256": "5fa08c5790be81ad51d2605565712d20dde122c19a9bdf89a9fc71ffcda3e993",
+  "source_commit": "70c4fa9",
+  "status": "running"
+}

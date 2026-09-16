@@ -22,6 +22,20 @@ from prme.types import NodeType
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def fake_torch(monkeypatch):
+    """Exercise activation semantics without installing PyTorch in core CI."""
+    import sys
+    from types import SimpleNamespace
+    import numpy as np
+
+    class Sigmoid:
+        def __call__(self, values):
+            return 1 / (1 + np.exp(-values))
+
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(nn=SimpleNamespace(Sigmoid=Sigmoid)))
+
+
 def _make_candidate(
     content: str = "test content",
     composite_score: float = 0.5,
@@ -77,9 +91,9 @@ class TestCrossEncoderReranking:
         mock_model = MagicMock()
         # predict() returns raw logit scores (before sigmoid)
         mock_model.predict = MagicMock(
-            side_effect=lambda pairs, batch_size=64: np.array(
+            side_effect=lambda pairs, batch_size=64, activation_fn=None: activation_fn(np.array(
                 [2.0 - i * 0.5 for i in range(len(pairs))]
-            )
+            ))
         )
         return mock_model
 
@@ -126,9 +140,9 @@ class TestCrossEncoderReranking:
         # First candidate gets low CE score, second gets high.
         reranker._model = MagicMock()
         reranker._model.predict = MagicMock(
-            side_effect=lambda pairs, batch_size=64: np.array(
+            side_effect=lambda pairs, batch_size=64, activation_fn=None: activation_fn(np.array(
                 [-2.0, 3.0]  # sigmoid(-2) ~ 0.12, sigmoid(3) ~ 0.95
-            )
+            ))
         )
 
         candidates = [
@@ -198,7 +212,7 @@ class TestCrossEncoderReranking:
         # Both get the same CE score.
         reranker._model = MagicMock()
         reranker._model.predict = MagicMock(
-            side_effect=lambda pairs, batch_size=64: np.array([1.0, 1.0])
+            side_effect=lambda pairs, batch_size=64, activation_fn=None: activation_fn(np.array([1.0, 1.0]))
         )
 
         id_a = UUID("00000000-0000-0000-0000-000000000001")
@@ -215,3 +229,69 @@ class TestCrossEncoderReranking:
 
         # Same blended score -> tie-broken by str(node.id) ascending.
         assert str(result[0].node.id) < str(result[1].node.id)
+
+
+async def test_single_activation_and_immutable_repeated_ranking():
+    import numpy as np
+    from prme.retrieval.reranker import CrossEncoderReranker
+    model = MagicMock()
+    model.predict.side_effect = lambda pairs, batch_size, activation_fn: activation_fn(np.array([-8.0, 8.0]))
+    reranker = CrossEncoderReranker()
+    reranker._model = model
+    candidates = [_make_candidate('unrelated', 0.6), _make_candidate('relevant', 0.6)]
+    first = await reranker.rerank('query', candidates)
+    second = await reranker.rerank('query', candidates)
+    assert first == second
+    assert [c.composite_score for c in candidates] == [0.6, 0.6]
+    assert all(c.reranker_score is None for c in candidates)
+    assert first[0].reranker_score > 0.99 and first[1].reranker_score < 0.01
+    assert first[1].composite_score < 0.5  # A double sigmoid would defeat this floor.
+
+
+@pytest.mark.parametrize('scores', [[0.5], [[0.2, 0.8], [0.3, 0.7]], [float('nan'), 0.5], [-1, 2]])
+async def test_invalid_model_outputs_fail_before_mutation(scores):
+    from prme.retrieval.reranker import CrossEncoderReranker
+    reranker = CrossEncoderReranker()
+    reranker._model = MagicMock()
+    reranker._model.predict.return_value = scores
+    candidates = [_make_candidate(), _make_candidate()]
+    with pytest.raises(ValueError, match='Reranker'):
+        await reranker.rerank('query', candidates)
+    assert all(c.composite_score == 0.5 for c in candidates)
+
+
+async def test_concurrent_first_requests_load_once(monkeypatch):
+    import asyncio
+    import sys
+    import time
+    from types import SimpleNamespace
+    import numpy as np
+    from prme.retrieval.reranker import CrossEncoderReranker
+    loaded, active = [], []
+
+    class Model:
+        def __init__(self, name):
+            loaded.append(name)
+            time.sleep(0.02)
+
+        def predict(self, pairs, **kwargs):
+            assert not active
+            active.append(True)
+            time.sleep(0.02)
+            active.pop()
+            return np.array([0.9] * len(pairs))
+
+    monkeypatch.setitem(sys.modules, 'sentence_transformers', SimpleNamespace(CrossEncoder=Model))
+    reranker = CrossEncoderReranker()
+    candidates = [_make_candidate()]
+    results = await asyncio.gather(*[reranker.rerank('query', candidates) for _ in range(4)])
+    assert len(loaded) == 1 and all(results[0] == result for result in results)
+
+
+@pytest.mark.parametrize('options', [{'top_k': -1}, {'top_k': 1.5}, {'prior_weight': -1}, {'prior_weight': float('nan')}])
+async def test_invalid_options_fail_without_model_load(options):
+    from prme.retrieval.reranker import CrossEncoderReranker
+    reranker = CrossEncoderReranker()
+    with pytest.raises(ValueError):
+        await reranker.rerank('query', [_make_candidate()], **options)
+    assert reranker._model is None

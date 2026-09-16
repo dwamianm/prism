@@ -1,0 +1,33 @@
+{
+  "source_commit": "7fe66ac",
+  "upstream_commit": "85b48d5fd1b38babc7fe922f3beb0308cf3aa6cb",
+  "floors": [
+    null,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7
+  ],
+  "python": "3.11.6",
+  "embedding": "BAAI/bge-small-en-v1.5",
+  "dependencies": {
+    "duckdb": "1.4.4",
+    "fastembed": "0.7.4",
+    "numpy": "2.4.2",
+    "onnxruntime": "1.24.2",
+    "tantivy": "0.25.1",
+    "tiktoken": "0.12.0",
+    "usearch": "2.23.0"
+  },
+  "upstream_tracked_changes": [
+    "providers.config.json"
+  ],
+  "fixture_sha256": {
+    "tsconfig.json": "a6b6f670652e5614f91b11977b136710c5a9a3d516821fac7f0a310d197c5fcf",
+    "fixtures/beliefs.seed.json": "35659b3b9a581b644fc6746e1b4e902c3e7b56c0973b546bf7b0816a69e3de98",
+    "fixtures/beliefs.seed.embedded.json": "b1b7a9b39ba12790883af06a0c369757ba2758e23b13376ad3d71eef86f6d76e",
+    "fixtures/session-retrieval.cases.json": "f24a359cdb2bf50237e1ab463af938cd54a81917f64c8d97304de318aed4cc1c",
+    "fixtures/retrieval.cases.json": "09e99f0852280538abe34b03570f65583fdb10df3c554b7150f0f665d5db709c"
+  }
+}

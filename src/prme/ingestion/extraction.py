@@ -8,11 +8,24 @@ and Ollama backends through a single unified interface.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+import asyncio
+from contextvars import ContextVar
+import os
+import re
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 import structlog
+from pydantic import Field, SecretStr, ValidationError, ValidationInfo, model_validator
 
-from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
+from prme.ingestion.grounding import (
+    _mentioned,
+    _supporting_claim_passage,
+    _supporting_passage,
+    validate_extracted_quantity,
+)
+from prme.ingestion.errors import ExtractionError, extraction_failure_code
+from prme.ingestion.entity_references import reference_errors_by_claim
 
 if TYPE_CHECKING:
     import instructor
@@ -20,6 +33,251 @@ if TYPE_CHECKING:
     from prme.config import ExtractionConfig
 
 logger = structlog.get_logger(__name__)
+
+_VALIDATION_SOURCE: ContextVar[str | None] = ContextVar(
+    "prme_extraction_validation_source", default=None
+)
+
+_EXPLICIT_CONDITION_RE = re.compile(
+    r"\b(?:if|unless|provided\s+that|as\s+long\s+as|only\s+if)\b",
+    re.IGNORECASE,
+)
+_INDIRECT_QUESTION_IF_RE = re.compile(
+    r"\b(?:ask(?:ed|ing)?|check(?:ed|ing)?|curious|determin(?:e|ed|ing)|"
+    r"find(?:ing)?\s+out|know|see|wonder(?:ed|ing)?)\s+if\b",
+    re.IGNORECASE,
+)
+_UNCERTAINTY_RE = re.compile(
+    r"(?i:\b(?:might|could|possibly|perhaps|maybe)\b)|\bmay\b"
+)
+_POLITE_REQUEST_MODAL_RE = re.compile(
+    r"\b(?:could\s+you|may\s+I|you\s+could\s+(?:please\s+)?(?:also\s+)?"
+    r"(?:help|suggest|recommend|explain|show|tell|give|provide|brainstorm))\b",
+    re.IGNORECASE,
+)
+_EXPLICIT_DECISION_RE = re.compile(
+    r"\b(?:decid\w*|chos(?:e|en)|select(?:ed|s)?|opt(?:ed|s)?|agree(?:d|s)?|"
+    r"commit(?:ted|s)?|reject(?:ed|s)?)\b",
+    re.IGNORECASE,
+)
+
+
+def _has_explicit_condition(evidence_quote: str) -> bool:
+    """Recognize contingent clauses without treating indirect questions as conditions."""
+    without_indirect_questions = _INDIRECT_QUESTION_IF_RE.sub("", evidence_quote)
+    return _EXPLICIT_CONDITION_RE.search(without_indirect_questions) is not None
+
+
+def _has_uncertainty(evidence_quote: str) -> bool:
+    """Recognize claim modality without treating polite requests as claims."""
+    without_polite_requests = _POLITE_REQUEST_MODAL_RE.sub("", evidence_quote)
+    return _UNCERTAINTY_RE.search(without_polite_requests) is not None
+
+
+def _validate_condition(epistemic_type: str, condition: str | None, evidence_quote: str) -> None:
+    """Require explicit conditional syntax to remain typed and auditable."""
+    has_explicit_condition = _has_explicit_condition(evidence_quote)
+    if has_explicit_condition and epistemic_type != "conditional":
+        raise ValueError("an explicit if/unless condition requires epistemic_type conditional")
+    if epistemic_type == "conditional":
+        if not condition or condition not in evidence_quote:
+            raise ValueError("conditional claims require a verbatim condition from evidence_quote")
+    elif condition is not None:
+        raise ValueError("condition is only valid when epistemic_type is conditional")
+
+
+def _validate_modality(
+    fact_type: str, epistemic_type: str, evidence_quote: str
+) -> None:
+    """Reject common uncertainty and contingent-action category collapses."""
+    uncertain = _has_uncertainty(evidence_quote)
+    if uncertain and epistemic_type not in {"hypothetical", "conditional"}:
+        raise ValueError("might/may/could claims require hypothetical or conditional epistemic_type")
+    if (
+        fact_type == "decision"
+        and (uncertain or _has_explicit_condition(evidence_quote))
+        and _EXPLICIT_DECISION_RE.search(evidence_quote) is None
+    ):
+        raise ValueError("a contingent future action is not a decision without an explicit choice or commitment")
+
+
+def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
+    claim_passage = _supporting_claim_passage(fact.evidence_quote or "", source)
+    evidence_passage = _supporting_passage(fact.evidence_quote or "", source)
+    if claim_passage is None or evidence_passage is None:
+        raise ValueError("evidence_quote must be copied verbatim from the source")
+    if not _mentioned(fact.subject, claim_passage) or not _mentioned(fact.object, claim_passage):
+        raise ValueError("subject and object must occur in evidence_quote")
+    _validate_condition(fact.epistemic_type, fact.condition, claim_passage)
+    _validate_modality(fact.fact_type, fact.epistemic_type, claim_passage)
+    quantity = validate_extracted_quantity(
+        fact.quantity,
+        object_value=fact.object,
+        claim_passage=claim_passage,
+    )
+    if fact.quantity is not None and quantity is None:
+        logger.warning(
+            "extraction_quantity_discarded",
+            subject=fact.subject,
+            reason="Quantity is not an exact supported value and unit in the claim object",
+        )
+    fact.quantity = quantity
+    fact.evidence_quote = evidence_passage
+
+
+def _validate_relationship_source_support(
+    relationship: ExtractedRelationship, source: str
+) -> None:
+    claim_passage = _supporting_claim_passage(
+        relationship.evidence_quote or "", source
+    )
+    evidence_passage = _supporting_passage(
+        relationship.evidence_quote or "", source
+    )
+    if claim_passage is None or evidence_passage is None:
+        raise ValueError("relationship evidence_quote must be copied verbatim from the source")
+    if (
+        not _mentioned(relationship.source_entity, claim_passage)
+        or not _mentioned(relationship.target_entity, claim_passage)
+    ):
+        raise ValueError("relationship endpoints must occur in evidence_quote")
+    _validate_condition(
+        relationship.epistemic_type, relationship.condition, claim_passage
+    )
+    _validate_modality("fact", relationship.epistemic_type, claim_passage)
+    relationship.evidence_quote = evidence_passage
+
+
+class _CitedFact(ExtractedFact):
+    """Built-in providers must return source support or retry validation."""
+
+    fact_type: Literal["fact", "decision", "preference"] = "fact"
+    polarity: Literal["positive", "negative"] = Field(
+        description=ExtractedFact.model_fields["polarity"].description
+    )
+
+    evidence_quote: str = Field(
+        min_length=1,
+        description=ExtractedFact.model_fields["evidence_quote"].description,
+    )
+
+class _CitedRelationship(ExtractedRelationship):
+    polarity: Literal["positive", "negative"] = Field(
+        description=ExtractedFact.model_fields["polarity"].description
+    )
+    evidence_quote: str = Field(min_length=1, description=ExtractedFact.model_fields["evidence_quote"].description)
+    epistemic_type: str = Field(description=ExtractedFact.model_fields["epistemic_type"].description)
+
+class _CitedExtractionResult(ExtractionResult):
+    facts: list[_CitedFact] = Field(default_factory=list)
+    relationships: list[_CitedRelationship] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def discard_malformed_claims(cls, value: Any) -> Any:
+        """Keep one malformed claim from invalidating supported siblings."""
+        if not isinstance(value, dict):
+            return value
+        cleaned = dict(value)
+        for field_name, model in (
+            ("facts", _CitedFact),
+            ("relationships", _CitedRelationship),
+        ):
+            items = value.get(field_name)
+            if not isinstance(items, list):
+                continue
+            admitted = []
+            for index, item in enumerate(items):
+                try:
+                    model.model_validate(item)
+                except (ValidationError, TypeError):
+                    without_quantity = None
+                    if field_name == "facts" and isinstance(item, dict) and "quantity" in item:
+                        candidate = dict(item)
+                        candidate.pop("quantity")
+                        try:
+                            model.model_validate(candidate)
+                        except (ValidationError, TypeError):
+                            pass
+                        else:
+                            without_quantity = candidate
+                    if without_quantity is not None:
+                        logger.warning(
+                            "extraction_quantity_discarded",
+                            path=f"{field_name}[{index}].quantity",
+                            reason="malformed quantity fields",
+                        )
+                        admitted.append(without_quantity)
+                        continue
+                    logger.warning(
+                        "extraction_claim_discarded",
+                        path=f"{field_name}[{index}]",
+                        reason="malformed claim fields",
+                    )
+                else:
+                    admitted.append(item)
+            cleaned[field_name] = admitted
+        return cleaned
+
+    @model_validator(mode="after")
+    def supported_closed_references(self, info: ValidationInfo):
+        source = (info.context or {}).get("source_text")
+        if source is None:
+            source = _VALIDATION_SOURCE.get()
+        if source is not None:
+            supported_facts = []
+            for index, fact in enumerate(self.facts):
+                try:
+                    _validate_fact_source_support(fact, source)
+                except ValueError as exc:
+                    logger.warning(
+                        "extraction_claim_discarded",
+                        path=f"facts[{index}]",
+                        reason=str(exc),
+                    )
+                else:
+                    supported_facts.append(fact)
+            supported_relationships = []
+            for index, relationship in enumerate(self.relationships):
+                try:
+                    _validate_relationship_source_support(relationship, source)
+                except ValueError as exc:
+                    logger.warning(
+                        "extraction_claim_discarded",
+                        path=f"relationships[{index}]",
+                        reason=str(exc),
+                    )
+                else:
+                    supported_relationships.append(relationship)
+            self.facts = supported_facts
+            self.relationships = supported_relationships
+        fact_errors, relationship_errors = reference_errors_by_claim(self)
+        closed_facts = []
+        for index, (fact, errors) in enumerate(zip(self.facts, fact_errors, strict=True)):
+            if errors:
+                logger.warning(
+                    "extraction_claim_discarded",
+                    path=f"facts[{index}]",
+                    reason="; ".join(errors),
+                )
+            else:
+                closed_facts.append(fact)
+        self.facts = closed_facts
+
+        closed_relationships = []
+        for index, (relationship, errors) in enumerate(
+            zip(self.relationships, relationship_errors, strict=True)
+        ):
+            if errors:
+                logger.warning(
+                    "extraction_claim_discarded",
+                    path=f"relationships[{index}]",
+                    reason="; ".join(errors),
+                )
+            else:
+                closed_relationships.append(relationship)
+        self.relationships = closed_relationships
+        return self
 
 EXTRACTION_SYSTEM_PROMPT = """\
 You are a knowledge extraction system. Your task is to extract structured \
@@ -41,9 +299,19 @@ fact is
    - A fact_type: use "fact" for general facts, "decision" for decisions \
 made or communicated (e.g., "We decided to use PostgreSQL"), and \
 "preference" for personal preferences expressed (e.g., "I prefer dark mode")
+   - A polarity: "positive" when the proposition is affirmed or "negative" \
+when it is denied, rejected, stopped, or stated with does not/never/no longer
+   - An optional quantity for one unambiguous numeric amount in the object: copy \
+the exact quantified phrase into source_text, its verbatim unit or symbol into \
+unit, and its exact decimal value into value. Use unit "1" only when source_text \
+is the bare number. Leave quantity null for ranges, approximations, locale decimal \
+commas, scientific notation, or objects containing multiple numeric amounts.
 
 3. **Relationships** between entities: How entities relate to each other. \
-Use relationship types: relates_to, part_of, caused_by, supports, mentions.
+Use a source-supported predicate such as lives_in, works_at, or uses. Do not \
+force residence into part_of, or infer causation from co-occurrence. Include \
+an evidence_quote, epistemic_type, and polarity for every relationship. Prefer a fact \
+triple for a statement; do not repeat it as a separate relationship.
 
 4. **Summary**: A brief 1-2 sentence summary of the message content.
 
@@ -58,15 +326,18 @@ temporal text in the temporal_ref field.
    - "agent" — about a specific AI agent's working memory or internal reasoning
    - "system" — system-generated content such as summaries or organizer output
    - "sandbox" — temporary or experimental context intended for isolated testing
+   This is a descriptive suggestion. It never overrides the caller's write scope.
    If the scope is unclear, leave it as null (the system will use a safe default).
 
 7. **Epistemic Type**: For each fact, classify its epistemic_type:
    - "observed" — directly stated or witnessed ("I work at Google")
    - "asserted" — claimed as fact without direct evidence
    - "inferred" — derived from context ("Based on their questions, they know Python")
-   - "hypothetical" — speculative or conditional
+   - "hypothetical" — speculative or possible without an explicit condition
+   - "conditional" — applies only if an explicitly stated condition is true
    - "unverified" — from untrusted or unverified source
-   Default to "asserted" if unclear.
+   Default to "asserted" if unclear. For "conditional", copy the exact source \
+span describing the condition into condition. Otherwise set condition to null.
 
 8. **Temporal Intent**: For each fact, classify its temporal_intent:
    - "update" — this fact replaces a prior state (signals: "now", "changed to", \
@@ -76,6 +347,35 @@ prior knowledge
    If unclear, leave temporal_intent as null (the system will use a safe default).
 
 IMPORTANT RULES:
+- Every named fact subject and relationship endpoint must use a name listed in entities.
+  Copy that entity name exactly; do not alternate between shortened and full names.
+  Literal unresolved personal references such as "I", "we", or "they" may be used
+  without listing them as named entities. Copy the literal reference; do not invent a speaker name.
+  Relationship endpoints are entity names, not phrases combining predicates and objects.
+  If the same name identifies different entity types, include subject_entity_type,
+  object_entity_type, source_entity_type, or target_entity_type to identify the intended listed entity.
+- Relationship claims must preserve negations, uncertainty, and conditions just as facts do.
+  Use conditional or hypothetical for possible relationships; never convert them to current reality.
+- Polarity is independent of fact_type and epistemic_type. A dislike is a \
+  negative preference; a rejected option is a negative decision. Keep the \
+  predicate about the underlying relation and express denial in polarity.
+- An action that will occur only if a future condition becomes true is a \
+  conditional fact, not a decision, unless the source separately states that \
+  the choice or commitment has already been made.
+- Include an evidence_quote for every fact: copy the complete supporting source \
+sentences verbatim, including negation, conditions, exceptions, and time references.
+- Subject and object must occur in the supporting text. Keep object values as \
+written rather than normalizing or paraphrasing them.
+- A quantity source_text must be contained in that fact's object and evidence. \
+Do not convert units, infer a currency from a symbol, or attach a number from \
+another part of the sentence.
+- Using something does not imply preferring it. One occurrence does not imply \
+a habit. Multiple values can coexist (e.g., liking tea and coffee).
+- Set replaces_object only for an explicit replacement of a named previous value \
+("switched from Slack to Signal"). "Now also uses Signal" does not replace Slack. \
+Copy the previous value exactly from the supporting passage.
+- Preserve conditions and uncertainty. Use conditional or hypothetical epistemic \
+types when appropriate; do not turn a possible future into a current fact.
 - Only extract information that is EXPLICITLY STATED or STRONGLY IMPLIED by \
 the text.
 - Do NOT infer facts that are not grounded in the source text.
@@ -84,6 +384,67 @@ the text.
 - Assign higher confidence (0.7-1.0) to explicitly stated facts and lower \
 confidence (0.3-0.6) to implied ones.
 """
+
+_ROLE_EXTRACTION_GUIDANCE = {
+    "user": (
+        "Prioritize explicit user state, preferences, decisions, tasks, relationships, "
+        "and project facts. A request for a recommendation does not itself establish a preference."
+    ),
+    "assistant": (
+        "Do not extract generic background knowledge, standalone recommendations, explanations, "
+        "or illustrative examples as durable claims. Extract only durable conversation state: "
+        "explicit assistant commitments or completed actions, and user/project facts the assistant "
+        "explicitly attributes. A restatement is system-inferred evidence, not user corroboration. "
+        "Return empty fact and relationship lists when the message contains no durable state."
+    ),
+    "system": (
+        "Extract only durable policies, constraints, identities, and operating instructions. "
+        "Do not extract examples or schema descriptions as claims."
+    ),
+    "tool": (
+        "Extract source-supported tool results and task state. Do not promote logs, formatting, "
+        "or examples into claims."
+    ),
+}
+
+_ASSISTANT_EXTRACTION_SYSTEM_PROMPT = """\
+You extract durable conversational memory from one historical assistant message.
+
+Admit only:
+- an explicit commitment or promise made by the assistant;
+- an action the assistant explicitly says it completed;
+- concrete user, project, task, or conversation state the assistant explicitly attributes.
+
+You MUST extract admitted claims. For example, "I scheduled the meeting" is a
+completed action and "I will send the agenda tomorrow" is a commitment. Preserve
+the literal assistant subject `I`; do not replace it with a guessed name.
+
+Do not catalog generic knowledge, explanations, examples, advice, book or product
+descriptions, or standalone recommendations. A message that only answers a question,
+explains a topic, or lists suggestions must return empty entities, facts, and
+relationships. Include entities only when an admitted claim references them.
+
+For every admitted fact or relationship, copy a complete verbatim evidence_quote
+containing its subject, object or endpoint names, negation, conditions, and time
+qualifiers. Preserve semantic polarity and use conditional or hypothetical for
+uncertain claims. Literal references such as I, we, or they may remain unlisted;
+never invent a speaker identity. Do not infer claims from prior conversation.
+For one unambiguous numeric amount in a fact object, preserve the exact decimal,
+verbatim quantified source_text, and verbatim unit or symbol. Do not convert units.
+An optional one-sentence summary may describe the message without becoming a claim.
+"""
+
+
+def _extraction_prompt_for_role(role: str) -> str:
+    """Add source-role admission policy without trusting role as prompt text."""
+    normalized = role.strip().casefold()
+    if normalized == "assistant":
+        return _ASSISTANT_EXTRACTION_SYSTEM_PROMPT
+    policy = _ROLE_EXTRACTION_GUIDANCE.get(
+        normalized,
+        "Extract only durable, source-supported state; omit examples and presentation text.",
+    )
+    return f"{EXTRACTION_SYSTEM_PROMPT}\nSOURCE MESSAGE ROLE: {normalized or 'unknown'}\n{policy}"
 
 
 @runtime_checkable
@@ -137,6 +498,7 @@ class InstructorExtractionProvider:
             provider_string.
         max_retries: Number of instructor retries for schema validation failures.
         timeout: Timeout in seconds per extraction call.
+        temperature: Sampling temperature passed to the provider.
     """
 
     def __init__(
@@ -146,11 +508,22 @@ class InstructorExtractionProvider:
         model: str | None = None,
         max_retries: int = 3,
         timeout: float = 30.0,
+        temperature: float = 0.0,
+        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
+        api_key: SecretStr | None = None,
+        base_url: str | None = None,
     ) -> None:
         self._provider_string = provider_string
         self._model = model
         self._max_retries = max_retries
         self._timeout = timeout
+        self._temperature = temperature
+        self._reasoning_effort = (
+            "none" if reasoning_effort is None and self.provider_name == "ollama"
+            else reasoning_effort
+        )
+        self._api_key = api_key
+        self._base_url = base_url
         self._client: instructor.AsyncInstructor | None = None
 
     def _ensure_client(self) -> instructor.AsyncInstructor:
@@ -161,9 +534,33 @@ class InstructorExtractionProvider:
         """
         if self._client is None:
             import instructor
+            from dotenv import dotenv_values
+
+            # SDK defaults read process variables but do not load .env. Resolve
+            # only the selected provider's settings, without mutating os.environ.
+            kwargs: dict = {}
+            if self._api_key:
+                kwargs["api_key"] = self._api_key.get_secret_value()
+            if self._base_url:
+                kwargs["base_url"] = self._base_url
+            if self.provider_name == "ollama":
+                # Ollama's constrained structured-output path returns JSON in
+                # message content. Tool mode can return the same valid JSON
+                # without a tool envelope, which Instructor rejects.
+                kwargs["mode"] = instructor.Mode.JSON
+            provider_prefix = {"openai": "OPENAI", "anthropic": "ANTHROPIC"}.get(self.provider_name)
+            if provider_prefix:
+                local = dotenv_values(".env")
+                key_name, url_name = f"{provider_prefix}_API_KEY", f"{provider_prefix}_BASE_URL"
+                key = self._api_key.get_secret_value() if self._api_key else os.environ.get(key_name, local.get(key_name))
+                url = self._base_url or os.environ.get(url_name, local.get(url_name))
+                if key:
+                    kwargs["api_key"] = key
+                if url:
+                    kwargs["base_url"] = url
 
             self._client = instructor.from_provider(
-                self._provider_string, async_client=True
+                self._provider_string, async_client=True, **kwargs
             )
         return self._client
 
@@ -204,32 +601,50 @@ class InstructorExtractionProvider:
 
         Returns:
             ExtractionResult with extracted entities, facts, relationships,
-            and summary. Returns an empty ExtractionResult on failure
-            (fail open -- pipeline handles retry).
+            and summary. Raises ExtractionError on provider failure or timeout
+            so the pipeline can distinguish an error from valid empty output.
         """
         try:
             client = self._ensure_client()
             create_kwargs: dict = {
-                "response_model": ExtractionResult,
+                "response_model": _CitedExtractionResult,
                 "messages": [
-                    {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-                    {"role": role, "content": content},
+                    {"role": "system", "content": _extraction_prompt_for_role(role)},
+                    # This is historical text to inspect, regardless of who
+                    # authored the event. Sending an assistant event as an
+                    # assistant chat turn asks the model to continue it and
+                    # can yield an empty response. Event.role remains the
+                    # authoritative source classification downstream.
+                    {"role": "user", "content": content},
                 ],
                 "max_retries": self._max_retries,
+                "temperature": self._temperature,
             }
+            if self._reasoning_effort is not None:
+                create_kwargs["reasoning_effort"] = self._reasoning_effort
             model_id = self._resolve_model_id()
             if model_id:
                 create_kwargs["model"] = model_id
-            result = await client.create(**create_kwargs)
+            # Instructor treats validation context as Jinja template context for
+            # every prompt message. Keep grounding input task-local so literal
+            # user code such as ``{{ variable }}`` reaches the model unchanged.
+            token = _VALIDATION_SOURCE.set(content)
+            try:
+                result = await asyncio.wait_for(
+                    client.create(**create_kwargs), timeout=self._timeout
+                )
+            finally:
+                _VALIDATION_SOURCE.reset(token)
             return result
-        except Exception:
+        except Exception as exc:
             logger.error(
                 "extraction_failed",
                 provider=self._provider_string,
                 content_length=len(content),
-                exc_info=True,
+                error_type=type(exc).__name__,
             )
-            return ExtractionResult()
+            reason = extraction_failure_code(exc)
+            raise ExtractionError(f"Extraction failed ({reason})", reason_code=reason) from exc
 
 
 def create_extraction_provider(
@@ -252,4 +667,8 @@ def create_extraction_provider(
         model=config.model,
         max_retries=config.max_retries,
         timeout=config.timeout,
+        temperature=config.temperature,
+        reasoning_effort=config.reasoning_effort,
+        api_key=config.api_key,
+        base_url=config.base_url,
     )

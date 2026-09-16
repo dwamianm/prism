@@ -11,9 +11,10 @@ import logging
 import asyncio
 import re
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
+from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
 from prme.retrieval.models import QueryAnalysis
 from prme.types import QueryIntent, RetrievalMode
 
@@ -49,6 +50,16 @@ _FACTUAL_KEYWORDS = re.compile(
 _AGGREGATION_KEYWORDS = re.compile(
     r"\b(how\s+many|how\s+much|how\s+often|total|count"
     r"|all\s+the\s+times|every\s+time|list\s+all|all\s+of\s+the)\b",
+    re.IGNORECASE,
+)
+
+# ``how many`` introduces both set cardinality and elapsed-time questions.
+# Explicit interval language needs temporal ranking and arithmetic, not
+# exhaustive-set coverage warnings or broader count scans. A time unit alone is
+# insufficient: "hours across both jobs" is still a sum over multiple records.
+_TEMPORAL_QUANTITY_RE = re.compile(
+    r"\bhow\s+(?:many\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)"
+    r"|much\s+time)\b[^?.!]{0,50}\b(?:ago|passed|elapsed|before|between|since|until)\b",
     re.IGNORECASE,
 )
 
@@ -169,6 +180,7 @@ def _extract_entities(query: str) -> list[str]:
 def _extract_temporal_signals(
     query: str,
     languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
+    reference_time: datetime | None = None,
 ) -> list[dict]:
     """Extract temporal expressions from the query via dateparser.
 
@@ -186,14 +198,16 @@ def _extract_temporal_signals(
     try:
         from dateparser.search import search_dates
 
-        results = search_dates(
-            query,
-            languages=list(languages) if languages else None,
-            settings={
-                "RETURN_AS_TIMEZONE_AWARE": True,
-                "TIMEZONE": "UTC",
-            },
-        )
+        with _DATEPARSER_LOCK:
+            results = search_dates(
+                query,
+                languages=list(languages) if languages else None,
+                settings={
+                    "RETURN_AS_TIMEZONE_AWARE": True,
+                    "TIMEZONE": "UTC",
+                    **({"RELATIVE_BASE": reference_time} if reference_time is not None else {}),
+                },
+            )
 
         if not results:
             return []
@@ -242,6 +256,7 @@ async def analyze_query(
     *,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    reference_time: datetime | None = None,
     retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
     languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
 ) -> QueryAnalysis:
@@ -254,6 +269,8 @@ async def analyze_query(
         query: Raw query text from the user.
         time_from: Explicit start of temporal window (overrides extraction).
         time_to: Explicit end of temporal window (overrides extraction).
+        reference_time: Timezone-aware base for relative dates. Defaults to
+            the parser's current UTC time when called independently.
         retrieval_mode: Retrieval mode controlling epistemic filtering.
         languages: Languages for temporal parsing. None restores dateparser's
             own language detection at its original cost.
@@ -265,8 +282,12 @@ async def analyze_query(
     # Extract temporal signals from query text. dateparser is CPU-bound and
     # can take milliseconds on a long query, so it runs off the event loop
     # (issue #61) -- otherwise concurrent retrievals serialize behind it.
+    if reference_time is not None:
+        if reference_time.utcoffset() is None:
+            raise ValueError("reference_time must include a timezone")
+        reference_time = reference_time.astimezone(timezone.utc)
     temporal_signals = await asyncio.to_thread(
-        _extract_temporal_signals, query, languages
+        _extract_temporal_signals, query, languages, reference_time
     )
     has_temporal_signals = len(temporal_signals) > 0
 
@@ -287,8 +308,12 @@ async def analyze_query(
             resolved_time_from = min(resolved_dates)
             resolved_time_to = max(resolved_dates)
 
-    # Detect aggregation intent (count/total/list-all queries).
-    is_aggregation = bool(_AGGREGATION_KEYWORDS.search(query))
+    # Detect aggregation intent (count/total/list-all queries) without treating
+    # elapsed-time quantities as set cardinality.
+    is_aggregation = bool(
+        _AGGREGATION_KEYWORDS.search(query)
+        and not _TEMPORAL_QUANTITY_RE.search(query)
+    )
 
     return QueryAnalysis(
         query=query,

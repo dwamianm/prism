@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "source_commit": "7a1e864",
+  "python": "3.13",
+  "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/__init__.py",
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "facts": 1,
+  "checks": [
+    "installed public sync ingest",
+    "real local extraction",
+    "typed public extraction record",
+    "identical record after restart",
+    "scoped read"
+  ],
+  "limits": "One synthetic package workflow; not an extraction accuracy benchmark."
+}

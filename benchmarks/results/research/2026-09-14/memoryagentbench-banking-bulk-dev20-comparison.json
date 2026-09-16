@@ -1,0 +1,42 @@
+{
+  "kind": "memoryagentbench-banking-bulk-ingestion-comparison",
+  "schema_version": 1,
+  "cohort": {
+    "dataset": "Test_Time_Learning",
+    "sub_dataset": "icl_banking77_5900shot_balance",
+    "queries": 20,
+    "source_chunks": 26,
+    "stored_nodes": 5897,
+    "reader": "qwen3.5:9b",
+    "temperature": 0.0,
+    "seed": 42
+  },
+  "serial_store": {
+    "prme_revision": "8676c9c9600bd0cd592bb186cea2d0ee2513f7cc",
+    "adapter_schema_version": 8,
+    "ingest_seconds": 463.112,
+    "exact_match_correct": 20,
+    "exact_match_total": 20,
+    "context_tokens_mean": 3969.7,
+    "query_seconds_mean": 5.097298206249252,
+    "verification_result_sha256": "955a0af845e1dbd94154737e24133d1f96e002ed3b1b4e498ff960b74c24043b"
+  },
+  "atomic_batch": {
+    "prme_revision": "36afbc8ef28be20628661e4690e56d6959beaf9b",
+    "adapter_schema_version": 9,
+    "ingest_seconds": 47.40061162499478,
+    "exact_match_correct": 19,
+    "exact_match_total": 20,
+    "context_tokens_mean": 3965.05,
+    "query_seconds_mean": 4.98276652720233,
+    "verification_result_sha256": "1bd4025585b5463fe42136e3f2b7cd7951ef0360eb9eebd2c8d6c71553198a52"
+  },
+  "observed_change": {
+    "ingest_seconds_reduction_percent": 89.76476281655522,
+    "ingest_speedup_ratio": 9.770169289456948,
+    "exact_match_percentage_points": -5.0,
+    "context_tokens_mean": -4.65,
+    "query_seconds_mean": -0.11453167904692234
+  },
+  "claim_boundary": "One registered local-reader cohort establishes the measured construction-time improvement. The single answer loss does not establish quality equivalence or a systematic regression."
+}

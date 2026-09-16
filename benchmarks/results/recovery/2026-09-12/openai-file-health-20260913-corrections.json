@@ -1,0 +1,13 @@
+{
+  "available": false,
+  "credential_source": "root .env OPENAI_API_KEY",
+  "endpoint_selection": "root-file OPENAI_BASE_URL when present, otherwise SDK default",
+  "error_type": "RateLimitError",
+  "max_retries": 0,
+  "max_tokens": 1,
+  "model": "gpt-4o-mini",
+  "observed_at": "2026-09-13T18:27:46.715038+00:00",
+  "recognized_error_code": null,
+  "status_code": 429,
+  "timeout_seconds": 20
+}

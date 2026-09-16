@@ -7,8 +7,7 @@ Tests that the rewriter:
 4. Produces settled facts that match manual ones in quality
 """
 
-import pytest
-from research.narrative.document import NarrativeDocument, Section
+from research.narrative.document import NarrativeDocument
 from research.narrative.rewriter import (
     NarrativeRewriter,
     RuleBasedGenerator,

@@ -18,12 +18,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-import numpy as np
-
 from research.vsa.core import (
     HV, DEFAULT_DIM,
-    bind, bundle, unbind, similarity, normalize,
-    weighted_bundle, random_hv,
+    bind, bundle, similarity,
 )
 from research.vsa.codebook import Codebook
 from research.vsa.temporal import TemporalEncoder

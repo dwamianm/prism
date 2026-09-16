@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "kind": "beam-extracted-scored-result",
+  "status": "complete and accepted by schema-5 fail-closed validation",
+  "registration": "beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev5-registration.json",
+  "registration_sha256": "8016fed543e63e468ee3cbdc1855cd6dc9969d8d06177bd7b6a6dbab60dd216a",
+  "source": {
+    "prme_revision": "08f27a8047bba16b9f6e3258aebf5984a138b979",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "protocol": {
+    "profile": "extracted",
+    "chat_sizes": ["100K"],
+    "conversations": [0],
+    "question_types": 10,
+    "questions_per_type": 2,
+    "top_k": 50,
+    "cutoff": 50,
+    "max_per_source": 1,
+    "passage_time": "latest_evidence_event"
+  },
+  "models": {
+    "extractor": {
+      "model": "deepseek-v4.1-flash:cloud",
+      "manifest_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "timeout_seconds": 180
+    },
+    "answerer": {
+      "model": "mistral-large-3:675b-cloud",
+      "manifest_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c"
+    },
+    "judge": {
+      "model": "gpt-oss:120b-cloud",
+      "manifest_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed"
+    }
+  },
+  "metrics": {
+    "overall": {
+      "correct": 13,
+      "total": 20,
+      "accuracy": 65.0,
+      "average_score": 0.5675,
+      "errors": 0
+    },
+    "by_question_type": {
+      "abstention": {"correct": 0, "total": 2, "accuracy": 0.0, "average_score": 0.0},
+      "contradiction_resolution": {"correct": 1, "total": 2, "accuracy": 50.0, "average_score": 0.375},
+      "event_ordering": {"correct": 0, "total": 2, "accuracy": 0.0, "average_score": 0.31665},
+      "information_extraction": {"correct": 1, "total": 2, "accuracy": 50.0, "average_score": 0.45835},
+      "instruction_following": {"correct": 2, "total": 2, "accuracy": 100.0, "average_score": 0.75},
+      "knowledge_update": {"correct": 2, "total": 2, "accuracy": 100.0, "average_score": 1.0},
+      "multi_session_reasoning": {"correct": 2, "total": 2, "accuracy": 100.0, "average_score": 0.875},
+      "preference_following": {"correct": 2, "total": 2, "accuracy": 100.0, "average_score": 1.0},
+      "summarization": {"correct": 2, "total": 2, "accuracy": 100.0, "average_score": 0.65},
+      "temporal_reasoning": {"correct": 1, "total": 2, "accuracy": 50.0, "average_score": 0.25}
+    }
+  },
+  "paired_raw_comparison": {
+    "raw_registration": "beam-100k-raw-mistral675b-gptoss120b-dev4-registration.json",
+    "raw_correct": 12,
+    "extracted_correct": 13,
+    "raw_average_score": 0.49833,
+    "extracted_average_score": 0.5675,
+    "average_score_delta": 0.06917,
+    "pass_level_wins": 3,
+    "pass_level_losses": 2,
+    "pass_level_ties": 15,
+    "interpretation": "This is a tuned within-cohort development comparison. The one-question net gain and higher mean score require confirmation on untouched conversations."
+  },
+  "superseded_dev3_comparison": {
+    "dev3_correct": 12,
+    "dev5_correct": 13,
+    "dev3_average_score": 0.51875,
+    "dev5_average_score": 0.5675,
+    "average_score_delta": 0.04875,
+    "pass_level_wins": 2,
+    "pass_level_losses": 1,
+    "pass_level_ties": 17,
+    "unique_passage_texts_per_top_50_dev3": {"min": 7, "median": 15.0, "max": 35},
+    "unique_passage_texts_per_top_50_dev5": {"min": 45, "median": 48.0, "max": 49},
+    "interpretation": "Dev3 is superseded because its pack was not fully materialized; this comparison is diagnostic only."
+  },
+  "execution": {
+    "ingestion_chunks_processed": 94,
+    "ingestion_chunks_failed": 0,
+    "durable_source_events": 188,
+    "raw_materializations_complete": 188,
+    "extractions_complete": 188,
+    "extraction_attempts": 189,
+    "events_requiring_extraction_retry": 1,
+    "materialized_nodes": 1344,
+    "materialized_nodes_by_type": {
+      "decision": 24,
+      "entity": 564,
+      "fact": 511,
+      "note": 188,
+      "preference": 57
+    },
+    "questions_written": 20,
+    "retrieval_results_per_question_min": 50,
+    "retrieval_results_per_question_max": 50,
+    "unique_passage_texts_per_question_min": 45,
+    "unique_passage_texts_per_question_median": 48.0,
+    "unique_passage_texts_per_question_max": 49,
+    "retrieval_latency_ms_min": 158.5,
+    "retrieval_latency_ms_median": 198.05,
+    "retrieval_latency_ms_mean": 231.065,
+    "retrieval_latency_ms_max": 530.2,
+    "answer_characters_min": 378,
+    "answer_characters_median": 1594.0,
+    "answer_characters_max": 8499,
+    "nonempty_answers": 20,
+    "judge_verdicts": 53,
+    "nonempty_judge_reasons": 53,
+    "validation_errors": 0
+  },
+  "durable_state": {
+    "events": 188,
+    "materializations": {"complete": 188},
+    "extractions": {"complete": 188}
+  },
+  "claim_boundary": "This is a tuned one-conversation, 20-question 100K development result using a completely admitted PRME extracted-memory pack and mutable Ollama cloud model aliases. It is not an untouched confirmation, official-scale BEAM result, matched cross-system comparison, or evidence of market leadership.",
+  "artifact_sha256": {
+    "execution-manifest.json": "666a3863e973517de6af6fe9488da3c05edb7d46d7039445c7af82366514176d",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "b8534a850a1a6b7faa1d9a3b8635d7b302f8920b9c7c45b1e7046745f26b820f",
+    "prme-pack/memory.duckdb": "1860a362341b4bfd589e5af23698af441487fda6b46b564967a003d609bc2987",
+    "prme-pack/vectors.usearch": "377c6ffb93a87801ecd487264d5dbf54163f0d7bfa229f0f67478ab4311701a5",
+    "prme-pack/lexical/meta.json": "6ffa97ed5c513ba5b2436836da176eec916adc1aee6e21ee54de04334513ab74",
+    "service.log": "9b40d554cc8b705c7186be0267c6cfbf1de208679f65ec5d2713a0b882dd233e",
+    "upstream-results/beam_results_20260915_165519.json": "141959bfde80301d314b1f69867efbfd984fd17616c894e113957d17e0e78c00",
+    "validator.json": "35a17186e4875222d411e1a413b452ca95cea2c12ae9fec0fe0fb21e5a2a47b0",
+    "_ingestion_100K_0.json": "b3fa4693489fd18bc0f5cd0600674efcd616cb0e966f906f65f32b9852303127",
+    "100K_0_q0_abstention.json": "6f2bd5fe7c69b4af75350ac6031b6f451f2b0030405ba9009a685756d9a7dee7",
+    "100K_0_q1_abstention.json": "bb72c0f3c0ce29adceb7c6b4640708ed5a3693d360c0049473e1f6c2563d61cd",
+    "100K_0_q2_contradiction_resolution.json": "8d281152bdc89f38de298429a5d1441582934a4636f7bbe5e4d76deb0b595357",
+    "100K_0_q3_contradiction_resolution.json": "fd0153492504f05bba3c5f7709f7968fbfe4dd2844e154e3428408e948a350e2",
+    "100K_0_q4_event_ordering.json": "d6c22b9511003c2017a57989a2b5bbbab0a31b0ceb870e4d5649780325eaf31d",
+    "100K_0_q5_event_ordering.json": "6e3a7a5b7bdb6c9d0d17e6bc0e7ea39c291bcfbc2ca08eb69acfdfb53d31a057",
+    "100K_0_q6_information_extraction.json": "a31c7c2e8f7a25c250731e06a8d538bb87d95dfcf08a2f231ef14cc8153d2866",
+    "100K_0_q7_information_extraction.json": "3dbf36dd812c02442be1a5377f6855afa53a51269c75a8733a3178dae0c3738d",
+    "100K_0_q8_instruction_following.json": "5eb4ae62dbe2796b33b98db5b548622d2f21c4d404b67a77a7e7bac8b01275c0",
+    "100K_0_q9_instruction_following.json": "2a42096166bfe9de1d04db50ced59ffb89fc631a81975cb294cd52db786a6627",
+    "100K_0_q10_knowledge_update.json": "9f0358b68a1d881c5539ffe43f5599f5135fba3b708b1a90a8208bac5201b2cc",
+    "100K_0_q11_knowledge_update.json": "e9501778683c5080bfed0c3a0f895bb3e1fa591fd5fc752f99ceda96b13ccbcd",
+    "100K_0_q12_multi_session_reasoning.json": "059809394420601952073c9290a2ba14a42803b2c618e6281ae06590c8cc4b2a",
+    "100K_0_q13_multi_session_reasoning.json": "079f3ede488dfc8b33df0a01fab1a9b216b9e9c63d23972632da538f127b5d8a",
+    "100K_0_q14_preference_following.json": "24762ef5e733f1f2554c0cebc53f460cfe3dc823b016c7f82672725861d5c480",
+    "100K_0_q15_preference_following.json": "627d535676efaf2b56d9217917354e732c6b7b5f24f5833171043fa4bd0cf7ba",
+    "100K_0_q16_summarization.json": "5ef685df7ca18aac0ac868f174b86c732eb4bce56c1c924d9684993c24d0ee2a",
+    "100K_0_q17_summarization.json": "5047eb15c23fb960c2496af56d3ab8da399c58dda26e844411b231e9ad24a051",
+    "100K_0_q18_temporal_reasoning.json": "91eff7b5793a1b3e9201446f40b94281794d92f608cd342507e04e94ba9b1853",
+    "100K_0_q19_temporal_reasoning.json": "c89f285e4e54d2409472cd8d7a7160a1ca2086404ae6908f36e994285aa8e6db"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "kind": "beam-retrieval-ablation-result",
+  "status": "complete; rejected for default promotion",
+  "registration": "beam-100k-evidence-diversity-ablation-v1-registration.json",
+  "registration_sha256": "15f95138c61c2e6b810dd4ab80ed68e923eb18712f238875108cd9c39d832739",
+  "source": {
+    "prme_revision": "0591f0a95b62f9a9f9c6cec7936bbe51cc7bf6c6",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "protocol": {
+    "profile": "frozen_extracted_pack_retrieval_ablation",
+    "chat_size": "100K",
+    "conversation_index": 0,
+    "questions": 20,
+    "top_k": 50,
+    "max_per_source": 1,
+    "max_per_evidence": 1,
+    "include_cross_scope": false
+  },
+  "baseline": {
+    "correct": 13,
+    "total": 20,
+    "accuracy": 65.0,
+    "average_score": 0.5675
+  },
+  "candidate": {
+    "correct": 13,
+    "total": 20,
+    "accuracy": 65.0,
+    "average_score": 0.54833,
+    "by_question_type": {
+      "abstention": {"correct": 0, "total": 2, "average_score": 0.0},
+      "contradiction_resolution": {"correct": 1, "total": 2, "average_score": 0.25},
+      "event_ordering": {"correct": 1, "total": 2, "average_score": 0.41665},
+      "information_extraction": {"correct": 1, "total": 2, "average_score": 0.29165},
+      "instruction_following": {"correct": 1, "total": 2, "average_score": 0.5},
+      "knowledge_update": {"correct": 2, "total": 2, "average_score": 1.0},
+      "multi_session_reasoning": {"correct": 2, "total": 2, "average_score": 0.875},
+      "preference_following": {"correct": 2, "total": 2, "average_score": 1.0},
+      "summarization": {"correct": 2, "total": 2, "average_score": 0.65},
+      "temporal_reasoning": {"correct": 1, "total": 2, "average_score": 0.5}
+    }
+  },
+  "paired_comparison": {
+    "pass_level_wins": 1,
+    "pass_level_losses": 1,
+    "pass_level_ties": 18,
+    "mean_score_delta": -0.01917,
+    "pass_level_win": "100K_0_q5_event_ordering",
+    "pass_level_loss": "100K_0_q9_instruction_following"
+  },
+  "execution": {
+    "questions_written": 20,
+    "retrieval_results_per_question_min": 50,
+    "retrieval_results_per_question_max": 50,
+    "retrieval_latency_ms_min": 76.2,
+    "retrieval_latency_ms_median": 117.95,
+    "retrieval_latency_ms_mean": 229.915,
+    "retrieval_latency_ms_max": 2093.4,
+    "source_pack_unchanged": true
+  },
+  "decision": "The registered failure rule blocks a default change because the candidate caused a pass-level loss and a negative mean score delta. max_per_evidence remains an explicit opt-in control.",
+  "diagnosis": "The cap exposed more distinct evidence groups but kept only the highest-ranked derived node from each group. This removed a complete dependency/version passage needed by q9 and demonstrates that provenance diversity alone does not preserve source completeness.",
+  "claim_boundary": "This is a paired, tuned one-conversation development ablation over an already examined frozen pack. It isolates max_per_evidence=1 under the registered protocol; it is not an untouched confirmation, official-scale BEAM result, or evidence of market leadership.",
+  "artifact_sha256": {
+    "full_execution_result": "f4440bdbd8a96e69717d05af5e94f2de9c4821df1fe520f58f84925de7cd846d",
+    "source_pack/memory.duckdb": "1860a362341b4bfd589e5af23698af441487fda6b46b564967a003d609bc2987",
+    "source_pack/vectors.usearch": "377c6ffb93a87801ecd487264d5dbf54163f0d7bfa229f0f67478ab4311701a5",
+    "source_pack/lexical/meta.json": "6ffa97ed5c513ba5b2436836da176eec916adc1aee6e21ee54de04334513ab74"
+  }
+}

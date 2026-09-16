@@ -13,9 +13,9 @@ Persistent memory across sessions:
 
 import asyncio
 import json
+import logging
 import os
 import sys
-import signal
 import tempfile
 import time
 import warnings
@@ -25,18 +25,18 @@ from uuid import uuid4
 
 # Load .env from project root
 from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 # Suppress noisy warnings from dependencies
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 warnings.filterwarnings("ignore")
 
-import logging
 logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI  # noqa: E402
 
-from prme import MemoryEngine, PRMEConfig, Scope
+from prme import MemoryEngine, PRMEConfig, Scope  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -199,7 +199,7 @@ async def main():
     print(f"  Session:  {session_id}")
     print(f"  Model:    {MODEL}")
     print(f"  Data dir: {data_dir}" + (" (persistent)" if persistent else " (temp)"))
-    print(f"  Type /help for commands, /quit to exit")
+    print("  Type /help for commands, /quit to exit")
     print()
 
     # --- Loop ---

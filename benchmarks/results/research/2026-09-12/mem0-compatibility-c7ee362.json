@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "upstream_commit": "c7ee362aff94a369af70f13f2b4f853f6793ff4c",
+  "installed_source_files_verified": 148,
+  "versions": {
+    "mem0ai": "2.0.20",
+    "prme": "0.11.0",
+    "fastembed": "0.7.4",
+    "onnxruntime": "1.24.2",
+    "numpy": "2.4.2",
+    "qdrant-client": "1.19.0",
+    "ollama": "0.6.1",
+    "openai": "2.21.0"
+  },
+  "python": "3.11.6",
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "embedding_comparison_inputs_sha256": "ab50129aeb01ff73f80837106d0ec67e408327f795a22a01238d6c584d78b8d2",
+  "embedding_maximum_absolute_difference": 0.0,
+  "embedding_absolute_tolerance": 1e-06,
+  "embedding_call_shape": "one text per call in each product",
+  "prme_batch_vs_single_maximum_absolute_difference": 0.00022357702255249023,
+  "model_assets_sha256": {
+    "config.json": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd",
+    "model_optimized.onnx": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+    "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+    "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+    "tokenizer_config.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+  },
+  "checks": [
+    "installed source matches pinned checkout",
+    "raw writes without LLM calls",
+    "same-model numerical embedding comparison",
+    "owner and metadata-scope filtering",
+    "reopen preserves result identities"
+  ],
+  "adapter_cleanup": "Memory.close() plus explicit Qdrant client.close()",
+  "limits": "Authored raw-mode compatibility probe with infer=False. No extraction, answer judging, benchmark accuracy or comparative leadership result. Four embedding inputs do not prove equality on all texts. The first probe used mismatched batch shapes; its failure is retained separately.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0
+}

@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import pytest
 
+from prme import MemoryEngine
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.query_analysis import analyze_query
+from tests.test_durable_ingestion import config as engine_config, user  # noqa: F401
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +98,22 @@ async def test_entity_lookup_not_aggregation():
 async def test_temporal_query_not_aggregation():
     result = await analyze_query("When did I start my new job?")
     assert result.is_aggregation is False
+
+
+@pytest.mark.parametrize("unit", ["hours", "days", "weeks", "months", "years"])
+async def test_elapsed_time_quantity_not_aggregation(unit):
+    result = await analyze_query(f"How many {unit} ago did the trip end?")
+    assert result.is_aggregation is False
+
+
+async def test_how_many_times_remains_aggregation():
+    result = await analyze_query("How many times did I visit the museum?")
+    assert result.is_aggregation is True
+
+
+async def test_time_units_summed_across_records_remain_aggregation():
+    result = await analyze_query("How many hours do I work across both jobs?")
+    assert result.is_aggregation is True
 
 
 @pytest.mark.asyncio
@@ -207,3 +225,40 @@ def test_custom_cap():
     assert min(int(config.lexical_k * mult), cap) == 200
     # 75 * 2.5 = 187, under cap
     assert min(int(config.graph_max_candidates * mult), cap) == 187
+
+
+async def test_retrieval_reports_non_exhaustive_aggregation_coverage(engine_config, user):  # noqa: F811
+    async with MemoryEngine.open(engine_config) as engine:
+        await engine.store("I visited the Field Museum.", user_id=user)
+        await engine.store("I visited the Science Museum.", user_id=user)
+
+        response = await engine.retrieve(
+            "How many museums did I visit?", user_id=user, limit=1,
+        )
+
+        coverage = response.metadata.aggregation_coverage
+        assert coverage is not None
+        assert coverage.exhaustive is False
+        assert coverage.status == "candidate_limited"
+        assert coverage.candidate_count >= 2
+        assert coverage.selected_count == 1
+        assert coverage.context_count == 1
+        assert coverage.limitations == ("semantic_matching", "result_limit")
+        assert response.bundle.render().startswith("Aggregation coverage:")
+        assert "not an exhaustive stored-record enumeration" in response.bundle.render()
+
+        receipt = await engine.get_retrieval_receipt(
+            str(response.metadata.request_id), user_id=user,
+        )
+        assert receipt is not None
+        assert receipt.execution is not None
+        assert receipt.execution.parameters["aggregation_coverage"] == coverage.model_dump(mode="json")
+
+
+async def test_non_aggregation_has_no_coverage_marker(engine_config, user):  # noqa: F811
+    async with MemoryEngine.open(engine_config) as engine:
+        await engine.store("The Field Museum is in Chicago.", user_id=user)
+        response = await engine.retrieve("Where is the Field Museum?", user_id=user)
+        assert response.metadata.aggregation_coverage is None
+        assert response.bundle.coverage_notice is None
+        assert not response.bundle.render().startswith("Aggregation coverage:")

@@ -7,7 +7,7 @@ drives the full engine and asserts a specific leak stays closed.
 
 The existing scope tests do not cover these paths because they never issue a
 proper-noun query (which triggers entity expansion) or an aggregation query
-(which triggers the exhaustive keyword scan).
+(which triggers the supplementary keyword scan).
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ async def test_entity_and_aggregation_scans_respect_scope(engine):
     )
 
     # Proper noun plus "how many" exercises both entity expansion and the
-    # exhaustive aggregation keyword scan.
+    # supplementary aggregation keyword scan.
     response = await engine.retrieve(
         "How many times was Project Falcon mentioned?",
         user_id="bob",

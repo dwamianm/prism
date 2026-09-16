@@ -1,0 +1,416 @@
+"""Source membership is necessary; exact source content retains qualifications."""
+
+from unittest.mock import AsyncMock
+
+import pytest
+from pydantic import ValidationError
+
+from prme import MemoryEngine
+from prme.ingestion.extraction import _CitedExtractionResult
+from prme.ingestion.grounding import validate_grounding
+from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
+from prme.types import NodeType
+from tests.test_durable_ingestion import config, user  # noqa: F401
+
+
+def fact(**kwargs):
+    return ExtractedFact(subject="Alice", predicate="uses", object="email", **kwargs)
+
+
+@pytest.mark.parametrize("source,extracted", [
+    ("Marianne uses email", ExtractedFact(subject="Ann", predicate="uses", object="email")),
+    ("Alice uses email", ExtractedFact(subject="Alice", predicate="uses", object="Slack")),
+    ("Alice uses email", fact(evidence_quote="Alice always uses email")),
+    ("Alice uses email", fact(evidence_quote="")),
+    ("Alice uses email", ExtractedFact(subject="", predicate="uses", object="email")),
+])
+def test_unsupported_mentions_and_fabricated_citations_are_rejected(source, extracted):
+    result = validate_grounding(ExtractionResult(facts=[extracted]), source)
+    assert result.facts == []
+
+
+def test_short_real_quote_cannot_remove_trailing_conditions():
+    source = "Unrelated introduction.\n\nAlice uses email only for nonurgent requests. Never for emergencies.\n\nUnrelated conclusion."
+    extracted = fact(evidence_quote="Alice uses email")
+    result = validate_grounding(ExtractionResult(facts=[extracted]), source)
+    assert result.facts[0].evidence_quote == "Alice uses email only for nonurgent requests. Never for emergencies."
+    assert extracted.evidence_quote == "Alice uses email"
+
+
+def test_legacy_custom_provider_keeps_full_source_and_non_ascii_mentions():
+    source = "José uses C++ only for embedded applications."
+    result = validate_grounding(ExtractionResult(facts=[
+        ExtractedFact(subject="José", predicate="uses", object="C++"),
+    ]), source)
+    assert result.facts[0].evidence_quote == source
+
+
+def test_repeated_quote_keeps_both_distinct_qualifications():
+    source = "Alice uses email at work.\n\nAlice uses email at home only when traveling."
+    result = validate_grounding(ExtractionResult(facts=[fact(evidence_quote="Alice uses email")]), source)
+    assert result.facts[0].evidence_quote == source
+
+
+def test_builtin_drops_fact_without_explicit_polarity():
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "likes",
+            "object": "tea",
+            "evidence_quote": "Alice likes tea.",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": "Alice likes tea."}
+    )
+    assert result.facts == []
+
+
+def test_builtin_keeps_valid_sibling_when_another_fact_is_malformed():
+    source = "Alice uses email and likes tea."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [
+            {
+                "subject": "Alice",
+                "predicate": "uses",
+                "object": "email",
+                "polarity": "positive",
+                "evidence_quote": source,
+            },
+            {
+                "subject": "Alice",
+                "predicate": "likes",
+                "object": None,
+                "polarity": "positive",
+                "evidence_quote": source,
+            },
+        ],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert [(item.predicate, item.object) for item in result.facts] == [
+        ("uses", "email")
+    ]
+
+
+def test_builtin_still_rejects_a_malformed_claim_envelope():
+    with pytest.raises(ValidationError, match="facts"):
+        _CitedExtractionResult.model_validate({"facts": {"object": None}})
+
+
+def test_unrelated_condition_in_same_paragraph_does_not_contaminate_claim():
+    source = "Alice uses email. Can you help if you have time?"
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": "Alice uses email.",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+    assert result.facts[0].evidence_quote == source
+
+
+def test_following_condition_sentence_still_qualifies_claim():
+    source = "Alice uses email. Only if her manager approves."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": "Alice uses email.",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+    payload["facts"][0].update({
+        "epistemic_type": "conditional",
+        "condition": "her manager approves",
+    })
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].condition == "her manager approves"
+
+
+def test_indirect_question_if_is_not_a_claim_condition():
+    source = "I will visit local antique dealers to see if they have information."
+    payload = {
+        "entities": [
+            {"name": "local antique dealers", "entity_type": "organization"}
+        ],
+        "facts": [{
+            "subject": "I",
+            "predicate": "will visit",
+            "object": "local antique dealers",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+
+    source = "I will visit local antique dealers if they have information."
+    payload["facts"][0]["evidence_quote"] = source
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "Alice uses email, so could you help me configure it?",
+        "Alice uses email and I was wondering if you could suggest a client.",
+        "Alice uses email and I was wondering if you could also help configure it.",
+        "Alice uses email; may I ask you about migration?",
+    ],
+)
+def test_polite_request_modals_do_not_make_supported_claim_hypothetical(source):
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "Alice could use email.",
+        "Could you tell me whether Alice might use email?",
+        "Can you suggest tools that Alice could use for email?",
+    ],
+)
+def test_claim_modals_remain_hypothetical_near_request_phrasing(source):
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+
+@pytest.mark.parametrize("condition", [None, "manager approval"])
+def test_builtin_drops_conditional_without_verbatim_condition(condition):
+    source = "If approval is granted, Alice uses email."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "conditional",
+            "condition": condition,
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
+
+    payload["facts"][0]["condition"] = "approval is granted"
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].condition == "approval is granted"
+
+
+def test_builtin_drops_explicit_condition_materialized_as_asserted():
+    source = "If approval is granted, Alice uses email."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "email",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
+
+    payload["facts"][0].update({
+        "epistemic_type": "conditional",
+        "condition": "approval is granted",
+        "fact_type": "decision",
+    })
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
+
+
+def test_builtin_drops_uncertainty_materialized_as_asserted_decision():
+    source = "Alice might use Redis after evaluation."
+    payload = {
+        "entities": [
+            {"name": "Alice", "entity_type": "person"},
+            {"name": "Redis", "entity_type": "product"},
+        ],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "fact_type": "decision",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
+
+    payload["facts"][0]["epistemic_type"] = "hypothetical"
+    result = _CitedExtractionResult.model_validate(payload, context={"source_text": source})
+    assert result.facts == []
+
+
+def test_builtin_explicit_choice_remains_a_decision():
+    source = "Alice decided to use Redis."
+    payload = {
+        "entities": [
+            {"name": "Alice", "entity_type": "person"},
+            {"name": "Redis", "entity_type": "product"},
+        ],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "uses",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "fact_type": "decision",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].fact_type == "decision"
+
+
+def test_person_named_may_is_not_treated_as_uncertain():
+    source = "May uses Redis."
+    payload = {
+        "entities": [
+            {"name": "May", "entity_type": "person"},
+            {"name": "Redis", "entity_type": "product"},
+        ],
+        "facts": [{
+            "subject": "May",
+            "predicate": "uses",
+            "object": "Redis",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "fact_type": "fact",
+            "epistemic_type": "asserted",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].epistemic_type == "asserted"
+
+
+def test_grounding_downgrades_conditionals_without_supported_condition():
+    source = "If approval is granted, Alice uses email."
+    unsupported = fact(
+        evidence_quote=source,
+        epistemic_type="conditional",
+        condition="the manager agrees",
+    )
+    grounded = validate_grounding(ExtractionResult(facts=[unsupported]), source)
+    assert grounded.facts[0].condition is None
+    assert grounded.facts[0].epistemic_type == "hypothetical"
+
+    supported = fact(
+        evidence_quote=source,
+        epistemic_type="conditional",
+        condition="approval is granted",
+    )
+    grounded = validate_grounding(ExtractionResult(facts=[supported]), source)
+    assert grounded.facts[0].condition == "approval is granted"
+    assert grounded.facts[0].epistemic_type == "conditional"
+
+
+def test_entity_substrings_are_not_distinct_people():
+    result = validate_grounding(ExtractionResult(entities=[
+        ExtractedEntity(name="Ann", entity_type="person"),
+        ExtractedEntity(name="Marianne", entity_type="person"),
+    ]), "Marianne uses email")
+    assert [e.name for e in result.entities] == ["Marianne"]
+
+
+async def test_materialized_fact_retains_conditions_and_source_provenance(config, user):  # noqa: F811
+    source = "Alice uses email only for nonurgent requests. For emergencies Alice requires a phone call."
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = AsyncMock(return_value=ExtractionResult(
+            facts=[fact(evidence_quote="Alice uses email")],
+        ))
+        event_id = await engine.ingest(source, user_id=user, wait_for_extraction=True)
+        nodes = await engine.query_nodes(user_id=user, node_type=NodeType.FACT)
+        assert len(nodes) == 1
+        assert nodes[0].content == source
+        assert nodes[0].metadata["evidence_quote"] == source
+        assert nodes[0].metadata["grounding_method"] == "source_passage_v1"
+        assert str(nodes[0].evidence_refs[0]) == str(event_id)
+
+
+async def test_materialized_claim_persists_typed_qualifiers(config, user):  # noqa: F811
+    source = "If approval is granted, Alice does not use email."
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = AsyncMock(return_value=ExtractionResult(
+            facts=[fact(
+                evidence_quote=source,
+                epistemic_type="conditional",
+                condition="approval is granted",
+                polarity="negative",
+            )],
+        ))
+        event_id = await engine.ingest(source, user_id=user, wait_for_extraction=True)
+        node = next(
+            node for node in await engine.get_event_nodes(event_id, user_id=user)
+            if node.node_type == NodeType.FACT
+        )
+        assert node.metadata["polarity"] == "negative"
+        assert node.metadata["condition"] == "approval is granted"
+        assert node.metadata["condition_state"] == "unknown"

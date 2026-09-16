@@ -197,6 +197,16 @@ TOMBSTONE operation payload:
 
 The `content_hash_of_deleted` field allows integrity verification that the tombstoned content matches what was expected to be deleted, without retaining the content itself.
 
+PRME's `ttl_expiration_v1` implementation treats archival as the logical
+deletion. It locks and revalidates the current node, then commits the archived
+lifecycle state and one deterministic `TOMBSTONE_SWEEP` operation in the same
+DuckDB or PostgreSQL transaction. The checksum-protected record retains the
+complete before/after node values, evaluation and expiration clocks, policy,
+reason, and content hash. The standardized summary fields remain at the top
+level for portable tombstone readers. Exact, concurrent and restarted retries
+reuse the same operation identity. Index eviction follows commit and remains
+repairable; the immutable source event and archived graph content are retained.
+
 ---
 
 ## 10. Decay Policy Versioning

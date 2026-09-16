@@ -21,6 +21,7 @@ import tempfile
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 import pytest
 import pytest_asyncio
 
@@ -29,6 +30,7 @@ from prme.cli import (
     _format_table,
     _node_to_dict,
     _truncate,
+    _verify_extraction_provider,
     build_parser,
     cmd_chain,
     cmd_doctor,
@@ -43,6 +45,7 @@ from prme.cli import (
     cmd_search,
     cmd_stats,
 )
+from prme.config import ExtractionConfig
 from prme.types import NodeType
 
 
@@ -224,15 +227,29 @@ class TestParser:
 
     def test_doctor_command(self):
         parser = build_parser()
-        args = parser.parse_args(["doctor", "/tmp/test_dir"])
+        args = parser.parse_args(
+            [
+                "doctor",
+                "/tmp/test_dir",
+                "--verify-extraction",
+                "--provider-timeout",
+                "2.5",
+            ]
+        )
         assert args.command == "doctor"
         assert args.directory == "/tmp/test_dir"
+        assert args.verify_extraction is True
+        assert args.provider_timeout == pytest.approx(2.5)
 
     def test_doctor_command_default(self):
         parser = build_parser()
         args = parser.parse_args(["doctor"])
         assert args.command == "doctor"
         assert args.directory == "."
+        assert args.verify_extraction is False
+
+        with pytest.raises(SystemExit):
+            parser.parse_args(["doctor", "--provider-timeout", "nan"])
 
     def test_no_command_exits(self):
         parser = build_parser()
@@ -775,3 +792,77 @@ async def test_cmd_doctor_missing_dir():
     args = _make_args(directory="/tmp/prme_nonexistent_dir_12345")
     with pytest.raises(SystemExit):
         await cmd_doctor(args)
+
+
+@pytest.mark.asyncio
+async def test_extraction_provider_verification_uses_model_endpoint_without_generation():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/v1/models/gpt-4o-mini"
+        assert request.headers["authorization"] == "Bearer private-test-key"
+        return httpx.Response(200, json={"id": "gpt-4o-mini", "object": "model"})
+
+    result = await _verify_extraction_provider(
+        ExtractionConfig(
+            provider="openai",
+            model="gpt-4o-mini",
+            api_key="private-test-key",
+            base_url="https://provider.test/v1",
+        ),
+        {},
+        timeout=1,
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result == (
+        True,
+        "openai credential and model metadata verified (generation quota not checked)",
+    )
+
+
+@pytest.mark.asyncio
+async def test_extraction_provider_verification_redacts_provider_error_body():
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            401,
+            json={"error": "rejected private-test-key at /private/provider/path"},
+        )
+
+    ok, message = await _verify_extraction_provider(
+        ExtractionConfig(
+            provider="anthropic",
+            model="claude-test",
+            api_key="private-test-key",
+            base_url="https://provider.test/v1",
+        ),
+        {},
+        timeout=1,
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert ok is False
+    assert message == "anthropic credential rejected (HTTP 401)"
+    assert "private-test-key" not in message
+    assert "/private/" not in message
+
+
+@pytest.mark.asyncio
+async def test_ollama_verification_translates_openai_compatible_base_url():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/api/show"
+        assert json.loads(request.content) == {"model": "local-model"}
+        return httpx.Response(200, json={"details": {"parameter_size": "9B"}})
+
+    result = await _verify_extraction_provider(
+        ExtractionConfig(
+            provider="ollama",
+            model="local-model",
+            base_url="http://127.0.0.1:11434/v1",
+        ),
+        {},
+        timeout=1,
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result == (True, "ollama endpoint and model metadata verified")

@@ -1,0 +1,210 @@
+{
+  "all_ci_checks_passed": false,
+  "frozen_commit": "7009326",
+  "full_postgres": {
+    "log_path": "/tmp/prme-balanced-full-pg.log",
+    "log_sha256": "276685410bad2d618c1b65a2e9e6fe26ace1f30a586039766bfa5561c3d93a6a",
+    "native_exit_code": 0,
+    "native_session_id": 31520,
+    "summary": "3198 passed, 85 skipped in 630.38s (0:10:30)"
+  },
+  "guide": {
+    "guide_sha256": "e4c734f500572868af8307e3d10d715dc75c1cd8c7fb2e5866e8516ce15504b1",
+    "log_sha256": "7d14d61464f1495cbb0f8b42060ac2745595f8f972c49453c9fceae6c8593d54",
+    "native_exit_code": 0,
+    "native_session_id": 95039,
+    "real_default_embeddings": true,
+    "reopened_receipt_version": 5
+  },
+  "installed_corrected": {
+    "log_path": "/tmp/prme-balanced-packing-installed-final.log",
+    "log_sha256": "95293edb801e712a6925fda4c6970a3c3df93e451ff2d4afd38d16370e2c56a9",
+    "native_exit_code": 0,
+    "native_session_id": 99458,
+    "summary": "82 passed, 1 skipped in 17.43s"
+  },
+  "installed_initial": {
+    "log_path": "/tmp/prme-balanced-packing-installed.log",
+    "log_sha256": "46555ef51182dcb13d8afd5e208427ba9167d8b3713daa25fe69dae935c0262f",
+    "native_exit_code": 1,
+    "native_session_id": 2515,
+    "summary": "1 failed, 81 passed, 1 skipped in 12.25s"
+  },
+  "installed_manifest": {
+    "installed_package": "/private/tmp/prme-balanced-packing-wheel/lib/python3.13/site-packages/prme",
+    "package_files_matched": 129,
+    "package_manifest_sha256": "9afb395e14195595c2d37f2122600614930b744c06d0dd03f8ec5787bfb1c168",
+    "pytest_exit_code": 0,
+    "source_commit": "7009326",
+    "test_files": [
+      "tests/test_balanced_packing.py",
+      "tests/test_packing_order_option.py",
+      "tests/test_packing_receipt_compatibility.py",
+      "tests/test_relevance_records.py",
+      "tests/test_runtime_ranking.py"
+    ],
+    "wheel_sha256": "0da1d433147557c471e83a02cf53a0325f27bc1c37da0435e3e857b46236b789"
+  },
+  "limits": [
+    "The simulation CI gate failed; consolidation differs across baseline/current runs and remains unresolved.",
+    "Packing remains opt-in; density default unchanged.",
+    "Prior source-retention studies are reused examined cohorts, not answer-quality or leadership proof.",
+    "No answers from incomplete head1 reader trials were scored."
+  ],
+  "observed_at": "2026-09-13T19:44:48.156342+00:00",
+  "pre_change_failed_scenarios": {
+    "complete": true,
+    "failures": [
+      {
+        "description": "Decision about migration to GraphQL should be retrievable",
+        "expected_missing": [
+          "GraphQL"
+        ],
+        "lifecycle_failures": [],
+        "ranking_failures": [],
+        "scenario": "bi_temporal"
+      },
+      {
+        "description": "After MySQL->PostgreSQL migration, PostgreSQL should dominate",
+        "expected_missing": [],
+        "lifecycle_failures": [],
+        "ranking_failures": [
+          "'PostgreSQL' (rank 4) should rank above 'MySQL' (rank 2)"
+        ],
+        "scenario": "changing_facts"
+      },
+      {
+        "description": "New CEO (Jane Doe) should supersede old (John Smith)",
+        "expected_missing": [],
+        "lifecycle_failures": [],
+        "ranking_failures": [
+          "'Jane' (rank 2) should rank above 'John Smith' (rank 1)"
+        ],
+        "scenario": "eval_supersedence_handling"
+      }
+    ],
+    "native_exit_code": 1,
+    "native_session_id": 76221,
+    "passed": 16,
+    "path": "data/benchmarks/balanced-before-simulations.json",
+    "sha256": "1f12ed5b959e0a34d46d09962c61a4f06a768a60c1429c9e73f06445a4b50832",
+    "successful": false,
+    "total": 19
+  },
+  "public_context_parity": {
+    "complete": true,
+    "contexts_verified": 4500,
+    "frozen_commit": "700932645603ba1a4ab1ad91c8bfa99da0a5b060",
+    "inputs": {
+      "dev": {
+        "packing-composition-dev-273fd96.json": "9c7256358ab4a3853aeda8cac9de52b25c6937101d64ac39d42d0f45a6f0f4f7",
+        "packing-composition-dev-completion-273fd96.json": "9daec296cf0c3a47a2a4f6c8bb0de76e2b4ebb94574dfcaebd524acbec225f11",
+        "packing-composition-dev-verification.json": "f9572562920a47a780a627b9399ddd3ea90c5e17f9940cca7fae03ed97dd755b",
+        "packing-composition-dev-verifier-completion.json": "249998c4994df15320934f0b2c57ed86d9e22ef9a980f7cf214e09eb2c86547a"
+      },
+      "regression": {
+        "packing-regression-completion.json": "aa7b58478219b8a099c32227492a367a096d00200d0954b2aacce1ea90637f39",
+        "packing-regression-verification.json": "3f394317fba0885d88fbc8cbc71883b0be96aab679e9b3f7ec68939b5d288323",
+        "packing-regression-verifier-completion.json": "d770634d30229fb4a4a8c1b3fa40aab3be96ca3c4247da4b34581b9ae659b235",
+        "packing-regression.json": "bb748a52a186e285cacc9cfc86fc7f0996566a2fc6026b7d50afa4b8f221c4ec"
+      }
+    },
+    "limits": "Implementation parity against existing studies, not new quality evidence or answer validation.",
+    "log_sha256": "addfacd7ccfe84e6a53f0570daddd97ed392c5f43875b432ffb87e57bda8135d",
+    "native_exit_code": 0,
+    "native_session_id": 79826,
+    "observed_at": "2026-09-13T19:41:13.534074+00:00",
+    "questions": 500,
+    "report_path": "data/benchmarks/balanced-public-parity.json",
+    "report_sha256": "dfa27473968363c51d65b59be64d6f0f3b233271dcd0a831e5cf07a0d055d6f6",
+    "root_commit": "58104c1",
+    "runtime": {
+      "commit": "700932645603ba1a4ab1ad91c8bfa99da0a5b060",
+      "dependencies": {
+        "numpy": "2.4.2",
+        "pydantic": "2.12.5",
+        "tiktoken": "0.12.0"
+      },
+      "dirty": false,
+      "modules": {
+        "benchmarks.diagnostics.compare_public_captures": "fab53f686c08ee724fc7b10531fb15aed7ed29061760727332b92df8f5697505",
+        "benchmarks.diagnostics.packing_composition": "a3fb68261c046b69f4f65ec93c1c0edb048e75507a43f6d468b53e0659c69908",
+        "benchmarks.diagnostics.packing_length": "32a315095add5f060f158297e29cfc79075d77376bbd1415b868293b04969155",
+        "benchmarks.diagnostics.product_packing": "eab5a838c076736ae2e6a34fded218f20ea5934ba86382a8e8626dfeda337324",
+        "prme.models.nodes": "7839bf50211d7e3e02947a7442b76649759e685355a47ce4327355f481c11706",
+        "prme.retrieval.config": "80631af1453f7c8f287c6f8b3a165d41742ebcb308f42a6475977eb9c9f5f7da",
+        "prme.retrieval.models": "44b7388264772bdd4b3bc2eb57125854bfc84c96a197c008a2998846dc03ff14",
+        "prme.retrieval.packing": "1ff06f6df5f2280599645d3ec4d4dbeeb2e6791b196f708b693efb89006142a5",
+        "prme.retrieval.tokenization": "838f1f1b3f1bfb1d9b2e315472fed5bd02334c59f92b9518243caca2eb5036e2"
+      },
+      "python": "3.11.6 | packaged by conda-forge | (main, Oct  3 2023, 10:37:07) [Clang 15.0.7 ]"
+    }
+  },
+  "public_types": {
+    "command": ".venv/bin/python -m mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+    "native_exit_code": 0,
+    "native_session_id": 51635
+  },
+  "root_commit": "58104c1",
+  "root_package_files_identical_to_frozen": 129,
+  "ruff": {
+    "command": ".venv/bin/ruff check src/ tests/",
+    "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "native_exit_code": 0
+  },
+  "simulations": {
+    "complete": true,
+    "failures": [
+      {
+        "description": "Decision about migration to GraphQL should be retrievable",
+        "expected_missing": [
+          "GraphQL"
+        ],
+        "lifecycle_failures": [],
+        "ranking_failures": [],
+        "scenario": "bi_temporal"
+      },
+      {
+        "description": "After MySQL->PostgreSQL migration, PostgreSQL should dominate",
+        "expected_missing": [],
+        "lifecycle_failures": [],
+        "ranking_failures": [
+          "'PostgreSQL' (rank 4) should rank above 'MySQL' (rank 2)"
+        ],
+        "scenario": "changing_facts"
+      },
+      {
+        "description": "Unrelated facts should not be affected by consolidation",
+        "expected_missing": [
+          "Kubernetes"
+        ],
+        "lifecycle_failures": [],
+        "ranking_failures": [],
+        "scenario": "consolidation"
+      },
+      {
+        "description": "New CEO (Jane Doe) should supersede old (John Smith)",
+        "expected_missing": [],
+        "lifecycle_failures": [],
+        "ranking_failures": [
+          "'Jane' (rank 2) should rank above 'John Smith' (rank 1)"
+        ],
+        "scenario": "eval_supersedence_handling"
+      }
+    ],
+    "native_exit_code": 1,
+    "native_session_id": 23025,
+    "passed": 70,
+    "path": "data/benchmarks/balanced-simulations.json",
+    "sha256": "65776849bfc1e29750f0e224b0aef1ac29d46a5a01f7df47ad49c22462365f14",
+    "successful": false,
+    "total": 74
+  },
+  "source_focused": {
+    "log_path": "/tmp/prme-balanced-packing-focused.log",
+    "log_sha256": "00f287e9129b32a44666ac0ee4f6540ca03df044296c86e0610d04e9cf15cceb",
+    "native_exit_code": 0,
+    "native_session_id": 9081,
+    "summary": "82 passed, 1 skipped in 10.54s"
+  }
+}

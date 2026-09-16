@@ -1,0 +1,15 @@
+{
+  "kind": "observed-native-completion",
+  "products": {
+    "hindsight": {
+      "native_exit_code": 0,
+      "report_sha256": "e9510290aac6e780fb986eb1806606688bc73885e8383e31a759a8338f56196d",
+      "tool_session_id": 47584
+    },
+    "prme": {
+      "native_exit_code": 0,
+      "report_sha256": "f5e0085ac85b7e9b7ae219d46716bd29a82e332a5d3be6254158812f913392cb",
+      "tool_session_id": 68967
+    }
+  }
+}
