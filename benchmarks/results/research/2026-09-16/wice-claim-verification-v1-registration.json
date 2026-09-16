@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "kind": "wice-claim-verification-registration",
+  "created_at": "2026-09-16T15:31:19.803856+00:00",
+  "source": {
+    "prme_revision": "af0c0a21e1f977e60f0f56497520977b81c0105f",
+    "files": {
+      "runner_sha256": "aea3f0d6bb863486f0e56ff5a43af63569a28940355a98754c641e2608d6246c",
+      "implementation_sha256": "87d1a552220363ec8bcc21d538e6abc8a029cb92422922298a2a9c5f58bbbe86"
+    }
+  },
+  "dataset": {
+    "name": "WiCE",
+    "repository": "https://github.com/ryokamoi/wice.git",
+    "revision": "ddeb6c183665e2a20c5f03c5aa07f03888b9870f",
+    "relative_path": "code_and_resources/entailment_inputs/oracle_chunks/claim/test.jsonl",
+    "sha256": "234bb8c2ca4511ca078e49e07c895a2db61a581d03237e7e1ecb7c48c8510a3e",
+    "expected_shape": {
+      "rows": 1070,
+      "claims": 358,
+      "labels": {
+        "not_supported": 32,
+        "partially_supported": 216,
+        "supported": 110
+      }
+    },
+    "annotation_license": "ODC-BY-1.0",
+    "source_text_terms": [
+      "Wikipedia CC-BY-SA",
+      "Common Crawl terms of use"
+    ]
+  },
+  "model": {
+    "config": {
+      "model": "cross-encoder/nli-deberta-v3-base",
+      "revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+      "entailment_threshold": 0.8,
+      "contradiction_threshold": 0.8,
+      "batch_size": 32,
+      "max_evidence": 64,
+      "max_group_size": 1,
+      "group_candidate_limit": 8,
+      "entailment_policy": "speech_act_guarded",
+      "refutation_policy": "explicit_corroboration"
+    },
+    "purpose": "pinned local three-label NLI with PRME guarded product policy"
+  },
+  "protocol": {
+    "task": "oracle_retrieval_entailment",
+    "evidence_unit": "oracle_chunk",
+    "oracle_aggregation": "product_decision_across_registered_variants",
+    "empty_evidence_sentences": "omit",
+    "positive_label": "supported",
+    "negative_labels": [
+      "partially_supported",
+      "not_supported"
+    ],
+    "emit_source_text": false
+  },
+  "evaluation": {
+    "gates": {
+      "claims_evaluated_min": 358,
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "balanced_accuracy_min": 0.7,
+      "false_support_rate_max": 0.1,
+      "not_supported_false_support_rate_max": 0.1
+    },
+    "interpretation": "All gates are fixed before inference. Failure is retained and blocks promotion of claim verification from opt-in."
+  }
+}
