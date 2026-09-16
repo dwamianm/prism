@@ -69,6 +69,7 @@ def _registered_validation(
             (3, SCORED_REGISTRATION_KIND_V3),
             (4, SCORED_REGISTRATION_KIND_V3),
             (5, SCORED_REGISTRATION_KIND_V3),
+            (6, SCORED_REGISTRATION_KIND_V3),
         }
     )
     if not supported_registration:
@@ -181,7 +182,7 @@ def _registered_validation(
         embedding = adapter_manifest.get("embedding")
         if embedding != system.get("embedding"):
             errors.append("BEAM embedding configuration differs from registration")
-        if registration_schema in {3, 4, 5}:
+        if registration_schema in {3, 4, 5, 6}:
             for field in (
                 "adapter_schema",
                 "duckdb_threads",
@@ -190,7 +191,7 @@ def _registered_validation(
             ):
                 if adapter_manifest.get(field) != system.get(field):
                     errors.append(f"BEAM {field} differs from registration")
-        if registration_schema == 5:
+        if isinstance(registration_schema, int) and registration_schema >= 5:
             for field in ("retrieval", "admission"):
                 if adapter_manifest.get(field) != system.get(field):
                     errors.append(f"BEAM {field} differs from registration")

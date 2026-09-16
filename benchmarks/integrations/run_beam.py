@@ -23,6 +23,7 @@ PROJECT_NAME = "prme-beam-100k-raw-v1"
 RUN_ID = "prme-beam-100k-raw-v1"
 DATASET_REVISION = "3205395e897e7318c7b094ef4e6047b9b82dbb03"
 DATASET_FILENAME = "beam_100K.json"
+DATASET_CONVERSATION_COUNT = 20
 MANIFEST_FILENAME = "execution-manifest.json"
 PREDICTION_DIRECTORY = f"predicted_{PROJECT_NAME}"
 PREDICT_REGISTRATION_KIND = "beam-raw-predict-only-registration"
@@ -90,6 +91,7 @@ def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
         (3, SCORED_REGISTRATION_KIND_V3),
         (4, SCORED_REGISTRATION_KIND_V3),
         (5, SCORED_REGISTRATION_KIND_V3),
+        (6, SCORED_REGISTRATION_KIND_V3),
     }:
         raise RuntimeError("unsupported BEAM registration schema or kind")
     if not isinstance(value, dict):
@@ -97,19 +99,31 @@ def _protocol(registration: dict[str, Any]) -> dict[str, Any]:
     profile = value.get("profile")
     if schema_version == 2 and profile != "raw":
         raise RuntimeError("BEAM schema 2 scored protocol requires the raw profile")
-    if schema_version in {3, 4, 5} and profile not in {"raw", "extracted"}:
+    if schema_version in {3, 4, 5, 6} and profile not in {"raw", "extracted"}:
         raise RuntimeError(
             f"BEAM schema {schema_version} scored protocol requires a supported profile"
         )
-    expected_fixed = {
+    expected_fixed: dict[str, Any] = {
         "chat_sizes": ["100K"],
-        "conversations": [0],
         "question_types": list(QUESTION_TYPES),
         "top_k": 50,
         "top_k_cutoffs": [50],
         "predict_only": False,
         "chunk_size": 2,
     }
+    conversations = value.get("conversations")
+    if schema_version < 6:
+        expected_fixed["conversations"] = [0]
+    elif (
+        not isinstance(conversations, list)
+        or len(conversations) != 1
+        or not isinstance(conversations[0], int)
+        or isinstance(conversations[0], bool)
+        or not 0 <= conversations[0] < DATASET_CONVERSATION_COUNT
+    ):
+        raise RuntimeError(
+            "BEAM schema 6 requires one registered 100K conversation index"
+        )
     if any(value.get(key) != expected for key, expected in expected_fixed.items()):
         raise RuntimeError("BEAM scored protocol changes the registered selection")
     for key in ("project_name", "run_id"):
@@ -252,7 +266,7 @@ def validate_registration(
             raise RuntimeError("registered BEAM extraction retries must be positive")
         if extraction.get("base_url") != "http://127.0.0.1:11434/v1":
             raise RuntimeError("registered BEAM extraction endpoint must be loopback Ollama")
-    if registration["schema_version"] in {3, 4, 5}:
+    if registration["schema_version"] in {3, 4, 5, 6}:
         required_system = {
             "id",
             "version",
@@ -283,17 +297,19 @@ def validate_registration(
             raise RuntimeError("BEAM schema 3 adapter configuration is incomplete")
         if registration["schema_version"] >= 5:
             if system["adapter_schema"] != 4:
-                raise RuntimeError("BEAM schema 5 requires adapter schema 4")
+                raise RuntimeError("BEAM schema 5+ requires adapter schema 4")
             if system.get("retrieval") != {
                 "max_per_source": 1,
                 "passage_time": "latest_evidence_event",
             }:
-                raise RuntimeError("BEAM schema 5 must bind source-diverse passage retrieval")
+                raise RuntimeError(
+                    "BEAM schema 5+ must bind source-diverse passage retrieval"
+                )
             if system.get("admission") != {
                 "raw_materialization_before_ack": True,
                 "extraction_before_ack": protocol["profile"] == "extracted",
             }:
-                raise RuntimeError("BEAM schema 5 must bind complete admission work")
+                raise RuntimeError("BEAM schema 5+ must bind complete admission work")
     _verify_models(registration)
 
 

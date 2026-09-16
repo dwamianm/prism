@@ -246,6 +246,12 @@ def test_scored_beam_protocol_requires_distinct_pinned_local_models(monkeypatch)
             run_beam.SCORED_REGISTRATION_KIND_V3,
             run_beam.SCORED_EXECUTION_KIND_V3,
         ),
+        (
+            "extracted",
+            6,
+            run_beam.SCORED_REGISTRATION_KIND_V3,
+            run_beam.SCORED_EXECUTION_KIND_V3,
+        ),
     ],
 )
 def test_registered_beam_validation_accepts_bound_scored_execution(
@@ -546,6 +552,29 @@ def test_scored_beam_v4_and_v5_bind_extraction_and_admission(monkeypatch):
             source_hashes={"service_sha256": "c" * 64},
             dataset_sha256="e" * 64,
         )
+
+
+def test_beam_schema_6_accepts_one_untouched_conversation():
+    registration = {
+        "schema_version": 6,
+        "kind": run_beam.SCORED_REGISTRATION_KIND_V3,
+        "protocol": {
+            **_scored_protocol(),
+            "profile": "extracted",
+            "conversations": [1],
+        },
+        "models": _scored_models(),
+    }
+
+    assert run_beam._protocol(registration)["conversations"] == [1]
+
+    registration["protocol"]["conversations"] = [1, 2]
+    with pytest.raises(RuntimeError, match="one registered 100K conversation"):
+        run_beam._protocol(registration)
+
+    registration["protocol"]["conversations"] = [20]
+    with pytest.raises(RuntimeError, match="one registered 100K conversation"):
+        run_beam._protocol(registration)
 
 
 def test_beam_durable_pack_validation_rejects_pending_materialization(tmp_path):

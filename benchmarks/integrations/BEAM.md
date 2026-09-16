@@ -106,6 +106,17 @@ Adapter schema 3 reports the applied count, preventing the library default from
 changing an attested extracted run without detection. Earlier schemas retain
 their original fields and meaning.
 
+Registration schema 5 requires complete raw materialization and, for the
+extracted profile, complete extraction before an ingestion request is
+acknowledged. It also binds one result per source and source-evidence passage
+time. The validator inspects durable work records instead of accepting an
+upstream checkpoint as proof that every source was admitted.
+
+Registration schema 6 permits one explicitly registered 100K conversation from
+the 20-conversation public split. This supports untouched confirmations while
+keeping selection narrow and fixed before ingestion. Schemas 2–5 retain their
+original conversation-0 selection.
+
 In a checkout of the pinned upstream commit, start with one retrieval-only
 conversation. This downloads only the selected public BEAM split and preserves
 the upstream ingestion and prediction checkpoints:
