@@ -230,6 +230,10 @@ async def test_nonactual_evidence_cannot_support_completed_claim(monkeypatch):
             "I am working on reducing latency.",
         ),
         ("The recommendation is Redis.", "You should use Redis."),
+        (
+            "The team asked whether the keys were rotated.",
+            "Did the team rotate the keys?",
+        ),
     ],
 )
 async def test_nonactual_support_is_allowed_when_claim_preserves_speech_act(
@@ -369,7 +373,7 @@ async def test_lexically_related_negation_does_not_refute_another_relation(monke
     monkeypatch.setattr(
         verifier,
         "_predict_sync",
-        lambda _pairs: [(0.002, 0.032, 0.966)],
+        lambda _pairs: [(0.002, 0.95, 0.048)],
     )
 
     result = await verifier.verify("Nadia leads the Atlas project.", [evidence])
@@ -377,6 +381,26 @@ async def test_lexically_related_negation_does_not_refute_another_relation(monke
     assert result.status == ClaimVerificationStatus.INSUFFICIENT
     assert result.refuting_group == ()
     assert result.refuting_basis is None
+    assert result.limitations == ("uncorroborated_model_contradiction",)
+
+
+async def test_negative_topical_overlap_cannot_support_or_refute_other_relation(
+    monkeypatch,
+):
+    evidence = _evidence("The image API does not cache PNG files.", "m1")
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.88, 0.015, 0.105)],
+    )
+
+    result = await verifier.verify("The image API serves PNG files.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.supporting_group == ()
+    assert result.refuting_group == ()
+    assert result.limitations == ("uncorroborated_model_entailment",)
 
 
 async def test_negated_intention_does_not_refute_completed_action(monkeypatch):

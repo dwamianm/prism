@@ -122,7 +122,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   statuses, reaching 44/48 with zero unsafe supports. A later 44-case
   previously unexecuted guard assay failed: four negative distractors about a
   different relation were treated as refutations or conflicts. The result is
-  preserved and blocks promotion of claim verification.
+  preserved and blocks promotion of claim verification. Evidence-side negation
+  now requires every normalized non-generic claim token in the negated clause
+  before either deterministic or model-assisted refutation, and reported
+  questions share the direct-question speech-act mode.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

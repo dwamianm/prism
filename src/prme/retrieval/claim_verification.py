@@ -54,6 +54,10 @@ _NEGATED_CLAUSE_RE = re.compile(
     re.IGNORECASE,
 )
 _WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+_REPORTED_QUESTION_RE = re.compile(
+    r"\b(?:ask(?:s|ed|ing)?|question(?:s|ed|ing)?|wonder(?:s|ed|ing)?|whether)\b",
+    re.IGNORECASE,
+)
 _NONACTUAL_MODE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "desire",
@@ -121,6 +125,7 @@ _NEGATION_STOPWORDS = {
     "for",
     "from",
     "in",
+    "i",
     "is",
     "it",
     "longer",
@@ -133,13 +138,17 @@ _NEGATION_STOPWORDS = {
     "service",
     "system",
     "that",
+    "team",
     "the",
     "this",
     "to",
+    "user",
     "was",
     "were",
+    "we",
     "will",
     "with",
+    "you",
 }
 
 ClaimVerificationLimitation = Literal[
@@ -305,24 +314,23 @@ def _corroborates_refutation(
     claim: str,
     group: Sequence[ClaimEvidence],
 ) -> bool:
-    claim_modes = _nonactual_modes(claim)
-    if any(not _typed_evidence_compatible(item, claim_modes) for item in group):
-        return False
-    if not _corroborates_entailment(claim, group):
+    if not _preserves_modality(claim, group):
         return False
     evidence_text = "\n".join(item.text for item in group)
-    if _REFUTATION_CUE_RE.search(claim) or _REFUTATION_CUE_RE.search(evidence_text):
+    if _REFUTATION_CUE_RE.search(claim):
         return True
     claim_values = _explicit_values(claim)
     evidence_values = _explicit_values(evidence_text)
-    return any(
+    if any(
         claim_group and evidence_group and claim_group != evidence_group
         for claim_group, evidence_group in zip(
             claim_values,
             evidence_values,
             strict=True,
         )
-    )
+    ):
+        return True
+    return _explicit_negation_refutes(claim, group)
 
 
 def _nonactual_modes(text: str) -> set[str]:
@@ -331,7 +339,7 @@ def _nonactual_modes(text: str) -> set[str]:
         for mode, pattern in _NONACTUAL_MODE_PATTERNS
         if pattern.search(text) is not None
     }
-    if "?" in text:
+    if "?" in text or _REPORTED_QUESTION_RE.search(text) is not None:
         modes.add("question")
     return modes
 
@@ -357,7 +365,7 @@ def _typed_evidence_compatible(
     return True
 
 
-def _corroborates_entailment(
+def _preserves_modality(
     claim: str,
     group: Sequence[ClaimEvidence],
 ) -> bool:
@@ -368,6 +376,19 @@ def _corroborates_entailment(
             return False
         evidence_modes.update(_nonactual_modes(item.text))
     return not evidence_modes.difference(claim_modes)
+
+
+def _corroborates_entailment(
+    claim: str,
+    group: Sequence[ClaimEvidence],
+) -> bool:
+    if not _preserves_modality(claim, group):
+        return False
+    if _NEGATED_CLAUSE_RE.search(claim) is None and any(
+        _NEGATED_CLAUSE_RE.search(item.text) is not None for item in group
+    ):
+        return False
+    return True
 
 
 def _negation_tokens(text: str) -> set[str]:
@@ -390,7 +411,7 @@ def _explicit_negation_refutes(
 ) -> bool:
     if _NEGATED_CLAUSE_RE.search(claim) is not None:
         return False
-    if not _corroborates_entailment(claim, group):
+    if not _preserves_modality(claim, group):
         return False
     claim_modes = _nonactual_modes(claim)
     claim_tokens = _negation_tokens(claim)
@@ -401,8 +422,12 @@ def _explicit_negation_refutes(
             continue
         for match in _NEGATED_CLAUSE_RE.finditer(item.text):
             clause_tokens = _negation_tokens(match.group())
-            shared = claim_tokens.intersection(clause_tokens)
-            if len(shared) >= 3 or (len(claim_tokens) == 2 and shared == claim_tokens):
+            if (
+                len(claim_tokens) == 2
+                and clause_tokens == claim_tokens
+                or len(claim_tokens) > 2
+                and claim_tokens.issubset(clause_tokens)
+            ):
                 return True
     return False
 

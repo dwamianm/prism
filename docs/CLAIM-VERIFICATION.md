@@ -67,7 +67,9 @@ claim does not preserve, even a model score above the entailment threshold stays
 Typed `hypothetical`, `conditional`, or `unverified` evidence must also match
 the claim's modality; deprecated epistemic evidence and superseded, deprecated,
 or archived lifecycle evidence cannot decide a current claim under the guarded
-policies.
+policies. A passage containing an explicit negated clause cannot support a
+positive claim under the guarded policy; cite an affirmative passage separately
+when the same memory contains independent positive and negative statements.
 
 By default, a high model contradiction becomes `refuted` only when the exact
 claim/evidence group also contains an explicit negation or correction cue, or
@@ -80,13 +82,14 @@ can remain unresolved. `refutation_policy="model_only"` restores raw
 threshold-based behavior for controlled experiments.
 
 An exact negated clause can also surface a refutation when the NLI model is
-neutral, but only when at least three non-generic proposition tokens overlap (or
-all tokens of a two-token proposition overlap). This narrow fallback catches
-corrections such as “Ravi no longer owns ingestion” for “Ravi owns the ingestion
-pipeline” without treating any topically related negative sentence as a
-conflict. `refuting_basis="explicit_negation_overlap"` distinguishes that
-deterministic decision from `model_contradiction`; `supporting_basis` and
-`refuting_basis` are part of claim-verification result schema 2.
+neutral, but only when every normalized non-generic claim token occurs in that
+clause; two-token claims require an exact token set. The same relation-alignment
+rule gates evidence-side negation before a high model contradiction is accepted.
+This narrow fallback catches corrections such as “Ravi no longer owns ingestion”
+for “Ravi owns the ingestion pipeline” without treating “Ravi did not attend an
+ingestion review” as a conflict. `refuting_basis="explicit_negation_overlap"`
+distinguishes that deterministic decision from `model_contradiction`;
+`supporting_basis` and `refuting_basis` are part of result schema 2.
 
 `verify_bundle()` sees only packed candidates whose references occur in the exact
 rendered context. It uses `candidate.rendered_text`, so it does not verify against
@@ -179,5 +182,7 @@ then failed two safety gates. Four negative sentences about a different relation
 were accepted as refuting or conflicting evidence because a broad negation cue
 and shared nouns were treated as corroboration. This blocks promotion despite
 zero plain unsafe `supported` decisions. The failed result remains the current
-untouched evidence until a stricter relation-alignment rule is separately
-confirmed.
+untouched evidence. The implementation now requires complete normalized claim
+token coverage within the negated clause and maps reported questions to the same
+speech-act mode as direct questions; a frozen confirmation must test that change
+without rewriting the failure.
