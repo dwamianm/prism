@@ -97,8 +97,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   result binds the prompt version and query/context/answer hashes, plus separate
   fixed-input and actual-output digests, without changing retrieval receipts or
   memory state. Its first registered 120-assessment BEAM development trial
-  failed all four promotion gates, including 3 unsafe full answers and stable
-  actions on only 27/40 questions, so it remains explicit and opt-in.
+  failed every promotion gate. A speech-act-aware same-cohort rerun with exact
+  evaluator and machine-gate bindings also failed all five gates, including 2
+  unsafe full answers and stable actions on only 26/40 questions, so it remains
+  explicit and opt-in.
 
 - Opt-in direct evidence projection lets extracted claims route retrieval while
   returning the complete active source passage. It replaces bounded exact

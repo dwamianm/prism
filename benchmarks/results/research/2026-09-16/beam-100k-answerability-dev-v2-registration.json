@@ -1,0 +1,130 @@
+{
+  "schema_version": 2,
+  "kind": "beam-answerability-registration",
+  "status": "preregistered",
+  "registered_at": "2026-09-16T06:29:41.588919+00:00",
+  "purpose": "Re-evaluate the fixed 40-question BEAM development cohort with the speech-act-aware v2 cited answerability prompt under independently bound evaluator inputs and machine-enforced gates",
+  "selection": {
+    "disclosure": "Both conversations, the v1 answerability outcomes, and all four abstention questions were examined before this registration. This rerun tests a prompt/API correction on the same complete development cohort; it is not confirmation evidence.",
+    "cohort_rule": "Evaluate every one of the same 40 frozen question artifacts used by the v1 development trial: 4 abstention questions and 36 ordinary questions.",
+    "prior_observation": "The v1 prompt produced 3 unsafe full answers, 8 citation errors, 60/108 ordinary full answers, and stable actions for 27/40 questions. The v2 prompt was written after those failures and explicitly preserves speech acts and project state."
+  },
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "4616d4b03442d46c4eae4d4486a6432f65cd8c5c",
+    "files": {
+      "runner_sha256": "1c3b93f7ef1def307836b4415530cc963d1c4bc682edb693e8676919334b1b8a",
+      "artifact_sha256": {
+        "conversation_0": {
+          "100K_0_q0_abstention.json": "6f2bd5fe7c69b4af75350ac6031b6f451f2b0030405ba9009a685756d9a7dee7",
+          "100K_0_q10_knowledge_update.json": "9f0358b68a1d881c5539ffe43f5599f5135fba3b708b1a90a8208bac5201b2cc",
+          "100K_0_q11_knowledge_update.json": "e9501778683c5080bfed0c3a0f895bb3e1fa591fd5fc752f99ceda96b13ccbcd",
+          "100K_0_q12_multi_session_reasoning.json": "059809394420601952073c9290a2ba14a42803b2c618e6281ae06590c8cc4b2a",
+          "100K_0_q13_multi_session_reasoning.json": "079f3ede488dfc8b33df0a01fab1a9b216b9e9c63d23972632da538f127b5d8a",
+          "100K_0_q14_preference_following.json": "24762ef5e733f1f2554c0cebc53f460cfe3dc823b016c7f82672725861d5c480",
+          "100K_0_q15_preference_following.json": "627d535676efaf2b56d9217917354e732c6b7b5f24f5833171043fa4bd0cf7ba",
+          "100K_0_q16_summarization.json": "5ef685df7ca18aac0ac868f174b86c732eb4bce56c1c924d9684993c24d0ee2a",
+          "100K_0_q17_summarization.json": "5047eb15c23fb960c2496af56d3ab8da399c58dda26e844411b231e9ad24a051",
+          "100K_0_q18_temporal_reasoning.json": "91eff7b5793a1b3e9201446f40b94281794d92f608cd342507e04e94ba9b1853",
+          "100K_0_q19_temporal_reasoning.json": "c89f285e4e54d2409472cd8d7a7160a1ca2086404ae6908f36e994285aa8e6db",
+          "100K_0_q1_abstention.json": "bb72c0f3c0ce29adceb7c6b4640708ed5a3693d360c0049473e1f6c2563d61cd",
+          "100K_0_q2_contradiction_resolution.json": "8d281152bdc89f38de298429a5d1441582934a4636f7bbe5e4d76deb0b595357",
+          "100K_0_q3_contradiction_resolution.json": "fd0153492504f05bba3c5f7709f7968fbfe4dd2844e154e3428408e948a350e2",
+          "100K_0_q4_event_ordering.json": "d6c22b9511003c2017a57989a2b5bbbab0a31b0ceb870e4d5649780325eaf31d",
+          "100K_0_q5_event_ordering.json": "6e3a7a5b7bdb6c9d0d17e6bc0e7ea39c291bcfbc2ca08eb69acfdfb53d31a057",
+          "100K_0_q6_information_extraction.json": "a31c7c2e8f7a25c250731e06a8d538bb87d95dfcf08a2f231ef14cc8153d2866",
+          "100K_0_q7_information_extraction.json": "3dbf36dd812c02442be1a5377f6855afa53a51269c75a8733a3178dae0c3738d",
+          "100K_0_q8_instruction_following.json": "5eb4ae62dbe2796b33b98db5b548622d2f21c4d404b67a77a7e7bac8b01275c0",
+          "100K_0_q9_instruction_following.json": "2a42096166bfe9de1d04db50ced59ffb89fc631a81975cb294cd52db786a6627"
+        },
+        "conversation_1": {
+          "100K_1_q0_abstention.json": "d505fa675ed6d372d8e29eaac2bfccf0a31a4ad00a8d5220b9e39686314c6c1a",
+          "100K_1_q10_knowledge_update.json": "7abdab1efc4570f72cea7f5a2a9db9bd669e473956a145ec61f46b83e1b812ff",
+          "100K_1_q11_knowledge_update.json": "5c9e01f0c3ff344c510af9f4cd0353cb6bb32ae84bc6f16f96eb96dfeb05b5bc",
+          "100K_1_q12_multi_session_reasoning.json": "d12ce65b39f77a0c1e79034a5b37b5b81ec675d0e7465316870dbb07d1666b05",
+          "100K_1_q13_multi_session_reasoning.json": "cba5aa285d9aaa0a97f5ff340e88e47dfab927491f1c1eefafe9a59189f822ae",
+          "100K_1_q14_preference_following.json": "4c6b98d14ff63c54f03bd9dc1916468f9e34064b2b22ecb91e5a9a4d32972846",
+          "100K_1_q15_preference_following.json": "8a3b7e5e99ba2ee745342d725be54b864d360e9e1d2ec2f218374a176806abfb",
+          "100K_1_q16_summarization.json": "39d34983a144ddb29647c28528eeb647572bb6f1590361f3f3de34ce94a0c728",
+          "100K_1_q17_summarization.json": "6aa0cb2c70aa8a680c7f83e9f385cff25043e33586a48bd2e0ee0c789ca0f0c1",
+          "100K_1_q18_temporal_reasoning.json": "6e910b6391109a44ac47297fd7e71c475276b825dc7b37393eba120777e40e93",
+          "100K_1_q19_temporal_reasoning.json": "d31e5b8358a226bd4e51362b3b4921afb9e3bbbfc99b3fbe1020daa336095145",
+          "100K_1_q1_abstention.json": "e2841c5202e04c6bf6512bf5a491b539a742d65bad01f20c28e0bfc43ef7077b",
+          "100K_1_q2_contradiction_resolution.json": "4d6e7447a4177dd693a316a622ed59d9b7ef7085e26aaa9a7227b92f519b136e",
+          "100K_1_q3_contradiction_resolution.json": "dfcf594516c48bb4330fd8e5c46d1037f4f1a45c3360e2ea2f47f0c4cecf6741",
+          "100K_1_q4_event_ordering.json": "9bf37c1c37b3bedf69426f403e71bd8a61ff79852449e50710b408aa3f64ec8d",
+          "100K_1_q5_event_ordering.json": "a77c28ddd25286f5d8f5e82c7687ede11cf3e0571b72ca18dc1e942c8a004ed4",
+          "100K_1_q6_information_extraction.json": "b26fc966eed9ad6dcb38adb5fac91d9325df934f956a99de060cac909aa53fec",
+          "100K_1_q7_information_extraction.json": "68492ead7253675550299f5f4623dc7309eb7da118bb7fb99139c89faf0bb3a7",
+          "100K_1_q8_instruction_following.json": "8ea675a25a64716216130c70541fbbe19ea3495861264cd0d9212abb37da9f32",
+          "100K_1_q9_instruction_following.json": "c93e5162c2f0c6fc9c97e738795134cf2fb81fc1e274686eb6fc559373659ade"
+        }
+      }
+    }
+  },
+  "artifacts": {
+    "conversation_0": {
+      "origin": "accepted extracted dev5 execution",
+      "questions": 20,
+      "abstention_questions": 2,
+      "retrieval_count_per_question": 50
+    },
+    "conversation_1": {
+      "origin": "accepted evidence-augmentation confirmation execution baseline",
+      "questions": 20,
+      "abstention_questions": 2,
+      "retrieval_count_per_question": 50
+    }
+  },
+  "protocol": {
+    "chat_size": "100K",
+    "questions": 40,
+    "abstention_questions": 4,
+    "ordinary_questions": 36,
+    "top_k": 50,
+    "repeats": 3,
+    "temperature": 0.0,
+    "reasoning_effort": "none",
+    "max_retries": 3,
+    "model_timeout_seconds": 120.0,
+    "no_retrieval_calls": true,
+    "no_answer_generation_calls": true,
+    "no_draft_answer": true,
+    "context_format": "One exact saved top-50 list rendered in rank order as [mN] memory with UUID-backed context references.",
+    "execution_order": "conversation name, artifact filename, then repeat index; all ascending",
+    "resume_rule": "Resume only after infrastructure failure with the same registration, frozen artifacts, clean PRME revision, model manifest, and verified saved samples."
+  },
+  "answerability": {
+    "implementation_sha256": "63c62168719eaa29d02eaadda924545351cb1778e5b6a63eb36685272ee54775",
+    "prompt_version": "answerability_requirements_v2",
+    "prompt_sha256": "51db73f014f22bf2c5b70a36b42fa5e7118b2d2ab8a7c5b6fca277ed09d65316",
+    "response_schema_sha256": "ef703f8b13765a0c0601adb8b769daaaacc9b0e1176f18f832c7c3e7d291d26e"
+  },
+  "model": {
+    "provider": "ollama",
+    "model": "gpt-oss:120b-cloud",
+    "api_key_placeholder": "ollama",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "model_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed",
+    "execution": "ollama_cloud",
+    "remote_host": "https://ollama.com",
+    "remote_model": "gpt-oss:120b",
+    "parameter_size": "117B",
+    "quantization": "MXFP4",
+    "advertised_context_tokens": 131072,
+    "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+  },
+  "evaluation": {
+    "gates": {
+      "unsafe_full_answer_count_max": 0,
+      "citation_errors_max": 0,
+      "ordinary_full_answer_count_min": 86,
+      "ordinary_abstention_count_max": 10,
+      "stable_action_questions_min": 32
+    },
+    "partial_policy": "answer_partially on an abstention-labeled question is reported separately and is not counted as an unsafe full answer; partial ordinary answers do not count toward the full-answer coverage minimum.",
+    "decision_rule": "All five machine-evaluated gates must pass. A failure is retained without prompt or threshold tuning on these artifacts.",
+    "stop_rule": "Run exactly three assessments per question. Resume only under the registered resume rule."
+  },
+  "claim_boundary": "This is a same-cohort development rerun of a prompt and benchmark-binding correction. Passing would show that the named v2 evaluator clears the prior registered gates on these frozen contexts; it would not establish held-out answerability, extraction quality, complete answer generation, competitive quality, or product leadership."
+}

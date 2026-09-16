@@ -41,11 +41,12 @@ superseded incomplete-pack run. This remains a tuned one-conversation result;
 abstention and event ordering both scored 0/2.
 
 The first complete [cited-answerability development trial](benchmarks/results/research/2026-09-16/BEAM-ANSWERABILITY-DEV-V1.md)
-repeated every frozen question three times and failed all four preregistered
-gates: 3/12 unsafe full answers on abstention samples, 60/108 full answers on
-ordinary samples, 8 citation errors, and stable actions on 27/40 questions.
-The evaluator remains an explicit experiment; it is not automatic retrieval
-behavior or a production default.
+failed every preregistered gate. A separately registered
+[speech-act-aware v2 rerun](benchmarks/results/research/2026-09-16/BEAM-ANSWERABILITY-DEV-V2.md)
+on the same 120 fixed assessments still failed all five machine-evaluated gates:
+2/12 unsafe full answers, 62/108 ordinary full answers, 5 citation errors, and
+stable actions on 26/40 questions. The evaluator remains an explicit experiment;
+it is not automatic retrieval behavior or a production default.
 
 On the first corrected matched MemoryAgentBench task, PRME scored 20/20 versus
 BM25 at 17/20 on 20 Banking77 development questions while using 90.52% fewer

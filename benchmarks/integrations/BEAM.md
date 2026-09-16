@@ -238,5 +238,9 @@ failed every promotion gate: 3/12 unsafe full answers on abstention samples,
 60/108 full answers and 31/108 abstentions on ordinary samples, 8 citation
 errors, and stable actions on 27/40 questions. See the
 [report](../results/research/2026-09-16/BEAM-ANSWERABILITY-DEV-V1.md). The
-question-only evaluator remains opt-in; this examined prompt does not advance to
-an untouched confirmation cohort.
+speech-act-aware v2
+[same-cohort rerun](../results/research/2026-09-16/BEAM-ANSWERABILITY-DEV-V2.md)
+also failed all five machine-evaluated gates: 2/12 unsafe full answers, 62/108
+ordinary full answers, 22/108 ordinary abstentions, 5 citation errors, and
+stable actions on 26/40 questions. The question-only evaluator remains opt-in;
+neither examined prompt advances to an untouched confirmation cohort.
