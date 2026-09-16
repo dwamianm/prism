@@ -340,6 +340,15 @@ class PackingConfig(BaseModel):
             "derived candidate in its exact evidence group. [HYPOTHESIS]"
         ),
     )
+    evidence_augmentation_anchor_policy: Literal["all", "non_entity"] = Field(
+        default="all",
+        description=(
+            "Which ranked candidates may route direct evidence. 'all' preserves "
+            "the original policy. 'non_entity' prevents entity-name matches from "
+            "treating an entire source passage as query support while allowing "
+            "later non-entity groups to fill the top-k quota. [HYPOTHESIS]"
+        ),
+    )
     aggregation_k_multiplier: float = Field(
         default=3.0,
         description="Multiplier for candidate k values on aggregation/count queries",

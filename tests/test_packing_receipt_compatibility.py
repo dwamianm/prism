@@ -168,3 +168,53 @@ def test_version_eleven_requires_explicit_evidence_augmentation_policy():
 
     with pytest.raises(ValidationError, match="evidence augmentation settings"):
         RetrievalReceipt.model_validate(payload)
+
+
+def test_version_eleven_defaults_to_all_augmentation_anchors():
+    payload = json.loads((FIXTURES / "receipt-v4-score.json").read_text())
+    payload["schema_version"] = 11
+    payload["packing"].update(
+        context_guidance_mode="off",
+        context_format="auditable",
+        episode_context_top_k=0,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+        evidence_projection_top_k=0,
+        evidence_projection_max_sources=1,
+        evidence_projection_score_decay=1.0,
+        evidence_augmentation_top_k=0,
+        evidence_augmentation_max_sources=1,
+        evidence_augmentation_score_decay=0.99,
+    )
+    payload["scoring"]["current_update_multiplier"] = 1.0
+    for item in payload["score_provenance"].values():
+        item["weights"]["current_update_multiplier"] = 1.0
+
+    receipt = RetrievalReceipt.model_validate(payload)
+
+    assert receipt.packing.evidence_augmentation_anchor_policy == "all"
+    assert "evidence_augmentation_anchor_policy" not in receipt.model_dump()["packing"]
+
+
+def test_version_twelve_requires_explicit_augmentation_anchor_policy():
+    payload = json.loads((FIXTURES / "receipt-v4-score.json").read_text())
+    payload["schema_version"] = 12
+    payload["packing"].update(
+        context_guidance_mode="off",
+        context_format="auditable",
+        episode_context_top_k=0,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.95,
+        evidence_projection_top_k=0,
+        evidence_projection_max_sources=1,
+        evidence_projection_score_decay=1.0,
+        evidence_augmentation_top_k=0,
+        evidence_augmentation_max_sources=1,
+        evidence_augmentation_score_decay=0.99,
+    )
+    payload["scoring"]["current_update_multiplier"] = 1.0
+    for item in payload["score_provenance"].values():
+        item["weights"]["current_update_multiplier"] = 1.0
+
+    with pytest.raises(ValidationError, match="augmentation anchor policy"):
+        RetrievalReceipt.model_validate(payload)

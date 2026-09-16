@@ -55,6 +55,7 @@ async def _source_groups(
     scored: list[RetrievalCandidate],
     *,
     top_k: int,
+    exclude_entity_anchors: bool = False,
     graph_store: GraphStore,
     user_id: str,
     scopes: list[Scope] | None,
@@ -68,6 +69,8 @@ async def _source_groups(
 ) -> list[tuple[list[RetrievalCandidate], list[MemoryNode]]]:
     groups: dict[tuple[str, ...], list[RetrievalCandidate]] = {}
     for candidate in scored:
+        if exclude_entity_anchors and candidate.node.node_type == NodeType.ENTITY:
+            continue
         key = _evidence_key(candidate)
         if key is not None:
             groups.setdefault(key, []).append(candidate)
@@ -233,6 +236,9 @@ async def augment_evidence_context(
     source_groups = await _source_groups(
         scored,
         top_k=top_k,
+        exclude_entity_anchors=(
+            config.evidence_augmentation_anchor_policy == "non_entity"
+        ),
         graph_store=graph_store,
         user_id=user_id,
         scopes=scopes,

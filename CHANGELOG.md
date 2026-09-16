@@ -94,6 +94,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   untouched confirmation then scored 14/20 versus the fresh baseline at 15/20,
   with zero wins, one contradiction-resolution loss and a -0.03375 mean delta.
   Unconditional top-10 augmentation remains opt-in and is rejected as a default.
+  A new `evidence_augmentation_anchor_policy="non_entity"` mode prevents entity
+  name matches from authorizing whole-passage injection and backfills the quota
+  from non-entity evidence groups. Receipt schema version 12 records the policy;
+  versions 1–11 preserve `all` semantics and their canonical bytes.
 
 - A registered fixed-pack BEAM ablation found that a hard one-node cap per exact
   evidence set held pass accuracy at 13/20 but reduced mean rubric score from

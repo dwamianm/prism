@@ -112,6 +112,7 @@ config = config.model_copy(update={
         evidence_augmentation_top_k=10,
         evidence_augmentation_max_sources=1,
         evidence_augmentation_score_decay=0.99,
+        evidence_augmentation_anchor_policy="non_entity",
     )
 })
 ```
@@ -126,6 +127,13 @@ contradiction-resolution loss and a -0.03375 mean delta. Unconditional top-10
 augmentation remains disabled by default. It can add useful direct wording, but
 callers must evaluate it for their query distribution rather than assume the
 development gain generalizes.
+
+`evidence_augmentation_anchor_policy="non_entity"` addresses one measured
+failure mode without classifying the query. Entity nodes are useful search
+routes, but an entity-name match does not establish that its full source passage
+supports the queried state. This policy skips entity anchors and lets later
+non-entity evidence groups fill the configured quota. It remains experimental
+pending paired answer trials.
 
 On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously
@@ -144,18 +152,19 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Current retrievals produce version 11 receipts with explicit ordering,
+Current retrievals produce version 12 receipts with explicit ordering,
 context-guidance, context-format, and episode-routing policies and the same
 score-replay and execution requirements. Version 9 records the explicit
 current-update scoring policy, version 10 records evidence projection, and
-version 11 records evidence augmentation.
+version 11 records evidence augmentation; version 12 records its anchor
+policy. Versions 1–11 mean the anchor policy was `all` and omit that field.
 Versions 1–7 keep their previous
 canonical bytes and checksums and mean episode routing was disabled. Versions
 1–6 always mean auditable rendering; versions 1–5 also mean context guidance was
 off. Version 5 remains the historical balanced format, and versions 1–4 cannot
 claim balanced packing. Versions 1–8 mean current-update scoring was disabled.
 Versions 1–9 mean evidence projection was disabled. Older readers that lack
-version 11 support cannot consume
+version 12 support cannot consume
 new receipts. Score replay reproduces the returned
 candidate ranking; it is not a reconstruction of packing or unseen candidates.
 Relevance feedback remains linked to the saved context exposure.

@@ -221,6 +221,9 @@ def _build_config(pack: Path, protocol: dict[str, Any]):
             evidence_augmentation_score_decay=protocol.get(
                 "evidence_augmentation_score_decay", 0.99
             ),
+            evidence_augmentation_anchor_policy=protocol.get(
+                "evidence_augmentation_anchor_policy", "all"
+            ),
         ),
     )
 

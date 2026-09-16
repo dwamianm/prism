@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -149,9 +149,9 @@ class RetrievalReceipt(BaseModel):
             if "context_format" not in packing:
                 if version in (1, 2, 3, 4, 5, 6):
                     updates["context_format"] = "auditable"
-                if version in (7, 8, 9, 10, 11):
+                if version in (7, 8, 9, 10, 11, 12):
                     raise ValueError(
-                        "Versions 7 through 11 require an explicit context format"
+                        "Versions 7 through 12 require an explicit context format"
                     )
             episode_fields = (
                 "episode_context_top_k",
@@ -168,9 +168,9 @@ class RetrievalReceipt(BaseModel):
                         episode_context_local_k=8,
                         episode_context_score_decay=0.95,
                     )
-                if version in (8, 9, 10, 11):
+                if version in (8, 9, 10, 11, 12):
                     raise ValueError(
-                        "Versions 8 through 11 require explicit episode context settings"
+                        "Versions 8 through 12 require explicit episode context settings"
                     )
             evidence_fields = (
                 "evidence_projection_top_k",
@@ -189,7 +189,7 @@ class RetrievalReceipt(BaseModel):
                     )
                 else:
                     raise ValueError(
-                        "Versions 10 and 11 require explicit evidence projection settings"
+                        "Versions 10 through 12 require explicit evidence projection settings"
                     )
             augmentation_fields = (
                 "evidence_augmentation_top_k",
@@ -208,7 +208,14 @@ class RetrievalReceipt(BaseModel):
                     )
                 else:
                     raise ValueError(
-                        "Version 11 requires explicit evidence augmentation settings"
+                        "Versions 11 and 12 require explicit evidence augmentation settings"
+                    )
+            if "evidence_augmentation_anchor_policy" not in packing:
+                if version < 12:
+                    updates["evidence_augmentation_anchor_policy"] = "all"
+                else:
+                    raise ValueError(
+                        "Version 12 requires an explicit evidence augmentation anchor policy"
                     )
             if updates:
                 updates_to_value["packing"] = {**packing, **updates}
@@ -252,12 +259,14 @@ class RetrievalReceipt(BaseModel):
             data["packing"].pop("evidence_augmentation_top_k", None)
             data["packing"].pop("evidence_augmentation_max_sources", None)
             data["packing"].pop("evidence_augmentation_score_decay", None)
+        if self.schema_version < 12 and isinstance(data.get("packing"), dict):
+            data["packing"].pop("evidence_augmentation_anchor_policy", None)
         return data
 
     @model_validator(mode="after")
     def unique_candidates(self):
         if (self.schema_version >= 3) != (self.execution is not None):
-            raise ValueError("Versions 3 through 11 require an execution descriptor")
+            raise ValueError("Versions 3 through 12 require an execution descriptor")
         if self.schema_version < 4 and self.packing.multipath_ordering != "density":
             raise ValueError("Legacy receipts support only density packing")
         if self.schema_version < 5 and self.packing.multipath_ordering == "balanced":
@@ -272,6 +281,13 @@ class RetrievalReceipt(BaseModel):
             raise ValueError("Evidence projection requires a version 10 receipt")
         if self.schema_version < 11 and self.packing.evidence_augmentation_top_k != 0:
             raise ValueError("Evidence augmentation requires a version 11 receipt")
+        if (
+            self.schema_version < 12
+            and self.packing.evidence_augmentation_anchor_policy != "all"
+        ):
+            raise ValueError(
+                "Selective evidence augmentation requires a version 12 receipt"
+            )
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -434,7 +450,7 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     receipt_packing = packing if execution is not None else packing.model_copy(
         update={"context_guidance_mode": "off", "context_format": "auditable"}
     )
-    version: Literal[2, 11] = 11 if execution is not None else 2
+    version: Literal[2, 12] = 12 if execution is not None else 2
     return RetrievalReceipt(schema_version=version, execution=execution,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,

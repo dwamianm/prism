@@ -210,7 +210,7 @@ ordering. The default `multipath_ordering="balanced"` reserves the highest-score
 ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
 It emits version 5 receipts with explicit ordering and execution; versions 1–4
 cannot claim balanced and retain their canonical bytes. See `docs/PACKING.md`.
-Current pipeline receipts use version 11. Version 6 introduced context guidance,
+Current pipeline receipts use version 12. Version 6 introduced context guidance,
 version 7 introduced auditable/compact context format, and version 8 records the
 optional deterministic episode-routing policy. Version 9 records the configured
 current-update multiplier and replayable applied operations; versions 1–8 mean
@@ -218,6 +218,9 @@ that separate multiplier was disabled and omit it. Version 10 records the
 optional deterministic evidence-projection policy; versions 1–9 mean projection
 was disabled and omit its fields. Version 11 records mutually exclusive evidence
 augmentation; versions 1–10 mean augmentation was disabled and omit its fields.
+Version 12 records the augmentation anchor policy; versions 1–11 mean `all`
+and omit the field. `non_entity` prevents entity-name matches from routing a
+whole source passage while backfilling the quota with non-entity evidence groups.
 Unconditional top-10 evidence augmentation improved one tuned BEAM development
 conversation but failed a preregistered untouched confirmation with one
 contradiction-resolution loss and a negative mean-score delta. Keep it disabled

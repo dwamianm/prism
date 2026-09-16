@@ -209,7 +209,7 @@ async def test_pipeline_persists_episode_policy_and_replayable_promotions(config
             str(response.metadata.request_id), user_id=user
         )
         assert receipt is not None
-        assert receipt.schema_version == 11
+        assert receipt.schema_version == 12
         assert receipt.packing.episode_context_top_k == 1
         assert receipt.packing.episode_context_local_k == 2
         assert receipt.packing.episode_context_score_decay == 0.95

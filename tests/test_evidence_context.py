@@ -246,6 +246,65 @@ async def test_augmentation_keeps_claims_and_adds_a_replayable_direct_source():
     assert direct.score_provenance.replay_score() == direct.composite_score
 
 
+@pytest.mark.asyncio
+async def test_non_entity_augmentation_skips_entity_routes_and_backfills_claims():
+    entity_source_id = UUID(int=1)
+    fact_source_id = UUID(int=2)
+    sources = {
+        str(entity_source_id): node(
+            1,
+            "A code sample contains YOUR_API_KEY but establishes no key ownership.",
+            node_type=NodeType.NOTE,
+            evidence=(entity_source_id,),
+        ),
+        str(fact_source_id): node(
+            2,
+            "The deployment completed after the final security review.",
+            node_type=NodeType.NOTE,
+            evidence=(fact_source_id,),
+        ),
+    }
+    entity = RetrievalCandidate(
+        node=node(
+            3,
+            "YOUR_API_KEY",
+            node_type=NodeType.ENTITY,
+            evidence=(entity_source_id,),
+        ),
+        semantic_score=0.95,
+    )
+    fact = RetrievalCandidate(
+        node=node(
+            4,
+            "Deployment followed security review.",
+            node_type=NodeType.FACT,
+            evidence=(fact_source_id,),
+        ),
+        semantic_score=0.9,
+    )
+    scored, _ = score_and_rank([entity, fact], now=NOW)
+
+    async def get_nodes(ids):
+        return [sources[source_id] for source_id in ids]
+
+    augmented = await augment_evidence_context(
+        scored,
+        graph_store=SimpleNamespace(get_nodes=get_nodes),
+        user_id="owner",
+        config=PackingConfig(
+            evidence_augmentation_top_k=1,
+            evidence_augmentation_anchor_policy="non_entity",
+        ),
+        scopes=[Scope.PROJECT],
+        retrieval_mode=RetrievalMode.DEFAULT,
+        unverified_confidence_threshold=None,
+    )
+
+    augmented_ids = {candidate.node.id for candidate in augmented}
+    assert fact_source_id in augmented_ids
+    assert entity_source_id not in augmented_ids
+
+
 def test_projection_and_augmentation_are_mutually_exclusive():
     with pytest.raises(ValueError, match="cannot both be enabled"):
         PackingConfig(

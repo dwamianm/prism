@@ -244,8 +244,12 @@ replayable `evidence_augmentation` score and the packer uses the same
 `EVIDENCE_CONTEXT` priority. Projection and augmentation are mutually exclusive.
 Augmentation keeps current-state and contradiction abstractions available while
 adding full wording for omitted details; its additional candidates and tokens
-still require workload evaluation. Receipt schema version 11 records all three
-augmentation settings; versions 1–10 mean augmentation was disabled.
+still require workload evaluation. The optional `non_entity` anchor policy
+prevents entity-name candidates from routing a whole passage and backfills the
+quota from later non-entity evidence groups. Receipt schema version 11 records
+the three augmentation settings; version 12 also records the anchor policy.
+Versions 1–10 mean augmentation was disabled, while versions 1–11 mean the
+anchor policy was `all`.
 
 ---
 
