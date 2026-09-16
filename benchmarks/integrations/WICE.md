@@ -43,3 +43,9 @@ Only WiCE's `supported` label counts as support. `partially_supported` and
 component from passing as safe. The product metric accepts only PRME's guarded
 `supported` status. The result also reports a raw entailment-threshold baseline
 from the same model scores to isolate the effect of PRME's deterministic guards.
+
+`run_wice_grounding_model.py` applies the same dataset and gate contract to a
+pinned binary grounding model before that model can be integrated into PRME.
+It validates the downloaded safetensors digest, repository revision, binary
+label shape, exact document/EOS/claim serialization, truncation and threshold.
+This is a model-capacity diagnostic; it does not exercise `ClaimVerifier`.
