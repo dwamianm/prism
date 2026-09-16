@@ -111,6 +111,8 @@ For explicit declarative claims, the optional local
 [`ClaimVerifier`](docs/CLAIM-VERIFICATION.md) independently scores bounded
 minimal evidence groups using a pinned NLI model. It preserves typed packed
 evidence, preserves speech-act boundaries before accepting model entailment,
+localizes those guards within multi-sentence passages and records the retained
+sentence numbers and premise digest,
 requires corroboration before accepting model contradiction, exposes the basis
 of deterministic and model decisions, and fails closed with `incomplete` when a
 derived count or list requires complete-set evidence.

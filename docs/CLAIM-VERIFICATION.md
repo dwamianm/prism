@@ -67,9 +67,19 @@ claim does not preserve, even a model score above the entailment threshold stays
 Typed `hypothetical`, `conditional`, or `unverified` evidence must also match
 the claim's modality; deprecated epistemic evidence and superseded, deprecated,
 or archived lifecycle evidence cannot decide a current claim under the guarded
-policies. A passage containing an explicit negated clause cannot support a
-positive claim under the guarded policy; cite an affirmative passage separately
-when the same memory contains independent positive and negative statements.
+policies. A short passage containing an explicit negated clause cannot support a
+positive claim under the guarded policy.
+
+For a multi-sentence passage that crosses the raw entailment threshold but fails
+one of those guards, schema 3 performs a localized recheck. It deterministically
+splits the passage, removes sentences whose speech act does not occur in the
+claim and removes negated sentences for a positive claim, then scores the
+retained passage with the same pinned model. A successful recheck reports
+`supporting_basis="localized_model_entailment"`. Every attempt retains the
+one-based sentence numbers, localized-premise digest, probabilities, and whether
+another model call occurred. Typed provenance remains attached to every segment,
+so localization cannot reactivate hypothetical or retired evidence. A passage
+containing only a desire or attempt yields no eligible localized premise.
 
 By default, a high model contradiction becomes `refuted` only when the exact
 claim/evidence group also contains an explicit negation or correction cue, or
@@ -89,7 +99,9 @@ This narrow fallback catches corrections such as “Ravi no longer owns ingestio
 for “Ravi owns the ingestion pipeline” without treating “Ravi did not attend an
 ingestion review” as a conflict. `refuting_basis="explicit_negation_overlap"`
 distinguishes that deterministic decision from `model_contradiction`;
-`supporting_basis` and `refuting_basis` are part of result schema 2.
+`supporting_basis` and `refuting_basis` were added in result schema 2. Schema 3
+adds `localized_assessments` and binds the schema version into new evaluation
+identities; schemas 1 and 2 remain readable.
 
 `verify_bundle()` sees only packed candidates whose references occur in the exact
 rendered context. It uses `candidate.rendered_text`, so it does not verify against

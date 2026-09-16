@@ -31,6 +31,7 @@ from prme.types import EpistemicType, LifecycleState, SourceType
 
 DEFAULT_NLI_MODEL = "cross-encoder/nli-deberta-v3-base"
 DEFAULT_NLI_REVISION = "6c749ce3425cd33b46d187e45b92bbf96ee12ec7"
+CLAIM_VERIFICATION_SCHEMA_VERSION: Literal[3] = 3
 
 _REFUTATION_CUE_RE = re.compile(
     r"\b(?:no|not|never|neither|nor|without|cannot|can't|isn't|aren't|"
@@ -54,6 +55,9 @@ _NEGATED_CLAUSE_RE = re.compile(
     re.IGNORECASE,
 )
 _WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+_GUARD_SEGMENT_BOUNDARY_RE = re.compile(
+    r"(?:\r?\n)+|(?<=[.!?])\s+(?=[\"'([{]*[A-Z0-9])"
+)
 _REPORTED_QUESTION_RE = re.compile(
     r"\b(?:ask(?:s|ed|ing)?|question(?:s|ed|ing)?|wonder(?:s|ed|ing)?|whether)\b",
     re.IGNORECASE,
@@ -158,6 +162,7 @@ ClaimVerificationLimitation = Literal[
 ]
 ClaimVerificationDecisionBasis = Literal[
     "model_entailment",
+    "localized_model_entailment",
     "model_contradiction",
     "explicit_negation_overlap",
 ]
@@ -249,12 +254,63 @@ class EvidenceGroupScore(BaseModel):
         return self
 
 
+class LocalizedEvidenceAssessment(BaseModel):
+    """Auditable recheck after localizing guard-compatible passage segments."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+
+    references: tuple[str, ...]
+    memory_ids: tuple[UUID, ...]
+    included_segment_numbers: tuple[tuple[int, ...], ...]
+    premise_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    model_called: bool
+    entailment: float | None = Field(default=None, ge=0.0, le=1.0)
+    contradiction: float | None = Field(default=None, ge=0.0, le=1.0)
+    neutral: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def validate_localized_assessment(self) -> LocalizedEvidenceAssessment:
+        if not (
+            len(self.references)
+            == len(self.memory_ids)
+            == len(self.included_segment_numbers)
+        ):
+            raise ValueError("localized evidence identities must have equal lengths")
+        if any(
+            numbers != tuple(sorted(set(numbers)))
+            or any(number < 1 for number in numbers)
+            for numbers in self.included_segment_numbers
+        ):
+            raise ValueError("localized segment numbers must be sorted and positive")
+        probabilities = (self.entailment, self.contradiction, self.neutral)
+        if self.model_called:
+            if self.premise_sha256 is None or any(
+                value is None for value in probabilities
+            ):
+                raise ValueError("called localized assessment requires scores and hash")
+            assert self.entailment is not None
+            assert self.contradiction is not None
+            assert self.neutral is not None
+            if not math.isclose(
+                self.entailment + self.contradiction + self.neutral,
+                1.0,
+                rel_tol=1e-5,
+                abs_tol=1e-5,
+            ):
+                raise ValueError("localized probabilities must sum to one")
+        elif self.premise_sha256 is not None or any(
+            value is not None for value in probabilities
+        ):
+            raise ValueError("uncalled localized assessment cannot contain scores")
+        return self
+
+
 class ClaimVerification(BaseModel):
     """Auditable claim decision over fixed evidence and verifier settings."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    schema_version: Literal[1, 2] = 2
+    schema_version: Literal[1, 2, 3] = CLAIM_VERIFICATION_SCHEMA_VERSION
     claim: str
     status: ClaimVerificationStatus
     supporting_group: tuple[UUID, ...] = ()
@@ -262,6 +318,7 @@ class ClaimVerification(BaseModel):
     supporting_basis: ClaimVerificationDecisionBasis | None = None
     refuting_basis: ClaimVerificationDecisionBasis | None = None
     group_scores: tuple[EvidenceGroupScore, ...] = ()
+    localized_assessments: tuple[LocalizedEvidenceAssessment, ...] = ()
     limitations: tuple[ClaimVerificationLimitation, ...] = ()
     model: str
     requested_revision: str
@@ -391,6 +448,41 @@ def _corroborates_entailment(
     return True
 
 
+def _guard_segments(text: str) -> tuple[str, ...]:
+    return tuple(
+        segment.strip()
+        for segment in _GUARD_SEGMENT_BOUNDARY_RE.split(text)
+        if segment.strip()
+    )
+
+
+def _localized_guard_premise(
+    claim: str,
+    group: Sequence[ClaimEvidence],
+) -> tuple[str | None, tuple[tuple[int, ...], ...]]:
+    """Remove passage segments that cannot establish the claim's modality."""
+    claim_is_negated = _NEGATED_CLAUSE_RE.search(claim) is not None
+    filtered_group: list[ClaimEvidence] = []
+    included_by_item: list[tuple[int, ...]] = []
+    for item in group:
+        retained: list[str] = []
+        included: list[int] = []
+        for number, segment in enumerate(_guard_segments(item.text), start=1):
+            scoped = item.model_copy(update={"text": segment})
+            if not _preserves_modality(claim, (scoped,)):
+                continue
+            if not claim_is_negated and _NEGATED_CLAUSE_RE.search(segment) is not None:
+                continue
+            retained.append(segment)
+            included.append(number)
+        included_by_item.append(tuple(included))
+        if retained:
+            filtered_group.append(item.model_copy(update={"text": "\n".join(retained)}))
+    if not filtered_group:
+        return None, tuple(included_by_item)
+    return _group_text(filtered_group), tuple(included_by_item)
+
+
 def _negation_tokens(text: str) -> set[str]:
     tokens: set[str] = set()
     for match in _WORD_RE.findall(text):
@@ -433,19 +525,28 @@ def _explicit_negation_refutes(
 
 
 def _best_group(
-    scores: Sequence[EvidenceGroupScore],
+    scores: Sequence[EvidenceGroupScore | LocalizedEvidenceAssessment],
     *,
     probability: Literal["entailment", "contradiction"],
-) -> EvidenceGroupScore | None:
+) -> EvidenceGroupScore | LocalizedEvidenceAssessment | None:
     if not scores:
         return None
+
+    def key(
+        item: EvidenceGroupScore | LocalizedEvidenceAssessment,
+    ) -> tuple[int, float, tuple[str, ...]]:
+        value = getattr(item, probability)
+        if value is None:
+            raise ValueError("decision score probability is unavailable")
+        return (
+            len(item.memory_ids),
+            -value,
+            tuple(str(memory_id) for memory_id in item.memory_ids),
+        )
+
     return min(
         scores,
-        key=lambda item: (
-            len(item.memory_ids),
-            -getattr(item, probability),
-            tuple(str(memory_id) for memory_id in item.memory_ids),
-        ),
+        key=key,
     )
 
 
@@ -568,6 +669,56 @@ class ClaimVerifier:
             for group, probability in zip(groups, probabilities, strict=True)
         ]
 
+    async def _score_localized_entailments(
+        self,
+        claim: str,
+        candidates: Sequence[tuple[EvidenceGroupScore, tuple[ClaimEvidence, ...]]],
+    ) -> list[LocalizedEvidenceAssessment]:
+        prepared: list[
+            tuple[
+                EvidenceGroupScore,
+                tuple[tuple[int, ...], ...],
+                str | None,
+            ]
+        ] = []
+        premises: list[str] = []
+        for score, group in candidates:
+            premise, included = _localized_guard_premise(claim, group)
+            prepared.append((score, included, premise))
+            if premise is not None:
+                premises.append(premise)
+        probabilities = await asyncio.to_thread(
+            self._predict_sync,
+            [(premise, claim) for premise in premises],
+        )
+        probability_iterator = iter(probabilities)
+        assessments: list[LocalizedEvidenceAssessment] = []
+        for score, included, premise in prepared:
+            if premise is None:
+                assessments.append(
+                    LocalizedEvidenceAssessment(
+                        references=score.references,
+                        memory_ids=score.memory_ids,
+                        included_segment_numbers=included,
+                        model_called=False,
+                    )
+                )
+                continue
+            entailment, contradiction, neutral = next(probability_iterator)
+            assessments.append(
+                LocalizedEvidenceAssessment(
+                    references=score.references,
+                    memory_ids=score.memory_ids,
+                    included_segment_numbers=included,
+                    premise_sha256=_sha256(premise),
+                    model_called=True,
+                    entailment=entailment,
+                    contradiction=contradiction,
+                    neutral=neutral,
+                )
+            )
+        return assessments
+
     async def verify(
         self,
         claim: str,
@@ -615,6 +766,7 @@ class ClaimVerifier:
             )
 
         all_scores: list[EvidenceGroupScore] = []
+        all_localized_assessments: list[LocalizedEvidenceAssessment] = []
         evidence_by_id = {item.memory_id: item for item in unique}
 
         def score_group(score: EvidenceGroupScore) -> tuple[ClaimEvidence, ...]:
@@ -629,6 +781,42 @@ class ClaimVerifier:
             if self.config.entailment_policy == "model_only":
                 return True
             return _corroborates_entailment(normalized_claim, score_group(score))
+
+        async def classify_supports(
+            scores: Sequence[EvidenceGroupScore],
+        ) -> tuple[
+            list[EvidenceGroupScore],
+            list[EvidenceGroupScore | LocalizedEvidenceAssessment],
+            bool,
+        ]:
+            raw = [
+                item
+                for item in scores
+                if item.entailment >= self.config.entailment_threshold
+            ]
+            direct = [item for item in raw if corroborates_entailment(item)]
+            blocked = [item for item in raw if item not in direct]
+            localized: list[LocalizedEvidenceAssessment] = []
+            if blocked and self.config.entailment_policy != "model_only":
+                assessments = await self._score_localized_entailments(
+                    normalized_claim,
+                    [(item, score_group(item)) for item in blocked],
+                )
+                all_localized_assessments.extend(assessments)
+                localized = [
+                    item
+                    for item in assessments
+                    if item.model_called
+                    and item.entailment is not None
+                    and item.entailment >= self.config.entailment_threshold
+                ]
+            accepted: list[EvidenceGroupScore | LocalizedEvidenceAssessment] = list(
+                direct
+            )
+            accepted.extend(localized)
+            accepted_keys = {item.memory_ids for item in accepted}
+            remains_blocked = any(item.memory_ids not in accepted_keys for item in raw)
+            return raw, accepted, remains_blocked
 
         def classify_refutations(
             scores: Sequence[EvidenceGroupScore],
@@ -659,13 +847,9 @@ class ClaimVerifier:
         single_scores = await self._score_groups(normalized_claim, groups)
         all_scores.extend(single_scores)
 
-        raw_support = [
-            item
-            for item in single_scores
-            if item.entailment >= self.config.entailment_threshold
-        ]
-        support = [item for item in raw_support if corroborates_entailment(item)]
-        blocked_entailment = len(raw_support) != len(support)
+        _raw_support, support, blocked_entailment = await classify_supports(
+            single_scores
+        )
         raw_refute, model_refute, deterministic_refute = classify_refutations(
             single_scores
         )
@@ -688,17 +872,12 @@ class ClaimVerifier:
                     break
                 group_scores = await self._score_groups(normalized_claim, grouped)
                 all_scores.extend(group_scores)
-                raw_support = [
-                    item
-                    for item in group_scores
-                    if item.entailment >= self.config.entailment_threshold
-                ]
-                support = [
-                    item for item in raw_support if corroborates_entailment(item)
-                ]
-                blocked_entailment = blocked_entailment or len(raw_support) != len(
-                    support
-                )
+                (
+                    _raw_support,
+                    support,
+                    group_entailment_blocked,
+                ) = await classify_supports(group_scores)
+                blocked_entailment = blocked_entailment or group_entailment_blocked
                 raw_refute, model_refute, deterministic_refute = classify_refutations(
                     group_scores
                 )
@@ -729,10 +908,17 @@ class ClaimVerifier:
             evidence=unique,
             status=status,
             scores=tuple(all_scores),
+            localized_assessments=tuple(all_localized_assessments),
             model_called=True,
             supporting=best_support,
             refuting=best_refute,
-            supporting_basis="model_entailment" if best_support else None,
+            supporting_basis=(
+                "localized_model_entailment"
+                if isinstance(best_support, LocalizedEvidenceAssessment)
+                else "model_entailment"
+                if best_support
+                else None
+            ),
             refuting_basis=(
                 "model_contradiction"
                 if best_refute in model_refute
@@ -814,7 +1000,8 @@ class ClaimVerifier:
         status: ClaimVerificationStatus,
         scores: tuple[EvidenceGroupScore, ...],
         model_called: bool,
-        supporting: EvidenceGroupScore | None = None,
+        localized_assessments: tuple[LocalizedEvidenceAssessment, ...] = (),
+        supporting: EvidenceGroupScore | LocalizedEvidenceAssessment | None = None,
         refuting: EvidenceGroupScore | None = None,
         supporting_basis: ClaimVerificationDecisionBasis | None = None,
         refuting_basis: ClaimVerificationDecisionBasis | None = None,
@@ -829,12 +1016,16 @@ class ClaimVerifier:
                     "claim_sha256": claim_sha,
                     "configuration_sha256": config_sha,
                     "evidence_sha256": evidence_sha,
+                    "schema_version": CLAIM_VERIFICATION_SCHEMA_VERSION,
                 }
             )
         )
         public = {
             "evaluation_id": identity,
             "group_scores": [item.model_dump(mode="json") for item in scores],
+            "localized_assessments": [
+                item.model_dump(mode="json") for item in localized_assessments
+            ],
             "limitations": list(limitations),
             "refuting_basis": refuting_basis,
             "refuting_group": (
@@ -854,6 +1045,7 @@ class ClaimVerifier:
             supporting_basis=supporting_basis,
             refuting_basis=refuting_basis,
             group_scores=scores,
+            localized_assessments=localized_assessments,
             limitations=limitations,
             model=self.config.model,
             requested_revision=self.config.revision,
@@ -870,6 +1062,7 @@ class ClaimVerifier:
 __all__ = [
     "DEFAULT_NLI_MODEL",
     "DEFAULT_NLI_REVISION",
+    "CLAIM_VERIFICATION_SCHEMA_VERSION",
     "ClaimEvidence",
     "ClaimVerification",
     "ClaimVerificationConfig",
@@ -879,4 +1072,5 @@ __all__ = [
     "ClaimVerificationStatus",
     "ClaimVerifier",
     "EvidenceGroupScore",
+    "LocalizedEvidenceAssessment",
 ]

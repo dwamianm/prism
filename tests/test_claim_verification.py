@@ -53,6 +53,7 @@ async def test_prefers_single_minimal_support_over_larger_groups(monkeypatch):
     legacy["schema_version"] = 1
     legacy.pop("supporting_basis")
     legacy.pop("refuting_basis")
+    legacy.pop("localized_assessments")
     assert ClaimVerification.model_validate(legacy).schema_version == 1
 
 
@@ -218,7 +219,93 @@ async def test_nonactual_evidence_cannot_support_completed_claim(monkeypatch):
     assert result.supporting_group == ()
     assert result.supporting_basis is None
     assert result.group_scores[0].entailment == 0.98
+    assert result.localized_assessments[0].model_called is False
+    assert result.localized_assessments[0].included_segment_numbers == ((),)
     assert result.limitations == ("uncorroborated_model_entailment",)
+
+
+async def test_localized_guard_recovers_fact_from_mixed_passage(monkeypatch):
+    evidence = _evidence(
+        "The team wants a quieter launch.\n"
+        "The release shipped on Tuesday.\n"
+        "Did the customer receive the notice?",
+        "m1",
+    )
+    verifier = ClaimVerifier()
+    captured = []
+
+    def predict(pairs):
+        captured.extend(pairs)
+        return [
+            (0.98, 0.005, 0.015)
+            if "wants a quieter launch" in premise
+            else (0.96, 0.01, 0.03)
+            for premise, _claim in pairs
+        ]
+
+    monkeypatch.setattr(verifier, "_predict_sync", predict)
+
+    result = await verifier.verify("The release shipped on Tuesday.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.SUPPORTED
+    assert result.supporting_basis == "localized_model_entailment"
+    assert result.limitations == ()
+    assert result.schema_version == 3
+    assert len(result.localized_assessments) == 1
+    localized = result.localized_assessments[0]
+    assert localized.model_called is True
+    assert localized.included_segment_numbers == ((2,),)
+    assert localized.entailment == 0.96
+    assert len(localized.premise_sha256 or "") == 64
+    assert captured[1][0] == "The release shipped on Tuesday."
+
+
+async def test_localized_guard_does_not_let_unrelated_fact_rescue_desire(
+    monkeypatch,
+):
+    evidence = _evidence(
+        "The user wants to enable passkeys.\nThe weather is sunny.",
+        "m1",
+    )
+    verifier = ClaimVerifier()
+
+    def predict(pairs):
+        return [
+            (0.98, 0.005, 0.015)
+            if "wants to enable passkeys" in premise
+            else (0.01, 0.01, 0.98)
+            for premise, _claim in pairs
+        ]
+
+    monkeypatch.setattr(verifier, "_predict_sync", predict)
+
+    result = await verifier.verify("The user enabled passkeys.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.supporting_basis is None
+    assert result.limitations == ("uncorroborated_model_entailment",)
+    assert result.localized_assessments[0].included_segment_numbers == ((2,),)
+    assert result.localized_assessments[0].neutral == 0.98
+
+
+async def test_localized_guard_removes_unrelated_negation(monkeypatch):
+    evidence = _evidence(
+        "Nadia did not attend the review.\nNadia leads the Atlas project.",
+        "m1",
+    )
+    verifier = ClaimVerifier()
+
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda pairs: [(0.97, 0.01, 0.02) for _pair in pairs],
+    )
+
+    result = await verifier.verify("Nadia leads the Atlas project.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.SUPPORTED
+    assert result.supporting_basis == "localized_model_entailment"
+    assert result.localized_assessments[0].included_segment_numbers == ((2,),)
 
 
 @pytest.mark.parametrize(

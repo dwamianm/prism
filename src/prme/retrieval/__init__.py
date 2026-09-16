@@ -33,6 +33,7 @@ from prme.retrieval.claim_verification import (
     ClaimVerificationStatus,
     ClaimVerifier,
     EvidenceGroupScore,
+    LocalizedEvidenceAssessment,
 )
 from prme.retrieval.context_formatter import build_context_guidance, format_for_llm
 from prme.retrieval.credit import ablate_context, assess_context_presence
@@ -83,6 +84,7 @@ __all__ = [
     "DEFAULT_SCORING_WEIGHTS",
     "EntitySnapshot",
     "EvidenceGroupScore",
+    "LocalizedEvidenceAssessment",
     "ExcludedCandidate",
     "format_for_llm",
     "MemoryBundle",

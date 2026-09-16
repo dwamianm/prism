@@ -341,14 +341,21 @@ async def _execute(
                 "id": case["id"],
                 "label": case["label"],
                 "oracle_variants": len(case["variants"]),
+                "assessment_schema_version": assessment.schema_version,
                 "product_status": assessment.status.value,
                 "product_supported": assessment.status.value == "supported",
                 "raw_supported": raw_supported,
+                "supporting_basis": assessment.supporting_basis,
+                "refuting_basis": assessment.refuting_basis,
                 "limitations": list(assessment.limitations),
                 "evaluation_id": assessment.evaluation_id,
                 "result_sha256": assessment.result_sha256,
                 "group_scores": [
                     score.model_dump(mode="json") for score in assessment.group_scores
+                ],
+                "localized_assessments": [
+                    item.model_dump(mode="json")
+                    for item in assessment.localized_assessments
                 ],
             }
         )
@@ -363,7 +370,7 @@ async def run(
     output_path: Path,
 ) -> bool:
     registration = json.loads(registration_path.read_text())
-    dataset_path, cases = _validate_registration(
+    _dataset_path, cases = _validate_registration(
         registration,
         project_root=project_root,
         dataset_root=dataset_root,
@@ -384,10 +391,7 @@ async def run(
         "registration": str(registration_path.resolve()),
         "registration_sha256": _sha256_file(registration_path),
         "source": registration["source"],
-        "dataset": {
-            **registration["dataset"],
-            "resolved_path": str(dataset_path),
-        },
+        "dataset": registration["dataset"],
         "model": registration["model"],
         "protocol": registration["protocol"],
         "summary": {

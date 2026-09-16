@@ -107,6 +107,7 @@ from prme.retrieval.claim_verification import (
     ClaimVerificationStatus,
     ClaimVerifier,
     EvidenceGroupScore,
+    LocalizedEvidenceAssessment,
 )
 from prme.retrieval.full_learning import evaluate_full_retrieval
 from prme.types import (
@@ -187,6 +188,7 @@ __all__ = [
     "ClaimVerificationLimitation",
     "ClaimVerificationStatus",
     "ClaimVerifier",
+    "LocalizedEvidenceAssessment",
     "QuantityAggregation",
     "QuantityAggregationQuery",
     "QuantityGroup",

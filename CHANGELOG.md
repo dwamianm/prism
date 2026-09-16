@@ -128,7 +128,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   questions share the direct-question speech-act mode. A registered same-cohort
   confirmation passed all eight gates at 43/44 with identical model scores:
   all four wrong-relation negatives became `insufficient`, the reported question
-  became `supported`, and every true refutation and conflict was retained.
+  became `supported`, and every true refutation and conflict was retained. The
+  first external WiCE oracle-retrieval assay then failed precision, recall and
+  balanced-accuracy gates across all 358 human-annotated test claims. It accepted
+  0/32 fully unsupported claims, but passage-wide speech-act and negation guards
+  reduced supported recall to 10.91%. Result schema 3 now localizes those guards
+  within multi-sentence passages and rechecks the retained exact text with the
+  same model. It records one-based retained sentence numbers, premise digests,
+  probabilities and a distinct `localized_model_entailment` basis; schemas 1 and
+  2 remain readable.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
