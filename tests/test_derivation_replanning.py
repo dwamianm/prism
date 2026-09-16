@@ -115,6 +115,7 @@ async def test_replan_transition_and_journal_are_atomic(config, user, monkeypatc
     "temporal_validity_v7",
     "speech_act_v8",
     "speech_act_v9",
+    "speech_act_v10",
 ])
 async def test_existing_plan_checksums_and_journals_still_load(config, user, policy):
     async with MemoryEngine.open(config) as engine:

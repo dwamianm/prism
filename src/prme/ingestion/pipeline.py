@@ -454,7 +454,7 @@ class IngestionPipeline:
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
-                grounding_policy="speech_act_v4",
+                grounding_policy="speech_act_v5",
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -470,8 +470,8 @@ class IngestionPipeline:
         event: Event,
         *,
         materialization_policy: Literal[
-            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10"
-        ] = "speech_act_v10",
+            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11"
+        ] = "speech_act_v11",
     ) -> DerivationPlan:
         """Prepare fixed graph/index inputs without publishing any artifacts."""
         from prme.ingestion.planning import PlanningGraph, PlanningIndexes, PlanningQueue
@@ -801,20 +801,25 @@ class IngestionPipeline:
                     event_id, user_id=event.user_id
                 )
                 materialization_policy: Literal[
-                    "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10"
+                    "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11"
                 ] = (
-                    "speech_act_v10"
+                    "speech_act_v11"
                     if extraction is not None
-                    and extraction.grounding_policy == "speech_act_v4"
+                    and extraction.grounding_policy == "speech_act_v5"
                     else (
-                        "speech_act_v9"
+                        "speech_act_v10"
                         if extraction is not None
-                        and extraction.grounding_policy == "speech_act_v3"
+                        and extraction.grounding_policy == "speech_act_v4"
                         else (
-                            "speech_act_v8"
+                            "speech_act_v9"
                             if extraction is not None
-                            and extraction.grounding_policy == "speech_act_v2"
-                            else "temporal_validity_v7"
+                            and extraction.grounding_policy == "speech_act_v3"
+                            else (
+                                "speech_act_v8"
+                                if extraction is not None
+                                and extraction.grounding_policy == "speech_act_v2"
+                                else "temporal_validity_v7"
+                            )
                         )
                     )
                 )

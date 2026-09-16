@@ -193,10 +193,10 @@ Legacy sources are not automatically enrolled in extraction work. Unmanaged or
 ambiguous staging remains conservatively retained; collection only covers the
 explicitly replaced, uniquely owned revision protocol above.
 
-Historical plans through materialization policy `speech_act_v9` keep
+Historical plans through materialization policy `speech_act_v10` keep
 their original behavior. Fresh built-in inference records
-`grounding_policy="speech_act_v4"`, and plans made from those records use
-`speech_act_v10`: relationship
+`grounding_policy="speech_act_v5"`, and plans made from those records use
+`speech_act_v11`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
 edges, unresolved personal references remain event-local, and claim polarity and
 explicit conditions are preserved in node metadata. A fact can also carry one
@@ -211,17 +211,20 @@ speech act in their predicate; they and relationships between components inside
 the attempted action cannot become current-state relations. The extraction
 contract also requires the attempted action target when a count or failure
 detail is emitted; those details cannot substitute for the target relation.
+When the model omits that relation, recovery is limited to a literal
+tried/attempted clause and the first exact model-returned entity after its action
+verb. It does not search memory, resolve pronouns, or infer an unreturned entity.
 Each new fact also sets `valid_from` to its resolved source-effective time. A
 valid newer replacement closes the referenced prior interval in the same graph
 transaction. The commit skips interval closure when the boundary precedes a
 legacy stored start, avoiding an inverted range while still publishing lifecycle,
 supersedence, edge, and receipt atomically.
-Saved v3 extraction records prepare missing plans under v9, and v2 records
+Saved v4 records prepare missing plans under v10, v3 under v9, and v2 records
 prepare them under v8. Extraction records whose omitted policy defaults to `source_passage_v1` prepare
 a missing plan under `temporal_validity_v7`; recovery cannot relabel old model
 output as v8. Existing `source_passage_v1`, `typed_references_v2`,
 `event_local_references_v4`, `claim_qualifiers_v5`,
-`grounded_quantities_v6`, `temporal_validity_v7`, `speech_act_v8`, and `speech_act_v9` plans remain readable and
+`grounded_quantities_v6`, `temporal_validity_v7`, `speech_act_v8`, `speech_act_v9`, and `speech_act_v10` plans remain readable and
 replay their saved artifacts unchanged. Recovery never regenerates an existing
 plan under the current policy implicitly; historical committed edges are not
 migrated.

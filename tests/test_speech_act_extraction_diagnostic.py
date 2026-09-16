@@ -30,8 +30,8 @@ def _report(*, raw_predicate: str, materialized_predicate: str | None) -> dict:
     return {
         "cases": [{
             "case": "attempt",
-            "extraction_grounding_policy": "speech_act_v4",
-            "materialization_policy": "speech_act_v10",
+            "extraction_grounding_policy": "speech_act_v5",
+            "materialization_policy": "speech_act_v11",
             "extraction": {
                 "facts": [{"predicate": raw_predicate, "object": "Redis"}],
                 "relationships": [],

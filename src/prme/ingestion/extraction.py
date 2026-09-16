@@ -76,7 +76,7 @@ _NONACTUAL_CLAUSE_BOUNDARY_RE = re.compile(
     re.IGNORECASE,
 )
 _NONACTUAL_PREDICATE_RE = re.compile(
-    r"(?:try|attempt|plan|intend|want|need|hope|aim|look|work|seek|request|ask|"
+    r"(?:tr(?:y|ied|ies|ying)|attempt|plan|intend|want|need|hope|aim|look|work|seek|request|ask|"
     r"propos|consider|evaluat|explor)", re.IGNORECASE,
 )
 
@@ -206,6 +206,77 @@ class _CitedRelationship(ExtractedRelationship):
     evidence_quote: str = Field(min_length=1, description=ExtractedFact.model_fields["evidence_quote"].description)
     epistemic_type: str = Field(description=ExtractedFact.model_fields["epistemic_type"].description)
 
+
+def _recover_omitted_attempt_targets(
+    extraction: ExtractionResult, source: str
+) -> list[_CitedFact]:
+    """Recover one exact target from a literal tried/attempted source clause.
+
+    This is intentionally narrower than general semantic extraction. It uses
+    only an entity name already returned by the model, requires that name after
+    the clause's first action verb, and does nothing when a qualified target
+    claim already exists.
+    """
+    recovered = []
+    for match in _FIRST_PERSON_NONACTUAL_CLAUSE_RE.finditer(source):
+        prefix = source[match.start():match.start("body")]
+        if re.search(r"\b(?:tried|attempted)\b", prefix, re.IGNORECASE) is None:
+            continue
+        body = match.group("body")
+        boundary = _NONACTUAL_CLAUSE_BOUNDARY_RE.search(body)
+        clause_body = body if boundary is None else body[:boundary.start()]
+        candidates = []
+        for entity in extraction.entities:
+            position = clause_body.casefold().find(entity.name.casefold())
+            if position >= 0:
+                candidates.append((position, -len(entity.name), entity))
+        if not candidates:
+            continue
+        position, _, target = min(candidates, key=lambda item: (item[0], item[1]))
+        action_match = re.search(r"\b([A-Za-z][A-Za-z0-9_-]*)\b", clause_body[:position])
+        if action_match is None:
+            continue
+        subject = match.group("subject")
+        if any(
+            fact.subject.casefold() == subject.casefold()
+            and fact.object.casefold() == target.name.casefold()
+            and _NONACTUAL_PREDICATE_RE.search(fact.predicate)
+            for fact in extraction.facts
+        ) or any(
+            relationship.target_entity.casefold() == target.name.casefold()
+            and _NONACTUAL_PREDICATE_RE.search(relationship.relationship_type)
+            for relationship in extraction.relationships
+        ):
+            continue
+        cue = "attempted_to" if "attempted" in prefix.casefold() else "tried_to"
+        quote_end = (
+            match.start("body") + boundary.start()
+            if boundary is not None
+            else match.end()
+        )
+        try:
+            fact = _CitedFact(
+                subject=subject,
+                object_entity_type=target.entity_type,
+                predicate=f"{cue}_{action_match.group(1).casefold()}",
+                object=target.name,
+                polarity="positive",
+                evidence_quote=source[match.start():quote_end].strip(),
+                confidence=1.0,
+                fact_type="fact",
+                scope=target.scope,
+                epistemic_type="observed",
+                temporal_intent="assertion",
+            )
+            _validate_fact_source_support(fact, source)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "extraction_attempt_target_not_recovered", reason=str(exc)
+            )
+            continue
+        recovered.append(fact)
+    return recovered
+
 class _CitedExtractionResult(ExtractionResult):
     facts: list[_CitedFact] = Field(default_factory=list)
     relationships: list[_CitedRelationship] = Field(default_factory=list)
@@ -289,6 +360,12 @@ class _CitedExtractionResult(ExtractionResult):
                     supported_relationships.append(relationship)
             self.facts = supported_facts
             self.relationships = supported_relationships
+            recovered = _recover_omitted_attempt_targets(self, source)
+            if recovered:
+                logger.info(
+                    "extraction_attempt_target_recovered", count=len(recovered)
+                )
+                self.facts.extend(recovered)
         fact_errors, relationship_errors = reference_errors_by_claim(self)
         closed_facts = []
         for index, (fact, errors) in enumerate(zip(self.facts, fact_errors, strict=True)):

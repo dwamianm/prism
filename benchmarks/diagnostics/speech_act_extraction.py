@@ -188,9 +188,9 @@ def score_report(
     for case in cases:
         name = case["name"]
         row = rows.get(name, {})
-        if row.get("extraction_grounding_policy") != "speech_act_v4":
+        if row.get("extraction_grounding_policy") != "speech_act_v5":
             policy_errors.append(f"{name}:grounding")
-        if row.get("materialization_policy") != "speech_act_v10":
+        if row.get("materialization_policy") != "speech_act_v11":
             policy_errors.append(f"{name}:materialization")
         raw = _raw_claims(row.get("extraction", {}))
         materialized = _materialized_claims(row)

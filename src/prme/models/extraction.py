@@ -23,7 +23,8 @@ class ExtractionRecord(BaseModel):
 
     schema_version: Literal[1] = 1
     grounding_policy: Literal[
-        "source_passage_v1", "speech_act_v2", "speech_act_v3", "speech_act_v4"
+        "source_passage_v1", "speech_act_v2", "speech_act_v3", "speech_act_v4",
+        "speech_act_v5"
     ] = (
         "source_passage_v1"
     )

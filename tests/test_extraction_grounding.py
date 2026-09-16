@@ -306,6 +306,73 @@ def test_builtin_drops_component_relationship_inside_attempt_clause():
     assert result.relationships == []
 
 
+def test_builtin_recovers_exact_target_when_model_keeps_only_attempt_count():
+    source = "I've tried to install CUDA 12.4 twice, but the installer fails."
+    payload = {
+        "entities": [{"name": "CUDA 12.4", "entity_type": "product"}],
+        "facts": [{
+            "subject": "I",
+            "predicate": "attempted_install_count",
+            "object": "twice",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "observed",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    recovered = [fact for fact in result.facts if fact.object == "CUDA 12.4"]
+    assert len(recovered) == 1
+    assert recovered[0].subject == "I"
+    assert recovered[0].predicate == "tried_to_install"
+    assert recovered[0].object_entity_type == "product"
+    assert recovered[0].evidence_quote == source
+
+
+def test_builtin_does_not_duplicate_existing_attempt_target():
+    source = "I've tried to install CUDA 12.4 twice."
+    payload = {
+        "entities": [{"name": "CUDA 12.4", "entity_type": "product"}],
+        "facts": [{
+            "subject": "I",
+            "predicate": "tried_to_install",
+            "object": "CUDA 12.4",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "epistemic_type": "observed",
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert len([fact for fact in result.facts if fact.object == "CUDA 12.4"]) == 1
+
+
+def test_builtin_does_not_recover_entity_outside_attempt_clause():
+    source = "I've tried to fix the installer twice. CUDA 12.4 is documented later."
+    payload = {
+        "entities": [{"name": "CUDA 12.4", "entity_type": "product"}],
+        "facts": [],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+
+def test_builtin_recovery_skips_condition_it_cannot_preserve():
+    source = "I've tried to use Redis if the service is healthy."
+    payload = {
+        "entities": [{"name": "Redis", "entity_type": "product"}],
+        "facts": [],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts == []
+
+
 @pytest.mark.parametrize(
     "source",
     [
