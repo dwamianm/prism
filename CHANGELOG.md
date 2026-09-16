@@ -147,8 +147,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The registered MIT MiniCheck Flan-T5 trial raised WiCE recall to 72.73%, F1 to
   74.77%, and balanced accuracy to 81.52% with no fully unsupported accepts, but
   failed the 90% precision gate on 24 partially supported compound claims. No
-  threshold meets both gates, isolating atomic claim decomposition as the next
-  experiment rather than another threshold change.
+  threshold meets both gates. A preregistered follow-up applied the unchanged
+  model to all 958 WiCE human subclaims and required every subclaim to pass.
+  Gold decomposition reconstructed 357/358 parent labels, but model errors
+  limited parent precision to 76.04% and recall to 66.36%; no frozen threshold
+  met both gates. This validates atomic decomposition as an architecture
+  boundary on the named cohort while rejecting this verifier for integration.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

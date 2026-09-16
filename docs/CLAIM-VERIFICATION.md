@@ -234,5 +234,10 @@ A second registered
 improved recall to 72.73%, balanced accuracy to 81.52%, and F1 to 74.77%, again
 with 0/32 fully unsupported accepts. It failed only the 90% precision gate:
 every false support was a partially supported compound claim, and threshold
-tuning cannot meet precision and recall together. This isolates atomic claim
-decomposition as the next architectural test; Flan-T5 is not integrated.
+tuning cannot meet precision and recall together. The preregistered
+[atomic follow-up](../benchmarks/results/research/2026-09-16/WICE-MINICHECK-FLAN-ATOMIC-V1.md)
+then applied the unchanged model to all 958 human subclaims. The gold
+all-subclaim rule reconstructed 357/358 parent labels, but model errors produced
+76.04% precision and 66.36% recall, again with no viable frozen threshold.
+Atomic decomposition is a strong boundary on this cohort, but it does not make
+this verifier safe enough. Flan-T5 is not integrated.
