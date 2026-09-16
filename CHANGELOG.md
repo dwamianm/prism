@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   v3 remain v9, v2 remain v8, and legacy extraction records recover
   under `temporal_validity_v7`, so restart cannot claim a validator that did
   not run. A preregistered 14-case real-model development confirmation passed
-  all 15 safety and utility targets with zero unsafe claims.
+  all 15 safety and utility targets with zero unsafe claims on both a hosted
+  DeepSeek profile and a distinct local Qwen 35B-A3B artifact.
 
 - Registered extracted BEAM ingestion now completes both durable raw-source
   materialization and structured extraction before acknowledging a source.
