@@ -111,7 +111,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when evidence has a nonactual speech act absent from the claim, retaining the
   raw score and an explicit limitation, and can surface narrowly matched
   explicit negation with a distinct deterministic decision basis. Claim
-  verification remains opt-in pending a frozen confirmation.
+  verification remains opt-in. A registered same-cohort safety confirmation
+  passed all eight gates: the raw scores were unchanged, exactly the two intended
+  statuses changed, and unsafe supports fell from two to zero. Four implicit
+  contradictions and two relation-composition cases remain unresolved.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

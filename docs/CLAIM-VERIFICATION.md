@@ -155,5 +155,10 @@ returned `supported` instead of `contested`. It correctly retained 6/6 explicit
 refutations, rejected all model-only contradictions, found 4/6 new minimal
 groups, and refused 4/4 exhaustive claims without inference. Keep the verifier
 opt-in. The default entailment guard and explicit-negation basis described above
-were added from these failures; a new frozen run must test the changed
-implementation without rewriting this result.
+were added from these failures. A registered
+[same-cohort safety confirmation](../benchmarks/results/research/2026-09-16/CLAIM-VERIFICATION-BROAD-SAFETY-V2.md)
+then passed all eight targeted gates. Raw model scores were identical and exactly
+the two intended statuses changed, removing both unsafe supports. Four implicit
+contradictions and two weak relation-composition pairs remain unresolved, and
+the confirmation cohort was already observed, so verification remains opt-in
+pending a new untouched cohort.
