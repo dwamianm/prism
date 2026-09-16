@@ -120,10 +120,11 @@ def _select_cohort(
     excluded_ids: set[str],
     max_document_chars: int,
     max_summary_chars: int,
+    max_cases_per_document: int,
 ) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     for domain, rows in sorted(rows_by_domain.items()):
-        used_documents: set[str] = set()
+        document_counts: Counter[str] = Counter()
         for label in (0, 1):
             eligible = [
                 row
@@ -144,10 +145,10 @@ def _select_cohort(
             chosen = 0
             for row in eligible:
                 document_sha256 = hashlib.sha256(row["doc"].encode()).hexdigest()
-                if document_sha256 in used_documents:
+                if document_counts[document_sha256] >= max_cases_per_document:
                     continue
                 selected.append({"domain": domain, **row})
-                used_documents.add(document_sha256)
+                document_counts[document_sha256] += 1
                 chosen += 1
                 if chosen == per_label_per_domain:
                     break
@@ -220,6 +221,7 @@ def _validate_registration(
         excluded_ids=set(cohort["excluded_prototype_ids"]),
         max_document_chars=cohort["max_document_chars"],
         max_summary_chars=cohort["max_summary_chars"],
+        max_cases_per_document=cohort["max_cases_per_document"],
     )
     observed_identity = _cohort_identity(selected)
     if any(cohort.get(key) != value for key, value in observed_identity.items()):

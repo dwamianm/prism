@@ -22,6 +22,7 @@ def test_cohort_selection_is_balanced_unique_and_excludes_prototype():
         excluded_ids={"case-0-0"},
         max_document_chars=100,
         max_summary_chars=100,
+        max_cases_per_document=1,
     )
 
     assert len(selected) == 4
