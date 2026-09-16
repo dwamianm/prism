@@ -98,3 +98,12 @@ miss paraphrases, temporal scope, arithmetic, domain terms, and evidence that
 needs more passages than the configured group limit. Use representative labeled
 claims before enforcing a threshold. Model load and inference failures raise
 `ClaimVerificationError`; they never become support.
+
+The first registered
+[20-case development assay](../benchmarks/results/research/2026-09-16/CLAIM-VERIFICATION-MINIMAL-GROUPS-V1.md)
+matched 17 cases and failed its all-cases gate. It produced zero unsafe support
+decisions, recovered both unseen two-passage claims, found every explicit
+refutation and conflict, and refused both exhaustive claims without a model call.
+It also overcalled two neutral passages as contradictions. Until refutation has
+independent corroboration, treat `refuted` as experimental rather than proof that
+the opposite claim is true.

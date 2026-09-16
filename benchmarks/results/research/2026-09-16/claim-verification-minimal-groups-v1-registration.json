@@ -1,0 +1,418 @@
+{
+  "schema_version": 1,
+  "kind": "claim-verification-assay-registration",
+  "status": "preregistered",
+  "registered_at": "2026-09-16T14:28:21.951280+00:00",
+  "purpose": "Measure the pinned local NLI verifier on authored support, refutation, speech-act safety, conflict, minimal-group, and completeness cases before the first complete run",
+  "source": {
+    "prme_revision": "6c2bf5d0cb7339302f1c33619589bf1d0a3a69dd",
+    "files": {
+      "runner_sha256": "5ed9dcc3e3e3285e3a4e76fca16d4cebb3a0499d504f492b326501d8349e07cb",
+      "implementation_sha256": "1afc349bf274b429011366ef1269cd1abb6b9c2e9c4bc849f1f0961df73b3b86"
+    }
+  },
+  "model": {
+    "name": "cross-encoder/nli-deberta-v3-base",
+    "revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+    "execution": "local_huggingface_cross_encoder",
+    "labels": [
+      "contradiction",
+      "entailment",
+      "neutral"
+    ],
+    "reported_mnli_mismatched_accuracy": 0.9004,
+    "reported_metric_source": "https://sbert.net/docs/cross_encoder/pretrained_models.html"
+  },
+  "protocol": {
+    "cases": [
+      {
+        "id": "support_exact_date",
+        "category": "support",
+        "claim": "The deployment date is May 4.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "957f9e87-1925-50e9-a12a-c3811ec32ee4",
+            "text": "The deployment date is May 4.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_user_intent",
+        "category": "support",
+        "claim": "The user mentioned wanting to handle asynchronous API calls in the weather app.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "b9b3cbed-58f4-56f7-8884-a1b194f6e602",
+            "text": "I'm trying to implement asynchronous fetch calls using fetch() with async/await for my weather app.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_current_target",
+        "category": "support",
+        "claim": "The first sprint ends on March 31.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "ff647088-fa41-5733-938c-22559a8355f3",
+            "text": "The first sprint now targets completion by March 31, giving us two extra days for testing.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_negative",
+        "category": "support",
+        "claim": "The user did not deploy the release.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "1c679aee-453c-5410-84dc-a38c708bba9c",
+            "text": "I did not deploy the release because the tests failed.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_preference",
+        "category": "support",
+        "claim": "The user prefers dark mode.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "bd47e3a9-12ac-5b6e-ba2b-d1467292fc92",
+            "text": "I prefer dark mode for every editor.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_decision",
+        "category": "support",
+        "claim": "The team approved PostgreSQL for the project.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "e76627dc-a8bc-5bf8-ad57-7f47c8d5b575",
+            "text": "The team decided to use PostgreSQL for the project.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_two_hop_name",
+        "category": "minimal_group",
+        "claim": "Project Aurora ships on Tuesday.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "19a51c2a-aba0-5d3c-88ca-2ef51bfdb706",
+            "text": "Aurora is the launch project.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "d6f323c2-f114-541b-84c8-bde122f58d6d",
+            "text": "The launch project ships on Tuesday.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "support_two_hop_owner",
+        "category": "minimal_group",
+        "claim": "Mina owns the service that runs on port 8443.",
+        "expected_status": "supported",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "547d3da2-fed0-5428-8fec-1d7657b28809",
+            "text": "Mina owns the Atlas service.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "e112771d-dd4d-573b-867d-a30b096528c1",
+            "text": "The Atlas service runs on port 8443.",
+            "source_type": "tool_output",
+            "epistemic_type": "observed",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_launch_day",
+        "category": "refutation",
+        "claim": "The launch is Tuesday.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "c6732fab-07bd-5510-8f4c-ee20a9a9ea5a",
+            "text": "The launch is not Tuesday; it is Wednesday.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_language",
+        "category": "refutation",
+        "claim": "The user currently uses Python.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "96a3d2c6-49f4-5d32-8a5a-b1590c611615",
+            "text": "I no longer use Python; I switched to Rust.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_deployment_date",
+        "category": "refutation",
+        "claim": "The deployment date is May 4.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "e8a0d8f2-f28c-59f9-9415-50927423deb8",
+            "text": "The deployment date is May 5, not May 4.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "refute_completion",
+        "category": "refutation",
+        "claim": "The migration is complete.",
+        "expected_status": "refuted",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "9d7af76a-202e-5af1-8db0-ea273bb142c1",
+            "text": "The migration is not complete; two tables remain.",
+            "source_type": "tool_output",
+            "epistemic_type": "observed",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_attempt",
+        "category": "speech_act_safety",
+        "claim": "The user enforced the Airbnb ESLint rules in the project.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "62eb0864-229b-5b21-a959-bdfc669856b3",
+            "text": "I'm trying to set up ESLint v8.39 with the Airbnb style guide.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_intention",
+        "category": "speech_act_safety",
+        "claim": "The user deployed the release.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "d56fee51-dea0-5758-b68a-39927c7ed09d",
+            "text": "I want to deploy the release after the tests pass.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_advice",
+        "category": "role_safety",
+        "claim": "The user decided to adopt PostgreSQL.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "34f3b115-dfce-55d7-971b-e008693275c0",
+            "text": "You should consider adopting PostgreSQL for this project.",
+            "source_type": "system_inferred",
+            "epistemic_type": "inferred",
+            "lifecycle_state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "insufficient_topic",
+        "category": "relation_safety",
+        "claim": "The user completed the migration.",
+        "expected_status": "insufficient",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "5a92f643-9fcd-5d32-ad28-f8d550ef90ad",
+            "text": "The migration plan covers users, invoices, and audit logs.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ]
+      },
+      {
+        "id": "contested_launch",
+        "category": "conflict",
+        "claim": "The launch is Tuesday.",
+        "expected_status": "contested",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "60916533-bd60-5b70-8aed-5dd358ee396e",
+            "text": "The launch is Tuesday.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "contested"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "9e73609f-d66f-5ce2-b01e-75df9cd0beb3",
+            "text": "The launch is not Tuesday; it is Wednesday.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "contested"
+          }
+        ]
+      },
+      {
+        "id": "contested_preference",
+        "category": "conflict",
+        "claim": "The user prefers dark mode.",
+        "expected_status": "contested",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "143b8dd5-328a-5c55-a145-a4bfcd7d3fbc",
+            "text": "I prefer dark mode.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "contested"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "8020f4fd-2721-5fdd-a2a5-afaf06fbda68",
+            "text": "I do not prefer dark mode; I prefer light mode.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "contested"
+          }
+        ]
+      },
+      {
+        "id": "incomplete_count",
+        "category": "completeness",
+        "claim": "There are exactly four deployment concerns across all sessions.",
+        "expected_status": "incomplete",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "25549d41-a623-58dc-a892-8cb89cb26886",
+            "text": "One deployment concern is certificate renewal.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ],
+        "requires_complete_set": true
+      },
+      {
+        "id": "incomplete_list",
+        "category": "completeness",
+        "claim": "The complete list of project risks is latency and cost.",
+        "expected_status": "incomplete",
+        "evidence": [
+          {
+            "reference": "m1",
+            "memory_id": "327ca8be-9c18-5d21-8b07-cbb6efbfa990",
+            "text": "Latency is a project risk.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          },
+          {
+            "reference": "m2",
+            "memory_id": "2c57c2ab-2cdf-53c1-b911-49395d046b82",
+            "text": "Cost is a project risk.",
+            "source_type": "user_stated",
+            "epistemic_type": "asserted",
+            "lifecycle_state": "stable"
+          }
+        ],
+        "requires_complete_set": true
+      }
+    ],
+    "config": {
+      "entailment_threshold": 0.8,
+      "contradiction_threshold": 0.8,
+      "batch_size": 32,
+      "max_evidence": 64,
+      "max_group_size": 2,
+      "group_candidate_limit": 8
+    },
+    "calls_per_case": 1,
+    "network_after_model_resolution": false,
+    "case_order": "registration order"
+  },
+  "evaluation": {
+    "gates": {
+      "all_expected_statuses": true,
+      "unsafe_supported_count_max": 0,
+      "supported_correct_min": 8,
+      "refuted_correct_min": 4,
+      "contested_correct_min": 2,
+      "incomplete_without_model_min": 2
+    },
+    "decision_rule": "All gates must pass. Preserve failures without changing thresholds, cases, expected labels, or group bounds on this execution."
+  },
+  "selection": {
+    "disclosure": "Cases are authored development probes, not held out. Four behaviors were smoke-tested before registration: one direct support, one attempt/achievement distinction, one contested pair, and one completeness refusal. The two multi-passage cases were not run before registration."
+  },
+  "claim_boundary": "Passing would establish only that one pinned local model and bounded verifier satisfy these authored cases. It would not establish calibration, answer quality, domain-general entailment, held-out accuracy, or product leadership."
+}

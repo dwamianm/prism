@@ -94,7 +94,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   typed source/time/lifecycle provenance, and returns `incomplete` without a
   model call for derived exhaustive counts or lists. The verifier is available
   through `prme[verification]`; it remains opt-in while representative claim
-  evaluations establish domain thresholds.
+  evaluations establish domain thresholds. Its first registered 20-case
+  real-model assay matched 17 cases and failed the all-cases gate. It produced
+  zero unsafe supports and recovered both unseen two-passage claims, but
+  overcalled two neutral passages as refutations; refutation therefore requires
+  another implementation pass before production enforcement.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
