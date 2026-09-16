@@ -159,7 +159,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quote integrity. The checks safely rejected paraphrased or invented proof,
   but the model also decomposed facts from the document instead of only the
   summary. This rejects free-form proof copying and motivates a separated,
-  segment-ID protocol; no provider verifier is integrated.
+  segment-ID protocol. The same-cohort causal v2 split summary-only
+  decomposition from fixed-atom document verification. Reference integrity
+  rose from 23.00% to 99.00%, supported recall from 6.00% to 72.00%, and
+  balanced accuracy from 52.00% to 76.00%. It still failed safety at 78.26%
+  precision and a 20.00% false-support rate, chiefly on entity changes and
+  antonym swaps. No provider verifier is integrated.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
