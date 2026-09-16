@@ -48,10 +48,109 @@ _MONTH_RE = re.compile(
     r"october|november|december)\b",
     re.IGNORECASE,
 )
+_NEGATED_CLAUSE_RE = re.compile(
+    r"[^.;!?]*(?:\b(?:not|never|no\s+longer|cannot|can't|isn't|aren't|"
+    r"wasn't|weren't|didn't|doesn't|don't|won't)\b)[^.;!?]*",
+    re.IGNORECASE,
+)
+_WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+_NONACTUAL_MODE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "desire",
+        re.compile(
+            r"\b(?:want(?:s|ed)?|would\s+like|wish(?:es|ed)?|hope(?:s|d)?|"
+            r"need(?:s|ed)?|aim\w*|seek\w*)\b|\b\w+[’']d\s+like\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "attempt",
+        re.compile(
+            r"\b(?:tr(?:y|ies|ied|ying)|attempt\w*|work(?:s|ed|ing)?\s+(?:on|to))\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "plan",
+        re.compile(
+            r"\b(?:plan(?:s|ned|ning)?|intend\w*|schedul\w*|consider\w*|"
+            r"explor\w*|evaluat\w*)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "advice",
+        re.compile(
+            r"\b(?:should|ought|recommend\w*|suggest\w*|advis\w*)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "uncertainty",
+        re.compile(
+            r"\b(?:might|maybe|perhaps|possible|possibly|potentially|uncertain|whether)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "conditional",
+        re.compile(r"\b(?:if|unless|provided\s+that|in\s+case)\b", re.IGNORECASE),
+    ),
+    (
+        "unverified",
+        re.compile(
+            r"\b(?:unverified|unconfirmed|reportedly|allegedly)\b",
+            re.IGNORECASE,
+        ),
+    ),
+)
+_NEGATION_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "app",
+    "application",
+    "are",
+    "at",
+    "be",
+    "by",
+    "currently",
+    "did",
+    "do",
+    "does",
+    "for",
+    "from",
+    "in",
+    "is",
+    "it",
+    "longer",
+    "no",
+    "not",
+    "of",
+    "on",
+    "pipeline",
+    "project",
+    "service",
+    "system",
+    "that",
+    "the",
+    "this",
+    "to",
+    "was",
+    "were",
+    "will",
+    "with",
+}
 
 ClaimVerificationLimitation = Literal[
     "complete_set_requires_structured_aggregation",
+    "uncorroborated_model_entailment",
     "uncorroborated_model_contradiction",
+]
+ClaimVerificationDecisionBasis = Literal[
+    "model_entailment",
+    "model_contradiction",
+    "explicit_negation_overlap",
 ]
 
 
@@ -78,6 +177,9 @@ class ClaimVerificationConfig(BaseModel):
     max_evidence: int = Field(default=64, ge=1, le=256)
     max_group_size: int = Field(default=2, ge=1, le=3)
     group_candidate_limit: int = Field(default=8, ge=2, le=16)
+    entailment_policy: Literal["speech_act_guarded", "model_only"] = (
+        "speech_act_guarded"
+    )
     refutation_policy: Literal["explicit_corroboration", "model_only"] = (
         "explicit_corroboration"
     )
@@ -143,11 +245,13 @@ class ClaimVerification(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 2
     claim: str
     status: ClaimVerificationStatus
     supporting_group: tuple[UUID, ...] = ()
     refuting_group: tuple[UUID, ...] = ()
+    supporting_basis: ClaimVerificationDecisionBasis | None = None
+    refuting_basis: ClaimVerificationDecisionBasis | None = None
     group_scores: tuple[EvidenceGroupScore, ...] = ()
     limitations: tuple[ClaimVerificationLimitation, ...] = ()
     model: str
@@ -201,6 +305,11 @@ def _corroborates_refutation(
     claim: str,
     group: Sequence[ClaimEvidence],
 ) -> bool:
+    claim_modes = _nonactual_modes(claim)
+    if any(not _typed_evidence_compatible(item, claim_modes) for item in group):
+        return False
+    if not _corroborates_entailment(claim, group):
+        return False
     evidence_text = "\n".join(item.text for item in group)
     if _REFUTATION_CUE_RE.search(claim) or _REFUTATION_CUE_RE.search(evidence_text):
         return True
@@ -214,6 +323,88 @@ def _corroborates_refutation(
             strict=True,
         )
     )
+
+
+def _nonactual_modes(text: str) -> set[str]:
+    modes = {
+        mode
+        for mode, pattern in _NONACTUAL_MODE_PATTERNS
+        if pattern.search(text) is not None
+    }
+    if "?" in text:
+        modes.add("question")
+    return modes
+
+
+def _typed_evidence_compatible(
+    item: ClaimEvidence,
+    claim_modes: set[str],
+) -> bool:
+    if item.lifecycle_state in {
+        LifecycleState.SUPERSEDED,
+        LifecycleState.DEPRECATED,
+        LifecycleState.ARCHIVED,
+    }:
+        return False
+    if item.epistemic_type == EpistemicType.HYPOTHETICAL:
+        return bool(claim_modes.intersection({"uncertainty", "conditional"}))
+    if item.epistemic_type == EpistemicType.CONDITIONAL:
+        return "conditional" in claim_modes
+    if item.epistemic_type == EpistemicType.UNVERIFIED:
+        return bool(claim_modes.intersection({"unverified", "uncertainty"}))
+    if item.epistemic_type == EpistemicType.DEPRECATED:
+        return False
+    return True
+
+
+def _corroborates_entailment(
+    claim: str,
+    group: Sequence[ClaimEvidence],
+) -> bool:
+    claim_modes = _nonactual_modes(claim)
+    evidence_modes: set[str] = set()
+    for item in group:
+        if not _typed_evidence_compatible(item, claim_modes):
+            return False
+        evidence_modes.update(_nonactual_modes(item.text))
+    return not evidence_modes.difference(claim_modes)
+
+
+def _negation_tokens(text: str) -> set[str]:
+    tokens: set[str] = set()
+    for match in _WORD_RE.findall(text):
+        token = match.casefold()
+        if token in _NEGATION_STOPWORDS:
+            continue
+        if token.endswith("ies") and len(token) > 4:
+            token = f"{token[:-3]}y"
+        elif token.endswith("s") and not token.endswith("ss") and len(token) > 3:
+            token = token[:-1]
+        tokens.add(token)
+    return tokens
+
+
+def _explicit_negation_refutes(
+    claim: str,
+    group: Sequence[ClaimEvidence],
+) -> bool:
+    if _NEGATED_CLAUSE_RE.search(claim) is not None:
+        return False
+    if not _corroborates_entailment(claim, group):
+        return False
+    claim_modes = _nonactual_modes(claim)
+    claim_tokens = _negation_tokens(claim)
+    if len(claim_tokens) < 2:
+        return False
+    for item in group:
+        if not _typed_evidence_compatible(item, claim_modes):
+            continue
+        for match in _NEGATED_CLAUSE_RE.finditer(item.text):
+            clause_tokens = _negation_tokens(match.group())
+            shared = claim_tokens.intersection(clause_tokens)
+            if len(shared) >= 3 or (len(claim_tokens) == 2 and shared == claim_tokens):
+                return True
+    return False
 
 
 def _best_group(
@@ -401,28 +592,60 @@ class ClaimVerifier:
         all_scores: list[EvidenceGroupScore] = []
         evidence_by_id = {item.memory_id: item for item in unique}
 
-        def corroborates(score: EvidenceGroupScore) -> bool:
+        def score_group(score: EvidenceGroupScore) -> tuple[ClaimEvidence, ...]:
+            return tuple(evidence_by_id[memory_id] for memory_id in score.memory_ids)
+
+        def corroborates_refutation(score: EvidenceGroupScore) -> bool:
             if self.config.refutation_policy == "model_only":
                 return True
-            group = tuple(evidence_by_id[memory_id] for memory_id in score.memory_ids)
-            return _corroborates_refutation(normalized_claim, group)
+            return _corroborates_refutation(normalized_claim, score_group(score))
+
+        def corroborates_entailment(score: EvidenceGroupScore) -> bool:
+            if self.config.entailment_policy == "model_only":
+                return True
+            return _corroborates_entailment(normalized_claim, score_group(score))
+
+        def classify_refutations(
+            scores: Sequence[EvidenceGroupScore],
+        ) -> tuple[
+            list[EvidenceGroupScore],
+            list[EvidenceGroupScore],
+            list[EvidenceGroupScore],
+        ]:
+            raw_model = [
+                item
+                for item in scores
+                if item.contradiction >= self.config.contradiction_threshold
+            ]
+            model = [item for item in raw_model if corroborates_refutation(item)]
+            model_keys = {item.memory_ids for item in model}
+            deterministic = [
+                item
+                for item in scores
+                if item.memory_ids not in model_keys
+                and _explicit_negation_refutes(
+                    normalized_claim,
+                    score_group(item),
+                )
+            ]
+            return raw_model, model, deterministic
 
         groups = [(item,) for item in unique]
         single_scores = await self._score_groups(normalized_claim, groups)
         all_scores.extend(single_scores)
 
-        support = [
+        raw_support = [
             item
             for item in single_scores
             if item.entailment >= self.config.entailment_threshold
         ]
-        raw_refute = [
-            item
-            for item in single_scores
-            if item.contradiction >= self.config.contradiction_threshold
-        ]
-        refute = [item for item in raw_refute if corroborates(item)]
-        blocked_refutation = len(raw_refute) != len(refute)
+        support = [item for item in raw_support if corroborates_entailment(item)]
+        blocked_entailment = len(raw_support) != len(support)
+        raw_refute, model_refute, deterministic_refute = classify_refutations(
+            single_scores
+        )
+        refute = [*model_refute, *deterministic_refute]
+        blocked_refutation = len(raw_refute) != len(model_refute)
 
         if not support and not refute and self.config.max_group_size > 1:
             ranked = sorted(
@@ -439,19 +662,23 @@ class ClaimVerifier:
                     break
                 group_scores = await self._score_groups(normalized_claim, grouped)
                 all_scores.extend(group_scores)
-                support = [
+                raw_support = [
                     item
                     for item in group_scores
                     if item.entailment >= self.config.entailment_threshold
                 ]
-                raw_refute = [
-                    item
-                    for item in group_scores
-                    if item.contradiction >= self.config.contradiction_threshold
+                support = [
+                    item for item in raw_support if corroborates_entailment(item)
                 ]
-                refute = [item for item in raw_refute if corroborates(item)]
+                blocked_entailment = blocked_entailment or len(raw_support) != len(
+                    support
+                )
+                raw_refute, model_refute, deterministic_refute = classify_refutations(
+                    group_scores
+                )
+                refute = [*model_refute, *deterministic_refute]
                 blocked_refutation = blocked_refutation or len(raw_refute) != len(
-                    refute
+                    model_refute
                 )
                 if support or refute:
                     break
@@ -464,17 +691,30 @@ class ClaimVerifier:
             status = ClaimVerificationStatus.REFUTED
         else:
             status = ClaimVerificationStatus.INSUFFICIENT
+        best_support = _best_group(support, probability="entailment")
+        best_refute = _best_group(refute, probability="contradiction")
+        limitations: list[ClaimVerificationLimitation] = []
+        if blocked_entailment:
+            limitations.append("uncorroborated_model_entailment")
+        if blocked_refutation:
+            limitations.append("uncorroborated_model_contradiction")
         return self._result(
             claim=normalized_claim,
             evidence=unique,
             status=status,
             scores=tuple(all_scores),
             model_called=True,
-            supporting=_best_group(support, probability="entailment"),
-            refuting=_best_group(refute, probability="contradiction"),
-            limitations=(
-                ("uncorroborated_model_contradiction",) if blocked_refutation else ()
+            supporting=best_support,
+            refuting=best_refute,
+            supporting_basis="model_entailment" if best_support else None,
+            refuting_basis=(
+                "model_contradiction"
+                if best_refute in model_refute
+                else "explicit_negation_overlap"
+                if best_refute
+                else None
             ),
+            limitations=tuple(limitations),
         )
 
     async def verify_bundle(
@@ -550,6 +790,8 @@ class ClaimVerifier:
         model_called: bool,
         supporting: EvidenceGroupScore | None = None,
         refuting: EvidenceGroupScore | None = None,
+        supporting_basis: ClaimVerificationDecisionBasis | None = None,
+        refuting_basis: ClaimVerificationDecisionBasis | None = None,
         limitations: tuple[ClaimVerificationLimitation, ...] = (),
     ) -> ClaimVerification:
         config_sha = _configuration_sha256(self.config)
@@ -568,10 +810,12 @@ class ClaimVerifier:
             "evaluation_id": identity,
             "group_scores": [item.model_dump(mode="json") for item in scores],
             "limitations": list(limitations),
+            "refuting_basis": refuting_basis,
             "refuting_group": (
                 [str(item) for item in refuting.memory_ids] if refuting else []
             ),
             "status": status.value,
+            "supporting_basis": supporting_basis,
             "supporting_group": (
                 [str(item) for item in supporting.memory_ids] if supporting else []
             ),
@@ -581,6 +825,8 @@ class ClaimVerifier:
             status=status,
             supporting_group=supporting.memory_ids if supporting else (),
             refuting_group=refuting.memory_ids if refuting else (),
+            supporting_basis=supporting_basis,
+            refuting_basis=refuting_basis,
             group_scores=scores,
             limitations=limitations,
             model=self.config.model,
@@ -601,6 +847,7 @@ __all__ = [
     "ClaimEvidence",
     "ClaimVerification",
     "ClaimVerificationConfig",
+    "ClaimVerificationDecisionBasis",
     "ClaimVerificationError",
     "ClaimVerificationLimitation",
     "ClaimVerificationStatus",

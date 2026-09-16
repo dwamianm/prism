@@ -55,6 +55,18 @@ scores, not calibrated truth probabilities. Every evaluated group, exact model
 revision, thresholds, typed evidence identity, and input/output digest is retained
 in `ClaimVerification`.
 
+The default entailment policy preserves speech act. If evidence expresses a
+desire, attempt, plan, advice, question, uncertainty, or condition that the
+claim does not preserve, even a model score above the entailment threshold stays
+`insufficient`. The raw score remains visible and `limitations` includes
+`uncorroborated_model_entailment`. A claim that itself says the user *wants* or
+*is trying* can still be supported by matching evidence. Set
+`entailment_policy="model_only"` only when reproducing raw-model experiments.
+Typed `hypothetical`, `conditional`, or `unverified` evidence must also match
+the claim's modality; deprecated epistemic evidence and superseded, deprecated,
+or archived lifecycle evidence cannot decide a current claim under the guarded
+policies.
+
 By default, a high model contradiction becomes `refuted` only when the exact
 claim/evidence group also contains an explicit negation or correction cue, or
 incompatible concrete numeric, weekday, or month values. A model contradiction
@@ -64,6 +76,15 @@ prevents an intention such as “I want to deploy” from becoming evidence that
 deployment did not happen. It is deliberately narrow: an implicit contradiction
 can remain unresolved. `refutation_policy="model_only"` restores raw
 threshold-based behavior for controlled experiments.
+
+An exact negated clause can also surface a refutation when the NLI model is
+neutral, but only when at least three non-generic proposition tokens overlap (or
+all tokens of a two-token proposition overlap). This narrow fallback catches
+corrections such as “Ravi no longer owns ingestion” for “Ravi owns the ingestion
+pipeline” without treating any topically related negative sentence as a
+conflict. `refuting_basis="explicit_negation_overlap"` distinguishes that
+deterministic decision from `model_contradiction`; `supporting_basis` and
+`refuting_basis` are part of claim-verification result schema 2.
 
 `verify_bundle()` sees only packed candidates whose references occur in the exact
 rendered context. It uses `candidate.rendered_text`, so it does not verify against
@@ -133,5 +154,6 @@ desire into a completed action; the other missed explicit counterevidence and
 returned `supported` instead of `contested`. It correctly retained 6/6 explicit
 refutations, rejected all model-only contradictions, found 4/6 new minimal
 groups, and refused 4/4 exhaustive claims without inference. Keep the verifier
-opt-in while these support and conflict failures are addressed and evaluated on
-a new frozen run.
+opt-in. The default entailment guard and explicit-negation basis described above
+were added from these failures; a new frozen run must test the changed
+implementation without rewriting this result.

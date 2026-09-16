@@ -107,7 +107,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not a held-out accuracy result. A later 48-case previously unexecuted
   development assay then failed its safety gate with two unsafe supports: one
   desire was treated as a completed action and one explicit ownership conflict
-  was missed. The failed result is retained; claim verification remains opt-in.
+  was missed. The failed result is retained. The verifier now blocks entailment
+  when evidence has a nonactual speech act absent from the claim, retaining the
+  raw score and an explicit limitation, and can surface narrowly matched
+  explicit negation with a distinct deterministic decision basis. Claim
+  verification remains opt-in pending a frozen confirmation.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional

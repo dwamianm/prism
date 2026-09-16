@@ -5,6 +5,7 @@ import pytest
 
 from prme import (
     ClaimEvidence,
+    ClaimVerification,
     ClaimVerificationConfig,
     ClaimVerificationError,
     ClaimVerificationStatus,
@@ -41,11 +42,18 @@ async def test_prefers_single_minimal_support_over_larger_groups(monkeypatch):
 
     assert result.status == ClaimVerificationStatus.SUPPORTED
     assert result.supporting_group == (second.memory_id,)
+    assert result.supporting_basis == "model_entailment"
     assert result.refuting_group == ()
     assert len(result.group_scores) == 2
     assert result.model_called is True
     assert len(result.evaluation_id) == 64
     assert len(result.result_sha256) == 64
+
+    legacy = result.model_dump()
+    legacy["schema_version"] = 1
+    legacy.pop("supporting_basis")
+    legacy.pop("refuting_basis")
+    assert ClaimVerification.model_validate(legacy).schema_version == 1
 
 
 async def test_searches_bounded_minimal_pair_when_singles_are_insufficient(monkeypatch):
@@ -93,6 +101,8 @@ async def test_entailing_and_refuting_groups_surface_contested(monkeypatch):
     assert result.status == ClaimVerificationStatus.CONTESTED
     assert result.supporting_group == (support.memory_id,)
     assert result.refuting_group == (refute.memory_id,)
+    assert result.supporting_basis == "model_entailment"
+    assert result.refuting_basis == "model_contradiction"
 
 
 async def test_model_contradiction_without_explicit_corroboration_fails_closed(
@@ -140,6 +150,7 @@ async def test_explicit_cues_or_incompatible_values_corroborate_refutation(
 
     assert result.status == ClaimVerificationStatus.REFUTED
     assert result.refuting_group == (evidence.memory_id,)
+    assert result.refuting_basis == "model_contradiction"
     assert result.limitations == ()
 
 
@@ -178,6 +189,220 @@ async def test_group_labels_do_not_count_as_concrete_evidence_values(monkeypatch
     assert result.status == ClaimVerificationStatus.INSUFFICIENT
     assert result.refuting_group == ()
     assert result.limitations == ("uncorroborated_model_contradiction",)
+
+
+async def test_nonactual_evidence_cannot_support_completed_claim(monkeypatch):
+    evidence = _evidence(
+        "I want to enable passkeys after the security review.",
+        "m1",
+    )
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.98, 0.005, 0.015)],
+    )
+
+    result = await verifier.verify("The user enabled passkeys.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.supporting_group == ()
+    assert result.supporting_basis is None
+    assert result.group_scores[0].entailment == 0.98
+    assert result.limitations == ("uncorroborated_model_entailment",)
+
+
+@pytest.mark.parametrize(
+    ("claim", "evidence_text"),
+    [
+        ("The user wants offline sync.", "I would like offline sync."),
+        (
+            "The user is trying to reduce latency.",
+            "I am working on reducing latency.",
+        ),
+        ("The recommendation is Redis.", "You should use Redis."),
+    ],
+)
+async def test_nonactual_support_is_allowed_when_claim_preserves_speech_act(
+    monkeypatch,
+    claim,
+    evidence_text,
+):
+    evidence = _evidence(evidence_text, "m1")
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.98, 0.005, 0.015)],
+    )
+
+    result = await verifier.verify(claim, [evidence])
+
+    assert result.status == ClaimVerificationStatus.SUPPORTED
+    assert result.supporting_group == (evidence.memory_id,)
+    assert result.supporting_basis == "model_entailment"
+    assert result.limitations == ()
+
+
+async def test_model_only_entailment_policy_preserves_raw_support(monkeypatch):
+    evidence = _evidence("I want to enable passkeys.", "m1")
+    verifier = ClaimVerifier(ClaimVerificationConfig(entailment_policy="model_only"))
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.98, 0.005, 0.015)],
+    )
+
+    result = await verifier.verify("The user enabled passkeys.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.SUPPORTED
+    assert result.supporting_basis == "model_entailment"
+    assert result.limitations == ()
+
+
+async def test_typed_hypothetical_evidence_cannot_support_unqualified_fact(
+    monkeypatch,
+):
+    evidence = ClaimEvidence(
+        reference="m1",
+        memory_id=uuid4(),
+        text="The deployment happens after approval.",
+        epistemic_type="hypothetical",
+    )
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.98, 0.005, 0.015)],
+    )
+
+    result = await verifier.verify("The deployment happens after approval.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.limitations == ("uncorroborated_model_entailment",)
+
+
+async def test_typed_hypothetical_evidence_can_support_qualified_claim(monkeypatch):
+    evidence = ClaimEvidence(
+        reference="m1",
+        memory_id=uuid4(),
+        text="The deployment could happen after approval.",
+        epistemic_type="hypothetical",
+    )
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.98, 0.005, 0.015)],
+    )
+
+    result = await verifier.verify(
+        "The deployment might happen after approval.",
+        [evidence],
+    )
+
+    assert result.status == ClaimVerificationStatus.SUPPORTED
+    assert result.supporting_basis == "model_entailment"
+
+
+async def test_hypothetical_negation_cannot_trigger_deterministic_refutation(
+    monkeypatch,
+):
+    evidence = ClaimEvidence(
+        reference="m1",
+        memory_id=uuid4(),
+        text="Ravi might not own the ingestion pipeline.",
+        epistemic_type="hypothetical",
+    )
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.002, 0.032, 0.966)],
+    )
+
+    result = await verifier.verify("Ravi owns the ingestion pipeline.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.refuting_basis is None
+
+
+async def test_explicit_near_exact_negation_surfaces_conflict_when_model_is_neutral(
+    monkeypatch,
+):
+    support = _evidence("Ravi owns the ingestion pipeline.", "m1")
+    correction = _evidence(
+        "Ravi no longer owns ingestion; Tessa owns it.",
+        "m2",
+    )
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.997, 0.001, 0.002), (0.002, 0.032, 0.966)],
+    )
+
+    result = await verifier.verify(
+        "Ravi owns the ingestion pipeline.",
+        [support, correction],
+    )
+
+    assert result.status == ClaimVerificationStatus.CONTESTED
+    assert result.supporting_group == (support.memory_id,)
+    assert result.refuting_group == (correction.memory_id,)
+    assert result.refuting_basis == "explicit_negation_overlap"
+    assert result.group_scores[1].contradiction == 0.032
+
+
+async def test_lexically_related_negation_does_not_refute_another_relation(monkeypatch):
+    evidence = _evidence("Nadia did not attend the Atlas project review.", "m1")
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.002, 0.032, 0.966)],
+    )
+
+    result = await verifier.verify("Nadia leads the Atlas project.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.refuting_group == ()
+    assert result.refuting_basis is None
+
+
+async def test_negated_intention_does_not_refute_completed_action(monkeypatch):
+    evidence = _evidence("Alice wants to not deploy the release.", "m1")
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.002, 0.95, 0.048)],
+    )
+
+    result = await verifier.verify("Alice deployed the release.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.INSUFFICIENT
+    assert result.refuting_group == ()
+    assert result.refuting_basis is None
+    assert result.limitations == ("uncorroborated_model_contradiction",)
+
+
+async def test_matching_negative_claim_is_supported_without_self_refutation(
+    monkeypatch,
+):
+    evidence = _evidence("Alice does not use Jira.", "m1")
+    verifier = ClaimVerifier()
+    monkeypatch.setattr(
+        verifier,
+        "_predict_sync",
+        lambda _pairs: [(0.99, 0.005, 0.005)],
+    )
+
+    result = await verifier.verify("Alice does not use Jira.", [evidence])
+
+    assert result.status == ClaimVerificationStatus.SUPPORTED
+    assert result.supporting_group == (evidence.memory_id,)
+    assert result.refuting_group == ()
 
 
 async def test_complete_set_claim_fails_closed_without_loading_model(monkeypatch):

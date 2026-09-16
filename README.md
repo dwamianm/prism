@@ -110,10 +110,10 @@ provider failures are explicit and do not alter deterministic retrieval.
 For explicit declarative claims, the optional local
 [`ClaimVerifier`](docs/CLAIM-VERIFICATION.md) independently scores bounded
 minimal evidence groups using a pinned NLI model. It preserves typed packed
-evidence, requires an explicit correction or incompatible concrete value before
-accepting a model contradiction as refutation, surfaces supporting and refuting
-groups, and fails closed with `incomplete` when a derived count or list requires
-complete-set evidence.
+evidence, preserves speech-act boundaries before accepting model entailment,
+requires corroboration before accepting model contradiction, exposes the basis
+of deterministic and model decisions, and fails closed with `incomplete` when a
+derived count or list requires complete-set evidence.
 
 The HTTP API accepts `limit`, `min_score`, `token_budget`, and `mode`, plus typed
 `filters` (`scope`, `time_from`, `time_to`, `knowledge_at`, `event_time_from`,
