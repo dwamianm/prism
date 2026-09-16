@@ -117,6 +117,11 @@ refutation and conflict, and refused both exhaustive claims without a model call
 It also overcalled two neutral passages as contradictions. Until refutation has
 independent corroboration, treat `refuted` from that implementation as
 experimental rather than proof that the opposite claim is true. The default
-verifier now applies the deterministic corroboration guard described above; its
-same-cohort follow-up is reported separately so the failed first result remains
-immutable.
+verifier now applies the deterministic corroboration guard described above. A
+registered
+[same-cohort confirmation](../benchmarks/results/research/2026-09-16/CLAIM-VERIFICATION-GUARDED-REFUTATION-V2.md)
+passed all eight targeted gates: the two false refutations became auditable
+`insufficient` results while every raw score and all explicit refutation,
+conflict, minimal-group and completeness outcomes were retained. That follow-up
+used the fully observed development cohort; it confirms the named fix rather
+than held-out refutation quality.

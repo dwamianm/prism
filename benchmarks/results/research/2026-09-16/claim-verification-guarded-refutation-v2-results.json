@@ -1,0 +1,912 @@
+{
+  "schema_version": 2,
+  "kind": "claim-verification-assay-result",
+  "completed_at": "2026-09-16T14:34:45.910730+00:00",
+  "registration": "/Users/dwamianm/Sites/prism/benchmarks/results/research/2026-09-16/claim-verification-guarded-refutation-v2-registration.json",
+  "registration_sha256": "8ef75aed903eed1a612c8e105bd6f35e21dcc583f2c9e53e03a83e750e632f8a",
+  "source": {
+    "prme_revision": "3f9540eaae8d28cb142dc708af769eb983b4c399",
+    "files": {
+      "runner_sha256": "421f56ec890d613d9c9327106a8794f0c654b451e6f10fec5767da9d4945ade0",
+      "implementation_sha256": "a3463d732837f2108473d5a58f5dc5334b6cef1ffac1bb274d32e8969c5de057"
+    }
+  },
+  "model": {
+    "name": "cross-encoder/nli-deberta-v3-base",
+    "revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+    "execution": "local_huggingface_cross_encoder",
+    "labels": [
+      "contradiction",
+      "entailment",
+      "neutral"
+    ],
+    "reported_mnli_mismatched_accuracy": 0.9004,
+    "reported_metric_source": "https://sbert.net/docs/cross_encoder/pretrained_models.html"
+  },
+  "protocol": {
+    "config": {
+      "entailment_threshold": 0.8,
+      "contradiction_threshold": 0.8,
+      "batch_size": 32,
+      "max_evidence": 64,
+      "max_group_size": 2,
+      "group_candidate_limit": 8,
+      "refutation_policy": "explicit_corroboration"
+    },
+    "calls_per_case": 1,
+    "network_after_model_resolution": false,
+    "case_order": "registration order"
+  },
+  "summary": {
+    "cases": 20,
+    "matched": 19,
+    "expected_statuses": {
+      "contested": 2,
+      "incomplete": 2,
+      "insufficient": 4,
+      "refuted": 4,
+      "supported": 8
+    },
+    "observed_statuses": {
+      "contested": 2,
+      "incomplete": 2,
+      "insufficient": 5,
+      "refuted": 4,
+      "supported": 7
+    }
+  },
+  "quality_gates": {
+    "passed": true,
+    "results": {
+      "unsafe_supported_count_max": {
+        "required": 0,
+        "observed": 0,
+        "passed": true
+      },
+      "insufficient_refuted_count_max": {
+        "required": 0,
+        "observed": 0,
+        "passed": true
+      },
+      "supported_correct_min": {
+        "required": 7,
+        "observed": 7,
+        "passed": true
+      },
+      "minimal_group_correct_min": {
+        "required": 2,
+        "observed": 2,
+        "passed": true
+      },
+      "refuted_correct_min": {
+        "required": 4,
+        "observed": 4,
+        "passed": true
+      },
+      "insufficient_correct_min": {
+        "required": 4,
+        "observed": 4,
+        "passed": true
+      },
+      "contested_correct_min": {
+        "required": 2,
+        "observed": 2,
+        "passed": true
+      },
+      "incomplete_without_model_min": {
+        "required": 2,
+        "observed": 2,
+        "passed": true
+      }
+    }
+  },
+  "samples": [
+    {
+      "id": "support_exact_date",
+      "category": "support",
+      "expected_status": "supported",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The deployment date is May 4.",
+        "status": "supported",
+        "supporting_group": [
+          "957f9e87-1925-50e9-a12a-c3811ec32ee4"
+        ],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "957f9e87-1925-50e9-a12a-c3811ec32ee4"
+            ],
+            "entailment": 0.9954038858413696,
+            "contradiction": 0.00016909475380089134,
+            "neutral": 0.004427038598805666
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "4d3807312e34c37060310b609bb2318e9d5d10df64ecc878f1be5384105699a7",
+        "evidence_sha256": "1cf90afb37a357184b6297a22e0c4252ca96452e73f55923b2cefd42f0c78a8f",
+        "evaluation_id": "96696f800cb71b1d4de3845b2ae97027ccb86f5cb80a69465e9691a17088d89b",
+        "result_sha256": "3099524dcf2548acef014bdfa92f2c50d5e57f6b58b140685e443b98feb0b822"
+      }
+    },
+    {
+      "id": "support_user_intent",
+      "category": "support",
+      "expected_status": "supported",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user mentioned wanting to handle asynchronous API calls in the weather app.",
+        "status": "supported",
+        "supporting_group": [
+          "b9b3cbed-58f4-56f7-8884-a1b194f6e602"
+        ],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "b9b3cbed-58f4-56f7-8884-a1b194f6e602"
+            ],
+            "entailment": 0.9971423745155334,
+            "contradiction": 8.109284681268036e-05,
+            "neutral": 0.0027764635160565376
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "b6fbdebcc68ccb2eb7969601fff4a27bd528094451f0d4498bd5f65725d4952a",
+        "evidence_sha256": "06a7d707d295cef0ce41ed5658faaad20425137ca6be1b419b1973d8a5f51c42",
+        "evaluation_id": "111639af16c0571f383f09c943aefbf299bd4bb4cd86d89949fa75688f764eea",
+        "result_sha256": "6a19d4a8aafeb95da33c7a6f2dab9103e243bdf73939b4a6296b6a430b9515f0"
+      }
+    },
+    {
+      "id": "support_current_target",
+      "category": "support",
+      "expected_status": "supported",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The first sprint ends on March 31.",
+        "status": "supported",
+        "supporting_group": [
+          "ff647088-fa41-5733-938c-22559a8355f3"
+        ],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "ff647088-fa41-5733-938c-22559a8355f3"
+            ],
+            "entailment": 0.9893866777420044,
+            "contradiction": 0.0008869137964211404,
+            "neutral": 0.009726403281092644
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "0432a83ffc0da68c523c34d44a14d25c2020805a865c43cbb504e427a710b416",
+        "evidence_sha256": "3e1cba50793d7a7d37e4ea09d36cbc23d151967e84e3f83bb37f91497f647d1b",
+        "evaluation_id": "cc0681d4a16b70e2b77481e0c8ac03771001be80f3e9f3ea2ec232b365a9dd0b",
+        "result_sha256": "e62afe6fd21e207319eb2ab08663e164fabf5aa141162f077b8a253a48cf80f1"
+      }
+    },
+    {
+      "id": "support_negative",
+      "category": "support",
+      "expected_status": "supported",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user did not deploy the release.",
+        "status": "supported",
+        "supporting_group": [
+          "1c679aee-453c-5410-84dc-a38c708bba9c"
+        ],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "1c679aee-453c-5410-84dc-a38c708bba9c"
+            ],
+            "entailment": 0.9377683401107788,
+            "contradiction": 0.008395898155868053,
+            "neutral": 0.053835753351449966
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "f80ed559c334f58e08065bb45754796cd698cee64664f0ec13665b2321915fdd",
+        "evidence_sha256": "387762727429dbf4216da1e713ff2e891fdaca6b68aa4af858a4fdef844db7f4",
+        "evaluation_id": "1cb70b039e8c80b456b8c0b5f32a3f024a5150b5052b2e705233229e42cbd13b",
+        "result_sha256": "f735f7ac9cbb26126e9f9657c02f23698a6fe1f36cd927b40b482f10a0bab5cf"
+      }
+    },
+    {
+      "id": "support_preference",
+      "category": "support",
+      "expected_status": "supported",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user prefers dark mode.",
+        "status": "supported",
+        "supporting_group": [
+          "bd47e3a9-12ac-5b6e-ba2b-d1467292fc92"
+        ],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "bd47e3a9-12ac-5b6e-ba2b-d1467292fc92"
+            ],
+            "entailment": 0.9963312745094299,
+            "contradiction": 9.568309178575873e-05,
+            "neutral": 0.0035730437375605106
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "c203d986cbdb80bd73ee6cd8c9e3cb713c937d039af38c75dd9ce5ab592cd6ca",
+        "evidence_sha256": "6f6aa0b9cb1130e7d28d2cc516505c45d89a4750b1191b38e53e624c9e9f3d51",
+        "evaluation_id": "8b21d5828d27e0ead38c776fb0e07d0eec58f6db2a9958a00aa0d18e941cb5b1",
+        "result_sha256": "8295711bf40bba8366b78f117af5f36d6849fe8cf1e47f446287d1ad903e5f7f"
+      }
+    },
+    {
+      "id": "support_decision",
+      "category": "support",
+      "expected_status": "supported",
+      "matched": false,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The team approved PostgreSQL for the project.",
+        "status": "insufficient",
+        "supporting_group": [],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "e76627dc-a8bc-5bf8-ad57-7f47c8d5b575"
+            ],
+            "entailment": 0.030371887609362602,
+            "contradiction": 0.00016835704445838928,
+            "neutral": 0.9694597125053406
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "d46194b769da200a798568fea409b5d1da23ed107f1f76fe1fdd6ee510f58a0c",
+        "evidence_sha256": "c52261918a641311afc060ee031260e93c0629026383f605c33a3667605a0aa3",
+        "evaluation_id": "b155a8585756cae6ab741cc381422c7b1f831caebab048e856371a3265a5f419",
+        "result_sha256": "1857a487fc78023b092f7c8b1b887d160db78df85e605fed50440e3970109ed0"
+      }
+    },
+    {
+      "id": "support_two_hop_name",
+      "category": "minimal_group",
+      "expected_status": "supported",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "Project Aurora ships on Tuesday.",
+        "status": "supported",
+        "supporting_group": [
+          "19a51c2a-aba0-5d3c-88ca-2ef51bfdb706",
+          "d6f323c2-f114-541b-84c8-bde122f58d6d"
+        ],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "19a51c2a-aba0-5d3c-88ca-2ef51bfdb706"
+            ],
+            "entailment": 0.00011351451394148171,
+            "contradiction": 0.0010797178838402033,
+            "neutral": 0.9988068342208862
+          },
+          {
+            "references": [
+              "m2"
+            ],
+            "memory_ids": [
+              "d6f323c2-f114-541b-84c8-bde122f58d6d"
+            ],
+            "entailment": 0.0005465347203426063,
+            "contradiction": 0.0004881208878941834,
+            "neutral": 0.9989653825759888
+          },
+          {
+            "references": [
+              "m1",
+              "m2"
+            ],
+            "memory_ids": [
+              "19a51c2a-aba0-5d3c-88ca-2ef51bfdb706",
+              "d6f323c2-f114-541b-84c8-bde122f58d6d"
+            ],
+            "entailment": 0.9899419546127319,
+            "contradiction": 0.0005851726746186614,
+            "neutral": 0.00947284884750843
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "5e546970fdfe483649693fd9c2537d733ecb2ad51f0381600a30a7087a25a0bb",
+        "evidence_sha256": "a7adaf264872e89525f72a5033fc1ac037c89dcf9c58b46f8d3008db00e26cf6",
+        "evaluation_id": "6605960fae61123b04348be194cb016c329ac89e15f6bff019070b1ae6139469",
+        "result_sha256": "2f46a163f82fa79914476b581e6d9a1eb43e5843fa7be30c330ba4b3fbc8414c"
+      }
+    },
+    {
+      "id": "support_two_hop_owner",
+      "category": "minimal_group",
+      "expected_status": "supported",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "Mina owns the service that runs on port 8443.",
+        "status": "supported",
+        "supporting_group": [
+          "e112771d-dd4d-573b-867d-a30b096528c1",
+          "547d3da2-fed0-5428-8fec-1d7657b28809"
+        ],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "547d3da2-fed0-5428-8fec-1d7657b28809"
+            ],
+            "entailment": 0.00024286750704050064,
+            "contradiction": 0.0037330908235162497,
+            "neutral": 0.9960241317749023
+          },
+          {
+            "references": [
+              "m2"
+            ],
+            "memory_ids": [
+              "e112771d-dd4d-573b-867d-a30b096528c1"
+            ],
+            "entailment": 0.005721058696508408,
+            "contradiction": 0.19270922243595123,
+            "neutral": 0.8015697002410889
+          },
+          {
+            "references": [
+              "m2",
+              "m1"
+            ],
+            "memory_ids": [
+              "e112771d-dd4d-573b-867d-a30b096528c1",
+              "547d3da2-fed0-5428-8fec-1d7657b28809"
+            ],
+            "entailment": 0.9914290308952332,
+            "contradiction": 0.0008172669331543148,
+            "neutral": 0.007753654383122921
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "91fdc2c388c810cedc46d4cb55973baaf5a4cafd82c536739a5d29a962d6e23a",
+        "evidence_sha256": "75233de9c4295efb49025702710766751762d32b867f5f64650ce0d2599451ef",
+        "evaluation_id": "7417cad19a2dd5b9030d38ce1a48abd397b620585be658514a34a69c1abaacdc",
+        "result_sha256": "d493e4a5d9d8888cac65565460d3fd24b94c39dea4a8c9be50d4ea638c2e5671"
+      }
+    },
+    {
+      "id": "refute_launch_day",
+      "category": "refutation",
+      "expected_status": "refuted",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The launch is Tuesday.",
+        "status": "refuted",
+        "supporting_group": [],
+        "refuting_group": [
+          "c6732fab-07bd-5510-8f4c-ee20a9a9ea5a"
+        ],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "c6732fab-07bd-5510-8f4c-ee20a9a9ea5a"
+            ],
+            "entailment": 9.411893552169204e-05,
+            "contradiction": 0.999659538269043,
+            "neutral": 0.00024629582185298204
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "347ed5914057b1e69d1bc35ce4f84d53c79d20b2472e22a039e6113437ab6568",
+        "evidence_sha256": "1038e68d42adf29f5e4ebfb4d4e764810cf78186507991afdcd9434a0d0cf753",
+        "evaluation_id": "4ae4a6d2298d2ceea819ba147b3b5c8b8a4b56204d7c8bc9ecc6a5eaf704d126",
+        "result_sha256": "83182199aa69a66a5ddffffd3f30da37d7d034b87b871d4b682b4e46a36e2fe6"
+      }
+    },
+    {
+      "id": "refute_language",
+      "category": "refutation",
+      "expected_status": "refuted",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user currently uses Python.",
+        "status": "refuted",
+        "supporting_group": [],
+        "refuting_group": [
+          "96a3d2c6-49f4-5d32-8a5a-b1590c611615"
+        ],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "96a3d2c6-49f4-5d32-8a5a-b1590c611615"
+            ],
+            "entailment": 0.00013209989992901683,
+            "contradiction": 0.9997343420982361,
+            "neutral": 0.00013360698358155787
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "188efb772dbba1032052960a3210a502b2271fe8e91b90ba1548d2aaf6d09d6a",
+        "evidence_sha256": "d25d78ec6c03b691df233fd98b91e7feaced95c34acc3c79005693c2eb5a2029",
+        "evaluation_id": "933c81e887d9a136abbc747cb63dff9bf804b72ed3644e019ec3d0ba685fb2d2",
+        "result_sha256": "2dc0518642d073e7479b734b6c2dbb30d3bc5c865c2606d31904bfa235b7f0ad"
+      }
+    },
+    {
+      "id": "refute_deployment_date",
+      "category": "refutation",
+      "expected_status": "refuted",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The deployment date is May 4.",
+        "status": "refuted",
+        "supporting_group": [],
+        "refuting_group": [
+          "e8a0d8f2-f28c-59f9-9415-50927423deb8"
+        ],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "e8a0d8f2-f28c-59f9-9415-50927423deb8"
+            ],
+            "entailment": 0.00018630830163601786,
+            "contradiction": 0.9995330572128296,
+            "neutral": 0.0002805591793730855
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "4d3807312e34c37060310b609bb2318e9d5d10df64ecc878f1be5384105699a7",
+        "evidence_sha256": "01561588435f1e13b7912c8781db9c0fa4f07da9d3c2c81cfe0cc0c11cc455d2",
+        "evaluation_id": "dbd7f3d99e10396141eaa4dd7600da682a9c86ee7c74cf0fee0bf2bcb4e79c75",
+        "result_sha256": "45fe5fc87723b79647fbcd8befaac09d93836372e9ac70c0af3dc98b880e9250"
+      }
+    },
+    {
+      "id": "refute_completion",
+      "category": "refutation",
+      "expected_status": "refuted",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The migration is complete.",
+        "status": "refuted",
+        "supporting_group": [],
+        "refuting_group": [
+          "9d7af76a-202e-5af1-8db0-ea273bb142c1"
+        ],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "9d7af76a-202e-5af1-8db0-ea273bb142c1"
+            ],
+            "entailment": 2.2745189198758453e-05,
+            "contradiction": 0.9998679161071777,
+            "neutral": 0.00010926232062047347
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "c7ece31b8b89b963ddee5fcb80c780fd32984e62dc2e2db7684a69c7483cbc4a",
+        "evidence_sha256": "7890db713b0ca62d5b945839f6530683ffbdad9925bdc1775cd236473fe30940",
+        "evaluation_id": "57eb2737fdcad1548fb723b07b86a99af2c5db91c812665187f0594658f98f0c",
+        "result_sha256": "96131480ceb64c1b3d8825618871469314e36d4cc64d685070f03b28ad2cf4b3"
+      }
+    },
+    {
+      "id": "insufficient_attempt",
+      "category": "speech_act_safety",
+      "expected_status": "insufficient",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user enforced the Airbnb ESLint rules in the project.",
+        "status": "insufficient",
+        "supporting_group": [],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "62eb0864-229b-5b21-a959-bdfc669856b3"
+            ],
+            "entailment": 0.009828898124396801,
+            "contradiction": 0.636772632598877,
+            "neutral": 0.35339853167533875
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "43b4d2f85bd62f33796e13fc50f2711ed233df7cf99b0cda2917cc9ad7643150",
+        "evidence_sha256": "51598a713c8ab2b4aa79669219e7231aa2bad85e1dcd15b8f994f62c28e18260",
+        "evaluation_id": "0ffb046996c58930b4dbdedbb436c81a1ac84ee86cbc4f8b971881a0e6706b77",
+        "result_sha256": "b31c312ff7b0721955271ca06835bdf9d9c1ab34f5d5c449d40a62cb51e576d8"
+      }
+    },
+    {
+      "id": "insufficient_intention",
+      "category": "speech_act_safety",
+      "expected_status": "insufficient",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user deployed the release.",
+        "status": "insufficient",
+        "supporting_group": [],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "d56fee51-dea0-5758-b68a-39927c7ed09d"
+            ],
+            "entailment": 0.01069861650466919,
+            "contradiction": 0.9708982110023499,
+            "neutral": 0.018403109163045883
+          }
+        ],
+        "limitations": [
+          "uncorroborated_model_contradiction"
+        ],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "dcf2c4f5c920fbd551d8f4da1a5e8bda15b97513714067937a2d23546e2f8e48",
+        "evidence_sha256": "122bffd9983b19b07bc6ad490b3479239a60ef5305af2033d050a1a4aaf70dea",
+        "evaluation_id": "07f885868ecd72fbb2a6043d5bef4d8a6a868ed78d12d12715584b40a4034a1b",
+        "result_sha256": "5d5864e1dedb28a4f14e04eac4c2addbd830c4e583d8836f2f17c5dfa81410a9"
+      }
+    },
+    {
+      "id": "insufficient_advice",
+      "category": "role_safety",
+      "expected_status": "insufficient",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user decided to adopt PostgreSQL.",
+        "status": "insufficient",
+        "supporting_group": [],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "34f3b115-dfce-55d7-971b-e008693275c0"
+            ],
+            "entailment": 0.0016388192307204008,
+            "contradiction": 0.00033569210791029036,
+            "neutral": 0.9980254173278809
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "1f173e8592bdaba8c51c8f6c7e555e9e0bedab82a0343bf41c28b8b579ecdf74",
+        "evidence_sha256": "1b88eae07cfaf471f215015b7339de11e3772145c080a43c4b09e518c81b4cef",
+        "evaluation_id": "c27e6b2819e7cfe5246a70f760fe37801809a640e5d39b15f4a5011c15e24368",
+        "result_sha256": "57751d9b1cecd37fc89cb0acdb1cd9c83f9a73d2c1957b542d30dd7f3cba4910"
+      }
+    },
+    {
+      "id": "insufficient_topic",
+      "category": "relation_safety",
+      "expected_status": "insufficient",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user completed the migration.",
+        "status": "insufficient",
+        "supporting_group": [],
+        "refuting_group": [],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "5a92f643-9fcd-5d32-ad28-f8d550ef90ad"
+            ],
+            "entailment": 8.499100658809766e-05,
+            "contradiction": 0.9948337078094482,
+            "neutral": 0.005081241484731436
+          }
+        ],
+        "limitations": [
+          "uncorroborated_model_contradiction"
+        ],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "25433516fed572009aa5ec0fb50056aafc5530c0db0f00c91b19ff2218e019df",
+        "evidence_sha256": "1f70c4e7f0b7c0241eeee04b310fcb03b98cb8d10532025981300e045b23f032",
+        "evaluation_id": "6b77fe485fb04d3778ed1cf9e3e292799e095fd81007306f8776308a36049b54",
+        "result_sha256": "8963da49768da4c452c291cb64a348c75fe686f7bfdce4081bc019c2ae4b76e9"
+      }
+    },
+    {
+      "id": "contested_launch",
+      "category": "conflict",
+      "expected_status": "contested",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The launch is Tuesday.",
+        "status": "contested",
+        "supporting_group": [
+          "60916533-bd60-5b70-8aed-5dd358ee396e"
+        ],
+        "refuting_group": [
+          "9e73609f-d66f-5ce2-b01e-75df9cd0beb3"
+        ],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "60916533-bd60-5b70-8aed-5dd358ee396e"
+            ],
+            "entailment": 0.9970308542251587,
+            "contradiction": 6.613234290853143e-05,
+            "neutral": 0.002903016982600093
+          },
+          {
+            "references": [
+              "m2"
+            ],
+            "memory_ids": [
+              "9e73609f-d66f-5ce2-b01e-75df9cd0beb3"
+            ],
+            "entailment": 9.411920473212376e-05,
+            "contradiction": 0.999659538269043,
+            "neutral": 0.00024629654944874346
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "347ed5914057b1e69d1bc35ce4f84d53c79d20b2472e22a039e6113437ab6568",
+        "evidence_sha256": "1b9d08cd4bb5ec8b85c59a9bc371bddb3418624478fca3f9f154ce91f651e730",
+        "evaluation_id": "4ce244e05528a8788d0460298d6835f3a4816de2c010a9440eb1645dad6cefcd",
+        "result_sha256": "6d4dfdba2c1fb77bd2cd0369158212fdea7ab9a7dab607cdbc37b300ff8b0d80"
+      }
+    },
+    {
+      "id": "contested_preference",
+      "category": "conflict",
+      "expected_status": "contested",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The user prefers dark mode.",
+        "status": "contested",
+        "supporting_group": [
+          "143b8dd5-328a-5c55-a145-a4bfcd7d3fbc"
+        ],
+        "refuting_group": [
+          "8020f4fd-2721-5fdd-a2a5-afaf06fbda68"
+        ],
+        "group_scores": [
+          {
+            "references": [
+              "m1"
+            ],
+            "memory_ids": [
+              "143b8dd5-328a-5c55-a145-a4bfcd7d3fbc"
+            ],
+            "entailment": 0.9977709054946899,
+            "contradiction": 5.485481597133912e-05,
+            "neutral": 0.002174252877011895
+          },
+          {
+            "references": [
+              "m2"
+            ],
+            "memory_ids": [
+              "8020f4fd-2721-5fdd-a2a5-afaf06fbda68"
+            ],
+            "entailment": 0.00010453214781591669,
+            "contradiction": 0.9996688365936279,
+            "neutral": 0.00022665996220894158
+          }
+        ],
+        "limitations": [],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "model_called": true,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "c203d986cbdb80bd73ee6cd8c9e3cb713c937d039af38c75dd9ce5ab592cd6ca",
+        "evidence_sha256": "d41eb0b129c49a1a3fda5ddb8bf2d9cc2d78fa052f2b47a44b1444edd2b9d5d2",
+        "evaluation_id": "a7c5305a7d4f8616df301384a660b53ad6f56c336cbcb04b98d1ada0c5b7fe31",
+        "result_sha256": "dd90bf8d994e0da9db276c310b2eb79c386aaf7049ef61680dc2f7af92794c0d"
+      }
+    },
+    {
+      "id": "incomplete_count",
+      "category": "completeness",
+      "expected_status": "incomplete",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "There are exactly four deployment concerns across all sessions.",
+        "status": "incomplete",
+        "supporting_group": [],
+        "refuting_group": [],
+        "group_scores": [],
+        "limitations": [
+          "complete_set_requires_structured_aggregation"
+        ],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": null,
+        "model_called": false,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "f9dcf9615fd6227f7add79ac2e2231a4beab83eebcb8cdffc678e3b98f965267",
+        "evidence_sha256": "59e9a84075430c003568e0251b18a97386b9fcb3aa40c27dc96be6833d29bde7",
+        "evaluation_id": "2490a317578f726ac848c95d80d1bf26aa47c525003de70f6d30eaefc70be05c",
+        "result_sha256": "7dcab102e7a55ff7185842eb42aa0df99bf5629e320ca30e0cd3ea61fd33b9bc"
+      }
+    },
+    {
+      "id": "incomplete_list",
+      "category": "completeness",
+      "expected_status": "incomplete",
+      "matched": true,
+      "assessment": {
+        "schema_version": 1,
+        "claim": "The complete list of project risks is latency and cost.",
+        "status": "incomplete",
+        "supporting_group": [],
+        "refuting_group": [],
+        "group_scores": [],
+        "limitations": [
+          "complete_set_requires_structured_aggregation"
+        ],
+        "model": "cross-encoder/nli-deberta-v3-base",
+        "requested_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        "resolved_revision": null,
+        "model_called": false,
+        "configuration_sha256": "9fb198d05407d8ecd43748ffbd330d12a76d0f0dcd20d79da59d29af236b96d6",
+        "claim_sha256": "94dc5e459d32a08316cd4e552aa4b8e80b3a2f42297ae386b18229ed66b3b2c3",
+        "evidence_sha256": "07ac685717d54ffc4e77eae349a1981c568f0bf27e51ddd08ace0493bbf7bf57",
+        "evaluation_id": "9bee2385700acf989aa791961437a5fbcf56a297a9f9293eb0fd936f3c89b70c",
+        "result_sha256": "726ff8ed70ee87a842d7f17a64c26992ae16b139173badc905826119d08dd596"
+      }
+    }
+  ],
+  "result_sha256": "b953a4a9e8b214946edf8bbba972d9677daf4b18248ed18bd3d113e5f7da7803"
+}

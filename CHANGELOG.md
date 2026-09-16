@@ -100,7 +100,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   overcalled two neutral passages as refutations. The default verifier now
   requires an explicit correction cue or incompatible concrete value in the
   exact evidence group before accepting a model contradiction; blocked raw
-  contradictions remain auditable and return `insufficient`.
+  contradictions remain auditable and return `insufficient`. A registered
+  same-cohort confirmation passed all eight targeted gates and changed only the
+  two intended false refutations, yielding 19/20 expected statuses with zero
+  unsafe supports. This is regression evidence on an observed development set,
+  not a held-out accuracy result.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
