@@ -87,6 +87,12 @@ verdict is auditable, not calibrated probability. Evaluate both unsafe-answer
 rejection and answerable-query coverage on the target workload before enforcing
 it in production.
 
+For an independent local check of an already-decomposed declarative claim, use
+[`ClaimVerifier`](CLAIM-VERIFICATION.md). It evaluates bounded minimal evidence
+groups with a pinned NLI model and returns `incomplete` for derived exhaustive
+counts or lists. It does not repair this evaluator's model-dependent claim
+decomposition or decide whether a complete draft answer is useful.
+
 The first registered repeated
 [BEAM development trial](../benchmarks/results/research/2026-09-16/BEAM-ANSWERABILITY-DEV-V1.md)
 failed every promotion gate. The

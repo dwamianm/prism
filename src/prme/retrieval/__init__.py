@@ -23,6 +23,15 @@ from prme.retrieval.config import (
     PackingConfig,
     ScoringWeights,
 )
+from prme.retrieval.claim_verification import (
+    ClaimEvidence,
+    ClaimVerification,
+    ClaimVerificationConfig,
+    ClaimVerificationError,
+    ClaimVerificationStatus,
+    ClaimVerifier,
+    EvidenceGroupScore,
+)
 from prme.retrieval.context_formatter import build_context_guidance, format_for_llm
 from prme.retrieval.credit import ablate_context, assess_context_presence
 from prme.retrieval.filtering import filter_epistemic
@@ -60,9 +69,16 @@ __all__ = [
     "AnswerabilityVerdict",
     "ContextAblation",
     "ContextPresenceCredit",
+    "ClaimEvidence",
+    "ClaimVerification",
+    "ClaimVerificationConfig",
+    "ClaimVerificationError",
+    "ClaimVerificationStatus",
+    "ClaimVerifier",
     "DEFAULT_PACKING_CONFIG",
     "DEFAULT_SCORING_WEIGHTS",
     "EntitySnapshot",
+    "EvidenceGroupScore",
     "ExcludedCandidate",
     "format_for_llm",
     "MemoryBundle",

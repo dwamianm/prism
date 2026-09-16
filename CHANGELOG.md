@@ -87,6 +87,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added an optional local `ClaimVerifier` that checks explicit declarative claims
+  against exact packed passages with a revision-pinned NLI cross-encoder. It
+  scores individual evidence first, explores only bounded minimal groups, exposes
+  supporting and refuting groups plus every model score and digest, preserves
+  typed source/time/lifecycle provenance, and returns `incomplete` without a
+  model call for derived exhaustive counts or lists. The verifier is available
+  through `prme[verification]`; it remains opt-in while representative claim
+  evaluations establish domain thresholds.
+
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
   draft answers into independent requirements, resolves cited compact refs or

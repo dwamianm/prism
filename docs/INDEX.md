@@ -52,6 +52,10 @@ ordering, exact token budgets, evidence limits and receipt compatibility.
 post-retrieval evidence-sufficiency evaluator, partial answers, cited conflicts,
 provider configuration and audit boundary.
 
+[Local claim verification](CLAIM-VERIFICATION.md) documents the optional pinned
+NLI verifier, bounded minimal evidence groups, typed bundle evidence and the
+explicit completeness boundary for derived counts and lists.
+
 ## RFC Listing
 
 ### Tier 0 — Foundation

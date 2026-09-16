@@ -107,6 +107,12 @@ validates bundle-local citations, and returns `answerable`, `partial`,
 `insufficient`, or `conflicting`. It is a model-assisted post-retrieval check;
 provider failures are explicit and do not alter deterministic retrieval.
 
+For explicit declarative claims, the optional local
+[`ClaimVerifier`](docs/CLAIM-VERIFICATION.md) independently scores bounded
+minimal evidence groups using a pinned NLI model. It preserves typed packed
+evidence, surfaces both supporting and refuting groups, and fails closed with
+`incomplete` when a derived count or list requires complete-set evidence.
+
 The HTTP API accepts `limit`, `min_score`, `token_budget`, and `mode`, plus typed
 `filters` (`scope`, `time_from`, `time_to`, `knowledge_at`, `event_time_from`,
 `event_time_to`, `include_cross_scope`). Unknown keys are rejected. `mode="explicit"`
@@ -159,6 +165,7 @@ With optional extras:
 ```bash
 pip install prme[postgres]   # PostgreSQL backend
 pip install prme[api]        # HTTP API (FastAPI)
+pip install prme[verification] # Local claim verification
 pip install prme[langchain]  # LangChain retriever and chat history
 pip install prme[llamaindex] # LlamaIndex retriever and chat store
 ```

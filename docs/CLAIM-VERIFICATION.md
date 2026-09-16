@@ -1,0 +1,100 @@
+# Local claim verification
+
+`ClaimVerifier` independently checks a declarative claim against exact memory
+passages with a local natural-language-inference model. It is a lower-level
+primitive than `AnswerabilityEvaluator`: it does not generate an answer,
+decompose prose, or decide whether a response is useful. It answers whether the
+supplied evidence supports, refutes, contests, or fails to establish one claim.
+
+Install the optional runtime and reuse one verifier instance so the model is
+loaded once:
+
+```shell
+pip install prme[verification]
+```
+
+```python
+from prme import ClaimVerificationStatus, ClaimVerifier
+
+response = await engine.retrieve(
+    "When is the launch?",
+    user_id="alice",
+)
+
+verifier = ClaimVerifier()
+result = await verifier.verify_bundle(
+    "The launch is Tuesday.",
+    response.bundle,
+)
+
+if result.status == ClaimVerificationStatus.SUPPORTED:
+    print(result.supporting_group)
+elif result.status == ClaimVerificationStatus.CONTESTED:
+    print(result.supporting_group, result.refuting_group)
+```
+
+The default is `cross-encoder/nli-deberta-v3-base` at immutable Hugging Face
+revision `6c749ce3425cd33b46d187e45b92bbf96ee12ec7`. The model download occupies
+roughly 721 MB in the Hugging Face cache. The optional dependency and inference remain
+outside ordinary storage and retrieval. Set `model` and `revision` together in
+`ClaimVerificationConfig` to use another three-label NLI cross-encoder.
+
+## Minimal evidence groups
+
+The verifier scores each passage alone before combining anything. If no
+individual passage reaches the configured entailment or contradiction threshold,
+it ranks a bounded candidate subset and evaluates combinations of two passages
+by default. It stops at the first group size with a decision. This avoids feeding
+an entire retrieved context through a short NLI window and produces the smallest
+observed evidence group rather than a long, redundant citation list.
+
+Both an entailing and a contradicting group produce `contested`. An entailing
+group alone produces `supported`; a contradicting group alone produces
+`refuted`; otherwise the result is `insufficient`. The probabilities are model
+scores, not calibrated truth probabilities. Every evaluated group, exact model
+revision, thresholds, typed evidence identity, and input/output digest is retained
+in `ClaimVerification`.
+
+`verify_bundle()` sees only packed candidates whose references occur in the exact
+rendered context. It uses `candidate.rendered_text`, so it does not verify against
+hidden full text after packing selected a lower-fidelity representation. Each
+`ClaimEvidence` also retains source type, epistemic type, lifecycle, event time,
+and validity. NLI currently scores the exact text; applications can inspect the
+typed fields before accepting the result.
+
+## Completeness boundary
+
+Entailment cannot prove that a top-k result contains every matching memory. Mark
+a derived exact count or complete-list claim with `requires_complete_set=True`:
+
+```python
+result = await verifier.verify_bundle(
+    "There are exactly four deployment concerns across all sessions.",
+    response.bundle,
+    requires_complete_set=True,
+)
+assert result.status == ClaimVerificationStatus.INCOMPLETE
+```
+
+This returns `incomplete` without loading the model. Produce exact stored-set
+counts with `aggregate_assertions()` or `aggregate_quantities()`, or perform an
+owner-scoped complete scan under the documented coverage contract. A caller that
+already has one explicit source assertion such as “the project has four phases”
+can verify that ordinary factual claim without setting the derived-set flag.
+
+## Evidence and limitations
+
+The implementation follows the minimal-evidence-group direction studied in
+[Li et al. (TrustNLP 2025)](https://aclanthology.org/2025.trustnlp-main.8/)
+and the sentence-level attribution direction in
+[ReClaim (NAACL Findings 2025)](https://aclanthology.org/2025.findings-naacl.55/).
+PRME's bounded search is an engineering adaptation, not a reproduction of either
+paper's complete system.
+
+The pinned default model reports 90.04 accuracy on the MNLI mismatched set in the
+[Sentence Transformers model table](https://sbert.net/docs/cross_encoder/pretrained_models.html).
+That result does not establish performance on long-term memory claims. NLI can
+miss paraphrases, temporal scope, arithmetic, domain terms, and evidence that
+needs more passages than the configured group limit. Use representative labeled
+claims before enforcing a threshold. Model load and inference failures raise
+`ClaimVerificationError`; they never become support.

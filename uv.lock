@@ -2465,6 +2465,9 @@ postgres = [
 reranker = [
     { name = "sentence-transformers" },
 ]
+verification = [
+    { name = "sentence-transformers" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -2495,6 +2498,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.9" },
     { name = "pytz", specifier = ">=2025.2" },
     { name = "sentence-transformers", marker = "extra == 'reranker'", specifier = ">=4.0" },
+    { name = "sentence-transformers", marker = "extra == 'verification'", specifier = ">=4.0" },
     { name = "structlog" },
     { name = "tantivy", specifier = ">=0.22.0" },
     { name = "tiktoken", specifier = ">=0.12" },
@@ -2502,7 +2506,7 @@ requires-dist = [
     { name = "usearch", specifier = ">=2.26.2" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.30" },
 ]
-provides-extras = ["postgres", "api", "mcp", "reranker", "langchain", "llamaindex", "evaluation"]
+provides-extras = ["postgres", "api", "mcp", "reranker", "verification", "langchain", "llamaindex", "evaluation"]
 
 [package.metadata.requires-dev]
 dev = [

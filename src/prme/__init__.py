@@ -97,6 +97,15 @@ from prme.retrieval.answerability import (
     AnswerabilityVerdict,
     assess_answerability,
 )
+from prme.retrieval.claim_verification import (
+    ClaimEvidence,
+    ClaimVerification,
+    ClaimVerificationConfig,
+    ClaimVerificationError,
+    ClaimVerificationStatus,
+    ClaimVerifier,
+    EvidenceGroupScore,
+)
 from prme.retrieval.full_learning import evaluate_full_retrieval
 from prme.types import (
     ConditionEvaluationMethod,
@@ -168,6 +177,12 @@ __all__ = [
     "AssertionStateHistoricalCoverage",
     "AssertionStateQuery",
     "AssertionStateValue",
+    "ClaimEvidence",
+    "ClaimVerification",
+    "ClaimVerificationConfig",
+    "ClaimVerificationError",
+    "ClaimVerificationStatus",
+    "ClaimVerifier",
     "QuantityAggregation",
     "QuantityAggregationQuery",
     "QuantityGroup",
@@ -184,6 +199,7 @@ __all__ = [
     "QueryEmbeddingProvider",
     "EdgeType",
     "EpistemicType",
+    "EvidenceGroupScore",
     "ExtractionError",
     "ExtractionRecord",
     "ExtractionStatus",

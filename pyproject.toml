@@ -64,6 +64,9 @@ mcp = [
 reranker = [
     "sentence-transformers>=4.0",
 ]
+verification = [
+    "sentence-transformers>=4.0",
+]
 langchain = [
     "langchain-core>=0.3",
 ]
