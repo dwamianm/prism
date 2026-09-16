@@ -86,13 +86,16 @@ async def demo_store_and_retrieve(engine: MemoryEngine) -> None:
     ]
 
     for content, node_type, scope in memories:
-        eid = await engine.store(
+        receipt = await engine.store_with_receipt(
             content,
             user_id="alice",
             node_type=node_type,
             scope=scope,
         )
-        print(f"  Stored: {content[:50]:50s} -> {eid[:8]}...")
+        print(
+            f"  Stored: {content[:50]:50s} -> "
+            f"event={str(receipt.event_id)[:8]}... node={str(receipt.node_id)[:8]}..."
+        )
 
     # --- Queries ---
     section("2. Retrieval - Personal Preferences")
@@ -124,41 +127,42 @@ async def demo_lifecycle(engine: MemoryEngine) -> None:
     section("5. Lifecycle Transitions")
 
     # Store a fact (starts as TENTATIVE)
-    await engine.store(
+    mysql_receipt = await engine.store_with_receipt(
         "The project uses MySQL for the database.",
         user_id="alice",
         node_type=NodeType.FACT,
         scope=Scope.PROJECT,
     )
+    mysql_node = mysql_receipt.node
+    print(f"  Created:    '{mysql_node.content}'")
+    print(f"  State:      {mysql_node.lifecycle_state.value}")
 
-    # Query to find the node
-    nodes = await engine.query_nodes(user_id="alice", node_type=NodeType.FACT)
-    mysql_node = next((n for n in nodes if "MySQL" in n.content), None)
+    # Promote to STABLE using the exact node returned by the store receipt.
+    await engine.promote(str(mysql_receipt.node_id), user_id="alice")
+    node = await engine.get_node(str(mysql_receipt.node_id), user_id="alice")
+    print(f"  Promoted:   {node.lifecycle_state.value}")
 
-    if mysql_node:
-        print(f"  Created:    '{mysql_node.content}'")
-        print(f"  State:      {mysql_node.lifecycle_state.value}")
-
-        # Promote to STABLE
-        await engine.promote(str(mysql_node.id))
-        node = await engine.get_node(str(mysql_node.id))
-        print(f"  Promoted:   {node.lifecycle_state.value}")
-
-        # Store a corrected fact and supersede the old one
-        await engine.store(
-            "The project uses PostgreSQL, not MySQL.",
-            user_id="alice",
-            node_type=NodeType.FACT,
-            scope=Scope.PROJECT,
-        )
-        new_nodes = await engine.query_nodes(user_id="alice", node_type=NodeType.FACT)
-        pg_node = next((n for n in new_nodes if "PostgreSQL, not MySQL" in n.content), None)
-
-        if pg_node:
-            await engine.supersede(str(mysql_node.id), str(pg_node.id))
-            old = await engine.get_node(str(mysql_node.id), include_superseded=True)
-            print(f"  Superseded: '{old.content}' -> {old.lifecycle_state.value}")
-            print(f"  New fact:   '{pg_node.content}' -> {pg_node.lifecycle_state.value}")
+    # Store a corrected fact and supersede the old one.
+    pg_receipt = await engine.store_with_receipt(
+        "The project uses PostgreSQL, not MySQL.",
+        user_id="alice",
+        node_type=NodeType.FACT,
+        scope=Scope.PROJECT,
+    )
+    await engine.supersede(
+        str(mysql_receipt.node_id),
+        str(pg_receipt.node_id),
+        evidence_id=str(pg_receipt.event_id),
+        user_id="alice",
+        actor_id="alice",
+    )
+    old = await engine.get_node(
+        str(mysql_receipt.node_id),
+        user_id="alice",
+        include_superseded=True,
+    )
+    print(f"  Superseded: '{old.content}' -> {old.lifecycle_state.value}")
+    print(f"  New fact:   '{pg_receipt.node.content}' -> {pg_receipt.node.lifecycle_state.value}")
 
 
 async def demo_ingest_with_llm(engine: MemoryEngine) -> None:

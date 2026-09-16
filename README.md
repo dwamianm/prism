@@ -212,15 +212,14 @@ Record the result when a user, tool, rule, or model evaluates that condition:
 from prme import ConditionState, EpistemicType, MemoryClient
 
 with MemoryClient("./my_memories") as client:
-    event_id = client.store(
+    receipt = client.store_with_receipt(
         "If the release is approved, deploy Atlas.",
         user_id="alice",
         epistemic_type=EpistemicType.CONDITIONAL,
         metadata={"condition": "the release is approved"},
     )
-    claim = client.get_event_nodes(event_id, user_id="alice")[0]
     client.evaluate_condition(
-        str(claim.id), ConditionState.TRUE, user_id="alice",
+        str(receipt.node_id), ConditionState.TRUE, user_id="alice",
         request_id="9ee0440b-4ea4-48c5-87ed-c1f43546475b",
         evaluation_method="tool", reason="Approval service confirmed",
     )

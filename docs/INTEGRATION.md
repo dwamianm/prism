@@ -223,6 +223,24 @@ truth judgment or calibrated confidence model.
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
 
+Use `store_with_receipt()` when the next operation needs the created node ID:
+
+```python
+receipt = await engine.store_with_receipt(
+    "The project uses PostgreSQL.",
+    user_id="alice",
+    node_type=NodeType.FACT,
+    scope=Scope.PROJECT,
+)
+await engine.promote(str(receipt.node_id), user_id="alice")
+```
+
+The immutable source ID is `receipt.event_id`; lifecycle methods accept
+`receipt.node_id`. `receipt.node` is the exact created node and
+`receipt.processing_status` reports its durable materialization state. Resolution
+follows the source event, so a concurrent write cannot be mistaken for this
+node. Existing `store()` callers retain the event-ID return for compatibility.
+
 For raw imports that do not need typed-node overrides or model extraction, use
 `ingest_fast_many(items, user_id=...)`. Each `FastIngestItem` carries `content`,
 `role`, `session_id`, `scope`, `metadata`, and an optional timezone-aware
