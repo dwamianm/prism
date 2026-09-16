@@ -166,8 +166,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   precision and a 20.00% false-support rate, chiefly on entity changes and
   antonym swaps. A different-family DeepSeek critic over all 46 primary support
   candidates reduced false support to 8.00% but left precision at 78.95% and
-  collapsed recall to 30.00%. This rejects general-model unanimity as the
-  high-assurance path. No provider verifier is integrated.
+  collapsed recall to 30.00%. A balanced 1,100-claim LLM-AggreFact development
+  trial then rejected direct FactCG classification: the best threshold retaining
+  60% recall reached 79.44% precision, while 90% precision retained only 28.73%
+  recall. Its bound test cohort remains untouched. No provider verifier is
+  integrated.
 
 - Added an optional, provider-agnostic `AnswerabilityEvaluator` for grounded
   abstention after retrieval. It decomposes compound questions and optional
