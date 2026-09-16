@@ -155,6 +155,27 @@ two questions per selected ability and conversation, exact owner/query
 continuity, finite retrieval records, and complete non-empty answer and nugget
 verdicts. It hashes every accepted artifact and exits nonzero on any gap.
 
+When a retrieval ablation changes only a few answer scores, a separately
+preregistered answer-stability trial can replay the two frozen question
+artifacts without retrieving again:
+
+```sh
+python -m benchmarks.integrations.run_beam_answer_stability \
+  --registration /absolute/path/to/answer-stability-registration.json \
+  --project-root /absolute/path/to/clean/prme-checkout \
+  --upstream-root /absolute/path/to/pinned/memory-benchmarks \
+  --dataset /absolute/path/to/frozen/beam_100K.json \
+  --baseline-artifact /absolute/path/to/baseline-question.json \
+  --candidate-artifact /absolute/path/to/candidate-question.json \
+  --output /absolute/path/to/new-stability-execution
+```
+
+The registration pins both artifacts, both repositories, the dataset, model
+manifests, repeat count, and alternating arm order. The runner verifies those
+bindings, makes no retrieval calls, and retains every generated answer and
+judge verdict. This measures answerer/judge repeatability for one fixed question;
+it does not turn a post-hoc question selection into confirmation evidence.
+
 For a scored run, create a schema-2 registration and pass it to the same
 `run_beam` command. The current registered profile is intentionally narrow: one
 100K conversation, every ability, top-50 recall, one cutoff, raw source storage,
