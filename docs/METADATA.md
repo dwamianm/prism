@@ -37,12 +37,12 @@ The decimal stays a string so event, graph, DuckDB, PostgreSQL JSONB, and replay
 paths preserve its exact value without binary floating-point conversion. The
 unit and source text are verbatim evidence, with only surrounding whitespace
 removed. No unit, currency, plural, or locale conversion is implied. New
-materialization plans backed by `speech_act_v5` extraction records use
-`speech_act_v11`; saved v4 records remain v10, v3 remain v9, and v2 remain v8. The quantity representation is unchanged from
+materialization plans backed by `speech_act_v6` extraction records use
+`speech_act_v12`; saved v5 records remain v11, v4 remain v10, v3 remain v9, and v2 remain v8. The quantity representation is unchanged from
 `grounded_quantities_v6`, and older records, plans, and checksums remain
 unchanged. A missing policy in a legacy extraction record means
 `source_passage_v1`, and recovery prepares a missing plan under
-`temporal_validity_v7`. Version 11 retains v7 temporal validity and rejects a
+`temporal_validity_v7`. Version 12 retains v7 temporal validity and rejects a
 first-person attempt or intention when its extracted predicate erases the
 non-completed speech act, including a relationship between components named
 inside that attempted action.

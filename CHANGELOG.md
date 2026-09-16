@@ -12,10 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built-in extraction now preserves literal first-person attempts and
   intentions instead of admitting them under completed or current-state
   predicates, including component relationships inside the attempted action.
-  Fresh durable outputs record `speech_act_v5` and prepare `speech_act_v11`
-  plans. A narrow source/entity recovery retains the attempted target when a
-  model emits only its count or failure detail. Saved v4 outputs remain v10,
-  v3 outputs remain v9, v2 outputs remain v8, and legacy extraction records recover
+  Fresh durable outputs record `speech_act_v6` and prepare `speech_act_v12`
+  plans. A narrow source/entity recovery retains the target of an explicit
+  nonactual clause when the model returns the entity but omits its claim, while
+  preserving explicit conditions. Saved v5 outputs remain v11, v4 remain v10,
+  v3 remain v9, v2 remain v8, and legacy extraction records recover
   under `temporal_validity_v7`, so restart cannot claim a validator that did
   not run.
 

@@ -361,7 +361,7 @@ def test_builtin_does_not_recover_entity_outside_attempt_clause():
     assert result.facts == []
 
 
-def test_builtin_recovery_skips_condition_it_cannot_preserve():
+def test_builtin_recovery_preserves_explicit_condition():
     source = "I've tried to use Redis if the service is healthy."
     payload = {
         "entities": [{"name": "Redis", "entity_type": "product"}],
@@ -370,7 +370,28 @@ def test_builtin_recovery_skips_condition_it_cannot_preserve():
     result = _CitedExtractionResult.model_validate(
         payload, context={"source_text": source}
     )
-    assert result.facts == []
+    assert len(result.facts) == 1
+    assert result.facts[0].predicate == "tried_to_use"
+    assert result.facts[0].epistemic_type == "conditional"
+    assert result.facts[0].condition == "if the service is healthy"
+
+
+def test_builtin_recovers_omitted_hope_target():
+    source = "We hope to deploy Phoenix after the security review."
+    payload = {
+        "entities": [
+            {"name": "Phoenix", "entity_type": "product"},
+            {"name": "security review", "entity_type": "event"},
+        ],
+        "facts": [],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert len(result.facts) == 1
+    assert result.facts[0].subject == "We"
+    assert result.facts[0].predicate == "hopes_to_deploy"
+    assert result.facts[0].object == "Phoenix"
 
 
 @pytest.mark.parametrize(

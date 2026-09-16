@@ -227,7 +227,7 @@ async def test_materialization_preserves_grounded_decimal_and_policy(config, use
             "source_text": "$12.50",
         }
         plan = await engine._event_store.get_derivation_plan(event_id, user_id=user)
-        assert plan.materialization_policy == "speech_act_v11"
+        assert plan.materialization_policy == "speech_act_v12"
 
 
 def test_legacy_fact_payloads_remain_unchanged_when_quantity_is_absent():

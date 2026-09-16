@@ -267,15 +267,15 @@ across conversations. Relationship predicates remain model metadata on FACT
 nodes; ingestion does not map them directly to structural edge types. Existing
 saved plans retain their original materialization policy and replay unchanged.
 
-Historical `speech_act_v10` and earlier plans keep their exact node
+Historical `speech_act_v11` and earlier plans keep their exact node
 metadata and replay unchanged. Fresh built-in extractions record
-`speech_act_v5`, and plans made from those outputs record `speech_act_v11`, which
+`speech_act_v6`, and plans made from those outputs record `speech_act_v12`, which
 retains the v7 source-effective validity rules and rejects an attempt or
 intention collapsed into a completed/current predicate, including component
-relationships inside the attempted action. If only an attempt count or failure
-detail survives, v11 can recover the first exact model-returned entity after the
-literal tried/attempted action verb. Saved v4 records prepare v10, v3 prepare v9,
-and v2 prepare v8. A legacy extraction
+relationships inside the attempted action. If the target claim is omitted, v12
+can recover the first exact model-returned entity after the literal nonactual
+action verb and preserve an explicit condition. Saved v5 records prepare v11,
+v4 prepare v10, v3 prepare v9, and v2 prepare v8. A legacy extraction
 record whose omitted policy defaults to `source_passage_v1` prepares a missing
 plan under v7 rather than claiming the new validator ran.
 Unresolved English personal

@@ -48,10 +48,10 @@ async def test_indexing_retry_reuses_saved_extraction_and_restart_can_read_it(co
         assert provider.await_count == 1
         assert len(await engine.query_nodes(user_id=user, node_type=NodeType.FACT)) == 1
         saved = await engine._event_store.get_extraction(event_id, user_id=user)
-        assert saved.grounding_policy == "speech_act_v5"
+        assert saved.grounding_policy == "speech_act_v6"
         assert saved.result["facts"][0]["object"] == "Python"
         plan = await engine._event_store.get_derivation_plan(event_id, user_id=user)
-        assert plan.materialization_policy == "speech_act_v11"
+        assert plan.materialization_policy == "speech_act_v12"
         assert await engine._event_store.get_extraction(event_id, user_id=user + "-other") is None
         assert (await engine.processing_status(event_id, user_id=user)).status == "pending"
     async with MemoryEngine.open(config) as engine:
@@ -70,6 +70,7 @@ async def test_indexing_retry_reuses_saved_extraction_and_restart_can_read_it(co
         ("speech_act_v2", "speech_act_v8"),
         ("speech_act_v3", "speech_act_v9"),
         ("speech_act_v4", "speech_act_v10"),
+        ("speech_act_v5", "speech_act_v11"),
     ],
 )
 async def test_legacy_extraction_recovery_keeps_legacy_materialization_policy(

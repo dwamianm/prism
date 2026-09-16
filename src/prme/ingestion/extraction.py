@@ -207,10 +207,32 @@ class _CitedRelationship(ExtractedRelationship):
     epistemic_type: str = Field(description=ExtractedFact.model_fields["epistemic_type"].description)
 
 
-def _recover_omitted_attempt_targets(
+def _nonactual_cue_predicate(prefix: str) -> str | None:
+    folded = prefix.casefold()
+    cues = (
+        (r"\bwould\s+like\b", "wants_to"),
+        (r"\btrying\b", "trying_to"),
+        (r"\btried\b", "tried_to"),
+        (r"\btry\b", "tries_to"),
+        (r"\battempting\b", "attempting_to"),
+        (r"\battempted\b", "attempted_to"),
+        (r"\battempt\b", "attempts_to"),
+        (r"\bplanning\b|\bplanned\b|\bplan\b", "plans_to"),
+        (r"\bintended\b|\bintend\b", "intends_to"),
+        (r"\bwanted\b|\bwant\b", "wants_to"),
+        (r"\bneeded\b|\bneed\b", "needs_to"),
+        (r"\bhoping\b|\bhoped\b|\bhope\b", "hopes_to"),
+        (r"\baiming\b|\baimed\b|\baim\b", "aims_to"),
+        (r"\blooking\b|\blooked\b|\blook\b", "looking_to"),
+        (r"\bworking\b|\bworked\b|\bwork\b", "working_to"),
+    )
+    return next((predicate for pattern, predicate in cues if re.search(pattern, folded)), None)
+
+
+def _recover_omitted_nonactual_targets(
     extraction: ExtractionResult, source: str
 ) -> list[_CitedFact]:
-    """Recover one exact target from a literal tried/attempted source clause.
+    """Recover one exact target from a literal nonactual source clause.
 
     This is intentionally narrower than general semantic extraction. It uses
     only an entity name already returned by the model, requires that name after
@@ -220,7 +242,8 @@ def _recover_omitted_attempt_targets(
     recovered = []
     for match in _FIRST_PERSON_NONACTUAL_CLAUSE_RE.finditer(source):
         prefix = source[match.start():match.start("body")]
-        if re.search(r"\b(?:tried|attempted)\b", prefix, re.IGNORECASE) is None:
+        cue = _nonactual_cue_predicate(prefix)
+        if cue is None:
             continue
         body = match.group("body")
         boundary = _NONACTUAL_CLAUSE_BOUNDARY_RE.search(body)
@@ -248,11 +271,17 @@ def _recover_omitted_attempt_targets(
             for relationship in extraction.relationships
         ):
             continue
-        cue = "attempted_to" if "attempted" in prefix.casefold() else "tried_to"
         quote_end = (
             match.start("body") + boundary.start()
             if boundary is not None
             else match.end()
+        )
+        quote = source[match.start():quote_end].strip()
+        explicit_condition = _EXPLICIT_CONDITION_RE.search(quote)
+        condition = (
+            quote[explicit_condition.start():].strip()
+            if explicit_condition is not None
+            else None
         )
         try:
             fact = _CitedFact(
@@ -261,11 +290,12 @@ def _recover_omitted_attempt_targets(
                 predicate=f"{cue}_{action_match.group(1).casefold()}",
                 object=target.name,
                 polarity="positive",
-                evidence_quote=source[match.start():quote_end].strip(),
+                evidence_quote=quote,
                 confidence=1.0,
                 fact_type="fact",
                 scope=target.scope,
-                epistemic_type="observed",
+                epistemic_type="conditional" if condition is not None else "observed",
+                condition=condition,
                 temporal_intent="assertion",
             )
             _validate_fact_source_support(fact, source)
@@ -360,10 +390,10 @@ class _CitedExtractionResult(ExtractionResult):
                     supported_relationships.append(relationship)
             self.facts = supported_facts
             self.relationships = supported_relationships
-            recovered = _recover_omitted_attempt_targets(self, source)
+            recovered = _recover_omitted_nonactual_targets(self, source)
             if recovered:
                 logger.info(
-                    "extraction_attempt_target_recovered", count=len(recovered)
+                    "extraction_nonactual_target_recovered", count=len(recovered)
                 )
                 self.facts.extend(recovered)
         fact_errors, relationship_errors = reference_errors_by_claim(self)

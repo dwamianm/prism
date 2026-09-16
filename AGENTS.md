@@ -60,15 +60,15 @@ encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
 metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
-Fresh built-in extractions record `grounding_policy="speech_act_v5"`; plans
-made from those records use `speech_act_v11`. Version 11 also rejects completed
+Fresh built-in extractions record `grounding_policy="speech_act_v6"`; plans
+made from those records use `speech_act_v12`. Version 12 also rejects completed
 component relationships inside a first-person attempt clause and requires the
 attempted target even when the extractor also records a count or failure. A
 narrow recovery adds the first exact model-returned entity after a literal
-tried/attempted action verb when that target claim is absent. Saved v4 records
-recover under v10, v3 under v9, v2 under v8; older extraction records
+nonactual action verb when that target claim is absent, preserving explicit
+conditions. Saved v5 records recover under v11, v4 under v10, v3 under v9, v2 under v8; older extraction records
 default to `source_passage_v1` and remain on `temporal_validity_v7` when recovery
-must prepare a missing plan. Version 11 preserves the
+must prepare a missing plan. Version 12 preserves the
 `temporal_validity_v7` effective-time rules and rejects first-person attempts or
 intentions that an extracted predicate collapses into completed/current state;
 the predicate must preserve the non-completed speech act. A quantity survives
