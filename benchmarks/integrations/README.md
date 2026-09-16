@@ -19,6 +19,10 @@ product-extraction profiles and restart-safe source retries.
 The [WiCE assay](WICE.md) evaluates the local claim verifier on an external,
 human-annotated oracle-retrieval test set with revision-pinned inputs and no
 copied source text in result artifacts.
+The SummEdits proof-verification assay evaluates a provider model on a bound,
+balanced ten-domain cohort. It derives acceptance in code only when an
+exhaustive atomic review supports every claim with exact document quotations
+and complete summary coverage; committed results omit all source text.
 
 ## PrecisionMemBench diagnostic adapter
 
