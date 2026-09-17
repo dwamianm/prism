@@ -58,14 +58,17 @@ def _load_partition_artifacts(
         and source_trial.get("cohort_identity_sha256")
         == factcg._canonical_sha256(list(expected_ids))
     )
+    complete_cases = development.get("complete_cases")
+    safe_abstention_cases = development.get("safe_abstention_cases")
     if (
         result.get("kind") != "llm-aggrefact-atomic-partition-diagnostic"
         or result.get("development_only") is not True
         or result.get("test_accessed") is not False
         or result.get("result_sha256") != canonical
         or development.get("cases") != len(expected_ids)
-        or development.get("complete_cases") != len(expected_ids)
-        or development.get("safe_abstention_cases") != 0
+        or not isinstance(complete_cases, int)
+        or not isinstance(safe_abstention_cases, int)
+        or complete_cases + safe_abstention_cases != len(expected_ids)
         or development.get("unsafe_fallback_cases") != 0
         or not (legacy_failure_cohort or current_cohort)
     ):
@@ -77,7 +80,13 @@ def _load_partition_artifacts(
         or state.get("complete") is not True
         or not isinstance(jobs, dict)
         or set(jobs) != set(expected_ids)
-        or any(job.get("status") != "complete" for job in jobs.values())
+        or any(
+            job.get("status")
+            not in {"complete", "semantic_exhausted", "transport_exhausted"}
+            for job in jobs.values()
+        )
+        or sum(job.get("status") == "complete" for job in jobs.values())
+        != complete_cases
         or state.get("identity", {}).get("run", {}).get("runner_sha256")
         != result.get("protocol", {}).get("runner_sha256")
         or state.get("identity", {}).get("run", {}).get("verifier_manifest_digest")
@@ -118,7 +127,16 @@ def _build_atomic_pairs(
     owners: list[str] = []
     partition_metadata: dict[str, dict[str, Any]] = {}
     for item in prepared:
-        value = _final_partition(item, state["jobs"][item["id"]])
+        job = state["jobs"][item["id"]]
+        if job["status"] != "complete":
+            partition_metadata[item["id"]] = {
+                "partition_status": "safe_abstention",
+                "atom_count": 0,
+                "partition_sha256": None,
+                "atom_source_sha256": None,
+            }
+            continue
+        value = _final_partition(item, job)
         evidence = "\n".join(text for _identifier, text in item["evidence_segments"])
         atom_hashes: list[str] = []
         for atom_index in range(1, len(value.atoms) + 1):
@@ -144,6 +162,7 @@ def _build_atomic_pairs(
             )
             owners.append(item["id"])
         partition_metadata[item["id"]] = {
+            "partition_status": "complete",
             "atom_count": len(value.atoms),
             "partition_sha256": factcg._canonical_sha256(value.model_dump(mode="json")),
             "atom_source_sha256": factcg._canonical_sha256(atom_hashes),
@@ -283,14 +302,14 @@ def run(
     }
     samples: list[dict[str, Any]] = []
     for item in prepared:
-        atomic_scores = by_owner[item["id"]]
+        atomic_scores = by_owner.get(item["id"], [])
         value = {
             "id": item["id"],
             "dataset": item["dataset"],
             "label": item["label"],
             **metadata[item["id"]],
             "atomic_support_probabilities": atomic_scores,
-            "support_probability": min(atomic_scores),
+            "support_probability": min(atomic_scores) if atomic_scores else 0.0,
             "unpartitioned_support_probability": unpartitioned_scores[item["id"]],
         }
         samples.append(value)
