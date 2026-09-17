@@ -63,8 +63,8 @@ subject or shared contextual token in every atom that needs it. Keep negation,
 modality, attribution, quantity, location, time, and other meaningful modifiers
 with the assertion they affect. Do not split a noun phrase, relation, or modifier
 into its own atom. Every atom must contain at least two substantive word tokens
-and at least one substantive token not shared with every other atom. Do not
-return duplicate atoms, generated text, or token ranges.
+and may be nested inside a larger attribution or modality atom. Do not return
+exact duplicate atoms, generated text, or token ranges.
 
 Return no prose. Call submit_atomic_partition exactly once.
 """
@@ -129,11 +129,6 @@ def _strict_validate(
         substantive = token_ids & required_tokens
         if len(substantive) < 2:
             errors.append(f"atom_{atom_index}_has_fewer_than_two_substantive_tokens")
-        if len(partition.atoms) > 1 and not any(
-            sum(token_id in other for other in memberships) == 1
-            for token_id in substantive
-        ):
-            errors.append(f"atom_{atom_index}_has_no_unique_substantive_token")
     return not errors, tuple(sorted(set(errors)))
 
 
@@ -171,10 +166,10 @@ def _repair_message(errors: list[str] | tuple[str, ...]) -> str:
         + ", ".join(errors)
         + ". Add every token named by missing_claim_tokens and remove every token "
         "named by unknown_claim_tokens. Give every atom at least two substantive "
-        "tokens and one nonshared substantive token, repeat shared subjects where "
-        "needed, and remove or correct the indexed duplicate atoms. Do not create "
-        "atoms for individual words. Call submit_atomic_partition exactly once with "
-        "the complete corrected partition."
+        "tokens, repeat shared subjects where needed, and remove or correct the "
+        "indexed exact duplicate atoms. Nested attribution or modality atoms are "
+        "allowed. Do not create atoms for individual words. Call "
+        "submit_atomic_partition exactly once with the complete corrected partition."
     )
 
 

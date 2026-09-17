@@ -45,7 +45,16 @@ def test_partition_rejects_unused_or_degenerate_atom() -> None:
 
     assert valid is False
     assert "atom_3_has_fewer_than_two_substantive_tokens" in errors
-    assert "atom_3_has_no_unique_substantive_token" in errors
+
+
+def test_partition_allows_nested_nonduplicate_atom() -> None:
+    arguments = _complete_arguments()
+    arguments["atoms"].append({"token_ids": ["C0006", "C0009"]})
+
+    valid, errors = subject._strict_validate(_item(), arguments)
+
+    assert valid is True
+    assert errors == ()
 
 
 def test_partition_rejects_duplicate_and_out_of_range_membership() -> None:
