@@ -212,6 +212,22 @@ metadata records the selected policy and SHA-256 identities of both query forms.
 Changing this policy requires a new registered run; it must not be mixed into a
 resume or represented as the default adapter behavior.
 
+Use the fail-closed comparator for a registered two-arm policy trial:
+
+```bash
+python -m benchmarks.integrations.compare_longmemeval_v2_query_policy \
+  --arm verbatim=/absolute/path/to/verbatim/run \
+  --arm question_stem_v1=/absolute/path/to/question-stem/run \
+  --registration /absolute/path/to/registration.json \
+  --output /absolute/path/to/comparison.json
+```
+
+The comparator verifies the frozen inputs, source revisions, reader runtime,
+memory artifacts, selected configurations, and per-question query hashes. It
+reports the full paired result plus the changed-query, unchanged-query, and
+multiple-choice subsets. The unchanged subset measures reader run-to-run drift;
+it is not an effect of the retrieval-query policy.
+
 The optional question image is currently not interpreted during retrieval. The
 reader still receives that question image from the official harness, and PRME
 can return source screenshots, but retrieval selection itself is text-only. The
