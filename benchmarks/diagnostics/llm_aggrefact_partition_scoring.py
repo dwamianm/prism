@@ -1,7 +1,7 @@
 """Score validated atomic partitions with the pinned FactCG task model.
 
-This consumes a completed private partition state over previously observed
-development failures. It reconstructs every atom from authoritative source-token
+This consumes a completed private partition state over a previously observed
+development cohort. It reconstructs every atom from authoritative source-token
 IDs, scores every atom against the ranked evidence, and emits no source text. It
 accepts no test split and cannot unlock evaluation.
 """
@@ -39,10 +39,25 @@ def _load_partition_artifacts(
     result_path: Path,
     state_path: Path,
     expected_ids: tuple[str, ...],
+    cohort: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     result = json.loads(result_path.read_text())
     canonical = _canonical_without_result_sha(result)
     development = result.get("development", {})
+    source_trial = result.get("source_trial", {})
+    legacy_failure_cohort = (
+        cohort == "failures"
+        and "cohort" not in source_trial
+        and source_trial.get("observed_failures") == len(expected_ids)
+        and source_trial.get("failure_identity_sha256")
+        == factcg._canonical_sha256(list(expected_ids))
+    )
+    current_cohort = (
+        source_trial.get("cohort") == cohort
+        and source_trial.get("cohort_cases") == len(expected_ids)
+        and source_trial.get("cohort_identity_sha256")
+        == factcg._canonical_sha256(list(expected_ids))
+    )
     if (
         result.get("kind") != "llm-aggrefact-atomic-partition-diagnostic"
         or result.get("development_only") is not True
@@ -52,6 +67,7 @@ def _load_partition_artifacts(
         or development.get("complete_cases") != len(expected_ids)
         or development.get("safe_abstention_cases") != 0
         or development.get("unsafe_fallback_cases") != 0
+        or not (legacy_failure_cohort or current_cohort)
     ):
         raise ValueError("partition result is not a complete sealed diagnostic")
     state = json.loads(state_path.read_text())
@@ -195,16 +211,25 @@ def run(
     dev_path: Path,
     output_path: Path,
     project_root: Path,
+    cohort: str = "failures",
 ) -> dict[str, Any]:
     failures, registered_result, _prior_state = recovery._failure_ids(
         registration_path=registration_path,
         result_path=registered_result_path,
         prior_state_path=prior_state_path,
     )
+    observed = tuple(registered_result["development"]["observed_ids"])
+    if cohort == "failures":
+        cohort_ids = failures
+    elif cohort == "observed":
+        cohort_ids = observed
+    else:
+        raise ValueError(f"unsupported cohort: {cohort}")
     partition_result, partition_state = _load_partition_artifacts(
         result_path=partition_result_path,
         state_path=partition_state_path,
-        expected_ids=failures,
+        expected_ids=cohort_ids,
+        cohort=cohort,
     )
     registration = json.loads(registration_path.read_text())
     selected, base_registration = typed._validate_registration(
@@ -217,12 +242,12 @@ def run(
         dev_path=dev_path,
     )
     rows_by_id = {row["contamination_identifier"]: row for row in selected}
-    if not set(failures) <= set(rows_by_id):
+    if not set(cohort_ids) <= set(rows_by_id):
         raise ValueError(
             "partition cohort is not part of the registered development cohort"
         )
     prepared, ranker_runtime = cascade._prepare_evidence(
-        [rows_by_id[identifier] for identifier in failures],
+        [rows_by_id[identifier] for identifier in cohort_ids],
         model_spec=base_registration["model"],
         top_k=registration["protocol"]["ranker_top_k"],
         batch_size=registration["protocol"]["ranker_batch_size"],
@@ -258,7 +283,11 @@ def run(
             "registration_sha256": factcg._sha256_file(registration_path),
             "result_sha256": factcg._sha256_file(registered_result_path),
             "result_canonical_sha256": registered_result["result_sha256"],
-            "failure_identity_sha256": factcg._canonical_sha256(list(failures)),
+            "observed_cases": len(observed),
+            "observed_failures": len(failures),
+            "cohort": cohort,
+            "cohort_cases": len(cohort_ids),
+            "cohort_identity_sha256": factcg._canonical_sha256(list(cohort_ids)),
         },
         "partition": {
             "result_file_sha256": factcg._sha256_file(partition_result_path),
@@ -292,8 +321,8 @@ def run(
             "platform": platform.platform(),
         },
         "limitations": [
-            "Post hoc scoring of failures already observed during typed-reference v2.",
-            "The 25-case subset is neither balanced nor an independent quality estimate.",
+            "Post hoc scoring of cases already observed during typed-reference v2.",
+            "The observed cohort is not an independent quality estimate.",
             "Provider disagreement requires full observed-cohort comparison before registration.",
             "No external test split was accepted or accessed.",
         ],
@@ -318,6 +347,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--dev", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--project-root", type=Path, default=Path.cwd())
+    parser.add_argument(
+        "--cohort",
+        choices=partitioning.COHORTS,
+        default="failures",
+    )
     return parser
 
 
@@ -336,6 +370,7 @@ def main() -> None:
         dev_path=args.dev.resolve(),
         output_path=args.output.resolve(),
         project_root=args.project_root.resolve(),
+        cohort=args.cohort,
     )
     print(
         json.dumps(

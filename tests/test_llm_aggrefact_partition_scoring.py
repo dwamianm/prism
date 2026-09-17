@@ -79,7 +79,8 @@ def test_diagnostics_report_required_operating_points() -> None:
 
 
 def test_cli_deliberately_has_no_test_dataset_argument() -> None:
-    actions = {action.dest for action in subject._parser()._actions}
+    actions = {action.dest: action for action in subject._parser()._actions}
 
     assert "dev" in actions
     assert "test" not in actions
+    assert actions["cohort"].default == "failures"

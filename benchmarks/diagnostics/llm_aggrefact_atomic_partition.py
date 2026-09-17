@@ -1,4 +1,4 @@
-"""Test compact source-token atomic partitions on observed verifier failures.
+"""Test compact source-token atomic partitions on an observed verifier cohort.
 
 The provider performs decomposition only. It returns an atom count and assigns
 required source-token properties to atom numbers. It does not generate text,
@@ -73,6 +73,7 @@ TIMEOUT_SECONDS = 120.0
 MAX_TRANSPORT_ATTEMPTS = 2
 MAX_SEMANTIC_ATTEMPTS = 3
 CONCURRENCY = 4
+COHORTS = ("failures", "observed")
 
 
 def _tool_for_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -186,6 +187,7 @@ async def run(
     state_path: Path,
     output_path: Path,
     project_root: Path,
+    cohort: str = "failures",
     model_name: str | None = None,
     concurrency: int = CONCURRENCY,
 ) -> dict[str, Any]:
@@ -194,6 +196,13 @@ async def run(
         result_path=registered_result_path,
         prior_state_path=prior_state_path,
     )
+    observed = tuple(registered_result["development"]["observed_ids"])
+    if cohort == "failures":
+        cohort_ids = failures
+    elif cohort == "observed":
+        cohort_ids = observed
+    else:
+        raise ValueError(f"unsupported cohort: {cohort}")
     registration = json.loads(registration_path.read_text())
     selected, base_registration = typed._validate_registration(
         registration,
@@ -205,10 +214,10 @@ async def run(
         dev_path=dev_path,
     )
     rows_by_id = {row["contamination_identifier"]: row for row in selected}
-    if len(rows_by_id) != len(selected) or not set(failures) <= set(rows_by_id):
-        raise ValueError("observed failures do not belong to the registered cohort")
+    if len(rows_by_id) != len(selected) or not set(cohort_ids) <= set(rows_by_id):
+        raise ValueError("observed cases do not belong to the registered cohort")
     prepared, ranker_runtime = cascade._prepare_evidence(
-        [rows_by_id[identifier] for identifier in failures],
+        [rows_by_id[identifier] for identifier in cohort_ids],
         model_spec=base_registration["model"],
         top_k=registration["protocol"]["ranker_top_k"],
         batch_size=registration["protocol"]["ranker_batch_size"],
@@ -243,7 +252,8 @@ async def run(
         "kind": "llm_aggrefact_atomic_partition",
         "registered_result_sha256": factcg._sha256_file(registered_result_path),
         "registered_result_canonical_sha256": registered_result["result_sha256"],
-        "failure_identity_sha256": factcg._canonical_sha256(list(failures)),
+        "cohort": cohort,
+        "cohort_identity_sha256": factcg._canonical_sha256(list(cohort_ids)),
         "runner_sha256": factcg._sha256_file(runner_path),
         "helper_sha256": factcg._sha256_file(helper_path),
         "role_helper_sha256": factcg._sha256_file(role_helper_path),
@@ -305,8 +315,11 @@ async def run(
             "registration_sha256": factcg._sha256_file(registration_path),
             "result_sha256": factcg._sha256_file(registered_result_path),
             "result_canonical_sha256": registered_result["result_sha256"],
+            "observed_cases": len(observed),
             "observed_failures": len(failures),
-            "failure_identity_sha256": factcg._canonical_sha256(list(failures)),
+            "cohort": cohort,
+            "cohort_cases": len(cohort_ids),
+            "cohort_identity_sha256": factcg._canonical_sha256(list(cohort_ids)),
         },
         "transport": {
             "provider": (
@@ -350,7 +363,7 @@ async def run(
             "platform": platform.platform(),
         },
         "limitations": [
-            "This diagnostic reuses only failures already observed during typed-reference v2.",
+            "This diagnostic reuses only cases already observed during typed-reference v2.",
             "It measures decomposition integrity, not held-out classification quality.",
             "Invalid partitions abstain and therefore may reduce recall.",
             "A pinned task model must still score every reconstructed atom.",
@@ -376,6 +389,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--state", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--project-root", type=Path, default=Path.cwd())
+    parser.add_argument("--cohort", choices=COHORTS, default="failures")
     parser.add_argument("--model")
     parser.add_argument("--concurrency", type=int, default=CONCURRENCY)
     return parser
@@ -396,6 +410,7 @@ def main() -> None:
             state_path=args.state.resolve(),
             output_path=args.output.resolve(),
             project_root=args.project_root.resolve(),
+            cohort=args.cohort,
             model_name=args.model,
             concurrency=args.concurrency,
         )

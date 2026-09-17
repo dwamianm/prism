@@ -108,7 +108,9 @@ def test_tool_schema_limits_atom_membership_to_displayed_tokens() -> None:
 
 
 def test_cli_deliberately_has_no_test_dataset_argument() -> None:
-    actions = {action.dest for action in subject._parser()._actions}
+    actions = {action.dest: action for action in subject._parser()._actions}
 
     assert "dev" in actions
     assert "test" not in actions
+    assert actions["cohort"].default == "failures"
+    assert actions["cohort"].choices == subject.COHORTS
