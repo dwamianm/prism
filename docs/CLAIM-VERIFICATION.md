@@ -292,3 +292,16 @@ from 16.88% to 17.50%. Selecting the best evidence subset regressed to 72.69%
 balanced accuracy and 20.62% false support. No static lattice policy reached 90%
 precision at 60% recall. Evidence-subset maximization and learned tuning on this
 exposed cohort are therefore rejected; the external test set remains unopened.
+
+The next registered
+[HHEM-2.1-Open capacity trial](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-HHEM-WINDOWED-V2.md)
+used 780 fresh balanced development claims after excluding all 310 previously
+observed identities. Its first joined-evidence protocol failed closed before any
+selected model prediction because a prompt exceeded the registered
+non-truncating limit. The superseding protocol covered every selected evidence
+word once across 1,512 source-ordered windows of at most 512 tokens. HHEM still
+failed calibration: its best balanced accuracy was 72.82%, and its best precision
+above 60% recall was 77.67%. The exact-cohort FactCG control reached 74.87% and
+79.46%, respectively. HHEM is not integrated, and the external test remains
+sealed. This closes static maximum-over-window verification with that model;
+future work needs fresh data and explicit partial-support/abstention semantics.
