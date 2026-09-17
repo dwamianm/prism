@@ -115,8 +115,14 @@ def _repair_message(errors: list[str] | tuple[str, ...]) -> str:
         "The source-reference validator rejected that tool call with these machine "
         "error codes: "
         + ", ".join(errors)
-        + ". Call submit_typed_verdict exactly once with a complete corrected "
-        "verdict using only the displayed identifiers."
+        + ". For an outside_atom error, expand that atom's claim range to contain "
+        "all of its relation, object, and qualifier ranges, or correct the misplaced "
+        "range. For incomplete_typed_coverage, assign every substantive token inside "
+        "the atom's claim range to its subject, relation, object, or qualifiers. For "
+        "incomplete_claim_word_coverage, add or expand atoms until every substantive "
+        "claim token is covered. Do not remove a conjunct. Call "
+        "submit_typed_verdict exactly once with a complete corrected verdict using "
+        "only the displayed identifiers."
     )
 
 
@@ -126,21 +132,40 @@ def _summarize(state: dict[str, Any]) -> dict[str, Any]:
     transport_statuses: Counter[str] = Counter()
     transport_errors: Counter[str] = Counter()
     semantic_attempts: Counter[str] = Counter()
+    validation_errors: Counter[str] = Counter()
+    transport_seconds: list[float] = []
     for value in jobs.values():
         semantic_attempts[str(len(value["semantic_attempts"]))] += 1
         for semantic in value["semantic_attempts"]:
+            validation_errors.update(semantic.get("validation_errors", []))
             for transport in semantic["transport_attempts"]:
                 transport_statuses[transport["status"]] += 1
                 if transport.get("error_type"):
                     transport_errors[transport["error_type"]] += 1
+                if transport.get("finished_at"):
+                    transport_seconds.append(
+                        (
+                            datetime.fromisoformat(transport["finished_at"])
+                            - datetime.fromisoformat(transport["started_at"])
+                        ).total_seconds()
+                    )
+    ordered_seconds = sorted(transport_seconds)
     return {
         "cases": len(jobs),
         "complete_cases": statuses.get("complete", 0),
         "completion_rate": statuses.get("complete", 0) / len(jobs),
         "job_statuses": dict(sorted(statuses.items())),
         "semantic_attempts_per_case": dict(sorted(semantic_attempts.items())),
+        "validation_error_counts": dict(sorted(validation_errors.items())),
         "transport_statuses": dict(sorted(transport_statuses.items())),
         "transport_error_types": dict(sorted(transport_errors.items())),
+        "transport_call_seconds_sum": sum(transport_seconds),
+        "transport_call_seconds_median": ordered_seconds[len(ordered_seconds) // 2],
+        "transport_call_seconds_max": max(transport_seconds),
+        "invocation_wall_seconds": (
+            datetime.fromisoformat(state["finished_at"])
+            - datetime.fromisoformat(state["started_at"])
+        ).total_seconds(),
     }
 
 
@@ -199,12 +224,14 @@ async def run(
         for item in prepared
     ]
     runner_path = Path(inspect.getfile(run)).resolve()
+    durable_runner_path = Path(inspect.getfile(durable_tool_calls.run)).resolve()
     run_identity = {
         "kind": "llm_aggrefact_typed_tool_recovery",
         "registered_result_sha256": factcg._sha256_file(registered_result_path),
         "registered_result_canonical_sha256": registered_result["result_sha256"],
         "failure_identity_sha256": factcg._canonical_sha256(list(failures)),
         "runner_sha256": factcg._sha256_file(runner_path),
+        "durable_runner_sha256": factcg._sha256_file(durable_runner_path),
         "system_prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest(),
         "verifier_manifest_digest": verifier["manifest_digest"],
     }
@@ -268,6 +295,16 @@ async def run(
             "max_transport_attempts": MAX_TRANSPORT_ATTEMPTS,
             "max_semantic_attempts": MAX_SEMANTIC_ATTEMPTS,
             "concurrency": CONCURRENCY,
+        },
+        "protocol": {
+            "runner_sha256": factcg._sha256_file(runner_path),
+            "durable_runner_sha256": factcg._sha256_file(durable_runner_path),
+            "system_prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest(),
+            "tool_sha256": factcg._canonical_sha256(TOOL),
+            "repair_message_sha256": hashlib.sha256(
+                _repair_message(("ERROR",)).encode()
+            ).hexdigest(),
+            "source_text_emitted": False,
         },
         "development": _summarize(state),
         "runtime": {
