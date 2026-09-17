@@ -107,12 +107,18 @@ def _strict_validate(
         token_id for atom in partition.atoms for token_id in atom.token_ids
     }
     errors: list[str] = []
-    if not required_tokens <= observed_tokens <= all_tokens:
-        errors.append("claim_token_coverage_invalid")
+    missing_tokens = sorted(required_tokens - observed_tokens)
+    unknown_tokens = sorted(observed_tokens - all_tokens)
+    if missing_tokens:
+        errors.append("missing_claim_tokens:" + ",".join(missing_tokens))
+    if unknown_tokens:
+        errors.append("unknown_claim_tokens:" + ",".join(unknown_tokens))
 
     memberships = [set(atom.token_ids) for atom in partition.atoms]
-    if len({tuple(sorted(values)) for values in memberships}) != len(memberships):
-        errors.append("duplicate_atom")
+    for left in range(len(memberships)):
+        for right in range(left + 1, len(memberships)):
+            if memberships[left] == memberships[right]:
+                errors.append(f"duplicate_atoms:{left + 1},{right + 1}")
     for atom_index, (unit, token_ids) in enumerate(
         zip(partition.atoms, memberships, strict=True), 1
     ):
@@ -163,11 +169,12 @@ def _repair_message(errors: list[str] | tuple[str, ...]) -> str:
         "The atomic-partition validator rejected that tool call with these machine "
         "error codes: "
         + ", ".join(errors)
-        + ". Cover every substantive C#### token across the atom token_ids lists. "
-        "Give every atom at least two substantive tokens and one nonshared "
-        "substantive token, repeat shared subjects where needed, and do not create "
-        "duplicate atoms or atoms for individual words. Call submit_atomic_partition "
-        "exactly once with the complete corrected partition."
+        + ". Add every token named by missing_claim_tokens and remove every token "
+        "named by unknown_claim_tokens. Give every atom at least two substantive "
+        "tokens and one nonshared substantive token, repeat shared subjects where "
+        "needed, and remove or correct the indexed duplicate atoms. Do not create "
+        "atoms for individual words. Call submit_atomic_partition exactly once with "
+        "the complete corrected partition."
     )
 
 

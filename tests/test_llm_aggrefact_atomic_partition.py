@@ -34,7 +34,7 @@ def test_partition_rejects_missing_required_token() -> None:
     valid, errors = subject._strict_validate(_item(), arguments)
 
     assert valid is False
-    assert "claim_token_coverage_invalid" in errors
+    assert "missing_claim_tokens:C0004" in errors
 
 
 def test_partition_rejects_unused_or_degenerate_atom() -> None:
@@ -57,6 +57,17 @@ def test_partition_rejects_duplicate_and_out_of_range_membership() -> None:
     assert valid is False
     assert "atom_1_duplicate_token" in errors
     assert "atom_1_unknown_claim_token" in errors
+    assert "unknown_claim_tokens:C9999" in errors
+
+
+def test_partition_identifies_duplicate_atom_indexes() -> None:
+    arguments = _complete_arguments()
+    arguments["atoms"].append({"token_ids": list(arguments["atoms"][0]["token_ids"])})
+
+    valid, errors = subject._strict_validate(_item(), arguments)
+
+    assert valid is False
+    assert "duplicate_atoms:1,3" in errors
 
 
 def test_partition_allows_optional_displayed_structural_tokens() -> None:
