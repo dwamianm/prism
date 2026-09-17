@@ -205,6 +205,11 @@ implement logical clear, replacement, and deletion over PRME's immutable event
 log. See the [framework integration guide](docs/FRAMEWORK-INTEGRATIONS.md) for
 copy-paste examples and lifecycle semantics.
 
+PRME also provides an optional, evidence-backed [TypeSafe Jev product-alignment
+advisor](docs/JEV-PRODUCT-ADVISOR.md). It compares caller-selected software
+product pairs and returns auditable recommendations for unverified alias
+proposals. It never authorizes or performs an automatic identity merge.
+
 Conditional memories require explicit condition text and always start unresolved.
 Record the result when a user, tool, rule, or model evaluates that condition:
 
