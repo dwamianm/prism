@@ -79,6 +79,31 @@ def test_token_roles_reject_duplicate_role_for_same_atom_token() -> None:
     assert "duplicate_atom_token_assignment" in errors
 
 
+def test_token_roles_accept_optional_displayed_structural_tokens() -> None:
+    arguments = _complete_arguments()
+    arguments["token_roles"]["C0005"] = [_role(1, "qualifier")]
+    arguments["token_roles"]["C0008"] = [_role(2, "qualifier")]
+    arguments["token_roles"]["C0010"] = [_role(2, "qualifier")]
+
+    valid, errors = subject._strict_validate(_item(), arguments)
+
+    assert valid is True
+    assert errors == ()
+
+
+def test_token_roles_reject_unknown_or_empty_properties() -> None:
+    arguments = _complete_arguments()
+    arguments["token_roles"]["C9999"] = [_role(1, "qualifier")]
+    arguments["token_roles"]["C0005"] = []
+
+    valid, errors = subject._strict_validate(_item(), arguments)
+
+    assert valid is False
+    assert "token_role_key_set_invalid" in errors
+    assert "unknown_claim_token" in errors
+    assert "empty_token_role_property" in errors
+
+
 def test_atomic_text_uses_only_ordered_authoritative_source_runs() -> None:
     verdict = subject._TokenRoleVerdict.model_validate(_complete_arguments())
 
@@ -101,7 +126,8 @@ def test_tool_schema_requires_every_substantive_token_property() -> None:
         "C0007",
         "C0009",
     ]
-    assert set(token_roles["properties"]) == set(token_roles["required"])
+    assert set(token_roles["properties"]) == {f"C{index:04d}" for index in range(1, 11)}
+    assert set(token_roles["required"]) < set(token_roles["properties"])
     assert token_roles["additionalProperties"] is False
 
 
