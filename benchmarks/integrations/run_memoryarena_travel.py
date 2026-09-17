@@ -28,7 +28,6 @@ from benchmarks.diagnostics.memoryarena_travel_audit import (
     score_strict,
     validate_coverage,
 )
-from benchmarks.diagnostics.memoryarena_server import CONFIRMED_PLAN_CONTEXT_CONTRACT
 from benchmarks.integrations.run_longmemeval_v2 import _ollama_reader_identity
 
 
@@ -510,8 +509,7 @@ def register(
                 "source-preserving trace-projection adapter; exact raw traces remain "
                 "events while traveler final plans are retrieved per query."
             ),
-            "prme_retrieval_projection": "traveler_confirmed_plan_v5",
-            "prme_context_contract": CONFIRMED_PLAN_CONTEXT_CONTRACT,
+            "prme_retrieval_projection": "traveler_confirmed_plan_v3",
             "prme_query_projection": (
                 "base traveler plus exact occurrences of previously stored traveler "
                 "names in the constraint body, excluding the roster preamble"
