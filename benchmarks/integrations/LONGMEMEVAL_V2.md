@@ -85,6 +85,13 @@ can bind that object as `reader.runtime_identity`; a changed tag or runtime then
 fails before any generation, and execution-manifest schema 3 preserves the
 observed identity for comparison.
 
+Ollama cloud readers use the same option. Their runtime identity records the
+local cloud-manifest digest and size, remote host and model name, capabilities,
+and Ollama server version. It also records `remote_weights_pinned: false` because
+Ollama does not expose an immutable remote weight revision. This makes repeated
+cloud runs auditable without misrepresenting the local manifest digest as a hash
+of the hosted weights.
+
 Loaded PRME runs also record a separate identity for the `prme_pack/` payload.
 This lets a registered multi-budget curve prove that every arm started from the
 same graph, indexes, attachments, and adapter manifest even though each clone's
@@ -168,24 +175,28 @@ content, or an interrupted partial insert, fails explicitly instead of silently
 reusing stale evidence or duplicating state. The recovery action for an
 interrupted benchmark insert is to rebuild that scratch pack. The manifest
 records source-state and inserted-node counts, and long trajectories checkpoint
-and print progress every 100 nodes. Schema 3 also records the latest successfully
-inserted event time as the retrieval reference clock. Every query against that
-pack reuses the same clock, so recency and relative-time scoring do not drift
-when a saved run is resumed days later.
+and print progress every 100 nodes. Schema 3 records the latest successfully
+inserted event time as the retrieval reference clock. Schema 4 additionally
+records the relative path and SHA-256 digest of every copied screenshot. Insert,
+save, and load verify the complete inventory, so missing or altered visual
+evidence fails before a portable pack can be used. Every query against that pack
+reuses the same clock, so recency and relative-time scoring do not drift when a
+saved run is resumed days later.
 
 Existing schema 2 packs remain queryable without rewriting their evidence. The
 adapter derives their clock from the newest stored node and marks the source as
-`legacy_max_created_at` in post-query metadata. They are read-only: rebuild a
-schema 3 scratch pack before adding trajectories. A schema 3 pack with completed
-trajectories but no clock fails closed rather than falling back to wall time.
+`legacy_max_created_at` in post-query metadata. Older schemas are read-only:
+rebuild a schema 4 scratch pack before adding trajectories. A schema 3 pack with
+completed trajectories but no clock fails closed rather than falling back to
+wall time.
 
 `save_memory()` includes the adapter manifest, copied screenshot attachments,
 PRME event and operation logs, graph tables, vector index, and lexical index.
-The manifest pins the adapter schema and upstream code revision. This is an
-adapter-level extension to PRME's standard text memory pack. Saving closes the
-source client and reopens it lazily only if the upstream harness makes another
-query, so a completed save cannot leave a client writing into a discarded
-temporary directory during process shutdown.
+The manifest pins the adapter schema, attachment inventory, and upstream code
+revision. This is an adapter-level extension to PRME's standard text memory
+pack. Saving closes the source client and reopens it lazily only if the upstream
+harness makes another query, so a completed save cannot leave a client writing
+into a discarded temporary directory during process shutdown.
 
 ## Query and budget boundary
 
@@ -201,7 +212,7 @@ can return source screenshots, but retrieval selection itself is text-only. The
 post-query metadata records this limitation. A result must therefore be labelled
 as text retrieval with multimodal evidence return, not visual query retrieval.
 The metadata also records the exact query reference time and whether the clock
-came from the schema 3 manifest or a read-only schema 2 pack.
+came from the manifest or a read-only schema 2 pack.
 
 ## Evaluation status and resources
 

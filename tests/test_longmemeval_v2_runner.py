@@ -387,6 +387,78 @@ def test_ollama_reader_identity_binds_server_and_model(monkeypatch) -> None:
     }
 
 
+def test_ollama_reader_identity_records_cloud_manifest_boundary(monkeypatch) -> None:
+    def fake_endpoint(_base_url: str, path: str, body=None):
+        if path == "/api/version":
+            return {"version": "0.34.1"}
+        if path == "/api/tags":
+            return {
+                "models": [
+                    {
+                        "name": "deepseek-v4.1-flash:cloud",
+                        "model": "deepseek-v4.1-flash:cloud",
+                        "digest": "a" * 64,
+                        "size": 326,
+                        "remote_host": "https://ollama.com",
+                        "remote_model": "deepseek-v4.1-flash",
+                        "details": {
+                            "parameter_size": "763B",
+                            "quantization_level": "FP8",
+                        },
+                    }
+                ]
+            }
+        assert path == "/api/show"
+        assert body == {"model": "deepseek-v4.1-flash:cloud", "verbose": False}
+        return {"capabilities": ["vision", "completion"]}
+
+    monkeypatch.setattr(runner, "_ollama_endpoint", fake_endpoint)
+    identity = runner._ollama_reader_identity(
+        "http://127.0.0.1:11434/v1", "deepseek-v4.1-flash:cloud"
+    )
+    assert identity == {
+        "provider": "ollama_cloud",
+        "api_base_url": "http://127.0.0.1:11434",
+        "server_version": "0.34.1",
+        "model": "deepseek-v4.1-flash:cloud",
+        "resolved_model": "deepseek-v4.1-flash:cloud",
+        "manifest_digest_sha256": "a" * 64,
+        "manifest_size_bytes": 326,
+        "remote_host": "https://ollama.com",
+        "remote_model": "deepseek-v4.1-flash",
+        "remote_weights_pinned": False,
+        "details": {
+            "parameter_size": "763B",
+            "quantization_level": "FP8",
+        },
+        "capabilities": ["completion", "vision"],
+    }
+
+
+def test_ollama_reader_identity_rejects_partial_cloud_identity(monkeypatch) -> None:
+    def fake_endpoint(_base_url: str, path: str, _body=None):
+        if path == "/api/version":
+            return {"version": "0.34.1"}
+        if path == "/api/tags":
+            return {
+                "models": [
+                    {
+                        "name": "reader:cloud",
+                        "model": "reader:cloud",
+                        "digest": "a" * 64,
+                        "size": 100,
+                        "remote_host": "https://ollama.com",
+                        "details": {},
+                    }
+                ]
+            }
+        return {"capabilities": ["completion"]}
+
+    monkeypatch.setattr(runner, "_ollama_endpoint", fake_endpoint)
+    with pytest.raises(RuntimeError, match="incomplete cloud identity"):
+        runner._ollama_reader_identity("http://127.0.0.1:11434", "reader:cloud")
+
+
 def test_execution_manifest_rejects_missing_selected_config(
     tmp_path: Path, monkeypatch
 ) -> None:

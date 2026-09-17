@@ -95,12 +95,14 @@ def test_adapter_round_trips_public_context_and_images(
             (tmp_path / "pack" / "longmemeval_v2_manifest.json").read_text()
         )
         record = manifest["trajectories"]["trajectory-1"]
-        assert manifest["schema_version"] == 3
+        assert manifest["schema_version"] == 4
         query_reference_time = datetime.fromisoformat(manifest["query_reference_time"])
         assert query_reference_time.utcoffset() is not None
         assert record["state_count"] == 2
         assert record["node_count"] == len(after)
         assert record["status"] == "complete"
+        assert [item["state_index"] for item in record["attachments"]] == [0, 1]
+        assert all(len(item["sha256"]) == 64 for item in record["attachments"])
 
         retrieve = memory._client.retrieve
         retrieval_clocks: list[datetime] = []
@@ -176,13 +178,44 @@ def test_schema_two_pack_derives_a_read_only_stable_clock(tmp_path: Path) -> Non
     try:
         assert legacy._query_reference_time == expected
         assert legacy._query_clock_source == "legacy_max_created_at"
-        with pytest.raises(RuntimeError, match="schema 2 packs are read-only"):
+        with pytest.raises(RuntimeError, match="legacy.*packs are read-only"):
             legacy.insert(source)
         context = legacy.query("What happens after submitting the order?")
         assert any(item["type"] == "text" for item in context)
     finally:
         legacy.close()
     assert manifest_path.read_bytes() == legacy_bytes
+
+
+def test_adapter_rejects_missing_and_changed_portable_attachments(tmp_path: Path) -> None:
+    root = tmp_path / "data"
+    pack = tmp_path / "pack"
+    source = trajectory(root)
+    memory = PRMEMemory(params(root, pack))
+    try:
+        memory.insert(source)
+        manifest = json.loads((pack / "longmemeval_v2_manifest.json").read_text())
+        relative = Path(manifest["trajectories"]["trajectory-1"]["attachments"][0]["path"])
+        attachment = pack / relative
+        original = attachment.read_bytes()
+        attachment.unlink()
+
+        missing_save = tmp_path / "missing-save"
+        missing_save.mkdir()
+        with pytest.raises(RuntimeError, match="attachment is missing"):
+            memory._save_backend(missing_save)
+
+        attachment.write_bytes(original)
+        valid_save = tmp_path / "valid-save"
+        valid_save.mkdir()
+        memory._save_backend(valid_save)
+    finally:
+        memory.close()
+
+    copied_attachment = valid_save / "prme_pack" / relative
+    copied_attachment.write_bytes(b"changed-after-save")
+    with pytest.raises(RuntimeError, match="attachment digest mismatch"):
+        PRMEMemory(params(root, valid_save / "prme_pack"))
 
 
 def test_adapter_supports_explicit_compact_context(tmp_path: Path) -> None:
@@ -252,12 +285,8 @@ def test_adapter_rejects_changed_or_interrupted_trajectory(tmp_path: Path) -> No
     finally:
         memory.close()
 
-    reopened = PRMEMemory(params(tmp_path / "data", tmp_path / "pack"))
-    try:
-        with pytest.raises(RuntimeError, match="insert was interrupted"):
-            reopened.insert(source)
-    finally:
-        reopened.close()
+    with pytest.raises(RuntimeError, match="trajectory insert is incomplete"):
+        PRMEMemory(params(tmp_path / "data", tmp_path / "pack"))
 
 
 def test_adapter_validates_configuration_and_public_schema(tmp_path: Path) -> None:

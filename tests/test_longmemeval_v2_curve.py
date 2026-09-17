@@ -229,6 +229,37 @@ def test_curve_verifies_every_arm_and_reports_all_pairs(tmp_path: Path) -> None:
     assert "Answer 0" not in json.dumps(result)
 
 
+def test_curve_accepts_registered_holdout_protocol(tmp_path: Path) -> None:
+    runs, registration_path, _ = _fixture(tmp_path)
+    registration = json.loads(registration_path.read_text())
+    registration["protocol"] = subject._holdout_protocol_specification()
+    registration_path.write_text(json.dumps(registration, sort_keys=True))
+    registration_sha256 = _digest(registration_path)
+    for run in runs.values():
+        path = run / "execution_manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["registration_sha256"] = registration_sha256
+        path.write_text(json.dumps(manifest))
+
+    result = subject.compare_curve(
+        runs, registration_path=registration_path, samples=10
+    )
+
+    assert result["limitations"][0] == (
+        "This is a registered cross-domain confirmation cohort, not a competitor comparison."
+    )
+
+
+def test_curve_rejects_unregistered_protocol(tmp_path: Path) -> None:
+    runs, registration_path, _ = _fixture(tmp_path)
+    registration = json.loads(registration_path.read_text())
+    registration["protocol"]["claim_boundary"] = "changed after registration"
+    registration_path.write_text(json.dumps(registration, sort_keys=True))
+
+    with pytest.raises(ValueError, match="registration identity is invalid"):
+        subject.compare_curve(runs, registration_path=registration_path, samples=10)
+
+
 def test_curve_rejects_changed_saved_configuration(tmp_path: Path) -> None:
     runs, registration, _ = _fixture(tmp_path)
     memory = Path(
