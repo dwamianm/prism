@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
@@ -77,7 +78,11 @@ _ALLOWED_PARAMS = {
     "image_limit",
     "max_chunk_chars",
     "context_item_max_chars",
+    "retrieval_query_policy",
 }
+
+_RETRIEVAL_QUERY_POLICIES = {"verbatim", "question_stem_v1"}
+_CHOICE_LINE_RE = re.compile(r"(?m)^[ \t]*([A-Z])[.)][ \t]+")
 
 
 def _canonical(value: object) -> bytes:
@@ -175,6 +180,33 @@ def _prefixed_chunks(prefix_lines: list[str], body: str, limit: int) -> list[str
     return [prefix + chunk for chunk in _chunks(body, limit - len(prefix))]
 
 
+def _retrieval_query(query: str, policy: str) -> str:
+    """Return the evidence-bearing question text used for memory search.
+
+    The benchmark reader must still receive the original question and choices.
+    ``question_stem_v1`` only removes a contiguous answer-choice block from the
+    retrieval query so distractor answers cannot become search terms.  It is an
+    explicit evaluation policy because changing a query can change results.
+    """
+    if policy == "verbatim":
+        return query
+    require(
+        policy == "question_stem_v1",
+        f"unsupported PRME retrieval query policy: {policy}",
+    )
+    value = query.strip()
+    choices = list(_CHOICE_LINE_RE.finditer(value))
+    if (
+        len(choices) >= 2
+        and choices[0].group(1) == "A"
+        and choices[1].group(1) == "B"
+    ):
+        stem = value[: choices[0].start()].rstrip()
+        if stem:
+            return stem
+    return query
+
+
 @register_memory
 class PRMEMemory(Memory):
     """Text-first PRME trajectory memory with source screenshot returns."""
@@ -196,6 +228,9 @@ class PRMEMemory(Memory):
         self.context_item_max_chars = int(
             memory_params.get("context_item_max_chars", 12000)
         )
+        self.retrieval_query_policy = str(
+            memory_params.get("retrieval_query_policy", "verbatim")
+        )
         require(bool(self.user_id), "prme user_id must be non-empty")
         require(self.token_budget > 0, "prme token_budget must be positive")
         require(
@@ -211,6 +246,10 @@ class PRMEMemory(Memory):
         require(
             self.context_item_max_chars >= 512,
             "prme context_item_max_chars must be at least 512",
+        )
+        require(
+            self.retrieval_query_policy in _RETRIEVAL_QUERY_POLICIES,
+            "prme retrieval_query_policy must be 'verbatim' or 'question_stem_v1'",
         )
 
         root_value = memory_params.get("trajectories_root_dir")
@@ -634,13 +673,14 @@ class PRMEMemory(Memory):
 
     def query(self, query: str, query_image: str | None = None) -> list[MemoryContextItem]:
         require(isinstance(query, str) and bool(query.strip()), "prme query must be non-empty")
+        retrieval_query = _retrieval_query(query, self.retrieval_query_policy)
         with self._lock:
             require(
                 self._query_reference_time is not None,
                 "cannot query PRME adapter before a completed trajectory insert",
             )
             response = self._ensure_client().retrieve(
-                query,
+                retrieval_query,
                 user_id=self.user_id,
                 scope=Scope.PROJECT,
                 reference_time=self._query_reference_time,
@@ -689,6 +729,7 @@ class PRMEMemory(Memory):
         query_image: str | None,
         memory_context: list[MemoryContextItem],
     ) -> dict[str, object]:
+        retrieval_query = _retrieval_query(query, self.retrieval_query_policy)
         return {
             "adapter": "prme",
             "adapter_schema_version": ADAPTER_SCHEMA_VERSION,
@@ -700,6 +741,11 @@ class PRMEMemory(Memory):
             ),
             "query_clock_source": self._query_clock_source,
             "context_format": self.context_format,
+            "retrieval_query_policy": self.retrieval_query_policy,
+            "original_query_sha256": hashlib.sha256(query.encode("utf-8")).hexdigest(),
+            "retrieval_query_sha256": hashlib.sha256(
+                retrieval_query.encode("utf-8")
+            ).hexdigest(),
             "query_image_used_for_retrieval": False,
             "returned_text_items": sum(item["type"] == "text" for item in memory_context),
             "returned_image_items": sum(item["type"] == "image" for item in memory_context),

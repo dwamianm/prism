@@ -195,6 +195,16 @@ belonging to included state nodes. Bounded items matter because the upstream
 harness re-tokenizes with the reader processor and truncates at item boundaries;
 a small tokenizer difference cannot discard one monolithic context item.
 
+The default `retrieval_query_policy` is `verbatim`, which sends the original
+question to PRME byte for byte. An explicit `question_stem_v1` policy is
+available for controlled multiple-choice ablations. When a contiguous answer
+block starts with lettered `A` and `B` lines, it removes that block from the
+retrieval query so answer distractors do not become search terms. The official
+reader still receives the complete original question and choices. Post-query
+metadata records the selected policy and SHA-256 identities of both query forms.
+Changing this policy requires a new registered run; it must not be mixed into a
+resume or represented as the default adapter behavior.
+
 The optional question image is currently not interpreted during retrieval. The
 reader still receives that question image from the official harness, and PRME
 can return source screenshots, but retrieval selection itself is text-only. The

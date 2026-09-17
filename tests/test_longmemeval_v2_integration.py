@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.integrations.longmemeval_v2 import PRMEMemory
+from benchmarks.integrations.longmemeval_v2 import PRMEMemory, _retrieval_query
 
 
 def trajectory(root: Path) -> dict:
@@ -230,6 +230,65 @@ def test_adapter_defaults_older_configs_to_auditable_context(tmp_path: Path) -> 
         memory.close()
 
 
+def test_question_stem_policy_removes_answer_choice_distractors() -> None:
+    question = (
+        "Which control opens the order?\n"
+        "A. Delete\n"
+        "B. View Order\n"
+        "C. Reorder\n"
+        "Your final answer should be wrapped in \\boxed{} like \\boxed{A}."
+    )
+
+    assert _retrieval_query(question, "verbatim") == question
+    padded = f"  {question}\n"
+    assert _retrieval_query(padded, "verbatim") == padded
+    assert _retrieval_query(question, "question_stem_v1") == (
+        "Which control opens the order?"
+    )
+    ordinary = "Which control opens the order? Wrap the answer in \\boxed{}."
+    assert _retrieval_query(ordinary, "question_stem_v1") == ordinary
+    assert _retrieval_query(f"  {ordinary}\n", "question_stem_v1") == (
+        f"  {ordinary}\n"
+    )
+
+
+def test_adapter_applies_and_reports_question_stem_policy(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source = trajectory(tmp_path / "data")
+    memory_params = params(tmp_path / "data", tmp_path / "pack")
+    memory_params["retrieval_query_policy"] = "question_stem_v1"
+    memory = PRMEMemory(memory_params)
+    try:
+        memory.insert(source)
+        original = (
+            "What happens after submitting the order?\n"
+            "A. Nothing\n"
+            "B. A delayed confirmation appears\n"
+            "Your final answer should be wrapped in \\boxed{}."
+        )
+        observed: list[str] = []
+        retrieve = memory._client.retrieve
+
+        def capture_retrieve(query, **kwargs):
+            observed.append(query)
+            return retrieve(query, **kwargs)
+
+        monkeypatch.setattr(memory._client, "retrieve", capture_retrieve)
+        context = memory.query(original)
+        hook = memory.post_query_hook(
+            query=original,
+            query_image=None,
+            memory_context=context,
+        )
+
+        assert observed == ["What happens after submitting the order?"]
+        assert hook["retrieval_query_policy"] == "question_stem_v1"
+        assert hook["original_query_sha256"] != hook["retrieval_query_sha256"]
+    finally:
+        memory.close()
+
+
 def test_adapter_rejects_changed_or_interrupted_trajectory(tmp_path: Path) -> None:
     source = trajectory(tmp_path / "data")
     memory = PRMEMemory(params(tmp_path / "data", tmp_path / "pack"))
@@ -266,6 +325,9 @@ def test_adapter_validates_configuration_and_public_schema(tmp_path: Path) -> No
 
     with pytest.raises(RuntimeError, match="context_format"):
         PRMEMemory({"context_format": "opaque"})
+
+    with pytest.raises(RuntimeError, match="retrieval_query_policy"):
+        PRMEMemory({"retrieval_query_policy": "guess"})
 
     root = tmp_path / "data"
     source = trajectory(root)
