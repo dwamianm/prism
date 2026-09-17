@@ -126,3 +126,10 @@ Every public JSON artifact states `development_only: true` and
 probabilities and metrics independently, bind the partition result and private
 state by SHA-256, and contain no claim, evidence, tool-argument or provider
 response text.
+
+The next whole-claim
+[evidence-lattice diagnostic](LLM-AGGREFACT-EVIDENCE-LATTICE-V1.md) is also
+complete. Reversing the evidence pair produced only a 0.35-point post hoc
+balanced-accuracy gain, while every evidence-subset projection regressed and no
+policy passed the 90%-precision/60%-recall gate. That line is closed without a
+learned policy or test access.

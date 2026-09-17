@@ -282,3 +282,13 @@ false-support rate, versus 74.67%/30.00% for DeepSeek atoms and 75.52%/35.62%
 for Qwen atoms. Neither provider reached 90% precision at 60% recall. This
 decomposition path is rejected, no larger local model is warranted for it, and
 the external test set remains unopened.
+
+A final whole-claim
+[evidence-lattice diagnostic](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-EVIDENCE-LATTICE-V1.md)
+scored each original claim against each ranked segment, both segments, and both
+segment orders. The lower score across pair orders produced a small post hoc
+balanced-accuracy increase from 75.90% to 76.25%, with false support increasing
+from 16.88% to 17.50%. Selecting the best evidence subset regressed to 72.69%
+balanced accuracy and 20.62% false support. No static lattice policy reached 90%
+precision at 60% recall. Evidence-subset maximization and learned tuning on this
+exposed cohort are therefore rejected; the external test set remains unopened.
