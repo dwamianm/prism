@@ -5,6 +5,7 @@ from typing import assert_type
 
 from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
 from prme.models import Event, MemoryNode, ProcessingResult
+from prme.integrations.typesafe import JevProductProposal
 from prme.organizer.models import OrganizeResult
 
 
@@ -31,6 +32,16 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.retrieve("preferences", user_id="alice",
                                 retrieval_mode=RetrievalMode.EXPLICIT), RetrievalResponse)
     assert_type(client.get_node("node-id"), MemoryNode | None)
+    assert_type(
+        client.propose_product_alignment(
+            "left-node",
+            "right-node",
+            {"name": "Product"},
+            {"name": "Product Pro"},
+            user_id="alice",
+        ),
+        JevProductProposal,
+    )
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])
     assert_type(client.get_events("alice"), list[Event])
     assert_type(client.get_event("event-id", user_id="alice"), Event | None)

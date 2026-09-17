@@ -1,7 +1,8 @@
 """Optional TypeSafe Jev advisor for software-product entity alignment.
 
 The confirmed protocol compares one caller-supplied pair.  It can recommend an
-unverified alias proposal, but it never authorizes or performs an identity merge.
+unverified alias proposal.  A separate explicit workflow can publish that
+proposal with complete evidence, but neither path authorizes an identity merge.
 """
 
 from __future__ import annotations
@@ -14,10 +15,20 @@ import math
 import os
 from pathlib import Path
 import time
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
+from uuid import UUID
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+
+from prme.models.derivation import canonical_hash, node_checksum
+from prme.organizer.merge_policy import alias_pair_allowed
+from prme.storage.alias_proposal import AliasProposalEvidence
+from prme.types import NodeType
+
+if TYPE_CHECKING:
+    from prme.models.nodes import MemoryNode
+    from prme.storage.engine import MemoryEngine
 
 
 JEV_PRODUCT_ALIGNMENT_PROTOCOL: Literal["jev_product_alignment_v1"] = (
@@ -161,6 +172,19 @@ class JevProductAlignment(BaseModel):
     attempts: int = Field(ge=1)
     elapsed_seconds: float = Field(ge=0)
     assessment_sha256: str
+
+
+class JevProductProposal(BaseModel):
+    """A Jev assessment and its optional durable unverified graph proposal."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+
+    assessment: JevProductAlignment
+    proposal_published: bool
+    proposal_applied: bool
+    proposal_operation_id: str | None = None
+    proposal_edge_id: str | None = None
+    automatic_merge_authorized: Literal[False] = False
 
 
 class JevProductAdvisorError(RuntimeError):
@@ -421,6 +445,121 @@ async def advise_product_alignment(
         return await advisor.compare(left, right)
 
 
+def _bound_product_node(
+    node: "MemoryNode | None", product: ProductEntity, *, node_id: str
+) -> "MemoryNode":
+    if (
+        node is None
+        or node.node_type != NodeType.ENTITY
+        or (node.metadata or {}).get("entity_type") != "product"
+        or node.content.strip() != product.name
+    ):
+        raise ValueError(f"Product entity node {node_id} is unavailable")
+    return node
+
+
+async def propose_product_alignment(
+    engine: "MemoryEngine",
+    left_node_id: str,
+    right_node_id: str,
+    left: ProductEntity | dict[str, str],
+    right: ProductEntity | dict[str, str],
+    *,
+    user_id: str,
+    config: JevProductAdvisorConfig | None = None,
+    advisor: JevProductAdvisor | None = None,
+) -> JevProductProposal:
+    """Assess two product entities and durably publish positive advice.
+
+    The external request runs before the graph transaction. Publication then
+    revalidates the exact assessed node snapshots under the backend lock and
+    writes one unverified ``RELATES_TO`` edge with a checksummed version-2
+    journal record. It never merges, supersedes, or retires either entity.
+    """
+    if not isinstance(user_id, str) or not user_id.strip():
+        raise ValueError("Product alignment requires an owner")
+    if advisor is not None and config is not None:
+        raise ValueError("Pass either advisor or config, not both")
+
+    left_id = str(UUID(left_node_id))
+    right_id = str(UUID(right_node_id))
+    if left_id == right_id:
+        raise ValueError("Product alignment requires two distinct nodes")
+    left_product = ProductEntity.model_validate(left)
+    right_product = ProductEntity.model_validate(right)
+    left_node, right_node = await asyncio.gather(
+        engine.get_node(left_id, user_id=user_id),
+        engine.get_node(right_id, user_id=user_id),
+    )
+    left_node = _bound_product_node(left_node, left_product, node_id=left_id)
+    right_node = _bound_product_node(right_node, right_product, node_id=right_id)
+    if not alias_pair_allowed(left_node, right_node):
+        raise ValueError("Product entity nodes are not compatible alias candidates")
+
+    nodes = {left_id: left_node, right_id: right_node}
+    ordered_ids = sorted(nodes)
+
+    if advisor is None:
+        async with JevProductAdvisor(config) as owned_advisor:
+            assessment = await owned_advisor.compare(left_product, right_product)
+    else:
+        assessment = await advisor.compare(left_product, right_product)
+
+    if not assessment.proposal_recommended:
+        return JevProductProposal(
+            assessment=assessment,
+            proposal_published=False,
+            proposal_applied=False,
+        )
+
+    payload = {
+        "node_bindings": [
+            {
+                "node_id": left_id,
+                "product": left_product.model_dump(mode="json"),
+            },
+            {
+                "node_id": right_id,
+                "product": right_product.model_dump(mode="json"),
+            },
+        ],
+        "assessment": assessment.model_dump(mode="json"),
+    }
+    evidence = AliasProposalEvidence(
+        provider=assessment.provider,
+        protocol=assessment.protocol,
+        model=assessment.model,
+        request_sha256=assessment.request_sha256,
+        assessment_sha256=assessment.assessment_sha256,
+        left_node_sha256=node_checksum(nodes[ordered_ids[0]]),
+        right_node_sha256=node_checksum(nodes[ordered_ids[1]]),
+        payload_sha256=canonical_hash(payload),
+        payload=payload,
+    )
+    result = await engine._graph_store.propose_alias(
+        left_id,
+        right_id,
+        user_id=user_id,
+        alias_type="semantic",
+        score=assessment.probabilities.same,
+        evidence=evidence,
+    )
+    if result is None or result.evidence is None or result.operation_id is None:
+        raise JevProductAdvisorError(
+            "Product entities changed or became unavailable before proposal publication"
+        )
+    durable_assessment = JevProductAlignment.model_validate(
+        result.evidence.payload["assessment"]
+    )
+    return JevProductProposal(
+        assessment=durable_assessment,
+        proposal_published=True,
+        proposal_applied=result.applied,
+        proposal_operation_id=result.operation_id,
+        proposal_edge_id=result.edge_id,
+    )
+
+
 __all__ = [
     "JEV_PRODUCT_ALIGNMENT_API_URL",
     "JEV_PRODUCT_ALIGNMENT_MODEL",
@@ -432,7 +571,9 @@ __all__ = [
     "JevProductAdvisorConfig",
     "JevProductAdvisorError",
     "JevProductAlignment",
+    "JevProductProposal",
     "ProductAlignmentProbabilities",
     "ProductEntity",
     "advise_product_alignment",
+    "propose_product_alignment",
 ]

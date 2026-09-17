@@ -88,8 +88,11 @@ New proposals publish their relationship and a checksum-protected
 `ALIAS_PROPOSED` record in one backend transaction. Their operation and edge IDs
 are stable for the unordered pair, so repeated or concurrent organizer passes
 do not create duplicate links. The record retains both complete node inputs and
-the exact edge. Existing random-ID proposal edges are recognized and reused but
-not backfilled with invented creation history.
+the exact edge. Version-2 records can additionally retain a complete external
+assessment bound to exact node checksums. Repeated matching requests return the
+first committed assessment; older proposals are never relabeled with evidence
+they did not originally contain. Existing random-ID proposal edges are
+recognized and reused but not backfilled with invented creation history.
 
 These guards protect source identity and merge behavior. They do not establish
 that extraction predicates are entailed, that a source is truthful, or that a

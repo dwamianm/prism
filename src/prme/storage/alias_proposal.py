@@ -11,8 +11,9 @@ import struct
 from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import UUID, uuid5
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from prme.models.derivation import canonical_hash, node_checksum
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.merge_policy import alias_pair_allowed
@@ -30,10 +31,123 @@ _ACTIVE = (LifecycleState.TENTATIVE, LifecycleState.STABLE)
 _POLICY: Literal["unverified_alias_proposals_v1"] = (
     "unverified_alias_proposals_v1"
 )
+_EVIDENCE_POLICY: Literal["unverified_alias_proposals_v2"] = (
+    "unverified_alias_proposals_v2"
+)
 
 
 class AliasProposalConflict(ValueError):
     """A deterministic alias identity conflicts with durable state."""
+
+
+class StaleAliasProposalEvidence(ValueError):
+    """The assessed node snapshots changed before proposal publication."""
+
+
+class AliasProposalEvidence(BaseModel):
+    """Complete Jev evidence bound to two exact product-node snapshots."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+
+    version: Literal[1] = 1
+    kind: Literal["typesafe_jev_product_alignment_v1"] = (
+        "typesafe_jev_product_alignment_v1"
+    )
+    provider: str = Field(min_length=1)
+    protocol: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    assessment_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    left_node_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    right_node_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    payload_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    payload: dict[str, Any]
+
+    @model_validator(mode="after")
+    def validate_payload(self) -> "AliasProposalEvidence":
+        try:
+            observed = canonical_hash(self.payload)
+        except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+            raise ValueError(
+                "Alias proposal evidence must contain finite JSON values"
+            ) from exc
+        if observed != self.payload_sha256:
+            raise ValueError("Alias proposal evidence payload checksum mismatch")
+        if self.provider != "typesafe_jev" or set(self.payload) != {
+            "node_bindings",
+            "assessment",
+        }:
+            raise ValueError("Alias proposal evidence has an invalid Jev payload")
+        bindings = self.payload["node_bindings"]
+        assessment = self.payload["assessment"]
+        if (
+            not isinstance(bindings, list)
+            or len(bindings) != 2
+            or not isinstance(assessment, dict)
+            or assessment.get("provider") != self.provider
+            or assessment.get("protocol") != self.protocol
+            or assessment.get("model") != self.model
+            or assessment.get("request_sha256") != self.request_sha256
+            or assessment.get("assessment_sha256") != self.assessment_sha256
+            or assessment.get("proposal_recommended") is not True
+            or assessment.get("automatic_merge_authorized") is not False
+        ):
+            raise ValueError("Alias proposal evidence has an invalid Jev assessment")
+        try:
+            node_ids = [str(UUID(binding["node_id"])) for binding in bindings]
+            products = [binding["product"] for binding in bindings]
+            if any(
+                set(binding) != {"node_id", "product"}
+                or not isinstance(binding["product"], dict)
+                for binding in bindings
+            ):
+                raise ValueError
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "Alias proposal evidence has invalid product bindings"
+            ) from exc
+        if len(set(node_ids)) != 2:
+            raise ValueError("Alias proposal evidence requires two distinct nodes")
+        if (
+            canonical_hash(products[0]) != assessment.get("left_sha256")
+            or canonical_hash(products[1]) != assessment.get("right_sha256")
+        ):
+            raise ValueError("Alias proposal product hashes do not match")
+        expected_request = canonical_hash(
+            {
+                "configuration_sha256": assessment.get("configuration_sha256"),
+                "model": self.model,
+                "questions_sha256": assessment.get("questions_sha256"),
+                "state": {"entity_a": products[0], "entity_b": products[1]},
+            }
+        )
+        result_identity = {
+            "compatible_price_probability": assessment.get(
+                "compatible_price_probability"
+            ),
+            "confidence": assessment.get("confidence"),
+            "probabilities": assessment.get("probabilities"),
+            "proposal_recommended": True,
+            "protocol": self.protocol,
+            "request_sha256": self.request_sha256,
+            "same_manufacturer_probability": assessment.get(
+                "same_manufacturer_probability"
+            ),
+            "same_name_probability": assessment.get("same_name_probability"),
+            "score": assessment.get("score"),
+        }
+        if expected_request != self.request_sha256:
+            raise ValueError("Alias proposal Jev request checksum does not match")
+        if canonical_hash(result_identity) != self.assessment_sha256:
+            raise ValueError("Alias proposal Jev assessment checksum does not match")
+        return self
+
+
+def _evidence_node_ids(evidence: AliasProposalEvidence) -> list[str]:
+    return sorted(
+        str(UUID(binding["node_id"]))
+        for binding in evidence.payload["node_bindings"]
+    )
 
 
 class AliasProposalRecord(BaseModel):
@@ -50,11 +164,30 @@ class AliasProposalRecord(BaseModel):
     edge: MemoryEdge
 
 
+class AliasProposalRecordV2(BaseModel):
+    """Alias proposal with complete external assessment evidence."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    version: Literal[2] = 2
+    policy: Literal["unverified_alias_proposals_v2"] = _EVIDENCE_POLICY
+    operation_id: UUID
+    alias_type: AliasType
+    score: float
+    left_before: MemoryNode
+    right_before: MemoryNode
+    evidence: AliasProposalEvidence
+    edge: MemoryEdge
+
+
+AliasProposalJournalRecord = AliasProposalRecord | AliasProposalRecordV2
+
+
 @dataclass(frozen=True)
 class AliasProposalResult:
     operation_id: str | None
     edge_id: str
     applied: bool
+    evidence: AliasProposalEvidence | None = None
 
 
 def _float32(value: float) -> float:
@@ -63,8 +196,15 @@ def _float32(value: float) -> float:
 
 
 def _request(
-    a: str, b: str, user_id: str, alias_type: str, score: float
-) -> tuple[list[str], UUID, str, AliasType, float]:
+    a: str,
+    b: str,
+    user_id: str,
+    alias_type: str,
+    score: float,
+    evidence: AliasProposalEvidence | dict[str, Any] | None = None,
+) -> tuple[
+    list[str], UUID, str, AliasType, float, AliasProposalEvidence | None
+]:
     if not isinstance(user_id, str) or not user_id.strip():
         raise ValueError("Alias proposal requires an owner")
     if alias_type not in {"abbreviation", "case_variation", "semantic"}:
@@ -81,30 +221,57 @@ def _request(
     operation_id = uuid5(
         UUID(ids[0]), f"prme:unverified-alias-proposal:v1:{ids[1]}"
     )
+    frozen_evidence = (
+        None
+        if evidence is None
+        else AliasProposalEvidence.model_validate(evidence).model_copy(deep=True)
+    )
     return (
         ids,
         operation_id,
         user_id,
         cast(AliasType, alias_type),
         _float32(float(score)),
+        frozen_evidence,
     )
 
 
-def _payload(record: AliasProposalRecord) -> str:
+def _payload(record: AliasProposalJournalRecord) -> str:
     raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps(
         {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
     )
 
 
-def read_record(payload: str | dict[str, Any]) -> AliasProposalRecord:
+def _evidence_metadata(evidence: AliasProposalEvidence) -> dict[str, Any]:
+    return {
+        "kind": evidence.kind,
+        "provider": evidence.provider,
+        "protocol": evidence.protocol,
+        "model": evidence.model,
+        "request_sha256": evidence.request_sha256,
+        "assessment_sha256": evidence.assessment_sha256,
+        "payload_sha256": evidence.payload_sha256,
+    }
+
+
+def read_record(payload: str | dict[str, Any]) -> AliasProposalJournalRecord:
     """Validate and decode a checksummed alias proposal journal payload."""
     value = json.loads(payload) if isinstance(payload, str) else payload
     try:
         raw = value["record"]
         if hashlib.sha256(raw.encode()).hexdigest() != value["sha256"]:
             raise ValueError("Alias proposal journal checksum mismatch")
-        record = AliasProposalRecord.model_validate(_snapshot_json.loads(raw))
+        decoded = _snapshot_json.loads(raw)
+        version = decoded.get("version") if isinstance(decoded, dict) else None
+        if version == 1:
+            record: AliasProposalJournalRecord = AliasProposalRecord.model_validate(
+                decoded
+            )
+        elif version == 2:
+            record = AliasProposalRecordV2.model_validate(decoded)
+        else:
+            raise ValueError("Unsupported alias proposal journal version")
     except (AttributeError, KeyError, TypeError) as exc:
         raise ValueError("Malformed alias proposal journal") from exc
 
@@ -113,12 +280,14 @@ def read_record(payload: str | dict[str, Any]) -> AliasProposalRecord:
     expected_operation = uuid5(
         UUID(ids[0]), f"prme:unverified-alias-proposal:v1:{ids[1]}"
     )
-    expected_metadata = {
+    expected_metadata: dict[str, Any] = {
         "relation": "alias",
         "alias_type": record.alias_type,
         "identity_verified": False,
         "alias_operation_id": str(record.operation_id),
     }
+    if isinstance(record, AliasProposalRecordV2):
+        expected_metadata["proposal_evidence"] = _evidence_metadata(record.evidence)
     if (
         str(left.id) != ids[0]
         or str(right.id) != ids[1]
@@ -140,6 +309,14 @@ def read_record(payload: str | dict[str, Any]) -> AliasProposalRecord:
         or edge.provenance_event_id is not None
         or edge.metadata != expected_metadata
         or edge.valid_from != edge.created_at
+        or (
+            isinstance(record, AliasProposalRecordV2)
+            and (
+                node_checksum(left) != record.evidence.left_node_sha256
+                or node_checksum(right) != record.evidence.right_node_sha256
+                or _evidence_node_ids(record.evidence) != ids
+            )
+        )
     ):
         raise ValueError("Alias proposal journal identity mismatch")
     return record
@@ -151,6 +328,7 @@ def _replayed(
     ids: list[str],
     operation_id: UUID,
     user_id: str,
+    evidence: AliasProposalEvidence | None,
 ) -> AliasProposalResult | None:
     if row is None:
         return None
@@ -171,6 +349,26 @@ def _replayed(
     ):
         raise AliasProposalConflict(
             "Alias proposal identity is already used with different inputs"
+        )
+    if evidence is not None:
+        if not isinstance(record, AliasProposalRecordV2):
+            raise AliasProposalConflict(
+                "Alias proposal already exists without external assessment evidence"
+            )
+        saved = record.evidence
+        if (
+            saved.provider != evidence.provider
+            or saved.protocol != evidence.protocol
+            or saved.model != evidence.model
+            or saved.request_sha256 != evidence.request_sha256
+            or saved.left_node_sha256 != evidence.left_node_sha256
+            or saved.right_node_sha256 != evidence.right_node_sha256
+        ):
+            raise AliasProposalConflict(
+                "Alias proposal already exists for a different external assessment request"
+            )
+        return AliasProposalResult(
+            str(record.operation_id), str(record.edge.id), False, saved
         )
     return AliasProposalResult(str(record.operation_id), str(record.edge.id), False)
 
@@ -199,7 +397,8 @@ def _prepare(
     user_id: str,
     alias_type: AliasType,
     score: float,
-) -> AliasProposalRecord | AliasProposalResult | None:
+    evidence: AliasProposalEvidence | None,
+) -> AliasProposalJournalRecord | AliasProposalResult | None:
     if any(node_id not in nodes for node_id in ids):
         return None
     left, right = (nodes[node_id] for node_id in ids)
@@ -211,6 +410,14 @@ def _prepare(
         or not alias_pair_allowed(left, right)
     ):
         return None
+    if evidence is not None and (
+        node_checksum(left) != evidence.left_node_sha256
+        or node_checksum(right) != evidence.right_node_sha256
+        or _evidence_node_ids(evidence) != ids
+    ):
+        raise StaleAliasProposalEvidence(
+            "Assessed alias nodes changed before proposal publication"
+        )
 
     existing = _legacy_alias(edges, ids, user_id)
     expected_edge_id = uuid5(operation_id, "relates-to")
@@ -219,11 +426,23 @@ def _prepare(
             raise AliasProposalConflict(
                 "Deterministic alias edge exists without its journal record"
             )
+        if evidence is not None:
+            raise AliasProposalConflict(
+                "Legacy alias proposal cannot retain external assessment evidence"
+            )
         # Older versions used random edge IDs and no journal. Preserve that
         # state without claiming it was atomically produced or duplicating it.
         return AliasProposalResult(None, str(existing.id), False)
 
     now = datetime.now(timezone.utc)
+    metadata: dict[str, Any] = {
+        "relation": "alias",
+        "alias_type": alias_type,
+        "identity_verified": False,
+        "alias_operation_id": str(operation_id),
+    }
+    if evidence is not None:
+        metadata["proposal_evidence"] = _evidence_metadata(evidence)
     edge = MemoryEdge(
         id=expected_edge_id,
         source_id=left.id,
@@ -232,20 +451,25 @@ def _prepare(
         user_id=user_id,
         confidence=score,
         valid_from=now,
-        metadata={
-            "relation": "alias",
-            "alias_type": alias_type,
-            "identity_verified": False,
-            "alias_operation_id": str(operation_id),
-        },
+        metadata=metadata,
         created_at=now,
     )
-    return AliasProposalRecord(
+    if evidence is None:
+        return AliasProposalRecord(
+            operation_id=operation_id,
+            alias_type=alias_type,
+            score=score,
+            left_before=left,
+            right_before=right,
+            edge=edge,
+        )
+    return AliasProposalRecordV2(
         operation_id=operation_id,
         alias_type=alias_type,
         score=score,
         left_before=left,
         right_before=right,
+        evidence=evidence,
         edge=edge,
     )
 
@@ -262,17 +486,20 @@ async def propose_duckdb(
     user_id: str,
     alias_type: str,
     score: float,
+    evidence: AliasProposalEvidence | dict[str, Any] | None = None,
 ) -> AliasProposalResult | None:
-    request = _request(a, b, user_id, alias_type, score)
+    request = _request(a, b, user_id, alias_type, score, evidence)
     async with store._conn_lock:
         return await run_to_completion(_propose_duckdb, store, request)
 
 
 def _propose_duckdb(
     store: "DuckPGQGraphStore",
-    request: tuple[list[str], UUID, str, AliasType, float],
+    request: tuple[
+        list[str], UUID, str, AliasType, float, AliasProposalEvidence | None
+    ],
 ) -> AliasProposalResult | None:
-    ids, operation_id, user_id, alias_type, score = request
+    ids, operation_id, user_id, alias_type, score, evidence = request
     conn = store._conn
     conn.execute("BEGIN TRANSACTION")
     try:
@@ -282,7 +509,11 @@ def _propose_duckdb(
             [str(operation_id)],
         ).fetchone()
         replayed = _replayed(
-            saved, ids=ids, operation_id=operation_id, user_id=user_id
+            saved,
+            ids=ids,
+            operation_id=operation_id,
+            user_id=user_id,
+            evidence=evidence,
         )
         if replayed is not None:
             conn.execute("COMMIT")
@@ -295,7 +526,14 @@ def _propose_duckdb(
             None, None, ids, EdgeType.RELATES_TO, None, None
         )
         prepared = _prepare(
-            present_nodes, edges, ids, operation_id, user_id, alias_type, score
+            present_nodes,
+            edges,
+            ids,
+            operation_id,
+            user_id,
+            alias_type,
+            score,
+            evidence,
         )
         if prepared is None or isinstance(prepared, AliasProposalResult):
             conn.execute("COMMIT")
@@ -319,7 +557,12 @@ def _propose_duckdb(
         _checkpoint("journal")
         conn.execute("COMMIT")
         return AliasProposalResult(
-            str(prepared.operation_id), str(prepared.edge.id), True
+            str(prepared.operation_id),
+            str(prepared.edge.id),
+            True,
+            prepared.evidence
+            if isinstance(prepared, AliasProposalRecordV2)
+            else None,
         )
     except BaseException:
         conn.execute("ROLLBACK")
@@ -334,11 +577,12 @@ async def propose_postgres(
     user_id: str,
     alias_type: str,
     score: float,
+    evidence: AliasProposalEvidence | dict[str, Any] | None = None,
 ) -> AliasProposalResult | None:
     from prme.storage.pg.graph_store import _NODE_COLUMNS
 
-    ids, operation_id, user_id, alias_type, score = _request(
-        a, b, user_id, alias_type, score
+    ids, operation_id, user_id, alias_type, score, evidence = _request(
+        a, b, user_id, alias_type, score, evidence
     )
     async with store._pool.acquire() as conn, conn.transaction():
         rows = await conn.fetch(
@@ -356,6 +600,7 @@ async def propose_postgres(
             ids=ids,
             operation_id=operation_id,
             user_id=user_id,
+            evidence=evidence,
         )
         if replayed is not None:
             return replayed
@@ -371,7 +616,14 @@ async def propose_postgres(
         )
         edges = [store._record_to_edge(row) for row in edge_rows]
         prepared = _prepare(
-            nodes, edges, ids, operation_id, user_id, alias_type, score
+            nodes,
+            edges,
+            ids,
+            operation_id,
+            user_id,
+            alias_type,
+            score,
+            evidence,
         )
         if prepared is None or isinstance(prepared, AliasProposalResult):
             return prepared
@@ -396,5 +648,10 @@ async def propose_postgres(
             )
         _checkpoint("journal")
         return AliasProposalResult(
-            str(prepared.operation_id), str(prepared.edge.id), True
+            str(prepared.operation_id),
+            str(prepared.edge.id),
+            True,
+            prepared.evidence
+            if isinstance(prepared, AliasProposalRecordV2)
+            else None,
         )
