@@ -266,3 +266,19 @@ cross-fits found a threshold at 90% precision and 60% recall. Post hoc outer
 scores reached only 81.13% precision at 60.18% recall and 25.09% recall at 90%
 precision. Shallow lexical structure is therefore also rejected on this cohort;
 the sealed test set remains unopened.
+
+The preregistered source-bound typed-reference trial then replaced generated
+quotations with claim/evidence identifiers, but its 98% integrity gate became
+mathematically impossible after 285 valid cases, 17 timeouts and eight
+structural failures among 310 observed cases. A durable native-tool diagnostic
+eliminated the transport failures but showed that redundant generated ranges
+remained unstable. The subsequent
+[source-token atomic-partition diagnostic](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-ATOMIC-PARTITION-V2.md)
+reduced the provider task to complete source-token groups and obtained 310/310
+valid DeepSeek partitions plus 307/310 valid Qwen partitions with three safe
+abstentions. Structural success did not improve classification: the paired
+unsplit FactCG control reached 75.90% balanced accuracy and a 16.88%
+false-support rate, versus 74.67%/30.00% for DeepSeek atoms and 75.52%/35.62%
+for Qwen atoms. Neither provider reached 90% precision at 60% recall. This
+decomposition path is rejected, no larger local model is warranted for it, and
+the external test set remains unopened.

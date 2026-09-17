@@ -77,7 +77,8 @@ def _load_partition_artifacts(
     jobs = state.get("jobs")
     if (
         state.get("schema_version") != 1
-        or state.get("complete") is not True
+        or state.get("complete") != (safe_abstention_cases == 0)
+        or not isinstance(state.get("finished_at"), str)
         or not isinstance(jobs, dict)
         or set(jobs) != set(expected_ids)
         or any(

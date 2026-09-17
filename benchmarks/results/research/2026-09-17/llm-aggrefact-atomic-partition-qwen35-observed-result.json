@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-atomic-partition-diagnostic",
+  "completed_at": "2026-09-17T14:33:49.124963+00:00",
+  "development_only": true,
+  "test_accessed": false,
+  "source_trial": {
+    "registration_sha256": "e38e4ccc7e3820972428d3e058b0b07bdf89a7728eecff9e3fef2c257e2ff2ec",
+    "result_sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+    "result_canonical_sha256": "ce9c9126e70060644d99903af01b3658b9d2a42f3115b8591a0db11515ee3cae",
+    "observed_cases": 310,
+    "observed_failures": 25,
+    "cohort": "observed",
+    "cohort_cases": 310,
+    "cohort_identity_sha256": "8abb5c958f32cd47da5087a7a3090f1c6472cbff41da40361eb92c85a82e4ff9"
+  },
+  "transport": {
+    "provider": "ollama_local",
+    "model": "qwen3.5:35b-a3b",
+    "remote_model": null,
+    "manifest_digest": "3460ffeede5453ead027dbd2f821b12ad0aa3de54630971993babdb2165221f7",
+    "mode": "ollama_native_tool_call",
+    "options": {
+      "temperature": 0,
+      "seed": 17,
+      "num_predict": 1024
+    },
+    "timeout_seconds": 120.0,
+    "max_transport_attempts": 2,
+    "max_semantic_attempts": 3,
+    "concurrency": 4
+  },
+  "representation": {
+    "version": "atom_token_lists_v2",
+    "generated_text": false,
+    "generated_ranges": false,
+    "provider_factuality_decision": false,
+    "provider_semantic_roles": false,
+    "coverage": "complete_substantive_token_union_validated_by_code",
+    "atomic_text": "ordered_exact_source_runs_joined_by_space",
+    "invalid_output": "explicit_safe_abstention"
+  },
+  "protocol": {
+    "kind": "llm_aggrefact_atomic_partition",
+    "registered_result_sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+    "registered_result_canonical_sha256": "ce9c9126e70060644d99903af01b3658b9d2a42f3115b8591a0db11515ee3cae",
+    "cohort": "observed",
+    "cohort_identity_sha256": "8abb5c958f32cd47da5087a7a3090f1c6472cbff41da40361eb92c85a82e4ff9",
+    "runner_sha256": "d7ab252f106f0df0f2ca1bafe7ff971fea71a812db5e416a2b9f0d77e97d495c",
+    "helper_sha256": "fcc0712b0461c1f4ad4f621abeb89a71f558c1fd8b9b74eec77028aea170298e",
+    "role_helper_sha256": "2b354a7e1a06c570047ca2c9ba1ad4c7f8f0a7459b44cdd60f6714612af95696",
+    "durable_runner_sha256": "b043537d5ab4b09fa8c5440397120efa608a568a2b2f74066e4fddf2bb904bca",
+    "system_prompt_sha256": "aab59d6c9876dbcce02fba22d1cd2564b9527b5d818d372fa743c309a3a5e7df",
+    "verifier_manifest_digest": "3460ffeede5453ead027dbd2f821b12ad0aa3de54630971993babdb2165221f7",
+    "tool_template_sha256": "8576f6871309c6af4aade1c9e2f5acf4bfbbd547ff0798d4412c3211769e7da6",
+    "per_case_tool_schema": true,
+    "repair_message_sha256": "604f590c0dfce924bde7fa4f42c52702d448d26201d730e0e7585ecd9ecac457",
+    "source_text_emitted": false
+  },
+  "development": {
+    "cases": 310,
+    "complete_cases": 307,
+    "completion_rate": 0.9903225806451613,
+    "job_statuses": {
+      "complete": 307,
+      "semantic_exhausted": 3
+    },
+    "semantic_attempts_per_case": {
+      "1": 274,
+      "2": 29,
+      "3": 7
+    },
+    "validation_error_counts": {
+      "atom_3_has_fewer_than_two_substantive_tokens": 2,
+      "atom_4_has_fewer_than_two_substantive_tokens": 3,
+      "duplicate_atoms:1,2": 3,
+      "duplicate_atoms:2,3": 2,
+      "missing_claim_tokens:C0001": 5,
+      "missing_claim_tokens:C0001,C0002": 2,
+      "missing_claim_tokens:C0001,C0002,C0003,C0004,C0006,C0018": 1,
+      "missing_claim_tokens:C0001,C0009,C0010,C0012,C0013,C0014,C0015,C0016": 1,
+      "missing_claim_tokens:C0002": 1,
+      "missing_claim_tokens:C0007,C0008,C0023,C0026": 1,
+      "missing_claim_tokens:C0008,C0020,C0023,C0026,C0029,C0036,C0045,C0053,C0056": 1,
+      "missing_claim_tokens:C0011": 2,
+      "missing_claim_tokens:C0012,C0023,C0025,C0026,C0028": 1,
+      "missing_claim_tokens:C0013": 2,
+      "missing_claim_tokens:C0014": 1,
+      "missing_claim_tokens:C0015": 1,
+      "missing_claim_tokens:C0015,C0016,C0018,C0019,C0020,C0023": 1,
+      "missing_claim_tokens:C0017": 1,
+      "missing_claim_tokens:C0018": 1,
+      "missing_claim_tokens:C0020": 1,
+      "missing_claim_tokens:C0021": 2,
+      "missing_claim_tokens:C0022": 1,
+      "missing_claim_tokens:C0022,C0023": 1,
+      "missing_claim_tokens:C0024,C0025,C0027,C0028,C0029,C0031": 1,
+      "missing_claim_tokens:C0025,C0027,C0028,C0036": 1,
+      "missing_claim_tokens:C0029": 1,
+      "missing_claim_tokens:C0033": 1,
+      "tool_response_invalid:ValueError": 7
+    },
+    "transport_statuses": {
+      "succeeded": 353
+    },
+    "transport_error_types": {},
+    "transport_call_seconds_sum": 7858.362113999993,
+    "transport_call_seconds_median": 20.085538,
+    "transport_call_seconds_max": 44.645916,
+    "invocation_wall_seconds": 1974.088699,
+    "safe_abstention_cases": 3,
+    "unsafe_fallback_cases": 0
+  },
+  "runtime": {
+    "ranker": {
+      "device": "mps",
+      "seconds": 106.72361591702793,
+      "pairs_scored": 678,
+      "torch": "2.10.0",
+      "transformers": "5.3.0",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit"
+    },
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit"
+  },
+  "limitations": [
+    "This diagnostic reuses only cases already observed during typed-reference v2.",
+    "It measures decomposition integrity, not held-out classification quality.",
+    "Invalid partitions abstain and therefore may reduce recall.",
+    "A pinned task model must still score every reconstructed atom.",
+    "No external test split was accepted or accessed."
+  ],
+  "result_sha256": "0f9ad865d361eae76bc7258a8802237f7af5b4ee8bc0f4ad0340612ebb0ea5ef"
+}

@@ -105,3 +105,11 @@ boundaries, make token coverage structural, and fail closed as an explicit
 abstention when a semantic decomposition remains invalid. It must pass on
 already-observed tuning cases before registration on a new disjoint development
 cohort. The external test split remains sealed.
+
+That follow-up is now complete. The
+[source-token atomic-partition diagnostic](LLM-AGGREFACT-ATOMIC-PARTITION-V2.md)
+made coverage structural and reached 310/310 valid DeepSeek partitions plus
+307/310 valid Qwen partitions with three safe abstentions. On all 310 observed
+cases, however, both atomic paths underperformed the paired unsplit FactCG
+control and failed the 90%-precision/60%-recall target. Provider-authored claim
+fragmentation is therefore rejected; the external test split remains sealed.
