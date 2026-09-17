@@ -93,6 +93,41 @@ def _protocol_specification() -> dict[str, Any]:
     }
 
 
+def _holdout_protocol_specification() -> dict[str, Any]:
+    """Return the fixed protocol for a fresh cross-domain confirmation."""
+    return {
+        "analysis": "complete_registered_arms_with_question_paired_statistics",
+        "claim_boundary": (
+            "Confirmation budget curve on an unscored domain cohort; it can test "
+            "cross-domain generalization and context-efficiency policy but is not "
+            "a competitor result."
+        ),
+        "configuration_rule": (
+            "Arms differ only in the registered internal token budget; source pack, "
+            "context format, result limit, image policy, reader, and question order match."
+        ),
+        "emit_source_text": False,
+        "stopping_rule": (
+            "Run every registered question in every arm; exact checkpoints may resume "
+            "infrastructure failures without replacing completed generations."
+        ),
+    }
+
+
+def _protocol_limitations(protocol: dict[str, Any]) -> list[str]:
+    if protocol == _holdout_protocol_specification():
+        return [
+            "This is a registered cross-domain confirmation cohort, not a competitor comparison.",
+            "Question bootstrap intervals condition on the selected cohort; shared haystacks can make questions dependent.",
+            "The curve isolates registered context budgets under one reader and source artifact family; it does not establish universal system leadership.",
+        ]
+    return [
+        "This is a development budget curve on a previously scored cohort, not a new holdout.",
+        "Question bootstrap intervals condition on the selected cohort; shared haystacks can make questions dependent.",
+        "The curve isolates registered context budgets under one reader and source artifact family; it does not establish universal system leadership.",
+    ]
+
+
 def _matched_runs(
     directories: dict[str, Path],
 ) -> tuple[dict[str, dict[str, Any]], list[str], dict[str, str]]:
@@ -416,12 +451,15 @@ def compare_curve(
     if samples < 1:
         raise ValueError("bootstrap samples must be positive")
     registration = paired._load_json(registration_path)
+    protocol = registration.get("protocol")
     if (
         registration.get("schema_version") != 2
         or registration.get("kind") != REGISTRATION_KIND
-        or registration.get("protocol") != _protocol_specification()
+        or protocol
+        not in (_protocol_specification(), _holdout_protocol_specification())
     ):
         raise ValueError("budget-curve registration identity is invalid")
+    assert isinstance(protocol, dict)
     systems = registration.get("systems")
     if not isinstance(systems, dict) or set(systems) != set(directories):
         raise ValueError("run labels do not match registered budget-curve systems")
@@ -494,11 +532,7 @@ def compare_curve(
         "pairwise": pairwise,
         "artifacts": {label: runs[label]["artifacts"] for label in ordered_labels},
         "execution_source": execution_source,
-        "limitations": [
-            "This is a development budget curve on a previously scored cohort, not a new holdout.",
-            "Question bootstrap intervals condition on the selected cohort; shared haystacks can make questions dependent.",
-            "The curve isolates registered context budgets under one reader and source artifact family; it does not establish universal system leadership.",
-        ],
+        "limitations": _protocol_limitations(protocol),
     }
 
 
