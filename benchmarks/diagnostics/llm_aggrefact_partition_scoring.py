@@ -151,6 +151,21 @@ def _build_atomic_pairs(
     return pairs, owners, partition_metadata
 
 
+def _build_unpartitioned_pairs(
+    prepared: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "dataset": item["dataset"],
+            "doc": "\n".join(text for _identifier, text in item["evidence_segments"]),
+            "claim": item["claim"],
+            "label": item["label"],
+            "contamination_identifier": f"{item['id']}:unpartitioned",
+        }
+        for item in prepared
+    ]
+
+
 def _diagnostics(samples: list[dict[str, Any]]) -> dict[str, Any]:
     thresholds = sorted(
         {0.0, 1.0, *(float(sample["support_probability"]) for sample in samples)}
@@ -253,14 +268,19 @@ def run(
         batch_size=registration["protocol"]["ranker_batch_size"],
     )
     pairs, owners, metadata = _build_atomic_pairs(prepared, partition_state)
+    unpartitioned_pairs = _build_unpartitioned_pairs(prepared)
     scored, scoring_runtime = factcg._score_rows(
-        pairs,
+        pairs + unpartitioned_pairs,
         model_spec=base_registration["model"],
         batch_size=registration["protocol"]["atomic_factcg_batch_size"],
     )
     by_owner: dict[str, list[float]] = defaultdict(list)
-    for owner, sample in zip(owners, scored, strict=True):
+    for owner, sample in zip(owners, scored[: len(pairs)], strict=True):
         by_owner[owner].append(float(sample["support_probability"]))
+    unpartitioned_scores = {
+        item["id"]: float(sample["support_probability"])
+        for item, sample in zip(prepared, scored[len(pairs) :], strict=True)
+    }
     samples: list[dict[str, Any]] = []
     for item in prepared:
         atomic_scores = by_owner[item["id"]]
@@ -271,6 +291,7 @@ def run(
             **metadata[item["id"]],
             "atomic_support_probabilities": atomic_scores,
             "support_probability": min(atomic_scores),
+            "unpartitioned_support_probability": unpartitioned_scores[item["id"]],
         }
         samples.append(value)
     result: dict[str, Any] = {
@@ -301,6 +322,17 @@ def run(
             "parent_rule": "minimum_atomic_support_probability",
             "evidence": "all_ranked_top_two_source_segments",
             "diagnostics": _diagnostics(samples),
+            "unpartitioned_diagnostics": _diagnostics(
+                [
+                    {
+                        **sample,
+                        "support_probability": sample[
+                            "unpartitioned_support_probability"
+                        ],
+                    }
+                    for sample in samples
+                ]
+            ),
             "label_counts": dict(
                 sorted(Counter(str(item["label"]) for item in prepared).items())
             ),

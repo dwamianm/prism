@@ -78,6 +78,20 @@ def test_diagnostics_report_required_operating_points() -> None:
     assert result["best_precision_at_recall_min"]["supported_recall"] >= 0.6
 
 
+def test_unpartitioned_pairs_use_original_claim_and_ranked_evidence() -> None:
+    pairs = subject._build_unpartitioned_pairs(_prepared())
+
+    assert pairs == [
+        {
+            "dataset": "d",
+            "doc": "Maya moved to Rome.",
+            "claim": "Maya moved to Rome and works as a surgeon.",
+            "label": 1,
+            "contamination_identifier": "case:unpartitioned",
+        }
+    ]
+
+
 def test_cli_deliberately_has_no_test_dataset_argument() -> None:
     actions = {action.dest: action for action in subject._parser()._actions}
 
