@@ -1,0 +1,38 @@
+{
+  "coverage": {
+    "checkpoint_count": 156,
+    "complete": true,
+    "group_count": 12,
+    "person_count": 78
+  },
+  "evidence": {
+    "audit_source_sha256": "a39e3ee3e07abec0f6367acf009fd0b5bc8ba07ef5ca6570eed6d4e36000d7c1",
+    "paired_result_file": "memoryarena-travel-deepseek-dev12-v14-result.json",
+    "paired_result_sha256": "8c2b4487413e3e078ab38ed57ca49f7bbc836b447e35e584006ca4b8232e08eb",
+    "person_checkpoints_file": "person_checkpoints.jsonl",
+    "person_checkpoints_sha256": "ba70f52f6d42aae07bf31c9dd6c9df563bb20dab3c3595e324b202e30a115025",
+    "registered_prme_revision": "180d16bb36b2ea6975c98afaaa330f16d46482af",
+    "registration_file": "memoryarena-travel-deepseek-dev12-v14-registration.json",
+    "registration_sha256": "695fb2a310b62570585c679392bfb16ea026a97c0a7fcbc38d16d95ec62c0777",
+    "upstream_revision": "6cd9de14b71915e39ac742a20dc33785e14b6aab"
+  },
+  "kind": "memoryarena-value-binding-audit",
+  "limits": [
+    "Exact normalized-string audit; it is not a semantic itinerary-validity judge.",
+    "Qualified values are changed slots whose reference contains parentheses.",
+    "Tool-call inspection covers complete top-level string arguments in saved traces."
+  ],
+  "qualified_changed_values": {
+    "observed": 318,
+    "passed": 244,
+    "rate": 0.7672955974842768,
+    "total": 318
+  },
+  "qualified_tool_calls": {
+    "count": 0,
+    "occurrences": [],
+    "traveler_count": 0
+  },
+  "registration_sha256": "695fb2a310b62570585c679392bfb16ea026a97c0a7fcbc38d16d95ec62c0777",
+  "schema_version": 1
+}
