@@ -269,7 +269,11 @@ def register(
                 "Pinned upstream three-endpoint client with the registered PRME "
                 "raw-trace adapter; base and completed traces are retrieved per query."
             ),
-            "checkpoint_unit": "one complete group-arm execution",
+            "checkpoint_unit": "one completed traveler within each group arm",
+            "resume_policy": (
+                "Rebuild the pinned actor history from saved actions and replay "
+                "saved raw trace entries into a fresh PRME pack before continuing."
+            ),
         },
         "evaluation": {
             "primary": "strict full-normalized-string PS, SPS and SR",
@@ -367,6 +371,28 @@ def _load_checkpoints(path: Path, registration_sha256: str) -> dict[tuple[str, i
         key = (value.get("arm"), value.get("group_id"))
         if key in records and records[key] != value:
             raise RuntimeError(f"conflicting checkpoint at line {number}")
+        records[key] = value
+    return records
+
+
+def _load_person_checkpoints(
+    path: Path, registration_sha256: str
+) -> dict[tuple[str, int, int], dict[str, Any]]:
+    if not path.exists():
+        return {}
+    _repair_tail(path)
+    records = {}
+    for number, line in enumerate(path.read_text().splitlines(), start=1):
+        value = json.loads(line)
+        if value.get("registration_sha256") != registration_sha256:
+            raise RuntimeError(f"person checkpoint registration differs at line {number}")
+        key = (
+            value.get("arm"),
+            value.get("group_id"),
+            value.get("person_idx"),
+        )
+        if key in records and records[key] != value:
+            raise RuntimeError(f"conflicting person checkpoint at line {number}")
         records[key] = value
     return records
 
@@ -469,6 +495,26 @@ def _configure_actor_client(agent: Any, actor: dict[str, Any]) -> None:
     agent.client.client = client
 
 
+def _restore_actor_state(
+    agent: Any,
+    memory: Any,
+    question: dict[str, Any],
+    prior: dict[str, Any],
+) -> None:
+    person = prior["person"]
+    if person["name"] != question["name"] or person["query"] != question["query"]:
+        raise RuntimeError("saved traveler differs from the registered cohort")
+    agent.all_queries.append(f"{question['name']}: {question['query']}")
+    agent.accumulated_plans += (
+        f"\n\n{person['result']}" if agent.accumulated_plans else person["result"]
+    )
+    if memory is not None:
+        memory_entry = prior.get("memory_entry")
+        if not isinstance(memory_entry, str):
+            raise RuntimeError("PRME traveler checkpoint lacks its raw trace")
+        memory.add(memory_entry)
+
+
 def _run_group(
     row: dict[str, Any],
     *,
@@ -477,6 +523,9 @@ def _run_group(
     agent: Any,
     memory_url: str,
     model: str,
+    registration_sha256: str,
+    person_checkpoint_path: Path,
+    person_checkpoints: dict[tuple[str, int, int], dict[str, Any]],
 ) -> dict[str, Any]:
     started = time.perf_counter()
     environment = runtime["environment"]({"judgement_mode": "none"})
@@ -513,6 +562,29 @@ def _run_group(
     persons = []
     scratchpads = []
     for question in observation["questions"]:
+        checkpoint_key = (arm, row["id"], question["round_idx"])
+        prior = person_checkpoints.get(checkpoint_key)
+        if prior is not None:
+            person = prior["person"]
+            answer = truth[question["round_idx"]]
+            _, _, info = environment.step(
+                person["result"],
+                ground_truth={
+                    "name": question["name"],
+                    "daily_plans": answer["daily_plans"],
+                    "judgement_mode": "none",
+                },
+                need_judge=True,
+            )
+            if info.get("judgement") is not None:
+                raise RuntimeError("no-feedback protocol exposed a replay judgement")
+            _restore_actor_state(agent, memory, question, prior)
+            persons.append(person)
+            memory_contexts.append(prior["memory_context"])
+            scratchpads.append(prior["scratchpad"])
+            continue
+
+        person_started = time.perf_counter()
         before = agent.get_usage_stats()
         memory_context = None
         if memory is not None:
@@ -546,15 +618,16 @@ def _run_group(
         )
         if info.get("judgement") is not None:
             raise RuntimeError("no-feedback protocol exposed a judgement")
+        memory_entry = None
         if memory is not None:
-            entry = agent.build_memory_entry(
+            memory_entry = agent.build_memory_entry(
                 task=question["query"],
                 action=action,
                 observation={"judgement": None},
                 reward=reward,
             )
-            memory.add(entry)
-        persons.append({
+            memory.add(memory_entry)
+        person = {
             "person_idx": question["round_idx"],
             "name": question["name"],
             "query": question["query"],
@@ -565,17 +638,36 @@ def _run_group(
             "steps": result.total_steps,
             "reward_hidden_from_agent": reward,
             "usage": _usage_delta(agent.get_usage_stats(), before),
-        })
-        scratchpads.append({
+            "duration_seconds": round(time.perf_counter() - person_started, 6),
+        }
+        scratchpad = {
             "person_idx": question["round_idx"],
             "scratchpad": agent.get_scratchpad_dict(),
-        })
+        }
+        checkpoint = {
+            "schema_version": 1,
+            "registration_sha256": registration_sha256,
+            "arm": arm,
+            "group_id": row["id"],
+            "person_idx": question["round_idx"],
+            "person": person,
+            "memory_context": memory_contexts[-1],
+            "memory_entry": memory_entry,
+            "scratchpad": scratchpad,
+        }
+        _append_checkpoint(person_checkpoint_path, checkpoint)
+        person_checkpoints[checkpoint_key] = checkpoint
+        persons.append(person)
+        scratchpads.append(scratchpad)
     environment.close()
     return {
         "schema_version": 1,
         "arm": arm,
         "group_id": row["id"],
-        "duration_seconds": round(time.perf_counter() - started, 6),
+        "duration_seconds": round(
+            sum(person["duration_seconds"] for person in persons), 6
+        ),
+        "wall_seconds_this_attempt": round(time.perf_counter() - started, 6),
         "persons": persons,
         "memory_contexts": memory_contexts,
         "scratchpads": scratchpads,
@@ -650,6 +742,10 @@ def run(
         manifest_path.write_bytes(_canonical(manifest) + b"\n")
     checkpoint_path = output / "group_checkpoints.jsonl"
     checkpoints = _load_checkpoints(checkpoint_path, registration_sha256)
+    person_checkpoint_path = output / "person_checkpoints.jsonl"
+    person_checkpoints = _load_person_checkpoints(
+        person_checkpoint_path, registration_sha256
+    )
     runtime = _upstream_runtime(upstream)
     previous_base = os.environ.get("OPENAI_API_BASE")
     previous_key = os.environ.get("OPENAI_API_KEY")
@@ -666,16 +762,15 @@ def run(
                 memory_port,
                 registration["protocol"]["prme_memory_tokens"],
             )
-        agents = {
-            arm: runtime["agent"](
-                model_name=registration["actor"]["model"],
-                temperature=registration["actor"]["temperature"],
-                max_steps=registration["actor"]["max_steps"],
-            )
-            for arm in ARMS
-        }
-        for agent in agents.values():
-            _configure_actor_client(agent, registration["actor"])
+        shared_agent = runtime["agent"](
+            model_name=registration["actor"]["model"],
+            temperature=registration["actor"]["temperature"],
+            max_steps=registration["actor"]["max_steps"],
+        )
+        _configure_actor_client(shared_agent, registration["actor"])
+        # The upstream reset removes all behavioral state. Reusing its immutable
+        # local tool databases avoids loading the 305 MB flight table twice.
+        agents = {arm: shared_agent for arm in ARMS}
         memory_url = f"http://127.0.0.1:{memory_port}"
         for index, row in enumerate(cohort):
             order = ARMS if index % 2 == 0 else tuple(reversed(ARMS))
@@ -695,6 +790,9 @@ def run(
                     agent=agents[arm],
                     memory_url=memory_url,
                     model=registration["actor"]["model"],
+                    registration_sha256=registration_sha256,
+                    person_checkpoint_path=person_checkpoint_path,
+                    person_checkpoints=person_checkpoints,
                 )
                 record["registration_sha256"] = registration_sha256
                 _append_checkpoint(checkpoint_path, record)

@@ -74,6 +74,25 @@ def test_group_checkpoint_repairs_only_incomplete_tail(tmp_path: Path):
     assert len(path.read_text().splitlines()) == 1
 
 
+def test_person_checkpoints_resume_and_bind_registration(tmp_path: Path):
+    path = tmp_path / "persons.jsonl"
+    record = {
+        "schema_version": 1,
+        "registration_sha256": "a" * 64,
+        "arm": "native_full_history",
+        "group_id": 7,
+        "person_idx": 2,
+        "person": {"result": "saved"},
+    }
+    runner._append_checkpoint(path, record)
+
+    assert runner._load_person_checkpoints(path, "a" * 64) == {
+        ("native_full_history", 7, 2): record
+    }
+    with pytest.raises(RuntimeError, match="person checkpoint registration differs"):
+        runner._load_person_checkpoints(path, "b" * 64)
+
+
 def test_submission_preserves_explicit_failed_plans(tmp_path: Path):
     path = tmp_path / "submission.jsonl"
     rows = runner._write_submission(path, [{
@@ -166,3 +185,51 @@ def test_actor_transport_policy_accepts_httpx_timeout_objects():
         "request_timeout_seconds": 120,
         "sdk_max_retries": 1,
     })
+
+
+def test_resume_restores_native_history_and_replays_prme_trace():
+    class Agent:
+        all_queries = ["Base: query"]
+        accumulated_plans = "base plan"
+
+    class Memory:
+        entries = []
+
+        def add(self, value):
+            self.entries.append(value)
+
+    question = {"name": "Ada", "query": "new constraints"}
+    prior = {
+        "person": {
+            "name": "Ada",
+            "query": "new constraints",
+            "result": "saved plan",
+        },
+        "memory_entry": "saved raw trace",
+    }
+    agent = Agent()
+    memory = Memory()
+
+    runner._restore_actor_state(agent, memory, question, prior)
+
+    assert agent.all_queries == ["Base: query", "Ada: new constraints"]
+    assert agent.accumulated_plans == "base plan\n\nsaved plan"
+    assert memory.entries == ["saved raw trace"]
+
+
+def test_resume_rejects_changed_traveler_or_missing_prme_trace():
+    class Agent:
+        all_queries = []
+        accumulated_plans = ""
+
+    question = {"name": "Ada", "query": "registered"}
+    with pytest.raises(RuntimeError, match="saved traveler differs"):
+        runner._restore_actor_state(
+            Agent(), None, question,
+            {"person": {"name": "Ada", "query": "changed", "result": "plan"}},
+        )
+    with pytest.raises(RuntimeError, match="lacks its raw trace"):
+        runner._restore_actor_state(
+            Agent(), object(), question,
+            {"person": {"name": "Ada", "query": "registered", "result": "plan"}},
+        )
