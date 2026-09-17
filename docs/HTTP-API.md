@@ -7,13 +7,14 @@ another owner returns 403. Source/node lookups belonging to another user return 
 
 ## Store supplied memory
 
-`POST /v1/store` accepts the Python `store()` fields: `content`, `role`, `user_id`,
+`POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `role`, `user_id`,
 `session_id`, `node_type`, `scope`, `metadata`, `epistemic_type`, `source_type`,
 `confidence`, `event_time` and `ttl_days`.
 
 ```json
 {
   "content": "The telescope recorded the observation successfully.",
+  "retrieval_content": "Telescope observation: success.",
   "role": "tool",
   "source_type": "tool_output",
   "epistemic_type": "observed",
@@ -32,6 +33,12 @@ JSON `null` disables TTL, and a nonnegative integer overrides it. TTL is measure
 from node creation, not the historical event time. Omitted source/epistemic fields
 use the engine's inference rules. Source classification describes provenance;
 it does not independently establish truth.
+
+When `retrieval_content` is present, PRME retains `content` verbatim in the
+immutable event and uses the compact value for the graph node, vector and lexical
+indexes, retrieval results and packed model context. Omit it for the historical
+one-string behavior. The projection is recovered from the checksummed direct
+store journal and never regenerated after restart.
 
 The response contains the immutable source `event_id`, its `node_id` when available,
 and `processing_status`. A completed status means the direct node and indexes

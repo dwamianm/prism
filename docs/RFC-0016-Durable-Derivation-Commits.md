@@ -384,8 +384,11 @@ This protocol covers newly journaled ingestion derivations. Direct `store()`
 requests use the simpler source/initial-node journal and materialization job in
 RFC-0002; they do not use derivation leases or fenced graph commits. Those jobs
 recover the initial typed node and indexes, without replaying optional post-store
-reinforcement, supersedence or QA pairing. Existing organizer
-and manual graph mutations also need complete operation payloads before PRME can
+reinforcement, supersedence or QA pairing. Version-2 direct-store records may
+carry a caller-supplied retrieval projection distinct from the immutable event
+content; recovery reuses the checksummed node snapshot and does not regenerate
+that projection. Existing organizer and manual graph mutations also need
+complete operation payloads before PRME can
 claim full-state replay. Legacy packs need an explicit baseline snapshot for
 state that was never recorded; nondeterministic historical model output cannot
 be retroactively recovered from a raw event alone. No implementation milestone

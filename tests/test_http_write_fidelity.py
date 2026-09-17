@@ -62,6 +62,24 @@ async def test_store_preserves_explicit_fields_and_ttl_presence(config, user):
                 assert item[field] == node[field]
 
 
+async def test_store_preserves_raw_source_and_exposes_retrieval_projection(config, user):
+    async with MemoryEngine.open(config) as engine:
+        async with client_for(app_for(config, engine, user)) as client:
+            response = await client.post(
+                "/v1/store",
+                json={
+                    "content": '{"scratchpad":"raw tool trace","answer":"cobalt route"}',
+                    "retrieval_content": "Compact final answer: cobalt route",
+                },
+            )
+            assert response.status_code == 200, response.text
+            receipt = response.json()
+            event = (await client.get(f'/v1/events/{receipt["event_id"]}')).json()
+            node = (await client.get(f'/v1/nodes/{receipt["node_id"]}')).json()
+            assert event["content"] == '{"scratchpad":"raw tool trace","answer":"cobalt route"}'
+            assert node["content"] == "Compact final answer: cobalt route"
+
+
 async def test_store_rejects_invalid_validity_before_source_admission(config, user):
     async with MemoryEngine.open(config) as engine:
         async with client_for(app_for(config, engine, user)) as client:

@@ -631,6 +631,7 @@ class MemoryEngine:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -656,7 +657,9 @@ class MemoryEngine:
         are outside this repair job's completion boundary.
 
         Args:
-            content: Text content to store.
+            content: Exact source text retained in the immutable event log.
+            retrieval_content: Optional compact representation to index, rank,
+                and place in model context. The source event remains ``content``.
             user_id: Owner user ID.
             session_id: Optional session identifier.
             role: Event role ('user', 'assistant', 'tool', or 'system').
@@ -687,6 +690,7 @@ class MemoryEngine:
 
         validate_source_time(event_time)
         validate_validity_window(valid_from, valid_to)
+        materialized_content = content if retrieval_content is None else retrieval_content
         # Infer epistemic_type and source_type if not provided
         # Lazy imports to avoid circular dependencies
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
@@ -732,7 +736,7 @@ class MemoryEngine:
         novelty_result = None
         if self._config.enable_surprise_gating:
             try:
-                novelty_result = await self._compute_novelty(content, user_id)
+                novelty_result = await self._compute_novelty(materialized_content, user_id)
             except Exception:
                 logger.warning(
                     "Novelty scoring failed for event %s. "
@@ -796,7 +800,7 @@ class MemoryEngine:
             session_id=session_id,
             node_type=node_type,
             scope=scope,
-            content=content,
+            content=materialized_content,
             metadata=metadata,
             confidence=confidence,
             confidence_base=confidence,
@@ -841,7 +845,7 @@ class MemoryEngine:
         if self._config.reinforce_similarity_threshold is not None:
             try:
                 await self._check_remention_reinforcement(
-                    content, str(node.id), user_id, event.id, scope=node.scope,
+                    materialized_content, str(node.id), user_id, event.id, scope=node.scope,
                 )
             except Exception:
                 logger.warning(
@@ -867,7 +871,7 @@ class MemoryEngine:
         if self._config.enable_store_supersedence:
             try:
                 await self._check_store_supersedence(
-                    content, str(node.id), user_id
+                    materialized_content, str(node.id), user_id
                 )
             except Exception:
                 logger.warning(
@@ -898,8 +902,8 @@ class MemoryEngine:
             prev = self._last_session_turn.get(session_key)
             if prev is not None:
                 prev_role, prev_content, prev_nt, prev_scope = prev
-                if prev_role != role and len(prev_content) + len(content) < 1000:
-                    merged = f"{prev_content}\n{content}"
+                if prev_role != role and len(prev_content) + len(materialized_content) < 1000:
+                    merged = f"{prev_content}\n{materialized_content}"
                     try:
                         merged_node = MemoryNode(
                             user_id=user_id,
@@ -940,7 +944,9 @@ class MemoryEngine:
                             session_id,
                             exc_info=True,
                         )
-            self._last_session_turn[session_key] = (role, content, node_type, scope)
+            self._last_session_turn[session_key] = (
+                role, materialized_content, node_type, scope
+            )
 
         return event_id
 
@@ -949,6 +955,7 @@ class MemoryEngine:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -976,6 +983,7 @@ class MemoryEngine:
         event_id = await self.store(
             content,
             user_id=user_id,
+            retrieval_content=retrieval_content,
             session_id=session_id,
             role=role,
             node_type=node_type,
@@ -991,9 +999,10 @@ class MemoryEngine:
         )
         try:
             nodes = await self.get_event_nodes(event_id, user_id=user_id)
+            expected_content = content if retrieval_content is None else retrieval_content
             node = next((
                 candidate for candidate in nodes
-                if candidate.content == content
+                if candidate.content == expected_content
                 and candidate.node_type == node_type
                 and candidate.scope == scope
                 and candidate.session_id == session_id

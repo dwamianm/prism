@@ -141,7 +141,12 @@ including its generated ID, classification, confidence, timestamps and TTL. Its
 UUID is derived from the event ID. A checksum covers the serialized record; the
 record remains a string within the JSON payload so JSONB numeric normalization
 does not change it. Reads verify the checksum and source owner, scope, session,
-content hash, content and evidence reference before recovery.
+content hash and evidence reference before recovery. Version 1 requires event
+and node content to match and retains its original bytes and checksum. Version 2
+allows an explicit `retrieval_content` projection: the exact caller source stays
+in the immutable event while the separately checksummed node text is indexed and
+packed into model context. Version 2 rejects an identical projection so ordinary
+stores continue to produce version-1 records.
 
 Recovery creates a missing graph node from the saved values and repairs its
 indexes without an LLM. Existing graph state is retained, including retirement.

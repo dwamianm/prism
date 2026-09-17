@@ -15,7 +15,7 @@ class DirectStoreRecord(BaseModel):
     """Initial node values, committed with the source and deferred work."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     event_id: UUID
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     node: MemoryNode
@@ -40,10 +40,14 @@ class DirectStoreRecord(BaseModel):
 
     def verify_source(self, event: Event) -> None:
         if (self.event_id != event.id or self.content_hash != event.content_hash
-                or self.node.content != event.content or self.node.user_id != event.user_id
+                or self.node.user_id != event.user_id
                 or self.node.scope != event.scope or self.node.session_id != event.session_id
                 or self.node.evidence_refs != [event.id]):
             raise ValueError("Direct store record does not match its source event")
+        if self.schema_version == 1 and self.node.content != event.content:
+            raise ValueError("Version 1 direct store content must match its source event")
+        if self.schema_version == 2 and self.node.content == event.content:
+            raise ValueError("Version 2 direct store requires a distinct retrieval projection")
 
 
 def direct_store_operation_id(event_id: UUID | str) -> str:

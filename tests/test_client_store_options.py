@@ -31,3 +31,21 @@ def test_sync_store_options_survive_pending_index_recovery(tmp_path, monkeypatch
         assert node.ttl_days == initial.ttl_days == expected_ttl
         assert node.confidence == initial.confidence
         assert client.processing_status(event_id, user_id='alice').status == 'complete'
+
+
+def test_sync_store_accepts_retrieval_projection(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        'prme.storage.engine.create_embedding_provider',
+        lambda _: MockEmbeddingProvider(),
+    )
+    config = config_from_directory(str(tmp_path))
+    with MemoryClient(config=config) as client:
+        receipt = client.store_with_receipt(
+            '{"scratchpad":"raw","answer":"cobalt"}',
+            retrieval_content='Compact cobalt answer',
+            user_id='alice',
+        )
+        assert client.get_event(str(receipt.event_id), user_id='alice').content == (
+            '{"scratchpad":"raw","answer":"cobalt"}'
+        )
+        assert receipt.node.content == 'Compact cobalt answer'

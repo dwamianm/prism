@@ -91,7 +91,14 @@ class StoreRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    content: str = Field(description="Text content to store")
+    content: str = Field(description="Exact source text retained in the event log")
+    retrieval_content: str | None = Field(
+        default=None,
+        description=(
+            "Optional compact representation used for graph search and model context; "
+            "the immutable event still retains content"
+        ),
+    )
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     session_id: str | None = None
     role: str = Field(default="user", description="Event role")

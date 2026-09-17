@@ -163,6 +163,7 @@ async def store(
     content: str,
     *,
     user_id: str,
+    retrieval_content: str | None = None,
     session_id: str | None = None,
     role: str = "user",
     node_type: NodeType = NodeType.NOTE,
@@ -178,7 +179,11 @@ async def store(
 ) -> str
 ```
 
-Store content across all four backends in one call. No LLM needed.
+Store content across all four backends in one call. No LLM needed. By default,
+the exact source text is also the searchable and model-facing memory. For large
+agent traces, logs, or structured documents, pass compact
+`retrieval_content`; `get_event()` still returns the exact source while the graph,
+vector index, lexical index and context packer use the compact representation.
 
 The event, complete initial node snapshot and repair job are saved atomically,
 then the graph node and both indexes are written. Index failures leave the job
@@ -206,7 +211,8 @@ truth judgment or calibrated confidence model.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `content` | `str` | required | Text content to store |
+| `content` | `str` | required | Exact source text retained in the immutable event log |
+| `retrieval_content` | `str \| None` | `None` | Optional compact text to index, rank and place in model context |
 | `user_id` | `str` | required | Owner user ID (all queries scoped to this) |
 | `session_id` | `str \| None` | `None` | Optional session identifier |
 | `role` | `str` | `"user"` | `"user"`, `"assistant"`, or `"system"` |
@@ -240,6 +246,25 @@ The immutable source ID is `receipt.event_id`; lifecycle methods accept
 `receipt.processing_status` reports its durable materialization state. Resolution
 follows the source event, so a concurrent write cannot be mistaken for this
 node. Existing `store()` callers retain the event-ID return for compatibility.
+
+For example, retain a complete tool trajectory without spending the retrieval
+budget on raw SDK payloads:
+
+```python
+receipt = await engine.store_with_receipt(
+    raw_trace_json,
+    retrieval_content="Traveler: Alice\nFinal plan:\n...",
+    user_id="alice",
+    metadata={"record_kind": "agent_trace"},
+)
+source = await engine.get_event(str(receipt.event_id), user_id="alice")
+assert source.content == raw_trace_json
+assert receipt.node.content.startswith("Traveler: Alice")
+```
+
+The projection is caller-supplied data, not a generated summary or a claim that
+the source supports it. It is durably journaled with the initial node and reused
+exactly during restart recovery.
 
 For raw imports that do not need typed-node overrides or model extraction, use
 `ingest_fast_many(items, user_id=...)`. Each `FastIngestItem` carries `content`,

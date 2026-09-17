@@ -192,6 +192,13 @@ with MemoryClient("./my_memories") as client:
     client.store("Alice prefers dark mode in all her editors.", user_id="alice")
     client.store("The team decided to use PostgreSQL.", user_id="alice")
 
+    # Keep a complete trace for audit while retrieving its compact memory view.
+    client.store(
+        '{"task":"migration","tool_calls":["..."],"result":"approved"}',
+        retrieval_content="Alice approved the PostgreSQL migration.",
+        user_id="alice",
+    )
+
     # Retrieve with hybrid scoring
     response = client.retrieve("What are Alice's preferences?", user_id="alice")
     for result in response.results:
