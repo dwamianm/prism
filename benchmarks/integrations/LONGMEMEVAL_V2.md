@@ -85,6 +85,13 @@ can bind that object as `reader.runtime_identity`; a changed tag or runtime then
 fails before any generation, and execution-manifest schema 3 preserves the
 observed identity for comparison.
 
+Ollama cloud readers use the same option. Their runtime identity records the
+local cloud-manifest digest and size, remote host and model name, capabilities,
+and Ollama server version. It also records `remote_weights_pinned: false` because
+Ollama does not expose an immutable remote weight revision. This makes repeated
+cloud runs auditable without misrepresenting the local manifest digest as a hash
+of the hosted weights.
+
 Loaded PRME runs also record a separate identity for the `prme_pack/` payload.
 This lets a registered multi-budget curve prove that every arm started from the
 same graph, indexes, attachments, and adapter manifest even though each clone's
