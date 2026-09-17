@@ -1075,11 +1075,13 @@ class PgGraphStore:
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node via recursive CTE.
 
         Delegates to the depth-aware variant and discards depths -- the
-        reachable node set is identical.
+        reachable node set is identical. Unaccepted alias proposals are
+        excluded unless explicitly requested.
         """
         results = await self.get_neighborhood_with_depth(
             node_id,
@@ -1088,6 +1090,7 @@ class PgGraphStore:
             valid_at=valid_at,
             min_confidence=min_confidence,
             include_superseded=include_superseded,
+            include_unverified_aliases=include_unverified_aliases,
         )
         return [node for node, _depth in results]
 
@@ -1100,13 +1103,15 @@ class PgGraphStore:
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops with their minimum hop distance.
 
         Single cycle-guarded recursive CTE: each branch carries the array
         of visited node IDs and refuses to revisit one (preventing
         A->B->A oscillation), and the outer query collapses paths to one
-        row per node with MIN(depth).
+        row per node with MIN(depth). Unaccepted alias proposals are excluded
+        unless explicitly requested.
         """
         # Build edge filter
         edge_filter_parts: list[str] = []
@@ -1118,6 +1123,12 @@ class PgGraphStore:
             edge_filter_parts.append(f"e.edge_type IN ({et_placeholders})")
             params.extend(et.value for et in edge_types)
             idx += len(edge_types)
+        if not include_unverified_aliases:
+            edge_filter_parts.append(
+                "NOT (e.edge_type = 'relates_to' "
+                "AND COALESCE(e.metadata->>'relation', '') = 'alias' "
+                "AND COALESCE(e.metadata->>'identity_verified', '') = 'false')"
+            )
 
         edge_filter = "AND " + " AND ".join(edge_filter_parts) if edge_filter_parts else ""
 
@@ -1211,8 +1222,9 @@ class PgGraphStore:
         target_id: str,
         *,
         edge_types: list[EdgeType] | None = None,
+        include_unverified_aliases: bool = False,
     ) -> list[str] | None:
-        """Find the shortest path between two nodes via BFS."""
+        """Find a path without treating unaccepted alias proposals as links."""
         if source_id == target_id:
             return [source_id]
 
@@ -1225,6 +1237,12 @@ class PgGraphStore:
             edge_filter_parts.append(f"edge_type IN ({et_placeholders})")
             edge_params.extend(et.value for et in edge_types)
             idx += len(edge_types)
+        if not include_unverified_aliases:
+            edge_filter_parts.append(
+                "NOT (edge_type = 'relates_to' "
+                "AND COALESCE(metadata->>'relation', '') = 'alias' "
+                "AND COALESCE(metadata->>'identity_verified', '') = 'false')"
+            )
 
         edge_where = "AND " + " AND ".join(edge_filter_parts) if edge_filter_parts else ""
 

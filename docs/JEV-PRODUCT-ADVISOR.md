@@ -106,6 +106,12 @@ scope, active lifecycle, metadata compatibility, and the exact assessed node
 checksums while holding the backend transaction. Both entity nodes remain
 active. A negative result returns without graph or journal mutation.
 
+Unverified proposal edges are excluded from ordinary graph neighborhood and
+shortest-path traversal, including retrieval and entity snapshots. Review tools
+can inspect them through `get_edges()` or opt into traversal with
+`include_unverified_aliases=True`. A proposal therefore cannot join the two
+entities' memories before a caller explicitly accepts the identity relationship.
+
 The unordered node pair has one durable proposal identity. A matching
 assessment-request retry returns the first committed assessment and edge without
 rewriting history. A preexisting legacy or version-1 proposal cannot be relabeled
