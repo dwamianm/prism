@@ -62,7 +62,11 @@ def _trace_projection(chunk: str) -> tuple[str | None, str | None, bool]:
     return "\n".join(parts), name, is_base
 
 
-def _travel_reference_names(question: str, base_name: str | None) -> list[str]:
+def _travel_reference_names(
+    question: str,
+    base_name: str | None,
+    known_names: tuple[str, ...] = (),
+) -> list[str]:
     """Find plan dependencies, excluding the participant-roster preamble."""
     lines = [line.strip() for line in question.splitlines() if line.strip()]
     constraints = "\n".join(lines[2:]) if len(lines) > 2 else question
@@ -73,6 +77,12 @@ def _travel_reference_names(question: str, base_name: str | None) -> list[str]:
     for pattern in (_POSSESSIVE_NAME, _COMPANION_NAME):
         for match in pattern.finditer(constraints):
             matches.append((match.start(), match.group(1)))
+    for known_name in known_names:
+        match = re.search(
+            rf"(?<![A-Za-z]){re.escape(known_name)}(?![A-Za-z])", constraints
+        )
+        if match is not None:
+            matches.append((match.start(), known_name))
     for _, name in sorted(matches):
         if name not in names:
             names.append(name)
@@ -166,6 +176,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
             app.state.engine = engine
             app.state.owners = {}
             app.state.base_names = {}
+            app.state.traveler_names = {}
             app.state.lock = asyncio.Lock()
             yield
 
@@ -187,6 +198,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
         async with app.state.lock:
             app.state.owners[identity.user_id] = str(uuid4())
             app.state.base_names[identity.user_id] = None
+            app.state.traveler_names[identity.user_id] = []
         return {"status": "ok", **identity.model_dump()}
 
     @app.post("/memory/add")
@@ -195,6 +207,8 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
             user = owner(request)
             engine = app.state.engine
             projection, traveler_name, is_base = _trace_projection(request.chunk)
+            if traveler_name and traveler_name not in app.state.traveler_names[request.user_id]:
+                app.state.traveler_names[request.user_id].append(traveler_name)
             if is_base:
                 app.state.base_names[request.user_id] = traveler_name
             metadata = (
@@ -224,7 +238,11 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
         async with app.state.lock:
             user = owner(request)
             base_name = app.state.base_names[request.user_id]
-            reference_names = _travel_reference_names(request.question, base_name)
+            reference_names = _travel_reference_names(
+                request.question,
+                base_name,
+                tuple(app.state.traveler_names[request.user_id]),
+            )
             retrieval_query = " ".join(reference_names) or request.question
             result = await app.state.engine.retrieve(
                 retrieval_query, user_id=user, token_budget=inner_budget,

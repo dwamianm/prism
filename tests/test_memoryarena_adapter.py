@@ -88,6 +88,16 @@ def test_travel_reference_names_do_not_treat_possessives_as_companion_names():
     assert _travel_reference_names(question, "Base") == ["Base", "Allison", "Zoe"]
 
 
+def test_travel_reference_names_match_plain_prior_travelers_in_constraints():
+    question = (
+        "I am Michael.\nI'm joining Base, Audrey, and Leslie.\n"
+        "I want to stay at the same place as Audrey."
+    )
+    assert _travel_reference_names(
+        question, "Base", ("Base", "Audrey", "Leslie")
+    ) == ["Base", "Audrey"]
+
+
 def test_trace_projection_marks_missing_final_plan_boundary_unavailable():
     source = '{"name":"Alice","final_plan":"analysis with Day 1: fragments"}'
     projection, name, is_base = _trace_projection(source)
@@ -121,7 +131,7 @@ def test_travel_trace_uses_projection_but_retains_raw_source(config):
                 **identity(),
                 "question": (
                     "I am Carol.\nI'm traveling with Base and Alice.\n"
-                    "For breakfast, I'd like to join Alice."
+                    "For accommodation, I'd like the same place as Alice."
                 ),
             },
         )

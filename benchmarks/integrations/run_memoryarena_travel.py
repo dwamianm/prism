@@ -428,7 +428,8 @@ def register(
             ),
             "prme_retrieval_projection": "traveler_confirmed_plan_v3",
             "prme_query_projection": (
-                "base traveler plus named plan dependencies outside the roster preamble"
+                "base traveler plus exact occurrences of previously stored traveler "
+                "names in the constraint body, excluding the roster preamble"
             ),
             "response_plan_projection": (
                 "last exact named final-plan block for scoring and native history; "
