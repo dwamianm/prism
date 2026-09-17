@@ -72,8 +72,11 @@ the authored adapter preflight is not a benchmark success rate.
 The [authored native scorer audit](MEMORYARENA-TRAVEL-SCORER-AUDIT.md) found two
 issues that must be addressed before interpreting a travel quality result:
 missing travelers disappear from the denominator, and short matching prefixes
-can receive full slot credit. A separate coverage validator now rejects missing,
-duplicate and unexpected submissions. It does not correct native similarity.
+can receive full slot credit. Exact coverage validation rejects missing,
+duplicate and unexpected submissions. The later
+[strict scorer audit](../2026-09-17/MEMORYARENA-TRAVEL-STRICT-SCORER-V2.md)
+also requires complete day/slot structure and full normalized-string equality;
+the native metric remains available only as a secondary comparison.
 
 The [formal reasoning runner](https://github.com/ZexueHe/MemoryArena/blob/6cd9de14b71915e39ac742a20dc33785e14b6aab/run_math.py)
 requires an additional model judge. Its default no-judge-feedback path passes

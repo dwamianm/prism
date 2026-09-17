@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import types
+import unicodedata
 
 from benchmarks.diagnostics.hindsight_capture import digest, write
 
@@ -56,6 +57,126 @@ def validate_coverage(expected, submissions):
         found[group] = people
     if set(found) != set(expected):
         raise ValueError("Submitted groups differ from the registered cohort")
+
+
+def _normalized(value):
+    if not isinstance(value, str):
+        return None
+    return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
+
+
+def _strict_days(plan, expected_days):
+    """Return one complete submitted row per registered day, or ``None``.
+
+    Missing slot keys are failures even when the reference value is ``-``. This
+    prevents an incomplete object from receiving credit through evaluator
+    defaults. Extra and duplicate days are also failures.
+    """
+    if not isinstance(plan, list) or len(plan) != len(expected_days):
+        return None
+    days = {}
+    for row in plan:
+        if not isinstance(row, dict):
+            return None
+        identity = row.get("day", row.get("days"))
+        if type(identity) is not int or identity in days:
+            return None
+        if any(slot not in row or _normalized(row[slot]) is None for slot in SLOTS):
+            return None
+        days[identity] = row
+    return days if set(days) == set(expected_days) else None
+
+
+def score_strict(cohort, submissions):
+    """Score complete plans with full normalized-string equality.
+
+    The metric intentionally stays narrower than itinerary validity: it compares
+    the same six slots as the pinned native evaluator but removes its prefix and
+    denominator behavior. The registered cohort remains the denominator.
+    """
+    expected = {
+        row["id"]: [person["round_idx"] for person in row.get("answers", [])]
+        for row in cohort
+    }
+    validate_coverage(expected, submissions)
+    submitted = {
+        (row["id"], person["person_idx"]): person["plan"]
+        for row in submissions
+        for person in row["persons"]
+    }
+    total_people = 0
+    passed_people = 0
+    passed_groups = 0
+    group_constraint_rates = []
+    passed_constraints = 0
+    total_constraints = 0
+
+    for group in cohort:
+        group_id = group["id"]
+        base_rows = group.get("base_person", {}).get("daily_plans") or []
+        base_by_day = {
+            row.get("day", row.get("days")): row
+            for row in base_rows
+            if isinstance(row, dict)
+        }
+        group_passed = True
+        person_constraint_rates = []
+        for answer in group.get("answers", []):
+            total_people += 1
+            person_id = answer["round_idx"]
+            truth = answer.get("daily_plans") or []
+            truth_days = [row.get("day", row.get("days")) for row in truth]
+            actual_by_day = _strict_days(submitted[(group_id, person_id)], truth_days)
+            person_passed = actual_by_day is not None
+            person_constraints_passed = 0
+            person_constraints_total = 0
+            for truth_row in truth:
+                day = truth_row.get("day", truth_row.get("days"))
+                base_row = base_by_day.get(day, {})
+                actual_row = actual_by_day.get(day, {}) if actual_by_day else {}
+                for slot in SLOTS:
+                    expected_value = _normalized(truth_row.get(slot))
+                    actual_value = _normalized(actual_row.get(slot))
+                    if actual_value != expected_value:
+                        person_passed = False
+                    if expected_value != _normalized(base_row.get(slot)):
+                        person_constraints_total += 1
+                        total_constraints += 1
+                        if actual_value == expected_value:
+                            person_constraints_passed += 1
+                            passed_constraints += 1
+            if person_constraints_total:
+                person_constraint_rates.append(
+                    person_constraints_passed / person_constraints_total
+                )
+            if person_passed:
+                passed_people += 1
+            else:
+                group_passed = False
+        if group_passed:
+            passed_groups += 1
+        if person_constraint_rates:
+            group_constraint_rates.append(
+                sum(person_constraint_rates) / len(person_constraint_rates)
+            )
+
+    total_groups = len(cohort)
+    return {
+        "ps": 100 * passed_people / total_people if total_people else 0.0,
+        "sps": (
+            100 * sum(group_constraint_rates) / len(group_constraint_rates)
+            if group_constraint_rates else 0.0
+        ),
+        "sr": 100 * passed_groups / total_groups if total_groups else 0.0,
+        "counts": {
+            "passed_people": passed_people,
+            "total_people": total_people,
+            "passed_groups": passed_groups,
+            "total_groups": total_groups,
+            "passed_constraint_slots": passed_constraints,
+            "total_constraint_slots": total_constraints,
+        },
+    }
 
 
 def authored_cohort():
@@ -135,6 +256,8 @@ def run(upstream):
                 with redirect_stdout(io.StringIO()):
                     scores = evaluator.evaluate(str(path))
                 outcomes[case] = {"native_scores": scores,
+                                  "strict_scores": score_strict(cohort, rows)
+                                  if coverage else None,
                                   "registered_coverage_passed": coverage,
                                   "submission": rows}
         return {
@@ -146,7 +269,7 @@ def run(upstream):
             "limits": [
                 "Authored scoring audit only; no dataset, actor or memory quality result.",
                 "Only load_travel_data is substituted; native evaluator executes unchanged.",
-                "Coverage validation does not repair the native prefix similarity metric.",
+                "Strict scoring checks complete structure and normalized full strings; it is not a semantic itinerary-validity judge.",
             ],
         }
     finally:
