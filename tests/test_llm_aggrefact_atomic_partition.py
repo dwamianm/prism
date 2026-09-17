@@ -9,16 +9,10 @@ def _item(claim: str = "Maya moved to Rome and works as a surgeon.") -> dict:
 
 def _complete_arguments() -> dict:
     return {
-        "atom_count": 2,
-        "token_atoms": {
-            "C0001": [1, 2],
-            "C0002": [1],
-            "C0003": [1],
-            "C0004": [1],
-            "C0006": [2],
-            "C0007": [2],
-            "C0009": [2],
-        },
+        "atoms": [
+            {"token_ids": ["C0001", "C0002", "C0003", "C0004"]},
+            {"token_ids": ["C0001", "C0006", "C0007", "C0009"]},
+        ]
     }
 
 
@@ -35,17 +29,17 @@ def test_partition_accepts_complete_source_bound_atoms() -> None:
 
 def test_partition_rejects_missing_required_token() -> None:
     arguments = _complete_arguments()
-    del arguments["token_atoms"]["C0004"]
+    arguments["atoms"][0]["token_ids"].remove("C0004")
 
     valid, errors = subject._strict_validate(_item(), arguments)
 
     assert valid is False
-    assert "token_atom_key_set_invalid" in errors
+    assert "claim_token_coverage_invalid" in errors
 
 
 def test_partition_rejects_unused_or_degenerate_atom() -> None:
     arguments = _complete_arguments()
-    arguments["atom_count"] = 3
+    arguments["atoms"].append({"token_ids": ["C0005", "C0010"]})
 
     valid, errors = subject._strict_validate(_item(), arguments)
 
@@ -56,18 +50,19 @@ def test_partition_rejects_unused_or_degenerate_atom() -> None:
 
 def test_partition_rejects_duplicate_and_out_of_range_membership() -> None:
     arguments = _complete_arguments()
-    arguments["token_atoms"]["C0001"] = [1, 1, 3]
+    arguments["atoms"][0]["token_ids"] += ["C0001", "C9999"]
 
     valid, errors = subject._strict_validate(_item(), arguments)
 
     assert valid is False
-    assert "duplicate_token_atom_membership" in errors
-    assert "atom_number_out_of_range" in errors
+    assert "atom_1_duplicate_token" in errors
+    assert "atom_1_unknown_claim_token" in errors
 
 
 def test_partition_allows_optional_displayed_structural_tokens() -> None:
     arguments = _complete_arguments()
-    arguments["token_atoms"].update({"C0005": [1], "C0008": [2], "C0010": [2]})
+    arguments["atoms"][0]["token_ids"].append("C0005")
+    arguments["atoms"][1]["token_ids"] += ["C0008", "C0010"]
 
     valid, errors = subject._strict_validate(_item(), arguments)
 
@@ -84,22 +79,12 @@ def test_atomic_text_reconstructs_disjoint_exact_source_runs() -> None:
     assert identifiers == ("C0001", "C0006", "C0007", "C0009")
 
 
-def test_tool_schema_requires_substantive_tokens_and_allows_displayed_tokens() -> None:
-    token_atoms = subject._tool_for_item(_item())["function"]["parameters"][
-        "properties"
-    ]["token_atoms"]
+def test_tool_schema_limits_atom_membership_to_displayed_tokens() -> None:
+    schema = subject._tool_for_item(_item())["function"]["parameters"]
+    token_ids = schema["$defs"]["_AtomicUnit"]["properties"]["token_ids"]
 
-    assert token_atoms["required"] == [
-        "C0001",
-        "C0002",
-        "C0003",
-        "C0004",
-        "C0006",
-        "C0007",
-        "C0009",
-    ]
-    assert set(token_atoms["properties"]) == {f"C{index:04d}" for index in range(1, 11)}
-    assert token_atoms["additionalProperties"] is False
+    assert token_ids["items"]["enum"] == [f"C{index:04d}" for index in range(1, 11)]
+    assert token_ids["uniqueItems"] is True
 
 
 def test_cli_deliberately_has_no_test_dataset_argument() -> None:
