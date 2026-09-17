@@ -207,6 +207,72 @@ def test_native_response_parsing_preserves_parallel_tool_calls():
     }
 
 
+def test_native_client_recovers_bounded_truncation_with_complete_answer():
+    class Response:
+        def __init__(self, value):
+            self.value = value
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.value
+
+    class Client:
+        def __init__(self, values):
+            self.values = iter(values)
+            self.bodies = []
+
+        def post(self, _path, *, json):
+            self.bodies.append(json)
+            return Response(next(self.values))
+
+    truncated = {
+        "model": "deepseek",
+        "done": True,
+        "done_reason": "length",
+        "prompt_eval_count": 100,
+        "eval_count": 8192,
+        "message": {"content": "long analysis"},
+    }
+    completed = {
+        "model": "deepseek",
+        "done": True,
+        "done_reason": "stop",
+        "prompt_eval_count": 150,
+        "eval_count": 25,
+        "message": {"content": "=== Ada's Plan ===\nDay 1: complete"},
+    }
+    client = runner.OllamaNativeTravelClient.__new__(runner.OllamaNativeTravelClient)
+    client.model_name = "deepseek"
+    client.accepted_models = {"deepseek"}
+    client.options = {"temperature": 0, "seed": 17}
+    client.think = False
+    client.attempts = 1
+    client.max_output_tokens = 8192
+    client.truncation_recovery_attempts = 1
+    client.truncation_recovery_instruction = "Return only the complete final answer."
+    client.client = Client([truncated, completed])
+    client.total_input_tokens = 0
+    client.total_output_tokens = 0
+    client.turn = 0
+
+    response = client.chat_with_tools(
+        [{"role": "user", "content": "Plan"}], [], max_tokens=32768
+    )
+
+    assert response.content == "=== Ada's Plan ===\nDay 1: complete"
+    assert response.raw_response["recovered_from_truncation"] is True
+    assert client.total_input_tokens == 250
+    assert client.total_output_tokens == 8217
+    assert client.client.bodies[0]["options"]["num_predict"] == 8192
+    assert client.client.bodies[1]["tools"] is None
+    assert client.client.bodies[1]["messages"][-2:] == [
+        {"role": "assistant", "content": "long analysis"},
+        {"role": "user", "content": "Return only the complete final answer."},
+    ]
+
+
 def test_resume_restores_native_history_and_replays_prme_trace():
     class Agent:
         all_queries = ["Base: query"]

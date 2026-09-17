@@ -95,6 +95,14 @@ class OllamaNativeTravelClient:
         self.options = dict(actor["native_options"])
         self.think = actor["think"]
         self.attempts = actor["transport_attempts"]
+        self.max_output_tokens = actor.get("max_output_tokens", 32768)
+        self.truncation_recovery_attempts = actor.get(
+            "truncation_recovery_attempts", 0
+        )
+        self.truncation_recovery_instruction = actor.get(
+            "truncation_recovery_instruction",
+            "Return the complete final answer now without analysis or tool calls.",
+        )
         self.client = httpx.Client(
             base_url=runtime["api_base_url"],
             timeout=actor["request_timeout_seconds"],
@@ -112,7 +120,10 @@ class OllamaNativeTravelClient:
     ) -> _NativeResponse:
         if temperature != self.options["temperature"]:
             raise RuntimeError("actor temperature differs from registration")
-        options = {**self.options, "num_predict": max_tokens}
+        options = {
+            **self.options,
+            "num_predict": min(max_tokens, self.max_output_tokens),
+        }
         body = {
             "model": self.model_name,
             "messages": messages,
@@ -127,22 +138,78 @@ class OllamaNativeTravelClient:
                 response = self.client.post("/api/chat", json=body)
                 response.raise_for_status()
                 value = response.json()
+                if value.get("done_reason") == "length":
+                    return self._recover_truncated(value, body)
                 return self._parse(value)
             except Exception as error:  # transport/schema failures are bounded alike
                 last_error = error
         raise RuntimeError("Ollama native actor attempts exhausted") from last_error
 
-    def _parse(self, value: Any) -> _NativeResponse:
-        if (
-            not isinstance(value, dict)
-            or value.get("model") not in self.accepted_models
-            or value.get("done") is not True
-            or value.get("done_reason") != "stop"
-        ):
-            raise ValueError("Ollama returned an incomplete or foreign response")
+    def _recover_truncated(
+        self, value: dict[str, Any], body: dict[str, Any]
+    ) -> _NativeResponse:
+        """Request one complete answer after a bounded, source-retained truncation."""
+        if self.truncation_recovery_attempts < 1:
+            raise ValueError("Ollama response reached the registered output limit")
+        self._validate_envelope(value, expected_reason="length")
         message = value.get("message")
         if not isinstance(message, dict):
-            raise ValueError("Ollama response has no assistant message")
+            raise ValueError("Ollama truncated response has no assistant message")
+        partial = message.get("content")
+        if not isinstance(partial, str) or not partial.strip() or message.get("tool_calls"):
+            raise ValueError("Ollama truncated response cannot be continued safely")
+        prompt_tokens, output_tokens = self._usage(value)
+        self.total_input_tokens += prompt_tokens
+        self.total_output_tokens += output_tokens
+
+        recovery_body = {
+            **body,
+            "messages": [
+                *body["messages"],
+                {"role": "assistant", "content": partial},
+                {
+                    "role": "user",
+                    "content": self.truncation_recovery_instruction,
+                },
+            ],
+            "tools": None,
+        }
+        last_error = None
+        for _attempt in range(self.truncation_recovery_attempts):
+            try:
+                response = self.client.post("/api/chat", json=recovery_body)
+                response.raise_for_status()
+                completion = response.json()
+                parsed = self._parse(completion)
+                if parsed.tool_calls or not parsed.content or not parsed.content.strip():
+                    raise ValueError("Ollama truncation recovery returned no final answer")
+                parsed.raw_response = {
+                    "recovered_from_truncation": True,
+                    "partial_response": value,
+                    "completion_response": completion,
+                }
+                return parsed
+            except Exception as error:
+                last_error = error
+        raise RuntimeError("Ollama truncation recovery attempts exhausted") from last_error
+
+    def _validate_envelope(
+        self, value: Any, *, expected_reason: str = "stop"
+    ) -> None:
+        if not isinstance(value, dict):
+            raise ValueError("Ollama response is not an object")
+        if value.get("model") not in self.accepted_models:
+            raise ValueError("Ollama response model differs from registration")
+        if value.get("done") is not True:
+            raise ValueError("Ollama response is incomplete")
+        if value.get("done_reason") != expected_reason:
+            reason = value.get("done_reason")
+            raise ValueError(
+                f"Ollama response reason {reason!r} differs from {expected_reason!r}"
+            )
+
+    @staticmethod
+    def _usage(value: dict[str, Any]) -> tuple[int, int]:
         prompt_tokens = value.get("prompt_eval_count")
         output_tokens = value.get("eval_count")
         if (
@@ -152,6 +219,14 @@ class OllamaNativeTravelClient:
             or output_tokens < 0
         ):
             raise ValueError("Ollama response has invalid token observations")
+        return prompt_tokens, output_tokens
+
+    def _parse(self, value: Any) -> _NativeResponse:
+        self._validate_envelope(value)
+        message = value.get("message")
+        if not isinstance(message, dict):
+            raise ValueError("Ollama response has no assistant message")
+        prompt_tokens, output_tokens = self._usage(value)
         calls = message.get("tool_calls")
         parsed_calls = None
         if calls:
@@ -406,6 +481,13 @@ def register(
             "native_options": {"temperature": 0, "seed": 17},
             "request_timeout_seconds": 180,
             "transport_attempts": 2,
+            "max_output_tokens": 8192,
+            "truncation_recovery_attempts": 1,
+            "truncation_recovery_instruction": (
+                "Your prior response reached its output limit. Return only the "
+                "complete final answer in the exact format requested. Do not "
+                "include analysis and do not call tools."
+            ),
             "remote_weights_pinned": False,
         },
         "protocol": {
