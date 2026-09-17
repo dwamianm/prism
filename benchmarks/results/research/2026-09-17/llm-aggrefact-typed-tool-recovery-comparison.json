@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-typed-tool-recovery-comparison",
+  "completed_at": "2026-09-17T12:54:38.261292+00:00",
+  "development_only": true,
+  "test_accessed": false,
+  "source_trial": {
+    "result_file_sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+    "result_canonical_sha256": "ce9c9126e70060644d99903af01b3658b9d2a42f3115b8591a0db11515ee3cae",
+    "failure_identity_sha256": "1128b24e950fc5b05e538a1592041b3d360afd257d6af62567f96cae65ba24f8",
+    "cases": 25
+  },
+  "provider": {
+    "model": "deepseek-v4.1-flash:cloud",
+    "remote_model": "deepseek-v4.1-flash",
+    "manifest_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+    "temperature": 0,
+    "seed": 17
+  },
+  "runs": {
+    "v1": {
+      "result_file": "llm-aggrefact-typed-tool-recovery-v1-result.json",
+      "result_file_sha256": "a000e4dd3673a882f81a5be5c96b691a1417ebc11ca621718bc6947da759c689",
+      "result_canonical_sha256": "6be0a074ea99c20a989ce2d27dbdcd763bbf16852abcd03e922a50f3256ea4da",
+      "private_state_sha256": "967d88dbcda3048e0451434be3166c337ffdd5c3611ad641015ac92b08c68120",
+      "runner_sha256": "828f4e73606847a3a76276507590e0de5134469a777caff9bbb479d5c9eaa0e9",
+      "durable_runner_sha256": null,
+      "system_prompt_sha256": "529888e92beca809d57bb34482f2682f1dc8d42f48ae3a2a185142e4461fa6f6",
+      "tool_sha256": "bdfe45dd45bcca55cee9418cad583f4df35300a8b6ba9c5d75a3849840c5974b",
+      "metrics": {
+        "cases": 25,
+        "complete_cases": 20,
+        "first_attempt_valid_cases": 13,
+        "job_statuses": {
+          "complete": 20,
+          "semantic_exhausted": 5
+        },
+        "tool_calls": 45,
+        "transport_failures": 0,
+        "wall_seconds": 25.956125,
+        "call_seconds_sum": 101.47931299999999,
+        "call_seconds_median": 2.255437,
+        "call_seconds_max": 4.201353,
+        "validation_error_counts": {
+          "atom_0_incomplete_typed_coverage": 3,
+          "atom_0_object_outside_atom": 1,
+          "atom_0_qualifier_2_outside_atom": 1,
+          "atom_1_incomplete_typed_coverage": 9,
+          "atom_1_object_outside_atom": 2,
+          "atom_1_relation_outside_atom": 6,
+          "atom_2_relation_outside_atom": 5,
+          "atom_3_object_outside_atom": 1,
+          "atom_3_relation_outside_atom": 3,
+          "atom_4_relation_outside_atom": 2,
+          "atom_5_relation_outside_atom": 1,
+          "atom_6_relation_outside_atom": 1,
+          "incomplete_claim_word_coverage": 4,
+          "tool_arguments_schema_invalid": 1
+        }
+      }
+    },
+    "v2": {
+      "result_file": "llm-aggrefact-typed-tool-recovery-v2-result.json",
+      "result_file_sha256": "dae7d4d88d5eae2ef9a197014259ddebe34ca0fc85912aa82f3472a0d7256e80",
+      "result_canonical_sha256": "d048db821a39a8dffd89aaa21e740729949bd8ef2e4780f73e2b184a5fa2509e",
+      "private_state_sha256": "39c3f548b5455390c361e8f93b569752a53600230498be4b35e077e88f46f052",
+      "runner_sha256": "6177ab354c55d6b6a3142a859915d945d1e9df2301d7b401d7eca4e758ffaead",
+      "durable_runner_sha256": "fd100494c7a932743bff8f18dbe4c0075bc3839c6e691e6625eba98bab9e0489",
+      "system_prompt_sha256": "529888e92beca809d57bb34482f2682f1dc8d42f48ae3a2a185142e4461fa6f6",
+      "tool_sha256": "bdfe45dd45bcca55cee9418cad583f4df35300a8b6ba9c5d75a3849840c5974b",
+      "metrics": {
+        "cases": 25,
+        "complete_cases": 17,
+        "first_attempt_valid_cases": 12,
+        "job_statuses": {
+          "complete": 17,
+          "semantic_exhausted": 8
+        },
+        "tool_calls": 48,
+        "transport_failures": 0,
+        "wall_seconds": 32.020834,
+        "call_seconds_sum": 119.77405799999998,
+        "call_seconds_median": 2.231527,
+        "call_seconds_max": 6.757459,
+        "validation_error_counts": {
+          "atom_0_incomplete_typed_coverage": 2,
+          "atom_0_object_outside_atom": 1,
+          "atom_0_qualifier_0_outside_atom": 1,
+          "atom_1_incomplete_typed_coverage": 11,
+          "atom_1_object_outside_atom": 3,
+          "atom_1_qualifier_0_outside_atom": 2,
+          "atom_1_relation_outside_atom": 7,
+          "atom_2_incomplete_typed_coverage": 2,
+          "atom_2_relation_has_no_word": 3,
+          "atom_2_relation_outside_atom": 3,
+          "atom_3_incomplete_typed_coverage": 2,
+          "atom_3_relation_outside_atom": 1,
+          "atom_4_incomplete_typed_coverage": 3,
+          "atom_4_relation_outside_atom": 1,
+          "atom_5_incomplete_typed_coverage": 2,
+          "atom_5_relation_outside_atom": 2,
+          "atom_6_incomplete_typed_coverage": 2,
+          "atom_6_relation_outside_atom": 1,
+          "incomplete_claim_word_coverage": 3
+        }
+      }
+    }
+  },
+  "same_initial_request": {
+    "system_prompt_sha256_equal": true,
+    "tool_sha256_equal": true,
+    "first_attempt_valid_status_agreement_cases": 16,
+    "first_attempt_valid_status_agreement_rate": 0.64,
+    "identical_first_argument_cases": 3,
+    "identical_first_argument_rate": 0.12
+  },
+  "final_outcome": {
+    "both_complete": 14,
+    "v1_only_complete": 6,
+    "v2_only_complete": 3,
+    "neither_complete": 2
+  },
+  "limitations": [
+    "Post hoc tuning on failures already observed during typed-reference v2.",
+    "The repair prompt changed after the identical first attempt, so final outcomes are not a pure repeatability measurement.",
+    "The Ollama cloud manifest does not pin remote model weights.",
+    "No test split was accepted or accessed."
+  ],
+  "result_sha256": "49f15da861e9ad274f96cef86e7f7997a0cd49776620ce92dc8a2e52d3674c5d"
+}

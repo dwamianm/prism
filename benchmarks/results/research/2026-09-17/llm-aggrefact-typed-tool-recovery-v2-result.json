@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-typed-tool-recovery-diagnostic",
+  "completed_at": "2026-09-17T12:47:54.564809+00:00",
+  "development_only": true,
+  "test_accessed": false,
+  "source_trial": {
+    "registration_sha256": "e38e4ccc7e3820972428d3e058b0b07bdf89a7728eecff9e3fef2c257e2ff2ec",
+    "result_sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+    "result_canonical_sha256": "ce9c9126e70060644d99903af01b3658b9d2a42f3115b8591a0db11515ee3cae",
+    "observed_failures": 25,
+    "failure_identity_sha256": "1128b24e950fc5b05e538a1592041b3d360afd257d6af62567f96cae65ba24f8"
+  },
+  "transport": {
+    "provider": "ollama_cloud",
+    "model": "deepseek-v4.1-flash:cloud",
+    "remote_model": "deepseek-v4.1-flash",
+    "manifest_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+    "mode": "ollama_native_tool_call",
+    "options": {
+      "temperature": 0,
+      "seed": 17,
+      "num_predict": 2048
+    },
+    "timeout_seconds": 180.0,
+    "max_transport_attempts": 2,
+    "max_semantic_attempts": 3,
+    "concurrency": 4
+  },
+  "protocol": {
+    "runner_sha256": "6177ab354c55d6b6a3142a859915d945d1e9df2301d7b401d7eca4e758ffaead",
+    "durable_runner_sha256": "fd100494c7a932743bff8f18dbe4c0075bc3839c6e691e6625eba98bab9e0489",
+    "system_prompt_sha256": "529888e92beca809d57bb34482f2682f1dc8d42f48ae3a2a185142e4461fa6f6",
+    "tool_sha256": "bdfe45dd45bcca55cee9418cad583f4df35300a8b6ba9c5d75a3849840c5974b",
+    "repair_message_sha256": "30fc5a699d49dbf3815d11892271f9bd21a5b2e1f1547e5bc83bbba66655daa0",
+    "source_text_emitted": false
+  },
+  "development": {
+    "cases": 25,
+    "complete_cases": 17,
+    "completion_rate": 0.68,
+    "job_statuses": {
+      "complete": 17,
+      "semantic_exhausted": 8
+    },
+    "semantic_attempts_per_case": {
+      "1": 12,
+      "2": 3,
+      "3": 10
+    },
+    "validation_error_counts": {
+      "atom_0_incomplete_typed_coverage": 2,
+      "atom_0_object_outside_atom": 1,
+      "atom_0_qualifier_0_outside_atom": 1,
+      "atom_1_incomplete_typed_coverage": 11,
+      "atom_1_object_outside_atom": 3,
+      "atom_1_qualifier_0_outside_atom": 2,
+      "atom_1_relation_outside_atom": 7,
+      "atom_2_incomplete_typed_coverage": 2,
+      "atom_2_relation_has_no_word": 3,
+      "atom_2_relation_outside_atom": 3,
+      "atom_3_incomplete_typed_coverage": 2,
+      "atom_3_relation_outside_atom": 1,
+      "atom_4_incomplete_typed_coverage": 3,
+      "atom_4_relation_outside_atom": 1,
+      "atom_5_incomplete_typed_coverage": 2,
+      "atom_5_relation_outside_atom": 2,
+      "atom_6_incomplete_typed_coverage": 2,
+      "atom_6_relation_outside_atom": 1,
+      "incomplete_claim_word_coverage": 3
+    },
+    "transport_statuses": {
+      "succeeded": 48
+    },
+    "transport_error_types": {},
+    "transport_call_seconds_sum": 119.77405799999998,
+    "transport_call_seconds_median": 2.231527,
+    "transport_call_seconds_max": 6.757459,
+    "invocation_wall_seconds": 32.020834
+  },
+  "runtime": {
+    "ranker": {
+      "device": "mps",
+      "seconds": 7.621211459045298,
+      "pairs_scored": 48,
+      "torch": "2.10.0",
+      "transformers": "5.3.0",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit"
+    },
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit"
+  },
+  "limitations": [
+    "This diagnostic reuses only failures already observed during typed-reference v2.",
+    "It is tuning evidence and cannot estimate held-out classification quality.",
+    "The Ollama cloud alias identifies a manifest, not pinned remote weights.",
+    "No external test split was accepted or accessed."
+  ],
+  "result_sha256": "d048db821a39a8dffd89aaa21e740729949bd8ef2e4780f73e2b184a5fa2509e"
+}
