@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from benchmarks.diagnostics.hybrid_lexical import raw_config
 from benchmarks.diagnostics.memoryarena_server import (
+    CONFIRMED_PLAN_CONTEXT_CONTRACT,
     _trace_projection,
     _travel_reference_names,
     _travel_reference_query,
@@ -154,6 +155,7 @@ def test_travel_trace_uses_projection_but_retains_raw_source(config):
         assert "Base Traveler Base's Request (Already Planned)" in prompt
         assert "Base's Confirmed Plan" in prompt
         assert "Alice's Retrieved Confirmed Plan" in prompt
+        assert CONFIRMED_PLAN_CONTEXT_CONTRACT in prompt
         assert "trip" in prompt
         assert "private raw" not in prompt
         owner = app.state.owners["alice"]
