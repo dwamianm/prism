@@ -36,6 +36,10 @@ Python and CLI contracts separately from draft RFC requirements.
 LlamaIndex retrievers, lossless structured-message storage, and append-only
 logical history mutations.
 
+[Jev product-alignment advisor](JEV-PRODUCT-ADVISOR.md) documents the opt-in,
+pinned external advisor for caller-selected software-product pairs, its held-out
+evidence, audit fields, and proposal-only safety boundary.
+
 [Scoped retrieval learning](LEARNING.md) documents the two-stage evidence gate,
 immutable owner/scope profiles, automatic application, and rollback workflow.
 
