@@ -11,6 +11,8 @@ from typing import Any
 
 from benchmarks.integrations import compare_longmemeval_v2 as paired
 from benchmarks.integrations import compare_longmemeval_v2_curve as curve
+from benchmarks.integrations import install_longmemeval_v2 as installer
+from benchmarks.integrations import run_longmemeval_v2 as launcher
 
 
 REGISTRATION_KIND = "longmemeval-v2-episode-policy-registration"
@@ -42,6 +44,97 @@ def _protocol_specification() -> dict[str, Any]:
             "resume infrastructure failures without replacing completed generations."
         ),
     }
+
+
+def _expected_source_files() -> dict[str, str]:
+    return {
+        "adapter_sha256": paired._digest(Path(installer._ADAPTER_SOURCE).resolve()),
+        "comparator_sha256": paired._digest(Path(__file__).resolve()),
+        "compact_config_sha256": paired._digest(
+            Path(installer._COMPACT_CONFIG_SOURCE).resolve()
+        ),
+        "config_sha256": paired._digest(Path(installer._CONFIG_SOURCE).resolve()),
+        "installer_sha256": paired._digest(Path(installer.__file__).resolve()),
+        "launcher_sha256": paired._digest(Path(launcher.__file__).resolve()),
+    }
+
+
+def _validate_execution_source(
+    runs: dict[str, dict[str, Any]],
+    registration: dict[str, Any],
+    registration_sha256: str,
+) -> dict[str, Any]:
+    source = registration.get("source")
+    if (
+        not isinstance(source, dict)
+        or set(source)
+        != {
+            "dataset_revision",
+            "files",
+            "prme_revision",
+            "upstream_revision",
+        }
+        or source.get("dataset_revision") != curve.DATASET_REVISION
+        or source.get("upstream_revision") != installer.UPSTREAM_REVISION
+        or not curve._git_revision(source.get("prme_revision"))
+        or source.get("files") != _expected_source_files()
+    ):
+        raise ValueError("registration source files do not match this comparator")
+
+    observed: dict[str, Any] | None = None
+    for label, run in runs.items():
+        manifest = run.get("execution")
+        if (
+            not isinstance(manifest, dict)
+            or manifest.get("schema_version") != 3
+            or manifest.get("kind") != "longmemeval-v2-execution"
+            or manifest.get("registration_sha256") != registration_sha256
+        ):
+            raise ValueError(f"arm {label} has no matching execution manifest")
+        execution_source = manifest.get("source")
+        if not isinstance(execution_source, dict):
+            raise ValueError(f"arm {label} has no execution source")
+        if observed is None:
+            observed = execution_source
+        elif execution_source != observed:
+            raise ValueError("episode-policy arms do not share one execution source")
+    assert observed is not None
+    if (
+        observed.get("prme_revision") != source.get("prme_revision")
+        or observed.get("upstream_revision") != source.get("upstream_revision")
+        or observed.get("prme_worktree_changes") != []
+        or observed.get("upstream_worktree_changes")
+        not in (
+            [],
+            [
+                "evaluation/memory_configs/prme.json",
+                "evaluation/memory_configs/prme_compact.json",
+                "memory_modules/__init__.py",
+                "memory_modules/prme.py",
+            ],
+        )
+    ):
+        raise ValueError("episode-policy execution source does not match registration")
+    for field in curve._EXECUTION_DIGEST_FIELDS:
+        if not curve._hex_digest(observed.get(field)):
+            raise ValueError(f"execution source has an invalid {field}")
+    files = source["files"]
+    if (
+        observed["launcher_sha256"] != files["launcher_sha256"]
+        or observed["installer_sha256"] != files["installer_sha256"]
+        or observed["adapter_source_sha256"] != files["adapter_sha256"]
+        or observed["config_source_sha256"] != files["config_sha256"]
+        or observed["compact_config_source_sha256"]
+        != files["compact_config_sha256"]
+        or observed["adapter_source_sha256"]
+        != observed["adapter_installed_sha256"]
+        or observed["config_source_sha256"]
+        != observed["config_installed_sha256"]
+        or observed["compact_config_source_sha256"]
+        != observed["compact_config_installed_sha256"]
+    ):
+        raise ValueError("installed episode-policy source differs from registration")
+    return observed
 
 
 def _episode_policy(system: dict[str, Any]) -> dict[str, int | float]:
@@ -172,7 +265,7 @@ def compare_episode_policies(
         registration, reference, question_ids, input_hashes
     )
     registration_sha256 = paired._digest(registration_path)
-    execution_source = curve._validate_execution_source(
+    execution_source = _validate_execution_source(
         runs, registration, registration_sha256
     )
     reader_runtime = curve._validate_reader_runtime(runs, registration)

@@ -20,6 +20,7 @@ def _fixture(root: Path) -> tuple[dict[str, Path], Path]:
     curve_runs, registration_path, _ = _curve_fixture(root)
     runs = {"flat": curve_runs["4k"], "episode": curve_runs["8k"]}
     registration = json.loads(registration_path.read_text())
+    registration["source"]["files"] = subject._expected_source_files()
     systems = {}
     policies = {
         "flat": {
