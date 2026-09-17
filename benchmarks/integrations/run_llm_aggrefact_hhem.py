@@ -45,6 +45,8 @@ PROMPT = (
 SELECTION_SEED = "prme-llm-aggrefact-hhem-v1"
 MODEL_PARAMETER_COUNT = 109_630_082
 RUNTIME_TRANSFORMERS = "5.3.0"
+FAILED_PROTOCOL_MAX_PROMPT_TOKENS = 4096
+MODEL_MAX_PROMPT_TOKENS = 512
 
 
 def _git_revision(root: Path) -> str:
@@ -169,6 +171,7 @@ def _base_inputs(
 
 def create_registration(
     *,
+    failed_registration_path: Path,
     typed_registration_path: Path,
     base_registration_path: Path,
     base_result_path: Path,
@@ -191,6 +194,17 @@ def create_registration(
         dev_path=dev_path,
         project_root=project_root,
     )
+    failed_registration = json.loads(failed_registration_path.read_text())
+    if (
+        failed_registration.get("kind") != "llm-aggrefact-hhem-capacity-registration"
+        or failed_registration.get("protocol", {}).get("max_prompt_tokens")
+        != FAILED_PROTOCOL_MAX_PROMPT_TOKENS
+        or failed_registration.get("cohort", {}).get("selected_identity_sha256")
+        != factcg._canonical_sha256(
+            [row["contamination_identifier"] for row in selected]
+        )
+    ):
+        raise ValueError("failed HHEM registration is not the joined-evidence trial")
     model = {
         "name": HHEM_REPOSITORY,
         "revision": HHEM_REVISION,
@@ -212,11 +226,12 @@ def create_registration(
     label_counts = Counter(str(row["label"]) for row in selected)
     registration: dict[str, Any] = {
         "schema_version": 1,
-        "kind": "llm-aggrefact-hhem-capacity-registration",
+        "kind": "llm-aggrefact-hhem-windowed-capacity-registration",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "claim_boundary": (
             "Passing would establish disjoint development evidence that pinned "
-            "HHEM-2.1-Open over the registered top-two evidence meets the frozen "
+            "HHEM-2.1-Open over complete registered top-two evidence windows meets "
+            "the frozen "
             "high-precision factual-support gates. It would not validate the sealed "
             "external test split, retrieval quality, universal factuality, or "
             "production latency."
@@ -232,7 +247,19 @@ def create_registration(
                 ),
                 "typed_result_sha256": factcg._sha256_file(registered_result_path),
                 "typed_result_canonical_sha256": registered_result["result_sha256"],
+                "failed_registration_sha256": factcg._sha256_file(
+                    failed_registration_path
+                ),
             },
+        },
+        "supersedes": {
+            "kind": failed_registration["kind"],
+            "registration_sha256": factcg._sha256_file(failed_registration_path),
+            "reason": (
+                "joined top-two evidence exceeded the registered non-truncating "
+                "prompt limit before any selected HHEM prediction was produced"
+            ),
+            "selected_hhem_predictions_observed": 0,
         },
         "dataset": {
             "name": "LLM-AggreFact",
@@ -282,11 +309,17 @@ def create_registration(
         "foundation": foundation,
         "protocol": {
             "task": "whole_claim_factual_consistency_capacity",
-            "evidence": "registered_top_two_segments_joined_in_source_order",
+            "evidence": "complete_registered_top_two_evidence_windowed_in_source_order",
+            "windowing": {
+                "normalization": "split_on_whitespace_then_join_with_single_spaces",
+                "packing": "greedy_maximal_contiguous_word_prefix",
+                "coverage": "every_selected_evidence_word_exactly_once_in_source_order",
+                "aggregation": "maximum_window_support_probability_then_lowest_index",
+            },
             "prompt_sha256": hashlib.sha256(PROMPT.encode()).hexdigest(),
-            "batch_size": 2,
+            "batch_size": 8,
             "ranker_batch_size": 2,
-            "max_prompt_tokens": 4096,
+            "max_prompt_tokens": MODEL_MAX_PROMPT_TOKENS,
             "truncation": False,
             "threshold_operator": "strictly_greater_than",
             "published_threshold": 0.5,
@@ -336,6 +369,7 @@ def create_registration(
 def _validate_registration(
     registration: dict[str, Any],
     *,
+    failed_registration_path: Path,
     selected: list[dict[str, Any]],
     base_registration: dict[str, Any],
     typed_registration_path: Path,
@@ -346,7 +380,8 @@ def _validate_registration(
 ) -> None:
     if (
         registration.get("schema_version") != 1
-        or registration.get("kind") != "llm-aggrefact-hhem-capacity-registration"
+        or registration.get("kind")
+        != "llm-aggrefact-hhem-windowed-capacity-registration"
     ):
         raise ValueError("HHEM registration kind is invalid")
     source = registration.get("source", {})
@@ -360,9 +395,31 @@ def _validate_registration(
         "typed_registration_sha256": factcg._sha256_file(typed_registration_path),
         "typed_result_sha256": factcg._sha256_file(registered_result_path),
         "typed_result_canonical_sha256": registered_result["result_sha256"],
+        "failed_registration_sha256": factcg._sha256_file(failed_registration_path),
     }
     if source.get("files") != expected_source:
         raise ValueError("registered source artifacts differ")
+    failed_registration = json.loads(failed_registration_path.read_text())
+    expected_supersedes = {
+        "kind": "llm-aggrefact-hhem-capacity-registration",
+        "registration_sha256": factcg._sha256_file(failed_registration_path),
+        "reason": (
+            "joined top-two evidence exceeded the registered non-truncating "
+            "prompt limit before any selected HHEM prediction was produced"
+        ),
+        "selected_hhem_predictions_observed": 0,
+    }
+    if (
+        failed_registration.get("kind") != expected_supersedes["kind"]
+        or failed_registration.get("protocol", {}).get("max_prompt_tokens")
+        != FAILED_PROTOCOL_MAX_PROMPT_TOKENS
+        or failed_registration.get("cohort", {}).get("selected_identity_sha256")
+        != factcg._canonical_sha256(
+            [row["contamination_identifier"] for row in selected]
+        )
+        or registration.get("supersedes") != expected_supersedes
+    ):
+        raise ValueError("registered failed-protocol predecessor differs")
     expected_dataset = {
         "name": "LLM-AggreFact",
         "repository": "https://huggingface.co/datasets/lytang/LLM-AggreFact",
@@ -437,11 +494,17 @@ def _validate_registration(
         raise ValueError("registered ranker differs")
     expected_protocol = {
         "task": "whole_claim_factual_consistency_capacity",
-        "evidence": "registered_top_two_segments_joined_in_source_order",
+        "evidence": "complete_registered_top_two_evidence_windowed_in_source_order",
+        "windowing": {
+            "normalization": "split_on_whitespace_then_join_with_single_spaces",
+            "packing": "greedy_maximal_contiguous_word_prefix",
+            "coverage": "every_selected_evidence_word_exactly_once_in_source_order",
+            "aggregation": "maximum_window_support_probability_then_lowest_index",
+        },
         "prompt_sha256": hashlib.sha256(PROMPT.encode()).hexdigest(),
-        "batch_size": 2,
+        "batch_size": 8,
         "ranker_batch_size": 2,
-        "max_prompt_tokens": 4096,
+        "max_prompt_tokens": MODEL_MAX_PROMPT_TOKENS,
         "truncation": False,
         "threshold_operator": "strictly_greater_than",
         "published_threshold": 0.5,
@@ -473,6 +536,62 @@ def _validate_registration(
     }
     if registration.get("evaluation") != expected_evaluation:
         raise ValueError("registered evaluation gates differ")
+
+
+def _prompt_token_count(
+    tokenizer: Any,
+    *,
+    premise: str,
+    claim: str,
+) -> int:
+    encoded = tokenizer(
+        PROMPT.format(premise=premise, hypothesis=claim),
+        add_special_tokens=True,
+        truncation=False,
+        verbose=False,
+    )
+    return len(encoded.input_ids)
+
+
+def _evidence_windows(
+    evidence_segments: list[tuple[str, str]],
+    *,
+    claim: str,
+    tokenizer: Any,
+    max_prompt_tokens: int,
+) -> list[tuple[str, int]]:
+    words = [word for _identifier, text in evidence_segments for word in text.split()]
+    if not words:
+        raise ValueError("selected evidence has no words")
+    if _prompt_token_count(tokenizer, premise="", claim=claim) >= max_prompt_tokens:
+        raise ValueError("claim leaves no room for evidence in the HHEM prompt")
+
+    windows: list[tuple[str, int]] = []
+    start = 0
+    while start < len(words):
+        low = start + 1
+        high = len(words)
+        best_end: int | None = None
+        best_tokens: int | None = None
+        while low <= high:
+            middle = (low + high) // 2
+            premise = " ".join(words[start:middle])
+            prompt_tokens = _prompt_token_count(
+                tokenizer,
+                premise=premise,
+                claim=claim,
+            )
+            if prompt_tokens <= max_prompt_tokens:
+                best_end = middle
+                best_tokens = prompt_tokens
+                low = middle + 1
+            else:
+                high = middle - 1
+        if best_end is None or best_tokens is None:
+            raise ValueError("one evidence word cannot fit in the HHEM prompt")
+        windows.append((" ".join(words[start:best_end]), best_tokens))
+        start = best_end
+    return windows
 
 
 def _score_hhem(
@@ -516,21 +635,31 @@ def _score_hhem(
     tokenizer = AutoTokenizer.from_pretrained(
         foundation_path, local_files_only=True, use_fast=True
     )
+    if tokenizer.model_max_length != max_prompt_tokens:
+        raise ValueError("registered prompt limit differs from the tokenizer limit")
     device = factcg._select_device(torch)
     model.to(device)
     model.eval()
-    prompts = [
-        PROMPT.format(
-            premise="\n".join(text for _identifier, text in item["evidence_segments"]),
-            hypothesis=item["claim"],
+    prompts: list[str] = []
+    lengths: list[int] = []
+    owners: list[tuple[int, int]] = []
+    evidence_word_counts: list[int] = []
+    window_counts: list[int] = []
+    for item_index, item in enumerate(prepared):
+        windows = _evidence_windows(
+            item["evidence_segments"],
+            claim=item["claim"],
+            tokenizer=tokenizer,
+            max_prompt_tokens=max_prompt_tokens,
         )
-        for item in prepared
-    ]
-    lengths = [
-        len(tokenizer(prompt, add_special_tokens=True).input_ids) for prompt in prompts
-    ]
-    if max(lengths, default=0) > max_prompt_tokens:
-        raise ValueError("HHEM prompt exceeds registered non-truncating limit")
+        evidence_word_counts.append(
+            sum(len(text.split()) for _identifier, text in item["evidence_segments"])
+        )
+        window_counts.append(len(windows))
+        for window_index, (premise, prompt_tokens) in enumerate(windows):
+            prompts.append(PROMPT.format(premise=premise, hypothesis=item["claim"]))
+            lengths.append(prompt_tokens)
+            owners.append((item_index, window_index))
     probabilities: list[float] = []
     started = time.perf_counter()
     with torch.inference_mode():
@@ -539,6 +668,7 @@ def _score_hhem(
                 prompts[offset : offset + batch_size],
                 padding="longest",
                 truncation=False,
+                max_length=max_prompt_tokens,
                 return_tensors="pt",
             )
             encoded = {name: value.to(device) for name, value in encoded.items()}
@@ -548,26 +678,45 @@ def _score_hhem(
                 for value in torch.softmax(logits, dim=-1)[:, 1].detach().cpu()
             )
     elapsed = time.perf_counter() - started
-    samples = [
-        {
-            "id": item["id"],
-            "dataset": item["dataset"],
-            "label": item["label"],
-            "support_probability": probability,
-            "prompt_tokens": length,
-            "source_chunks": item["source_chunks"],
-            "selected_chunk_indices": item["selected_chunk_indices"],
-            "selected_chunk_scores": item["selected_chunk_scores"],
-            "evidence_segments": len(item["evidence_segments"]),
-        }
-        for item, probability, length in zip(
-            prepared, probabilities, lengths, strict=True
-        )
+    probabilities_by_item: list[list[tuple[int, float, int]]] = [
+        [] for _item in prepared
     ]
+    for (item_index, window_index), probability, length in zip(
+        owners, probabilities, lengths, strict=True
+    ):
+        probabilities_by_item[item_index].append((window_index, probability, length))
+    samples: list[dict[str, Any]] = []
+    for item_index, (item, window_results) in enumerate(
+        zip(prepared, probabilities_by_item, strict=True)
+    ):
+        winning_index, winning_probability, winning_tokens = max(
+            window_results,
+            key=lambda value: (value[1], -value[0]),
+        )
+        samples.append(
+            {
+                "id": item["id"],
+                "dataset": item["dataset"],
+                "label": item["label"],
+                "support_probability": winning_probability,
+                "selected_window_index": winning_index,
+                "selected_window_prompt_tokens": winning_tokens,
+                "prompt_tokens_max": max(
+                    length for _index, _probability, length in window_results
+                ),
+                "evidence_windows": window_counts[item_index],
+                "evidence_words": evidence_word_counts[item_index],
+                "source_chunks": item["source_chunks"],
+                "selected_chunk_indices": item["selected_chunk_indices"],
+                "selected_chunk_scores": item["selected_chunk_scores"],
+                "evidence_segments": len(item["evidence_segments"]),
+            }
+        )
     runtime = {
         "device": device,
         "seconds": elapsed,
-        "pairs_scored": len(samples),
+        "claims_scored": len(samples),
+        "windows_scored": len(prompts),
         "prompt_tokens_sum": sum(lengths),
         "prompt_tokens_max": max(lengths, default=0),
         "torch": torch.__version__,
@@ -581,6 +730,7 @@ def _score_hhem(
 def run(
     *,
     registration_path: Path,
+    failed_registration_path: Path,
     typed_registration_path: Path,
     base_registration_path: Path,
     base_result_path: Path,
@@ -606,6 +756,7 @@ def run(
     registration = json.loads(registration_path.read_text())
     _validate_registration(
         registration,
+        failed_registration_path=failed_registration_path,
         selected=selected,
         base_registration=base_registration,
         typed_registration_path=typed_registration_path,
@@ -643,7 +794,7 @@ def run(
         )
     result: dict[str, Any] = {
         "schema_version": 1,
-        "kind": "llm-aggrefact-hhem-capacity-result",
+        "kind": "llm-aggrefact-hhem-windowed-capacity-result",
         "completed_at": datetime.now(timezone.utc).isoformat(),
         "development_only": True,
         "test_accessed": False,
@@ -671,6 +822,7 @@ def run(
         "limitations": [
             "Development-only capacity trial on a disjoint but related source split.",
             "Evidence is selected by the pinned FactCG ranker before HHEM scoring.",
+            "A claim score is the maximum over complete source-ordered evidence windows.",
             "Passing would require a separately registered untouched external test.",
             "No external test split was accepted or accessed.",
         ],
@@ -682,6 +834,7 @@ def run(
 
 
 def _common_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--failed-registration", type=Path, required=True)
     parser.add_argument("--typed-registration", type=Path, required=True)
     parser.add_argument("--base-registration", type=Path, required=True)
     parser.add_argument("--base-result", type=Path, required=True)
@@ -708,6 +861,7 @@ def _parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = _parser().parse_args()
     common = {
+        "failed_registration_path": args.failed_registration.resolve(),
         "typed_registration_path": args.typed_registration.resolve(),
         "base_registration_path": args.base_registration.resolve(),
         "base_result_path": args.base_result.resolve(),

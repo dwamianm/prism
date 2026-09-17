@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from types import SimpleNamespace
 
 from benchmarks.integrations import run_llm_aggrefact_hhem as subject
 
@@ -42,6 +43,40 @@ def test_dataset_label_counts_are_canonical() -> None:
     assert result["d"] == {"0": 4, "1": 4}
 
 
+class _WordTokenizer:
+    model_max_length = 512
+
+    def __call__(self, text: str, **_kwargs: object) -> SimpleNamespace:
+        return SimpleNamespace(input_ids=text.split())
+
+
+def test_evidence_windows_cover_every_word_once_with_maximal_prefixes() -> None:
+    tokenizer = _WordTokenizer()
+    claim = "claim"
+    overhead = subject._prompt_token_count(
+        tokenizer,
+        premise="",
+        claim=claim,
+    )
+
+    windows = subject._evidence_windows(
+        [("E0001", "one two three"), ("E0002", "four\nfive")],
+        claim=claim,
+        tokenizer=tokenizer,
+        max_prompt_tokens=overhead + 2,
+    )
+
+    assert [text for text, _tokens in windows] == ["one two", "three four", "five"]
+    assert " ".join(text for text, _tokens in windows).split() == [
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+    ]
+    assert all(tokens <= overhead + 2 for _text, tokens in windows)
+
+
 def test_cli_deliberately_has_no_test_dataset_argument() -> None:
     parser = subject._parser()
     destinations = {action.dest for action in parser._actions}
@@ -52,6 +87,7 @@ def test_cli_deliberately_has_no_test_dataset_argument() -> None:
                 destinations.update(item.dest for item in subparser._actions)
 
     assert "dev" in destinations
+    assert "failed_registration" in destinations
     assert "test" not in destinations
     assert subject.HHEM_REVISION == "8e4a2e6e96c708cc76c2344f7e4757df2515292c"
     assert subject.FOUNDATION_REVISION == ("7bcac572ce56db69c1ea7c8af255c5d7c9672fc2")
