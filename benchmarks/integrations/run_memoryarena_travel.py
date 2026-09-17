@@ -205,6 +205,7 @@ def register(
     model: str,
     seed: int,
     groups_per_stratum: int,
+    excluded_group_ids: set[int],
 ) -> dict[str, Any]:
     if output.exists():
         raise RuntimeError("registration output already exists")
@@ -216,7 +217,7 @@ def register(
         raw_rows,
         seed=seed,
         groups_per_stratum=groups_per_stratum,
-        excluded_ids={1},
+        excluded_ids=excluded_group_ids,
     )
     selected_ids = {item["id"] for item in selected}
     cohort_rows = [row for row in raw_rows if row["id"] in selected_ids]
@@ -237,7 +238,7 @@ def register(
             "selection": "seeded stratified sample by number of travelers",
             "seed": seed,
             "groups_per_stratum": groups_per_stratum,
-            "excluded_preflight_group_ids": [1],
+            "excluded_group_ids": sorted(excluded_group_ids),
             "groups": selected,
             "group_count": len(selected),
             "person_count": sum(item["person_count"] for item in selected),
@@ -250,6 +251,8 @@ def register(
             "temperature": 0,
             "max_steps": 30,
             "tool_choice": "auto",
+            "request_timeout_seconds": 120,
+            "sdk_max_retries": 1,
             "remote_weights_pinned": False,
         },
         "protocol": {
@@ -448,6 +451,20 @@ def _usage_delta(after: dict[str, Any], before: dict[str, Any]) -> dict[str, Any
         key: after.get(key, 0) - before.get(key, 0)
         for key in ("total_input_tokens", "total_output_tokens", "total_cost")
     }
+
+
+def _configure_actor_client(agent: Any, actor: dict[str, Any]) -> None:
+    """Bind transport tail latency without changing prompts or model settings."""
+    client = agent.client.client.with_options(
+        timeout=actor["request_timeout_seconds"],
+        max_retries=actor["sdk_max_retries"],
+    )
+    if (
+        client.timeout.read != actor["request_timeout_seconds"]
+        or client.max_retries != actor["sdk_max_retries"]
+    ):
+        raise RuntimeError("could not bind the registered actor transport policy")
+    agent.client.client = client
 
 
 def _run_group(
@@ -655,6 +672,8 @@ def run(
             )
             for arm in ARMS
         }
+        for agent in agents.values():
+            _configure_actor_client(agent, registration["actor"])
         memory_url = f"http://127.0.0.1:{memory_port}"
         for index, row in enumerate(cohort):
             order = ARMS if index % 2 == 0 else tuple(reversed(ARMS))
@@ -775,6 +794,9 @@ def _parser() -> argparse.ArgumentParser:
     register_parser.add_argument("--model", default="deepseek-v4.1-flash:cloud")
     register_parser.add_argument("--seed", type=int, default=20260917)
     register_parser.add_argument("--groups-per-stratum", type=int, default=3)
+    register_parser.add_argument(
+        "--exclude-group-id", type=int, action="append", default=[1]
+    )
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("--upstream", required=True, type=Path)
     run_parser.add_argument("--registration", required=True, type=Path)
@@ -795,6 +817,7 @@ def main() -> None:
             model=args.model,
             seed=args.seed,
             groups_per_stratum=args.groups_per_stratum,
+            excluded_group_ids=set(args.exclude_group_id),
         )
     else:
         value = run(

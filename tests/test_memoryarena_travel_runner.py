@@ -118,3 +118,30 @@ def test_server_attempt_paths_do_not_reuse_a_prior_pack(tmp_path: Path, monkeypa
     command = captured["command"]
     assert str(tmp_path / "prme-pack-attempt-2") in command
     assert (tmp_path / "prme-adapter-attempt-2.log").is_file()
+
+
+def test_actor_transport_policy_is_explicitly_bound():
+    class Timeout:
+        read = 120
+
+    class Configured:
+        timeout = Timeout()
+        max_retries = 1
+
+    class Client:
+        def with_options(self, **options):
+            assert options == {"timeout": 120, "max_retries": 1}
+            return Configured()
+
+    class Wrapper:
+        client = Client()
+
+    class Agent:
+        client = Wrapper()
+
+    agent = Agent()
+    runner._configure_actor_client(agent, {
+        "request_timeout_seconds": 120,
+        "sdk_max_retries": 1,
+    })
+    assert isinstance(agent.client.client, Configured)
