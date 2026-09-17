@@ -24,6 +24,9 @@ from benchmarks.integrations import run_llm_aggrefact_factcg as factcg
 from benchmarks.integrations import run_llm_aggrefact_typed_references as typed
 
 
+CONTROL_SCORE_TOLERANCE = 2e-5
+
+
 def _load_control(path: Path, expected_ids: tuple[str, ...]) -> dict[str, Any]:
     result = json.loads(path.read_text())
     payload = dict(result)
@@ -157,8 +160,11 @@ def _validate_control_scores(
             )
         )
     maximum = max(differences, default=0.0)
-    if maximum > 1e-7:
-        raise ValueError("ordered evidence scores do not reproduce the paired control")
+    if maximum > CONTROL_SCORE_TOLERANCE:
+        raise ValueError(
+            "ordered evidence scores do not reproduce the paired control: "
+            f"max absolute difference {maximum}"
+        )
     return maximum
 
 
@@ -229,6 +235,7 @@ def run(
             "file_sha256": factcg._sha256_file(control_scoring_path),
             "canonical_result_sha256": control["result_sha256"],
             "ordered_score_max_absolute_difference": max_control_difference,
+            "ordered_score_absolute_tolerance": CONTROL_SCORE_TOLERANCE,
         },
         "scoring": {
             "model": base_registration["model"],

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from benchmarks.diagnostics import llm_aggrefact_evidence_lattice as subject
 
 
@@ -78,6 +80,35 @@ def test_single_evidence_reuses_ordered_group_score() -> None:
     assert keys == [("case", "single_0"), ("case", "group_ordered")]
     assert samples[0]["group_reversed_support_probability"] == 0.6
     assert samples[0]["projections"]["max_subset"] == 0.6
+
+
+def test_control_validation_allows_bounded_mps_variation() -> None:
+    samples = [
+        {
+            "id": "case",
+            "label": 1,
+            "projections": {"ordered_group": 0.600001},
+        }
+    ]
+    control = {
+        "scoring": {
+            "samples": [
+                {
+                    "id": "case",
+                    "label": 1,
+                    "unpartitioned_support_probability": 0.6,
+                }
+            ]
+        }
+    }
+
+    difference = subject._validate_control_scores(samples, control)
+
+    assert 0 < difference < subject.CONTROL_SCORE_TOLERANCE
+
+    samples[0]["projections"]["ordered_group"] = 0.7
+    with pytest.raises(ValueError, match="max absolute difference"):
+        subject._validate_control_scores(samples, control)
 
 
 def test_cli_deliberately_has_no_test_dataset_argument() -> None:
