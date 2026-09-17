@@ -173,7 +173,7 @@ def _ollama_endpoint(
 
 
 def _ollama_reader_identity(api_base_url: str, model: str) -> dict[str, Any]:
-    """Resolve the exact Ollama server and immutable model artifact in use."""
+    """Resolve the Ollama server and the strongest available model identity."""
     version = _ollama_endpoint(api_base_url, "/api/version")
     tags = _ollama_endpoint(api_base_url, "/api/tags")
     show = _ollama_endpoint(
@@ -202,6 +202,9 @@ def _ollama_reader_identity(api_base_url: str, model: str) -> dict[str, Any]:
     details = installed.get("details")
     capabilities = show.get("capabilities")
     requires = show.get("requires")
+    remote_host = installed.get("remote_host")
+    remote_model = installed.get("remote_model")
+    is_cloud = remote_host is not None or remote_model is not None
     if (
         not isinstance(digest, str)
         or len(digest) != 64
@@ -215,11 +218,36 @@ def _ollama_reader_identity(api_base_url: str, model: str) -> dict[str, Any]:
         or not isinstance(details, dict)
         or not isinstance(capabilities, list)
         or any(not isinstance(value, str) for value in capabilities)
-        or not isinstance(requires, str)
     ):
         raise RuntimeError(f"Ollama returned incomplete identity for model: {model}")
     parsed = urlsplit(api_base_url)
     origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", "")).rstrip("/")
+    if is_cloud:
+        if (
+            not isinstance(remote_host, str)
+            or not remote_host
+            or not isinstance(remote_model, str)
+            or not remote_model
+        ):
+            raise RuntimeError(
+                f"Ollama returned incomplete cloud identity for model: {model}"
+            )
+        return {
+            "provider": "ollama_cloud",
+            "api_base_url": origin,
+            "server_version": server_version,
+            "model": model,
+            "resolved_model": resolved_model,
+            "manifest_digest_sha256": digest,
+            "manifest_size_bytes": size,
+            "remote_host": remote_host,
+            "remote_model": remote_model,
+            "remote_weights_pinned": False,
+            "details": details,
+            "capabilities": sorted(set(capabilities)),
+        }
+    if not isinstance(requires, str):
+        raise RuntimeError(f"Ollama returned incomplete identity for model: {model}")
     return {
         "provider": "ollama",
         "api_base_url": origin,
