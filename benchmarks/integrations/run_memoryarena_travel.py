@@ -413,7 +413,12 @@ def register(
             ),
             "prme": (
                 "Pinned upstream three-endpoint client with the registered PRME "
-                "raw-trace adapter; base and completed traces are retrieved per query."
+                "source-preserving trace-projection adapter; exact raw traces remain "
+                "events while traveler final plans are retrieved per query."
+            ),
+            "prme_retrieval_projection": "traveler_final_plan_v1",
+            "prme_query_projection": (
+                "base traveler plus named plan dependencies outside the roster preamble"
             ),
             "checkpoint_unit": "one completed traveler within each group arm",
             "resume_policy": (
