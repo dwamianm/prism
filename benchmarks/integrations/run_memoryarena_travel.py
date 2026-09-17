@@ -17,7 +17,6 @@ import json
 import os
 from pathlib import Path
 import random
-import re
 import subprocess
 import sys
 import time
@@ -216,11 +215,9 @@ def _canonical(value: Any) -> bytes:
 
 def _final_plan_block(value: str, name: str) -> str:
     """Return only the last exact traveler plan block from a model response."""
-    marker = re.compile(
-        rf"^===\s*{re.escape(name)}'s Plan\s*===\s*$", re.MULTILINE
-    )
-    matches = list(marker.finditer(value))
-    return value[matches[-1].start():].strip() if matches else ""
+    marker = f"=== {name}'s Plan ==="
+    boundary = value.rfind(marker)
+    return value[boundary:].strip() if boundary >= 0 else ""
 
 
 def _sha256(path: Path) -> str:

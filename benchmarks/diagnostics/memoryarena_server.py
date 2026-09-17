@@ -45,12 +45,10 @@ def _trace_projection(chunk: str) -> tuple[str | None, str | None, bool]:
     if not isinstance(plan, str) or not plan.strip():
         return None, None, False
     name = name.strip()
-    marker = re.compile(
-        rf"^===\s*{re.escape(name)}'s Plan\s*===\s*$", re.MULTILINE
-    )
-    matches = list(marker.finditer(plan))
-    if matches:
-        plan = plan[matches[-1].start():]
+    marker = f"=== {name}'s Plan ==="
+    boundary = plan.rfind(marker)
+    if boundary >= 0:
+        plan = plan[boundary:]
     else:
         plan = f"=== {name}'s Plan Unavailable ==="
     is_base = value.get("is_base_person") is True

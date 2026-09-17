@@ -120,6 +120,13 @@ def test_final_plan_projection_discards_reasoning_and_requires_named_boundary():
     assert runner._final_plan_block(response, "Bob") == ""
 
 
+def test_final_plan_projection_accepts_exact_marker_without_line_boundary():
+    response = "analysis\nFinal plan:=== Ada's Plan ===\nDay 1:\nBreakfast: Tea"
+    assert runner._final_plan_block(response, "Ada") == (
+        "=== Ada's Plan ===\nDay 1:\nBreakfast: Tea"
+    )
+
+
 def test_server_attempt_paths_do_not_reuse_a_prior_pack(tmp_path: Path, monkeypatch):
     (tmp_path / "prme-pack-attempt-1").mkdir()
     captured = {}

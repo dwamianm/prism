@@ -70,6 +70,19 @@ def test_trace_projection_keeps_only_named_final_plan():
     assert "scratchpad" not in projection and "analysis first" not in projection
 
 
+def test_trace_projection_accepts_exact_marker_without_line_boundary():
+    source = (
+        '{"name":"Alice","final_plan":"analysis\\nFinal plan:'
+        '=== Alice\'s Plan ===\\nDay 1: cobalt rail"}'
+    )
+    projection, name, is_base = _trace_projection(source)
+    assert (name, is_base) == ("Alice", False)
+    assert projection == (
+        "Traveler: Alice\nFinal plan:\n"
+        "=== Alice's Plan ===\nDay 1: cobalt rail"
+    )
+
+
 def test_travel_reference_query_removes_roster_and_keeps_dependencies():
     question = (
         "I am Carol.\n"
