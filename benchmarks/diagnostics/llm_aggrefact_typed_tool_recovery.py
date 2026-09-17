@@ -182,6 +182,8 @@ async def run(
     state_path: Path,
     output_path: Path,
     project_root: Path,
+    model_name: str | None = None,
+    concurrency: int = CONCURRENCY,
 ) -> dict[str, Any]:
     failures, registered_result, _prior_state = _failure_ids(
         registration_path=registration_path,
@@ -209,9 +211,15 @@ async def run(
         batch_size=registration["protocol"]["ranker_batch_size"],
     )
     prepared_by_id = {item["id"]: item for item in prepared}
-    verifier = registration["verifier"]
-    installed_before = cascade._ollama_model(verifier["base_url"], verifier["name"])
-    if installed_before.get("digest") != verifier["manifest_digest"]:
+    registered_verifier = registration["verifier"]
+    selected_model = model_name or registered_verifier["name"]
+    installed_before = cascade._ollama_model(
+        registered_verifier["base_url"], selected_model
+    )
+    if (
+        selected_model == registered_verifier["name"]
+        and installed_before.get("digest") != registered_verifier["manifest_digest"]
+    ):
         raise ValueError("Ollama verifier changed before the recovery diagnostic")
     jobs = [
         {
@@ -233,14 +241,16 @@ async def run(
         "runner_sha256": factcg._sha256_file(runner_path),
         "durable_runner_sha256": factcg._sha256_file(durable_runner_path),
         "system_prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest(),
-        "verifier_manifest_digest": verifier["manifest_digest"],
+        "verifier_manifest_digest": installed_before.get("digest"),
     }
     accepted_models = frozenset(
         value
-        for value in (verifier["name"], verifier.get("remote_model"))
+        for value in (selected_model, installed_before.get("remote_model"))
         if isinstance(value, str) and value
     )
-    async with httpx.AsyncClient(base_url=verifier["base_url"], timeout=None) as client:
+    async with httpx.AsyncClient(
+        base_url=registered_verifier["base_url"], timeout=None
+    ) as client:
 
         async def caller(body: dict[str, Any]) -> dict[str, Any]:
             response = await client.post("/api/chat", json=body)
@@ -254,22 +264,24 @@ async def run(
             jobs=jobs,
             state_path=state_path,
             run_identity=run_identity,
-            model=verifier["name"],
+            model=selected_model,
             accepted_models=accepted_models,
             tool=TOOL,
             options=OPTIONS,
             timeout_seconds=TIMEOUT_SECONDS,
             max_transport_attempts=MAX_TRANSPORT_ATTEMPTS,
             max_semantic_attempts=MAX_SEMANTIC_ATTEMPTS,
-            concurrency=CONCURRENCY,
+            concurrency=concurrency,
             caller=caller,
             validator=lambda job_id, arguments: _strict_validate(
                 prepared_by_id[job_id], arguments
             ),
             repair_message=_repair_message,
         )
-    installed_after = cascade._ollama_model(verifier["base_url"], verifier["name"])
-    if installed_after.get("digest") != verifier["manifest_digest"]:
+    installed_after = cascade._ollama_model(
+        registered_verifier["base_url"], selected_model
+    )
+    if installed_after.get("digest") != installed_before.get("digest"):
         raise ValueError("Ollama verifier changed during the recovery diagnostic")
     result: dict[str, Any] = {
         "schema_version": 1,
@@ -285,16 +297,20 @@ async def run(
             "failure_identity_sha256": factcg._canonical_sha256(list(failures)),
         },
         "transport": {
-            "provider": verifier["provider"],
-            "model": verifier["name"],
-            "remote_model": verifier.get("remote_model"),
-            "manifest_digest": verifier["manifest_digest"],
+            "provider": (
+                "ollama_cloud"
+                if installed_before.get("remote_model")
+                else "ollama_local"
+            ),
+            "model": selected_model,
+            "remote_model": installed_before.get("remote_model"),
+            "manifest_digest": installed_before.get("digest"),
             "mode": "ollama_native_tool_call",
             "options": OPTIONS,
             "timeout_seconds": TIMEOUT_SECONDS,
             "max_transport_attempts": MAX_TRANSPORT_ATTEMPTS,
             "max_semantic_attempts": MAX_SEMANTIC_ATTEMPTS,
-            "concurrency": CONCURRENCY,
+            "concurrency": concurrency,
         },
         "protocol": {
             "runner_sha256": factcg._sha256_file(runner_path),
@@ -315,7 +331,11 @@ async def run(
         "limitations": [
             "This diagnostic reuses only failures already observed during typed-reference v2.",
             "It is tuning evidence and cannot estimate held-out classification quality.",
-            "The Ollama cloud alias identifies a manifest, not pinned remote weights.",
+            (
+                "The Ollama cloud alias identifies a manifest, not pinned remote weights."
+                if installed_before.get("remote_model")
+                else "The local model artifact is content-addressed by its Ollama manifest digest."
+            ),
             "No external test split was accepted or accessed.",
         ],
     }
@@ -338,6 +358,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--state", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--project-root", type=Path, default=Path.cwd())
+    parser.add_argument("--model")
+    parser.add_argument("--concurrency", type=int, default=CONCURRENCY)
     return parser
 
 
@@ -356,6 +378,8 @@ def main() -> None:
             state_path=args.state.resolve(),
             output_path=args.output.resolve(),
             project_root=args.project_root.resolve(),
+            model_name=args.model,
+            concurrency=args.concurrency,
         )
     )
     print(
