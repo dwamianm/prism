@@ -62,8 +62,8 @@ except ImportError:  # Imported from PRME's own benchmark/test environment.
 
 
 UPSTREAM_REVISION = "2cc8c540bdb87fe6761629b585e727e1c4704520"
-ADAPTER_SCHEMA_VERSION = 3
-_READABLE_SCHEMA_VERSIONS = {2, ADAPTER_SCHEMA_VERSION}
+ADAPTER_SCHEMA_VERSION = 4
+_READABLE_SCHEMA_VERSIONS = {2, 3, ADAPTER_SCHEMA_VERSION}
 _MANIFEST_NAME = "longmemeval_v2_manifest.json"
 _PACK_NAME = "prme_pack"
 _ALLOWED_PARAMS = {
@@ -295,6 +295,7 @@ class PRMEMemory(Memory):
                 "trajectories": {},
             }
             self._write_manifest()
+        self._validate_manifest_attachments(root)
         self._root = root
         self._client = MemoryClient(config=self._config(root))
         if self._manifest["schema_version"] == 2:
@@ -370,9 +371,7 @@ class PRMEMemory(Memory):
     ) -> str | None:
         if not self.include_images:
             return None
-        trajectory_dir = hashlib.sha256(trajectory_id.encode("utf-8")).hexdigest()[:24]
-        suffix = original.suffix.lower() or ".png"
-        relative = Path("attachments") / trajectory_dir / f"{state_index:06d}{suffix}"
+        relative = self._attachment_relative(trajectory_id, state_index, original)
         destination = self._root / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         if destination.exists():
@@ -384,6 +383,67 @@ class PRMEMemory(Memory):
         else:
             shutil.copy2(original, destination)
         return relative.as_posix()
+
+    @staticmethod
+    def _attachment_relative(
+        trajectory_id: str,
+        state_index: int,
+        original: Path,
+    ) -> Path:
+        trajectory_dir = hashlib.sha256(trajectory_id.encode("utf-8")).hexdigest()[:24]
+        suffix = original.suffix.lower() or ".png"
+        return Path("attachments") / trajectory_dir / f"{state_index:06d}{suffix}"
+
+    def _validate_manifest_attachments(
+        self,
+        root: Path,
+        trajectory_ids: set[str] | None = None,
+    ) -> None:
+        """Reject incomplete or altered schema-4 attachment artifacts."""
+        if self._manifest.get("schema_version") != ADAPTER_SCHEMA_VERSION:
+            return
+        resolved_root = root.resolve()
+        trajectories = self._manifest.get("trajectories")
+        require(isinstance(trajectories, dict), "adapter manifest trajectories must be an object")
+        selected_ids = sorted(trajectories) if trajectory_ids is None else sorted(trajectory_ids)
+        for trajectory_id in selected_ids:
+            require(trajectory_id in trajectories, f"unknown trajectory inventory: {trajectory_id}")
+            record = trajectories[trajectory_id]
+            require(isinstance(record, dict), f"invalid trajectory manifest record: {trajectory_id}")
+            require(record.get("status") == "complete", f"trajectory insert is incomplete: {trajectory_id}")
+            attachments = record.get("attachments")
+            require(isinstance(attachments, list), f"trajectory attachment inventory is missing: {trajectory_id}")
+            expected_count = record.get("state_count") if self.include_images else 0
+            require(type(expected_count) is int and expected_count >= 0, f"invalid trajectory state count: {trajectory_id}")
+            require(len(attachments) == expected_count, f"trajectory attachment inventory is incomplete: {trajectory_id}")
+            seen_states: set[int] = set()
+            seen_paths: set[str] = set()
+            for attachment in attachments:
+                require(isinstance(attachment, dict), f"invalid attachment inventory entry: {trajectory_id}")
+                state_index = attachment.get("state_index")
+                relative_value = attachment.get("path")
+                expected_digest = attachment.get("sha256")
+                require(type(state_index) is int and state_index >= 0, f"invalid attachment state index: {trajectory_id}")
+                require(isinstance(relative_value, str) and bool(relative_value), f"invalid attachment path: {trajectory_id}:{state_index}")
+                relative = Path(relative_value)
+                require(not relative.is_absolute() and ".." not in relative.parts, f"attachment path escaped the PRME pack: {trajectory_id}:{state_index}")
+                trajectory_dir = hashlib.sha256(trajectory_id.encode("utf-8")).hexdigest()[:24]
+                require(
+                    len(relative.parts) == 3
+                    and relative.parts[:2] == ("attachments", trajectory_dir)
+                    and relative.stem == f"{state_index:06d}",
+                    f"attachment path does not match its trajectory state: {trajectory_id}:{state_index}",
+                )
+                resolved = (resolved_root / relative).resolve()
+                require(resolved.is_relative_to(resolved_root), f"attachment path escaped the PRME pack: {trajectory_id}:{state_index}")
+                require(isinstance(expected_digest, str) and len(expected_digest) == 64, f"invalid attachment digest: {trajectory_id}:{state_index}")
+                require(state_index not in seen_states and relative_value not in seen_paths, f"duplicate attachment inventory entry: {trajectory_id}:{state_index}")
+                require(resolved.is_file(), f"attachment is missing from the PRME pack: {trajectory_id}:{state_index}")
+                actual_digest = hashlib.sha256(resolved.read_bytes()).hexdigest()
+                require(actual_digest == expected_digest, f"attachment digest mismatch: {trajectory_id}:{state_index}")
+                seen_states.add(state_index)
+                seen_paths.add(relative_value)
+            require(seen_states == set(range(expected_count)), f"trajectory attachment states are incomplete: {trajectory_id}")
 
     def _record_insert_progress(self, trajectory_id: str, node_count: int) -> None:
         """Checkpoint and report bounded progress for long trajectories."""
@@ -398,22 +458,31 @@ class PRMEMemory(Memory):
     def insert(self, trajectory: dict[str, object]) -> None:
         require(
             self._manifest.get("schema_version") == ADAPTER_SCHEMA_VERSION,
-            "LongMemEval-V2 schema 2 packs are read-only; rebuild to insert trajectories",
+            "legacy LongMemEval-V2 adapter packs are read-only; rebuild to insert trajectories",
         )
         payload = _trajectory_payload(trajectory)
         trajectory_id = str(payload["id"])
         states = list(payload["states"])
         screenshot_sources: dict[int, Path] = {}
         screenshot_digests: list[dict[str, object]] = []
+        attachments: list[dict[str, object]] = []
         if self.include_images:
             for state in states:
                 state_index = int(state["state_index"])
                 source = self._resolve_screenshot(str(state["screenshot"]))
+                digest = hashlib.sha256(source.read_bytes()).hexdigest()
                 screenshot_sources[state_index] = source
                 screenshot_digests.append(
                     {
                         "state_index": state_index,
-                        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                        "sha256": digest,
+                    }
+                )
+                attachments.append(
+                    {
+                        "state_index": state_index,
+                        "path": self._attachment_relative(trajectory_id, state_index, source).as_posix(),
+                        "sha256": digest,
                     }
                 )
         fingerprint = hashlib.sha256(
@@ -436,6 +505,7 @@ class PRMEMemory(Memory):
                 "status": "preparing",
                 "state_count": len(states),
                 "node_count": 0,
+                "attachments": attachments,
             }
             self._write_manifest()
             client = self._ensure_client()
@@ -630,6 +700,7 @@ class PRMEMemory(Memory):
             self._manifest["trajectories"][trajectory_id].update(
                 status="complete", node_count=node_count
             )
+            self._validate_manifest_attachments(self._root, {trajectory_id})
             self._write_manifest()
 
     def query(self, query: str, query_image: str | None = None) -> list[MemoryContextItem]:
@@ -709,11 +780,14 @@ class PRMEMemory(Memory):
         with self._lock:
             destination = output_dir / _PACK_NAME
             require(not destination.exists(), f"refusing to overwrite saved PRME pack: {destination}")
+            self._validate_manifest_attachments(self._root)
             client = self._ensure_client()
             client.close()
             self._client = None
             try:
+                self._validate_manifest_attachments(self._root)
                 shutil.copytree(self._root, destination)
+                self._validate_manifest_attachments(destination)
             except BaseException:
                 self._client = MemoryClient(config=self._config(self._root))
                 raise
