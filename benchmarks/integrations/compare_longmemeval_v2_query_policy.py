@@ -12,6 +12,7 @@ from benchmarks.integrations import compare_longmemeval_v2 as paired
 from benchmarks.integrations import compare_longmemeval_v2_curve as curve
 from benchmarks.integrations import install_longmemeval_v2 as installer
 from benchmarks.integrations import run_longmemeval_v2 as launcher
+from benchmarks.integrations.longmemeval_v2 import _retrieval_query
 
 
 REGISTRATION_KIND = "longmemeval-v2-query-policy-registration"
@@ -192,9 +193,12 @@ def _load_query_metadata(
             raise ValueError(f"prompt row query policy is invalid for {policy}")
         original = hashlib.sha256(question_text.encode()).hexdigest()
         retrieval = metadata.get("retrieval_query_sha256")
+        expected_retrieval = hashlib.sha256(
+            _retrieval_query(question_text, policy).encode()
+        ).hexdigest()
         if (
             metadata.get("original_query_sha256") != original
-            or not curve._hex_digest(retrieval)
+            or retrieval != expected_retrieval
             or question_id in observed
         ):
             raise ValueError(f"prompt row query identity is invalid for {policy}")
@@ -286,6 +290,8 @@ def compare_query_policies(
             "mc_choice_"
         )
     ]
+    if not changed_ids or not unchanged_ids or not mc_ids:
+        raise ValueError("query-policy cohort lacks a required analysis subset")
     left = runs["question_stem_v1"]["by_id"]
     right = runs["verbatim"]["by_id"]
     categories = sorted({str(row["category"]) for row in reference["records"]})

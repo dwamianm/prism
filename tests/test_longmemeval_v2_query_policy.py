@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from benchmarks.integrations import compare_longmemeval_v2_query_policy as subject
+from benchmarks.integrations.longmemeval_v2 import _retrieval_query
 from tests.test_longmemeval_v2_comparison import _write_run
 from tests.test_longmemeval_v2_curve import _runtime_identity
 
@@ -28,6 +29,12 @@ def _fixture(root: Path) -> tuple[dict[str, Path], Path]:
         run = _write_run(root / f"run-{label}", scores)
         rows_path = run / "per_question.jsonl"
         rows = [json.loads(line) for line in rows_path.read_text().splitlines()]
+        rows[0]["question_text"] = (
+            "Question 0?\n"
+            "A. First option\n"
+            "B. Second option\n"
+            "Your final answer should be wrapped in \\boxed{} like \\boxed{A}."
+        )
         rows[0]["eval_function"] = "mc_choice_match|require_non_empty=true"
         rows[1]["eval_function"] = "mc_choice_match|require_non_empty=true"
         rows_path.write_text("".join(json.dumps(row) + "\n" for row in rows))
@@ -72,9 +79,9 @@ def _fixture(root: Path) -> tuple[dict[str, Path], Path]:
         prompt_rows = []
         for index, row in enumerate(rows):
             original = hashlib.sha256(row["question_text"].encode()).hexdigest()
-            retrieval = original
-            if label == "question_stem_v1" and index == 0:
-                retrieval = hashlib.sha256(b"Question stem 0").hexdigest()
+            retrieval = hashlib.sha256(
+                _retrieval_query(row["question_text"], label).encode()
+            ).hexdigest()
             prompt_rows.append(
                 {
                     "question_id": row["question_id"],
@@ -240,7 +247,7 @@ def test_query_policy_comparison_rejects_changed_reader_query_metadata(
     rows[0]["memory_post_query_metadata"]["retrieval_query_sha256"] = "0" * 64
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
 
-    with pytest.raises(ValueError, match="verbatim arm changed"):
+    with pytest.raises(ValueError, match="query identity is invalid for verbatim"):
         subject.compare_query_policies(
             runs, registration_path=registration, samples=10
         )
