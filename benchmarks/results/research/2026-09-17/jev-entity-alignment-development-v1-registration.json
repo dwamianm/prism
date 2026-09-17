@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "kind": "jev-entity-alignment-development-registration",
+  "created_at": "2026-09-17T20:27:12.711372+00:00",
+  "claim_boundary": "Passing establishes development evidence that pinned Jev improves candidate-pair entity alignment over PRME's conservative automatic name matching. It does not authorize graph mutation or establish cross-domain confirmation.",
+  "source": {
+    "prme_revision": "f37fd016666acc0120ac6e312c0d621e5a19aee7",
+    "runner_sha256": "8ee0d87675f38d7992346c3251b567c65ca04f2f1479d7a462ad5ccb56420a3b"
+  },
+  "dataset": {
+    "name": "DeepMatcher Structured BeerAdvo-RateBeer",
+    "source": "https://pages.cs.wisc.edu/~anhai/data1/deepmatcher_data/Structured/Beer/exp_data/",
+    "split": "train",
+    "files": {
+      "tableA.csv": {
+        "sha256": "abb02b749152dc62b49fe01b928ca5fde49b9b29a27be5beaacab1511d7f9051",
+        "bytes": 340692
+      },
+      "tableB.csv": {
+        "sha256": "c842548a980906fcd5863e80b184c1ec7e594f31b8221d21e0a372ce74fc44d4",
+        "bytes": 232671
+      },
+      "train.csv": {
+        "sha256": "d5b10d02b1ec9453de0637d56210cb0ef4acbd1c99634ed2082d7d99db9d93d4",
+        "bytes": 3051
+      },
+      "valid.csv": {
+        "sha256": "b8aead98d2e80a2ed978f7e3c8949294a13df38cc62b3c8926b584b9a1742c10",
+        "bytes": 1055
+      },
+      "test.csv": {
+        "sha256": "545440994ad998ab96b230f1bbbc240af8b72ee55aa1dbbc583b751859615a5c",
+        "bytes": 1046
+      }
+    },
+    "test_access": "forbidden_until_development_passes"
+  },
+  "cohort": {
+    "role": "development",
+    "pairs": 268,
+    "counts_by_label": {
+      "0": 228,
+      "1": 40
+    },
+    "identity_sha256": "7c2f029a20b05d0f1467878e8d955a55933938c54350c555fe4c5acb088334ca"
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "candidate_pair_entity_alignment",
+    "state_fields": [
+      "entity_a",
+      "entity_b"
+    ],
+    "questions": {
+      "link_state": {
+        "type": "score",
+        "instructions": "How do the two entity descriptions relate as products?",
+        "criteria": [
+          "They describe two different products.",
+          "They describe closely related products that may or may not be the same one: a variant, a special edition, or a name that could plausibly refer to either.",
+          "They describe one and the same product."
+        ]
+      },
+      "same_name": {
+        "type": "noul",
+        "instructions": "Do the two entities state the same beer name?"
+      },
+      "same_brewery": {
+        "type": "noul",
+        "instructions": "Are the two entities from the same brewery?"
+      },
+      "same_style": {
+        "type": "noul",
+        "instructions": "Do the two entities describe the same beer style?"
+      }
+    },
+    "questions_sha256": "5c49f064266e12eb6b375de6ad2d3ff1b688d4441d8c2ed6f97891e3b702faa6",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "decision_arms": {
+      "score_route": "link_state.score >= 1.5",
+      "confident_score": "link_state.score >= 1.5 and confidence >= 0.8",
+      "field_guarded": "confident_score and same_name.noul > 0.5 and same_brewery.noul > 0.5"
+    },
+    "review_rule": "link_state.score >= 0.5",
+    "current_prme_baseline": "stripped case-insensitive exact entity name or built-in known alias",
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_entity_text": false
+  },
+  "evaluation": {
+    "gates_per_arm": {
+      "pairs_evaluated_min": 268,
+      "response_validity_min": 268,
+      "merge_precision_min": 0.98,
+      "merge_recall_min": 0.5,
+      "false_merges_max": 1,
+      "recall_gain_over_current_min": 0.25
+    },
+    "selection": "Among passing arms, choose greatest merge recall, then precision, then lexicographically smallest name.",
+    "decision_rule": "Do not implement or access held-out entity-alignment pairs unless at least one frozen development arm passes every gate."
+  }
+}
