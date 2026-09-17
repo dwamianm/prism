@@ -305,3 +305,18 @@ above 60% recall was 77.67%. The exact-cohort FactCG control reached 74.87% and
 79.46%, respectively. HHEM is not integrated, and the external test remains
 sealed. This closes static maximum-over-window verification with that model;
 future work needs fresh data and explicit partial-support/abstention semantics.
+
+A fresh, preregistered
+[full-source support-certificate trial](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-SUPPORT-CERTIFICATE-V1.md)
+then tested those semantics directly with DeepSeek 4.1 Flash. Every accepted
+certificate covered all substantive claim tokens with source-bound evidence IDs
+and `supported`, `contradicted` or `unknown` atoms; the final claim was supported
+only when every atom was supported. Complete documents replaced the FactCG
+ranker. The provider produced 782/800 valid certificates, missing the 98%
+integrity gate by two. It reached 78.31% precision, 65.00% recall, 73.50%
+balanced accuracy and an 18.00% false-support rate. Reveal and LFQA passed the
+precision/recall boundary individually, while false support rose to 42% on media
+summaries and 36% on meeting summaries. This domain instability blocks global
+enablement. The routed provider completed 930 transport calls without a failure,
+so transport and structural source binding are no longer the main constraint;
+semantic verification quality is.
