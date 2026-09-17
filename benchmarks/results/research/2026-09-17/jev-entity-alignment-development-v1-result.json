@@ -1,0 +1,6619 @@
+{
+  "schema_version": 1,
+  "kind": "jev-entity-alignment-development-result",
+  "completed_at": "2026-09-17T20:27:35.607140+00:00",
+  "development_only": true,
+  "heldout_accessed": false,
+  "registration_sha256": "1ca5abd8a6fdcb63c40d1e642cbe1c39ed0161ca558e77a11e46ed7643572266",
+  "cohort": {
+    "role": "development",
+    "pairs": 268,
+    "counts_by_label": {
+      "0": 228,
+      "1": 40
+    },
+    "identity_sha256": "7c2f029a20b05d0f1467878e8d955a55933938c54350c555fe4c5acb088334ca"
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "candidate_pair_entity_alignment",
+    "state_fields": [
+      "entity_a",
+      "entity_b"
+    ],
+    "questions": {
+      "link_state": {
+        "type": "score",
+        "instructions": "How do the two entity descriptions relate as products?",
+        "criteria": [
+          "They describe two different products.",
+          "They describe closely related products that may or may not be the same one: a variant, a special edition, or a name that could plausibly refer to either.",
+          "They describe one and the same product."
+        ]
+      },
+      "same_name": {
+        "type": "noul",
+        "instructions": "Do the two entities state the same beer name?"
+      },
+      "same_brewery": {
+        "type": "noul",
+        "instructions": "Are the two entities from the same brewery?"
+      },
+      "same_style": {
+        "type": "noul",
+        "instructions": "Do the two entities describe the same beer style?"
+      }
+    },
+    "questions_sha256": "5c49f064266e12eb6b375de6ad2d3ff1b688d4441d8c2ed6f97891e3b702faa6",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "decision_arms": {
+      "score_route": "link_state.score >= 1.5",
+      "confident_score": "link_state.score >= 1.5 and confidence >= 0.8",
+      "field_guarded": "confident_score and same_name.noul > 0.5 and same_brewery.noul > 0.5"
+    },
+    "review_rule": "link_state.score >= 0.5",
+    "current_prme_baseline": "stripped case-insensitive exact entity name or built-in known alias",
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_entity_text": false
+  },
+  "development": {
+    "current_prme_baseline": {
+      "tp": 8,
+      "fp": 0,
+      "tn": 228,
+      "fn": 32,
+      "accuracy": 0.8805970149253731,
+      "merge_precision": 1.0,
+      "merge_recall": 0.2,
+      "false_merge_rate": 0.0
+    },
+    "review_or_merge": {
+      "tp": 38,
+      "fp": 5,
+      "tn": 223,
+      "fn": 2,
+      "accuracy": 0.9738805970149254,
+      "merge_precision": 0.8837209302325582,
+      "merge_recall": 0.95,
+      "false_merge_rate": 0.021929824561403508
+    },
+    "arms": {
+      "score_route": {
+        "metrics": {
+          "tp": 21,
+          "fp": 0,
+          "tn": 228,
+          "fn": 19,
+          "accuracy": 0.9291044776119403,
+          "merge_precision": 1.0,
+          "merge_recall": 0.525,
+          "false_merge_rate": 0.0
+        },
+        "gate_results": {
+          "pairs_evaluated_min": true,
+          "response_validity_min": true,
+          "merge_precision_min": true,
+          "merge_recall_min": true,
+          "false_merges_max": true,
+          "recall_gain_over_current_min": true
+        },
+        "passed": true
+      },
+      "confident_score": {
+        "metrics": {
+          "tp": 13,
+          "fp": 0,
+          "tn": 228,
+          "fn": 27,
+          "accuracy": 0.8992537313432836,
+          "merge_precision": 1.0,
+          "merge_recall": 0.325,
+          "false_merge_rate": 0.0
+        },
+        "gate_results": {
+          "pairs_evaluated_min": true,
+          "response_validity_min": true,
+          "merge_precision_min": true,
+          "merge_recall_min": false,
+          "false_merges_max": true,
+          "recall_gain_over_current_min": false
+        },
+        "passed": false
+      },
+      "field_guarded": {
+        "metrics": {
+          "tp": 6,
+          "fp": 0,
+          "tn": 228,
+          "fn": 34,
+          "accuracy": 0.8731343283582089,
+          "merge_precision": 1.0,
+          "merge_recall": 0.15,
+          "false_merge_rate": 0.0
+        },
+        "gate_results": {
+          "pairs_evaluated_min": true,
+          "response_validity_min": true,
+          "merge_precision_min": true,
+          "merge_recall_min": false,
+          "false_merges_max": true,
+          "recall_gain_over_current_min": false
+        },
+        "passed": false
+      }
+    },
+    "samples": [
+      {
+        "id": "train-0000-2082-1496",
+        "label": 0,
+        "link_score": 0.28,
+        "link_confidence": 0.58,
+        "link_probabilities": {
+          "0": 0.72,
+          "1": 0.28,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.602017,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0001-982-2999",
+        "label": 1,
+        "link_score": 1.47,
+        "link_confidence": 0.26,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.51,
+          "2": 0.48
+        },
+        "same_name_noul": 0.3,
+        "same_brewery_noul": 0.98,
+        "same_style_noul": 0.11,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.399327,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0002-3715-2562",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.1,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.549027,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0003-3246-284",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.82,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.408916,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0004-1931-810",
+        "label": 1,
+        "link_score": 0.78,
+        "link_confidence": 0.61,
+        "link_probabilities": {
+          "0": 0.24,
+          "1": 0.74,
+          "2": 0.02
+        },
+        "same_name_noul": 0.15,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.541202,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0005-704-411",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.33,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.374355,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0006-1880-872",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.77,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.144571,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0007-3325-2266",
+        "label": 0,
+        "link_score": 0.21,
+        "link_confidence": 0.69,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.166293,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0008-2047-1103",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.18,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.181003,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0009-2718-2787",
+        "label": 0,
+        "link_score": 0.4,
+        "link_confidence": 0.4,
+        "link_probabilities": {
+          "0": 0.61,
+          "1": 0.39,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.199963,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0010-141-2672",
+        "label": 0,
+        "link_score": 0.38,
+        "link_confidence": 0.43,
+        "link_probabilities": {
+          "0": 0.62,
+          "1": 0.38,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.137241,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0011-4138-823",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.03,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.02,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.195993,
+        "input_tokens": 533,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0012-190-805",
+        "label": 1,
+        "link_score": 1.22,
+        "link_confidence": 0.57,
+        "link_probabilities": {
+          "0": 0.03,
+          "1": 0.72,
+          "2": 0.25
+        },
+        "same_name_noul": 0.97,
+        "same_brewery_noul": 0.03,
+        "same_style_noul": 0.65,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.153991,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0013-2277-1255",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.17,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.197391,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0014-4162-2313",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.163364,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0015-1850-742",
+        "label": 1,
+        "link_score": 0.52,
+        "link_confidence": 0.22,
+        "link_probabilities": {
+          "0": 0.5,
+          "1": 0.47,
+          "2": 0.03
+        },
+        "same_name_noul": 0.09,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.81,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.16583,
+        "input_tokens": 503,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0016-2909-1529",
+        "label": 1,
+        "link_score": 1.94,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.06,
+          "2": 0.94
+        },
+        "same_name_noul": 0.29,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.85,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.136117,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0017-3963-1026",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.163204,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0018-2480-558",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.74,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.229215,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0019-1185-2991",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.13822,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0020-2433-2722",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.28,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.15234,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0021-2175-996",
+        "label": 1,
+        "link_score": 1.29,
+        "link_confidence": 0.54,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.69,
+          "2": 0.3
+        },
+        "same_name_noul": 0.22,
+        "same_brewery_noul": 0.32,
+        "same_style_noul": 0.84,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.161124,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0022-1466-972",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.87,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.165169,
+        "input_tokens": 503,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0023-178-838",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.11,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.236581,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0024-732-621",
+        "label": 0,
+        "link_score": 0.22,
+        "link_confidence": 0.67,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.142038,
+        "input_tokens": 503,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0025-2423-881",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.9400000000000001,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.59,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.154296,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0026-1857-1860",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.71,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.124777,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0027-3388-99",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "same_name_noul": 0.04,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.18,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.140952,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0028-2125-22",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.33,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.192028,
+        "input_tokens": 523,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0029-3605-521",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.72,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.79,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.179826,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0030-2272-64",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.138635,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0031-492-1661",
+        "label": 0,
+        "link_score": 0.22,
+        "link_confidence": 0.67,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.131669,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0032-4200-469",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.98,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.02,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.188323,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0033-4101-2360",
+        "label": 1,
+        "link_score": 1.62,
+        "link_confidence": 0.43,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.38,
+          "2": 0.62
+        },
+        "same_name_noul": 0.96,
+        "same_brewery_noul": 0.84,
+        "same_style_noul": 0.74,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.157451,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0034-285-623",
+        "label": 0,
+        "link_score": 0.23,
+        "link_confidence": 0.66,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.17865,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0035-2602-1255",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.16,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.20867,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0036-890-2580",
+        "label": 1,
+        "link_score": 1.98,
+        "link_confidence": 0.97,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.02,
+          "2": 0.98
+        },
+        "same_name_noul": 0.77,
+        "same_brewery_noul": 0.92,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": true
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.216929,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0037-2689-1373",
+        "label": 1,
+        "link_score": 1.92,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.08,
+          "2": 0.92
+        },
+        "same_name_noul": 0.99,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.3,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": true
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.142947,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0038-1672-590",
+        "label": 1,
+        "link_score": 0.64,
+        "link_confidence": 0.45,
+        "link_probabilities": {
+          "0": 0.37,
+          "1": 0.63,
+          "2": 0.0
+        },
+        "same_name_noul": 0.06,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.05,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.163589,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0039-3126-461",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.46,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.171388,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0040-1755-2883",
+        "label": 0,
+        "link_score": 0.27,
+        "link_confidence": 0.59,
+        "link_probabilities": {
+          "0": 0.73,
+          "1": 0.26,
+          "2": 0.01
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.23,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.171524,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0041-354-22",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.34,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.205646,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0042-2086-490",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.63,
+        "link_probabilities": {
+          "0": 0.76,
+          "1": 0.24,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.84,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.159937,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0043-2089-1038",
+        "label": 0,
+        "link_score": 0.03,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.82,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.129076,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0044-2423-1934",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.200898,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0045-2156-1889",
+        "label": 0,
+        "link_score": 0.46,
+        "link_confidence": 0.31,
+        "link_probabilities": {
+          "0": 0.5700000000000001,
+          "1": 0.41,
+          "2": 0.02
+        },
+        "same_name_noul": 0.03,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.193777,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0046-2365-469",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.204532,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0047-3210-1737",
+        "label": 1,
+        "link_score": 1.21,
+        "link_confidence": 0.6,
+        "link_probabilities": {
+          "0": 0.03,
+          "1": 0.73,
+          "2": 0.24
+        },
+        "same_name_noul": 0.98,
+        "same_brewery_noul": 0.61,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.319169,
+        "input_tokens": 501,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0048-4286-2362",
+        "label": 1,
+        "link_score": 1.91,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.09,
+          "2": 0.91
+        },
+        "same_name_noul": 0.38,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.87,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.185355,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0049-773-22",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.19,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.158844,
+        "input_tokens": 527,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0050-3758-2120",
+        "label": 1,
+        "link_score": 1.11,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.04,
+          "1": 0.81,
+          "2": 0.15
+        },
+        "same_name_noul": 0.21,
+        "same_brewery_noul": 0.67,
+        "same_style_noul": 0.12,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.194442,
+        "input_tokens": 501,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0051-1587-1911",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.81,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.57,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.143646,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0052-487-646",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.173277,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0053-1587-1534",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.167524,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0054-1898-2085",
+        "label": 0,
+        "link_score": 0.62,
+        "link_confidence": 0.38,
+        "link_probabilities": {
+          "0": 0.4,
+          "1": 0.59,
+          "2": 0.01
+        },
+        "same_name_noul": 0.04,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.41,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.187966,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0055-1755-1551",
+        "label": 0,
+        "link_score": 0.38,
+        "link_confidence": 0.43,
+        "link_probabilities": {
+          "0": 0.63,
+          "1": 0.37,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.3,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.139323,
+        "input_tokens": 523,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0056-2401-179",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.85,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.220898,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0057-184-1534",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.3,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.230427,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0058-2602-1955",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.76,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.155558,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0059-3417-1983",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.12,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.07,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.156108,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0060-1118-2812",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.89,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.135789,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0061-9-2883",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.28,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.236582,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0062-3813-22",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.34,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.262293,
+        "input_tokens": 524,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0063-1587-1496",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.17,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.156955,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0064-1621-1853",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.16,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.182267,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0065-486-2883",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.189909,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0066-1524-284",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.66,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.155542,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0067-890-615",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.18689,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0068-3248-1298",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.16,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.151752,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0069-736-316",
+        "label": 0,
+        "link_score": 0.29,
+        "link_confidence": 0.56,
+        "link_probabilities": {
+          "0": 0.71,
+          "1": 0.28,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.159537,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0070-4003-2284",
+        "label": 1,
+        "link_score": 1.91,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.09,
+          "2": 0.91
+        },
+        "same_name_noul": 0.36,
+        "same_brewery_noul": 0.89,
+        "same_style_noul": 0.75,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.214843,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0071-4088-2351",
+        "label": 1,
+        "link_score": 1.12,
+        "link_confidence": 0.69,
+        "link_probabilities": {
+          "0": 0.05,
+          "1": 0.79,
+          "2": 0.16
+        },
+        "same_name_noul": 0.36,
+        "same_brewery_noul": 0.83,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.15726,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0072-285-90",
+        "label": 0,
+        "link_score": 0.42,
+        "link_confidence": 0.37,
+        "link_probabilities": {
+          "0": 0.58,
+          "1": 0.42,
+          "2": 0.0
+        },
+        "same_name_noul": 0.06,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.213784,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0073-138-1635",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.23,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.220911,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0074-3325-1973",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.170851,
+        "input_tokens": 523,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0075-2209-2728",
+        "label": 0,
+        "link_score": 0.03,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.1,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.139044,
+        "input_tokens": 522,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0076-2026-1911",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.6,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.205487,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0077-2606-1320",
+        "label": 1,
+        "link_score": 1.95,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.05,
+          "2": 0.95
+        },
+        "same_name_noul": 0.27,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.162664,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0078-1460-412",
+        "label": 1,
+        "link_score": 1.93,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.07,
+          "2": 0.93
+        },
+        "same_name_noul": 0.28,
+        "same_brewery_noul": 0.93,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.152647,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0079-138-646",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.153303,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0080-1281-704",
+        "label": 0,
+        "link_score": 0.2,
+        "link_confidence": 0.69,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.205416,
+        "input_tokens": 533,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0081-2362-1136",
+        "label": 1,
+        "link_score": 1.87,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.13,
+          "2": 0.87
+        },
+        "same_name_noul": 0.17,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.82,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.23831,
+        "input_tokens": 501,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0082-3963-2334",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.150691,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0083-178-1103",
+        "label": 0,
+        "link_score": 0.2,
+        "link_confidence": 0.7,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.35,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.173191,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0084-3813-1026",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.33465,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0085-2082-1638",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.149324,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0086-1458-1414",
+        "label": 0,
+        "link_score": 0.31,
+        "link_confidence": 0.53,
+        "link_probabilities": {
+          "0": 0.69,
+          "1": 0.31,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.209575,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0087-1207-1604",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.74,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.163627,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0088-1219-2463",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.98,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.03,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.151519,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0089-1725-419",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.83,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.175576,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0090-138-90",
+        "label": 0,
+        "link_score": 0.31,
+        "link_confidence": 0.54,
+        "link_probabilities": {
+          "0": 0.7,
+          "1": 0.3,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.499118,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0091-2491-1260",
+        "label": 0,
+        "link_score": 0.28,
+        "link_confidence": 0.57,
+        "link_probabilities": {
+          "0": 0.73,
+          "1": 0.27,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.87,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.154313,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0092-285-1026",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.215012,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0093-1661-351",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.2,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.158799,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0094-2480-2621",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.11,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.155275,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0095-1898-1408",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.220477,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0096-1436-1069",
+        "label": 0,
+        "link_score": 0.36,
+        "link_confidence": 0.45,
+        "link_probabilities": {
+          "0": 0.65,
+          "1": 0.34,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.64,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.202883,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0097-285-1534",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.3,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.157358,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0098-487-1414",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.23,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.175576,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0099-44-1119",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.177623,
+        "input_tokens": 526,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0100-386-2204",
+        "label": 1,
+        "link_score": 1.27,
+        "link_confidence": 0.51,
+        "link_probabilities": {
+          "0": 0.03,
+          "1": 0.67,
+          "2": 0.3
+        },
+        "same_name_noul": 0.97,
+        "same_brewery_noul": 0.83,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.185286,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0101-167-635",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.72,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.84,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.183456,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0102-2992-1590",
+        "label": 1,
+        "link_score": 1.02,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.03,
+          "1": 0.92,
+          "2": 0.05
+        },
+        "same_name_noul": 0.06,
+        "same_brewery_noul": 0.9,
+        "same_style_noul": 0.76,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.159255,
+        "input_tokens": 524,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0103-3963-1863",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.66,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.185333,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0104-1458-646",
+        "label": 0,
+        "link_score": 0.22,
+        "link_confidence": 0.67,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.181861,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0105-2082-1103",
+        "label": 0,
+        "link_score": 0.27,
+        "link_confidence": 0.6,
+        "link_probabilities": {
+          "0": 0.74,
+          "1": 0.26,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.28,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176961,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0106-1207-558",
+        "label": 0,
+        "link_score": 0.29,
+        "link_confidence": 0.56,
+        "link_probabilities": {
+          "0": 0.71,
+          "1": 0.29,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.79,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.556137,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0107-1433-1261",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.1,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.154208,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0108-1456-409",
+        "label": 1,
+        "link_score": 1.86,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.13,
+          "2": 0.87
+        },
+        "same_name_noul": 0.99,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.73,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": true
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.187077,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0109-3963-1551",
+        "label": 0,
+        "link_score": 0.29,
+        "link_confidence": 0.56,
+        "link_probabilities": {
+          "0": 0.71,
+          "1": 0.29,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.218749,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0110-4329-2416",
+        "label": 0,
+        "link_score": 0.29,
+        "link_confidence": 0.56,
+        "link_probabilities": {
+          "0": 0.71,
+          "1": 0.29,
+          "2": 0.0
+        },
+        "same_name_noul": 0.03,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.181838,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0111-491-1120",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.35,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.184526,
+        "input_tokens": 522,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0112-3325-63",
+        "label": 0,
+        "link_score": 0.27,
+        "link_confidence": 0.59,
+        "link_probabilities": {
+          "0": 0.73,
+          "1": 0.27,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.201759,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0113-34-2048",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.44,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.187523,
+        "input_tokens": 522,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0114-2399-144",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.59,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.209823,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0115-3802-2149",
+        "label": 1,
+        "link_score": 0.73,
+        "link_confidence": 0.49,
+        "link_probabilities": {
+          "0": 0.31,
+          "1": 0.66,
+          "2": 0.03
+        },
+        "same_name_noul": 0.17,
+        "same_brewery_noul": 0.05,
+        "same_style_noul": 0.81,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.215868,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0116-3246-1682",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.17,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.181288,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0117-2047-63",
+        "label": 0,
+        "link_score": 0.2,
+        "link_confidence": 0.7,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.17,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.179786,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0118-2433-1534",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.35,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.232696,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0119-9-881",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.8099999999999999,
+          "1": 0.18,
+          "2": 0.01
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.6,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.206392,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0120-2972-2883",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.17,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.352502,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0121-2089-845",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.98,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.06,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.17059,
+        "input_tokens": 522,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0122-3800-2146",
+        "label": 1,
+        "link_score": 1.63,
+        "link_confidence": 0.44,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.36,
+          "2": 0.63
+        },
+        "same_name_noul": 0.99,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.23,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.196051,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0123-1648-571",
+        "label": 1,
+        "link_score": 1.25,
+        "link_confidence": 0.55,
+        "link_probabilities": {
+          "0": 0.02,
+          "1": 0.7,
+          "2": 0.28
+        },
+        "same_name_noul": 0.38,
+        "same_brewery_noul": 0.86,
+        "same_style_noul": 0.72,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.194721,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0124-2423-465",
+        "label": 0,
+        "link_score": 0.41,
+        "link_confidence": 0.39,
+        "link_probabilities": {
+          "0": 0.59,
+          "1": 0.4,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.148054,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0125-260-1174",
+        "label": 0,
+        "link_score": 0.99,
+        "link_confidence": 0.97,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.99,
+          "2": 0.0
+        },
+        "same_name_noul": 0.06,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.63,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.159617,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0126-2319-980",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.36,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.214903,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0127-833-641",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.32,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.160346,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0128-3325-1119",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.135379,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0129-3126-1934",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.238545,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0130-120-213",
+        "label": 1,
+        "link_score": 0.46,
+        "link_confidence": 0.31,
+        "link_probabilities": {
+          "0": 0.54,
+          "1": 0.46,
+          "2": 0.0
+        },
+        "same_name_noul": 0.05,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.67,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.194079,
+        "input_tokens": 499,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0131-3325-1103",
+        "label": 0,
+        "link_score": 0.38,
+        "link_confidence": 0.44,
+        "link_probabilities": {
+          "0": 0.63,
+          "1": 0.37,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.21,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.195472,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0132-1926-2048",
+        "label": 0,
+        "link_score": 0.39,
+        "link_confidence": 0.41,
+        "link_probabilities": {
+          "0": 0.62,
+          "1": 0.38,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.53,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.229128,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0133-1433-418",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.19609,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0134-3852-2875",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.82,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.211873,
+        "input_tokens": 501,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0135-29-1026",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.15014,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0136-2423-1519",
+        "label": 0,
+        "link_score": 0.24,
+        "link_confidence": 0.65,
+        "link_probabilities": {
+          "0": 0.77,
+          "1": 0.23,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.191948,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0137-2960-287",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.88,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.179674,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0138-2602-730",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.69,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.129337,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0139-3185-2266",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.142129,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0140-4117-22",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.99,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.08,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.160876,
+        "input_tokens": 529,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0141-2433-1103",
+        "label": 0,
+        "link_score": 0.23,
+        "link_confidence": 0.65,
+        "link_probabilities": {
+          "0": 0.77,
+          "1": 0.23,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.196401,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0142-1289-2622",
+        "label": 0,
+        "link_score": 0.23,
+        "link_confidence": 0.66,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.03,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.161545,
+        "input_tokens": 501,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0143-429-2636",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.12,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.147369,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0144-1458-1496",
+        "label": 0,
+        "link_score": 0.2,
+        "link_confidence": 0.7,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.162172,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0145-1621-12",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.192281,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0146-3661-2672",
+        "label": 0,
+        "link_score": 0.65,
+        "link_confidence": 0.46,
+        "link_probabilities": {
+          "0": 0.36,
+          "1": 0.64,
+          "2": 0.0
+        },
+        "same_name_noul": 0.03,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.140275,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0147-1647-2409",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.99,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.02,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.231798,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0148-3035-1620",
+        "label": 1,
+        "link_score": 1.72,
+        "link_confidence": 0.59,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.26,
+          "2": 0.73
+        },
+        "same_name_noul": 0.28,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.23,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.152763,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0149-1914-793",
+        "label": 1,
+        "link_score": 1.93,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.07,
+          "2": 0.93
+        },
+        "same_name_noul": 0.6,
+        "same_brewery_noul": 0.98,
+        "same_style_noul": 0.83,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": true
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.162772,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0150-2463-1206",
+        "label": 1,
+        "link_score": 1.07,
+        "link_confidence": 0.32,
+        "link_probabilities": {
+          "0": 0.19,
+          "1": 0.55,
+          "2": 0.26
+        },
+        "same_name_noul": 0.4,
+        "same_brewery_noul": 0.68,
+        "same_style_noul": 0.09,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.180365,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0151-3185-1661",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.174,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0152-3632-1275",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.89,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.267825,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0153-2289-1085",
+        "label": 1,
+        "link_score": 1.69,
+        "link_confidence": 0.53,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.31,
+          "2": 0.69
+        },
+        "same_name_noul": 0.45,
+        "same_brewery_noul": 0.84,
+        "same_style_noul": 0.39,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.169951,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0154-2724-1886",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.286186,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0155-1458-1551",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.189544,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0156-1501-2750",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.85,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.179086,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0157-284-2517",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.02,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.137991,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0158-487-1635",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.18902,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0159-3963-124",
+        "label": 0,
+        "link_score": 0.22,
+        "link_confidence": 0.66,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.220797,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0160-2934-1103",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.72,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.205846,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0161-2433-349",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.72,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.211896,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0162-2506-1242",
+        "label": 1,
+        "link_score": 1.8,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.19,
+          "2": 0.81
+        },
+        "same_name_noul": 0.29,
+        "same_brewery_noul": 0.57,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.176775,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0163-1815-2654",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.85,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.162996,
+        "input_tokens": 524,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0164-3626-2728",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.186943,
+        "input_tokens": 530,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0165-1524-1682",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.04,
+        "same_style_noul": 0.15,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.146566,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0166-1794-881",
+        "label": 0,
+        "link_score": 0.32,
+        "link_confidence": 0.52,
+        "link_probabilities": {
+          "0": 0.7,
+          "1": 0.27,
+          "2": 0.03
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.68,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.180131,
+        "input_tokens": 523,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0167-3090-461",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.72,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.7,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.143118,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0168-2780-1594",
+        "label": 0,
+        "link_score": 0.24,
+        "link_confidence": 0.63,
+        "link_probabilities": {
+          "0": 0.76,
+          "1": 0.24,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.84,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.168859,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0169-2433-1496",
+        "label": 0,
+        "link_score": 0.29,
+        "link_confidence": 0.56,
+        "link_probabilities": {
+          "0": 0.71,
+          "1": 0.29,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.143334,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0170-1178-1889",
+        "label": 0,
+        "link_score": 0.26,
+        "link_confidence": 0.61,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.28,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.184325,
+        "input_tokens": 522,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0171-3842-1281",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.09,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.186885,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0172-1219-730",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.9400000000000001,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.172452,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0173-2724-1221",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.184234,
+        "input_tokens": 500,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0174-3134-641",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.18,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.14375,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0175-4256-730",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.99,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.02,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.149262,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0176-1218-2618",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.16,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.179234,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0177-589-1586",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.15896,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0178-295-980",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.81,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.173179,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0179-44-1889",
+        "label": 0,
+        "link_score": 0.38,
+        "link_confidence": 0.42,
+        "link_probabilities": {
+          "0": 0.63,
+          "1": 0.36,
+          "2": 0.01
+        },
+        "same_name_noul": 0.03,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.134907,
+        "input_tokens": 530,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0180-4030-2508",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.73,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.235514,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0181-403-2582",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.28,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.175548,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0182-2480-1604",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.72,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.178978,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0183-3478-1119",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.191102,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0184-833-22",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.37,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.175053,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0185-4157-2405",
+        "label": 1,
+        "link_score": 1.96,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.04,
+          "2": 0.96
+        },
+        "same_name_noul": 0.63,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.89,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": true
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.173842,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0186-44-1534",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.137877,
+        "input_tokens": 526,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0187-178-1534",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.32,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.1659,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0188-42-1025",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.233475,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0189-2934-1911",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.51,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.148653,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0190-141-2991",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.169895,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0191-3130-1255",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.158065,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0192-543-2232",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.231986,
+        "input_tokens": 503,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0193-138-1255",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.2,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.170654,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0194-1157-155",
+        "label": 1,
+        "link_score": 1.29,
+        "link_confidence": 0.46,
+        "link_probabilities": {
+          "0": 0.04,
+          "1": 0.63,
+          "2": 0.33
+        },
+        "same_name_noul": 0.28,
+        "same_brewery_noul": 0.1,
+        "same_style_noul": 0.75,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.145358,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0195-486-1551",
+        "label": 0,
+        "link_score": 0.21,
+        "link_confidence": 0.68,
+        "link_probabilities": {
+          "0": 0.79,
+          "1": 0.21,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.557606,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0196-1458-1679",
+        "label": 0,
+        "link_score": 0.4,
+        "link_confidence": 0.4,
+        "link_probabilities": {
+          "0": 0.6,
+          "1": 0.39,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.32,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.180882,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0197-2960-1275",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.9,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.215106,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0198-4256-2491",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.74,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.175356,
+        "input_tokens": 534,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0199-2770-1428",
+        "label": 0,
+        "link_score": 0.71,
+        "link_confidence": 0.56,
+        "link_probabilities": {
+          "0": 0.29,
+          "1": 0.71,
+          "2": 0.0
+        },
+        "same_name_noul": 0.05,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.15,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.154303,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0200-3381-2275",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.87,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.192548,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0201-4083-2424",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.85,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.151551,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0202-3842-2546",
+        "label": 0,
+        "link_score": 0.38,
+        "link_confidence": 0.43,
+        "link_probabilities": {
+          "0": 0.63,
+          "1": 0.37,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.169918,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0203-2026-2582",
+        "label": 0,
+        "link_score": 0.21,
+        "link_confidence": 0.69,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.183555,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0204-295-1255",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.136874,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0205-696-22",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.34,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.158917,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0206-487-621",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.201616,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0207-3715-216",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.12,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.170017,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0208-3992-1681",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.75,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.16672,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0209-1375-2610",
+        "label": 0,
+        "link_score": 0.3,
+        "link_confidence": 0.55,
+        "link_probabilities": {
+          "0": 0.7,
+          "1": 0.3,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.82,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.225975,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0210-294-1586",
+        "label": 1,
+        "link_score": 1.62,
+        "link_confidence": 0.44,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.37,
+          "2": 0.63
+        },
+        "same_name_noul": 0.43,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.83,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.173188,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0211-4237-2466",
+        "label": 1,
+        "link_score": 1.94,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.06,
+          "2": 0.94
+        },
+        "same_name_noul": 0.21,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.89,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.267661,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0212-781-2835",
+        "label": 1,
+        "link_score": 0.52,
+        "link_confidence": 0.27,
+        "link_probabilities": {
+          "0": 0.49,
+          "1": 0.51,
+          "2": 0.0
+        },
+        "same_name_noul": 0.07,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.05,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.230981,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0213-1178-1414",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.249855,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0214-1226-1911",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.61,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176839,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0215-2480-2602",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.78,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.141193,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0216-99-1698",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.186464,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0217-2722-1393",
+        "label": 1,
+        "link_score": 0.35,
+        "link_confidence": 0.48,
+        "link_probabilities": {
+          "0": 0.66,
+          "1": 0.34,
+          "2": 0.0
+        },
+        "same_name_noul": 0.07,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.1,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.156618,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0218-1794-1973",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.29,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.164929,
+        "input_tokens": 532,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0219-2925-2208",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.149363,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0220-3813-2583",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.255643,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0221-654-1892",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.44,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.278655,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0222-3445-369",
+        "label": 0,
+        "link_score": 0.24,
+        "link_confidence": 0.64,
+        "link_probabilities": {
+          "0": 0.76,
+          "1": 0.24,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.85,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.178551,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0223-512-1356",
+        "label": 0,
+        "link_score": 0.33,
+        "link_confidence": 0.5,
+        "link_probabilities": {
+          "0": 0.67,
+          "1": 0.33,
+          "2": 0.0
+        },
+        "same_name_noul": 0.03,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.83,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176167,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0224-2979-216",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.1,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.178285,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0225-3478-1934",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.3,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.2107,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0226-3402-1496",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.18,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.189686,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0227-486-1106",
+        "label": 0,
+        "link_score": 0.31,
+        "link_confidence": 0.53,
+        "link_probabilities": {
+          "0": 0.7,
+          "1": 0.29,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.28,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.130787,
+        "input_tokens": 535,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0228-480-2576",
+        "label": 1,
+        "link_score": 1.74,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.25,
+          "2": 0.75
+        },
+        "same_name_noul": 0.22,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.79,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.139656,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0229-61-2710",
+        "label": 1,
+        "link_score": 1.95,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.05,
+          "2": 0.95
+        },
+        "same_name_noul": 0.99,
+        "same_brewery_noul": 0.99,
+        "same_style_noul": 0.84,
+        "decisions": {
+          "score_route": true,
+          "confident_score": true,
+          "field_guarded": true
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.183891,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0230-3626-641",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.141754,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0231-1664-1348",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.83,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.177692,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0232-3478-1096",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.46,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.203219,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0233-418-2441",
+        "label": 1,
+        "link_score": 1.33,
+        "link_confidence": 0.37,
+        "link_probabilities": {
+          "0": 0.04,
+          "1": 0.58,
+          "2": 0.38
+        },
+        "same_name_noul": 0.41,
+        "same_brewery_noul": 0.91,
+        "same_style_noul": 0.11,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.389778,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0234-1604-213",
+        "label": 0,
+        "link_score": 0.39,
+        "link_confidence": 0.41,
+        "link_probabilities": {
+          "0": 0.61,
+          "1": 0.39,
+          "2": 0.0
+        },
+        "same_name_noul": 0.03,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.63,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.173069,
+        "input_tokens": 503,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0235-2272-980",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.3,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.1676,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0236-1599-2975",
+        "label": 0,
+        "link_score": 0.46,
+        "link_confidence": 0.3,
+        "link_probabilities": {
+          "0": 0.55,
+          "1": 0.44,
+          "2": 0.01
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.81,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.164189,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0237-99-2139",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.23,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.141575,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0238-138-1638",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.22,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.135985,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0239-1725-1376",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.81,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.160001,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0240-906-419",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.85,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.222042,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0241-184-1428",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.199332,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0242-613-2429",
+        "label": 0,
+        "link_score": 0.02,
+        "link_confidence": 0.97,
+        "link_probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.03,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.189541,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0243-4329-2314",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.83,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.187056,
+        "input_tokens": 532,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0244-4304-2429",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.71,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.142488,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0245-4216-730",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.99,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.03,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.156129,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0246-2811-838",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.17,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.201302,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0247-171-1026",
+        "label": 0,
+        "link_score": 0.29,
+        "link_confidence": 0.57,
+        "link_probabilities": {
+          "0": 0.72,
+          "1": 0.28,
+          "2": 0.0
+        },
+        "same_name_noul": 0.04,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.23,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.195592,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0248-1515-716",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.8,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.211629,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0249-1022-2839",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.81,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.195634,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0250-491-1638",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.149712,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0251-492-2991",
+        "label": 0,
+        "link_score": 0.26,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.207043,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0252-2526-411",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.31,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.202026,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0253-1857-545",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.71,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.171444,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0254-3246-2019",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.86,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.22044,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0255-4200-1825",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.99,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.02,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.169829,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0256-3079-1650",
+        "label": 1,
+        "link_score": 1.83,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.17,
+          "2": 0.83
+        },
+        "same_name_noul": 0.24,
+        "same_brewery_noul": 0.9,
+        "same_style_noul": 0.64,
+        "decisions": {
+          "score_route": true,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.161134,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0257-2156-124",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.25,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.130027,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0258-9-2728",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.140769,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0259-1178-698",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.28,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.144578,
+        "input_tokens": 528,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0260-655-90",
+        "label": 0,
+        "link_score": 0.23,
+        "link_confidence": 0.65,
+        "link_probabilities": {
+          "0": 0.77,
+          "1": 0.23,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.3,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.208457,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0261-1755-1661",
+        "label": 0,
+        "link_score": 0.24,
+        "link_confidence": 0.64,
+        "link_probabilities": {
+          "0": 0.76,
+          "1": 0.24,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.26,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.18129,
+        "input_tokens": 523,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0262-2156-1255",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.24,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.167595,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0263-3251-997",
+        "label": 0,
+        "link_score": 0.71,
+        "link_confidence": 0.55,
+        "link_probabilities": {
+          "0": 0.3,
+          "1": 0.7,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.79,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.201064,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0264-1725-2244",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.79,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.195313,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0265-252-2975",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.84,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.163847,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0266-3963-64",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "same_name_noul": 0.02,
+        "same_brewery_noul": 0.02,
+        "same_style_noul": 0.27,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.165518,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "train-0267-1649-2313",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.99,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "same_name_noul": 0.01,
+        "same_brewery_noul": 0.01,
+        "same_style_noul": 0.03,
+        "decisions": {
+          "score_route": false,
+          "confident_score": false,
+          "field_guarded": false
+        },
+        "review_or_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.1453,
+        "input_tokens": 519,
+        "output_tokens": 71
+      }
+    ]
+  },
+  "runtime": {
+    "requests": 268,
+    "attempts": 268,
+    "input_tokens": 137430,
+    "output_tokens": 19028,
+    "median_request_seconds": 0.177623,
+    "max_request_seconds": 0.602017,
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit"
+  },
+  "passed": true,
+  "selected_arm": "score_route",
+  "decision": "eligible_for_cross_domain_confirmation",
+  "limitations": [
+    "Development split from one public product-matching dataset.",
+    "Candidate pairs are supplied; this does not evaluate candidate generation.",
+    "A semantic decision cannot bypass PRME owner, scope, type or provenance checks.",
+    "No graph mutation or held-out split was performed."
+  ],
+  "result_sha256": "b008ad7e376abb3cbcb8b209e81e8c8f187e4c76fa6f6e7c32388b9e2f064339"
+}
