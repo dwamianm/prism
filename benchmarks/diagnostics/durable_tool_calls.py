@@ -79,6 +79,18 @@ def _request_body(
     }
 
 
+def _job_tool(job: JsonObject, default: JsonObject, tool_name: str) -> JsonObject:
+    value = job.get("tool", default)
+    function = value.get("function") if isinstance(value, dict) else None
+    if (
+        not isinstance(function, dict)
+        or function.get("name") != tool_name
+        or not isinstance(function.get("parameters"), dict)
+    ):
+        raise ValueError("job tool must preserve the declared function identity")
+    return value
+
+
 def _tool_arguments(
     response: JsonObject,
     *,
@@ -194,11 +206,12 @@ async def run(
         set(job_ids)
     ) != len(job_ids):
         raise ValueError("durable tool-call job identities are invalid")
+    job_tools = {job["id"]: _job_tool(job, tool, tool_name) for job in jobs}
     initial_bodies = {
         job["id"]: _request_body(
             model=model,
             messages=list(job["messages"]),
-            tool=tool,
+            tool=job_tools[job["id"]],
             options=options,
         )
         for job in jobs
@@ -212,6 +225,9 @@ async def run(
         "timeout_seconds": timeout_seconds,
         "max_transport_attempts": max_transport_attempts,
         "max_semantic_attempts": max_semantic_attempts,
+        "job_tool_sha256": {
+            job_id: _sha256(job_tools[job_id]) for job_id in sorted(job_ids)
+        },
         "jobs": {job_id: _sha256(initial_bodies[job_id]) for job_id in sorted(job_ids)},
     }
     jobs_by_id = {job["id"]: job for job in jobs}
@@ -298,7 +314,7 @@ async def run(
                         body = _request_body(
                             model=model,
                             messages=messages,
-                            tool=tool,
+                            tool=job_tools[job_id],
                             options=options,
                         )
                         semantic = {
@@ -312,7 +328,7 @@ async def run(
                         body = _request_body(
                             model=model,
                             messages=messages,
-                            tool=tool,
+                            tool=job_tools[job_id],
                             options=options,
                         )
                         if semantic["request_sha256"] != _sha256(body):

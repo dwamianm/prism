@@ -28,23 +28,22 @@ def _atom(atom_id: str, status: str = "supported") -> dict:
     }
 
 
-def _assignment(token: int, atom: int, role: str) -> dict:
-    return {"token_id": f"C{token:04d}", "atom_id": f"A{atom:02d}", "role": role}
+def _role(atom: int, role: str) -> dict:
+    return {"atom_id": f"A{atom:02d}", "role": role}
 
 
 def _complete_arguments() -> dict:
     return {
         "atoms": [_atom("A01"), _atom("A02", "unsupported")],
-        "assignments": [
-            _assignment(1, 1, "subject"),
-            _assignment(2, 1, "relation"),
-            _assignment(3, 1, "relation"),
-            _assignment(4, 1, "object"),
-            _assignment(1, 2, "subject"),
-            _assignment(6, 2, "relation"),
-            _assignment(7, 2, "relation"),
-            _assignment(9, 2, "object"),
-        ],
+        "token_roles": {
+            "C0001": [_role(1, "subject"), _role(2, "subject")],
+            "C0002": [_role(1, "relation")],
+            "C0003": [_role(1, "relation")],
+            "C0004": [_role(1, "object")],
+            "C0006": [_role(2, "relation")],
+            "C0007": [_role(2, "relation")],
+            "C0009": [_role(2, "object")],
+        },
     }
 
 
@@ -59,23 +58,20 @@ def test_token_roles_accept_complete_decomposition_without_ranges() -> None:
 
 def test_token_roles_reject_missing_claim_token_and_missing_role() -> None:
     arguments = _complete_arguments()
-    arguments["assignments"] = [
-        value
-        for value in arguments["assignments"]
-        if value["token_id"] not in {"C0004", "C0009"}
-    ]
+    del arguments["token_roles"]["C0004"]
+    del arguments["token_roles"]["C0009"]
 
     valid, errors = subject._strict_validate(_item(), arguments)
 
     assert valid is False
-    assert "incomplete_claim_token_coverage" in errors
+    assert "token_role_key_set_invalid" in errors
     assert "A01_object_missing_word" in errors
     assert "A02_object_missing_word" in errors
 
 
 def test_token_roles_reject_duplicate_role_for_same_atom_token() -> None:
     arguments = _complete_arguments()
-    arguments["assignments"].append(_assignment(1, 1, "qualifier"))
+    arguments["token_roles"]["C0001"].append(_role(1, "qualifier"))
 
     valid, errors = subject._strict_validate(_item(), arguments)
 
@@ -90,6 +86,23 @@ def test_atomic_text_uses_only_ordered_authoritative_source_runs() -> None:
 
     assert text == "Maya works as a surgeon"
     assert identifiers == ("C0001", "C0006", "C0007", "C0009")
+
+
+def test_tool_schema_requires_every_substantive_token_property() -> None:
+    schema = subject._tool_for_item(_item())["function"]["parameters"]
+    token_roles = schema["properties"]["token_roles"]
+
+    assert token_roles["required"] == [
+        "C0001",
+        "C0002",
+        "C0003",
+        "C0004",
+        "C0006",
+        "C0007",
+        "C0009",
+    ]
+    assert set(token_roles["properties"]) == set(token_roles["required"])
+    assert token_roles["additionalProperties"] is False
 
 
 def test_strict_schema_rejects_unrecognized_fields() -> None:

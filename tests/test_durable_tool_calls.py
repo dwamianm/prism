@@ -213,3 +213,48 @@ async def test_transport_exhaustion_is_terminal_for_frozen_limits(
 
     await _run(state_path, times_out, max_transport_attempts=1)
     assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_each_job_can_bind_a_distinct_schema_for_the_same_tool(
+    tmp_path: Path,
+) -> None:
+    observed = []
+    second_tool = json.loads(json.dumps(TOOL))
+    second_tool["function"]["parameters"]["properties"] = {"other": {"type": "integer"}}
+    second_tool["function"]["parameters"]["required"] = ["other"]
+    jobs = [
+        _job(),
+        {
+            "id": "case-2",
+            "messages": [{"role": "user", "content": "other"}],
+            "tool": second_tool,
+        },
+    ]
+
+    async def caller(body):
+        observed.append(body["tools"][0])
+        key = next(iter(body["tools"][0]["function"]["parameters"]["properties"]))
+        response = _response(7)
+        response["message"]["tool_calls"][0]["function"]["arguments"] = {key: 7}
+        return response
+
+    state = await subject.run(
+        jobs=jobs,
+        state_path=tmp_path / "state.json",
+        run_identity={"trial": "per-job-schema"},
+        model="alias",
+        accepted_models=frozenset({"alias", "remote"}),
+        tool=TOOL,
+        options={"temperature": 0},
+        timeout_seconds=1,
+        max_transport_attempts=1,
+        max_semantic_attempts=1,
+        concurrency=1,
+        caller=caller,
+        validator=lambda _job_id, _args: (True, []),
+        repair_message=lambda errors: ",".join(errors),
+    )
+
+    assert state["complete"] is True
+    assert observed == [TOOL, second_tool]
