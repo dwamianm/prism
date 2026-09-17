@@ -27,6 +27,12 @@ The [research agenda](RESEARCH-AGENDA.md) tracks verified results, active
 comparison protocols and remaining capability gaps. RFC status and historical
 benchmark targets are not evidence of current product quality.
 
+The [2026-09-17 competitive landscape snapshot](COMPETITIVE-LANDSCAPE-2026-09-17.md)
+records PRME's point-in-time position against direct and adjacent memory
+products, including source URLs, adoption metadata, benchmark boundaries, and
+the source revision evaluated. Future reviews create new dated snapshots rather
+than rewriting this reference.
+
 Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [custom embedding providers](CUSTOM-EMBEDDINGS.md), and
 [entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
