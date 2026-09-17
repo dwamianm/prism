@@ -416,7 +416,7 @@ def register(
                 "source-preserving trace-projection adapter; exact raw traces remain "
                 "events while traveler final plans are retrieved per query."
             ),
-            "prme_retrieval_projection": "traveler_final_plan_v1",
+            "prme_retrieval_projection": "traveler_final_plan_v2",
             "prme_query_projection": (
                 "base traveler plus named plan dependencies outside the roster preamble"
             ),

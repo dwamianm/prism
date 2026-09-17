@@ -63,7 +63,8 @@ def test_trace_projection_keeps_only_named_final_plan():
     projection, name, is_base = _trace_projection(source)
     assert (name, is_base) == ("Alice", True)
     assert projection == (
-        "Traveler: Alice\nFinal plan:\n=== Alice's Plan ===\nDay 1: cobalt rail"
+        "Traveler: Alice\nTrip request:\nlarge task\nFinal plan:\n"
+        "=== Alice's Plan ===\nDay 1: cobalt rail"
     )
     assert "scratchpad" not in projection and "analysis first" not in projection
 
@@ -109,6 +110,7 @@ def test_travel_trace_uses_projection_but_retains_raw_source(config):
         assert result.status_code == 200
         prompt = result.json()["prompt"]
         assert "Day 1: base route" in prompt and "Day 1: cobalt rail" in prompt
+        assert "Trip request:\\ntrip" in prompt
         assert "private raw" not in prompt
         owner = app.state.owners["alice"]
         base_source = client.portal.call(

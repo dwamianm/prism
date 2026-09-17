@@ -48,8 +48,13 @@ def _trace_projection(chunk: str) -> tuple[str | None, str | None, bool]:
     matches = list(_PLAN_MARKER.finditer(plan))
     if matches:
         plan = plan[matches[-1].start():]
-    projection = f"Traveler: {name}\nFinal plan:\n{plan.strip()}"
-    return projection, name, value.get("is_base_person") is True
+    is_base = value.get("is_base_person") is True
+    parts = [f"Traveler: {name}"]
+    query = value.get("query")
+    if is_base and isinstance(query, str) and query.strip():
+        parts.append(f"Trip request:\n{query.strip()}")
+    parts.append(f"Final plan:\n{plan.strip()}")
+    return "\n".join(parts), name, is_base
 
 
 def _travel_reference_query(question: str, base_name: str | None) -> str:
@@ -132,7 +137,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
                 metadata={
                     "record_kind": "agent_environment_trace",
                     "retrieval_projection": (
-                        "traveler_final_plan_v1" if projection is not None else "source_v1"
+                        "traveler_final_plan_v2" if projection is not None else "source_v1"
                     ),
                 },
             )
