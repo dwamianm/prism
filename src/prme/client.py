@@ -257,6 +257,7 @@ class MemoryClient:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -274,11 +275,14 @@ class MemoryClient:
 
         Classification overrides and TTL match the async engine. Omit ttl_days
         to use the configured per-type default, or pass None for no expiry.
+        ``retrieval_content`` can provide a compact searchable/model-facing
+        representation while ``content`` remains the immutable source.
         """
         return self._run(
             self._engine.store(
                 content,
                 user_id=user_id,
+                retrieval_content=retrieval_content,
                 session_id=session_id,
                 role=role,
                 node_type=node_type,
@@ -299,6 +303,7 @@ class MemoryClient:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -316,6 +321,7 @@ class MemoryClient:
         return self._run(self._engine.store_with_receipt(
             content,
             user_id=user_id,
+            retrieval_content=retrieval_content,
             session_id=session_id,
             role=role,
             node_type=node_type,

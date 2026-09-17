@@ -154,6 +154,7 @@ async def engine_lifespan(server: FastMCP):
 async def memory_store(
     content: str,
     user_id: Optional[str] = None,
+    retrieval_content: Optional[str] = None,
     node_type: str = "note",
     scope: str = "personal",
     event_time: Optional[AwareDatetime] = None,
@@ -173,7 +174,9 @@ async def memory_store(
     full-text indexing. Returns the event ID and node ID.
 
     Args:
-        content: The text content to store as a memory.
+        content: Exact source text retained in the immutable event log.
+        retrieval_content: Optional compact text used for retrieval and model
+            context while preserving the full source in ``content``.
         user_id: User who owns this memory.
         node_type: Type of memory node. One of: entity, fact, decision,
             preference, task, instruction, summary, note. Default: note.
@@ -208,6 +211,7 @@ async def memory_store(
         receipt = await engine.store_with_receipt(
             content,
             user_id=user_id,
+            retrieval_content=retrieval_content,
             node_type=nt,
             scope=sc,
             role=role,

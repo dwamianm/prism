@@ -89,8 +89,15 @@ async def test_mcp_receipt_follows_its_event_and_raw_source_obeys_identity(confi
 
         monkeypatch.setattr(engine, "store", interleaved_store)
         ctx = SimpleNamespace(request_context=SimpleNamespace(lifespan_context={"engine": engine}))
-        receipt = json.loads(await memory_store("qualified MCP source", ctx=ctx))
+        receipt = json.loads(await memory_store(
+            "qualified MCP source with raw trace",
+            retrieval_content="qualified MCP projection",
+            ctx=ctx,
+        ))
         node = await engine.get_node(receipt["node_id"], user_id=user)
-        assert node.content == "qualified MCP source" and node.evidence_refs == [UUID(receipt["event_id"])]
-        assert json.loads(await memory_get_event(receipt["event_id"], ctx=ctx))["content"] == node.content
+        assert node.content == "qualified MCP projection"
+        assert node.evidence_refs == [UUID(receipt["event_id"])]
+        assert json.loads(await memory_get_event(receipt["event_id"], ctx=ctx))["content"] == (
+            "qualified MCP source with raw trace"
+        )
         assert "not found" in json.loads(await memory_get_event(foreign, ctx=ctx))["error"]

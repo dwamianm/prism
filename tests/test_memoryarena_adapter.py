@@ -7,7 +7,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benchmarks.diagnostics.hybrid_lexical import raw_config
-from benchmarks.diagnostics.memoryarena_server import create_app
+from benchmarks.diagnostics.memoryarena_server import (
+    _trace_projection,
+    _travel_reference_query,
+    create_app,
+)
 from prme.retrieval.tokenization import count_tokens
 from tests.test_durable_ingestion import MockEmbeddingProvider
 
@@ -48,6 +52,72 @@ def test_native_shapes_and_complete_memory_budget(config, budget):
         assert count_tokens(prompt[:-len(suffix)], config.packing.tokenizer) <= budget
         if budget == 4096:
             assert source in prompt
+
+
+def test_trace_projection_keeps_only_named_final_plan():
+    source = (
+        '{"name":"Alice","query":"large task","scratchpad":[{"tool_results":"huge"}],'
+        '"final_plan":"analysis first\\n=== Alice\'s Plan ===\\nDay 1: cobalt rail",'
+        '"is_base_person":true}'
+    )
+    projection, name, is_base = _trace_projection(source)
+    assert (name, is_base) == ("Alice", True)
+    assert projection == (
+        "Traveler: Alice\nFinal plan:\n=== Alice's Plan ===\nDay 1: cobalt rail"
+    )
+    assert "scratchpad" not in projection and "analysis first" not in projection
+
+
+def test_travel_reference_query_removes_roster_and_keeps_dependencies():
+    question = (
+        "I am Carol.\n"
+        "I'm traveling with Base, Alice, and Bob.\n"
+        "For breakfast, I'd like to join Alice.\n"
+        "Dinner should cost less than Bob's lunch."
+    )
+    assert _travel_reference_query(question, "Base") == "Base Bob Alice"
+
+
+def test_travel_trace_uses_projection_but_retains_raw_source(config):
+    app = create_app(config)
+    with TestClient(app) as client:
+        client.post("/memory/initialize", json=identity())
+        base = (
+            '{"name":"Base","query":"trip","is_base_person":true,'
+            '"final_plan":"=== Base\'s Plan ===\\nDay 1: base route"}'
+        )
+        alice = (
+            '{"name":"Alice","query":"task","scratchpad":[{"tool_results":"private raw"}],'
+            '"final_plan":"=== Alice\'s Plan ===\\nDay 1: cobalt rail"}'
+        )
+        base_event = client.post(
+            "/memory/add", json={**identity(), "chunk": base}
+        ).json()["response"]["event_id"]
+        alice_event = client.post(
+            "/memory/add", json={**identity(), "chunk": alice}
+        ).json()["response"]["event_id"]
+        result = client.post(
+            "/memory/wrap_user_prompt",
+            json={
+                **identity(),
+                "question": (
+                    "I am Carol.\nI'm traveling with Base and Alice.\n"
+                    "For breakfast, I'd like to join Alice."
+                ),
+            },
+        )
+        assert result.status_code == 200
+        prompt = result.json()["prompt"]
+        assert "Day 1: base route" in prompt and "Day 1: cobalt rail" in prompt
+        assert "private raw" not in prompt
+        owner = app.state.owners["alice"]
+        base_source = client.portal.call(
+            partial(app.state.engine.get_event, base_event, user_id=owner)
+        )
+        alice_source = client.portal.call(
+            partial(app.state.engine.get_event, alice_event, user_id=owner)
+        )
+        assert base_source.content == base and alice_source.content == alice
 
 
 def test_reinitialization_is_fresh_and_retains_previous_source(config):

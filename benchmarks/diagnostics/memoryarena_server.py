@@ -9,7 +9,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 from contextlib import asynccontextmanager
+import json
 from pathlib import Path
+import re
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
@@ -19,6 +21,50 @@ from prme import MemoryEngine, PRMEConfig
 from prme.retrieval.tokenization import count_tokens
 from prme.types import SourceType
 from benchmarks.diagnostics.hybrid_lexical import raw_config
+
+
+_PLAN_MARKER = re.compile(r"^=== .+?'s Plan ===\s*$", re.MULTILINE)
+_POSSESSIVE_NAME = re.compile(r"\b([A-Z][A-Za-z'-]+)[’']s\b")
+_COMPANION_NAME = re.compile(
+    r"\b(?:join|with)\s+([A-Z][A-Za-z'-]+)\b",
+)
+
+
+def _trace_projection(chunk: str) -> tuple[str | None, str | None, bool]:
+    """Return a compact traveler/final-plan view without discarding the source."""
+    try:
+        value = json.loads(chunk)
+    except (TypeError, json.JSONDecodeError):
+        return None, None, False
+    if not isinstance(value, dict):
+        return None, None, False
+    name = value.get("name")
+    plan = value.get("final_plan")
+    if not isinstance(name, str) or not name.strip():
+        return None, None, False
+    if not isinstance(plan, str) or not plan.strip():
+        return None, None, False
+    name = name.strip()
+    matches = list(_PLAN_MARKER.finditer(plan))
+    if matches:
+        plan = plan[matches[-1].start():]
+    projection = f"Traveler: {name}\nFinal plan:\n{plan.strip()}"
+    return projection, name, value.get("is_base_person") is True
+
+
+def _travel_reference_query(question: str, base_name: str | None) -> str:
+    """Route by plan dependencies, excluding the participant-roster preamble."""
+    lines = [line.strip() for line in question.splitlines() if line.strip()]
+    constraints = "\n".join(lines[2:]) if len(lines) > 2 else question
+    names: list[str] = []
+    if base_name:
+        names.append(base_name)
+    for pattern in (_POSSESSIVE_NAME, _COMPANION_NAME):
+        for match in pattern.finditer(constraints):
+            name = match.group(1)
+            if name not in names:
+                names.append(name)
+    return " ".join(names) if names else question
 
 
 class Identity(BaseModel):
@@ -47,6 +93,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
         async with MemoryEngine.open(config) as engine:
             app.state.engine = engine
             app.state.owners = {}
+            app.state.base_names = {}
             app.state.lock = asyncio.Lock()
             yield
 
@@ -67,6 +114,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
         check(identity)
         async with app.state.lock:
             app.state.owners[identity.user_id] = str(uuid4())
+            app.state.base_names[identity.user_id] = None
         return {"status": "ok", **identity.model_dump()}
 
     @app.post("/memory/add")
@@ -74,10 +122,19 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
         async with app.state.lock:
             user = owner(request)
             engine = app.state.engine
+            projection, traveler_name, is_base = _trace_projection(request.chunk)
+            if is_base:
+                app.state.base_names[request.user_id] = traveler_name
             event_id = await engine.store(
                 request.chunk, user_id=user, role="system",
                 source_type=SourceType.EXTERNAL_DOCUMENT,
-                metadata={"record_kind": "agent_environment_trace"},
+                retrieval_content=projection,
+                metadata={
+                    "record_kind": "agent_environment_trace",
+                    "retrieval_projection": (
+                        "traveler_final_plan_v1" if projection is not None else "source_v1"
+                    ),
+                },
             )
             status = await engine.processing_status(event_id, user_id=user)
             if status is None or status.status != "complete":
@@ -88,8 +145,13 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
     @app.post("/memory/wrap_user_prompt")
     async def wrap(request: Query):
         async with app.state.lock:
+            user = owner(request)
+            retrieval_query = _travel_reference_query(
+                request.question,
+                app.state.base_names[request.user_id],
+            )
             result = await app.state.engine.retrieve(
-                request.question, user_id=owner(request), token_budget=inner_budget,
+                retrieval_query, user_id=user, token_budget=inner_budget,
                 include_cross_scope=False,
             )
             context = result.bundle.render() or "None"

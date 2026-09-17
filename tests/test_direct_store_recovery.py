@@ -34,6 +34,61 @@ async def test_source_typed_snapshot_and_work_are_atomic_and_scoped(config, user
         assert await engine._event_store.get_direct_store(str(event.id), user_id=user) == saved
 
 
+async def test_projected_direct_store_preserves_source_and_repairs_projection(config, user, monkeypatch):
+    source = '{"name":"Alice","scratchpad":"very large tool trace","final":"Use cobalt rail"}'
+    projection = "Alice final plan: Use cobalt rail"
+    async with MemoryEngine.open(config) as engine:
+        with monkeypatch.context() as outage:
+            outage.setattr(
+                engine._vector_index,
+                "index",
+                AsyncMock(side_effect=OSError("offline")),
+            )
+            receipt = await engine.store_with_receipt(
+                source,
+                retrieval_content=projection,
+                user_id=user,
+                metadata={"record_kind": "agent_trace"},
+            )
+        event_id = str(receipt.event_id)
+        assert (await engine.get_event(event_id, user_id=user)).content == source
+        assert receipt.node.content == projection
+        record = await engine._event_store.get_direct_store(event_id, user_id=user)
+        assert record.schema_version == 2 and record.node.content == projection
+        assert (await engine.processing_status(event_id, user_id=user)).status == "pending"
+        assert await engine._lexical_index.search("scratchpad tool trace", user) == []
+        assert [
+            hit["node_id"]
+            for hit in await engine._lexical_index.search("cobalt rail", user)
+        ] == [str(receipt.node_id)]
+
+    async with MemoryEngine.open(config) as engine:
+        assert (await engine.process_pending(user_id=user)).processed == 1
+        event = await engine.get_event(event_id, user_id=user)
+        node = (await engine.get_event_nodes(event_id, user_id=user))[0]
+        record = await engine._event_store.get_direct_store(event_id, user_id=user)
+        assert event.content == source
+        assert node.id == record.node.id
+        assert node.content == record.node.content == projection
+        assert node.evidence_refs == record.node.evidence_refs == [event.id]
+        assert node.metadata == record.node.metadata == {"record_kind": "agent_trace"}
+        assert [
+            hit["node_id"]
+            for hit in await engine._vector_index.search(projection, user)
+        ] == [str(node.id)]
+
+
+async def test_equal_retrieval_content_keeps_version_one_record(config, user):
+    async with MemoryEngine.open(config) as engine:
+        event_id = await engine.store(
+            "identical source and memory",
+            retrieval_content="identical source and memory",
+            user_id=user,
+        )
+        record = await engine._event_store.get_direct_store(event_id, user_id=user)
+        assert record.schema_version == 1
+
+
 @pytest.mark.parametrize("failed", ["vector", "lexical"])
 async def test_store_retains_typed_memory_and_repairs_index_after_restart(config, user, monkeypatch, failed):
     source = "Always store timestamps in UTC"
