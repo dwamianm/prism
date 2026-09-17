@@ -29,11 +29,13 @@ _COMPANION_NAME = re.compile(
     rf"\b(?:join|with)\s+({_TRAVELER_NAME})\b",
 )
 CONFIRMED_PLAN_CONTEXT_CONTRACT = (
-    "Values in confirmed records are canonical identifiers. When referring to "
-    "the same place, person, venue, route, or other value, copy its spelling "
-    "verbatim, including punctuation, repeated spaces, and parenthesized "
-    "qualifiers. Do not shorten, normalize, or repair it when a tool uses a "
-    "different surface form."
+    "FINAL-ANSWER VALUE FIDELITY: Use each tool's accepted argument form for "
+    "tool calls. When writing the final answer, treat values in confirmed "
+    "records as canonical identifiers. If the answer refers to the same place, "
+    "person, venue, route, or other value, copy its confirmed spelling verbatim, "
+    "including punctuation, repeated spaces, and parenthesized qualifiers, even "
+    "when a tool returns a shorter form. Do not normalize or repair the final-"
+    "answer value."
 )
 
 
@@ -219,7 +221,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
             metadata = (
                 {
                     "record_kind": "agent_environment_trace",
-                    "retrieval_projection": "traveler_confirmed_plan_v4",
+                    "retrieval_projection": "traveler_confirmed_plan_v5",
                     "traveler_name": traveler_name,
                     "base_traveler": is_base,
                 }
