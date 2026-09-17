@@ -431,9 +431,12 @@ def register(
     seed: int,
     groups_per_stratum: int,
     excluded_group_ids: set[int],
+    cohort_role: str = "development",
 ) -> dict[str, Any]:
     if output.exists():
         raise RuntimeError("registration output already exists")
+    if cohort_role not in {"development", "confirmation"}:
+        raise ValueError("cohort role must be development or confirmation")
     _check_upstream(upstream)
     revision = _check_prme_clean(root)
     dataset, dataset_identity = _load_dataset()
@@ -460,6 +463,7 @@ def register(
         "dataset": dataset_identity,
         "databases": _database_identity(upstream),
         "cohort": {
+            "role": cohort_role,
             "selection": "seeded stratified sample by number of travelers",
             "seed": seed,
             "groups_per_stratum": groups_per_stratum,
@@ -530,7 +534,12 @@ def register(
                 "minimum_prme_minus_native_strict_sps_points": -5.0,
             },
             "limits": [
-                "Development cohort; it does not establish universal superiority.",
+                (
+                    "Fresh confirmation cohort; it does not establish universal "
+                    "superiority."
+                    if cohort_role == "confirmation"
+                    else "Development cohort; it does not establish universal superiority."
+                ),
                 "The cloud route pins a local manifest and remote alias, not remote weights.",
                 "Strict string scoring is not a semantic itinerary-validity judge.",
                 "A single generation per arm does not estimate model variance.",
@@ -1139,6 +1148,11 @@ def _parser() -> argparse.ArgumentParser:
     register_parser.add_argument("--seed", type=int, default=20260917)
     register_parser.add_argument("--groups-per-stratum", type=int, default=3)
     register_parser.add_argument(
+        "--cohort-role",
+        choices=("development", "confirmation"),
+        default="development",
+    )
+    register_parser.add_argument(
         "--exclude-group-id", type=int, action="append", default=[1]
     )
     run_parser = subparsers.add_parser("run")
@@ -1162,6 +1176,7 @@ def main() -> None:
             seed=args.seed,
             groups_per_stratum=args.groups_per_stratum,
             excluded_group_ids=set(args.exclude_group_id),
+            cohort_role=args.cohort_role,
         )
     else:
         value = run(
