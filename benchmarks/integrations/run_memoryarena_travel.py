@@ -509,7 +509,12 @@ def register(
                 "source-preserving trace-projection adapter; exact raw traces remain "
                 "events while traveler final plans are retrieved per query."
             ),
-            "prme_retrieval_projection": "traveler_confirmed_plan_v3",
+            "prme_retrieval_projection": "traveler_confirmed_plan_v4",
+            "prme_value_binding_policy": (
+                "Source-backed current-city values with parenthesized qualifiers are "
+                "stored as typed presentation/lookup pairs. Context retains both exact "
+                "forms; no generated plan or tool call is rewritten."
+            ),
             "prme_query_projection": (
                 "base traveler plus exact occurrences of previously stored traveler "
                 "names in the constraint body, excluding the roster preamble"

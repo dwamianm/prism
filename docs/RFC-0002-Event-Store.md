@@ -148,6 +148,15 @@ in the immutable event while the separately checksummed node text is indexed and
 packed into model context. Version 2 rejects an identical projection so ordinary
 stores continue to produce version-1 records.
 
+Direct stores may also attach versioned typed value bindings in event and node
+metadata. Each caller-supplied presentation form must occur verbatim in both the
+source and indexed text. Retrieval exposes a binding only when that form survives
+packing; exact complete tool-argument resolution returns source-node provenance
+and rejects conflicting mappings. This operational mapping is not model
+inference, semantic validation, substring rewriting or generated-answer repair.
+It uses the existing direct-store record version because the complete metadata
+snapshot was already part of both versioned node formats.
+
 Recovery creates a missing graph node from the saved values and repairs its
 indexes without an LLM. Existing graph state is retained, including retirement.
 Lexical replacement commits deletion and insertion together; vector replacement

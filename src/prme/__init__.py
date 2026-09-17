@@ -53,6 +53,12 @@ from prme.models.processing import (
     ProcessingStatus,
     StoreReceipt,
 )
+from prme.models.value_bindings import (
+    MemoryValueBinding,
+    RetrievedValueBinding,
+    ToolArgumentReplacement,
+    ToolArgumentResolution,
+)
 from prme.storage.fast_ingest import FastIngestConflict
 from prme.storage.alias_review import (
     AliasProposalDecision,
@@ -255,6 +261,7 @@ __all__ = [
     "MaterializationError",
     "MemoryClient",
     "MemoryEngine",
+    "MemoryValueBinding",
     "MemoryWorkspace",
     "NamespaceInfo",
     "NamespaceMemory",
@@ -275,6 +282,7 @@ __all__ = [
     "RetrievalPipeline",
     "RetrievalResponse",
     "RetrievalReceipt",
+    "RetrievedValueBinding",
     "RetrievalMode",
     "RankingMultipliers",
     "RankingProfile",
@@ -291,6 +299,8 @@ __all__ = [
     "StoreReceipt",
     "TemporalRelationConfig",
     "TemporalRelationMetadata",
+    "ToolArgumentReplacement",
+    "ToolArgumentResolution",
     "ablate_context",
     "assess_context_presence",
     "assess_answerability",

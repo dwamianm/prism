@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import assert_type
 from uuid import UUID
 
-from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, ProductAlignmentCandidate, ProductCandidateEntity, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
+from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, MemoryValueBinding, ProductAlignmentCandidate, ProductCandidateEntity, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievedValueBinding, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ToolArgumentResolution, ablate_context, assess_context_presence, evaluate_full_retrieval
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
@@ -18,8 +18,14 @@ def consume(client: MemoryClient) -> None:
                               event_time=datetime(2024, 3, 10, tzinfo=timezone.utc),
                               metadata={"source": "import"}), str)
     assert_type(client.store_with_receipt(
-        "Alice uses Rust",
+        "Alice uses Rust 2024 Edition",
         user_id="alice",
+        value_bindings=[MemoryValueBinding(
+            reference="rust-edition",
+            kind="language",
+            presentation="Rust 2024 Edition",
+            lookup="rust-2024",
+        )],
         valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
         valid_to=datetime(2026, 1, 1, tzinfo=timezone.utc),
     ), StoreReceipt)
@@ -32,6 +38,12 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
     assert_type(client.retrieve("preferences", user_id="alice",
                                 retrieval_mode=RetrievalMode.EXPLICIT), RetrievalResponse)
+    response = client.retrieve("Rust", user_id="alice")
+    assert_type(response.bundle.value_bindings(), tuple[RetrievedValueBinding, ...])
+    assert_type(
+        response.bundle.resolve_tool_arguments({"language": "Rust 2024 Edition"}),
+        ToolArgumentResolution,
+    )
     assert_type(client.get_node("node-id"), MemoryNode | None)
     assert_type(
         client.propose_product_alignment(

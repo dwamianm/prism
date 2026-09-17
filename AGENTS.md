@@ -60,6 +60,13 @@ encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
 metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
+Direct stores may carry source-backed `MemoryValueBinding` presentation/lookup
+pairs. Presentations must occur verbatim in both immutable source and retrieval
+text. Only bindings visible in packed context can resolve tool arguments, and
+resolution replaces exact complete JSON string values while returning provenance;
+it never performs substring or generated-answer rewriting. The reserved metadata
+key is `prme_value_bindings_v1`. See `docs/VALUE-BINDINGS.md`.
+
 Fresh built-in extractions record `grounding_policy="speech_act_v11"`; plans
 made from those records use `speech_act_v12`. V7 recovers an exact decimal from
 its source phrase when provider JSON used a float, without converting or trusting

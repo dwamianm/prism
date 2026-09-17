@@ -63,6 +63,10 @@ ordering, exact token budgets, evidence limits and receipt compatibility.
 resolver, deterministic citation validation and arithmetic, independent Jev
 gate, fixed-budget repacking, failure behavior, receipts and held-out evidence.
 
+[Typed presentation and lookup values](VALUE-BINDINGS.md) documents source-bound
+value pairs, visible-context filtering, exact tool-argument resolution and the
+Python, HTTP and MCP contracts.
+
 [Answerability and grounded abstention](ANSWERABILITY.md) documents the optional
 post-retrieval evidence-sufficiency evaluator, partial answers, cited conflicts,
 provider configuration and audit boundary.

@@ -80,6 +80,47 @@ async def test_store_preserves_raw_source_and_exposes_retrieval_projection(confi
             assert node["content"] == "Compact final answer: cobalt route"
 
 
+async def test_store_accepts_source_bound_value_bindings(config, user):
+    async with MemoryEngine.open(config) as engine:
+        async with client_for(app_for(config, engine, user)) as client:
+            source = '{"plan":"Current City: Salt Lake City(Utah)"}'
+            response = await client.post(
+                "/v1/store",
+                json={
+                    "content": source,
+                    "retrieval_content": "Current City: Salt Lake City(Utah)",
+                    "value_bindings": [{
+                        "reference": "current-city-1",
+                        "kind": "city",
+                        "presentation": "Salt Lake City(Utah)",
+                        "lookup": "Salt Lake City",
+                    }],
+                },
+            )
+            assert response.status_code == 200, response.text
+            receipt = response.json()
+            event = (await client.get(f'/v1/events/{receipt["event_id"]}')).json()
+            node = (await client.get(f'/v1/nodes/{receipt["node_id"]}')).json()
+            assert event["content"] == source
+            assert event["metadata"] == node["metadata"]
+            assert event["metadata"]["prme_value_bindings_v1"][0] == {
+                "schema_version": 1,
+                "reference": "current-city-1",
+                "kind": "city",
+                "presentation": "Salt Lake City(Utah)",
+                "lookup": "Salt Lake City",
+                "lookup_authority": "caller",
+            }
+            retrieved = await client.post(
+                "/v1/retrieve",
+                json={"query": "Salt Lake City", "token_budget": 4096},
+            )
+            assert retrieved.status_code == 200, retrieved.text
+            assert retrieved.json()["value_bindings"][0]["presentation"] == (
+                "Salt Lake City(Utah)"
+            )
+
+
 async def test_store_rejects_invalid_validity_before_source_admission(config, user):
     async with MemoryEngine.open(config) as engine:
         async with client_for(app_for(config, engine, user)) as client:

@@ -41,6 +41,7 @@ from prme.models import (
     Event,
     FastIngestItem,
     MemoryNode,
+    MemoryValueBinding,
     ProcessingResult,
     ProcessingStatus,
     StoreReceipt,
@@ -644,6 +645,7 @@ class MemoryEngine:
         *,
         user_id: str,
         retrieval_content: str | None = None,
+        value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -672,6 +674,9 @@ class MemoryEngine:
             content: Exact source text retained in the immutable event log.
             retrieval_content: Optional compact representation to index, rank,
                 and place in model context. The source event remains ``content``.
+            value_bindings: Optional typed presentation/lookup pairs. Every
+                presentation must occur verbatim in both source and retrieval
+                content. Lookup values remain caller-supplied operational data.
             user_id: Owner user ID.
             session_id: Optional session identifier.
             role: Event role ('user', 'assistant', 'tool', or 'system').
@@ -703,6 +708,14 @@ class MemoryEngine:
         validate_source_time(event_time)
         validate_validity_window(valid_from, valid_to)
         materialized_content = content if retrieval_content is None else retrieval_content
+        from prme.models.value_bindings import attach_value_bindings
+
+        metadata = attach_value_bindings(
+            source_content=content,
+            retrieval_content=materialized_content,
+            metadata=metadata,
+            value_bindings=value_bindings,
+        )
         # Infer epistemic_type and source_type if not provided
         # Lazy imports to avoid circular dependencies
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
@@ -968,6 +981,7 @@ class MemoryEngine:
         *,
         user_id: str,
         retrieval_content: str | None = None,
+        value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -996,6 +1010,7 @@ class MemoryEngine:
             content,
             user_id=user_id,
             retrieval_content=retrieval_content,
+            value_bindings=value_bindings,
             session_id=session_id,
             role=role,
             node_type=node_type,
