@@ -139,52 +139,54 @@ def test_server_attempt_paths_do_not_reuse_a_prior_pack(tmp_path: Path, monkeypa
     assert (tmp_path / "prme-adapter-attempt-2.log").is_file()
 
 
-def test_actor_transport_policy_is_explicitly_bound():
-    class Configured:
-        timeout = 120
-        max_retries = 1
-
-    class Client:
-        def with_options(self, **options):
-            assert options == {"timeout": 120, "max_retries": 1}
-            return Configured()
-
-    class Wrapper:
-        client = Client()
-
+def test_actor_transport_policy_is_explicitly_bound(monkeypatch):
     class Agent:
-        client = Wrapper()
+        client = object()
 
+    configured = object()
+    monkeypatch.setattr(runner, "OllamaNativeTravelClient", lambda actor: configured)
     agent = Agent()
-    runner._configure_actor_client(agent, {
-        "request_timeout_seconds": 120,
-        "sdk_max_retries": 1,
+    runner._configure_actor_client(agent, {"transport": "ollama_native_chat"})
+    assert agent.client is configured
+
+
+def test_actor_transport_rejects_unregistered_compatibility_path():
+    with pytest.raises(RuntimeError, match="transport is unsupported"):
+        runner._configure_actor_client(type("Agent", (), {})(), {
+            "transport": "openai_compatibility",
+        })
+
+
+def test_native_response_parsing_preserves_parallel_tool_calls():
+    client = runner.OllamaNativeTravelClient.__new__(runner.OllamaNativeTravelClient)
+    client.accepted_models = {"deepseek"}
+    client.total_input_tokens = 0
+    client.total_output_tokens = 0
+    client.turn = 4
+    response = client._parse({
+        "model": "deepseek",
+        "done": True,
+        "done_reason": "stop",
+        "prompt_eval_count": 100,
+        "eval_count": 20,
+        "message": {
+            "content": "searching",
+            "tool_calls": [
+                {"function": {"name": "FlightSearch", "arguments": {"date": "2022-01-01"}}},
+                {"function": {"name": "CitySearch", "arguments": {"state": "Texas"}}},
+            ],
+        },
     })
-    assert isinstance(agent.client.client, Configured)
 
-
-def test_actor_transport_policy_accepts_httpx_timeout_objects():
-    class Timeout:
-        read = 120
-
-    class Configured:
-        timeout = Timeout()
-        max_retries = 1
-
-    class Client:
-        def with_options(self, **_options):
-            return Configured()
-
-    class Wrapper:
-        client = Client()
-
-    class Agent:
-        client = Wrapper()
-
-    runner._configure_actor_client(Agent(), {
-        "request_timeout_seconds": 120,
-        "sdk_max_retries": 1,
-    })
+    assert response.content == "searching"
+    assert [(call.id, call.name) for call in response.tool_calls] == [
+        ("native_4_0", "FlightSearch"), ("native_4_1", "CitySearch")
+    ]
+    assert client.get_usage_stats() == {
+        "total_input_tokens": 100,
+        "total_output_tokens": 20,
+        "total_cost": 0.0,
+    }
 
 
 def test_resume_restores_native_history_and_replays_prme_trace():

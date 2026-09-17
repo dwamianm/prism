@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import redirect_stdout
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import io
@@ -62,6 +63,148 @@ DATABASE_FILES = (
     "env/env_systems/travel_planner_env/database/background/citySet_with_states.txt",
     "env/env_systems/travel_planner_env/database/background/stateSet.txt",
 )
+
+
+@dataclass
+class _NativeToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any]
+
+
+@dataclass
+class _NativeResponse:
+    content: str | None
+    tool_calls: list[_NativeToolCall] | None
+    raw_response: dict[str, Any]
+
+
+class OllamaNativeTravelClient:
+    """MemoryArena model-client contract over Ollama's native chat endpoint."""
+
+    def __init__(self, actor: dict[str, Any]):
+        import httpx
+
+        self.model_name = actor["model"]
+        runtime = actor["runtime_identity"]
+        self.accepted_models = {
+            value
+            for value in (self.model_name, runtime.get("remote_model"))
+            if isinstance(value, str) and value
+        }
+        self.options = dict(actor["native_options"])
+        self.think = actor["think"]
+        self.attempts = actor["transport_attempts"]
+        self.client = httpx.Client(
+            base_url=runtime["api_base_url"],
+            timeout=actor["request_timeout_seconds"],
+        )
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.turn = 0
+
+    def chat_with_tools(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        temperature: float = 0.0,
+        max_tokens: int = 32768,
+    ) -> _NativeResponse:
+        if temperature != self.options["temperature"]:
+            raise RuntimeError("actor temperature differs from registration")
+        options = {**self.options, "num_predict": max_tokens}
+        body = {
+            "model": self.model_name,
+            "messages": messages,
+            "stream": False,
+            "think": self.think,
+            "options": options,
+            "tools": tools or None,
+        }
+        last_error = None
+        for _attempt in range(self.attempts):
+            try:
+                response = self.client.post("/api/chat", json=body)
+                response.raise_for_status()
+                value = response.json()
+                return self._parse(value)
+            except Exception as error:  # transport/schema failures are bounded alike
+                last_error = error
+        raise RuntimeError("Ollama native actor attempts exhausted") from last_error
+
+    def _parse(self, value: Any) -> _NativeResponse:
+        if (
+            not isinstance(value, dict)
+            or value.get("model") not in self.accepted_models
+            or value.get("done") is not True
+            or value.get("done_reason") != "stop"
+        ):
+            raise ValueError("Ollama returned an incomplete or foreign response")
+        message = value.get("message")
+        if not isinstance(message, dict):
+            raise ValueError("Ollama response has no assistant message")
+        prompt_tokens = value.get("prompt_eval_count")
+        output_tokens = value.get("eval_count")
+        if (
+            type(prompt_tokens) is not int
+            or prompt_tokens < 0
+            or type(output_tokens) is not int
+            or output_tokens < 0
+        ):
+            raise ValueError("Ollama response has invalid token observations")
+        calls = message.get("tool_calls")
+        parsed_calls = None
+        if calls:
+            if not isinstance(calls, list):
+                raise ValueError("Ollama tool calls must be a list")
+            parsed_calls = []
+            for index, call in enumerate(calls):
+                function = call.get("function") if isinstance(call, dict) else None
+                if not isinstance(function, dict):
+                    raise ValueError("Ollama tool call lacks a function")
+                name = function.get("name")
+                arguments = function.get("arguments")
+                if not isinstance(name, str) or not isinstance(arguments, dict):
+                    raise ValueError("Ollama tool call has invalid arguments")
+                parsed_calls.append(_NativeToolCall(
+                    id=f"native_{self.turn}_{index}",
+                    name=name,
+                    arguments=arguments,
+                ))
+        self.turn += 1
+        self.total_input_tokens += prompt_tokens
+        self.total_output_tokens += output_tokens
+        content = message.get("content")
+        if content is not None and not isinstance(content, str):
+            raise ValueError("Ollama assistant content must be text or null")
+        return _NativeResponse(content, parsed_calls, value)
+
+    def format_assistant_tool_calls(
+        self, tool_calls: list[_NativeToolCall]
+    ) -> dict[str, Any]:
+        return {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"function": {"name": call.name, "arguments": call.arguments}}
+                for call in tool_calls
+            ],
+        }
+
+    def format_tool_result(
+        self, tool_call_id: str, result: str, name: str | None = None
+    ) -> dict[str, Any]:
+        del tool_call_id
+        if not name:
+            raise ValueError("Ollama native tool results require a tool name")
+        return {"role": "tool", "tool_name": name, "content": str(result)}
+
+    def get_usage_stats(self) -> dict[str, Any]:
+        return {
+            "total_input_tokens": self.total_input_tokens,
+            "total_output_tokens": self.total_output_tokens,
+            "total_cost": 0.0,
+        }
 
 
 def _canonical(value: Any) -> bytes:
@@ -246,13 +389,16 @@ def register(
         },
         "actor": {
             "runtime_identity": runtime,
-            "openai_base_url": ollama_origin.rstrip("/") + "/v1",
+            "constructor_openai_base_url": ollama_origin.rstrip("/") + "/v1",
+            "transport": "ollama_native_chat",
             "model": model,
             "temperature": 0,
             "max_steps": 30,
             "tool_choice": "auto",
-            "request_timeout_seconds": 120,
-            "sdk_max_retries": 1,
+            "think": False,
+            "native_options": {"temperature": 0, "seed": 17},
+            "request_timeout_seconds": 180,
+            "transport_attempts": 2,
             "remote_weights_pinned": False,
         },
         "protocol": {
@@ -480,19 +626,9 @@ def _usage_delta(after: dict[str, Any], before: dict[str, Any]) -> dict[str, Any
 
 
 def _configure_actor_client(agent: Any, actor: dict[str, Any]) -> None:
-    """Bind transport tail latency without changing prompts or model settings."""
-    client = agent.client.client.with_options(
-        timeout=actor["request_timeout_seconds"],
-        max_retries=actor["sdk_max_retries"],
-    )
-    timeout = client.timeout
-    observed_timeout = getattr(timeout, "read", timeout)
-    if (
-        observed_timeout != actor["request_timeout_seconds"]
-        or client.max_retries != actor["sdk_max_retries"]
-    ):
-        raise RuntimeError("could not bind the registered actor transport policy")
-    agent.client.client = client
+    if actor.get("transport") != "ollama_native_chat":
+        raise RuntimeError("registered actor transport is unsupported")
+    agent.client = OllamaNativeTravelClient(actor)
 
 
 def _restore_actor_state(
@@ -749,7 +885,7 @@ def run(
     runtime = _upstream_runtime(upstream)
     previous_base = os.environ.get("OPENAI_API_BASE")
     previous_key = os.environ.get("OPENAI_API_KEY")
-    os.environ["OPENAI_API_BASE"] = registration["actor"]["openai_base_url"]
+    os.environ["OPENAI_API_BASE"] = registration["actor"]["constructor_openai_base_url"]
     os.environ["OPENAI_API_KEY"] = "ollama"
     process = None
     log = None
