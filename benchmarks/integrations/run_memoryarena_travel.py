@@ -459,8 +459,10 @@ def _configure_actor_client(agent: Any, actor: dict[str, Any]) -> None:
         timeout=actor["request_timeout_seconds"],
         max_retries=actor["sdk_max_retries"],
     )
+    timeout = client.timeout
+    observed_timeout = getattr(timeout, "read", timeout)
     if (
-        client.timeout.read != actor["request_timeout_seconds"]
+        observed_timeout != actor["request_timeout_seconds"]
         or client.max_retries != actor["sdk_max_retries"]
     ):
         raise RuntimeError("could not bind the registered actor transport policy")

@@ -121,11 +121,8 @@ def test_server_attempt_paths_do_not_reuse_a_prior_pack(tmp_path: Path, monkeypa
 
 
 def test_actor_transport_policy_is_explicitly_bound():
-    class Timeout:
-        read = 120
-
     class Configured:
-        timeout = Timeout()
+        timeout = 120
         max_retries = 1
 
     class Client:
@@ -145,3 +142,27 @@ def test_actor_transport_policy_is_explicitly_bound():
         "sdk_max_retries": 1,
     })
     assert isinstance(agent.client.client, Configured)
+
+
+def test_actor_transport_policy_accepts_httpx_timeout_objects():
+    class Timeout:
+        read = 120
+
+    class Configured:
+        timeout = Timeout()
+        max_retries = 1
+
+    class Client:
+        def with_options(self, **_options):
+            return Configured()
+
+    class Wrapper:
+        client = Client()
+
+    class Agent:
+        client = Wrapper()
+
+    runner._configure_actor_client(Agent(), {
+        "request_timeout_seconds": 120,
+        "sdk_max_retries": 1,
+    })
