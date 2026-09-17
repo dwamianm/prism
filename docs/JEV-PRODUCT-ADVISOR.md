@@ -4,7 +4,8 @@ PRME includes an opt-in advisor for deciding whether two caller-selected
 software-product records merit an unverified alias proposal. It uses TypeSafe
 Jev's typed Score and Noul responses, pins `jev-1.13.0`, and validates the exact
 response schema before returning a result. It does not scan the memory store,
-publish graph edges, or merge identities.
+select candidate pairs, or merge identities. An explicit node-pair workflow can
+publish positive advice as an unverified graph proposal.
 
 Set `JEV_API_KEY` in the environment or in the current directory's `.env` file,
 then compare a pair:
@@ -45,6 +46,39 @@ async with JevProductAdvisor() as advisor:
     second = await advisor.compare(other_left, other_right)
 ```
 
+To bind a positive assessment to existing PRME product entities, pass the exact
+node IDs and product records:
+
+```python
+proposal = await memory.propose_product_alignment(
+    left_node_id,
+    right_node_id,
+    {
+        "name": "Adobe Acrobat Standard 7.0 Windows",
+        "manufacturer": "Adobe",
+        "price": "299.00",
+    },
+    {
+        "name": "Adobe Acrobat 7 Standard for Windows",
+        "manufacturer": "Adobe Systems",
+        "price": "289.99",
+    },
+    user_id="alice",
+)
+if proposal.proposal_published:
+    print(proposal.proposal_edge_id, proposal.proposal_applied)
+```
+
+`MemoryClient.propose_product_alignment()` provides the same workflow without
+`await`. The standalone async function remains available from
+`prme.integrations.typesafe` for dependency injection and testing.
+
+Both nodes must be active `ENTITY` nodes owned by the supplied user, share the
+same scope and compatible provenance metadata, carry
+`metadata={"entity_type": "product"}`, and have content exactly matching the
+corresponding product name. The caller still selects the pair; this operation
+does not scan the store.
+
 `ProductEntity` accepts only `name`, `manufacturer`, and `price`. Name is
 required; the other fields may be empty. Fields remain strings because the
 confirmed protocol did not normalize currencies, infer units, or establish
@@ -64,16 +98,28 @@ your data policy prohibits an external service from processing.
 - `proposal_recommended` plus `automatic_merge_authorized=False`.
 
 The frozen proposal rule is `link_state.score >= 1.5`. A positive result is a
-candidate for review or for PRME's unverified `RELATES_TO` proposal path. It is
-not proof of identity. The integration deliberately has no mutation capability,
-so an external model response cannot bypass PRME's owner, scope, lifecycle,
-provenance, or merge-policy checks.
+candidate for review. `propose_product_alignment()` can atomically publish it as
+an unverified `RELATES_TO` edge and a checksummed `ALIAS_PROPOSED` version-2
+record. The record retains both node snapshots, both complete product inputs,
+the complete typed assessment, and its hashes. Publication revalidates owner,
+scope, active lifecycle, metadata compatibility, and the exact assessed node
+checksums while holding the backend transaction. Both entity nodes remain
+active. A negative result returns without graph or journal mutation.
+
+The unordered node pair has one durable proposal identity. A matching
+assessment-request retry returns the first committed assessment and edge without
+rewriting history. A preexisting legacy or version-1 proposal cannot be relabeled
+as Jev-backed; the evidence-aware call fails explicitly. External assessment
+data cannot bypass PRME's provenance or merge-policy checks.
 
 The client retries HTTP 429, 500, 502, 503, 504, and 529 responses and transport
 failures up to the configured limit. It fails closed if the service returns a
 different model, answer set, legend, invalid probability distribution, or token
 usage. Custom endpoints must use HTTPS. Credentials are excluded from model
-representations, hashes, and errors.
+representations, hashes, errors, edge metadata, and journal records. The product
+records and complete Jev response are stored locally in the version-2 journal,
+so applications should apply their data policy to both the external request and
+the local audit record.
 
 ## Evidence
 

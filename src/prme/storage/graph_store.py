@@ -13,7 +13,7 @@ from typing import Any, Protocol, runtime_checkable
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
-from prme.storage.alias_proposal import AliasProposalResult
+from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
@@ -72,6 +72,7 @@ class GraphStore(Protocol):
     async def propose_alias(
         self, node_a_id: str, node_b_id: str, *, user_id: str,
         alias_type: str, score: float,
+        evidence: AliasProposalEvidence | dict[str, Any] | None = None,
     ) -> AliasProposalResult | None:
         """Publish one durable, unverified alias relationship for a node pair."""
         ...

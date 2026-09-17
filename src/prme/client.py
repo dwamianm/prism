@@ -69,6 +69,11 @@ from prme.retrieval.models import RetrievalResponse
 _Result = TypeVar("_Result")
 
 if TYPE_CHECKING:
+    from prme.integrations.typesafe import (
+        JevProductAdvisorConfig,
+        JevProductProposal,
+        ProductEntity,
+    )
     from prme.models.aggregation import (
         AssertionAggregation,
         AssertionQuery,
@@ -594,6 +599,28 @@ class MemoryClient:
     def get_node(self, node_id: str, *, user_id: str | None = None, include_superseded: bool = False) -> MemoryNode | None:
         """Get a single node by ID. Returns MemoryNode or None."""
         return self._run(self._engine.get_node(node_id, user_id=user_id, include_superseded=include_superseded))
+
+    def propose_product_alignment(
+        self,
+        left_node_id: str,
+        right_node_id: str,
+        left: "ProductEntity | dict[str, str]",
+        right: "ProductEntity | dict[str, str]",
+        *,
+        user_id: str,
+        config: "JevProductAdvisorConfig | None" = None,
+    ) -> "JevProductProposal":
+        """Assess an explicit product pair and publish only unverified advice."""
+        return self._run(
+            self._engine.propose_product_alignment(
+                left_node_id,
+                right_node_id,
+                left,
+                right,
+                user_id=user_id,
+                config=config,
+            )
+        )
 
     def get_provenance(
         self, node_id: str, *, user_id: str | None = None,

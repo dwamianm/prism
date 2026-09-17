@@ -111,6 +111,11 @@ if TYPE_CHECKING:
     from prme.storage.encryption import EncryptionProvider
 
     from prme.ingestion.pipeline import IngestionPipeline
+    from prme.integrations.typesafe import (
+        JevProductAdvisorConfig,
+        JevProductProposal,
+        ProductEntity,
+    )
     from prme.organizer.models import OrganizeResult
     from prme.retrieval.config import ScoringWeights
     from prme.retrieval.models import RetrievalResponse
@@ -1966,6 +1971,29 @@ class MemoryEngine:
             )
         return await self._graph_store.get_node(
             node_id, include_superseded=include_superseded
+        )
+
+    async def propose_product_alignment(
+        self,
+        left_node_id: str,
+        right_node_id: str,
+        left: "ProductEntity | dict[str, str]",
+        right: "ProductEntity | dict[str, str]",
+        *,
+        user_id: str,
+        config: "JevProductAdvisorConfig | None" = None,
+    ) -> "JevProductProposal":
+        """Assess an explicit product pair and publish only unverified advice."""
+        from prme.integrations.typesafe import propose_product_alignment
+
+        return await propose_product_alignment(
+            self,
+            left_node_id,
+            right_node_id,
+            left,
+            right,
+            user_id=user_id,
+            config=config,
         )
 
     async def query_nodes(self, **kwargs) -> list[MemoryNode]:

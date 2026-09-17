@@ -113,8 +113,10 @@ memory/entity types, source type, session, event time and metadata. Non-entity
 copies require exact content and the same validity start. Vector similarity alone
 does not authorize merging claims; purely semantic aliases remain unverified
 `RELATES_TO` proposals. New proposals use deterministic pair/edge identities and
-atomically retain complete inputs and output in `ALIAS_PROPOSED`; existing
-random-ID proposal edges are reused without invented history. Extracted
+atomically retain complete inputs and output in `ALIAS_PROPOSED`. Version-2
+records can retain complete external assessment evidence bound to exact node
+snapshots; older records and random-ID proposal edges are never relabeled with
+invented history. Extracted
 unresolved English personal references are event-local under new
 `event_local_references_v4` plans; old plans replay unchanged.
 See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.
