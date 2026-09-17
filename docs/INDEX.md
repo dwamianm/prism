@@ -59,6 +59,10 @@ lossless special-float snapshots for previously admitted graph metadata.
 [Context packing](PACKING.md) explains the default balanced policy plus density and score
 ordering, exact token budgets, evidence limits and receipt compatibility.
 
+[Typed presentation and lookup values](VALUE-BINDINGS.md) documents source-bound
+value pairs, visible-context filtering, exact tool-argument resolution and the
+Python, HTTP and MCP contracts.
+
 [Answerability and grounded abstention](ANSWERABILITY.md) documents the optional
 post-retrieval evidence-sufficiency evaluator, partial answers, cited conflicts,
 provider configuration and audit boundary.

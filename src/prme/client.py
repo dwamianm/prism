@@ -61,6 +61,7 @@ from prme.models.processing import (
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.value_bindings import MemoryValueBinding
 from prme.types import ConditionEvaluationMethod, ConditionState, EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
@@ -263,6 +264,7 @@ class MemoryClient:
         *,
         user_id: str,
         retrieval_content: str | None = None,
+        value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -282,12 +284,15 @@ class MemoryClient:
         to use the configured per-type default, or pass None for no expiry.
         ``retrieval_content`` can provide a compact searchable/model-facing
         representation while ``content`` remains the immutable source.
+        ``value_bindings`` preserve exact presentation values while exposing
+        complete caller-supplied lookup forms for tool boundaries.
         """
         return self._run(
             self._engine.store(
                 content,
                 user_id=user_id,
                 retrieval_content=retrieval_content,
+                value_bindings=value_bindings,
                 session_id=session_id,
                 role=role,
                 node_type=node_type,
@@ -309,6 +314,7 @@ class MemoryClient:
         *,
         user_id: str,
         retrieval_content: str | None = None,
+        value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -327,6 +333,7 @@ class MemoryClient:
             content,
             user_id=user_id,
             retrieval_content=retrieval_content,
+            value_bindings=value_bindings,
             session_id=session_id,
             role=role,
             node_type=node_type,

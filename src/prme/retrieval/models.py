@@ -8,7 +8,7 @@ RetrievalResponse, RetrievalMetadata, and ExcludedCandidate.
 from __future__ import annotations
 
 import math
-from typing import Any, Literal
+from typing import Any, Literal, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from datetime import datetime
@@ -19,6 +19,12 @@ from prme.models.nodes import MemoryNode
 from prme.models.learning import RankingMultipliers
 from prme.retrieval.config import ScoringWeights
 from prme.types import QueryIntent, RepresentationLevel, RetrievalMode
+
+if TYPE_CHECKING:
+    from prme.models.value_bindings import (
+        RetrievedValueBinding,
+        ToolArgumentResolution,
+    )
 
 
 # Candidate source type -- which backend produced a candidate.
@@ -328,6 +334,26 @@ class MemoryBundle(BaseModel):
             return self.context_references[reference]
         except KeyError as exc:
             raise ValueError(f"Unknown context reference: {reference}") from exc
+
+    def value_bindings(self) -> tuple[RetrievedValueBinding, ...]:
+        """Return typed presentation/lookup pairs visible in this exact context."""
+        from prme.models.value_bindings import retrieved_value_bindings
+
+        return retrieved_value_bindings(self)
+
+    def render_value_bindings(self) -> str:
+        """Render visible bindings as a deterministic, separately budgetable block."""
+        from prme.models.value_bindings import render_value_bindings
+
+        return render_value_bindings(self)
+
+    def resolve_tool_arguments(
+        self, arguments: dict[str, Any]
+    ) -> ToolArgumentResolution:
+        """Resolve exact complete tool values using bindings visible in context."""
+        from prme.models.value_bindings import resolve_tool_arguments
+
+        return resolve_tool_arguments(self, arguments)
 
     def render_system_instructions(self) -> str:
         """Render system instructions as a formatted prompt block.

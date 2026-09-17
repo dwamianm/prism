@@ -207,6 +207,12 @@ with MemoryClient("./my_memories") as client:
 
 `MemoryClient` is a synchronous wrapper — no `async`/`await` needed. It works everywhere: scripts, notebooks, FastAPI apps.
 
+Direct memories can also retain typed presentation and lookup forms when an
+agent must display one exact value but send another to a tool. Bindings are
+source-backed, survive restart, appear only when their presentation text is in
+the packed context, and support exact audited argument resolution. See
+[typed value bindings](docs/VALUE-BINDINGS.md).
+
 LangChain and LlamaIndex adapters preserve structured framework messages and
 implement logical clear, replacement, and deletion over PRME's immutable event
 log. See the [framework integration guide](docs/FRAMEWORK-INTEGRATIONS.md) for

@@ -164,6 +164,7 @@ async def store(
     *,
     user_id: str,
     retrieval_content: str | None = None,
+    value_bindings: list[MemoryValueBinding | dict] | None = None,
     session_id: str | None = None,
     role: str = "user",
     node_type: NodeType = NodeType.NOTE,
@@ -184,6 +185,9 @@ the exact source text is also the searchable and model-facing memory. For large
 agent traces, logs, or structured documents, pass compact
 `retrieval_content`; `get_event()` still returns the exact source while the graph,
 vector index, lexical index and context packer use the compact representation.
+Use `value_bindings` when an exact source-backed presentation value differs from
+the complete string accepted by a tool. The [value-binding guide](VALUE-BINDINGS.md)
+defines visibility, resolution and audit behavior.
 
 The event, complete initial node snapshot and repair job are saved atomically,
 then the graph node and both indexes are written. Index failures leave the job
@@ -213,6 +217,7 @@ truth judgment or calibrated confidence model.
 |---|---|---|---|
 | `content` | `str` | required | Exact source text retained in the immutable event log |
 | `retrieval_content` | `str \| None` | `None` | Optional compact text to index, rank and place in model context |
+| `value_bindings` | `list[MemoryValueBinding \| dict] \| None` | `None` | Exact presentation values paired with caller-supplied complete lookup forms |
 | `user_id` | `str` | required | Owner user ID (all queries scoped to this) |
 | `session_id` | `str \| None` | `None` | Optional session identifier |
 | `role` | `str` | `"user"` | `"user"`, `"assistant"`, or `"system"` |

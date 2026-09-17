@@ -223,7 +223,7 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONRes
         "user_id": _user_id(request, body.user_id, required=True),
         "role": body.role,
     }
-    for name in ("retrieval_content", "node_type", "scope", "epistemic_type", "metadata", "session_id",
+    for name in ("retrieval_content", "value_bindings", "node_type", "scope", "epistemic_type", "metadata", "session_id",
                  "source_type", "confidence", "event_time", "valid_from", "valid_to"):
         value = getattr(body, name)
         if value is not None:
@@ -469,6 +469,7 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
     return RetrieveResponse(
         results=items,
         bundle=bundle_dict,
+        value_bindings=list(response.bundle.value_bindings()),
         metrics=metrics,
     )
 

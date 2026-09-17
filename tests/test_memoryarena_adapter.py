@@ -61,13 +61,14 @@ def test_trace_projection_keeps_only_named_final_plan():
         '"final_plan":"analysis first\\n=== Alice\'s Plan ===\\nDay 1: cobalt rail",'
         '"is_base_person":true}'
     )
-    projection, name, is_base = _trace_projection(source)
+    projection, name, is_base, bindings = _trace_projection(source)
     assert (name, is_base) == ("Alice", True)
     assert projection == (
         "Traveler: Alice\nTrip request:\nlarge task\nFinal plan:\n"
         "=== Alice's Plan ===\nDay 1: cobalt rail"
     )
     assert "scratchpad" not in projection and "analysis first" not in projection
+    assert bindings == []
 
 
 def test_trace_projection_accepts_exact_marker_without_line_boundary():
@@ -75,12 +76,13 @@ def test_trace_projection_accepts_exact_marker_without_line_boundary():
         '{"name":"Alice","final_plan":"analysis\\nFinal plan:'
         '=== Alice\'s Plan ===\\nDay 1: cobalt rail"}'
     )
-    projection, name, is_base = _trace_projection(source)
+    projection, name, is_base, bindings = _trace_projection(source)
     assert (name, is_base) == ("Alice", False)
     assert projection == (
         "Traveler: Alice\nFinal plan:\n"
         "=== Alice's Plan ===\nDay 1: cobalt rail"
     )
+    assert bindings == []
 
 
 def test_travel_reference_query_removes_roster_and_keeps_dependencies():
@@ -113,11 +115,65 @@ def test_travel_reference_names_match_plain_prior_travelers_in_constraints():
 
 def test_trace_projection_marks_missing_final_plan_boundary_unavailable():
     source = '{"name":"Alice","final_plan":"analysis with Day 1: fragments"}'
-    projection, name, is_base = _trace_projection(source)
+    projection, name, is_base, bindings = _trace_projection(source)
     assert (name, is_base) == ("Alice", False)
     assert projection == (
         "Traveler: Alice\nFinal plan:\n=== Alice's Plan Unavailable ==="
     )
+    assert bindings == []
+
+
+def test_trace_projection_emits_typed_qualified_city_values():
+    source = (
+        '{"name":"Alice","final_plan":"=== Alice\'s Plan ===\\nDay 1:\\n'
+        'Current City: Salt Lake City(Utah)\\nDay 2:\\n'
+        'Current City: Salt Lake City(Utah)\\nDay 3:\\nCurrent City: Boise"}'
+    )
+    projection, name, is_base, bindings = _trace_projection(source)
+    assert (name, is_base) == ("Alice", False)
+    assert "Salt Lake City(Utah)" in projection
+    assert [item.model_dump(mode="json") for item in bindings] == [{
+        "schema_version": 1,
+        "reference": "current-city-1",
+        "kind": "city",
+        "presentation": "Salt Lake City(Utah)",
+        "lookup": "Salt Lake City",
+        "lookup_authority": "caller",
+    }]
+
+
+def test_travel_context_renders_typed_value_forms_without_rewriting(config):
+    app = create_app(config)
+    with TestClient(app) as client:
+        client.post("/memory/initialize", json=identity())
+        source = (
+            '{"name":"Base","query":"trip","is_base_person":true,'
+            '"final_plan":"=== Base\'s Plan ===\\nDay 1:\\n'
+            'Current City: Salt Lake City(Utah)"}'
+        )
+        event_id = client.post(
+            "/memory/add", json={**identity(), "chunk": source}
+        ).json()["response"]["event_id"]
+        response = client.post(
+            "/memory/wrap_user_prompt",
+            json={**identity(), "question": "I am Alice.\nTraveling with Base.\nJoin Base."},
+        )
+        assert response.status_code == 200
+        prompt = response.json()["prompt"]
+        assert '"presentation":"Salt Lake City(Utah)"' in prompt
+        assert '"lookup":"Salt Lake City"' in prompt
+        assert "Current City: Salt Lake City(Utah)" in prompt
+
+        owner = app.state.owners["alice"]
+        nodes = client.portal.call(
+            partial(app.state.engine.get_event_nodes, event_id, user_id=owner)
+        )
+        assert nodes[0].metadata["retrieval_projection"] == (
+            "traveler_confirmed_plan_v4"
+        )
+        assert nodes[0].metadata["prme_value_bindings_v1"][0]["lookup"] == (
+            "Salt Lake City"
+        )
 
 
 def test_travel_trace_uses_projection_but_retains_raw_source(config):

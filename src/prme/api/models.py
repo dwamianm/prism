@@ -34,6 +34,7 @@ from prme.types import (
     SourceType,
 )
 from prme.models.processing import FastIngestItem, ProcessingStatus
+from prme.models.value_bindings import MemoryValueBinding, RetrievedValueBinding
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +98,14 @@ class StoreRequest(BaseModel):
         description=(
             "Optional compact representation used for graph search and model context; "
             "the immutable event still retains content"
+        ),
+    )
+    value_bindings: list[MemoryValueBinding] | None = Field(
+        default=None,
+        max_length=256,
+        description=(
+            "Optional source-backed presentation values paired with caller-supplied "
+            "complete lookup forms for tool boundaries"
         ),
     )
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
@@ -291,6 +300,10 @@ class RetrieveResponse(BaseModel):
     results: list[RetrieveResultItem] = Field(default_factory=list)
     bundle: dict[str, Any] | None = Field(
         default=None, description="Memory bundle"
+    )
+    value_bindings: list[RetrievedValueBinding] = Field(
+        default_factory=list,
+        description="Presentation/lookup pairs visible in the exact packed context",
     )
     metrics: dict[str, Any] | None = Field(
         default=None, description="Retrieval metrics"
