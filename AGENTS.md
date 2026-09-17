@@ -116,7 +116,8 @@ does not authorize merging claims; purely semantic aliases remain unverified
 atomically retain complete inputs and output in `ALIAS_PROPOSED`. Version-2
 records can retain complete external assessment evidence bound to exact node
 snapshots; older records and random-ID proposal edges are never relabeled with
-invented history. Extracted
+invented history. Unverified alias proposals do not participate in ordinary
+graph traversal; explicit review tooling may opt in. Extracted
 unresolved English personal references are event-local under new
 `event_local_references_v4` plans; old plans replay unchanged.
 See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.

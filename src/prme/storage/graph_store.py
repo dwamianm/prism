@@ -313,6 +313,7 @@ class GraphStore(Protocol):
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node.
 
@@ -323,6 +324,9 @@ class GraphStore(Protocol):
             valid_at: Temporal filter for edges.
             min_confidence: Minimum edge confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse alias proposals that have not
+                been accepted as identity. Disabled by default so proposals do
+                not affect ordinary retrieval.
 
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
@@ -338,6 +342,7 @@ class GraphStore(Protocol):
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops along with their minimum hop distance.
 
@@ -352,6 +357,8 @@ class GraphStore(Protocol):
             valid_at: Temporal filter for edges.
             min_confidence: Minimum edge confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse alias proposals that have not
+                been accepted as identity. Disabled by default.
 
         Returns:
             List of (MemoryNode, min_depth) tuples, excluding the
@@ -365,6 +372,7 @@ class GraphStore(Protocol):
         target_id: str,
         *,
         edge_types: list[EdgeType] | None = None,
+        include_unverified_aliases: bool = False,
     ) -> list[str] | None:
         """Find the shortest path between two nodes.
 
@@ -372,6 +380,7 @@ class GraphStore(Protocol):
             source_id: Starting node ID.
             target_id: Target node ID.
             edge_types: Only traverse edges of these types.
+            include_unverified_aliases: Traverse unaccepted alias proposals.
 
         Returns:
             List of node IDs forming the shortest path (including

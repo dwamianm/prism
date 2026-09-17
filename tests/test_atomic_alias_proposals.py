@@ -149,6 +149,19 @@ async def test_alias_proposal_retains_complete_inputs_and_replays(config, user):
             "identity_verified": False,
             "alias_operation_id": first.operation_id,
         }
+        assert await engine._graph_store.get_neighborhood(
+            ids[0], max_hops=1
+        ) == []
+        assert {
+            str(node.id)
+            for node in await engine._graph_store.get_neighborhood(
+                ids[0], max_hops=1, include_unverified_aliases=True
+            )
+        } == {ids[1]}
+        assert await engine._graph_store.find_shortest_path(ids[0], ids[1]) is None
+        assert await engine._graph_store.find_shortest_path(
+            ids[0], ids[1], include_unverified_aliases=True
+        ) == ids
 
     async with MemoryEngine.open(config) as engine:
         again = await engine._graph_store.propose_alias(

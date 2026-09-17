@@ -93,6 +93,8 @@ assessment bound to exact node checksums. Repeated matching requests return the
 first committed assessment; older proposals are never relabeled with evidence
 they did not originally contain. Existing random-ID proposal edges are
 recognized and reused but not backfilled with invented creation history.
+Unverified proposals remain queryable as edges but are excluded from ordinary
+neighborhood and shortest-path traversal unless a caller explicitly opts in.
 
 These guards protect source identity and merge behavior. They do not establish
 that extraction predicates are entailed, that a source is truthful, or that a

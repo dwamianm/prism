@@ -656,6 +656,7 @@ class DuckPGQGraphStore:
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node.
 
@@ -670,6 +671,7 @@ class DuckPGQGraphStore:
             valid_at: Temporal filter for nodes.
             min_confidence: Minimum node confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse unaccepted alias proposals.
 
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
@@ -683,6 +685,7 @@ class DuckPGQGraphStore:
                 valid_at,
                 min_confidence,
                 include_superseded,
+                include_unverified_aliases,
             )
 
     async def get_neighborhood_with_depth(
@@ -694,6 +697,7 @@ class DuckPGQGraphStore:
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops along with their minimum hop distance.
 
@@ -708,6 +712,7 @@ class DuckPGQGraphStore:
             valid_at: Temporal filter for nodes.
             min_confidence: Minimum node confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse unaccepted alias proposals.
 
         Returns:
             List of (MemoryNode, min_depth) tuples, excluding the
@@ -722,6 +727,7 @@ class DuckPGQGraphStore:
                 valid_at,
                 min_confidence,
                 include_superseded,
+                include_unverified_aliases,
             )
 
     async def find_shortest_path(
@@ -730,6 +736,7 @@ class DuckPGQGraphStore:
         target_id: str,
         *,
         edge_types: list[EdgeType] | None = None,
+        include_unverified_aliases: bool = False,
     ) -> list[str] | None:
         """Find the shortest path between two nodes via BFS.
 
@@ -740,6 +747,7 @@ class DuckPGQGraphStore:
             source_id: Starting node ID.
             target_id: Target node ID.
             edge_types: Only traverse edges of these types.
+            include_unverified_aliases: Traverse unaccepted alias proposals.
 
         Returns:
             List of node IDs forming the shortest path (including
@@ -747,7 +755,11 @@ class DuckPGQGraphStore:
         """
         async with self._conn_lock:
             return await run_to_completion(
-                self._find_shortest_path_sync, source_id, target_id, edge_types
+                self._find_shortest_path_sync,
+                source_id,
+                target_id,
+                edge_types,
+                include_unverified_aliases,
             )
 
     async def get_supersedence_chain(
@@ -1522,6 +1534,7 @@ class DuckPGQGraphStore:
         valid_at: datetime | None,
         min_confidence: float | None,
         include_superseded: bool,
+        include_unverified_aliases: bool,
     ) -> list[MemoryNode]:
         """Get neighborhood via recursive CTE (sync).
 
@@ -1535,6 +1548,7 @@ class DuckPGQGraphStore:
             valid_at,
             min_confidence,
             include_superseded,
+            include_unverified_aliases,
         )
         return [node for node, _depth in results]
 
@@ -1546,6 +1560,7 @@ class DuckPGQGraphStore:
         valid_at: datetime | None,
         min_confidence: float | None,
         include_superseded: bool,
+        include_unverified_aliases: bool,
     ) -> list[tuple[MemoryNode, int]]:
         """Get neighborhood with min hop depth via recursive CTE (sync).
 
@@ -1567,6 +1582,12 @@ class DuckPGQGraphStore:
             placeholders = ", ".join(["?" for _ in edge_types])
             edge_conditions.append(f"e.edge_type IN ({placeholders})")
             edge_params.extend([et.value for et in edge_types])
+        if not include_unverified_aliases:
+            edge_conditions.append(
+                "NOT (e.edge_type = 'relates_to' "
+                "AND COALESCE(json_extract_string(e.metadata, '$.relation'), '') = 'alias' "
+                "AND COALESCE(json_extract_string(e.metadata, '$.identity_verified'), '') = 'false')"
+            )
 
         edge_where = (
             "AND " + " AND ".join(edge_conditions) if edge_conditions else ""
@@ -1683,6 +1704,7 @@ class DuckPGQGraphStore:
         source_id: str,
         target_id: str,
         edge_types: list[EdgeType] | None,
+        include_unverified_aliases: bool,
     ) -> list[str] | None:
         """BFS shortest path via iterative query (sync).
 
@@ -1704,6 +1726,12 @@ class DuckPGQGraphStore:
             placeholders = ", ".join(["?" for _ in edge_types])
             edge_conditions.append(f"edge_type IN ({placeholders})")
             edge_params.extend([et.value for et in edge_types])
+        if not include_unverified_aliases:
+            edge_conditions.append(
+                "NOT (edge_type = 'relates_to' "
+                "AND COALESCE(json_extract_string(metadata, '$.relation'), '') = 'alias' "
+                "AND COALESCE(json_extract_string(metadata, '$.identity_verified'), '') = 'false')"
+            )
 
         edge_where = (
             "AND " + " AND ".join(edge_conditions) if edge_conditions else ""
