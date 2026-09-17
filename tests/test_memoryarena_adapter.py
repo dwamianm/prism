@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from benchmarks.diagnostics.hybrid_lexical import raw_config
 from benchmarks.diagnostics.memoryarena_server import (
     _trace_projection,
+    _travel_reference_names,
     _travel_reference_query,
     create_app,
 )
@@ -76,7 +77,24 @@ def test_travel_reference_query_removes_roster_and_keeps_dependencies():
         "For breakfast, I'd like to join Alice.\n"
         "Dinner should cost less than Bob's lunch."
     )
-    assert _travel_reference_query(question, "Base") == "Base Bob Alice"
+    assert _travel_reference_query(question, "Base") == "Base Alice Bob"
+
+
+def test_travel_reference_names_do_not_treat_possessives_as_companion_names():
+    question = (
+        "I am Ethan.\nI'm traveling with Allison and Zoe.\n"
+        "Use a house rule shared with Allison's stay and join Zoe."
+    )
+    assert _travel_reference_names(question, "Base") == ["Base", "Allison", "Zoe"]
+
+
+def test_trace_projection_marks_missing_final_plan_boundary_unavailable():
+    source = '{"name":"Alice","final_plan":"analysis with Day 1: fragments"}'
+    projection, name, is_base = _trace_projection(source)
+    assert (name, is_base) == ("Alice", False)
+    assert projection == (
+        "Traveler: Alice\nFinal plan:\n=== Alice's Plan Unavailable ==="
+    )
 
 
 def test_travel_trace_uses_projection_but_retains_raw_source(config):
@@ -110,7 +128,10 @@ def test_travel_trace_uses_projection_but_retains_raw_source(config):
         assert result.status_code == 200
         prompt = result.json()["prompt"]
         assert "Day 1: base route" in prompt and "Day 1: cobalt rail" in prompt
-        assert "Trip request:\\ntrip" in prompt
+        assert "Base Traveler Base's Request (Already Planned)" in prompt
+        assert "Base's Confirmed Plan" in prompt
+        assert "Alice's Retrieved Confirmed Plan" in prompt
+        assert "trip" in prompt
         assert "private raw" not in prompt
         owner = app.state.owners["alice"]
         base_source = client.portal.call(

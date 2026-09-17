@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import random
+import re
 import subprocess
 import sys
 import time
@@ -211,6 +212,15 @@ def _canonical(value: Any) -> bytes:
     return json.dumps(
         value, ensure_ascii=True, sort_keys=True, separators=(",", ":")
     ).encode()
+
+
+def _final_plan_block(value: str, name: str) -> str:
+    """Return only the last exact traveler plan block from a model response."""
+    marker = re.compile(
+        rf"^===\s*{re.escape(name)}'s Plan\s*===\s*$", re.MULTILINE
+    )
+    matches = list(marker.finditer(value))
+    return value[matches[-1].start():].strip() if matches else ""
 
 
 def _sha256(path: Path) -> str:
@@ -416,9 +426,13 @@ def register(
                 "source-preserving trace-projection adapter; exact raw traces remain "
                 "events while traveler final plans are retrieved per query."
             ),
-            "prme_retrieval_projection": "traveler_final_plan_v2",
+            "prme_retrieval_projection": "traveler_confirmed_plan_v3",
             "prme_query_projection": (
                 "base traveler plus named plan dependencies outside the roster preamble"
+            ),
+            "response_plan_projection": (
+                "last exact named final-plan block for scoring and native history; "
+                "the raw model response remains checkpointed and journaled"
             ),
             "checkpoint_unit": "one completed traveler within each group arm",
             "resume_policy": (
@@ -646,9 +660,11 @@ def _restore_actor_state(
     if person["name"] != question["name"] or person["query"] != question["query"]:
         raise RuntimeError("saved traveler differs from the registered cohort")
     agent.all_queries.append(f"{question['name']}: {question['query']}")
-    agent.accumulated_plans += (
-        f"\n\n{person['result']}" if agent.accumulated_plans else person["result"]
-    )
+    final_plan = _final_plan_block(person["result"], person["name"])
+    if final_plan:
+        agent.accumulated_plans += (
+            f"\n\n{final_plan}" if agent.accumulated_plans else final_plan
+        )
     if memory is not None:
         memory_entry = prior.get("memory_entry")
         if not isinstance(memory_entry, str):
@@ -745,7 +761,14 @@ def _run_group(
             memory_context=memory_context,
             memory_system=None,
         )
+        prior_plans = agent.accumulated_plans
         action = agent.act(question["query"])
+        final_plan = _final_plan_block(action, question["name"])
+        agent.accumulated_plans = prior_plans
+        if final_plan:
+            agent.accumulated_plans += (
+                f"\n\n{final_plan}" if agent.accumulated_plans else final_plan
+            )
         result = agent.last_result
         answer = truth[question["round_idx"]]
         _, reward, info = environment.step(
@@ -772,7 +795,7 @@ def _run_group(
             "person_idx": question["round_idx"],
             "name": question["name"],
             "query": question["query"],
-            "plan": runtime["parse_plan"](action),
+            "plan": runtime["parse_plan"](final_plan),
             "result": action,
             "agent_success": result.success,
             "agent_error": result.error_message,

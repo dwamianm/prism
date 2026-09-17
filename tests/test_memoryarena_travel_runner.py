@@ -109,6 +109,17 @@ def test_submission_preserves_explicit_failed_plans(tmp_path: Path):
     assert json.loads(path.read_text())["persons"][0]["plan"] is None
 
 
+def test_final_plan_projection_discards_reasoning_and_requires_named_boundary():
+    response = (
+        "analysis with Day 1: fragments\n"
+        "=== Ada's Plan ===\nDay 1:\nBreakfast: Tea\n"
+    )
+    assert runner._final_plan_block(response, "Ada") == (
+        "=== Ada's Plan ===\nDay 1:\nBreakfast: Tea"
+    )
+    assert runner._final_plan_block(response, "Bob") == ""
+
+
 def test_server_attempt_paths_do_not_reuse_a_prior_pack(tmp_path: Path, monkeypatch):
     (tmp_path / "prme-pack-attempt-1").mkdir()
     captured = {}
@@ -205,7 +216,7 @@ def test_resume_restores_native_history_and_replays_prme_trace():
         "person": {
             "name": "Ada",
             "query": "new constraints",
-            "result": "saved plan",
+            "result": "analysis\n=== Ada's Plan ===\nsaved plan",
         },
         "memory_entry": "saved raw trace",
     }
@@ -215,7 +226,9 @@ def test_resume_restores_native_history_and_replays_prme_trace():
     runner._restore_actor_state(agent, memory, question, prior)
 
     assert agent.all_queries == ["Base: query", "Ada: new constraints"]
-    assert agent.accumulated_plans == "base plan\n\nsaved plan"
+    assert agent.accumulated_plans == (
+        "base plan\n\n=== Ada's Plan ===\nsaved plan"
+    )
     assert memory.entries == ["saved raw trace"]
 
 
