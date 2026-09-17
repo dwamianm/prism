@@ -230,6 +230,35 @@ def test_adapter_defaults_older_configs_to_auditable_context(tmp_path: Path) -> 
         memory.close()
 
 
+def test_adapter_supports_explicit_episode_routing(tmp_path: Path) -> None:
+    memory_params = params(tmp_path / "data", tmp_path / "pack")
+    memory_params.update(
+        episode_context_top_k=2,
+        episode_context_local_k=8,
+        episode_context_score_decay=0.9,
+    )
+    memory = PRMEMemory(memory_params)
+    try:
+        packing = memory._client._engine._retrieval_pipeline._packing_config
+        assert packing.session_context_window == 0
+        assert packing.episode_context_top_k == 2
+        assert packing.episode_context_local_k == 8
+        assert packing.episode_context_score_decay == 0.9
+
+        memory.insert(trajectory(tmp_path / "data"))
+        context = memory.query("What happens after submitting the order?")
+        hook = memory.post_query_hook(
+            query="order",
+            query_image=None,
+            memory_context=context,
+        )
+        assert hook["episode_context_top_k"] == 2
+        assert hook["episode_context_local_k"] == 8
+        assert hook["episode_context_score_decay"] == 0.9
+    finally:
+        memory.close()
+
+
 def test_adapter_rejects_changed_or_interrupted_trajectory(tmp_path: Path) -> None:
     source = trajectory(tmp_path / "data")
     memory = PRMEMemory(params(tmp_path / "data", tmp_path / "pack"))
@@ -266,6 +295,15 @@ def test_adapter_validates_configuration_and_public_schema(tmp_path: Path) -> No
 
     with pytest.raises(RuntimeError, match="context_format"):
         PRMEMemory({"context_format": "opaque"})
+
+    with pytest.raises(RuntimeError, match="episode_context_top_k"):
+        PRMEMemory({"episode_context_top_k": True})
+
+    with pytest.raises(RuntimeError, match="episode_context_local_k"):
+        PRMEMemory({"episode_context_local_k": 0})
+
+    with pytest.raises(RuntimeError, match="episode_context_score_decay"):
+        PRMEMemory({"episode_context_score_decay": float("nan")})
 
     root = tmp_path / "data"
     source = trajectory(root)

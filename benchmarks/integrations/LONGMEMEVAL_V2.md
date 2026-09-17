@@ -170,6 +170,14 @@ the compact procedure trace already supplies ordered session context. Expanding
 arbitrary neighboring raw chunks duplicates large accessibility trees and can
 displace independently relevant evidence from a bounded result set.
 
+The adapter exposes PRME's deterministic two-stage episode route through the
+optional `episode_context_top_k`, `episode_context_local_k`, and
+`episode_context_score_decay` memory parameters. It remains disabled by default.
+When enabled, it can reserve query-relevant records from the best candidate-backed
+trajectory sessions without restoring generic adjacent-node expansion. Trial
+configurations must bind all three values and compare answer quality before
+promoting this policy for LongMemEval-V2.
+
 Exact duplicate inserts are idempotent. A changed trajectory or screenshot
 content, or an interrupted partial insert, fails explicitly instead of silently
 reusing stale evidence or duplicating state. The recovery action for an

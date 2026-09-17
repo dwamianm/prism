@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -77,6 +78,9 @@ _ALLOWED_PARAMS = {
     "image_limit",
     "max_chunk_chars",
     "context_item_max_chars",
+    "episode_context_top_k",
+    "episode_context_local_k",
+    "episode_context_score_decay",
 }
 
 
@@ -196,6 +200,11 @@ class PRMEMemory(Memory):
         self.context_item_max_chars = int(
             memory_params.get("context_item_max_chars", 12000)
         )
+        episode_context_top_k = memory_params.get("episode_context_top_k", 0)
+        episode_context_local_k = memory_params.get("episode_context_local_k", 8)
+        episode_context_score_decay = memory_params.get(
+            "episode_context_score_decay", 0.95
+        )
         require(bool(self.user_id), "prme user_id must be non-empty")
         require(self.token_budget > 0, "prme token_budget must be positive")
         require(
@@ -212,6 +221,23 @@ class PRMEMemory(Memory):
             self.context_item_max_chars >= 512,
             "prme context_item_max_chars must be at least 512",
         )
+        require(
+            type(episode_context_top_k) is int and episode_context_top_k >= 0,
+            "prme episode_context_top_k must be a non-negative integer",
+        )
+        require(
+            type(episode_context_local_k) is int and episode_context_local_k > 0,
+            "prme episode_context_local_k must be a positive integer",
+        )
+        require(
+            type(episode_context_score_decay) in {int, float}
+            and math.isfinite(episode_context_score_decay)
+            and 0 < episode_context_score_decay <= 1,
+            "prme episode_context_score_decay must be finite and in (0, 1]",
+        )
+        self.episode_context_top_k = episode_context_top_k
+        self.episode_context_local_k = episode_context_local_k
+        self.episode_context_score_decay = float(episode_context_score_decay)
 
         root_value = memory_params.get("trajectories_root_dir")
         if root_value is None:
@@ -263,6 +289,9 @@ class PRMEMemory(Memory):
                 # chunks duplicates long accessibility trees and can crowd
                 # independently relevant candidates out of the result limit.
                 session_context_window=0,
+                episode_context_top_k=self.episode_context_top_k,
+                episode_context_local_k=self.episode_context_local_k,
+                episode_context_score_decay=self.episode_context_score_decay,
             ),
             enable_qa_pairing=False,
             enable_query_reformulation=False,
@@ -700,6 +729,9 @@ class PRMEMemory(Memory):
             ),
             "query_clock_source": self._query_clock_source,
             "context_format": self.context_format,
+            "episode_context_top_k": self.episode_context_top_k,
+            "episode_context_local_k": self.episode_context_local_k,
+            "episode_context_score_decay": self.episode_context_score_decay,
             "query_image_used_for_retrieval": False,
             "returned_text_items": sum(item["type"] == "text" for item in memory_context),
             "returned_image_items": sum(item["type"] == "image" for item in memory_context),
