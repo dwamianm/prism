@@ -178,6 +178,20 @@ trajectory sessions without restoring generic adjacent-node expansion. Trial
 configurations must bind all three values and compare answer quality before
 promoting this policy for LongMemEval-V2.
 
+Use the fail-closed comparator for a registered two-arm episode trial:
+
+```bash
+python -m benchmarks.integrations.compare_longmemeval_v2_episode_policy \
+  --arm flat=/absolute/path/to/flat/run \
+  --arm episode=/absolute/path/to/episode/run \
+  --registration /absolute/path/to/registration.json \
+  --output /absolute/path/to/comparison.json
+```
+
+It verifies the frozen inputs, source revisions, reader runtime, pack payload,
+selected configurations, and the effective episode policy captured with every
+prompt before producing aggregate paired statistics.
+
 Exact duplicate inserts are idempotent. A changed trajectory or screenshot
 content, or an interrupted partial insert, fails explicitly instead of silently
 reusing stale evidence or duplicating state. The recovery action for an
