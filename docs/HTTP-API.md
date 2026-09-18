@@ -5,15 +5,38 @@ reference at `/docs`. Configure per-user bearer credentials as described in the
 [README](../README.md#http-api). An authenticated owner can omit `user_id`; selecting
 another owner returns 403. Source/node lookups belonging to another user return 404.
 
+## Review identity proposals
+
+`GET /v1/alias-proposals?status=pending` lists the authenticated owner's
+decoded unverified alias proposals. Optional `scope`, `status`, and `limit`
+filters apply after owner isolation. Each item includes the complete proposal
+journal and its accepted or rejected review when present.
+
+`POST /v1/alias-proposals/{proposal_operation_id}/review` accepts one decision:
+
+```json
+{
+  "decision": "accepted",
+  "reviewer_id": "human:catalog-owner",
+  "reason": "The source catalog confirms one licensed product."
+}
+```
+
+Acceptance creates a verified traversable alias link while leaving both entity
+nodes active. Rejection requires a reason and creates no link. Identical retries
+return the first decision; conflicting decisions and stale assessed nodes return
+HTTP 409. The API never turns Jev advice into an automatic merge.
+
 ## Store supplied memory
 
-`POST /v1/store` accepts the Python `store()` fields: `content`, `role`, `user_id`,
+`POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `role`, `user_id`,
 `session_id`, `node_type`, `scope`, `metadata`, `epistemic_type`, `source_type`,
 `confidence`, `event_time` and `ttl_days`.
 
 ```json
 {
   "content": "The telescope recorded the observation successfully.",
+  "retrieval_content": "Telescope observation: success.",
   "role": "tool",
   "source_type": "tool_output",
   "epistemic_type": "observed",
@@ -32,6 +55,12 @@ JSON `null` disables TTL, and a nonnegative integer overrides it. TTL is measure
 from node creation, not the historical event time. Omitted source/epistemic fields
 use the engine's inference rules. Source classification describes provenance;
 it does not independently establish truth.
+
+When `retrieval_content` is present, PRME retains `content` verbatim in the
+immutable event and uses the compact value for the graph node, vector and lexical
+indexes, retrieval results and packed model context. Omit it for the historical
+one-string behavior. The projection is recovered from the checksummed direct
+store journal and never regenerated after restart.
 
 The response contains the immutable source `event_id`, its `node_id` when available,
 and `processing_status`. A completed status means the direct node and indexes
@@ -62,6 +91,22 @@ silently discarded extra fields; clients relying on that behavior must correct
 their payloads. The former `namespace` field was never applied and is now rejected.
 Scope and authenticated owner controls retain their documented meanings; metadata
 and session labels are not additional authorization boundaries.
+
+## Aggregate grounded quantities
+
+`POST /v1/quantities/aggregate` accepts an owner and a structured
+`QuantityAggregationQuery`. It performs a complete owner-scoped scan for an
+unchanged store, revalidates every decimal against its claim and evidence, and
+never converts units. Optional `predicate_prefixes` match only the normalized
+predicate itself or an underscore-delimited suffix.
+
+`POST /v1/quantities/aggregate-text` accepts `{"user_id": "alice",
+"question": "How much did I raise?"}`. This separate convenience route supports
+only a fixed set of complete, qualifier-free amount/count shapes. Its response
+always exposes the structured plan and assumptions and preserves the exact `I`
+or `we` subject. Unsupported wording returns
+`plan.status="unsupported"` and `aggregation=null` without scanning memory.
+Ordinary retrieval never auto-routes to either operation.
 
 ## Recover an accepted request
 

@@ -44,7 +44,10 @@ from prme.retrieval.config import (
     PackingConfig,
     ScoringWeights,
 )
-from prme.retrieval.context_formatter import build_context_guidance
+from prme.retrieval.context_formatter import (
+    build_context_guidance,
+    is_temporal_reasoning_query,
+)
 from prme.retrieval.evidence_context import (
     augment_evidence_context,
     project_evidence_context,
@@ -66,6 +69,10 @@ from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import select_candidates, validate_selection
 from prme.retrieval.session_context import expand_session_context
+from prme.retrieval.temporal_relations import (
+    TemporalRelationConfig,
+    TemporalRelationEnricher,
+)
 from prme.types import EdgeType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope
 
 if TYPE_CHECKING:
@@ -166,6 +173,8 @@ class RetrievalPipeline:
         query_reformulation_provider: str = "openai",
         query_reformulation_model: str = "gpt-4o-mini",
         temporal_languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
+        temporal_relation_config: TemporalRelationConfig | None = None,
+        temporal_relation_enricher: TemporalRelationEnricher | None = None,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -183,6 +192,28 @@ class RetrievalPipeline:
         self._query_reformulation_provider = query_reformulation_provider
         self._query_reformulation_model = query_reformulation_model
         self._temporal_languages = temporal_languages
+        self._temporal_relation_config = (
+            temporal_relation_config or TemporalRelationConfig()
+        ).model_copy(deep=True)
+        if (
+            temporal_relation_enricher is not None
+            and not self._temporal_relation_config.enabled
+        ):
+            raise ValueError(
+                "temporal_relation_enricher requires temporal relation configuration to be enabled"
+            )
+        self._temporal_relation_enricher = temporal_relation_enricher
+        if (
+            self._temporal_relation_config.enabled
+            and self._temporal_relation_enricher is None
+        ):
+            from prme.retrieval.temporal_relation_providers import (
+                create_temporal_relation_enricher,
+            )
+
+            self._temporal_relation_enricher = create_temporal_relation_enricher(
+                self._temporal_relation_config
+            )
 
         # Lazy-init cross-encoder reranker when enabled.
         self._reranker = None
@@ -192,6 +223,19 @@ class RetrievalPipeline:
             self._reranker = CrossEncoderReranker(model_name=reranker_model)
 
         self._feature_identity = feature_identity(vector_index, lexical_index, self._reranker)
+        self._feature_identity["temporal_relation"] = {
+            "enabled": self._temporal_relation_config.enabled,
+            "protocol": "temporal_relation_v1",
+            "resolver_provider": self._temporal_relation_config.resolver_provider,
+            "resolver_model": self._temporal_relation_config.resolver_model,
+            "gate_provider": self._temporal_relation_config.gate_provider,
+            "gate_model": self._temporal_relation_config.gate_model,
+            "gate_threshold": self._temporal_relation_config.gate_threshold,
+            "confirmation_protocol_aligned": (
+                self._temporal_relation_config.confirmation_protocol_aligned
+            ),
+            "configuration_sha256": self._temporal_relation_config.configuration_sha256,
+        }
 
     def execution_features(self) -> dict:
         """Return the exact feature identity used for a new receipt."""
@@ -847,6 +891,20 @@ class RetrievalPipeline:
             ),
         )
 
+        temporal_relation_metadata = None
+        if (
+            self._temporal_relation_enricher is not None
+            and is_temporal_reasoning_query(query, analysis)
+        ):
+            bundle, temporal_relation_metadata = (
+                await self._temporal_relation_enricher.enrich(
+                    query,
+                    bundle,
+                    question_time=scoring_now,
+                    packing_config=effective_packing_config,
+                )
+            )
+
         aggregation_coverage: AggregationCoverage | None = None
         if analysis.is_aggregation:
             limitation_codes: list[AggregationLimitation] = ["semantic_matching"]
@@ -909,6 +967,8 @@ class RetrievalPipeline:
                     if aggregation_coverage is not None else None,
                 "historical_coverage": historical_coverage.model_dump(mode="json")
                     if historical_coverage is not None else None,
+                "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
+                    if temporal_relation_metadata is not None else None,
                 "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
                 "reranker_top_k": self._reranker_top_k,
                 "query_reformulation": {"enabled": self._enable_query_reformulation,
@@ -948,6 +1008,8 @@ class RetrievalPipeline:
                     if aggregation_coverage is not None else None,
                 "historical_coverage": historical_coverage.model_dump(mode="json")
                     if historical_coverage is not None else None,
+                "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
+                    if temporal_relation_metadata is not None else None,
                 "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
                 "time_from": effective_time_from.isoformat() if effective_time_from else None,
                 "time_to": effective_time_to.isoformat() if effective_time_to else None,
@@ -1010,6 +1072,7 @@ class RetrievalPipeline:
             backend_failures=candidate_diagnostics.backend_failures,
             aggregation_coverage=aggregation_coverage,
             historical_coverage=historical_coverage,
+            temporal_relation=temporal_relation_metadata,
         )
 
         # Build filter metadata for debugging/explainability.

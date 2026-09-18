@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "quantity-extraction-registration",
+  "status": "registered_before_provider_calls",
+  "registered_at": "2026-09-18T20:31:09.876558+00:00",
+  "claim_boundary": "Authored development assay for source-grounded quantitative extraction; not held-out accuracy, answer quality, or a competitive result.",
+  "source": {
+    "implementation_sha256": {
+      "benchmarks/diagnostics/quantity_extraction.py": "c5de1fbe74d3e82a1d8199081af11bc2c718fa96015e483f7b5c8e120a36dcb9",
+      "benchmarks/diagnostics/entity_references.py": "d2ea7c688ba5c43ebe3e0c9a58a707c390572b4fff356b76cdcfbb8fc381d583",
+      "src/prme/ingestion/extraction.py": "62231502f1583c8bc3970c17f1a944ee5efdc8c3572e59f564da2ed4ab1d506f",
+      "src/prme/ingestion/schema.py": "f400cb36784670095b67cede4d13fdc35dcc713840d33a85a52480531a028910",
+      "src/prme/ingestion/grounding.py": "cfd23a937f1bc31d8964dcd4afc2f6d8cfe17b4fe0836e936ca2bf8e9ad79283",
+      "src/prme/ingestion/pipeline.py": "e3e4f3e0760eeb4ff392db94ea70f8d924ba3d2ed51aee7291d8650d13e00f2c",
+      "src/prme/ingestion/planning.py": "c74108f9785911111bcef7dac42fbf44aa465457470ab115cde03af893b51508"
+    },
+    "cases_sha256": "b804a9d074a74f40b6eec57c9f77f0cd0bb14ab573f9ed3678db1d76bd3b5801",
+    "prompt_sha256": "877a628c7ae8b26a17b8b7fa514020933e59ff40704cb3fdf2be8853be294a13",
+    "response_schema_sha256": "be1bd6735bb9b28c6edef3213fe68aa60603749ff40bfd95f56b632206ea8490",
+    "fact_schema_sha256": "714ad1412f0646b96fd7bad7d1d7be6041df79a654903ae31381add29b907f26",
+    "quantity_schema_sha256": "eef46d59441bc18681ff59c4c4b1da3f94986b7af3111188ded87ec28233f050",
+    "relationship_schema_sha256": "665ae81fce465a37aa9736b8426d1d82467832c221f96f9b5c7eee35e0d3dfc7"
+  },
+  "model": {
+    "provider": "ollama",
+    "model": "deepseek-v4.1-flash:cloud",
+    "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0.0,
+    "max_retries": 3,
+    "timeout_seconds": 180.0
+  },
+  "protocol": {
+    "cases": 20,
+    "expected_quantities": 12,
+    "arm": "fresh engine and one extraction per fixed source",
+    "resume": "checkpoint after every completed case; no selective retries",
+    "gates": {
+      "completed_cases": 20,
+      "failed_attempts": 0,
+      "missing_expected_quantities": 0,
+      "unexpected_quantities": 0,
+      "field_mismatches": 0,
+      "policy_errors": 0
+    }
+  }
+}

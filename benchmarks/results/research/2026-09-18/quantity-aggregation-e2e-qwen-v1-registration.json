@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "kind": "quantity-aggregation-e2e-registration",
+  "status": "registered_before_provider_calls",
+  "registered_at": "2026-09-18T20:58:42.797700+00:00",
+  "claim_boundary": "Authored end-to-end product-path assay over fixed natural-language sources; not held-out accuracy, answer quality, exhaustive unit coverage, or competitive evidence.",
+  "source": {
+    "implementation_sha256": {
+      "benchmarks/diagnostics/quantity_aggregation_e2e.py": "3f5a353acca22b6852276cda9caeef4a36e4c648a57b0aa2ee741f65136e70d8",
+      "src/prme/ingestion/extraction.py": "75e81d9f616299bc86551f47629ed87d8d122b34fd9b20bd04480adfac8ca811",
+      "src/prme/ingestion/schema.py": "f400cb36784670095b67cede4d13fdc35dcc713840d33a85a52480531a028910",
+      "src/prme/ingestion/grounding.py": "c269021cbbb74464bf43c98548ccb6c08eadb88d284fc31abda82da0ee0ee54b",
+      "src/prme/ingestion/pipeline.py": "324e220412a1126b8e47a97612f9592a18c6a14fb23ef91d7e6bb120a38a56a3",
+      "src/prme/ingestion/planning.py": "c74108f9785911111bcef7dac42fbf44aa465457470ab115cde03af893b51508",
+      "src/prme/models/aggregation.py": "4514e0fb2312c87d68e43cf15124ec8f075d77e266721143604f969d0e749d76",
+      "src/prme/retrieval/aggregation.py": "dd5d6404bf69af338dd4d552e25e7ec6a78ff3b294487a7e773a642a29af4d2c",
+      "src/prme/storage/engine.py": "bca140c2368a71997549b60511770323ede5ad192ddf4dd1e2836d61478edbe4"
+    },
+    "cases_sha256": "cea1c4e8300c3a9374492cb221c508c7049398cfae5712c9f573096b5699b72e",
+    "query_sha256": "3813175212dcd3bc9912cad55d3ce3092631e6caab61cdec5740973a4582b7fe",
+    "expected_aggregation_sha256": "4402368358dd219702e86ddc29e8dcb69b6361f8856d8a91ac50c23fb05a75dc",
+    "prompt_sha256": "877a628c7ae8b26a17b8b7fa514020933e59ff40704cb3fdf2be8853be294a13",
+    "response_schema_sha256": "be1bd6735bb9b28c6edef3213fe68aa60603749ff40bfd95f56b632206ea8490"
+  },
+  "model": {
+    "provider": "ollama",
+    "model": "prme-qwen3.5:35b-a3b-8k",
+    "model_digest": "45870b70b6fa65ab09355aeb7901897763ae40745c6cdd11d28bc33a6b818ffc",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0.0,
+    "max_retries": 3,
+    "timeout_seconds": 180.0
+  },
+  "protocol": {
+    "cases": 10,
+    "expected_quantities": 10,
+    "primary_owner": "quantity-aggregation-e2e-owner",
+    "other_owner": "quantity-aggregation-e2e-other",
+    "query": {
+      "predicates": [
+        "raised",
+        "raised_amount_for",
+        "raised_funds_for",
+        "helped_raise",
+        "helped_raise_amount_for",
+        "helped_raise_funds_for"
+      ],
+      "units": [
+        "$"
+      ],
+      "group_by": [
+        "unit"
+      ],
+      "sample_limit": 100
+    },
+    "expected_aggregation": {
+      "matched_quantity_records": 4,
+      "distinct_count": 1,
+      "value_count": 4,
+      "total": "3750",
+      "minimum": "250",
+      "maximum": "2000",
+      "evidence_count": 4,
+      "values": [
+        "250",
+        "500",
+        "1000",
+        "2000"
+      ]
+    },
+    "arm": "one durable local pack; synchronous extraction for every fixed source; public aggregate_quantities query after ingestion",
+    "resume": "checkpoint before and after every source; admitted events are recovered by fixed owner, session, case marker, and source",
+    "gates": {
+      "completed_cases": 10,
+      "failed_attempts": 0,
+      "case_contract_failures": 0,
+      "matched_quantity_records": 4,
+      "distinct_count": 1,
+      "value_count": 4,
+      "total": "3750",
+      "minimum": "250",
+      "maximum": "2000",
+      "evidence_count": 4,
+      "values": [
+        "250",
+        "500",
+        "1000",
+        "2000"
+      ],
+      "stored_set_exhaustive": true,
+      "source_extraction_coverage": "unknown",
+      "semantic_equivalence": "normalized_exact_only",
+      "real_world_coverage": "unknown",
+      "unit_conversion": "none",
+      "consistency": "complete_for_unchanged_store",
+      "required_exclusions": [
+        "selector_mismatch",
+        "epistemic_filtered",
+        "unit_mismatch"
+      ]
+    }
+  }
+}

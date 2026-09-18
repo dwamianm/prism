@@ -22,6 +22,12 @@ from prme.storage.lifecycle import LifecycleConflict
 from prme.storage.citations import CitationConflict
 from prme.storage.ranking_profiles import StaleRankingProfileError
 from prme.storage.fast_ingest import FastIngestConflict
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewConflict,
+    AliasProposalReviewResult,
+    StaleAliasProposal,
+)
 from prme.models.relevance import (
     AnswerCitationRecord,
     AnswerCitationSubmission,
@@ -36,12 +42,17 @@ from prme.models.learning import (
     RankingProfileState,
     RankingProfileStatus,
 )
-from prme.models.aggregation import AssertionAggregation, QuantityAggregation
+from prme.models.aggregation import (
+    AssertionAggregation,
+    PlannedQuantityAggregation,
+    QuantityAggregation,
+)
 from prme.models.temporal import AssertionState
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
     AcceptedWorkErrorResponse,
     AnswerCitationRequest,
+    AliasProposalReviewRequest,
     AssertionAggregationRequest,
     AssertionStateRequest,
     ConditionEvaluationRequest,
@@ -63,6 +74,7 @@ from prme.api.models import (
     OrganizeRequest,
     OrganizeResponse,
     QuantityAggregationRequest,
+    PlannedQuantityAggregationRequest,
     RankingProfileChangeRequest,
     RankingProfileCreateRequest,
     RankingProfileRollbackRequest,
@@ -223,7 +235,7 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONRes
         "user_id": _user_id(request, body.user_id, required=True),
         "role": body.role,
     }
-    for name in ("node_type", "scope", "epistemic_type", "metadata", "session_id",
+    for name in ("retrieval_content", "node_type", "scope", "epistemic_type", "metadata", "session_id",
                  "source_type", "confidence", "event_time", "valid_from", "valid_to"):
         value = getattr(body, name)
         if value is not None:
@@ -559,6 +571,26 @@ async def aggregate_quantities(
     try:
         return await _get_engine(request).aggregate_quantities(
             body.query,
+            user_id=_user_id(request, body.user_id, required=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/quantities/aggregate-text",
+    response_model=PlannedQuantityAggregation,
+    summary="Plan and run a supported natural-language quantity aggregation",
+    responses={422: {"model": ErrorResponse}},
+)
+async def aggregate_quantities_from_text(
+    request: Request,
+    body: PlannedQuantityAggregationRequest,
+) -> PlannedQuantityAggregation:
+    """Execute only a complete question shape supported by the exact planner."""
+    try:
+        return await _get_engine(request).aggregate_quantities_from_text(
+            body.question,
             user_id=_user_id(request, body.user_id, required=True),
         )
     except ValueError as exc:
@@ -1006,6 +1038,55 @@ async def get_chain(
         nodes=[_node_to_response(n) for n in chain],
         count=len(chain),
     )
+
+
+@router.get(
+    "/alias-proposals",
+    response_model=list[AliasProposalInboxItem],
+    summary="List identity proposals for review",
+)
+async def list_alias_proposals(
+    request: Request,
+    user_id: str | None = None,
+    scope: Scope | None = None,
+    status: str | None = Query(default=None, pattern="^(pending|accepted|rejected)$"),
+    limit: int = Query(default=100, ge=1, le=1000),
+) -> list[AliasProposalInboxItem]:
+    """Read pending and decided proposals without changing graph state."""
+    owner = _user_id(request, user_id, required=True)
+    return await _get_engine(request).list_alias_proposals(
+        user_id=owner, scope=scope, status=status, limit=limit
+    )
+
+
+@router.post(
+    "/alias-proposals/{proposal_operation_id}/review",
+    response_model=AliasProposalReviewResult,
+    summary="Accept or reject an identity proposal",
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
+async def review_alias_proposal(
+    request: Request,
+    proposal_operation_id: UUID,
+    body: AliasProposalReviewRequest,
+) -> AliasProposalReviewResult:
+    """Accept a verified graph link or retain an audited rejection."""
+    owner = _user_id(request, body.user_id, required=True)
+    try:
+        return await _get_engine(request).review_alias_proposal(
+            str(proposal_operation_id),
+            user_id=owner,
+            decision=body.decision,
+            reviewer_id=body.reviewer_id,
+            reason=body.reason,
+        )
+    except AliasProposalReviewConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except StaleAliasProposal as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        status_code = 404 if "unavailable" in str(exc) else 422
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

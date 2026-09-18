@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-compact-localization-result",
+  "completed_at": "2026-09-18T10:10:33.153558+00:00",
+  "registration_sha256": "7322a60993054c39aa3be9b8f7450a9870985fbc9f674bcda05664831eebab91",
+  "questions": 20,
+  "metrics": {
+    "overall": {
+      "questions": 20,
+      "control_correct": 9,
+      "same_set_compact_correct": 6,
+      "paired_wins": 1,
+      "paired_losses": 4,
+      "paired_ties": 15
+    },
+    "categories": {
+      "abstention": {
+        "questions": 1,
+        "control_correct": 0,
+        "same_set_compact_correct": 0,
+        "paired_wins": 0,
+        "paired_losses": 0,
+        "paired_ties": 1
+      },
+      "multi-session": {
+        "questions": 6,
+        "control_correct": 6,
+        "same_set_compact_correct": 3,
+        "paired_wins": 0,
+        "paired_losses": 3,
+        "paired_ties": 3
+      },
+      "single-session-assistant": {
+        "questions": 1,
+        "control_correct": 0,
+        "same_set_compact_correct": 0,
+        "paired_wins": 0,
+        "paired_losses": 0,
+        "paired_ties": 1
+      },
+      "single-session-preference": {
+        "questions": 1,
+        "control_correct": 0,
+        "same_set_compact_correct": 0,
+        "paired_wins": 0,
+        "paired_losses": 0,
+        "paired_ties": 1
+      },
+      "single-session-user": {
+        "questions": 1,
+        "control_correct": 0,
+        "same_set_compact_correct": 1,
+        "paired_wins": 1,
+        "paired_losses": 0,
+        "paired_ties": 0
+      },
+      "temporal-reasoning": {
+        "questions": 10,
+        "control_correct": 3,
+        "same_set_compact_correct": 2,
+        "paired_wins": 0,
+        "paired_losses": 1,
+        "paired_ties": 9
+      }
+    },
+    "complete_reader_execution": true,
+    "complete_judge_execution": true,
+    "reader_failed_attempts": 0,
+    "judge_failed_attempts": 0
+  },
+  "execution_sha256": "76563d053b361fb733b116ef2e20f358582697fe83e34a544afe3d4ff8d5aa0b",
+  "runtime": {
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-i386-64bit"
+  },
+  "claim_boundary": "Post-hoc causal localization on observed answer transitions. The result can choose the next experiment but cannot support product promotion.",
+  "result_sha256": "acdcbb6748cddd32476a154197accb974afc5c398c97c110ef7af6b1ae987628"
+}

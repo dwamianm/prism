@@ -59,17 +59,20 @@ class AssertionQuery(BaseModel):
             raise ValueError("assertion selectors must be nonempty strings")
         return values
 
-    @field_validator("group_by", "scopes", "node_types")
+    @field_validator("group_by", "node_types")
     @classmethod
     def validate_unique_nonempty(cls, values: tuple) -> tuple:
         if not values:
-            raise ValueError(
-                "group_by, scopes, and node_types cannot be empty when supplied"
-            )
+            raise ValueError("group_by and node_types cannot be empty")
         if len(set(values)) != len(values):
-            raise ValueError(
-                "group_by, scopes, and node_types must not contain duplicates"
-            )
+            raise ValueError("group_by and node_types must not contain duplicates")
+        return values
+
+    @field_validator("scopes")
+    @classmethod
+    def validate_unique_scopes(cls, values: tuple[Scope, ...]) -> tuple[Scope, ...]:
+        if len(set(values)) != len(values):
+            raise ValueError("scopes must not contain duplicates")
         return values
 
     @model_validator(mode="after")
@@ -134,6 +137,7 @@ class QuantityAggregationQuery(BaseModel):
 
     subjects: tuple[str, ...] = ()
     predicates: tuple[str, ...] = ()
+    predicate_prefixes: tuple[str, ...] = ()
     objects: tuple[str, ...] = ()
     polarities: tuple[str, ...] = ("positive",)
     units: tuple[str, ...] = ()
@@ -153,20 +157,34 @@ class QuantityAggregationQuery(BaseModel):
     group_limit: int = Field(default=1000, ge=0, le=10000, strict=True)
     sample_limit: int = Field(default=10, ge=0, le=100, strict=True)
 
-    @field_validator("subjects", "predicates", "objects", "polarities", "units")
+    @field_validator(
+        "subjects",
+        "predicates",
+        "predicate_prefixes",
+        "objects",
+        "polarities",
+        "units",
+    )
     @classmethod
     def validate_selectors(cls, values: tuple[str, ...]) -> tuple[str, ...]:
         if any(not value.strip() for value in values):
             raise ValueError("quantity selectors must be nonempty strings")
         return values
 
-    @field_validator("group_by", "scopes", "node_types")
+    @field_validator("group_by", "node_types")
     @classmethod
     def validate_unique_nonempty(cls, values: tuple) -> tuple:
         if not values:
-            raise ValueError("group_by, scopes, and node_types cannot be empty when supplied")
+            raise ValueError("group_by and node_types cannot be empty")
         if len(set(values)) != len(values):
-            raise ValueError("group_by, scopes, and node_types must not contain duplicates")
+            raise ValueError("group_by and node_types must not contain duplicates")
+        return values
+
+    @field_validator("scopes")
+    @classmethod
+    def validate_unique_scopes(cls, values: tuple[Scope, ...]) -> tuple[Scope, ...]:
+        if len(set(values)) != len(values):
+            raise ValueError("scopes must not contain duplicates")
         return values
 
     @field_validator("group_by")
@@ -232,10 +250,59 @@ class QuantityAggregation(BaseModel):
     groups_truncated: bool = False
     stored_set_exhaustive: Literal[True] = True
     source_extraction_coverage: Literal["unknown"] = "unknown"
-    semantic_equivalence: Literal["normalized_exact_only"] = "normalized_exact_only"
+    semantic_equivalence: Literal[
+        "normalized_exact_only",
+        "normalized_exact_and_predicate_prefix",
+    ] = "normalized_exact_only"
     real_world_coverage: Literal["unknown"] = "unknown"
     unit_conversion: Literal["none"] = "none"
     consistency: Literal["complete_for_unchanged_store"] = (
         "complete_for_unchanged_store"
     )
     exclusions: dict[str, int] = Field(default_factory=dict)
+
+
+QuantityAggregationPlanStatus = Literal["ready", "unsupported"]
+QuantityAggregationPlanReason = Literal[
+    "matched_amount_question",
+    "matched_count_question",
+    "unsupported_shape",
+    "unsupported_action",
+    "unsupported_unit",
+]
+
+
+class QuantityAggregationPlan(BaseModel):
+    """Auditable fail-closed translation of a narrow natural-language query."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_version: Literal[1] = 1
+    question: str = Field(min_length=1)
+    status: QuantityAggregationPlanStatus
+    reason: QuantityAggregationPlanReason
+    action: str | None = None
+    query: QuantityAggregationQuery | None = None
+    assumptions: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_status(self) -> QuantityAggregationPlan:
+        if (self.status == "ready") != (self.query is not None):
+            raise ValueError("ready quantity plans require a query and unsupported plans forbid one")
+        return self
+
+
+class PlannedQuantityAggregation(BaseModel):
+    """A transparent natural-language plan and its optional exact execution."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_version: Literal[1] = 1
+    plan: QuantityAggregationPlan
+    aggregation: QuantityAggregation | None = None
+
+    @model_validator(mode="after")
+    def validate_execution(self) -> PlannedQuantityAggregation:
+        if (self.plan.status == "ready") != (self.aggregation is not None):
+            raise ValueError("ready plans require an aggregation and unsupported plans forbid one")
+        return self

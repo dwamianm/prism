@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-monotonic-compact-result",
+  "completed_at": "2026-09-18T09:23:54.664141+00:00",
+  "registration_sha256": "b777b6c89531af83062285e1ce7dcbade2ccf769dc17c6095cc0da675752d5dc",
+  "cohort": "full-development",
+  "arms": {
+    "control": {
+      "questions": 500,
+      "evidence_questions": 470,
+      "mean_session_recall": 0.9626241134751773,
+      "complete_session_questions": 437,
+      "mean_turn_recall": 0.9146453900709219,
+      "complete_turn_questions": 403,
+      "context_tokens": {
+        "mean": 3964.75,
+        "median": 3976.0,
+        "p95": 3996.0,
+        "max": 3996
+      },
+      "records": {
+        "mean": 23.932,
+        "median": 24.0,
+        "p95": 27.0,
+        "max": 29
+      }
+    },
+    "monotonic": {
+      "questions": 500,
+      "evidence_questions": 470,
+      "mean_session_recall": 0.9666666666666667,
+      "complete_session_questions": 442,
+      "mean_turn_recall": 0.9212765957446809,
+      "complete_turn_questions": 409,
+      "context_tokens": {
+        "mean": 3975.42,
+        "median": 3982.0,
+        "p95": 3996.0,
+        "max": 3996
+      },
+      "records": {
+        "mean": 32.524,
+        "median": 33.0,
+        "p95": 38.0,
+        "max": 43
+      }
+    }
+  },
+  "comparison": {
+    "questions": 470,
+    "turn_recall_wins": 7,
+    "turn_recall_losses": 0,
+    "turn_recall_ties": 463,
+    "session_recall_wins": 6,
+    "session_recall_losses": 0,
+    "session_recall_ties": 464,
+    "categories": {
+      "knowledge-update": {
+        "questions": 72,
+        "control_mean_turn_recall": 0.9652777777777778,
+        "monotonic_mean_turn_recall": 0.9652777777777778,
+        "turn_recall_losses": 0
+      },
+      "multi-session": {
+        "questions": 121,
+        "control_mean_turn_recall": 0.8808539944903582,
+        "monotonic_mean_turn_recall": 0.8928374655647383,
+        "turn_recall_losses": 0
+      },
+      "single-session-assistant": {
+        "questions": 56,
+        "control_mean_turn_recall": 0.875,
+        "monotonic_mean_turn_recall": 0.8928571428571429,
+        "turn_recall_losses": 0
+      },
+      "single-session-preference": {
+        "questions": 30,
+        "control_mean_turn_recall": 0.9,
+        "monotonic_mean_turn_recall": 0.9166666666666666,
+        "turn_recall_losses": 0
+      },
+      "single-session-user": {
+        "questions": 64,
+        "control_mean_turn_recall": 0.9765625,
+        "monotonic_mean_turn_recall": 0.9765625,
+        "turn_recall_losses": 0
+      },
+      "temporal-reasoning": {
+        "questions": 127,
+        "control_mean_turn_recall": 0.9078740157480315,
+        "monotonic_mean_turn_recall": 0.9091863517060368,
+        "turn_recall_losses": 0
+      }
+    }
+  },
+  "gate": {
+    "replay_failures": 0,
+    "budget_violations": 0,
+    "control_record_loss_questions": 0,
+    "control_guidance_loss_questions": 0,
+    "compact_fallback_questions": 0,
+    "per_question_turn_recall_losses": 0,
+    "per_question_session_recall_losses": 0,
+    "category_mean_turn_recall_losses": 0,
+    "complete_turn_questions_improved": true,
+    "passed": true
+  },
+  "runtime": {
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-i386-64bit",
+    "workers": 5
+  },
+  "case_manifest_sha256": "9671ccf545e3bad72494759b02cdb78a66e3cea739c0492f35d44a7822c98790",
+  "result_sha256": "17bb8c5ad7cb3b243b9409c3fe70c498a92f928fbdb92fe6b9c0052add260c59"
+}

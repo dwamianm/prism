@@ -19,11 +19,17 @@ class ExtractedQuantity(BaseModel):
     """One source-grounded decimal quantity attached to a claim object.
 
     The unit is copied from the source and is not converted or inferred. Use
-    ``"1"`` only for a dimensionless number whose source text is the number.
+    ``"1"`` only for a dimensionless measured or counted value whose source
+    text is the number. Dates, times, versions, identifiers, addresses, phone
+    numbers, model names, and ordinals are not quantities.
     """
 
     value: Decimal = Field(
-        description="Exact decimal value represented by source_text; never a float approximation"
+        description=(
+            "Exact measured or counted decimal value represented by source_text; "
+            "never a float approximation or a date, version, identifier, address, "
+            "phone number, model name, or ordinal"
+        )
     )
     unit: str = Field(
         min_length=1,
@@ -108,13 +114,23 @@ class ExtractedFact(BaseModel):
     predicate: str = Field(
         description="Relationship or attribute type (e.g., works_at, lives_in, role)"
     )
-    object: str = Field(description="Value or target entity")
+    object: str = Field(
+        description=(
+            "Value or target entity. When the source states one explicit numeric "
+            "amount about a target, include the exact quantified phrase in this "
+            "value (for example, '$500 for the shelter') so the amount remains "
+            "source-grounded."
+        )
+    )
     quantity: ExtractedQuantity | None = Field(
         default=None,
         description=(
             "One explicit numeric amount represented by this fact object. "
-            "Copy its quantified phrase and unit from the source; null when "
-            "the object has no single unambiguous decimal quantity."
+            "Copy its quantified phrase and unit from the source, and keep the "
+            "exact quantified phrase in object even when the claim also names "
+            "a target; null when the object has no single unambiguous decimal "
+            "quantity or the number is only a date, time, version, identifier, "
+            "address, phone number, model name, or ordinal."
         ),
     )
     polarity: ClaimPolarity = Field(
@@ -215,14 +231,23 @@ class ExtractedFact(BaseModel):
 
 
 class ExtractedRelationship(BaseModel):
-    """A relationship between two entities extracted from text."""
+    """A relationship between two entities extracted from text.
+
+    Claims whose explicit numeric amount must survive belong in ``facts``,
+    whose object and quantity fields can retain the exact source phrase.
+    """
 
     source_entity: str = Field(description="Source entity name, or a literal unresolved personal reference such as I or we; copy the source text exactly")
     source_entity_type: str | None = Field(default=None, description="Exact source entity_type; required for an ambiguous name")
     target_entity: str = Field(description="Target entity name, or a literal unresolved personal reference such as I or we; copy the source text exactly")
     target_entity_type: str | None = Field(default=None, description="Exact target entity_type; required for an ambiguous name")
     relationship_type: str = Field(
-        description="Source-supported relationship predicate, such as lives_in or works_at; do not force it into a graph edge category"
+        description=(
+            "Source-supported relationship predicate, such as lives_in or "
+            "works_at; do not force it into a graph edge category. Do not use "
+            "a relationship for a claim with an explicit numeric amount; emit "
+            "that claim as a fact so its quantity can be preserved."
+        )
     )
     polarity: ClaimPolarity = Field(
         default="unknown", description=ExtractedFact.model_fields["polarity"].description

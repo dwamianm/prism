@@ -65,14 +65,28 @@ from prme.types import ConditionEvaluationMethod, ConditionState, EpistemicType,
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
 from prme.retrieval.models import RetrievalResponse
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewResult,
+)
+from prme.integrations.product_candidates import (
+    ProductAlignmentCandidate,
+    ProductCandidateEntity,
+)
 
 _Result = TypeVar("_Result")
 
 if TYPE_CHECKING:
+    from prme.integrations.typesafe import (
+        JevProductAdvisorConfig,
+        JevProductProposal,
+        ProductEntity,
+    )
     from prme.models.aggregation import (
         AssertionAggregation,
         AssertionQuery,
         QuantityAggregation,
+        PlannedQuantityAggregation,
         QuantityAggregationQuery,
     )
     from prme.models.temporal import AssertionState, AssertionStateQuery
@@ -257,6 +271,7 @@ class MemoryClient:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -274,11 +289,14 @@ class MemoryClient:
 
         Classification overrides and TTL match the async engine. Omit ttl_days
         to use the configured per-type default, or pass None for no expiry.
+        ``retrieval_content`` can provide a compact searchable/model-facing
+        representation while ``content`` remains the immutable source.
         """
         return self._run(
             self._engine.store(
                 content,
                 user_id=user_id,
+                retrieval_content=retrieval_content,
                 session_id=session_id,
                 role=role,
                 node_type=node_type,
@@ -299,6 +317,7 @@ class MemoryClient:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -316,6 +335,7 @@ class MemoryClient:
         return self._run(self._engine.store_with_receipt(
             content,
             user_id=user_id,
+            retrieval_content=retrieval_content,
             session_id=session_id,
             role=role,
             node_type=node_type,
@@ -595,6 +615,83 @@ class MemoryClient:
         """Get a single node by ID. Returns MemoryNode or None."""
         return self._run(self._engine.get_node(node_id, user_id=user_id, include_superseded=include_superseded))
 
+    def propose_product_alignment(
+        self,
+        left_node_id: str,
+        right_node_id: str,
+        left: "ProductEntity | dict[str, str]",
+        right: "ProductEntity | dict[str, str]",
+        *,
+        user_id: str,
+        config: "JevProductAdvisorConfig | None" = None,
+    ) -> "JevProductProposal":
+        """Assess an explicit product pair and publish only unverified advice."""
+        return self._run(
+            self._engine.propose_product_alignment(
+                left_node_id,
+                right_node_id,
+                left,
+                right,
+                user_id=user_id,
+                config=config,
+            )
+        )
+
+    def find_product_alignment_candidates(
+        self,
+        products: list[ProductCandidateEntity | dict[str, Any]],
+        *,
+        user_id: str,
+        top_k: int = 5,
+        min_score: float = 0.1,
+        cross_catalog_only: bool = False,
+    ) -> list[ProductAlignmentCandidate]:
+        """Rank compatible owned product nodes before optional Jev calls."""
+        return self._run(
+            self._engine.find_product_alignment_candidates(
+                products,
+                user_id=user_id,
+                top_k=top_k,
+                min_score=min_score,
+                cross_catalog_only=cross_catalog_only,
+            )
+        )
+
+    def list_alias_proposals(
+        self,
+        *,
+        user_id: str,
+        scope: Scope | str | None = None,
+        status: str | None = None,
+        limit: int = 100,
+    ) -> list[AliasProposalInboxItem]:
+        """List pending or reviewed identity proposals for one owner."""
+        return self._run(
+            self._engine.list_alias_proposals(
+                user_id=user_id, scope=scope, status=status, limit=limit
+            )
+        )
+
+    def review_alias_proposal(
+        self,
+        proposal_operation_id: str,
+        *,
+        user_id: str,
+        decision: str,
+        reviewer_id: str,
+        reason: str | None = None,
+    ) -> AliasProposalReviewResult:
+        """Accept an identity link or reject a proposal without merging nodes."""
+        return self._run(
+            self._engine.review_alias_proposal(
+                proposal_operation_id,
+                user_id=user_id,
+                decision=decision,
+                reviewer_id=reviewer_id,
+                reason=reason,
+            )
+        )
+
     def get_provenance(
         self, node_id: str, *, user_id: str | None = None,
         operation_cursor: str | None = None, operation_limit: int = 100,
@@ -736,6 +833,18 @@ class MemoryClient:
         """Calculate exact decimal statistics without implicit unit conversion."""
         return self._run(self._engine.aggregate_quantities(
             query, user_id=user_id, batch_size=batch_size,
+        ))
+
+    def aggregate_quantities_from_text(
+        self,
+        question: str,
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "PlannedQuantityAggregation":
+        """Plan and run a supported natural-language quantity aggregation."""
+        return self._run(self._engine.aggregate_quantities_from_text(
+            question, user_id=user_id, batch_size=batch_size,
         ))
 
     def get_assertion_state(

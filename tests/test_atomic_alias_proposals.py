@@ -1,19 +1,78 @@
 """Unverified alias links must be durable, idempotent graph proposals."""
 
 import asyncio
+from datetime import datetime, timezone
+import hashlib
+from uuid import UUID, uuid5
 
 import pytest
 
 from prme import MemoryEngine
 from prme.models.edges import MemoryEdge
 from prme.organizer.alias_resolution import AliasCandidate, resolve_aliases
-from prme.storage.alias_proposal import read_record
+from prme.storage.alias_proposal import AliasProposalRecord, _payload, read_record
 from prme.models.nodes import MemoryNode
 from prme.types import EdgeType, NodeType, Scope
 from tests import test_durable_ingestion as fixtures
 
 config = fixtures.config
 user = fixtures.user
+
+
+def test_version_one_alias_journal_bytes_remain_unchanged():
+    stamp = datetime(2026, 1, 2, 3, 4, 5, 678901, tzinfo=timezone.utc)
+    ids = (
+        UUID("11111111-1111-1111-1111-111111111111"),
+        UUID("22222222-2222-2222-2222-222222222222"),
+    )
+    nodes = tuple(
+        MemoryNode(
+            id=node_id,
+            user_id="alice",
+            node_type=NodeType.ENTITY,
+            content=content,
+            metadata={"entity_type": "person"},
+            created_at=stamp,
+            updated_at=stamp,
+            valid_from=stamp,
+            last_reinforced_at=stamp,
+        )
+        for node_id, content in zip(ids, ("Alice", "Alicia"), strict=True)
+    )
+    operation_id = uuid5(
+        ids[0], f"prme:unverified-alias-proposal:v1:{ids[1]}"
+    )
+    edge = MemoryEdge(
+        id=uuid5(operation_id, "relates-to"),
+        source_id=ids[0],
+        target_id=ids[1],
+        edge_type=EdgeType.RELATES_TO,
+        user_id="alice",
+        confidence=0.875,
+        valid_from=stamp,
+        created_at=stamp,
+        metadata={
+            "relation": "alias",
+            "alias_type": "semantic",
+            "identity_verified": False,
+            "alias_operation_id": str(operation_id),
+        },
+    )
+    payload = _payload(
+        AliasProposalRecord(
+            operation_id=operation_id,
+            alias_type="semantic",
+            score=0.875,
+            left_before=nodes[0],
+            right_before=nodes[1],
+            edge=edge,
+        )
+    )
+
+    assert hashlib.sha256(payload.encode()).hexdigest() == (
+        "999efcc563f431410a92f3fc3447f08f457fcad6504e714865863f4f98796b54"
+    )
+    assert isinstance(read_record(payload), AliasProposalRecord)
 
 
 async def seed(engine, user):
@@ -90,6 +149,19 @@ async def test_alias_proposal_retains_complete_inputs_and_replays(config, user):
             "identity_verified": False,
             "alias_operation_id": first.operation_id,
         }
+        assert await engine._graph_store.get_neighborhood(
+            ids[0], max_hops=1
+        ) == []
+        assert {
+            str(node.id)
+            for node in await engine._graph_store.get_neighborhood(
+                ids[0], max_hops=1, include_unverified_aliases=True
+            )
+        } == {ids[1]}
+        assert await engine._graph_store.find_shortest_path(ids[0], ids[1]) is None
+        assert await engine._graph_store.find_shortest_path(
+            ids[0], ids[1], include_unverified_aliases=True
+        ) == ids
 
     async with MemoryEngine.open(config) as engine:
         again = await engine._graph_store.propose_alias(

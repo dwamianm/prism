@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "kind": "jev-retrieval-rerank-development-registration",
+  "created_at": "2026-09-17T20:35:18.380475+00:00",
+  "claim_boundary": "Passing establishes development evidence that pinned Jev improves the ordering of PRME's fixed top-five AgentMemBench candidates. It does not improve candidate recall or establish answer quality.",
+  "source": {
+    "prme_revision": "841454c90d9d010e1b3520c039e2cd8d11522947",
+    "runner_sha256": "6083020e746cea290e60053697bc1666ea68c7d352cd00f340d97d67320105a7"
+  },
+  "dataset": {
+    "name": "AgentMemBench retrieval",
+    "upstream_revision": "186c9a54edd47aae42d8b6990520f8e902b60303",
+    "raw_result_sha256": "703436c92fadf43de8037ab725c464d671b18c41d35f4ee34a4f06487bd2b678",
+    "excluded_development_raw_sha256": "a45e6e67c49285ef73e5cc8ca4aa1ff1a5f8a6b74dbaff0e58ff32b0c521e427",
+    "verification_sha256": "ad255d86d4fa23e71ee5654c23d7497d06e068c1d486cbd42768e07b2f75de3d",
+    "source_text_policy": "Raw public benchmark memories remain outside the repository; public Jev artifacts contain identities, ranks, probabilities and hashes."
+  },
+  "cohort": {
+    "role": "development",
+    "selection_seed": "prme-jev-agentmembench-rerank-development-v1",
+    "excluded_prior_cases": 100,
+    "cases": 200,
+    "identity_sha256": "e3da382cd6e776ac7a7ad5bdfb3d712d25f71f065871c90a25b8fa4dca66d63b",
+    "baseline_exact_source_present": 193,
+    "baseline_exact_source_at_1": 161
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "query_candidate_relevance_reranking",
+    "state_fields": [
+      "query",
+      "candidates"
+    ],
+    "candidate_count": 5,
+    "questions": {
+      "candidate_0": {
+        "type": "noul",
+        "instructions": "Does candidates[0] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_1": {
+        "type": "noul",
+        "instructions": "Does candidates[1] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_2": {
+        "type": "noul",
+        "instructions": "Does candidates[2] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_3": {
+        "type": "noul",
+        "instructions": "Does candidates[3] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_4": {
+        "type": "noul",
+        "instructions": "Does candidates[4] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      }
+    },
+    "questions_sha256": "888c99d973dd64d91299f9dd0d5f40dce79e779f537b20f00197ecab3e0a364a",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "ordering": "descending_noul_then_original_rank",
+    "relevance_unit": "exact_source_memory",
+    "candidate_set_mutation": false,
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_query_or_candidate_text": false
+  },
+  "evaluation": {
+    "gates": {
+      "cases_evaluated_min": 200,
+      "response_validity_min": 200,
+      "candidate_set_preservation": true,
+      "hit_at_1_gain_min": 0.05,
+      "mrr_gain_min": 0.03,
+      "recall_at_5_noninferiority_min": 0.0,
+      "top1_net_gains_min": 10,
+      "p95_request_seconds_max": 1.0
+    },
+    "decision_rule": "Do not implement the reranker or score the remaining cohort unless every development gate passes."
+  }
+}

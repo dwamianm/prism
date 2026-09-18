@@ -19,10 +19,11 @@ same response, apart from those event-local personal references. A missing or
 ambiguous reference discards its claim while preserving grounded, closed
 siblings; it never creates or selects an identity to repair model output.
 
-Fresh built-in extractions record `speech_act_v6`; derivations prepared from
+Fresh built-in extractions record `speech_act_v11`; derivations prepared from
 those records identify qualifier-aware, quantity-preserving,
 speech-act-preserving, and source-effective validity rules as `speech_act_v12`.
-Saved v5 records prepare v11, v4 prepare v10, v3 prepare v9, and v2 prepare v8.
+Saved v10 through v6 records also prepare v12, v5 records prepare v11, v4 prepare v10, v3
+prepare v9, and v2 prepare v8.
 Legacy `source_passage_v1` extraction records prepare missing plans under
 `temporal_validity_v7`, so recovery never claims validation that did not run.
 Prepared plans using `speech_act_v11`, `speech_act_v10`, `speech_act_v9`, `speech_act_v8`, `temporal_validity_v7`, `grounded_quantities_v6`, `claim_qualifiers_v5`,
@@ -88,8 +89,23 @@ New proposals publish their relationship and a checksum-protected
 `ALIAS_PROPOSED` record in one backend transaction. Their operation and edge IDs
 are stable for the unordered pair, so repeated or concurrent organizer passes
 do not create duplicate links. The record retains both complete node inputs and
-the exact edge. Existing random-ID proposal edges are recognized and reused but
-not backfilled with invented creation history.
+the exact edge. Version-2 records can additionally retain a complete external
+assessment bound to exact node checksums. Repeated matching requests return the
+first committed assessment; older proposals are never relabeled with evidence
+they did not originally contain. Existing random-ID proposal edges are
+recognized and reused but not backfilled with invented creation history.
+Unverified proposals remain queryable as edges but are excluded from ordinary
+neighborhood and shortest-path traversal unless a caller explicitly opts in.
+
+An owner can list these records through the alias-proposal inbox and make one
+explicit accepted or rejected decision. The decision transaction retains the
+complete original proposal payload and reviewer input in a checksummed record.
+Acceptance rechecks the exact proposed node snapshots and publishes a separate
+verified alias edge; it leaves both nodes active and does not perform an
+organizer merge. Rejection publishes no traversable edge. Matching retries reuse
+the deterministic review record, while conflicting decisions fail. This turns a
+model or similarity signal into a reviewable identity link without treating it
+as permission to delete or supersede either entity.
 
 These guards protect source identity and merge behavior. They do not establish
 that extraction predicates are entailed, that a source is truthful, or that a

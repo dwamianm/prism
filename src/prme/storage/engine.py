@@ -72,6 +72,15 @@ from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfilePro
 from prme.models.derivation import PreparedEmbedding
 from prme.storage.relevance import RelevanceRepository
 from prme.storage.ranking_profiles import RankingProfileRepository, StaleRankingProfileError
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewResult,
+    AliasProposalStatus,
+)
+from prme.integrations.product_candidates import (
+    ProductAlignmentCandidate,
+    ProductCandidateEntity,
+)
 from prme.storage.citations import CitationRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -105,12 +114,18 @@ if TYPE_CHECKING:
         AssertionAggregation,
         AssertionQuery,
         QuantityAggregation,
+        PlannedQuantityAggregation,
         QuantityAggregationQuery,
     )
     from prme.models.temporal import AssertionState, AssertionStateQuery
     from prme.storage.encryption import EncryptionProvider
 
     from prme.ingestion.pipeline import IngestionPipeline
+    from prme.integrations.typesafe import (
+        JevProductAdvisorConfig,
+        JevProductProposal,
+        ProductEntity,
+    )
     from prme.organizer.models import OrganizeResult
     from prme.retrieval.config import ScoringWeights
     from prme.retrieval.models import RetrievalResponse
@@ -447,6 +462,7 @@ class MemoryEngine:
                 query_reformulation_provider=config.extraction.provider,
                 query_reformulation_model=config.extraction.model,
                 temporal_languages=config.temporal_languages,
+                temporal_relation_config=config.temporal_relation,
             )
 
             # Run epistemic backfill migration for existing nodes
@@ -581,6 +597,7 @@ class MemoryEngine:
                 query_reformulation_provider=config.extraction.provider,
                 query_reformulation_model=config.extraction.model,
                 temporal_languages=config.temporal_languages,
+                temporal_relation_config=config.temporal_relation,
             )
 
             # Run epistemic backfill migration
@@ -626,6 +643,7 @@ class MemoryEngine:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -651,7 +669,9 @@ class MemoryEngine:
         are outside this repair job's completion boundary.
 
         Args:
-            content: Text content to store.
+            content: Exact source text retained in the immutable event log.
+            retrieval_content: Optional compact representation to index, rank,
+                and place in model context. The source event remains ``content``.
             user_id: Owner user ID.
             session_id: Optional session identifier.
             role: Event role ('user', 'assistant', 'tool', or 'system').
@@ -682,6 +702,7 @@ class MemoryEngine:
 
         validate_source_time(event_time)
         validate_validity_window(valid_from, valid_to)
+        materialized_content = content if retrieval_content is None else retrieval_content
         # Infer epistemic_type and source_type if not provided
         # Lazy imports to avoid circular dependencies
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
@@ -727,7 +748,7 @@ class MemoryEngine:
         novelty_result = None
         if self._config.enable_surprise_gating:
             try:
-                novelty_result = await self._compute_novelty(content, user_id)
+                novelty_result = await self._compute_novelty(materialized_content, user_id)
             except Exception:
                 logger.warning(
                     "Novelty scoring failed for event %s. "
@@ -791,7 +812,7 @@ class MemoryEngine:
             session_id=session_id,
             node_type=node_type,
             scope=scope,
-            content=content,
+            content=materialized_content,
             metadata=metadata,
             confidence=confidence,
             confidence_base=confidence,
@@ -836,7 +857,7 @@ class MemoryEngine:
         if self._config.reinforce_similarity_threshold is not None:
             try:
                 await self._check_remention_reinforcement(
-                    content, str(node.id), user_id, event.id, scope=node.scope,
+                    materialized_content, str(node.id), user_id, event.id, scope=node.scope,
                 )
             except Exception:
                 logger.warning(
@@ -862,7 +883,7 @@ class MemoryEngine:
         if self._config.enable_store_supersedence:
             try:
                 await self._check_store_supersedence(
-                    content, str(node.id), user_id
+                    materialized_content, str(node.id), user_id
                 )
             except Exception:
                 logger.warning(
@@ -893,8 +914,8 @@ class MemoryEngine:
             prev = self._last_session_turn.get(session_key)
             if prev is not None:
                 prev_role, prev_content, prev_nt, prev_scope = prev
-                if prev_role != role and len(prev_content) + len(content) < 1000:
-                    merged = f"{prev_content}\n{content}"
+                if prev_role != role and len(prev_content) + len(materialized_content) < 1000:
+                    merged = f"{prev_content}\n{materialized_content}"
                     try:
                         merged_node = MemoryNode(
                             user_id=user_id,
@@ -935,7 +956,9 @@ class MemoryEngine:
                             session_id,
                             exc_info=True,
                         )
-            self._last_session_turn[session_key] = (role, content, node_type, scope)
+            self._last_session_turn[session_key] = (
+                role, materialized_content, node_type, scope
+            )
 
         return event_id
 
@@ -944,6 +967,7 @@ class MemoryEngine:
         content: str,
         *,
         user_id: str,
+        retrieval_content: str | None = None,
         session_id: str | None = None,
         role: str = "user",
         node_type: NodeType = NodeType.NOTE,
@@ -971,6 +995,7 @@ class MemoryEngine:
         event_id = await self.store(
             content,
             user_id=user_id,
+            retrieval_content=retrieval_content,
             session_id=session_id,
             role=role,
             node_type=node_type,
@@ -986,9 +1011,10 @@ class MemoryEngine:
         )
         try:
             nodes = await self.get_event_nodes(event_id, user_id=user_id)
+            expected_content = content if retrieval_content is None else retrieval_content
             node = next((
                 candidate for candidate in nodes
-                if candidate.content == content
+                if candidate.content == expected_content
                 and candidate.node_type == node_type
                 and candidate.scope == scope
                 and candidate.session_id == session_id
@@ -1968,6 +1994,125 @@ class MemoryEngine:
             node_id, include_superseded=include_superseded
         )
 
+    async def propose_product_alignment(
+        self,
+        left_node_id: str,
+        right_node_id: str,
+        left: "ProductEntity | dict[str, str]",
+        right: "ProductEntity | dict[str, str]",
+        *,
+        user_id: str,
+        config: "JevProductAdvisorConfig | None" = None,
+    ) -> "JevProductProposal":
+        """Assess an explicit product pair and publish only unverified advice."""
+        from prme.integrations.typesafe import propose_product_alignment
+
+        return await propose_product_alignment(
+            self,
+            left_node_id,
+            right_node_id,
+            left,
+            right,
+            user_id=user_id,
+            config=config,
+        )
+
+    async def find_product_alignment_candidates(
+        self,
+        products: list[ProductCandidateEntity | dict[str, Any]],
+        *,
+        user_id: str,
+        top_k: int = 5,
+        min_score: float = 0.1,
+        cross_catalog_only: bool = False,
+    ) -> list[ProductAlignmentCandidate]:
+        """Rank compatible owned product nodes before optional Jev calls."""
+        from prme.integrations.product_candidates import (
+            rank_product_alignment_candidates,
+        )
+        from prme.integrations.typesafe import _bound_product_node
+        from prme.organizer.merge_policy import alias_pair_allowed
+
+        if not isinstance(user_id, str) or not user_id.strip():
+            raise ValueError("Product candidate generation requires an owner")
+        parsed = [ProductCandidateEntity.model_validate(item) for item in products]
+        if len(parsed) > 10000:
+            raise ValueError("Product candidate generation accepts at most 10000 nodes")
+        if len({item.node_id for item in parsed}) != len(parsed):
+            raise ValueError("Product candidate node IDs must be unique")
+        nodes = await self._graph_store.get_nodes(
+            [str(item.node_id) for item in parsed]
+        )
+        by_id = {node.id: node for node in nodes}
+        for item in parsed:
+            node = _bound_product_node(
+                by_id.get(item.node_id), item.product, node_id=str(item.node_id)
+            )
+            if node.user_id != user_id:
+                raise ValueError(f"Product entity node {item.node_id} is unavailable")
+
+        groups: list[list[ProductCandidateEntity]] = []
+        representatives = []
+        for item in sorted(parsed, key=lambda value: str(value.node_id)):
+            node = by_id[item.node_id]
+            for index, representative in enumerate(representatives):
+                if alias_pair_allowed(representative, node):
+                    groups[index].append(item)
+                    break
+            else:
+                representatives.append(node)
+                groups.append([item])
+
+        candidates = [
+            candidate
+            for group in groups
+            for candidate in rank_product_alignment_candidates(
+                group,
+                top_k=top_k,
+                min_score=min_score,
+                cross_catalog_only=cross_catalog_only,
+            )
+        ]
+        return sorted(
+            candidates,
+            key=lambda item: (
+                -item.score,
+                str(item.left.node_id),
+                str(item.right.node_id),
+            ),
+        )
+
+    async def list_alias_proposals(
+        self,
+        *,
+        user_id: str,
+        scope: Scope | str | None = None,
+        status: AliasProposalStatus | str | None = None,
+        limit: int = 100,
+    ) -> list[AliasProposalInboxItem]:
+        """List audited alias proposals as a review inbox."""
+        return await self._graph_store.list_alias_proposals(
+            user_id=user_id, scope=scope, status=status, limit=limit
+        )
+
+    async def review_alias_proposal(
+        self,
+        proposal_operation_id: str,
+        *,
+        user_id: str,
+        decision: str,
+        reviewer_id: str,
+        reason: str | None = None,
+    ) -> AliasProposalReviewResult:
+        """Accept an identity link or reject a proposal without merging nodes."""
+        return await self._graph_store.review_alias_proposal(
+            proposal_operation_id,
+            user_id=user_id,
+            decision=decision,
+            reviewer_id=reviewer_id,
+            reason=reason,
+        )
+
     async def query_nodes(self, **kwargs) -> list[MemoryNode]:
         """Query nodes with flexible filters.
 
@@ -2070,6 +2215,27 @@ class MemoryEngine:
             user_id=user_id,
             batch_size=batch_size,
         )
+
+    async def aggregate_quantities_from_text(
+        self,
+        question: str,
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "PlannedQuantityAggregation":
+        """Plan a narrow natural-language quantity query and execute when safe."""
+        from prme.models.aggregation import PlannedQuantityAggregation
+        from prme.retrieval.aggregation_planning import plan_quantity_aggregation
+
+        plan = plan_quantity_aggregation(question)
+        if plan.query is None:
+            return PlannedQuantityAggregation(plan=plan)
+        aggregation = await self.aggregate_quantities(
+            plan.query,
+            user_id=user_id,
+            batch_size=batch_size,
+        )
+        return PlannedQuantityAggregation(plan=plan, aggregation=aggregation)
 
     async def get_assertion_state(
         self,

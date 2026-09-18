@@ -578,6 +578,16 @@ the stored decimal, verbatim unit, quantified source text, claim object, and
 evidence again at read time. Missing and invalid quantities receive separate
 exclusion counts.
 
+Quantity queries may additionally provide `predicate_prefixes`. Each value uses
+the same normalized predicate representation as exact selectors and matches
+only itself or an underscore-delimited suffix: `raised` matches `raised` and
+`raised_amount_for`, but not `fundraised`. Exact predicates and prefixes are
+ORed within the predicate field; other selector fields remain ANDed. This is an
+explicit lexical composition tool for model-authored predicate detail, not
+synonym, alias or embedding inference. Responses using it report
+`semantic_equivalence="normalized_exact_and_predicate_prefix"`; queries without
+it retain `normalized_exact_only`.
+
 Every group key must include `unit`; normalized units use only NFKC, case-fold,
 trim, and whitespace normalization. No currency inference, plural resolution,
 dimensional analysis, or unit conversion occurs. This prevents a total from
@@ -592,8 +602,19 @@ The completeness and consistency boundary is identical to structured assertion
 aggregation: all matching grounded quantities are visited for an unchanged
 store, while source-extraction and real-world coverage remain unknown. HTTP
 exposes `POST /v1/quantities/aggregate`; MCP exposes
-`memory_aggregate_quantities`. Natural-language retrieval does not automatically
-route to this operation.
+`memory_aggregate_quantities`.
+
+`aggregate_quantities_from_text(question, user_id=...)` is a separate
+fail-closed planner and executor for a fixed set of complete, qualifier-free
+amount/count question shapes. It returns a typed plan with the exact structured
+query, action, assumptions and either an aggregation or an unsupported reason.
+Trailing qualifiers, negation, future wording, named subjects, unknown actions
+and unsupported units do not scan memory. Action inflections map through a fixed
+inspectable prefix table; first-person plans preserve the question's exact `I`
+or `we` subject.
+HTTP exposes `POST /v1/quantities/aggregate-text`; MCP exposes
+`memory_aggregate_quantities_from_text`. Natural-language retrieval does not
+automatically route to either exact operation.
 
 Natural-language count and list retrievals expose this boundary directly as
 `RetrievalMetadata.aggregation_coverage`. It reports unique candidates before

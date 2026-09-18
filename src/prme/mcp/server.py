@@ -154,6 +154,7 @@ async def engine_lifespan(server: FastMCP):
 async def memory_store(
     content: str,
     user_id: Optional[str] = None,
+    retrieval_content: Optional[str] = None,
     node_type: str = "note",
     scope: str = "personal",
     event_time: Optional[AwareDatetime] = None,
@@ -173,7 +174,9 @@ async def memory_store(
     full-text indexing. Returns the event ID and node ID.
 
     Args:
-        content: The text content to store as a memory.
+        content: Exact source text retained in the immutable event log.
+        retrieval_content: Optional compact text used for retrieval and model
+            context while preserving the full source in ``content``.
         user_id: User who owns this memory.
         node_type: Type of memory node. One of: entity, fact, decision,
             preference, task, instruction, summary, note. Default: note.
@@ -208,6 +211,7 @@ async def memory_store(
         receipt = await engine.store_with_receipt(
             content,
             user_id=user_id,
+            retrieval_content=retrieval_content,
             node_type=nt,
             scope=sc,
             role=role,
@@ -901,6 +905,56 @@ async def memory_organize(
         return _internal_error("memory_organize", e)
 
 
+async def memory_list_alias_proposals(
+    user_id: Optional[str] = None,
+    scope: Optional[str] = None,
+    status: Optional[Literal["pending", "accepted", "rejected"]] = None,
+    limit: int = 100,
+    ctx: Context = None,
+) -> str:
+    """List audited entity-alias proposals and their review status."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        items = await engine.list_alias_proposals(
+            user_id=owner,
+            scope=Scope(scope) if scope is not None else None,
+            status=status,
+            limit=limit,
+        )
+        return json.dumps([item.model_dump(mode="json") for item in items])
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_list_alias_proposals", exc)
+
+
+async def memory_review_alias_proposal(
+    proposal_operation_id: str,
+    decision: Literal["accepted", "rejected"],
+    reviewer_id: str,
+    reason: Optional[str] = None,
+    user_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Accept a verified alias link or record an audited rejection."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.review_alias_proposal(
+            proposal_operation_id,
+            user_id=owner,
+            decision=decision,
+            reviewer_id=reviewer_id,
+            reason=reason,
+        )
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_review_alias_proposal", exc)
+
+
 async def memory_get_node(
     node_id: str,
     ctx: Context = None,
@@ -1064,6 +1118,7 @@ async def memory_aggregate_quantities(
     user_id: Optional[str] = None,
     subjects: Optional[list[str]] = None,
     predicates: Optional[list[str]] = None,
+    predicate_prefixes: Optional[list[str]] = None,
     objects: Optional[list[str]] = None,
     polarities: Optional[list[str]] = None,
     units: Optional[list[str]] = None,
@@ -1091,6 +1146,7 @@ async def memory_aggregate_quantities(
         user_id: Owner to aggregate; omit when the MCP server binds an owner.
         subjects: Optional exact subject selectors.
         predicates: Optional exact predicate selectors.
+        predicate_prefixes: Optional normalized token prefixes for predicates.
         objects: Optional exact object selectors.
         polarities: Optional exact polarity selectors; defaults to positive.
         units: Optional exact unit selectors after Unicode/case/whitespace normalization.
@@ -1112,6 +1168,7 @@ async def memory_aggregate_quantities(
         raw = {
             "subjects": subjects,
             "predicates": predicates,
+            "predicate_prefixes": predicate_prefixes,
             "objects": objects,
             "polarities": polarities,
             "units": units,
@@ -1136,6 +1193,34 @@ async def memory_aggregate_quantities(
         return json.dumps({"error": str(exc)})
     except Exception as exc:
         return _internal_error("memory_aggregate_quantities", exc)
+
+
+async def memory_aggregate_quantities_from_text(
+    question: str,
+    user_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Plan and run a narrow natural-language quantity aggregation.
+
+    Supported questions are complete, qualifier-free amount or count shapes.
+    The response always includes the exact structured plan and its assumptions.
+    Unsupported wording returns a typed refusal and does not scan memory.
+
+    Args:
+        question: Natural-language amount or count question to plan.
+        user_id: Owner to aggregate; omit when the MCP server binds an owner.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.aggregate_quantities_from_text(
+            question, user_id=owner
+        )
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_aggregate_quantities_from_text", exc)
 
 
 async def memory_get_assertion_state(
@@ -1577,8 +1662,10 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     server.prme_config = config
     for tool in (memory_store, memory_ingest_fast_many, memory_process_materializations,
                  memory_retrieve, memory_ingest, memory_organize,
+                 memory_list_alias_proposals, memory_review_alias_proposal,
                  memory_get_node, memory_scan_nodes, memory_aggregate_assertions,
-                 memory_aggregate_quantities, memory_get_assertion_state,
+                 memory_aggregate_quantities, memory_aggregate_quantities_from_text,
+                 memory_get_assertion_state,
                  memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance, memory_evaluate_learning,

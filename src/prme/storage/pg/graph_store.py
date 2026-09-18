@@ -11,6 +11,7 @@ import json
 import logging
 import uuid as _uuid
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 import asyncpg  # type: ignore[import-untyped]
@@ -18,7 +19,7 @@ import asyncpg  # type: ignore[import-untyped]
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
-from prme.storage.alias_proposal import AliasProposalResult
+from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
@@ -586,12 +587,33 @@ class PgGraphStore:
     async def propose_alias(
         self, node_a_id: str, node_b_id: str, *, user_id: str,
         alias_type: str, score: float,
+        evidence: AliasProposalEvidence | dict[str, Any] | None = None,
     ) -> AliasProposalResult | None:
         """Atomically publish an unverified alias link and its journal."""
         from prme.storage.alias_proposal import propose_postgres
         return await propose_postgres(
             self, node_a_id, node_b_id, user_id=user_id,
-            alias_type=alias_type, score=score,
+            alias_type=alias_type, score=score, evidence=evidence,
+        )
+
+    async def review_alias_proposal(
+        self, proposal_operation_id: str, *, user_id: str, decision: str,
+        reviewer_id: str, reason: str | None = None,
+    ):
+        """Atomically record a review and publish an accepted identity link."""
+        from prme.storage.alias_review import review_postgres
+        return await review_postgres(
+            self, proposal_operation_id, user_id=user_id, decision=decision,
+            reviewer_id=reviewer_id, reason=reason,
+        )
+
+    async def list_alias_proposals(
+        self, *, user_id: str, scope=None, status=None, limit: int = 100,
+    ):
+        """List durable alias proposals with their current review status."""
+        from prme.storage.alias_review import list_postgres
+        return await list_postgres(
+            self, user_id=user_id, scope=scope, status=status, limit=limit,
         )
 
     async def create_edge(self, edge: MemoryEdge) -> str:
@@ -1073,11 +1095,13 @@ class PgGraphStore:
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node via recursive CTE.
 
         Delegates to the depth-aware variant and discards depths -- the
-        reachable node set is identical.
+        reachable node set is identical. Unaccepted alias proposals are
+        excluded unless explicitly requested.
         """
         results = await self.get_neighborhood_with_depth(
             node_id,
@@ -1086,6 +1110,7 @@ class PgGraphStore:
             valid_at=valid_at,
             min_confidence=min_confidence,
             include_superseded=include_superseded,
+            include_unverified_aliases=include_unverified_aliases,
         )
         return [node for node, _depth in results]
 
@@ -1098,13 +1123,15 @@ class PgGraphStore:
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops with their minimum hop distance.
 
         Single cycle-guarded recursive CTE: each branch carries the array
         of visited node IDs and refuses to revisit one (preventing
         A->B->A oscillation), and the outer query collapses paths to one
-        row per node with MIN(depth).
+        row per node with MIN(depth). Unaccepted alias proposals are excluded
+        unless explicitly requested.
         """
         # Build edge filter
         edge_filter_parts: list[str] = []
@@ -1116,6 +1143,12 @@ class PgGraphStore:
             edge_filter_parts.append(f"e.edge_type IN ({et_placeholders})")
             params.extend(et.value for et in edge_types)
             idx += len(edge_types)
+        if not include_unverified_aliases:
+            edge_filter_parts.append(
+                "NOT (e.edge_type = 'relates_to' "
+                "AND COALESCE(e.metadata->>'relation', '') = 'alias' "
+                "AND COALESCE(e.metadata->>'identity_verified', '') = 'false')"
+            )
 
         edge_filter = "AND " + " AND ".join(edge_filter_parts) if edge_filter_parts else ""
 
@@ -1209,8 +1242,9 @@ class PgGraphStore:
         target_id: str,
         *,
         edge_types: list[EdgeType] | None = None,
+        include_unverified_aliases: bool = False,
     ) -> list[str] | None:
-        """Find the shortest path between two nodes via BFS."""
+        """Find a path without treating unaccepted alias proposals as links."""
         if source_id == target_id:
             return [source_id]
 
@@ -1223,6 +1257,12 @@ class PgGraphStore:
             edge_filter_parts.append(f"edge_type IN ({et_placeholders})")
             edge_params.extend(et.value for et in edge_types)
             idx += len(edge_types)
+        if not include_unverified_aliases:
+            edge_filter_parts.append(
+                "NOT (edge_type = 'relates_to' "
+                "AND COALESCE(metadata->>'relation', '') = 'alias' "
+                "AND COALESCE(metadata->>'identity_verified', '') = 'false')"
+            )
 
         edge_where = "AND " + " AND ".join(edge_filter_parts) if edge_filter_parts else ""
 

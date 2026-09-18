@@ -11,7 +11,7 @@ from prme.models.relevance import make_receipt
 from prme.retrieval.config import PackingConfig, ScoringWeights
 from prme.retrieval.execution import RetrievalExecution
 from prme.retrieval.models import MemoryBundle, RetrievalCandidate, ScoreProvenance, ScoreTrace
-from prme.retrieval.packing import pack_context
+from prme.retrieval.packing import pack_context, pack_context_monotonic_compact
 from prme.types import EpistemicType, LifecycleState, Scope, SourceType
 
 
@@ -116,3 +116,29 @@ def test_empty_bundle_context_reference_defaults_remain_compatible():
     bundle = MemoryBundle()
     assert bundle.context_format == "auditable"
     assert bundle.context_references == {}
+
+
+@pytest.mark.parametrize("budget", [0, 200, 500, 1000, 4096])
+def test_monotonic_compact_never_drops_auditable_selection(budget: int):
+    values = [candidate(index, content=("Long evidence. " * index))
+              for index in range(1, 41)]
+    base = PackingConfig(token_budget=budget, overhead_tokens=20,
+                         min_fidelity="full", multipath_ordering="balanced",
+                         context_guidance_mode="off")
+    control = pack_context(values, base, context_guidance="Keep this guidance.")
+    monotonic = pack_context_monotonic_compact(
+        values, base.model_copy(update={"context_format": "compact"}),
+        context_guidance="Keep this guidance.",
+    )
+    control_ids = {item.node.id for group in control.sections.values() for item in group}
+    monotonic_ids = {item.node.id for group in monotonic.sections.values() for item in group}
+
+    assert control_ids <= monotonic_ids
+    assert monotonic.tokens_used <= max(0, budget - base.overhead_tokens)
+    if control.context_guidance is not None:
+        assert monotonic.context_guidance == control.context_guidance
+
+
+def test_monotonic_compact_rejects_noncompact_configuration():
+    with pytest.raises(ValueError, match="context_format='compact'"):
+        pack_context_monotonic_compact([candidate(1)], PackingConfig())

@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-prme-baseline-registration",
+  "registered_at": "2026-09-18T00:46:53.623319+00:00",
+  "claim_boundary": "This is a matched baseline of unchanged PRME on all 500 cleaned LongMemEval-S questions with a pinned GPT-5.4 reader and official-prompt judge. It does not establish a comparison with Zep unless disclosed reader, judge, budget, dataset, and latency boundaries match.",
+  "source": {
+    "prme_revision": "17898d9063ce056bf338dd45c10af3eee6aca1d6",
+    "runner_sha256": "c6f57439c8793387fe9f5e6ebaafc9c52f7a6c1c0bc93f2cb4f65828c8cedf73",
+    "official": {
+      "repository": "https://github.com/xiaowu0162/LongMemEval",
+      "revision": "9e0b455f4ef0e2ab8f2e582289761153549043fc",
+      "files": {
+        "evaluator": {
+          "path": "src/evaluation/evaluate_qa.py",
+          "sha256": "ecce9c4c79dc89d99534ac17b383a5cbb5b9f0c69ee98adaf0684742e3d95251"
+        },
+        "generation": {
+          "path": "src/generation/run_generation.py",
+          "sha256": "4f1eb3c69d7ad40f04065b9c0bc86f6582441018fc6ff751d162d66c95baf672"
+        },
+        "readme": {
+          "path": "README.md",
+          "sha256": "c4ff45676683d9e2f7cf7d9099d26426f14635ec110dbb1da818d1019a142573"
+        }
+      }
+    }
+  },
+  "dataset": {
+    "name": "LongMemEval-S cleaned",
+    "source": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned",
+    "filename": "longmemeval_s_cleaned.json",
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "questions": 500,
+    "question_types": {
+      "knowledge-update": 78,
+      "multi-session": 133,
+      "single-session-assistant": 56,
+      "single-session-preference": 30,
+      "single-session-user": 70,
+      "temporal-reasoning": 133
+    },
+    "abstention_questions": 30,
+    "sessions": 23867,
+    "turns": 246750,
+    "ordered_question_identity_sha256": "a4849b8afda6b6ed31ead4fc28d00784d2d5fef945be87642f5ce3ab710b21c4"
+  },
+  "protocol": {
+    "ingestion": {
+      "api": "MemoryEngine.store",
+      "one_node_per_nonempty_turn": true,
+      "empty_turn_policy": "omit the 12 empty, unlabeled turns in the cleaned dataset while preserving original session and turn positions",
+      "node_type": "fact",
+      "scope": "personal",
+      "roles": [
+        "user",
+        "assistant"
+      ],
+      "session_identity": "zero-based history position plus official haystack_session_id; the cleaned dataset repeats 13 IDs at distinct positions",
+      "event_time": "official session timestamp as UTC",
+      "question_visible_during_ingestion": false,
+      "answers_or_evidence_labels_visible_during_ingestion": false,
+      "generated_extraction": false
+    },
+    "retrieval": {
+      "query": "verbatim official question",
+      "reference_time": "official question timestamp as UTC",
+      "effective_prme_defaults": {
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384
+        },
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "auditable",
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "organizer": {
+          "opportunistic_enabled": true,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "enable_reranker": false,
+        "vector_exact_search": true,
+        "duckdb_threads": null
+      },
+      "cold_definition": "first retrieve after closing and reopening the ingested pack; engine-open time excluded",
+      "warm_definition": "immediate identical second retrieve on the same open engine",
+      "context_equality_required": true,
+      "receipt_persistence_required": true
+    },
+    "reader": {
+      "model": "gpt-5.4-2026-03-05",
+      "reasoning_effort": "medium",
+      "prompt_version": "prme_longmemeval_s_reader_v1",
+      "prompt_template_sha256": "80a5d33b80a63dd096201473d874b02785bf87b96b9b45b04d6a6b17b037c63a",
+      "prompt_source": "official LongMemEval run_generation.py CoT retrieval template; PRME context replaces the official history serialization",
+      "max_output_tokens": 1024
+    },
+    "judge": {
+      "model": "gpt-5.4-2026-03-05",
+      "reasoning_effort": "medium",
+      "prompt_source": "official LongMemEval evaluate_qa.py get_anscheck_prompt",
+      "verdict_parser": "case-insensitive substring 'yes', matching official evaluator",
+      "max_output_tokens": 64
+    }
+  },
+  "evaluation": {
+    "capture": {
+      "questions_completed": 500,
+      "ingestion_failures": 0,
+      "retrieval_failures": 0,
+      "durable_receipts": 1000,
+      "cold_warm_context_mismatches": 0,
+      "pack_integrity_failures": 0
+    },
+    "baseline_decision": "This arm measures unchanged PRME and cannot promote a feature. Any later composition arm requires a separate registration and a positive paired interval without protected-category or evidence loss."
+  },
+  "known_provider_preflight": {
+    "model_visible": true,
+    "generation_available": false,
+    "failure_code": "credit_balance_exhausted",
+    "meaning": "capture can proceed; reader and judge stages remain pending"
+  },
+  "limitations": [
+    "PRME direct-turn FACT ingestion is the existing benchmark path; it does not reproduce Zep's proprietary write-time extraction.",
+    "Thirteen questions contain one repeated official session ID; storage qualifies every session with its history position while evidence reporting retains the official ID.",
+    "The cleaned dataset contains 12 empty, unlabeled turns; PRME omits them because empty memory records are invalid and reports the omission explicitly.",
+    "Zep's exact GPT-5.4 prompts, judge prompt, dataset checksum and artifacts are not public.",
+    "Hot and cold timings cover local PRME retrieval only and are reported separately from ingestion, reader and judge costs.",
+    "The mutable GPT-5.4 alias is avoided by pinning the visible 2026-03-05 snapshot."
+  ]
+}

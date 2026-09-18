@@ -214,6 +214,7 @@ class EventStore:
             if defer_extraction:
                 raise ValueError("Direct store work cannot also request LLM extraction")
             record = DirectStoreRecord.model_validate_json(DirectStoreRecord(
+                schema_version=1 if store_node.content == event.content else 2,
                 event_id=event.id, content_hash=event.content_hash, node=store_node,
             ).model_dump_json())
             record.verify_source(event)

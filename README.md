@@ -107,6 +107,15 @@ validates bundle-local citations, and returns `answerable`, `partial`,
 `insufficient`, or `conflicting`. It is a model-assisted post-retrieval check;
 provider failures are explicit and do not alter deterministic retrieval.
 
+For interval, ordering, and explicit-duration questions, opt-in
+[`TemporalRelationConfig`](docs/TEMPORAL-RELATIONS.md) lets a resolver align the
+question to exact packed quotes, then performs the arithmetic locally and uses
+an independent Jev gate before adding fixed-budget guidance. The held-out
+104-question confirmation improved answer accuracy from 50/104 to 60/104 with
+10 paired wins and no losses. It remains disabled by default because it makes
+provider calls; every run exposes evidence IDs, model identity, hashes, gate
+probabilities, fallback status, and receipt data.
+
 For explicit declarative claims, the optional local
 [`ClaimVerifier`](docs/CLAIM-VERIFICATION.md) independently scores bounded
 minimal evidence groups using a pinned NLI model. It preserves typed packed
@@ -192,6 +201,13 @@ with MemoryClient("./my_memories") as client:
     client.store("Alice prefers dark mode in all her editors.", user_id="alice")
     client.store("The team decided to use PostgreSQL.", user_id="alice")
 
+    # Keep a complete trace for audit while retrieving its compact memory view.
+    client.store(
+        '{"task":"migration","tool_calls":["..."],"result":"approved"}',
+        retrieval_content="Alice approved the PostgreSQL migration.",
+        user_id="alice",
+    )
+
     # Retrieve with hybrid scoring
     response = client.retrieve("What are Alice's preferences?", user_id="alice")
     for result in response.results:
@@ -204,6 +220,17 @@ LangChain and LlamaIndex adapters preserve structured framework messages and
 implement logical clear, replacement, and deletion over PRME's immutable event
 log. See the [framework integration guide](docs/FRAMEWORK-INTEGRATIONS.md) for
 copy-paste examples and lifecycle semantics.
+
+PRME also provides an optional, evidence-backed [TypeSafe Jev product-alignment
+advisor](docs/JEV-PRODUCT-ADVISOR.md). It compares caller-selected software
+product pairs and returns auditable recommendations for unverified alias
+proposals. A deterministic Python candidate API can first reduce a product
+catalog to a bounded discovery set, but registered end-to-end trials rejected
+automatic candidate-to-proposal publication. An explicit Python workflow can
+publish advice for a selected pair as a durable, unverified graph edge with
+complete assessment evidence. Owner-scoped Python, HTTP and MCP review APIs then
+accept a verified graph link or retain an audited rejection. Both entities
+remain active; Jev never authorizes or performs an automatic identity merge.
 
 Conditional memories require explicit condition text and always start unresolved.
 Record the result when a user, tool, rule, or model evaluates that condition:
@@ -397,6 +424,25 @@ Each group returns `value_count`, `total`, `minimum`, `maximum`, distinct
 evidence count, event-time bounds, and bounded source samples. The API never
 combines different normalized units. HTTP uses
 `POST /v1/quantities/aggregate`; MCP uses `memory_aggregate_quantities`.
+
+For a small set of complete, qualifier-free questions, PRME can expose and run
+the exact plan in one call:
+
+```python
+planned = client.aggregate_quantities_from_text(
+    "How much did I raise?", user_id="alice"
+)
+if planned.plan.status == "ready":
+    for group in planned.aggregation.groups:
+        print(group.values["unit"], group.total)
+```
+
+The plan contains its structured selectors and assumptions, including the exact
+`I` or `we` subject from the question. Extra qualifiers,
+unknown actions or units, negation, future wording, named subjects, and other
+unsupported shapes return `status="unsupported"` without scanning memory.
+Units remain separate. HTTP uses `POST /v1/quantities/aggregate-text`; MCP uses
+`memory_aggregate_quantities_from_text`.
 
 <details>
 <summary>Async API (advanced)</summary>

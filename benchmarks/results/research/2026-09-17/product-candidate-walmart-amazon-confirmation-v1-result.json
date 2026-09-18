@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "kind": "product-candidate-generation-result",
+  "completed_at": "2026-09-18T00:04:08.054129+00:00",
+  "registration_sha256": "54ff980358aa9ea37953e838141cb9a7ab89b2d24cde3307c0d08dc5eee653c6",
+  "dataset": {
+    "name": "DeepMatcher Structured Walmart-Amazon",
+    "source": "https://pages.cs.wisc.edu/~anhai/data1/deepmatcher_data/Structured/Walmart-Amazon/exp_data/",
+    "split": "test",
+    "files": {
+      "tableA.csv": {
+        "sha256": "29046fe92f842041117d803094ee028c30510d8844d90008c0fefeef8af5c119",
+        "bytes": 258750
+      },
+      "tableB.csv": {
+        "sha256": "922963a71b42c3964c261d5e5bae98a82b46761c81a68b7cb16d962cb81fe169",
+        "bytes": 2502281
+      },
+      "train.csv": {
+        "sha256": "a1bb613fab6d216e74c9d4353b3ee7c3696d9907475417046651dbad12a349a9",
+        "bytes": 73995
+      },
+      "valid.csv": {
+        "sha256": "cd3de90dcf2a9b319c1870cdd82c54985fc437173a33f95295e4178eb1e1ac6e",
+        "bytes": 24701
+      },
+      "test.csv": {
+        "sha256": "ad23487a5c7f9e719e9b7cbea38b07d05940466b4bf040cd1cbc8fb251a53883",
+        "bytes": 24696
+      }
+    },
+    "left_entities": 2554,
+    "right_entities": 22074,
+    "labeled_pairs": 2049,
+    "labels": {
+      "0": 1856,
+      "1": 193
+    },
+    "pair_identity_sha256": "be3b1308d826483429bb69ee482b8d5229dccabf7c3ef31e749eeadedd49bf73"
+  },
+  "protocol": {
+    "candidate_policy": "product_tfidf_candidates_v1",
+    "entity_fields": {
+      "name": "title",
+      "manufacturer": "brand",
+      "price": "price"
+    },
+    "catalog_labels": [
+      "walmart",
+      "amazon"
+    ],
+    "cross_catalog_only": true,
+    "top_k_per_entity": 5,
+    "minimum_cosine_score": 0.1,
+    "pair_union": "a pair survives when selected by either endpoint",
+    "mutation_authorized": false,
+    "external_model_calls": false
+  },
+  "evaluation": {
+    "positive_pairs_routed": 193,
+    "positive_pairs_total": 193,
+    "positive_pair_recall": 1.0,
+    "negative_labeled_pairs_routed": 1484,
+    "negative_labeled_pairs_total": 1856,
+    "candidate_pairs": 76456,
+    "cross_product_pairs": 56376996,
+    "cross_product_reduction": 0.9986438440246089,
+    "mean_candidates_per_entity": 3.104433977586487,
+    "candidate_identity_sha256": "bcc5644354b594a285c469f8d63f5b430d2baa972de9bd288ac80cdfdbcf601b",
+    "deterministic_replay": true,
+    "gate_results": {
+      "positive_pair_recall_min": true,
+      "cross_product_reduction_min": true,
+      "deterministic_replay": true,
+      "candidate_count_max": true
+    }
+  },
+  "passed": true,
+  "decision": "candidate_generation_confirmed",
+  "limitations": [
+    "Candidate recall is not Jev classification precision or recall.",
+    "The ranker only routes pairs; every identity decision remains reviewed.",
+    "Walmart-Amazon is one structured retail-product dataset."
+  ],
+  "result_sha256": "fdbfe3a6a3c5bcdac1aecf214b30701552dc8607ab67784a1d80a67b585c0bcb"
+}

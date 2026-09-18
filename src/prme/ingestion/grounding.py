@@ -48,10 +48,44 @@ _QUANTITY_NUMBER_RE = re.compile(
     r"(?<![\w.])[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?![\d.,])"
 )
 _INEXACT_QUANTITY_RE = re.compile(
-    r"(?:[~≈<>−()]|\b(?:about|approximately|around|roughly|nearly|almost|between|"
-    r"more\s+than|less\s+than|at\s+least|at\s+most|over|under)\b)",
+    r"(?:[~≈<>−±()]|\b(?:about|approximately|around|roughly|nearly|almost|circa|"
+    r"estimated?|between|from|up\s+to|more\s+than|less\s+than|no\s+more\s+than|"
+    r"no\s+less\s+than|at\s+least|at\s+most|over|under)\b)",
     re.IGNORECASE,
 )
+_INEXACT_QUANTITY_PREFIX_RE = re.compile(
+    r"(?:[~≈<>−±]\s*|\b(?:about|approximately|around|roughly|nearly|almost|circa|"
+    r"estimated?|between|from|up\s+to|more\s+than|less\s+than|no\s+more\s+than|"
+    r"no\s+less\s+than|at\s+least|at\s+most|over|under)\s*)$",
+    re.IGNORECASE,
+)
+_RANGE_BEFORE_QUANTITY_RE = re.compile(
+    r"\d[\d,]*(?:\.\d+)?\s*(?:[-–—]|\bto)\s*(?:[$€£¥]\s*)?$",
+    re.IGNORECASE,
+)
+_BETWEEN_PREFIX_RE = re.compile(
+    r"\bbetween\b[^.!?;,\n]{0,40}\band\s*(?:[$€£¥]\s*)?$",
+    re.IGNORECASE,
+)
+_RANGE_AFTER_QUANTITY_RE = re.compile(
+    r"^\s*(?:[-–—]|to\b)\s*(?:[$€£¥]\s*)?\d",
+    re.IGNORECASE,
+)
+_RECOVERABLE_QUANTITY_UNIT_RE = re.compile(
+    r"^(?P<space>\s*)(?P<unit>"
+    r"USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|INR|"
+    r"%|percent(?:age)?s?|"
+    r"mm|cm|km|millimet(?:er|re)s?|centimet(?:er|re)s?|met(?:er|re)s?|"
+    r"kilomet(?:er|re)s?|"
+    r"mg|kg|milligrams?|grams?|kilograms?|"
+    r"ml|millilit(?:er|re)s?|lit(?:er|re)s?|gallons?|"
+    r"volts?|amps?|amperes?|watts?|"
+    r"bytes?|KB|MB|GB|TB|"
+    r"packages?|items?|files?|records?|requests?|users?|tickets?|tasks?|units?|people"
+    r")(?=$|[^A-Za-z/])",
+    re.IGNORECASE,
+)
+_CURRENCY_SYMBOLS = frozenset("$€£¥")
 
 
 def normalize_quantity_unit(value: str) -> str:
@@ -72,6 +106,132 @@ def _unit_mentioned(unit: str, text: str) -> bool:
     return unit in text
 
 
+def exact_decimal_string_from_quantity_text(source_text: str) -> str | None:
+    """Recover an exact decimal token from a supported quantified phrase.
+
+    This reads the source phrase rather than converting a provider-supplied
+    float. Ordinary grounding still has to prove the phrase occurs in both the
+    claim object and evidence before the value can survive.
+    """
+    if _INEXACT_QUANTITY_RE.search(source_text):
+        return None
+    matches = list(_QUANTITY_NUMBER_RE.finditer(source_text))
+    if len(matches) != 1:
+        return None
+    match = matches[0]
+    outside_number = source_text[: match.start()] + source_text[match.end() :]
+    if re.search(r"\d", outside_number):
+        return None
+    token = match.group(0).replace(",", "")
+    try:
+        parsed = Decimal(token)
+    except InvalidOperation:
+        return None
+    if not parsed.is_finite():
+        return None
+    return token
+
+
+def recover_exact_quantity_from_object(
+    object_value: str,
+    *,
+    claim_passage: str,
+) -> ExtractedQuantity | None:
+    """Derive one supported exact measure from an already grounded object.
+
+    This is a bounded provider-independent repair, not general unit inference.
+    It copies a currency symbol/code or a unit from a conservative lexicon and
+    delegates approximation, range, value, object, and evidence checks to the
+    ordinary quantity validator.
+    """
+    numbers = list(_QUANTITY_NUMBER_RE.finditer(object_value))
+    if len(numbers) != 1:
+        return None
+    number = numbers[0]
+    if (
+        number.start() >= 2
+        and object_value[number.start() - 1] in {"-", ","}
+        and object_value[number.start() - 2].isalnum()
+    ):
+        return None
+    start, end = number.span()
+    unit: str | None = None
+    prefix = object_value[:start]
+    symbol_index = len(prefix.rstrip()) - 1
+    if symbol_index >= 0 and prefix[symbol_index] in _CURRENCY_SYMBOLS:
+        start = symbol_index
+        unit = prefix[symbol_index]
+    else:
+        unit_match = _RECOVERABLE_QUANTITY_UNIT_RE.match(object_value[end:])
+        if unit_match is not None:
+            unit = unit_match.group("unit")
+            end += unit_match.end()
+    if unit is None:
+        return None
+    if (
+        object_value[:start].rstrip().endswith("(")
+        or object_value[end:].lstrip().startswith(")")
+    ):
+        return None
+    source_text = object_value[start:end]
+    exact_value = exact_decimal_string_from_quantity_text(source_text)
+    if exact_value is None:
+        return None
+    try:
+        quantity = ExtractedQuantity(
+            value=Decimal(exact_value),
+            unit=unit,
+            source_text=source_text,
+        )
+    except (ValueError, TypeError):
+        return None
+    return validate_extracted_quantity(
+        quantity,
+        object_value=object_value,
+        claim_passage=claim_passage,
+    )
+
+
+def recover_exact_quantity_prefix(
+    text: str,
+    *,
+    claim_passage: str,
+) -> ExtractedQuantity | None:
+    """Derive one exact bounded measure from the beginning of source text.
+
+    This helper supports deterministic recovery of an omitted measured action.
+    It consumes only a leading currency phrase or decimal plus a unit from the
+    same conservative lexicon as :func:`recover_exact_quantity_from_object`.
+    Remaining clause text is ignored only after that exact phrase is isolated;
+    the ordinary validator still checks the phrase and its local qualifiers in
+    the complete claim passage.
+    """
+    stripped = text.lstrip()
+    if not stripped:
+        return None
+    number_start = 0
+    if stripped[0] in _CURRENCY_SYMBOLS:
+        number_start = 1
+        while number_start < len(stripped) and stripped[number_start].isspace():
+            number_start += 1
+    number = _QUANTITY_NUMBER_RE.match(stripped, number_start)
+    if number is None:
+        return None
+    start, end = number.span()
+    if number_start:
+        start = 0
+    else:
+        unit_match = _RECOVERABLE_QUANTITY_UNIT_RE.match(stripped[end:])
+        if unit_match is None:
+            return None
+        end += unit_match.end()
+    phrase = stripped[start:end]
+    return recover_exact_quantity_from_object(
+        phrase,
+        claim_passage=claim_passage,
+    )
+
+
 def validate_extracted_quantity(
     quantity: ExtractedQuantity | None,
     *,
@@ -89,23 +249,36 @@ def validate_extracted_quantity(
     source_text = canonical_source_quote(quantity.source_text, claim_passage)
     if source_text is None or canonical_source_quote(source_text, object_value) is None:
         return None
-    if _INEXACT_QUANTITY_RE.search(source_text):
+    start = claim_passage.find(source_text)
+    if start < 0:
         return None
-    matches = list(_QUANTITY_NUMBER_RE.finditer(source_text))
-    if len(matches) != 1:
+    prefix = claim_passage[max(0, start - 48) : start]
+    # Approximation cues only govern the current clause. This still catches a
+    # model clipping "about" from source_text without letting an unrelated
+    # earlier clause poison an exact amount.
+    local_prefix = re.split(r"[.!?;,\n]", prefix)[-1]
+    suffix = claim_passage[start + len(source_text) : start + len(source_text) + 24]
+    if (
+        _INEXACT_QUANTITY_PREFIX_RE.search(local_prefix)
+        or _RANGE_BEFORE_QUANTITY_RE.search(local_prefix)
+        or _BETWEEN_PREFIX_RE.search(local_prefix)
+        or _RANGE_AFTER_QUANTITY_RE.search(suffix)
+    ):
         return None
-    token = matches[0].group(0)
-    outside_number = source_text[:matches[0].start()] + source_text[matches[0].end():]
-    if re.search(r"\d", outside_number):
+    exact_value = exact_decimal_string_from_quantity_text(source_text)
+    if exact_value is None:
         return None
     try:
-        parsed = Decimal(token.replace(",", ""))
+        parsed = Decimal(exact_value)
     except InvalidOperation:
         return None
     unit = quantity.unit.strip()
     if parsed != quantity.value or not _unit_mentioned(unit, source_text):
         return None
-    if normalize_quantity_unit(unit) == "1" and source_text.strip() != token:
+    if (
+        normalize_quantity_unit(unit) == "1"
+        and source_text.strip().replace(",", "") != exact_value
+    ):
         return None
     return quantity.model_copy(update={"source_text": source_text, "unit": unit})
 
@@ -117,13 +290,13 @@ def _supporting_passage(quote: str, source: str) -> str | None:
     Keep its surrounding paragraph(s), without inventing a sentence boundary.
     Repeated quotations conservatively retain the complete source.
     """
-    quote = canonical_source_quote(quote, source)
-    if quote is None:
+    canonical_quote = canonical_source_quote(quote, source)
+    if canonical_quote is None:
         return None
-    start = source.find(quote)
-    if source.find(quote, start + 1) != -1:
+    start = source.find(canonical_quote)
+    if source.find(canonical_quote, start + 1) != -1:
         return source
-    end = start + len(quote)
+    end = start + len(canonical_quote)
     separators = list(re.finditer(r"\n\s*\n", source))
     left = max((m.end() for m in separators if m.end() <= start), default=0)
     right = min((m.start() for m in separators if m.start() >= end), default=len(source))
@@ -145,13 +318,13 @@ def _supporting_claim_passage(quote: str, source: str) -> str | None:
     following sentence that begins with a condition or exception remains part
     of the span so a shortened citation cannot erase a trailing qualifier.
     """
-    quote = canonical_source_quote(quote, source)
-    if quote is None:
+    canonical_quote = canonical_source_quote(quote, source)
+    if canonical_quote is None:
         return None
-    start = source.find(quote)
-    if source.find(quote, start + 1) != -1:
+    start = source.find(canonical_quote)
+    if source.find(canonical_quote, start + 1) != -1:
         return source
-    end = start + len(quote)
+    end = start + len(canonical_quote)
 
     paragraph_breaks = list(re.finditer(r"\n\s*\n", source))
     paragraph_start = max(

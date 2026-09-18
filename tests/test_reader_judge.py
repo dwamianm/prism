@@ -102,6 +102,17 @@ def test_expected_labels_and_arm_are_not_given_to_judge(monkeypatch):
     )
 
 
+def test_cloud_alias_accepts_only_its_resolved_remote_model_name():
+    raw = response()
+    raw["model"] = "gpt-oss:120b"
+
+    assert judge.verdict(raw, "gpt-oss:120b-cloud")["correct"] is True
+    raw["model"] = "deepseek-v4.1-flash"
+    assert judge.verdict(raw, "deepseek-v4.1-flash:cloud")["correct"] is True
+    with pytest.raises(ValueError):
+        judge.verdict(raw, "other:cloud")
+
+
 @pytest.mark.parametrize(
     "change",
     [

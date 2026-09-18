@@ -60,8 +60,26 @@ encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
 metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
-Fresh built-in extractions record `grounding_policy="speech_act_v6"`; plans
-made from those records use `speech_act_v12`. Version 12 also rejects completed
+Fresh built-in extractions record `grounding_policy="speech_act_v11"`; plans
+made from those records use `speech_act_v12`. V7 recovers an exact decimal from
+its source phrase when provider JSON used a float, without converting or trusting
+that float, and rejects approximation or range cues from surrounding evidence.
+V8 can additionally recover a user-authored, sentence-level exact numeric
+score/count/rating/level that the model omitted; it creates a source-literal
+concept subject and still runs normal evidence, quantity and reference checks.
+It does not run for assistant messages, examples, unsupported attributes,
+approximations, ranges or multi-number values. V9 can derive one currency or
+bounded verbatim measurement unit from an already grounded fact object when a
+provider omitted or malformed quantity fields. It also recovers a complete
+first-person conditional action with one such quantity from a user-authored
+sentence. Both paths retain ordinary exactness, evidence, condition and
+reference checks. V10 suppresses conditional fallback when a validated fact
+already has the same source evidence, predicate, polarity and quantity identity,
+even when its valid condition quote uses a different source substring. Saved v9,
+v8, v7 and v6 records remain on v12. V11 can also recover one leading exact
+measure from a user-authored first-person completed action in a bounded verb
+lexicon. It remains sentence-level, source-grounded and excludes modals,
+negations, examples, questions, conditions, approximations and ranges. Version 12 rejects completed
 component relationships inside a first-person attempt clause and requires the
 attempted target even when the extractor also records a count or failure. A
 narrow recovery adds the first exact model-returned entity after a literal
@@ -79,6 +97,17 @@ checksums remain unchanged; do not infer unit aliases or rewrite historical meta
 facts start validity at their resolved source-effective time. Valid newer
 replacements close the prior interval atomically when the boundary does not
 precede its stored start; legacy intervals that would invert remain unchanged.
+
+`QuantityAggregationQuery.predicate_prefixes` is an explicit normalized token
+prefix selector for open-vocabulary predicates. `raised` matches `raised` and
+`raised_*`, but not `fundraised`; no synonym or embedding inference occurs.
+Responses report `semantic_equivalence="normalized_exact_and_predicate_prefix"`
+when it is used. Exact predicate selectors retain `normalized_exact_only`.
+`aggregate_quantities_from_text` is a separate fail-closed convenience path. It
+accepts only complete qualifier-free amount/count shapes in its fixed action and
+unit tables, preserves the exact `I` or `we` subject, returns the exact plan and
+assumptions, and does not scan on an unsupported shape. Ordinary `retrieve()`
+never auto-routes to aggregation.
 
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 
@@ -113,11 +142,24 @@ memory/entity types, source type, session, event time and metadata. Non-entity
 copies require exact content and the same validity start. Vector similarity alone
 does not authorize merging claims; purely semantic aliases remain unverified
 `RELATES_TO` proposals. New proposals use deterministic pair/edge identities and
-atomically retain complete inputs and output in `ALIAS_PROPOSED`; existing
-random-ID proposal edges are reused without invented history. Extracted
+atomically retain complete inputs and output in `ALIAS_PROPOSED`. Version-2
+records can retain complete external assessment evidence bound to exact node
+snapshots; older records and random-ID proposal edges are never relabeled with
+invented history. Unverified alias proposals do not participate in ordinary
+graph traversal; explicit review tooling may opt in. Explicit proposal review
+stores one deterministic accepted/rejected record. Acceptance
+revalidates the exact proposed snapshots and adds a verified alias edge without
+retiring either node; rejection adds no traversable relationship. Extracted
 unresolved English personal references are event-local under new
 `event_local_references_v4` plans; old plans replay unchanged.
 See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.
+
+The deterministic product candidate ranker is validated only as a discovery
+stage. Registered candidate-to-Jev trials missed their frozen precision/recall
+gates, including a confirmation of a development-calibrated rule. Do not add a
+bulk candidate-to-proposal path or change the confirmed single-pair Jev rule on
+that evidence. Applications must select pairs explicitly and review every
+published proposal.
 
 Duplicate/alias merges publish evidence, relationship copies, source retirement
 and one supersedence edge in a backend transaction. `ORGANIZER_MERGED` retains
@@ -258,6 +300,15 @@ assessments do not mutate memory or retrieval receipts. A registered repeated
 BEAM development trial failed every promotion gate, so this remains an explicit
 experimental API rather than automatic retrieval behavior. The legacy
 `should_abstain` helper remains a fail-open Boolean compatibility API.
+`TemporalRelationConfig.enabled` opts temporal-reasoning queries into an
+answer-blind Ollama resolver, bundle-local quote/date validation, deterministic
+arithmetic, a pinned Jev operand gate and same-budget repacking. It is disabled
+by default and must never call either provider for ordinary queries. Accepted
+guidance may evict only uncited control records; cited IDs and representations
+must remain. Provider failures default to the byte-identical control bundle and
+surface sanitized metadata. Preserve the confirmed prompt/options, one-repair
+limit, model digest and 0.85 threshold when claiming protocol alignment. Changed
+configurations must report alignment false. See `docs/TEMPORAL-RELATIONS.md`.
 Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
 for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a

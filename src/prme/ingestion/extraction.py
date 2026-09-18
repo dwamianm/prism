@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from contextvars import ContextVar
+from decimal import Decimal
 import os
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
@@ -17,11 +18,20 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 import structlog
 from pydantic import Field, SecretStr, ValidationError, ValidationInfo, model_validator
 
-from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
+from prme.ingestion.schema import (
+    ExtractedEntity,
+    ExtractedFact,
+    ExtractedQuantity,
+    ExtractedRelationship,
+    ExtractionResult,
+)
 from prme.ingestion.grounding import (
     _mentioned,
     _supporting_claim_passage,
     _supporting_passage,
+    exact_decimal_string_from_quantity_text,
+    recover_exact_quantity_from_object,
+    recover_exact_quantity_prefix,
     validate_extracted_quantity,
 )
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
@@ -36,6 +46,9 @@ logger = structlog.get_logger(__name__)
 
 _VALIDATION_SOURCE: ContextVar[str | None] = ContextVar(
     "prme_extraction_validation_source", default=None
+)
+_VALIDATION_ROLE: ContextVar[str | None] = ContextVar(
+    "prme_extraction_validation_role", default=None
 )
 
 _EXPLICIT_CONDITION_RE = re.compile(
@@ -307,9 +320,271 @@ def _recover_omitted_nonactual_targets(
         recovered.append(fact)
     return recovered
 
+
+_EXACT_DIMENSIONLESS_ATTRIBUTE_RE = re.compile(
+    r"(?<!\w)(?P<determiner>my|our|his|her|their|its|the)\s+"
+    r"(?P<attribute>(?:[A-Za-z][A-Za-z'-]*\s+){0,3}"
+    r"(?:score|count|rating|level))\s+"
+    r"(?P<predicate>is|was|equals?|equaled|reached)\s+"
+    r"(?P<value>[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+))"
+    r"(?P<terminal>[.!?])?(?=\s|$)",
+    re.IGNORECASE,
+)
+
+
+def _recover_exact_dimensionless_attributes(
+    extraction: ExtractionResult,
+    source: str,
+    *,
+    role: str | None,
+) -> tuple[list[ExtractedEntity], list[_CitedFact]]:
+    """Recover narrow source-literal numeric attributes omitted by the model.
+
+    Recovery is limited to user-authored, sentence-level score/count/rating/level
+    assertions with one terminal exact decimal. The ordinary fact, quantity and
+    closed-reference validators still run before anything is admitted.
+    """
+    if role != "user":
+        return [], []
+    entities: list[ExtractedEntity] = []
+    facts: list[_CitedFact] = []
+    known_concepts = {
+        entity.name.casefold()
+        for entity in extraction.entities
+        if entity.entity_type.casefold() == "concept"
+    }
+    for match in _EXACT_DIMENSIONLESS_ATTRIBUTE_RE.finditer(source):
+        before = source[: match.start()].rstrip()
+        after = source[match.end() :].lstrip()
+        if before and before[-1] not in ".!?":
+            continue
+        if match.group("terminal") is None and after:
+            continue
+        attribute = match.group("attribute")
+        source_text = match.group("value")
+        exact_value = exact_decimal_string_from_quantity_text(source_text)
+        if exact_value is None:
+            continue
+        if any(
+            fact.subject.casefold() == attribute.casefold()
+            and fact.quantity is not None
+            and fact.quantity.source_text == source_text
+            for fact in extraction.facts
+        ):
+            continue
+        if attribute.casefold() not in known_concepts:
+            entities.append(
+                ExtractedEntity(name=attribute, entity_type="concept")
+            )
+            known_concepts.add(attribute.casefold())
+        try:
+            fact = _CitedFact(
+                subject=attribute,
+                subject_entity_type="concept",
+                predicate=match.group("predicate").casefold(),
+                object=source_text,
+                quantity=ExtractedQuantity(
+                    value=Decimal(exact_value),
+                    unit="1",
+                    source_text=source_text,
+                ),
+                polarity="positive",
+                evidence_quote=match.group(0),
+                confidence=1.0,
+                fact_type="fact",
+                epistemic_type="observed",
+                temporal_intent="assertion",
+            )
+            _validate_fact_source_support(fact, source)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "extraction_dimensionless_attribute_not_recovered", reason=str(exc)
+            )
+            continue
+        facts.append(fact)
+    return entities, facts
+
+
+def _enrich_missing_fact_quantities(
+    extraction: ExtractionResult,
+    source: str,
+) -> int:
+    """Attach one bounded source-derived measure to an existing grounded fact."""
+    recovered = 0
+    for fact in extraction.facts:
+        if fact.quantity is not None:
+            continue
+        claim_passage = _supporting_claim_passage(fact.evidence_quote or "", source)
+        if claim_passage is None:
+            continue
+        quantity = recover_exact_quantity_from_object(
+            fact.object,
+            claim_passage=claim_passage,
+        )
+        if quantity is not None:
+            fact.quantity = quantity
+            recovered += 1
+    return recovered
+
+
+_CONDITIONAL_QUANTIFIED_ACTION_RE = re.compile(
+    r"(?<!\w)(?P<condition>(?:if|unless|provided\s+that|as\s+long\s+as|only\s+if)"
+    r"\s+[^,!?;\n]{1,200}),\s*"
+    r"(?P<subject>I|we)\s+(?P<modal>will|would)\s+"
+    r"(?P<negative>not\s+)?(?P<verb>[A-Za-z][A-Za-z'-]*)\s+"
+    r"(?P<object>[^.!?;\n]{1,300})(?P<terminal>[.!?])",
+    re.IGNORECASE,
+)
+
+
+def _recover_conditional_quantified_actions(
+    extraction: ExtractionResult,
+    source: str,
+    *,
+    role: str | None,
+) -> list[_CitedFact]:
+    """Recover a complete first-person conditional action with one exact measure."""
+    if role != "user":
+        return []
+    recovered: list[_CitedFact] = []
+    for match in _CONDITIONAL_QUANTIFIED_ACTION_RE.finditer(source):
+        before = source[: match.start()].rstrip()
+        if before and before[-1] not in ".!?":
+            continue
+        subject = match.group("subject")
+        object_value = match.group("object").strip()
+        condition = match.group("condition")
+        quantity = recover_exact_quantity_from_object(
+            object_value,
+            claim_passage=match.group(0),
+        )
+        if quantity is None:
+            continue
+        predicate = (
+            f"{match.group('modal').casefold()}_"
+            f"{match.group('verb').casefold()}"
+        )
+        polarity: Literal["positive", "negative"] = (
+            "negative" if match.group("negative") else "positive"
+        )
+        if any(
+            fact.subject.casefold() == subject.casefold()
+            and fact.predicate.casefold() == predicate
+            and fact.polarity == polarity
+            and fact.epistemic_type == "conditional"
+            and fact.quantity == quantity
+            and (
+                (passage := _supporting_claim_passage(
+                    fact.evidence_quote or "", source
+                ))
+                is not None
+                and match.group(0) in passage
+            )
+            for fact in extraction.facts
+        ):
+            continue
+        try:
+            fact = _CitedFact(
+                subject=subject,
+                predicate=predicate,
+                object=object_value,
+                quantity=quantity,
+                polarity=polarity,
+                evidence_quote=match.group(0),
+                confidence=1.0,
+                fact_type="fact",
+                epistemic_type="conditional",
+                condition=condition,
+                temporal_intent="assertion",
+            )
+            _validate_fact_source_support(fact, source)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "extraction_conditional_quantity_not_recovered", reason=str(exc)
+            )
+            continue
+        recovered.append(fact)
+    return recovered
+
+
+_FIRST_PERSON_MEASURED_ACTION_RE = re.compile(
+    r"(?:^|(?<=[.!?])\s+)"
+    r"(?P<lead>(?:(?:by\s+the\s+way|also|additionally|then),?\s+)?)"
+    r"(?P<subject>I|we)\s+"
+    r"(?:(?:just|recently|previously|successfully|also)\s+)*"
+    r"(?P<verb>ran|run|walked|walk|hiked|hike|cycled|cycle|biked|bike|"
+    r"swam|swim|drove|drive|traveled|travelled|travel|lifted|lift|"
+    r"drank|drink|consumed|consume|shipped|ship|sent|send|processed|"
+    r"process|completed|complete)\s+"
+    r"(?P<body>[^!?;\n]{1,300}?)(?P<terminal>[.!])(?=\s|$)",
+    re.IGNORECASE,
+)
+
+
+def _recover_exact_first_person_measured_actions(
+    extraction: ExtractionResult,
+    source: str,
+    *,
+    role: str | None,
+) -> list[_CitedFact]:
+    """Recover one leading exact measure from a bounded completed action.
+
+    The pattern is deliberately user-only and sentence-level. It accepts a
+    small completed-action lexicon, optional harmless discourse lead-ins and a
+    leading currency or bounded measurement phrase. Modals, negations,
+    examples, questions and condition-prefixed clauses do not match.
+    """
+    if role != "user":
+        return []
+    recovered: list[_CitedFact] = []
+    for match in _FIRST_PERSON_MEASURED_ACTION_RE.finditer(source):
+        quote = match.group(0).strip()
+        quantity = recover_exact_quantity_prefix(
+            match.group("body"),
+            claim_passage=quote,
+        )
+        if quantity is None:
+            continue
+        subject = match.group("subject")
+        if any(
+            fact.subject.casefold() == subject.casefold()
+            and fact.quantity == quantity
+            and (
+                (passage := _supporting_claim_passage(
+                    fact.evidence_quote or "", source
+                ))
+                is not None
+                and quote in passage
+            )
+            for fact in extraction.facts
+        ):
+            continue
+        try:
+            fact = _CitedFact(
+                subject=subject,
+                predicate=match.group("verb").casefold(),
+                object=quantity.source_text,
+                quantity=quantity,
+                polarity="positive",
+                evidence_quote=quote,
+                confidence=1.0,
+                fact_type="fact",
+                epistemic_type="observed",
+                temporal_intent="assertion",
+            )
+            _validate_fact_source_support(fact, source)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "extraction_measured_action_not_recovered", reason=str(exc)
+            )
+            continue
+        recovered.append(fact)
+    return recovered
+
+
 class _CitedExtractionResult(ExtractionResult):
-    facts: list[_CitedFact] = Field(default_factory=list)
-    relationships: list[_CitedRelationship] = Field(default_factory=list)
+    facts: list[_CitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+    relationships: list[_CitedRelationship] = Field(default_factory=list)  # type: ignore[assignment]
 
     @model_validator(mode="before")
     @classmethod
@@ -332,6 +607,33 @@ class _CitedExtractionResult(ExtractionResult):
                 except (ValidationError, TypeError):
                     without_quantity = None
                     if field_name == "facts" and isinstance(item, dict) and "quantity" in item:
+                        raw_quantity = item.get("quantity")
+                        if (
+                            isinstance(raw_quantity, dict)
+                            and isinstance(raw_quantity.get("value"), float)
+                            and isinstance(raw_quantity.get("source_text"), str)
+                        ):
+                            exact_value = exact_decimal_string_from_quantity_text(
+                                raw_quantity["source_text"]
+                            )
+                            if exact_value is not None:
+                                repaired = dict(item)
+                                repaired["quantity"] = {
+                                    **raw_quantity,
+                                    "value": exact_value,
+                                }
+                                try:
+                                    model.model_validate(repaired)
+                                except (ValidationError, TypeError):
+                                    pass
+                                else:
+                                    logger.info(
+                                        "extraction_quantity_value_recovered",
+                                        path=f"{field_name}[{index}].quantity.value",
+                                        method="exact_source_text",
+                                    )
+                                    admitted.append(repaired)
+                                    continue
                         candidate = dict(item)
                         candidate.pop("quantity")
                         try:
@@ -361,8 +663,11 @@ class _CitedExtractionResult(ExtractionResult):
     @model_validator(mode="after")
     def supported_closed_references(self, info: ValidationInfo):
         source = (info.context or {}).get("source_text")
+        role = (info.context or {}).get("source_role")
         if source is None:
             source = _VALIDATION_SOURCE.get()
+        if role is None:
+            role = _VALIDATION_ROLE.get()
         if source is not None:
             supported_facts = []
             for index, fact in enumerate(self.facts):
@@ -390,12 +695,46 @@ class _CitedExtractionResult(ExtractionResult):
                     supported_relationships.append(relationship)
             self.facts = supported_facts
             self.relationships = supported_relationships
+            enriched = _enrich_missing_fact_quantities(self, source)
+            if enriched:
+                logger.info(
+                    "extraction_fact_quantities_recovered",
+                    count=enriched,
+                )
             recovered = _recover_omitted_nonactual_targets(self, source)
             if recovered:
                 logger.info(
                     "extraction_nonactual_target_recovered", count=len(recovered)
                 )
                 self.facts.extend(recovered)
+            recovered_entities, recovered_facts = (
+                _recover_exact_dimensionless_attributes(self, source, role=role)
+            )
+            if recovered_facts:
+                logger.info(
+                    "extraction_dimensionless_attributes_recovered",
+                    count=len(recovered_facts),
+                )
+                self.entities.extend(recovered_entities)
+                self.facts.extend(recovered_facts)
+            conditional_facts = _recover_conditional_quantified_actions(
+                self, source, role=role
+            )
+            if conditional_facts:
+                logger.info(
+                    "extraction_conditional_quantities_recovered",
+                    count=len(conditional_facts),
+                )
+                self.facts.extend(conditional_facts)
+            measured_actions = _recover_exact_first_person_measured_actions(
+                self, source, role=role
+            )
+            if measured_actions:
+                logger.info(
+                    "extraction_measured_actions_recovered",
+                    count=len(measured_actions),
+                )
+                self.facts.extend(measured_actions)
         fact_errors, relationship_errors = reference_errors_by_claim(self)
         closed_facts = []
         for index, (fact, errors) in enumerate(zip(self.facts, fact_errors, strict=True)):
@@ -450,13 +789,20 @@ when it is denied, rejected, stopped, or stated with does not/never/no longer
 the exact quantified phrase into source_text, its verbatim unit or symbol into \
 unit, and its exact decimal value into value. Use unit "1" only when source_text \
 is the bare number. Leave quantity null for ranges, approximations, locale decimal \
-commas, scientific notation, or objects containing multiple numeric amounts.
+commas, scientific notation, or objects containing multiple numeric amounts. \
+When the source states an amount about a target, keep the exact amount and target \
+together in the fact object (for example, "$500 for the shelter"). Do not omit \
+the amount to make the object entity-only, and do not detach the amount into an \
+unrelated fact. Dates, times, versions, identifiers, addresses, phone numbers, \
+model names, and ordinals are not quantities.
 
 3. **Relationships** between entities: How entities relate to each other. \
 Use a source-supported predicate such as lives_in, works_at, or uses. Do not \
 force residence into part_of, or infer causation from co-occurrence. Include \
 an evidence_quote, epistemic_type, and polarity for every relationship. Prefer a fact \
-triple for a statement; do not repeat it as a separate relationship.
+triple for a statement; do not repeat it as a separate relationship. A claim \
+with an explicit numeric amount must be a fact, not a relationship, so its exact \
+quantity can be preserved.
 
 4. **Summary**: A brief 1-2 sentence summary of the message content.
 
@@ -514,6 +860,19 @@ written rather than normalizing or paraphrasing them.
 - A quantity source_text must be contained in that fact's object and evidence. \
 Do not convert units, infer a currency from a symbol, or attach a number from \
 another part of the sentence.
+- Preserve the semantic target with an explicit amount. For example, "raised \
+$500 for the shelter" should have an object containing "$500 for the shelter" \
+and quantity source_text "$500", rather than an entity-only object that loses \
+the amount.
+- Emit every claim with an explicit numeric amount as a fact. Relationships \
+cannot carry quantity metadata and must not replace the quantified fact.
+- Quantity metadata is only for a measured or counted claim value. Do not attach \
+it to dates, times, versions, identifiers, addresses, phone numbers, model names, \
+or ordinals even when they contain a decimal-looking token.
+- Preserve explicit dimensionless counts as quantities. For a possessive numeric \
+attribute such as "My final score was 3", list "final score" as a concept entity, \
+use that exact entity as the subject, and use the exact number as the fact object \
+instead of inventing "I" as a source mention.
 - Using something does not imply preferring it. One occurrence does not imply \
 a habit. Multiple values can coexist (e.g., liking tea and coffee).
 - Set replaces_object only for an explicit replacement of a named previous value \
@@ -709,8 +1068,12 @@ class InstructorExtractionProvider:
             if provider_prefix:
                 local = dotenv_values(".env")
                 key_name, url_name = f"{provider_prefix}_API_KEY", f"{provider_prefix}_BASE_URL"
-                key = self._api_key.get_secret_value() if self._api_key else os.environ.get(key_name, local.get(key_name))
-                url = self._base_url or os.environ.get(url_name, local.get(url_name))
+                key = (
+                    self._api_key.get_secret_value()
+                    if self._api_key
+                    else os.environ.get(key_name) or local.get(key_name)
+                )
+                url = self._base_url or os.environ.get(url_name) or local.get(url_name)
                 if key:
                     kwargs["api_key"] = key
                 if url:
@@ -785,13 +1148,15 @@ class InstructorExtractionProvider:
             # Instructor treats validation context as Jinja template context for
             # every prompt message. Keep grounding input task-local so literal
             # user code such as ``{{ variable }}`` reaches the model unchanged.
-            token = _VALIDATION_SOURCE.set(content)
+            source_token = _VALIDATION_SOURCE.set(content)
+            role_token = _VALIDATION_ROLE.set(role.strip().casefold())
             try:
                 result = await asyncio.wait_for(
                     client.create(**create_kwargs), timeout=self._timeout
                 )
             finally:
-                _VALIDATION_SOURCE.reset(token)
+                _VALIDATION_ROLE.reset(role_token)
+                _VALIDATION_SOURCE.reset(source_token)
             return result
         except Exception as exc:
             logger.error(

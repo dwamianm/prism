@@ -163,6 +163,7 @@ async def store(
     content: str,
     *,
     user_id: str,
+    retrieval_content: str | None = None,
     session_id: str | None = None,
     role: str = "user",
     node_type: NodeType = NodeType.NOTE,
@@ -178,7 +179,11 @@ async def store(
 ) -> str
 ```
 
-Store content across all four backends in one call. No LLM needed.
+Store content across all four backends in one call. No LLM needed. By default,
+the exact source text is also the searchable and model-facing memory. For large
+agent traces, logs, or structured documents, pass compact
+`retrieval_content`; `get_event()` still returns the exact source while the graph,
+vector index, lexical index and context packer use the compact representation.
 
 The event, complete initial node snapshot and repair job are saved atomically,
 then the graph node and both indexes are written. Index failures leave the job
@@ -206,7 +211,8 @@ truth judgment or calibrated confidence model.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `content` | `str` | required | Text content to store |
+| `content` | `str` | required | Exact source text retained in the immutable event log |
+| `retrieval_content` | `str \| None` | `None` | Optional compact text to index, rank and place in model context |
 | `user_id` | `str` | required | Owner user ID (all queries scoped to this) |
 | `session_id` | `str \| None` | `None` | Optional session identifier |
 | `role` | `str` | `"user"` | `"user"`, `"assistant"`, or `"system"` |
@@ -240,6 +246,25 @@ The immutable source ID is `receipt.event_id`; lifecycle methods accept
 `receipt.processing_status` reports its durable materialization state. Resolution
 follows the source event, so a concurrent write cannot be mistaken for this
 node. Existing `store()` callers retain the event-ID return for compatibility.
+
+For example, retain a complete tool trajectory without spending the retrieval
+budget on raw SDK payloads:
+
+```python
+receipt = await engine.store_with_receipt(
+    raw_trace_json,
+    retrieval_content="Traveler: Alice\nFinal plan:\n...",
+    user_id="alice",
+    metadata={"record_kind": "agent_trace"},
+)
+source = await engine.get_event(str(receipt.event_id), user_id="alice")
+assert source.content == raw_trace_json
+assert receipt.node.content.startswith("Traveler: Alice")
+```
+
+The projection is caller-supplied data, not a generated summary or a claim that
+the source supports it. It is durably journaled with the initial node and reused
+exactly during restart recovery.
 
 For raw imports that do not need typed-node overrides or model extraction, use
 `ingest_fast_many(items, user_id=...)`. Each `FastIngestItem` carries `content`,
@@ -1219,9 +1244,9 @@ from prme import QuantityAggregationQuery
 
 totals = memory.aggregate_quantities(
     QuantityAggregationQuery(
-        predicates=["spent"],
-        units=["USD"],
-        group_by=["predicate", "unit"],
+        predicate_prefixes=["raised"],
+        units=["$"],
+        group_by=["unit"],
     ),
     user_id="alice",
 )
@@ -1231,10 +1256,34 @@ Each group returns an exact `Decimal` total, minimum, maximum, value/evidence
 counts, temporal bounds, and bounded per-node source samples. JSON serializes
 decimals as strings. `group_by` must contain `unit`; normalization is limited to
 Unicode, case, and whitespace, and no conversion or currency inference occurs.
+`predicate_prefixes` is opt-in and token-bounded after predicate normalization:
+`raised` includes `raised` and `raised_*`, but not `fundraised`. A response using
+it reports `semantic_equivalence="normalized_exact_and_predicate_prefix"` rather
+than `normalized_exact_only`; no synonym or embedding inference is performed.
 The read path revalidates the stored decimal against its claim object and source
 evidence. HTTP exposes `POST /v1/quantities/aggregate`; MCP exposes
 `memory_aggregate_quantities`. These operations use the same unchanged-store and
 extraction/real-world coverage boundaries as assertion aggregation.
+
+For supported simple questions, the convenience path returns its exact plan and
+execution together:
+
+```python
+planned = memory.aggregate_quantities_from_text(
+    "How many kilometers did I run?",
+    user_id="alice",
+)
+```
+
+The planner recognizes only complete, qualifier-free amount/count shapes in a
+fixed action and unit table. It preserves the exact `I` or `we` subject from the
+question and selects positive default epistemic state, explicit predicate-prefix
+families, and unit-separated groups. Unsupported qualifiers, negation, future
+wording, named subjects,
+actions, or units return `plan.status="unsupported"` with no scan. Inspect
+`plan.query` and `plan.assumptions`; the convenience result does not hide a
+semantic model call. HTTP exposes `POST /v1/quantities/aggregate-text`; MCP
+exposes `memory_aggregate_quantities_from_text`.
 
 Use the exact temporal state operation when the application already knows an
 assertion's subject and predicate:
@@ -1419,10 +1468,23 @@ When a fact object contains one exact numeric amount, built-in extraction may
 also populate `node.metadata["quantity"]` with decimal-string `value`, verbatim
 `unit`, verbatim `source_text`, and `grounding="object_decimal_v1"`. Grounding
 requires the quantified phrase in both the object and source evidence and checks
-the parsed decimal. Invalid optional quantity output is removed while the
+the parsed decimal. When JSON transport emits a float, built-in extraction can
+recover the decimal only by reparsing one exact supported token from the grounded
+source phrase; it never converts the float. Approximation or range cues in the
+surrounding evidence reject clipped exact-looking output. If model-authored
+quantity fields are absent or invalid, built-in extraction can recognize one
+verbatim currency or unit from its bounded physical, data and count-unit
+lexicon in an otherwise grounded fact object. It does not normalize that unit
+or accept an unlisted noun as a measure. Invalid optional quantity output is removed while the
 otherwise grounded fact remains. Ranges, approximations, scientific notation,
 locale decimal commas, and phrases with multiple numbers are not typed. No
 currency inference or unit conversion occurs.
+
+Fresh `speech_act_v11` extraction can also recover one leading exact measure
+from a user-authored first-person completed action in a bounded verb lexicon,
+such as `I just ran 5 kilometers`. It retains the source phrase as the object and
+uses the same validators; modals, negations, examples, questions, conditions,
+approximations and ranges do not use this recovery path.
 
 ### Custom Scoring Weights
 

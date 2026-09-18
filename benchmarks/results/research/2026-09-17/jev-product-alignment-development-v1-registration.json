@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "kind": "jev-product-alignment-registration",
+  "registered_at": "2026-09-17T20:51:17.869388+00:00",
+  "claim_boundary": "Passing confirms the exact pinned protocol as an optional product-pair advisor that may recommend durable unverified alias proposals. It does not authorize automatic identity merges or establish other domains.",
+  "source": {
+    "prme_revision": "0df4f0e1be935035a707ad537c5ca82bdf5d8e5e",
+    "runner_sha256": "882ec668d95a5a226711b0c195e3d818ffde3e3a7135ad23462d340b5b967e79",
+    "development": null
+  },
+  "dataset": {
+    "name": "DeepMatcher Structured Amazon-Google",
+    "source": "https://pages.cs.wisc.edu/~anhai/data1/deepmatcher_data/Structured/Amazon-Google/exp_data/",
+    "splits": [
+      "train"
+    ],
+    "files": {
+      "tableA.csv": {
+        "sha256": "04a797511d83af9e27469778081c50397857b199d49e2f83c119390f14301947",
+        "bytes": 82596
+      },
+      "tableB.csv": {
+        "sha256": "00c0d19c0dcd014b00d6d341e15e2b3b3caa616b4f6d710d0c9cd2dfc3f4717f",
+        "bytes": 228139
+      },
+      "train.csv": {
+        "sha256": "cdc5e88d714e77febc26a81a61c3295a0000baa51d6debf93043f0cbd5193b9f",
+        "bytes": 74481
+      },
+      "valid.csv": {
+        "sha256": "4999067ea47fa2ae03e0c4a68fee60cf68728943208fcde46415cb895844dd22",
+        "bytes": 24734
+      },
+      "test.csv": {
+        "sha256": "09e376c0c5391bd4a6c6d8efde148c994441b6043ef6b7f9eab2a8772a6fb362",
+        "bytes": 24807
+      }
+    },
+    "source_text_policy": "Public source tables remain outside the repository; committed artifacts contain pair identities, labels, typed scores and hashes."
+  },
+  "cohort": {
+    "role": "development",
+    "selection_seed": "prme-jev-product-alignment-development-v1",
+    "pairs": 400,
+    "counts_by_label": {
+      "0": 200,
+      "1": 200
+    },
+    "identity_sha256": "6c29ff86ad3f107c44d780fcb4332ee7ef18e1bf7cfff0fa41f60d816911a461"
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "candidate_pair_generic_product_alignment",
+    "state_fields": {
+      "entity_a": [
+        "name",
+        "manufacturer",
+        "price"
+      ],
+      "entity_b": [
+        "name",
+        "manufacturer",
+        "price"
+      ]
+    },
+    "questions": {
+      "link_state": {
+        "type": "score",
+        "instructions": "How do the two entity descriptions relate as products?",
+        "criteria": [
+          "They are different catalog products.",
+          "They are related but not safely identical: a different version, edition, bundle, platform, capacity, pack size, or an ambiguous listing.",
+          "They are the same catalog product despite formatting differences, abbreviations, price variation, or a missing optional field."
+        ]
+      },
+      "same_name": {
+        "type": "noul",
+        "instructions": "Do the two listings name the same product?"
+      },
+      "same_manufacturer": {
+        "type": "noul",
+        "instructions": "Are the two listings from the same manufacturer?"
+      },
+      "compatible_price": {
+        "type": "noul",
+        "instructions": "Could the stated prices plausibly describe the same product listing, allowing a missing price or ordinary price variation?"
+      }
+    },
+    "questions_sha256": "39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "proposal_rule": "link_state.score >= 1.5",
+    "automatic_merge_authorized": false,
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_entity_text": false
+  },
+  "evaluation": {
+    "gates": {
+      "pairs_evaluated_min": 400,
+      "response_validity_min": 400,
+      "proposal_precision_min": 0.9,
+      "proposal_recall_min": 0.5,
+      "false_positive_rate_max": 0.1,
+      "recall_gain_over_exact_name_min": 0.2,
+      "accuracy_gain_over_exact_name_min": 0.05,
+      "p95_request_seconds_max": 1.0
+    },
+    "decision_rule": "Development must pass every gate before confirmation is registered. Confirmation must pass every gate before the exact protocol may ship as an optional unverified-proposal advisor. Automatic merges remain forbidden regardless of score."
+  }
+}

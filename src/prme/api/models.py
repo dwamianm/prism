@@ -86,12 +86,31 @@ class ContradictionResolutionRequest(BaseModel):
     evidence_id: UUID | None = None
 
 
+class AliasProposalReviewRequest(BaseModel):
+    """Explicit owner-scoped decision on an unverified identity proposal."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(
+        default=None, description="Owner; defaults to authenticated user"
+    )
+    decision: Literal["accepted", "rejected"]
+    reviewer_id: str = Field(min_length=1, max_length=256)
+    reason: str | None = Field(default=None, max_length=2048)
+
+
 class StoreRequest(BaseModel):
     """Request body for POST /v1/store."""
 
     model_config = ConfigDict(extra="forbid")
 
-    content: str = Field(description="Text content to store")
+    content: str = Field(description="Exact source text retained in the event log")
+    retrieval_content: str | None = Field(
+        default=None,
+        description=(
+            "Optional compact representation used for graph search and model context; "
+            "the immutable event still retains content"
+        ),
+    )
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     session_id: str | None = None
     role: str = Field(default="user", description="Event role")
@@ -383,6 +402,14 @@ class QuantityAggregationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     query: QuantityAggregationQuery = Field(default_factory=QuantityAggregationQuery)
+
+
+class PlannedQuantityAggregationRequest(BaseModel):
+    """Fail-closed natural-language request for exact quantity aggregation."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    question: str = Field(min_length=1)
 
 
 class AssertionStateRequest(BaseModel):

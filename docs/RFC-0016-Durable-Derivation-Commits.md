@@ -195,7 +195,7 @@ explicitly replaced, uniquely owned revision protocol above.
 
 Historical plans through materialization policy `speech_act_v11` keep
 their original behavior. Fresh built-in inference records
-`grounding_policy="speech_act_v6"`, and plans made from those records use
+`grounding_policy="speech_act_v11"`, and plans made from those records use
 `speech_act_v12`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
 edges, unresolved personal references remain event-local, and claim polarity and
@@ -203,7 +203,24 @@ explicit conditions are preserved in node metadata. A fact can also carry one
 source-bound decimal quantity. Its quantified phrase must occur in the claim
 object and evidence, its decimal must match the supported source notation, and
 its unit or symbol remains verbatim. Invalid optional quantity output is dropped
-without discarding the grounded claim. Type-qualified object
+without discarding the grounded claim. V7 can recover the exact decimal token
+from grounded source text after a provider emits a JSON float, but never converts
+or trusts that float; surrounding approximation and range cues fail closed.
+V8 can also recover a model-omitted exact dimensionless
+score/count/rating/level from a complete user-authored sentence by creating its
+source-literal concept subject; normal evidence, quantity and reference checks
+still apply. V9 can derive one currency or bounded verbatim measurement unit
+from an already grounded object and can recover a complete first-person
+conditional quantified action from a user sentence. These paths retain the
+same exactness, evidence, condition and reference validation. V10 suppresses
+conditional fallback when a validated fact already has the same evidence,
+predicate, polarity and quantity identity, even if its valid condition is a
+different substring of that evidence. V11 can recover one leading exact measure
+from a user-authored first-person completed action in a bounded verb lexicon.
+The action remains sentence-level and passes the same evidence, quantity and
+closed-reference validators; modals, negations, examples, questions,
+conditions, approximations and ranges do not enter this path. Saved v10 through
+v6 records also prepare v12. Type-qualified object
 references avoid arbitrary namesake links. Conditional claims start with an
 unknown condition state and stay out of DEFAULT retrieval until confirmed.
 Literal first-person attempts and intentions must retain that non-completed
@@ -384,8 +401,11 @@ This protocol covers newly journaled ingestion derivations. Direct `store()`
 requests use the simpler source/initial-node journal and materialization job in
 RFC-0002; they do not use derivation leases or fenced graph commits. Those jobs
 recover the initial typed node and indexes, without replaying optional post-store
-reinforcement, supersedence or QA pairing. Existing organizer
-and manual graph mutations also need complete operation payloads before PRME can
+reinforcement, supersedence or QA pairing. Version-2 direct-store records may
+carry a caller-supplied retrieval projection distinct from the immutable event
+content; recovery reuses the checksummed node snapshot and does not regenerate
+that projection. Existing organizer and manual graph mutations also need
+complete operation payloads before PRME can
 claim full-state replay. Legacy packs need an explicit baseline snapshot for
 state that was never recorded; nondeterministic historical model output cannot
 be retroactively recovered from a raw event alone. No implementation milestone

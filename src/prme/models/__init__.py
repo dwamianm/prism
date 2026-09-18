@@ -8,9 +8,11 @@ from prme.models.aggregation import (
     AssertionGroup,
     AssertionQuery,
     QuantityAggregation,
+    QuantityAggregationPlan,
     QuantityAggregationQuery,
     QuantityGroup,
     QuantitySample,
+    PlannedQuantityAggregation,
 )
 from prme.models.base import MemoryObject
 from prme.models.temporal import (
@@ -46,9 +48,11 @@ __all__ = [
     "AssertionStateQuery",
     "AssertionStateValue",
     "QuantityAggregation",
+    "QuantityAggregationPlan",
     "QuantityAggregationQuery",
     "QuantityGroup",
     "QuantitySample",
+    "PlannedQuantityAggregation",
     "Event",
     "FastIngestItem",
     "ExtractionRecord",

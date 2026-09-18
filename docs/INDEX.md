@@ -27,6 +27,12 @@ The [research agenda](RESEARCH-AGENDA.md) tracks verified results, active
 comparison protocols and remaining capability gaps. RFC status and historical
 benchmark targets are not evidence of current product quality.
 
+The [2026-09-17 competitive landscape snapshot](COMPETITIVE-LANDSCAPE-2026-09-17.md)
+records PRME's point-in-time position against direct and adjacent memory
+products, including source URLs, adoption metadata, benchmark boundaries, and
+the source revision evaluated. Future reviews create new dated snapshots rather
+than rewriting this reference.
+
 Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [custom embedding providers](CUSTOM-EMBEDDINGS.md), and
 [entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
@@ -35,6 +41,11 @@ Python and CLI contracts separately from draft RFC requirements.
 [Framework integrations](FRAMEWORK-INTEGRATIONS.md) documents the LangChain and
 LlamaIndex retrievers, lossless structured-message storage, and append-only
 logical history mutations.
+
+[Jev product-alignment advisor](JEV-PRODUCT-ADVISOR.md) documents the opt-in,
+pinned external advisor for caller-selected software-product pairs, its held-out
+evidence, audit fields, durable unverified-proposal workflow, and proposal-only
+safety boundary.
 
 [Scoped retrieval learning](LEARNING.md) documents the two-stage evidence gate,
 immutable owner/scope profiles, automatic application, and rollback workflow.
@@ -47,6 +58,10 @@ lossless special-float snapshots for previously admitted graph metadata.
 
 [Context packing](PACKING.md) explains the default balanced policy plus density and score
 ordering, exact token budgets, evidence limits and receipt compatibility.
+
+[Evidence-bound temporal relations](TEMPORAL-RELATIONS.md) documents the opt-in
+resolver, deterministic citation validation and arithmetic, independent Jev
+gate, fixed-budget repacking, failure behavior, receipts and held-out evidence.
 
 [Answerability and grounded abstention](ANSWERABILITY.md) documents the optional
 post-retrieval evidence-sufficiency evaluator, partial answers, cited conflicts,

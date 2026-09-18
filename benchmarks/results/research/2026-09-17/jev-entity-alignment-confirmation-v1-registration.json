@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "kind": "jev-entity-alignment-confirmation-registration",
+  "created_at": "2026-09-17T20:29:25.576019+00:00",
+  "claim_boundary": "Passing confirms the frozen Jev score route on the untouched BeerAdvocate-RateBeer validation and test pairs. It supports an optional alignment advisor, not autonomous graph mutation or cross-domain superiority.",
+  "source": {
+    "prme_revision": "5753a45a805dfe453908987741444d3ddc8792d2",
+    "runner_sha256": "783d7ad15ad7e0b1701f110aae388b4b06f719b922410349f86927fbccafa113",
+    "development_registration_sha256": "1ca5abd8a6fdcb63c40d1e642cbe1c39ed0161ca558e77a11e46ed7643572266",
+    "development_result_sha256": "80f1e32b04b63a88f95d8c6016670fc90aecc6cc2647e1adee7136e0aa7974e3",
+    "development_result_canonical_sha256": "b008ad7e376abb3cbcb8b209e81e8c8f187e4c76fa6f6e7c32388b9e2f064339"
+  },
+  "dataset": {
+    "name": "DeepMatcher Structured BeerAdvo-RateBeer",
+    "source": "https://pages.cs.wisc.edu/~anhai/data1/deepmatcher_data/Structured/Beer/exp_data/",
+    "split": [
+      "valid",
+      "test"
+    ],
+    "files": {
+      "tableA.csv": {
+        "sha256": "abb02b749152dc62b49fe01b928ca5fde49b9b29a27be5beaacab1511d7f9051",
+        "bytes": 340692
+      },
+      "tableB.csv": {
+        "sha256": "c842548a980906fcd5863e80b184c1ec7e594f31b8221d21e0a372ce74fc44d4",
+        "bytes": 232671
+      },
+      "train.csv": {
+        "sha256": "d5b10d02b1ec9453de0637d56210cb0ef4acbd1c99634ed2082d7d99db9d93d4",
+        "bytes": 3051
+      },
+      "valid.csv": {
+        "sha256": "b8aead98d2e80a2ed978f7e3c8949294a13df38cc62b3c8926b584b9a1742c10",
+        "bytes": 1055
+      },
+      "test.csv": {
+        "sha256": "545440994ad998ab96b230f1bbbc240af8b72ee55aa1dbbc583b751859615a5c",
+        "bytes": 1046
+      }
+    },
+    "test_access": "confirmation_only_after_development_pass"
+  },
+  "cohort": {
+    "role": "confirmation",
+    "splits": [
+      "valid",
+      "test"
+    ],
+    "pairs": 182,
+    "counts_by_label": {
+      "0": 154,
+      "1": 28
+    },
+    "identity_sha256": "32f529a4ce8bc8b25743354caec07280fbaac56e0f672cf31b76ca0e92953f5a"
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "candidate_pair_entity_alignment",
+    "state_fields": [
+      "entity_a",
+      "entity_b"
+    ],
+    "questions": {
+      "link_state": {
+        "type": "score",
+        "instructions": "How do the two entity descriptions relate as products?",
+        "criteria": [
+          "They describe two different products.",
+          "They describe closely related products that may or may not be the same one: a variant, a special edition, or a name that could plausibly refer to either.",
+          "They describe one and the same product."
+        ]
+      },
+      "same_name": {
+        "type": "noul",
+        "instructions": "Do the two entities state the same beer name?"
+      },
+      "same_brewery": {
+        "type": "noul",
+        "instructions": "Are the two entities from the same brewery?"
+      },
+      "same_style": {
+        "type": "noul",
+        "instructions": "Do the two entities describe the same beer style?"
+      }
+    },
+    "questions_sha256": "5c49f064266e12eb6b375de6ad2d3ff1b688d4441d8c2ed6f97891e3b702faa6",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "decision_arms": {
+      "score_route": "link_state.score >= 1.5"
+    },
+    "review_rule": "link_state.score >= 0.5",
+    "current_prme_baseline": "stripped case-insensitive exact entity name or built-in known alias",
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_entity_text": false,
+    "selected_arm": "score_route"
+  },
+  "evaluation": {
+    "gates": {
+      "pairs_evaluated_min": 182,
+      "response_validity_min": 182,
+      "merge_precision_min": 0.98,
+      "merge_recall_min": 0.5,
+      "false_merges_max": 1,
+      "recall_gain_over_current_min": 0.25
+    },
+    "decision_rule": "Only a complete pass permits implementation of an optional advisor. The confirmation never authorizes automatic graph mutation."
+  }
+}

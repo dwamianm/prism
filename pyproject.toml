@@ -35,6 +35,7 @@ dependencies = [
     "dateparser>=1.2",
     "cryptography>=43.0",
     "filelock>=3.16",
+    "httpx>=0.27",
     "tiktoken>=0.12",
 ]
 

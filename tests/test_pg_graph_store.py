@@ -172,6 +172,37 @@ async def test_get_neighborhood(graph_store):
     assert any(n.content == "neighbor" for n in neighbors)
 
 
+async def test_unverified_aliases_require_explicit_traversal(graph_store):
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    left = _make_node(user_id=uid, content="product one")
+    right = _make_node(user_id=uid, content="product variant")
+    await graph_store.create_node(left)
+    await graph_store.create_node(right)
+    await graph_store.create_edge(
+        MemoryEdge(
+            source_id=left.id,
+            target_id=right.id,
+            edge_type=EdgeType.RELATES_TO,
+            user_id=uid,
+            metadata={
+                "relation": "alias",
+                "alias_type": "semantic",
+                "identity_verified": False,
+            },
+        )
+    )
+
+    assert await graph_store.get_neighborhood(str(left.id), max_hops=1) == []
+    explicit = await graph_store.get_neighborhood(
+        str(left.id), max_hops=1, include_unverified_aliases=True
+    )
+    assert [node.id for node in explicit] == [right.id]
+    assert await graph_store.find_shortest_path(str(left.id), str(right.id)) is None
+    assert await graph_store.find_shortest_path(
+        str(left.id), str(right.id), include_unverified_aliases=True
+    ) == [str(left.id), str(right.id)]
+
+
 async def test_delete_node(graph_store):
     node = _make_node()
     nid = await graph_store.create_node(node)

@@ -1,0 +1,1257 @@
+{
+  "schema_version": 1,
+  "kind": "jev-retrieval-rerank-rank1-diagnostic",
+  "completed_at": "2026-09-17T20:39:19.617650+00:00",
+  "post_hoc": true,
+  "claim_boundary": "Development diagnosis only; not preregistered confirmation evidence.",
+  "source": {
+    "rerank_result_file_sha256": "a4395513bf1fd0b5bf510f5b4abc5079ecf441825a6e05293bad3ab2dd7d8088",
+    "rerank_result_sha256": "2cffc404daf39941f094100eae673bc2308d992f226c0451c248706203ef67d6",
+    "cohort_identity_sha256": "e3da382cd6e776ac7a7ad5bdfb3d712d25f71f065871c90a25b8fa4dca66d63b"
+  },
+  "judge": {
+    "provider": "ollama",
+    "model": "prme-qwen3.5:35b-a3b-8k",
+    "model_digest": "45870b70b6fa65ab09355aeb7901897763ae40745c6cdd11d28bc33a6b818ffc",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0,
+    "reasoning_effort": "none",
+    "max_tokens": 32,
+    "response_format": "json_object",
+    "prompt_sha256": "baef5d0ef7160e1e29171241c79329c642f08b801e13f96070916377e2548769"
+  },
+  "execution": {
+    "cases": 200,
+    "arm_calls": 400,
+    "unique_case_candidate_pairs": 259,
+    "jev_top_changed": 59
+  },
+  "rank1_answer_support": {
+    "baseline": {
+      "hits": 162,
+      "rate": 0.81
+    },
+    "jev": {
+      "hits": 144,
+      "rate": 0.72
+    },
+    "paired": {
+      "gains": 8,
+      "losses": 26,
+      "both": 136,
+      "neither": 30
+    }
+  },
+  "post_hoc_selective_promotion": {
+    "policy": "promote Jev top candidate only when its Noul exceeds original rank one by at least 0.20 and original rank-one Noul is at most 0.40",
+    "promotions": 5,
+    "exact_source_gains": 3,
+    "exact_source_losses": 0,
+    "judge_gains": 1,
+    "judge_losses": 1,
+    "decision": "reject"
+  },
+  "samples": [
+    {
+      "id": "fb45d96c6f719001495620fb280e4acb",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "15056c6979974c3063356be69da3a050",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "8c3735ce0b82b57d405a91221bbf2961",
+      "jev_top_original_rank": 3,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "a9668a5bb0d4355e424003c0fef4f06f",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "a35d73ed6e11315181d3a23d49c38191",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "75238e97f1e371ee0440b58134773675",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "5371bb0990574045cd1e14f792d183f7",
+      "jev_top_original_rank": 5,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "cfbe602446ea86bc671563dc2831d567",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "af869144b6495031613ba95a9ac34988",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "07f066f38d0f869a0f4dbfde4156da01",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "896ba5c8cbdd4d9ea95f6bfac072f2e0",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "2dc41f1e4b1690c3b3aff1c5e05dc958",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "36df3c570c62a3c56ee111f8e54df149",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "ff8d50f2d7bb99aa1569ca34a2c9d180",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "3d75ee471817914ee4932e8987c2512b",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "a87c40c933051cb9cb698bb29ab4e219",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "3e4cc6a16201efb9a8731702a9164dcf",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "0608f1344ba98344c27d037f9eb13508",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "cf12f3bc08fe1fcb371c2fb7afa21f94",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "7e751158a95afae0b8eeefb48883aeee",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "43dee24fd4dc868005ad8119cd650701",
+      "jev_top_original_rank": 4,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "dd19e2372a7ef330b69955a66918344c",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6a7638d645b835e11019a3bf7f1d4c25",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "172160c674a5ce62f7f29d8e5f1b49e9",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "386c187e525d5cfc78fef4f58d30fce4",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "648d83ca9c2a5b10b51a17397f4166cd",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "eca2d519aae6f37925c8855d4522437b",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "e23a9d7e658fe05987d70b3ee5c39518",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "7856c9708276efd81c1702b2709718f7",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "a1913cb16cd37ebb0a1620ebf7372b68",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "666a2749ca072d15272f51ca9a4f82ec",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6d6d8dc5b1d54aa3bf3d545bc7928563",
+      "jev_top_original_rank": 3,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "ae25c8bcf71513a6007b389d3f7ce0a4",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "f80674cd28a7e24cd928b408d0ecb954",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "a1e00794d7c858190f686240daa5fa82",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "60b6805ee7bc594519b7d170c607a735",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "f49541533ab1970b12d5faad48c4eeda",
+      "jev_top_original_rank": 2,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "4dbc60c89f7162deb326bbc62349a82b",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "61aa0abbfad655990e0436711aba148e",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "0032ef81e1808b1427566a672fa1b23c",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "65cdfffac3180f9030039525f4c9d44f",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "9e3531efe2292955a7b2dac6cfeda26d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "eeb3c9f22277cf8ec97482dc89d3a1d2",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "6eb73c762e0b2b21304390759806254c",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "7f96ab5e6e288cc70c7cf3ad3f336794",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "3e5d5e01a8c6e26bbce5a6c1ee122ad8",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "7caaafcd9814b67bd1da2e73d4001012",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "f2e75dfa4a1f476222c461669e577923",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "06725f3eabf0a25b9ce259909d68c7ba",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "aa65de07335e6ee3be3621902b58c30d",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "9a87af171d6c8d4d469c74a42019200c",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "de39ae4b19fad171f0508c4d24dd6432",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "17705347f9c42ef17580e518b0bd6954",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "dc4760c0cdf3339d81d82b1aec654bdc",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "ba86142c5504c2d9ae25708fa3200031",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "4780701198d85d5b2fc77bb7ba2d7c67",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6d747f1f2036acc0238ff74af4425222",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "450500ad08e3e70511788932cdf94634",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "a5a85e69d58b29f2fe31576ea50caef7",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "71bb4b44f03d6b3275bd9ac0c9d8c95d",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "22ae20897ea7e5532abf032c562f74a5",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "0a266569647dbbd8e664f2da5867e5f0",
+      "jev_top_original_rank": 2,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "aa15bcff75400849be5bc820c013c9ba",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "52772e265c20381ad604ec7c6dcfed4c",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6cd1e89b93debc89e5b132633b51a6f3",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "d9bbf74a49574d704305aa9e7cf97cab",
+      "jev_top_original_rank": 4,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "741574c12c7e5ce05b30d5319b2b19d6",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "48716e8336f0e0823acac4801b9d1cb7",
+      "jev_top_original_rank": 2,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "8d2621b677ebf59b079f115067066c8f",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "9f055cabc40c4648dc12327b89881df8",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "376ea48ce165fc40355d6f9b39c417c8",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "73ba76e9e26b2fd1bc47996c60306152",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "e97bcf3a511aae44bbec95da88e16f8d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "e9ef86b1ec167c901f17c5d07b47ce98",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "22d127334eca59b5a9ce4b731637f95d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "4d9f0487cc9a0fdbc12837810a653f3f",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "fead398ae6a905a917241eefa9c362e7",
+      "jev_top_original_rank": 2,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "a6b9ff90c6b409483270f1e20f354228",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "0e27f1ed519579505abba03d6d6975d7",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "0f1e32ea58f9d581f4f081ee0307772e",
+      "jev_top_original_rank": 4,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "c6ba576e03dd842359bba7440006ffb5",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "4dac1d67e49505b23fea4f23380bc18d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "bef6d32a8093be7a50db47a217b94d36",
+      "jev_top_original_rank": 2,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "79767f0480f666949e9fc1c1fff31323",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "9089788452844649e7e16f5dacb131c3",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "cd59a21a9b2b66b0f43cc7c2bd1bbd9a",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "9f11db20a2ade4df57a40f4c2491e11e",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "8ef672ab22e69eea507e19d3b296dc4d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "61cccd44343526899845a0f5ed7131cb",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "c88210fee3180da3ba2b2e2cfd3de17d",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "e61133b83658ab173983f896d01d07b0",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "3e1d9d0ec5d700c0a61ff55a6e86e0c6",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "e4ae1a80fc89ef9678f99881ac543acf",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "e7ae0a1595583d747de5f04dbe95a641",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "8d39f8e7c030bbb9505480215b3b5ada",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "2341c2c2cc8d7edeb3ca3493794d9767",
+      "jev_top_original_rank": 5,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "48eb9eaa42381dd0fd9619af031f11f3",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "dac59ba60ace8a8090cd386bd404b050",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "f3c0268895258cc86a953c1177a8ad01",
+      "jev_top_original_rank": 4,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "5b606572d70923f35e9040e7f89ccd13",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "bfb3411b6278c117d3c9a4ed5eade05d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "698de01931ee004380bf6d51e107fbd4",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "f7b89d9ab08965b3544f15cc25951997",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "89b192de66498618857faf741e2ec72f",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "ba29d5ce8f2644246d024e966db7fc17",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "ca4bc530c412b5e5bf5cafc476f79f7d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "429122d251bb4ee46113dd963a46cc14",
+      "jev_top_original_rank": 5,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "b389aa6556522326018028c8d049cac8",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "eba4ef03ed0e63b1d979d83da80dd898",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "51842a791c6b97725ee52e98ea30f576",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "b01f1cbd1f60b52d433358c81a189295",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "a692319a644a380ec65814696cff35a3",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "712fffe2d3d47ee6a9ff838e3a8a23c4",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "38a236d26bd6b9959c4d914ce14c3d22",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "55c251f83ea221df7add6672914104e9",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "9da08b0388e3f14ebb3ccc61837845b8",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "9944930690804f6c58ab61a8f4094506",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "006c2bb5e4fe72d361e3b0a598f1a383",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "229822fe59d9a79d297d408fb823e334",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "4d0b07c9be684da7af4235b614375ef6",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "bf4b1985fb0d0b8e355b863d38b6c15d",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "12c090dd37a69ccea8f6df9baf55b121",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "74cec2c05757821b0849c0af908df899",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "b56861e76ed6b4e690741d223a9574da",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "2c0613d3d8c07187a0bc500988ff8fe9",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "96d714bf1b80de954c3f54330ba35037",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "4c75fa85df490491c46d14941021fb4f",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "29710b7e0ccf450008489bf43f126761",
+      "jev_top_original_rank": 3,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "293c743c80b4b9651e87dee39fb391e9",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "badf5fea543c9a42497abc406907a954",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "b9dff68bd47b0e136c5dc38ce700cb71",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "c6890a7294062e04f009f17690517432",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "02527c573a6e08bffa5acb6b51ef79e7",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "f7dfdad2ce87645976e251efd69be165",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "dab10cea5d69c39f758363773d84792b",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "64cc2644c95519a35da2879a61438e73",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "c56cd2194fc231a4162ffc0b5d2e106a",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "01e163d05deeca26952d62ef51658870",
+      "jev_top_original_rank": 1,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "a9e5e832bc14dc1d92eb626cf2e8ade9",
+      "jev_top_original_rank": 4,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "be75b17905129cb102efa5523c83d9e4",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "050c54c3c531b6cc0692d56d4707a909",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "ec6c4558b716ecfbe4cb028782459f67",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "3895f190938bd357bfa77ea096cbe67f",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "04d8e99ea67c0fc931979ed05ca0405a",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "572a113f9f63830b352e10a40e0d924f",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "7244b39e708d909f221ec330a1aaa099",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "7b5021a831f83bb152329da823b8a633",
+      "jev_top_original_rank": 2,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "82d6a49502c3e3da541a164968a1451f",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "f4a14d5b11dcd75935cdce91e348b129",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6dd6ae1fd9246962ac092eeaee259e60",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "001ec54cd84b67f1cb5e4fe57e141036",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6ea144c12d3c877b3d349d7ef66f317e",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "1085346b81aed339ba92f5c3da357972",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "d1255e5a8bde0eb0500f1452dca27f77",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6a61eaaf2e98cdad9d5e44e40567ab27",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "56f866b201d17d01885a351d5134e02f",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "2b050becba05786d71b9c0549e1a3ce5",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6720887290a37639056f0f7650d3d9b8",
+      "jev_top_original_rank": 4,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "0d5c9dfb557d2b8d02136b537d86de5a",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "cce8e52b98fb33f34ea24926bd487737",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "b4edfaba8c249bb1ee656a689983acbb",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "f10b5efa891cb5523b08bdfa764e830c",
+      "jev_top_original_rank": 2,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "a0b8e509651c922f8c3bb9a136715eab",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "e0869b8b5642f0c03e8cd0753d9ffbaf",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "ae3e21e958703cd120966dcf6b53c741",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "f9110d032d673648714bedd6905c1e9c",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "913ab8d9c6b491ad6637754e8064ee5a",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "4621ef51d8580696e434e319368f2fc2",
+      "jev_top_original_rank": 5,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "01b89ec4536d3e7e17d027a87b6b4d09",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "a70d9fdccab521f3ef45da5c0fc73f4f",
+      "jev_top_original_rank": 3,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "72940ed46a5c5c445649c1e96a2b0195",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "7a137e9ea20dfaa5fa1f85d2ab4c5224",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "e1a7d3354cec69d7e7f0288da9673ae4",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "1a3d68d26ae9bef0b4064f7ea580d91f",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "b1efcf0c9ffdc211462303734ed19c50",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "a4a0f13a031c309bfbb970b942b1a41e",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "8b9cc2fe991bcaa7e5b7b92893d1b5f0",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "2eaf2fd274449d91eaeaefb1bc04d69b",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "0fc6fa62eb3818437f073f8860ab5cd3",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "6e2db81d51bbb27775881f29f8daa5a2",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "46f87d3b8c9551fd71b0f4135adf9f80",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "dab6824e8e9b4b90d2d80a6c69bc4ae1",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "3bcf9279ad93664913df21f132949f76",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "b3d0398bf8802b6511c625582451963b",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "7a70d4e844464ceeec2036381bdc4204",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "066d27339f1efc174cf8756745894c0c",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "d8742c9e1eb440c0f0a4adb195bb3905",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "664a5fb993c5292b115f0b38bf1577b5",
+      "jev_top_original_rank": 3,
+      "baseline_hit": true,
+      "jev_hit": false
+    },
+    {
+      "id": "722b1908ee7b51df4c45bc0c904f3fb9",
+      "jev_top_original_rank": 5,
+      "baseline_hit": false,
+      "jev_hit": false
+    },
+    {
+      "id": "ac6df8689aacb09708f2459eca3cab29",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "7a68a4d5e19e6b3edeecf7e98c79b3d6",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "8b59db539a3835ae8d6e2d29d0ad2ed9",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "b8cc9d117ce3879cf08f12171540aad9",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "404b66786df16f2967a067cf9621fd1b",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "26ca462d820481ddfd8248d12275c31a",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "dd6e15ddfa4851a27249c65e5c767bf0",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "c3502ac16d40b40381e4f82bfa7b5a7c",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "47853407866c9cb372a435375a73e151",
+      "jev_top_original_rank": 3,
+      "baseline_hit": false,
+      "jev_hit": true
+    },
+    {
+      "id": "f0f9c87b3ba50169459d5ffbcef44faf",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    },
+    {
+      "id": "de27dbd67d0e1643233e605566bfdfab",
+      "jev_top_original_rank": 1,
+      "baseline_hit": true,
+      "jev_hit": true
+    }
+  ],
+  "result_sha256": "6a8fbe7755182c4f53174e7fe3cfa81becf01bbd9d96e9bc8d83871c03590f10"
+}

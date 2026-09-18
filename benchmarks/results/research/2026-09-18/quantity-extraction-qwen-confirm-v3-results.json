@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "kind": "quantity-extraction-result",
+  "completed_at": "2026-09-18T20:50:18.880749+00:00",
+  "registration_sha256": "97315bc95b734c98a39278925d765af1091c0aa46a7524ca0be15c9660e49f19",
+  "model": {
+    "provider": "ollama",
+    "model": "prme-qwen3.5:35b-a3b-8k",
+    "model_digest": "45870b70b6fa65ab09355aeb7901897763ae40745c6cdd11d28bc33a6b818ffc",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0.0,
+    "max_retries": 3,
+    "timeout_seconds": 180.0
+  },
+  "metrics": {
+    "completed_cases": 20,
+    "failed_attempts": 0,
+    "missing_expected_quantities": 0,
+    "unexpected_quantities": 0,
+    "field_mismatches": 0,
+    "policy_errors": 0,
+    "cases_passed": 20,
+    "passed": true
+  },
+  "cases": [
+    {
+      "name": "currency_target",
+      "source": "I raised $500 for the animal shelter.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "500",
+          "unit": "$",
+          "source_text": "$500",
+          "object": "$500 for the animal shelter",
+          "predicate": "raised",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "named_currency_target",
+      "source": "I donated 250 USD to the food bank.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "250",
+          "unit": "USD",
+          "source_text": "250 USD",
+          "object": "250 USD to the food bank",
+          "predicate": "donated",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "count_target",
+      "source": "I shipped 1234 packages for Project Atlas.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "1234",
+          "unit": "packages",
+          "source_text": "1234 packages",
+          "object": "1234 packages for Project Atlas",
+          "predicate": "shipped_packages_for",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "decimal_measure",
+      "source": "I drank 1.5 liters of water during the race.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "1.5",
+          "unit": "liters",
+          "source_text": "1.5 liters",
+          "object": "1.5 liters of water during the race",
+          "predicate": "drank",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "signed_measure",
+      "source": "The battery delivered -3.25 volts during the test.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "-3.25",
+          "unit": "volts",
+          "source_text": "-3.25 volts",
+          "object": "-3.25 volts during the test",
+          "predicate": "delivered_voltage_during_test",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "dimensionless_count",
+      "source": "My final score was 3.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "3",
+          "unit": "1",
+          "source_text": "3",
+          "object": "3",
+          "predicate": "has_value",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "two_independent_measures",
+      "source": "I ran 5 kilometers and raised $250 for the food bank.",
+      "expected_count": 2,
+      "actual_count": 2,
+      "matches": [
+        {
+          "value": "5",
+          "unit": "kilometers",
+          "source_text": "5 kilometers",
+          "object": "5 kilometers",
+          "predicate": "ran_distance",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        },
+        {
+          "value": "250",
+          "unit": "$",
+          "source_text": "$250",
+          "object": "$250 for the food bank",
+          "predicate": "raised_amount_for",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "decimal_currency",
+      "source": "I paid $12.50 for lunch.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "12.50",
+          "unit": "$",
+          "source_text": "$12.50",
+          "object": "$12.50 for lunch",
+          "predicate": "paid_amount_for",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "compact_unit",
+      "source": "I lifted 5kg during the training session.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "5",
+          "unit": "kg",
+          "source_text": "5kg",
+          "object": "5kg during the training session",
+          "predicate": "lifted",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "negated_amount",
+      "source": "I did not raise $500 for the shelter.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "500",
+          "unit": "$",
+          "source_text": "$500",
+          "object": "$500 for the shelter",
+          "predicate": "raised_amount_for",
+          "polarity": "negative",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "conditional_amount",
+      "source": "If the campaign succeeds, I will donate $500 to the shelter.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "value": "500",
+          "unit": "$",
+          "source_text": "$500",
+          "object": "$500 to the shelter",
+          "predicate": "will_donate",
+          "polarity": "positive",
+          "epistemic_type": "conditional"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "approximation",
+      "source": "I raised about $500 for the shelter.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "range",
+      "source": "The budget is between $400 and $500.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "software_version",
+      "source": "I installed CUDA 12.4 yesterday.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "calendar_date",
+      "source": "The fundraiser happened on January 20th.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "identifier",
+      "source": "My ticket number is 1250.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "clock_time",
+      "source": "The call starts at 3:30 pm.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "model_name",
+      "source": "I bought an iPhone 15.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "address",
+      "source": "The office is at 500 Main Street.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "ordinal",
+      "source": "I finished in 2nd place.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "field_mismatches": [],
+      "policy_errors": [],
+      "passed": true
+    }
+  ],
+  "decision": "advance_to_cross_model_confirmation",
+  "state_sha256": "30ff2aaf1553217a46637803e1d003557c4cc8aefad30d116abb835264bf1051",
+  "result_sha256": "ba1a5dad434fe7d63ea494647ecdd6447033caafa58ef65a375458773e5b1416"
+}

@@ -13,7 +13,12 @@ from typing import Any, Protocol, runtime_checkable
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
-from prme.storage.alias_proposal import AliasProposalResult
+from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewResult,
+    AliasProposalStatus,
+)
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
@@ -72,8 +77,23 @@ class GraphStore(Protocol):
     async def propose_alias(
         self, node_a_id: str, node_b_id: str, *, user_id: str,
         alias_type: str, score: float,
+        evidence: AliasProposalEvidence | dict[str, Any] | None = None,
     ) -> AliasProposalResult | None:
         """Publish one durable, unverified alias relationship for a node pair."""
+        ...
+
+    async def review_alias_proposal(
+        self, proposal_operation_id: str, *, user_id: str, decision: str,
+        reviewer_id: str, reason: str | None = None,
+    ) -> AliasProposalReviewResult:
+        """Atomically accept or reject one durable alias proposal."""
+        ...
+
+    async def list_alias_proposals(
+        self, *, user_id: str, scope: Scope | str | None = None,
+        status: AliasProposalStatus | str | None = None, limit: int = 100,
+    ) -> list[AliasProposalInboxItem]:
+        """List decoded alias proposals and their owner-scoped review state."""
         ...
 
     async def create_node(self, node: MemoryNode) -> str:
@@ -312,6 +332,7 @@ class GraphStore(Protocol):
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node.
 
@@ -322,6 +343,9 @@ class GraphStore(Protocol):
             valid_at: Temporal filter for edges.
             min_confidence: Minimum edge confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse alias proposals that have not
+                been accepted as identity. Disabled by default so proposals do
+                not affect ordinary retrieval.
 
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
@@ -337,6 +361,7 @@ class GraphStore(Protocol):
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops along with their minimum hop distance.
 
@@ -351,6 +376,8 @@ class GraphStore(Protocol):
             valid_at: Temporal filter for edges.
             min_confidence: Minimum edge confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse alias proposals that have not
+                been accepted as identity. Disabled by default.
 
         Returns:
             List of (MemoryNode, min_depth) tuples, excluding the
@@ -364,6 +391,7 @@ class GraphStore(Protocol):
         target_id: str,
         *,
         edge_types: list[EdgeType] | None = None,
+        include_unverified_aliases: bool = False,
     ) -> list[str] | None:
         """Find the shortest path between two nodes.
 
@@ -371,6 +399,7 @@ class GraphStore(Protocol):
             source_id: Starting node ID.
             target_id: Target node ID.
             edge_types: Only traverse edges of these types.
+            include_unverified_aliases: Traverse unaccepted alias proposals.
 
         Returns:
             List of node IDs forming the shortest path (including

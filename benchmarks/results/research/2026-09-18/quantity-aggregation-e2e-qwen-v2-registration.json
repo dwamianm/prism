@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "kind": "quantity-aggregation-e2e-registration",
+  "status": "registered_before_provider_calls",
+  "registered_at": "2026-09-18T21:13:50.555139+00:00",
+  "claim_boundary": "Authored end-to-end product-path assay over fixed natural-language sources; not held-out accuracy, answer quality, exhaustive unit coverage, or competitive evidence.",
+  "source": {
+    "implementation_sha256": {
+      "benchmarks/diagnostics/quantity_aggregation_e2e.py": "266d1be7dfc45b048dda9b597f609ff59c5f3777f5798e576da6553ec0badc42",
+      "src/prme/ingestion/extraction.py": "bcc9447700800a91847a7a50fa598c217a5cbd6979f2cf428fb0d6ddd4b38849",
+      "src/prme/ingestion/schema.py": "f400cb36784670095b67cede4d13fdc35dcc713840d33a85a52480531a028910",
+      "src/prme/ingestion/grounding.py": "11d6458dfb131096f325330be26e7a08c8173bce2199e9430a8db4c7fa8066ef",
+      "src/prme/ingestion/pipeline.py": "11ad9d2d648f5dd2a7cbcca72bc0bf16afdf092543cd5e6526dc8eee379f61c8",
+      "src/prme/ingestion/planning.py": "c74108f9785911111bcef7dac42fbf44aa465457470ab115cde03af893b51508",
+      "src/prme/models/aggregation.py": "218ab72e170e5aa3efe9640e19bc2d5bb1339e9d5116340764c023a5f94e7dd7",
+      "src/prme/retrieval/aggregation.py": "cc81683361ef2cd95a53b6f5ff6a18f652fce571c004487b412a352cd81d8568",
+      "src/prme/storage/engine.py": "bca140c2368a71997549b60511770323ede5ad192ddf4dd1e2836d61478edbe4"
+    },
+    "cases_sha256": "cea1c4e8300c3a9374492cb221c508c7049398cfae5712c9f573096b5699b72e",
+    "query_sha256": "b00d1f8cce6d98d6b8f35616bf0f166b0c8c336ca7d9237d82e39133cd136afb",
+    "expected_aggregation_sha256": "4402368358dd219702e86ddc29e8dcb69b6361f8856d8a91ac50c23fb05a75dc",
+    "prompt_sha256": "877a628c7ae8b26a17b8b7fa514020933e59ff40704cb3fdf2be8853be294a13",
+    "response_schema_sha256": "be1bd6735bb9b28c6edef3213fe68aa60603749ff40bfd95f56b632206ea8490"
+  },
+  "model": {
+    "provider": "ollama",
+    "model": "prme-qwen3.5:35b-a3b-8k",
+    "model_digest": "45870b70b6fa65ab09355aeb7901897763ae40745c6cdd11d28bc33a6b818ffc",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0.0,
+    "max_retries": 3,
+    "timeout_seconds": 180.0
+  },
+  "protocol": {
+    "cases": 10,
+    "expected_quantities": 10,
+    "primary_owner": "quantity-aggregation-e2e-owner",
+    "other_owner": "quantity-aggregation-e2e-other",
+    "query": {
+      "predicate_prefixes": [
+        "raised",
+        "helped_raise"
+      ],
+      "units": [
+        "$"
+      ],
+      "group_by": [
+        "unit"
+      ],
+      "sample_limit": 100
+    },
+    "expected_aggregation": {
+      "matched_quantity_records": 4,
+      "distinct_count": 1,
+      "value_count": 4,
+      "total": "3750",
+      "minimum": "250",
+      "maximum": "2000",
+      "evidence_count": 4,
+      "values": [
+        "250",
+        "500",
+        "1000",
+        "2000"
+      ]
+    },
+    "arm": "one durable local pack; synchronous extraction for every fixed source; public aggregate_quantities query after ingestion",
+    "resume": "checkpoint before and after every source; admitted events are recovered by fixed owner, session, case marker, and source",
+    "gates": {
+      "completed_cases": 10,
+      "failed_attempts": 0,
+      "case_contract_failures": 0,
+      "matched_quantity_records": 4,
+      "distinct_count": 1,
+      "value_count": 4,
+      "total": "3750",
+      "minimum": "250",
+      "maximum": "2000",
+      "evidence_count": 4,
+      "values": [
+        "250",
+        "500",
+        "1000",
+        "2000"
+      ],
+      "stored_set_exhaustive": true,
+      "source_extraction_coverage": "unknown",
+      "semantic_equivalence": "normalized_exact_and_predicate_prefix",
+      "real_world_coverage": "unknown",
+      "unit_conversion": "none",
+      "consistency": "complete_for_unchanged_store",
+      "required_exclusions": [
+        "selector_mismatch",
+        "condition_filtered",
+        "unit_mismatch"
+      ]
+    }
+  }
+}
