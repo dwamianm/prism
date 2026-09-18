@@ -102,6 +102,10 @@ def _cohort(
     return cases, development_ids
 
 
+def _source_question_type(question_id: str, dataset_question_type: str) -> str:
+    return "abstention" if question_id.endswith("_abs") else dataset_question_type
+
+
 def _prepare_registered_inputs(
     *,
     cases: list[dict[str, Any]],
@@ -115,11 +119,12 @@ def _prepare_registered_inputs(
     for case in cases:
         question_id = case["question_id"]
         saved = json.loads((source_cases_root / f"{question_id}.json").read_text())
+        expected_source_type = _source_question_type(question_id, case["question_type"])
         if (
             saved.get("kind") != "longmemeval-s-monotonic-compact-case"
             or saved.get("question_id") != question_id
             or saved.get("case_sha256") != _case_checksum(saved)
-            or saved.get("question_type") != "temporal-reasoning"
+            or saved.get("question_type") != expected_source_type
         ):
             raise ValueError(f"saved source case differs for {question_id}")
         control = saved["arms"]["control"]

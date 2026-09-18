@@ -13,6 +13,15 @@ def test_confirmation_protocol_freezes_disjoint_stages_and_gate() -> None:
     assert protocol["gate"]["accepted_hint_wins"] == ">= 3"
 
 
+def test_confirmation_source_type_rule_preserves_abstention_controls() -> None:
+    assert trial._source_question_type("ordinary", "temporal-reasoning") == (
+        "temporal-reasoning"
+    )
+    assert trial._source_question_type("example_abs", "temporal-reasoning") == (
+        "abstention"
+    )
+
+
 def test_self_hash_rejects_mutation() -> None:
     value = {"kind": "example", "count": 2}
     value["result_sha256"] = trial._sha256(trial.paired.canonical(value))
