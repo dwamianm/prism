@@ -9,11 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Quantified claims now remain exact when a provider serializes a decimal as a
+  JSON float: PRME discards the float and recovers only a single supported
+  decimal token from the grounded source phrase. Surrounding approximation and
+  range cues fail closed even when the provider clips them from `source_text`.
+  Fresh durable outputs record `speech_act_v7`; saved v6 outputs keep their
+  original bytes and still prepare v12 materialization plans.
+
 - Built-in extraction now preserves literal first-person attempts and
   intentions instead of admitting them under completed or current-state
   predicates, including component relationships inside the attempted action.
-  Fresh durable outputs record `speech_act_v6` and prepare `speech_act_v12`
-  plans. A narrow source/entity recovery retains the target of an explicit
+  The preregistered confirmation outputs recorded `speech_act_v6` and prepared
+  `speech_act_v12` plans. A narrow source/entity recovery retains the target of an explicit
   nonactual clause when the model returns the entity but omits its claim, while
   preserving explicit conditions. Saved v5 outputs remain v11, v4 remain v10,
   v3 remain v9, v2 remain v8, and legacy extraction records recover

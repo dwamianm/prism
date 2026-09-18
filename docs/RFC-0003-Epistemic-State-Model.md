@@ -184,7 +184,8 @@ cannot materialize it under a completed/current predicate such as `uses` or
 general entailment and older extraction plans retain their recorded behavior.
 The same clause check covers completed relationships between components named
 inside the attempted action. Fresh built-in outputs carry extraction grounding
-policy `speech_act_v6` before they may prepare a v12 plan. V12 can recover an
+policy `speech_act_v7` before they may prepare a v12 plan. Saved v6 outputs also
+remain eligible for v12. V12 can recover an
 omitted target only from the first exact returned entity after a literal
 nonactual action verb and preserves an explicit condition. Saved v5 outputs
 remain v11, v4 remain v10, v3 remain v9, v2 remain v8, while legacy `source_passage_v1` outputs remain eligible

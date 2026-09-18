@@ -269,12 +269,15 @@ saved plans retain their original materialization policy and replay unchanged.
 
 Historical `speech_act_v11` and earlier plans keep their exact node
 metadata and replay unchanged. Fresh built-in extractions record
-`speech_act_v6`, and plans made from those outputs record `speech_act_v12`, which
+`speech_act_v7`, and plans made from those outputs record `speech_act_v12`, which
 retains the v7 source-effective validity rules and rejects an attempt or
 intention collapsed into a completed/current predicate, including component
 relationships inside the attempted action. If the target claim is omitted, v12
 can recover the first exact model-returned entity after the literal nonactual
-action verb and preserve an explicit condition. Saved v5 records prepare v11,
+action verb and preserve an explicit condition. V7 can reconstruct a supported
+exact decimal from source text when JSON transport emitted a float, while
+rejecting approximation and range context; it never converts the float. Saved
+v6 records also prepare v12, saved v5 records prepare v11,
 v4 prepare v10, v3 prepare v9, and v2 prepare v8. A legacy extraction
 record whose omitted policy defaults to `source_passage_v1` prepares a missing
 plan under v7 rather than claiming the new validator ran.

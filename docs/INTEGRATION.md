@@ -1444,7 +1444,10 @@ When a fact object contains one exact numeric amount, built-in extraction may
 also populate `node.metadata["quantity"]` with decimal-string `value`, verbatim
 `unit`, verbatim `source_text`, and `grounding="object_decimal_v1"`. Grounding
 requires the quantified phrase in both the object and source evidence and checks
-the parsed decimal. Invalid optional quantity output is removed while the
+the parsed decimal. When JSON transport emits a float, built-in extraction can
+recover the decimal only by reparsing one exact supported token from the grounded
+source phrase; it never converts the float. Approximation or range cues in the
+surrounding evidence reject clipped exact-looking output. Invalid optional quantity output is removed while the
 otherwise grounded fact remains. Ranges, approximations, scientific notation,
 locale decimal commas, and phrases with multiple numbers are not typed. No
 currency inference or unit conversion occurs.

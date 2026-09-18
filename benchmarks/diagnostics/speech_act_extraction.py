@@ -203,7 +203,7 @@ def score_report(
     for case in cases:
         name = case["name"]
         row = rows.get(name, {})
-        if row.get("extraction_grounding_policy") != "speech_act_v6":
+        if row.get("extraction_grounding_policy") != "speech_act_v7":
             policy_errors.append(f"{name}:grounding")
         if row.get("materialization_policy") != "speech_act_v12":
             policy_errors.append(f"{name}:materialization")

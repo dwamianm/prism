@@ -195,7 +195,7 @@ explicitly replaced, uniquely owned revision protocol above.
 
 Historical plans through materialization policy `speech_act_v11` keep
 their original behavior. Fresh built-in inference records
-`grounding_policy="speech_act_v6"`, and plans made from those records use
+`grounding_policy="speech_act_v7"`, and plans made from those records use
 `speech_act_v12`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
 edges, unresolved personal references remain event-local, and claim polarity and
@@ -203,7 +203,10 @@ explicit conditions are preserved in node metadata. A fact can also carry one
 source-bound decimal quantity. Its quantified phrase must occur in the claim
 object and evidence, its decimal must match the supported source notation, and
 its unit or symbol remains verbatim. Invalid optional quantity output is dropped
-without discarding the grounded claim. Type-qualified object
+without discarding the grounded claim. V7 can recover the exact decimal token
+from grounded source text after a provider emits a JSON float, but never converts
+or trusts that float; surrounding approximation and range cues fail closed.
+Saved v6 records also prepare v12. Type-qualified object
 references avoid arbitrary namesake links. Conditional claims start with an
 unknown condition state and stay out of DEFAULT retrieval until confirmed.
 Literal first-person attempts and intentions must retain that non-completed

@@ -22,6 +22,7 @@ from prme.ingestion.grounding import (
     _mentioned,
     _supporting_claim_passage,
     _supporting_passage,
+    exact_decimal_string_from_quantity_text,
     validate_extracted_quantity,
 )
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
@@ -332,6 +333,33 @@ class _CitedExtractionResult(ExtractionResult):
                 except (ValidationError, TypeError):
                     without_quantity = None
                     if field_name == "facts" and isinstance(item, dict) and "quantity" in item:
+                        raw_quantity = item.get("quantity")
+                        if (
+                            isinstance(raw_quantity, dict)
+                            and isinstance(raw_quantity.get("value"), float)
+                            and isinstance(raw_quantity.get("source_text"), str)
+                        ):
+                            exact_value = exact_decimal_string_from_quantity_text(
+                                raw_quantity["source_text"]
+                            )
+                            if exact_value is not None:
+                                repaired = dict(item)
+                                repaired["quantity"] = {
+                                    **raw_quantity,
+                                    "value": exact_value,
+                                }
+                                try:
+                                    model.model_validate(repaired)
+                                except (ValidationError, TypeError):
+                                    pass
+                                else:
+                                    logger.info(
+                                        "extraction_quantity_value_recovered",
+                                        path=f"{field_name}[{index}].quantity.value",
+                                        method="exact_source_text",
+                                    )
+                                    admitted.append(repaired)
+                                    continue
                         candidate = dict(item)
                         candidate.pop("quantity")
                         try:
@@ -530,6 +558,10 @@ cannot carry quantity metadata and must not replace the quantified fact.
 - Quantity metadata is only for a measured or counted claim value. Do not attach \
 it to dates, times, versions, identifiers, addresses, phone numbers, model names, \
 or ordinals even when they contain a decimal-looking token.
+- Preserve explicit dimensionless counts as quantities. For a possessive numeric \
+attribute such as "My final score was 3", use the literal attribute "final score" \
+as the subject and the exact number as the fact object instead of inventing "I" \
+as a source mention.
 - Using something does not imply preferring it. One occurrence does not imply \
 a habit. Multiple values can coexist (e.g., liking tea and coffee).
 - Set replaces_object only for an explicit replacement of a named previous value \

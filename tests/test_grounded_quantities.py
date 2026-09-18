@@ -8,7 +8,10 @@ from pydantic import ValidationError
 
 from prme import MemoryEngine
 from prme.ingestion.extraction import _CitedExtractionResult
-from prme.ingestion.grounding import validate_grounding
+from prme.ingestion.grounding import (
+    exact_decimal_string_from_quantity_text,
+    validate_grounding,
+)
 from prme.ingestion.schema import (
     ExtractedFact,
     ExtractedQuantity,
@@ -73,7 +76,7 @@ def test_builtin_strict_json_preserves_exact_quantity_after_result_sanitizing():
     assert result.facts[0].quantity.value == Decimal("5000")
 
 
-def test_builtin_discards_json_float_quantity_without_losing_fact():
+def test_builtin_recovers_exact_decimal_from_source_instead_of_json_float():
     source = "Alice spent $12.50 on lunch."
     raw = (
         '{"entities":[{"name":"Alice","entity_type":"person"}],'
@@ -86,7 +89,143 @@ def test_builtin_discards_json_float_quantity_without_losing_fact():
         raw, context={"source_text": source}, strict=True
     )
     assert len(result.facts) == 1
+    assert result.facts[0].quantity == ExtractedQuantity(
+        value="12.50", unit="$", source_text="$12.50"
+    )
+
+
+@pytest.mark.parametrize(
+    ("source_text", "expected"),
+    [
+        ("$12.50", "12.50"),
+        ("-3.25 volts", "-3.25"),
+        ("1,234 packages", "1234"),
+        ("about $500", None),
+        ("an estimated $500", None),
+        ("up to 12 packages", None),
+        ("$400-$500", None),
+    ],
+)
+def test_exact_decimal_recovery_uses_supported_source_text(source_text, expected):
+    assert exact_decimal_string_from_quantity_text(source_text) == expected
+
+
+def test_grounding_rejects_clipped_approximation_cue_from_full_evidence():
+    source = "Alice raised about $500 for the shelter."
+    result = validate_grounding(
+        ExtractionResult(
+            facts=[
+                ExtractedFact(
+                    subject="Alice",
+                    predicate="raised",
+                    object="$500 for the shelter",
+                    evidence_quote=source,
+                    quantity=ExtractedQuantity(
+                        value="500", unit="$", source_text="$500"
+                    ),
+                )
+            ]
+        ),
+        source,
+    )
     assert result.facts[0].quantity is None
+
+
+def test_grounding_does_not_apply_approximation_from_an_earlier_clause():
+    source = "Alice spoke about the event, then raised $500 for the shelter."
+    result = validate_grounding(
+        ExtractionResult(
+            facts=[
+                ExtractedFact(
+                    subject="Alice",
+                    predicate="raised",
+                    object="$500 for the shelter",
+                    evidence_quote=source,
+                    quantity=ExtractedQuantity(
+                        value="500", unit="$", source_text="$500"
+                    ),
+                )
+            ]
+        ),
+        source,
+    )
+    assert result.facts[0].quantity == ExtractedQuantity(
+        value="500", unit="$", source_text="$500"
+    )
+
+
+def test_grounding_does_not_apply_unrelated_nearby_inexact_word():
+    source = "Alice moved over and then paid $500 for the booking."
+    result = validate_grounding(
+        ExtractionResult(
+            facts=[
+                ExtractedFact(
+                    subject="Alice",
+                    predicate="paid",
+                    object="$500 for the booking",
+                    evidence_quote=source,
+                    quantity=ExtractedQuantity(
+                        value="500", unit="$", source_text="$500"
+                    ),
+                )
+            ]
+        ),
+        source,
+    )
+    assert result.facts[0].quantity is not None
+
+
+@pytest.mark.parametrize(
+    ("source", "object_value", "source_text", "value"),
+    [
+        ("The estimate was between $400 and $500.", "$500", "$500", "500"),
+        ("The estimate was $400-$500.", "$400", "$400", "400"),
+        ("The estimate was $400-$500.", "$500", "$500", "500"),
+        ("The estimate was from $400 to $500.", "$400", "$400", "400"),
+        ("The estimate was from $400 to $500.", "$500", "$500", "500"),
+    ],
+)
+def test_grounding_rejects_clipped_range_context(
+    source, object_value, source_text, value
+):
+    result = validate_grounding(
+        ExtractionResult(
+            facts=[
+                ExtractedFact(
+                    subject="estimate",
+                    predicate="was",
+                    object=object_value,
+                    evidence_quote=source,
+                    quantity=ExtractedQuantity(
+                        value=value, unit="$", source_text=source_text
+                    ),
+                )
+            ]
+        ),
+        source,
+    )
+    assert result.facts[0].quantity is None
+
+
+def test_grounding_accepts_comma_grouped_dimensionless_count():
+    source = "The final count was 1,234."
+    result = validate_grounding(
+        ExtractionResult(
+            facts=[
+                ExtractedFact(
+                    subject="final count",
+                    predicate="was",
+                    object="1,234",
+                    evidence_quote=source,
+                    quantity=ExtractedQuantity(
+                        value="1234", unit="1", source_text="1,234"
+                    ),
+                )
+            ]
+        ),
+        source,
+    )
+    assert result.facts[0].quantity is not None
 
 
 def test_builtin_keeps_exact_grounded_quantity():
@@ -267,3 +406,4 @@ def test_extraction_contract_keeps_quantified_phrase_in_targeted_object():
     assert "explicit numeric amount" in relationship_description
     assert "Dates, times, versions, identifiers" in EXTRACTION_SYSTEM_PROMPT
     assert "date, time, version, identifier" in quantity_description
+    assert '"My final score was 3"' in EXTRACTION_SYSTEM_PROMPT
