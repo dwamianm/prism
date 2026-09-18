@@ -512,6 +512,16 @@ repeat returns the saved outcome without another edge. Preexisting random-ID
 alias links are reused without writing a record that would claim they were
 created atomically; their historical inputs remain unavailable.
 
+Versioned proposals can be decided through `explicit_alias_proposal_review_v1`.
+The proposal operation determines one review identity. Acceptance revalidates
+the exact node snapshots and proposal edge under the backend lock, then commits
+a verified `RELATES_TO` edge with `ALIAS_PROPOSAL_ACCEPTED`; both entities remain
+active. Rejection commits `ALIAS_PROPOSAL_REJECTED` and no edge. Each checksummed
+record retains the exact original proposal payload, owner, scope, reviewer ID,
+reason, timestamp, decision, and verified edge when present. Matching retries
+return the first decision and conflicting decisions fail. Ordinary traversal
+follows the accepted edge and continues to exclude the original unverified edge.
+
 The `tombstone_sweep` job publishes TTL archival through
 `ttl_expiration_v1`. Current owner, lifecycle, pinning, creation time and TTL are
 revalidated under the backend lock. The archived node and deterministic,

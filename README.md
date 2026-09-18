@@ -215,9 +215,13 @@ copy-paste examples and lifecycle semantics.
 PRME also provides an optional, evidence-backed [TypeSafe Jev product-alignment
 advisor](docs/JEV-PRODUCT-ADVISOR.md). It compares caller-selected software
 product pairs and returns auditable recommendations for unverified alias
-proposals. An explicit Python workflow can publish positive advice as a durable,
-unverified graph edge with complete assessment evidence. It never authorizes or
-performs an automatic identity merge.
+proposals. A deterministic Python candidate API can first reduce a product
+catalog to a bounded discovery set, but registered end-to-end trials rejected
+automatic candidate-to-proposal publication. An explicit Python workflow can
+publish advice for a selected pair as a durable, unverified graph edge with
+complete assessment evidence. Owner-scoped Python, HTTP and MCP review APIs then
+accept a verified graph link or retain an audited rejection. Both entities
+remain active; Jev never authorizes or performs an automatic identity merge.
 
 Conditional memories require explicit condition text and always start unresolved.
 Record the result when a user, tool, rule, or model evaluates that condition:

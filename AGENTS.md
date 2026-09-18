@@ -117,10 +117,20 @@ atomically retain complete inputs and output in `ALIAS_PROPOSED`. Version-2
 records can retain complete external assessment evidence bound to exact node
 snapshots; older records and random-ID proposal edges are never relabeled with
 invented history. Unverified alias proposals do not participate in ordinary
-graph traversal; explicit review tooling may opt in. Extracted
+graph traversal; explicit review tooling may opt in. Explicit proposal review
+stores one deterministic accepted/rejected record. Acceptance
+revalidates the exact proposed snapshots and adds a verified alias edge without
+retiring either node; rejection adds no traversable relationship. Extracted
 unresolved English personal references are event-local under new
 `event_local_references_v4` plans; old plans replay unchanged.
 See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.
+
+The deterministic product candidate ranker is validated only as a discovery
+stage. Registered candidate-to-Jev trials missed their frozen precision/recall
+gates, including a confirmation of a development-calibrated rule. Do not add a
+bulk candidate-to-proposal path or change the confirmed single-pair Jev rule on
+that evidence. Applications must select pairs explicitly and review every
+published proposal.
 
 Duplicate/alias merges publish evidence, relationship copies, source retirement
 and one supersedence edge in a backend transaction. `ORGANIZER_MERGED` retains

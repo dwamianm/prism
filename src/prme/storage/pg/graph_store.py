@@ -596,6 +596,26 @@ class PgGraphStore:
             alias_type=alias_type, score=score, evidence=evidence,
         )
 
+    async def review_alias_proposal(
+        self, proposal_operation_id: str, *, user_id: str, decision: str,
+        reviewer_id: str, reason: str | None = None,
+    ):
+        """Atomically record a review and publish an accepted identity link."""
+        from prme.storage.alias_review import review_postgres
+        return await review_postgres(
+            self, proposal_operation_id, user_id=user_id, decision=decision,
+            reviewer_id=reviewer_id, reason=reason,
+        )
+
+    async def list_alias_proposals(
+        self, *, user_id: str, scope=None, status=None, limit: int = 100,
+    ):
+        """List durable alias proposals with their current review status."""
+        from prme.storage.alias_review import list_postgres
+        return await list_postgres(
+            self, user_id=user_id, scope=scope, status=status, limit=limit,
+        )
+
     async def create_edge(self, edge: MemoryEdge) -> str:
         """Create a new edge between two nodes."""
         async with self._pool.acquire() as conn:

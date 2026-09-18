@@ -217,6 +217,12 @@ async def test_positive_node_assessment_publishes_audited_unverified_proposal(
             mode="json"
         )
         assert "jev-secret" not in payloads[0]
+        inbox = await engine.list_alias_proposals(user_id=user, status="pending")
+        assert len(inbox) == 1
+        assert inbox[0].proposal == record
+        assert inbox[0].proposal.evidence.assessment_sha256 == (
+            result.assessment.assessment_sha256
+        )
 
         tampered = copy.deepcopy(record.evidence.model_dump(mode="json"))
         tampered["payload"]["node_bindings"][0]["product"]["price"] = "1.00"

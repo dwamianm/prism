@@ -72,6 +72,15 @@ from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfilePro
 from prme.models.derivation import PreparedEmbedding
 from prme.storage.relevance import RelevanceRepository
 from prme.storage.ranking_profiles import RankingProfileRepository, StaleRankingProfileError
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewResult,
+    AliasProposalStatus,
+)
+from prme.integrations.product_candidates import (
+    ProductAlignmentCandidate,
+    ProductCandidateEntity,
+)
 from prme.storage.citations import CitationRepository
 from prme.quality.metrics import QualityMetrics, compute_quality_metrics
 from prme.quality.tuner import WeightTuner
@@ -2003,6 +2012,102 @@ class MemoryEngine:
             right,
             user_id=user_id,
             config=config,
+        )
+
+    async def find_product_alignment_candidates(
+        self,
+        products: list[ProductCandidateEntity | dict[str, Any]],
+        *,
+        user_id: str,
+        top_k: int = 5,
+        min_score: float = 0.1,
+        cross_catalog_only: bool = False,
+    ) -> list[ProductAlignmentCandidate]:
+        """Rank compatible owned product nodes before optional Jev calls."""
+        from prme.integrations.product_candidates import (
+            rank_product_alignment_candidates,
+        )
+        from prme.integrations.typesafe import _bound_product_node
+        from prme.organizer.merge_policy import alias_pair_allowed
+
+        if not isinstance(user_id, str) or not user_id.strip():
+            raise ValueError("Product candidate generation requires an owner")
+        parsed = [ProductCandidateEntity.model_validate(item) for item in products]
+        if len(parsed) > 10000:
+            raise ValueError("Product candidate generation accepts at most 10000 nodes")
+        if len({item.node_id for item in parsed}) != len(parsed):
+            raise ValueError("Product candidate node IDs must be unique")
+        nodes = await self._graph_store.get_nodes(
+            [str(item.node_id) for item in parsed]
+        )
+        by_id = {node.id: node for node in nodes}
+        for item in parsed:
+            node = _bound_product_node(
+                by_id.get(item.node_id), item.product, node_id=str(item.node_id)
+            )
+            if node.user_id != user_id:
+                raise ValueError(f"Product entity node {item.node_id} is unavailable")
+
+        groups: list[list[ProductCandidateEntity]] = []
+        representatives = []
+        for item in sorted(parsed, key=lambda value: str(value.node_id)):
+            node = by_id[item.node_id]
+            for index, representative in enumerate(representatives):
+                if alias_pair_allowed(representative, node):
+                    groups[index].append(item)
+                    break
+            else:
+                representatives.append(node)
+                groups.append([item])
+
+        candidates = [
+            candidate
+            for group in groups
+            for candidate in rank_product_alignment_candidates(
+                group,
+                top_k=top_k,
+                min_score=min_score,
+                cross_catalog_only=cross_catalog_only,
+            )
+        ]
+        return sorted(
+            candidates,
+            key=lambda item: (
+                -item.score,
+                str(item.left.node_id),
+                str(item.right.node_id),
+            ),
+        )
+
+    async def list_alias_proposals(
+        self,
+        *,
+        user_id: str,
+        scope: Scope | str | None = None,
+        status: AliasProposalStatus | str | None = None,
+        limit: int = 100,
+    ) -> list[AliasProposalInboxItem]:
+        """List audited alias proposals as a review inbox."""
+        return await self._graph_store.list_alias_proposals(
+            user_id=user_id, scope=scope, status=status, limit=limit
+        )
+
+    async def review_alias_proposal(
+        self,
+        proposal_operation_id: str,
+        *,
+        user_id: str,
+        decision: str,
+        reviewer_id: str,
+        reason: str | None = None,
+    ) -> AliasProposalReviewResult:
+        """Accept an identity link or reject a proposal without merging nodes."""
+        return await self._graph_store.review_alias_proposal(
+            proposal_operation_id,
+            user_id=user_id,
+            decision=decision,
+            reviewer_id=reviewer_id,
+            reason=reason,
         )
 
     async def query_nodes(self, **kwargs) -> list[MemoryNode]:

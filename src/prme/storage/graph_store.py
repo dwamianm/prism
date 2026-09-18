@@ -14,6 +14,11 @@ from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
 from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewResult,
+    AliasProposalStatus,
+)
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
 from prme.models.profile import ProfilePublication
@@ -75,6 +80,20 @@ class GraphStore(Protocol):
         evidence: AliasProposalEvidence | dict[str, Any] | None = None,
     ) -> AliasProposalResult | None:
         """Publish one durable, unverified alias relationship for a node pair."""
+        ...
+
+    async def review_alias_proposal(
+        self, proposal_operation_id: str, *, user_id: str, decision: str,
+        reviewer_id: str, reason: str | None = None,
+    ) -> AliasProposalReviewResult:
+        """Atomically accept or reject one durable alias proposal."""
+        ...
+
+    async def list_alias_proposals(
+        self, *, user_id: str, scope: Scope | str | None = None,
+        status: AliasProposalStatus | str | None = None, limit: int = 100,
+    ) -> list[AliasProposalInboxItem]:
+        """List decoded alias proposals and their owner-scoped review state."""
         ...
 
     async def create_node(self, node: MemoryNode) -> str:

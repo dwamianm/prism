@@ -5,6 +5,28 @@ reference at `/docs`. Configure per-user bearer credentials as described in the
 [README](../README.md#http-api). An authenticated owner can omit `user_id`; selecting
 another owner returns 403. Source/node lookups belonging to another user return 404.
 
+## Review identity proposals
+
+`GET /v1/alias-proposals?status=pending` lists the authenticated owner's
+decoded unverified alias proposals. Optional `scope`, `status`, and `limit`
+filters apply after owner isolation. Each item includes the complete proposal
+journal and its accepted or rejected review when present.
+
+`POST /v1/alias-proposals/{proposal_operation_id}/review` accepts one decision:
+
+```json
+{
+  "decision": "accepted",
+  "reviewer_id": "human:catalog-owner",
+  "reason": "The source catalog confirms one licensed product."
+}
+```
+
+Acceptance creates a verified traversable alias link while leaving both entity
+nodes active. Rejection requires a reason and creates no link. Identical retries
+return the first decision; conflicting decisions and stale assessed nodes return
+HTTP 409. The API never turns Jev advice into an automatic merge.
+
 ## Store supplied memory
 
 `POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `role`, `user_id`,

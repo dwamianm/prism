@@ -46,6 +46,45 @@ async with JevProductAdvisor() as advisor:
     second = await advisor.compare(other_left, other_right)
 ```
 
+For a catalog rather than a hand-selected pair, generate a bounded candidate
+set first:
+
+```python
+from prme import ProductCandidateEntity
+
+candidates = await memory.find_product_alignment_candidates(
+    [
+        ProductCandidateEntity(
+            node_id=amazon_node_id,
+            catalog="amazon",
+            product=amazon_product,
+        ),
+        ProductCandidateEntity(
+            node_id=google_node_id,
+            catalog="google",
+            product=google_product,
+        ),
+    ],
+    user_id="alice",
+    top_k=5,
+    cross_catalog_only=True,
+)
+```
+
+The `product_tfidf_candidates_v1` ranker uses normalized name words, adjacent
+name bigrams, and manufacturer words to produce a deterministic sparse TF-IDF
+top-k union. It validates that every node is an active, owned product entity,
+that its content exactly matches the supplied product name, and that each pair
+shares compatible scope and provenance. It makes no provider calls and never
+creates an edge. Pass selected candidate pairs to the Jev advisor; candidate
+similarity is routing evidence, not an identity decision.
+
+Do not submit the complete generated set and publish every positive Jev answer
+automatically. Two registered end-to-end trials on the harder candidate-routed
+distribution missed their precision/recall gates. Candidate generation is a
+bounded discovery tool; the application must select pairs under its own catalog
+evidence and keep every published result in the explicit review workflow below.
+
 To bind a positive assessment to existing PRME product entities, pass the exact
 node IDs and product records:
 
@@ -67,6 +106,16 @@ proposal = await memory.propose_product_alignment(
 )
 if proposal.proposal_published:
     print(proposal.proposal_edge_id, proposal.proposal_applied)
+
+    # The proposal is inert until an owner-scoped reviewer decides it.
+    decision = memory.review_alias_proposal(
+        proposal.proposal_operation_id,
+        user_id="alice",
+        decision="accepted",
+        reviewer_id="human:catalog-owner",
+        reason="The source catalog confirms one licensed product.",
+    )
+    print(decision.verified_edge_id)
 ```
 
 `MemoryClient.propose_product_alignment()` provides the same workflow without
@@ -112,6 +161,24 @@ can inspect them through `get_edges()` or opt into traversal with
 `include_unverified_aliases=True`. A proposal therefore cannot join the two
 entities' memories before a caller explicitly accepts the identity relationship.
 
+`list_alias_proposals(user_id=..., status="pending")` is the review inbox.
+It returns the complete decoded proposal, including the original node snapshots
+and Jev assessment when present. `review_alias_proposal()` accepts exactly one
+`accepted` or `rejected` decision with a bounded reviewer ID and optional reason;
+rejections require a reason. The synchronous `MemoryClient` and asynchronous
+`MemoryEngine` expose the same methods, and HTTP/MCP provide equivalent list and
+review operations.
+
+Acceptance atomically publishes a second `RELATES_TO` edge marked
+`identity_verified=True` with an `ALIAS_PROPOSAL_ACCEPTED` record. Both entity
+nodes stay active; review does not erase sources or silently choose a canonical
+entity. The verified link participates in ordinary traversal. Acceptance fails
+if either exact assessed node snapshot changed, so callers must reassess stale
+pairs. Rejection writes `ALIAS_PROPOSAL_REJECTED`, publishes no graph link, and
+keeps the original proposal excluded from traversal. The proposal pair has one
+deterministic review identity: identical retries return the committed decision,
+while a conflicting later decision fails.
+
 The unordered node pair has one durable proposal identity. A matching
 assessment-request retry returns the first committed assessment and edge without
 rewriting history. A preexisting legacy or version-1 proposal cannot be relabeled
@@ -143,10 +210,22 @@ and p95 was 0.330 seconds with six concurrent requests. The development cohort
 was directionally consistent at 94.38% precision, 75.50% recall, and 85.50%
 accuracy.
 
-These results validate proposal advice for candidate software-product pairs.
-They do not validate candidate generation, automatic merging, people,
-organizations, places, or arbitrary entity metadata. The full preregistration,
-runner, immutable results, checksums, and reports are under
+These results validate proposal advice for caller-selected software-product
+pairs. A separate untouched Walmart-Amazon candidate-generation trial routed
+193/193 positive pairs while reducing the catalog cross product by 99.8644%, so
+the deterministic ranker is confirmed as a discovery stage.
+
+The stages did not compose into a safe bulk proposal pipeline. On the validation
+split, the original Jev rule reached 73.76% precision and 77.20% recall. A typed
+three-signal calibration reached 92.52% precision and 51.30% recall on that
+development evidence, then fell to 88.17% precision and 42.49% recall on the
+untouched Jev test outputs. Both end-to-end pipelines were rejected under their
+frozen gates. The retained product boundary is candidate discovery, explicit
+pair selection, audited Jev advice, and explicit proposal review.
+
+None of these results validate automatic merging, people, organizations,
+places, or arbitrary entity metadata. The full preregistrations, runners,
+immutable results, checksums, and reports are under
 `benchmarks/results/research/2026-09-17/` and `benchmarks/integrations/`.
 
 See TypeSafe's [introduction](https://docs.typesafe.ai/introduction), [API

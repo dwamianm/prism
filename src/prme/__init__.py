@@ -52,6 +52,21 @@ from prme.models.processing import (
     StoreReceipt,
 )
 from prme.storage.fast_ingest import FastIngestConflict
+from prme.storage.alias_review import (
+    AliasProposalDecision,
+    AliasProposalInboxItem,
+    AliasProposalReviewConflict,
+    AliasProposalReviewRecord,
+    AliasProposalReviewResult,
+    AliasProposalStatus,
+    StaleAliasProposal,
+)
+from prme.integrations.product_candidates import (
+    PRODUCT_CANDIDATE_POLICY,
+    ProductAlignmentCandidate,
+    ProductCandidateEntity,
+    rank_product_alignment_candidates,
+)
 from prme.models.credit import ContextAblation, ContextPresenceCredit
 from prme.models.profile import (
     StaleProfileError,
@@ -168,6 +183,12 @@ def __getattr__(name: str):
 __all__ = [
     "AnswerCitationRecord",
     "AnswerCitationSubmission",
+    "AliasProposalDecision",
+    "AliasProposalInboxItem",
+    "AliasProposalReviewConflict",
+    "AliasProposalReviewRecord",
+    "AliasProposalReviewResult",
+    "AliasProposalStatus",
     "AnswerabilityAction",
     "AnswerabilityAssessment",
     "AnswerabilityConfig",
@@ -239,6 +260,9 @@ __all__ = [
     "PRMEConfig",
     "ProcessingResult",
     "ProcessingStatus",
+    "PRODUCT_CANDIDATE_POLICY",
+    "ProductAlignmentCandidate",
+    "ProductCandidateEntity",
     "ProfileJobStatus",
     "ProfileProcessingResult",
     "ProfileCollectionResult",
@@ -256,11 +280,13 @@ __all__ = [
     "Scope",
     "SourceType",
     "StaleProfileError",
+    "StaleAliasProposal",
     "StaleRankingProfileError",
     "StoreReceipt",
     "ablate_context",
     "assess_context_presence",
     "assess_answerability",
     "evaluate_full_retrieval",
+    "rank_product_alignment_candidates",
     "config_from_directory",
 ]
