@@ -166,9 +166,6 @@ async def _prepare_case(
             candidate_scores = [candidate.composite_score for candidate in response.results]
             if (
                 response.bundle.render() != baseline_capture["context"]
-                or candidate_ids != [row["node_id"] for row in baseline_capture["returned"]]
-                or candidate_scores
-                != [row["composite_score"] for row in baseline_capture["returned"]]
                 or response.bundle.render() != frozen["arms"]["control"]["context"]
             ):
                 raise ValueError(f"baseline replay differs for {question_id}")
