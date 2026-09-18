@@ -450,13 +450,20 @@ when it is denied, rejected, stopped, or stated with does not/never/no longer
 the exact quantified phrase into source_text, its verbatim unit or symbol into \
 unit, and its exact decimal value into value. Use unit "1" only when source_text \
 is the bare number. Leave quantity null for ranges, approximations, locale decimal \
-commas, scientific notation, or objects containing multiple numeric amounts.
+commas, scientific notation, or objects containing multiple numeric amounts. \
+When the source states an amount about a target, keep the exact amount and target \
+together in the fact object (for example, "$500 for the shelter"). Do not omit \
+the amount to make the object entity-only, and do not detach the amount into an \
+unrelated fact. Dates, times, versions, identifiers, addresses, phone numbers, \
+model names, and ordinals are not quantities.
 
 3. **Relationships** between entities: How entities relate to each other. \
 Use a source-supported predicate such as lives_in, works_at, or uses. Do not \
 force residence into part_of, or infer causation from co-occurrence. Include \
 an evidence_quote, epistemic_type, and polarity for every relationship. Prefer a fact \
-triple for a statement; do not repeat it as a separate relationship.
+triple for a statement; do not repeat it as a separate relationship. A claim \
+with an explicit numeric amount must be a fact, not a relationship, so its exact \
+quantity can be preserved.
 
 4. **Summary**: A brief 1-2 sentence summary of the message content.
 
@@ -514,6 +521,15 @@ written rather than normalizing or paraphrasing them.
 - A quantity source_text must be contained in that fact's object and evidence. \
 Do not convert units, infer a currency from a symbol, or attach a number from \
 another part of the sentence.
+- Preserve the semantic target with an explicit amount. For example, "raised \
+$500 for the shelter" should have an object containing "$500 for the shelter" \
+and quantity source_text "$500", rather than an entity-only object that loses \
+the amount.
+- Emit every claim with an explicit numeric amount as a fact. Relationships \
+cannot carry quantity metadata and must not replace the quantified fact.
+- Quantity metadata is only for a measured or counted claim value. Do not attach \
+it to dates, times, versions, identifiers, addresses, phone numbers, model names, \
+or ordinals even when they contain a decimal-looking token.
 - Using something does not imply preferring it. One occurrence does not imply \
 a habit. Multiple values can coexist (e.g., liking tea and coffee).
 - Set replaces_object only for an explicit replacement of a named previous value \

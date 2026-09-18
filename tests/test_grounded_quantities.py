@@ -9,7 +9,12 @@ from pydantic import ValidationError
 from prme import MemoryEngine
 from prme.ingestion.extraction import _CitedExtractionResult
 from prme.ingestion.grounding import validate_grounding
-from prme.ingestion.schema import ExtractedFact, ExtractedQuantity, ExtractionResult
+from prme.ingestion.schema import (
+    ExtractedFact,
+    ExtractedQuantity,
+    ExtractedRelationship,
+    ExtractionResult,
+)
 from prme.types import NodeType
 from tests import test_durable_ingestion
 
@@ -241,3 +246,24 @@ def test_legacy_fact_payloads_remain_unchanged_when_quantity_is_absent():
     assert fact.quantity is None
     dumped = fact.model_dump(mode="json", exclude_defaults=True)
     assert "quantity" not in dumped
+
+
+def test_extraction_contract_keeps_quantified_phrase_in_targeted_object():
+    from prme.ingestion.extraction import EXTRACTION_SYSTEM_PROMPT
+
+    object_description = ExtractedFact.model_fields["object"].description
+    quantity_description = ExtractedFact.model_fields["quantity"].description
+    relationship_description = ExtractedRelationship.model_fields[
+        "relationship_type"
+    ].description
+    assert object_description is not None
+    assert quantity_description is not None
+    assert relationship_description is not None
+    assert "exact quantified phrase" in object_description
+    assert "keep the exact quantified phrase in object" in quantity_description
+    assert '"$500 for the shelter"' in EXTRACTION_SYSTEM_PROMPT
+    assert "entity-only object that loses" in EXTRACTION_SYSTEM_PROMPT
+    assert "must be a fact, not a relationship" in EXTRACTION_SYSTEM_PROMPT
+    assert "explicit numeric amount" in relationship_description
+    assert "Dates, times, versions, identifiers" in EXTRACTION_SYSTEM_PROMPT
+    assert "date, time, version, identifier" in quantity_description
