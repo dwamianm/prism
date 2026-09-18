@@ -44,6 +44,7 @@ READER_OPTIONS = {
     "num_predict": 1024,
 }
 MEMORY_TOKEN_BUDGET = 3996
+TEMPORAL_QUESTIONS = 29
 
 
 def _git_revision(root: Path) -> str:
@@ -85,16 +86,16 @@ def _question_ids(
         for question_id in registration["dataset"]["question_ids"]
         if cases[question_id]["question_type"] == "temporal-reasoning"
     ]
-    if len(selected) != 28:
-        raise ValueError("expected 28 temporal development questions")
+    if len(selected) != TEMPORAL_QUESTIONS:
+        raise ValueError(
+            f"expected {TEMPORAL_QUESTIONS} temporal development questions"
+        )
     return selected, cases
 
 
 def _numbered_records(context: str) -> int:
     return sum(
-        line.startswith("[")
-        and len(line) > 2
-        and line[1 : line.find("]")].isdigit()
+        line.startswith("[") and len(line) > 2 and line[1 : line.find("]")].isdigit()
         for line in context.splitlines()
     )
 
@@ -136,9 +137,13 @@ async def _prepare_case(
             if control != saved["arms"]["control"]["context"]:
                 raise ValueError(f"auditable control replay differs for {question_id}")
             control_ids = saved["arms"]["control"]["node_ids"]
-            by_id = {str(candidate.node.id): candidate for candidate in response.results}
+            by_id = {
+                str(candidate.node.id): candidate for candidate in response.results
+            }
             if not set(control_ids) <= set(by_id):
-                raise ValueError(f"selected control nodes are unavailable for {question_id}")
+                raise ValueError(
+                    f"selected control nodes are unavailable for {question_id}"
+                )
             selected = [by_id[node_id] for node_id in control_ids]
             candidate = format_for_llm(
                 selected,
@@ -158,7 +163,9 @@ async def _prepare_case(
         or _numbered_records(candidate) != len(control_ids)
         or candidate_tokens > MEMORY_TOKEN_BUDGET
     ):
-        raise ValueError(f"temporal view did not retain the control set for {question_id}")
+        raise ValueError(
+            f"temporal view did not retain the control set for {question_id}"
+        )
     neutral = {
         "question_id": question_id,
         "question": case["question"],
@@ -178,7 +185,13 @@ async def _prepare_case(
     }
     reference = {
         key: case[key]
-        for key in ("question_id", "question", "question_date", "question_type", "answer")
+        for key in (
+            "question_id",
+            "question",
+            "question_date",
+            "question_type",
+            "answer",
+        )
     }
     audit = {
         "question_id": question_id,
@@ -214,7 +227,10 @@ async def _prepare(
         "schema_version": 1,
         "kind": "longmemeval-s-temporal-view-inputs",
         "dataset_sha256": DATASET_SHA256,
-        "selection": "all 28 temporal-reasoning questions in the frozen development split",
+        "selection": (
+            f"all {TEMPORAL_QUESTIONS} temporal-reasoning questions in the frozen "
+            "development split"
+        ),
         "question_ids": question_ids,
         "generation_system_prompt": GENERATION_SYSTEM_PROMPT,
         "arms": list(ARMS),
@@ -358,7 +374,10 @@ async def create_registration(
             "This direct-turn cohort does not exercise mixed epistemic or validity states.",
         ],
     }
-    if len(prepared["rows"]) != len(references) or len(references) != 28:
+    if (
+        len(prepared["rows"]) != len(references)
+        or len(references) != TEMPORAL_QUESTIONS
+    ):
         raise ValueError("prepared/reference coverage differs")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(value, indent=2) + "\n")
@@ -409,7 +428,7 @@ def _validate_registration(
         or registration.get("source") != expected_source
         or registration.get("prior_failed_answer_result_sha256")
         != failed_result["result_sha256"]
-        or registration.get("dataset", {}).get("questions") != 28
+        or registration.get("dataset", {}).get("questions") != TEMPORAL_QUESTIONS
         or registration.get("dataset", {}).get("question_ids_sha256")
         != _sha256(paired.canonical(registration["dataset"]["question_ids"]))
         or registration.get("models", {}).get("reader") != runtime_reader
@@ -512,8 +531,7 @@ def evaluate(
             > metrics["overall"]["control_correct"]
         ),
         "wins_exceed_losses": (
-            metrics["overall"]["paired_wins"]
-            > metrics["overall"]["paired_losses"]
+            metrics["overall"]["paired_wins"] > metrics["overall"]["paired_losses"]
         ),
     }
     gate["passed"] = (
@@ -541,10 +559,14 @@ def evaluate(
         "metrics": metrics,
         "context_tokens": {
             arm: {
-                "total": sum(row["contexts"][arm]["tokens"] for row in prepared["rows"]),
+                "total": sum(
+                    row["contexts"][arm]["tokens"] for row in prepared["rows"]
+                ),
                 "mean": sum(row["contexts"][arm]["tokens"] for row in prepared["rows"])
                 / len(prepared["rows"]),
-                "maximum": max(row["contexts"][arm]["tokens"] for row in prepared["rows"]),
+                "maximum": max(
+                    row["contexts"][arm]["tokens"] for row in prepared["rows"]
+                ),
             }
             for arm in ARMS
         },
@@ -613,7 +635,11 @@ def main() -> None:
                 **shared,
             )
         )
-        print(json.dumps({"dataset": value["dataset"], "protocol": value["protocol"]}, indent=2))
+        print(
+            json.dumps(
+                {"dataset": value["dataset"], "protocol": value["protocol"]}, indent=2
+            )
+        )
         return
     value = evaluate(
         registration_path=args.registration.resolve(),
@@ -621,7 +647,12 @@ def main() -> None:
         summary_path=args.summary.resolve(),
         **shared,
     )
-    print(json.dumps({"metrics": value["metrics"], "result_sha256": value["result_sha256"]}, indent=2))
+    print(
+        json.dumps(
+            {"metrics": value["metrics"], "result_sha256": value["result_sha256"]},
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

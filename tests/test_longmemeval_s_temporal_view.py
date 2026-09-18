@@ -20,5 +20,6 @@ def test_protocol_requires_strict_development_gain() -> None:
     protocol = trial._protocol()
 
     assert protocol["record_set"] == "identical per question"
+    assert trial.TEMPORAL_QUESTIONS == 29
     assert protocol["gate"]["candidate_correct"] == "> control_correct"
     assert "cannot promote" in protocol["status"]
