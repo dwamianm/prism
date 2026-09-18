@@ -478,7 +478,7 @@ def _packed_candidates(bundle: MemoryBundle) -> list[RetrievalCandidate]:
 
 
 def _combine_guidance(current: str | None, relation: str) -> str:
-    return f"{current}\n\n{relation}" if current else relation
+    return f"{current}\n{relation}" if current else relation
 
 
 def repack_with_relation(
