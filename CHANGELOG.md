@@ -19,7 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when an existing validated fact has the same evidence, predicate, polarity
   and quantity identity but quotes a different valid condition substring.
   Saved v9 through v6 outputs keep their bytes and continue to prepare v12
-  plans.
+  plans. Registered 20-case runs passed all zero-tolerance gates on both hosted
+  DeepSeek and a distinct local Qwen 35B-A3B artifact: 40/40 cases, 24/24
+  expected quantity instances, no unexpected quantities and no provider errors.
 
 - A user-authored sentence such as `My final score was 3` no longer disappears
   when the model omits its claim. A narrow deterministic path admits terminal
