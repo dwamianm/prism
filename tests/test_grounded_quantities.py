@@ -225,6 +225,36 @@ def test_builtin_recovers_omitted_conditional_quantified_action():
     assert fact.quantity == ExtractedQuantity(value="500", unit="$", source_text="$500")
 
 
+def test_builtin_does_not_duplicate_existing_conditional_quantity():
+    source = "If the campaign succeeds, I will donate $500 to the shelter."
+    result = _CitedExtractionResult.model_validate(
+        {
+            "entities": [],
+            "facts": [
+                {
+                    "subject": "I",
+                    "predicate": "will_donate",
+                    "object": "$500 to the shelter",
+                    "quantity": {
+                        "value": "500",
+                        "unit": "$",
+                        "source_text": "$500",
+                    },
+                    "polarity": "positive",
+                    "evidence_quote": source,
+                    "confidence": 0.95,
+                    "epistemic_type": "conditional",
+                    "condition": "the campaign succeeds",
+                }
+            ],
+            "relationships": [],
+        },
+        context={"source_text": source, "source_role": "user"},
+    )
+    assert len(result.facts) == 1
+    assert result.facts[0].condition == "the campaign succeeds"
+
+
 @pytest.mark.parametrize("role", ["assistant", "system", "tool"])
 def test_builtin_conditional_quantity_recovery_is_user_only(role):
     source = "If the campaign succeeds, I will donate $500 to the shelter."

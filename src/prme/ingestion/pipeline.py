@@ -454,7 +454,7 @@ class IngestionPipeline:
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
-                grounding_policy="speech_act_v9",
+                grounding_policy="speech_act_v10",
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -810,6 +810,7 @@ class IngestionPipeline:
                         "speech_act_v7",
                         "speech_act_v8",
                         "speech_act_v9",
+                        "speech_act_v10",
                     }
                     else (
                         "speech_act_v11"

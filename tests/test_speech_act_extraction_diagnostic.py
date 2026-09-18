@@ -35,7 +35,7 @@ def _report(
     return {
         "cases": [{
             "case": "attempt",
-            "extraction_grounding_policy": "speech_act_v9",
+            "extraction_grounding_policy": "speech_act_v10",
             "materialization_policy": "speech_act_v12",
             "extraction": {
                 "facts": [{"predicate": raw_predicate, "object": object_value}],

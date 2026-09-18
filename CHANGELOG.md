@@ -15,8 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   existing exclusions for approximations, ranges, identifiers and unsupported
   notation. A separate user-only path recovers one complete first-person
   conditional quantified action when the model drops the whole claim. Fresh
-  outputs record `speech_act_v9`; saved v8 through v6 outputs keep their bytes
-  and continue to prepare v12 plans.
+  outputs record `speech_act_v10`. V10 also suppresses conditional fallback
+  when an existing validated fact has the same evidence, predicate, polarity
+  and quantity identity but quotes a different valid condition substring.
+  Saved v9 through v6 outputs keep their bytes and continue to prepare v12
+  plans.
 
 - A user-authored sentence such as `My final score was 3` no longer disappears
   when the model omits its claim. A narrow deterministic path admits terminal
@@ -24,15 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subject, then applies the normal evidence, quantity and reference checks. It
   excludes assistant messages, examples, unsupported attributes,
   approximations, ranges and multi-number values. This behavior was introduced
-  under `speech_act_v8`; fresh v9 outputs retain it, while saved v8, v7 and v6
+  under `speech_act_v8`; fresh v10 outputs retain it, while saved v9 through v6
   outputs retain their original bytes and still prepare v12 plans.
 
 - Quantified claims now remain exact when a provider serializes a decimal as a
   JSON float: PRME discards the float and recovers only a single supported
   decimal token from the grounded source phrase. Surrounding approximation and
   range cues fail closed even when the provider clips them from `source_text`.
-  This behavior was introduced under `speech_act_v7`; fresh v9 outputs retain
-  it, while saved v8, v7 and v6 outputs keep their original bytes and still prepare
+  This behavior was introduced under `speech_act_v7`; fresh v10 outputs retain
+  it, while saved v9 through v6 outputs keep their original bytes and still prepare
   v12 materialization plans.
 
 - Built-in extraction now preserves literal first-person attempts and

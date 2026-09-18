@@ -184,11 +184,12 @@ cannot materialize it under a completed/current predicate such as `uses` or
 general entailment and older extraction plans retain their recorded behavior.
 The same clause check covers completed relationships between components named
 inside the attempted action. Fresh built-in outputs carry extraction grounding
-policy `speech_act_v9` before they may prepare a v12 plan. Saved v8, v7 and v6
+policy `speech_act_v10` before they may prepare a v12 plan. Saved v9 through v6
 outputs also remain eligible for v12. V8 adds a narrow user-source recovery for
 an omitted exact dimensionless score/count/rating/level. V9 adds bounded
 source-derived quantities on grounded facts and one complete conditional
-quantified-action recovery. V12 can recover an
+quantified-action recovery. V10 prevents that fallback from duplicating a
+validated fact with the same evidence and quantity identity. V12 can recover an
 omitted target only from the first exact returned entity after a literal
 nonactual action verb and preserves an explicit condition. Saved v5 outputs
 remain v11, v4 remain v10, v3 remain v9, v2 remain v8, while legacy `source_passage_v1` outputs remain eligible

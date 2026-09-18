@@ -453,29 +453,42 @@ def _recover_conditional_quantified_actions(
         subject = match.group("subject")
         object_value = match.group("object").strip()
         condition = match.group("condition")
-        if any(
-            fact.subject.casefold() == subject.casefold()
-            and fact.object.casefold() == object_value.casefold()
-            and fact.condition == condition
-            for fact in extraction.facts
-        ):
-            continue
         quantity = recover_exact_quantity_from_object(
             object_value,
             claim_passage=match.group(0),
         )
         if quantity is None:
             continue
+        predicate = (
+            f"{match.group('modal').casefold()}_"
+            f"{match.group('verb').casefold()}"
+        )
+        polarity: Literal["positive", "negative"] = (
+            "negative" if match.group("negative") else "positive"
+        )
+        if any(
+            fact.subject.casefold() == subject.casefold()
+            and fact.predicate.casefold() == predicate
+            and fact.polarity == polarity
+            and fact.epistemic_type == "conditional"
+            and fact.quantity == quantity
+            and (
+                (passage := _supporting_claim_passage(
+                    fact.evidence_quote or "", source
+                ))
+                is not None
+                and match.group(0) in passage
+            )
+            for fact in extraction.facts
+        ):
+            continue
         try:
             fact = _CitedFact(
                 subject=subject,
-                predicate=(
-                    f"{match.group('modal').casefold()}_"
-                    f"{match.group('verb').casefold()}"
-                ),
+                predicate=predicate,
                 object=object_value,
                 quantity=quantity,
-                polarity="negative" if match.group("negative") else "positive",
+                polarity=polarity,
                 evidence_quote=match.group(0),
                 confidence=1.0,
                 fact_type="fact",
