@@ -59,17 +59,20 @@ class AssertionQuery(BaseModel):
             raise ValueError("assertion selectors must be nonempty strings")
         return values
 
-    @field_validator("group_by", "scopes", "node_types")
+    @field_validator("group_by", "node_types")
     @classmethod
     def validate_unique_nonempty(cls, values: tuple) -> tuple:
         if not values:
-            raise ValueError(
-                "group_by, scopes, and node_types cannot be empty when supplied"
-            )
+            raise ValueError("group_by and node_types cannot be empty")
         if len(set(values)) != len(values):
-            raise ValueError(
-                "group_by, scopes, and node_types must not contain duplicates"
-            )
+            raise ValueError("group_by and node_types must not contain duplicates")
+        return values
+
+    @field_validator("scopes")
+    @classmethod
+    def validate_unique_scopes(cls, values: tuple[Scope, ...]) -> tuple[Scope, ...]:
+        if len(set(values)) != len(values):
+            raise ValueError("scopes must not contain duplicates")
         return values
 
     @model_validator(mode="after")
@@ -168,13 +171,20 @@ class QuantityAggregationQuery(BaseModel):
             raise ValueError("quantity selectors must be nonempty strings")
         return values
 
-    @field_validator("group_by", "scopes", "node_types")
+    @field_validator("group_by", "node_types")
     @classmethod
     def validate_unique_nonempty(cls, values: tuple) -> tuple:
         if not values:
-            raise ValueError("group_by, scopes, and node_types cannot be empty when supplied")
+            raise ValueError("group_by and node_types cannot be empty")
         if len(set(values)) != len(values):
-            raise ValueError("group_by, scopes, and node_types must not contain duplicates")
+            raise ValueError("group_by and node_types must not contain duplicates")
+        return values
+
+    @field_validator("scopes")
+    @classmethod
+    def validate_unique_scopes(cls, values: tuple[Scope, ...]) -> tuple[Scope, ...]:
+        if len(set(values)) != len(values):
+            raise ValueError("scopes must not contain duplicates")
         return values
 
     @field_validator("group_by")

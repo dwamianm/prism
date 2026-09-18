@@ -9,7 +9,7 @@ import httpx
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from prme import MemoryClient, MemoryEngine, QuantityAggregationQuery
+from prme import AssertionQuery, MemoryClient, MemoryEngine, QuantityAggregationQuery
 from prme.api.app import create_app
 from prme.config import MCPConfig
 from prme.mcp.server import create_mcp_server
@@ -203,6 +203,16 @@ async def test_quantity_predicate_prefix_is_explicit_and_token_bounded(config, u
 def test_quantity_query_requires_unit_in_every_group():
     with pytest.raises(ValueError, match="must include unit"):
         QuantityAggregationQuery(group_by=["predicate"])
+
+
+def test_aggregation_queries_round_trip_default_all_scopes():
+    assertion = AssertionQuery()
+    quantity = QuantityAggregationQuery()
+
+    assert AssertionQuery.model_validate_json(assertion.model_dump_json()) == assertion
+    assert QuantityAggregationQuery.model_validate_json(
+        quantity.model_dump_json()
+    ) == quantity
 
 
 def test_sync_client_exposes_quantity_aggregation(config, user):

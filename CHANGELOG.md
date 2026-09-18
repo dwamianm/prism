@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   qualifiers, negation, future wording, named subjects, actions or units return
   a typed refusal without scanning memory; ordinary retrieval remains unchanged.
 
+- Assertion and quantity aggregation queries now round-trip their serialized
+  default empty scope selector. An empty scope list consistently means all
+  scopes; duplicate scopes remain invalid.
+
 - A user-authored sentence such as `My final score was 3` no longer disappears
   when the model omits its claim. A narrow deterministic path admits terminal
   exact score, count, rating and level attributes with a source-literal concept
