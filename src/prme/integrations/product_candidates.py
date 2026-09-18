@@ -176,7 +176,11 @@ def rank_product_alignment_candidates(
             ranked.append((-score, str(other_id), other_id, len(shared)))
         ranked.sort()
         for negative_score, _, other_id, shared_count in ranked[:top_k]:
-            pair = tuple(sorted((node_id, other_id), key=str))
+            pair = (
+                (node_id, other_id)
+                if str(node_id) < str(other_id)
+                else (other_id, node_id)
+            )
             selected[pair].add(node_id)
             pair_scores[pair] = (-negative_score, shared_count)
 
