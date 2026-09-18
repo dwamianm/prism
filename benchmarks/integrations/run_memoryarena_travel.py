@@ -540,6 +540,9 @@ def register(
                 "complete_execution": True,
                 "minimum_prme_minus_native_strict_ps_points": -5.0,
                 "minimum_prme_minus_native_strict_sps_points": -5.0,
+                "targeted_audit_complete": True,
+                "minimum_exact_qualified_values": 244,
+                "maximum_executed_qualified_arguments": 0,
             },
             "limits": [
                 (
