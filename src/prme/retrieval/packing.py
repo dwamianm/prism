@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import math
 import json
-import heapq
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -209,8 +208,6 @@ def pack_context(
     context_guidance: str | None = None,
     _required: Sequence[tuple[UUID, RepresentationLevel]] = (),
     _require_guidance: bool = False,
-    _session_marginal_free_slots: int | None = None,
-    _session_marginal_decay: float | None = None,
 ) -> MemoryBundle:
     """Pack scored candidates into a MemoryBundle within token budget.
 
@@ -234,16 +231,6 @@ def pack_context(
     Returns:
         MemoryBundle with grouped sections, token usage, and excluded IDs.
     """
-    marginal_free_slots = _session_marginal_free_slots
-    marginal_decay = _session_marginal_decay
-    if (marginal_free_slots is None) != (marginal_decay is None):
-        raise ValueError("Session marginal packing parameters must be set together")
-    if marginal_free_slots is not None and marginal_decay is not None:
-        if marginal_free_slots < 1:
-            raise ValueError("Session marginal free slots must be at least one")
-        if not 0 < marginal_decay <= 1:
-            raise ValueError("Session marginal decay must be in (0, 1]")
-
     required = dict(_required)
     if len(required) != len(_required):
         raise ValueError("Required packed candidate identities must be unique")
@@ -325,7 +312,7 @@ def pack_context(
                 eligible, key=lambda c: (-c.composite_score, str(c.node.id))
             ).node.id
 
-    def _try_include(candidate: RetrievalCandidate) -> bool:
+    def _try_include(candidate: RetrievalCandidate) -> None:
         nonlocal rendered, tokens_used
         section = classify_into_sections(candidate)
         tried_text: set[str] = set()
@@ -372,9 +359,8 @@ def pack_context(
                 candidate.token_cost = entry_cost
                 sections.setdefault(section, []).append(candidate)
                 rendered, tokens_used = text, total
-                return True
+                return
         excluded_ids.append(candidate.node.id)
-        return False
 
     def priority(candidate: RetrievalCandidate) -> tuple[int, float, str]:
         required_position = required_positions.get(candidate.node.id)
@@ -409,86 +395,8 @@ def pack_context(
             tier, value = 4, candidate.composite_score
         return tier, -value, str(candidate.node.id)
 
-    if marginal_free_slots is None:
-        for candidate in sorted(candidates, key=priority):
-            _try_include(candidate)
-    else:
-        assert marginal_decay is not None
-        # Experimental benchmark hook. Within each ordinary evidence tier, use
-        # diminishing marginal utility for repeated records from the same exact
-        # (scope, session_id) group. Higher priority tiers keep their ordinary
-        # ordering and only successfully packed ordinary records consume slots.
-        session_counts: dict[tuple[str, str], int] = {}
-
-        def session_key(
-            candidate: RetrievalCandidate,
-        ) -> tuple[str, str] | None:
-            session_id = candidate.node.session_id
-            if session_id is None:
-                return None
-            return candidate.node.scope.value, session_id
-
-        def marginal_priority(
-            candidate: RetrievalCandidate,
-        ) -> tuple[float, str]:
-            _tier, negative_value, node_id = priority(candidate)
-            value = -negative_value
-            key = session_key(candidate)
-            if key is not None and not math.isinf(value):
-                selected = session_counts.get(key, 0)
-                exponent = max(0, selected - marginal_free_slots + 1)
-                value *= marginal_decay**exponent
-            return -value, node_id
-
-        by_tier: dict[int, list[RetrievalCandidate]] = {}
-        for candidate in candidates:
-            tier = priority(candidate)[0]
-            by_tier.setdefault(tier, []).append(candidate)
-
-        for tier in sorted(by_tier):
-            pending = by_tier[tier]
-            if tier not in (3, 4):
-                for candidate in sorted(pending, key=priority):
-                    _try_include(candidate)
-                continue
-
-            # Only the best remaining candidate in each session can win the
-            # next greedy step: every member has the same current multiplier.
-            # A heap over session heads keeps the dynamic policy O(n log n).
-            groups: dict[tuple[str, str, str], list[RetrievalCandidate]] = {}
-            for candidate in pending:
-                key = session_key(candidate)
-                group = (
-                    ("session", key[0], key[1])
-                    if key is not None
-                    else ("node", "", str(candidate.node.id))
-                )
-                groups.setdefault(group, []).append(candidate)
-            for values in groups.values():
-                values.sort(key=priority)
-            positions = dict.fromkeys(groups, 0)
-            heap: list[tuple[float, str, tuple[str, str, str]]] = []
-
-            def push_group(group: tuple[str, str, str]) -> None:
-                position = positions[group]
-                values = groups[group]
-                if position < len(values):
-                    candidate = values[position]
-                    negative_value, node_id = marginal_priority(candidate)
-                    heapq.heappush(heap, (negative_value, node_id, group))
-
-            for group in sorted(groups):
-                push_group(group)
-            while heap:
-                _negative_value, _node_id, group = heapq.heappop(heap)
-                position = positions[group]
-                candidate = groups[group][position]
-                positions[group] = position + 1
-                if _try_include(candidate):
-                    key = session_key(candidate)
-                    if key is not None:
-                        session_counts[key] = session_counts.get(key, 0) + 1
-                push_group(group)
+    for candidate in sorted(candidates, key=priority):
+        _try_include(candidate)
 
     included_guidance = guidance if sections and _require_guidance else None
     if sections and guidance and not _require_guidance:
