@@ -2,6 +2,11 @@ from datetime import datetime, timezone
 import hashlib
 
 from prme import MemoryEngine, PRMEConfig
+from prme.retrieval.context_formatter import (
+    _detect_context_type,
+    is_temporal_reasoning_query,
+)
+from prme.retrieval.query_analysis import analyze_query
 from prme.retrieval.temporal_relation_models import GateAudit, ResolverAudit
 from prme.retrieval.temporal_relations import (
     RawOperand,
@@ -139,6 +144,22 @@ async def test_public_retrieval_enriches_temporal_context_and_receipt(
         )
         assert ordinary.metadata.temporal_relation is None
         assert resolver.calls == 1
+
+
+async def test_temporal_relation_routing_covers_duration_arithmetic_without_changing_base_guidance() -> None:
+    for query in (
+        "How many weeks have I been taking sculpting classes when I invested in tools?",
+        "How many days did it take for me to find a house after starting with Rachel?",
+        "How many days did I spend on my camping trip?",
+    ):
+        analysis = await analyze_query(query, reference_time=REFERENCE_TIME)
+        assert _detect_context_type(query, analysis) == "aggregation"
+        assert is_temporal_reasoning_query(query, analysis) is True
+
+    count_query = "How many days did I visit the gym this month?"
+    count_analysis = await analyze_query(count_query, reference_time=REFERENCE_TIME)
+    assert _detect_context_type(count_query, count_analysis) == "aggregation"
+    assert is_temporal_reasoning_query(count_query, count_analysis) is False
 
 
 def test_temporal_relation_configuration_is_opt_in_and_env_addressable(

@@ -250,57 +250,92 @@ async def _run_case(
             ):
                 raise ValueError(f"product candidate replay differs for {question_id}")
             metadata = candidate.metadata.temporal_relation
-            if metadata is None or resolver.calls != 1:
-                raise ValueError(f"product temporal stage did not run for {question_id}")
             expected_accepted = bool(gate_row["accepted"])
-            if (metadata.status == "accepted") != expected_accepted:
-                raise ValueError(f"product acceptance differs for {question_id}")
-            if metadata.status in {"provider_error", "packing_rejected"}:
-                raise ValueError(f"product stage failed for {question_id}")
-            if gate.calls != int(metadata.gate is not None):
-                raise ValueError(f"product gate calls differ for {question_id}")
-            if expected_accepted:
-                if (
-                    list(map(str, metadata.evidence_ids))
-                    != prepared_audit["relation_evidence_ids"]
-                    or len(metadata.dropped_record_ids)
-                    != prepared_audit["dropped_records"]
-                ):
-                    raise ValueError(
-                        f"product evidence retention differs for {question_id}"
-                    )
+            expected_changed = (
+                expected_control["sha256"] != expected_candidate["sha256"]
+            )
             receipt = await engine.get_retrieval_receipt(
                 str(candidate.metadata.request_id), user_id=USER_ID
             )
             if not isinstance(receipt, RetrievalReceipt) or receipt.execution is None:
                 raise ValueError(f"product receipt is unavailable for {question_id}")
             recorded = receipt.execution.parameters.get("temporal_relation")
-            if (
-                recorded != metadata.model_dump(mode="json")
-                or receipt.context_sha256
-                != hashlib.sha256(candidate.bundle.render().encode()).hexdigest()
-            ):
+            if receipt.context_sha256 != hashlib.sha256(
+                candidate.bundle.render().encode()
+            ).hexdigest():
                 raise ValueError(f"product receipt differs for {question_id}")
+            if metadata is None:
+                if (
+                    expected_accepted
+                    or expected_changed
+                    or resolver.calls != 0
+                    or gate.calls != 0
+                    or recorded is not None
+                ):
+                    raise ValueError(
+                        f"product skipped a material temporal case for {question_id}"
+                    )
+                status = "not_routed"
+                operation = None
+                value = None
+                evidence_ids: list[str] = []
+                dropped_record_ids: list[str] = []
+                control_context_sha256 = expected_control["sha256"]
+                result_context_sha256 = expected_candidate["sha256"]
+                confirmation_protocol_aligned = None
+            else:
+                if resolver.calls != 1:
+                    raise ValueError(
+                        f"product temporal resolver calls differ for {question_id}"
+                    )
+                if (metadata.status == "accepted") != expected_accepted:
+                    raise ValueError(f"product acceptance differs for {question_id}")
+                if metadata.status in {"provider_error", "packing_rejected"}:
+                    raise ValueError(f"product stage failed for {question_id}")
+                if gate.calls != int(metadata.gate is not None):
+                    raise ValueError(f"product gate calls differ for {question_id}")
+                if expected_accepted:
+                    if (
+                        list(map(str, metadata.evidence_ids))
+                        != prepared_audit["relation_evidence_ids"]
+                        or len(metadata.dropped_record_ids)
+                        != prepared_audit["dropped_records"]
+                    ):
+                        raise ValueError(
+                            f"product evidence retention differs for {question_id}"
+                        )
+                if recorded != metadata.model_dump(mode="json"):
+                    raise ValueError(f"product receipt differs for {question_id}")
+                status = metadata.status
+                operation = metadata.operation
+                value = metadata.value
+                evidence_ids = [str(item) for item in metadata.evidence_ids]
+                dropped_record_ids = [
+                    str(item) for item in metadata.dropped_record_ids
+                ]
+                control_context_sha256 = metadata.control_context_sha256
+                result_context_sha256 = metadata.result_context_sha256
+                confirmation_protocol_aligned = (
+                    metadata.confirmation_protocol_aligned
+                )
         finally:
             await engine.close()
 
     return {
         "question_id": question_id,
         "clone_method": clone_method,
-        "status": metadata.status,
-        "operation": metadata.operation,
-        "value": metadata.value,
+        "status": status,
+        "operation": operation,
+        "value": value,
         "resolver_called": resolver.calls == 1,
         "gate_called": gate.calls == 1,
         "expected_accepted": bool(gate_row["accepted"]),
-        "context_changed": (
-            metadata.control_context_sha256 != metadata.result_context_sha256
-        ),
-        "control_context_sha256": metadata.control_context_sha256,
-        "result_context_sha256": metadata.result_context_sha256,
-        "evidence_ids": [str(value) for value in metadata.evidence_ids],
-        "dropped_record_ids": [str(value) for value in metadata.dropped_record_ids],
-        "confirmation_protocol_aligned": metadata.confirmation_protocol_aligned,
+        "context_changed": control_context_sha256 != result_context_sha256,
+        "control_context_sha256": control_context_sha256,
+        "result_context_sha256": result_context_sha256,
+        "evidence_ids": evidence_ids,
+        "dropped_record_ids": dropped_record_ids,
+        "confirmation_protocol_aligned": confirmation_protocol_aligned,
     }
 
 
@@ -348,6 +383,7 @@ async def run(
                 / f"{name}.py"
             )
             for name in (
+                "context_formatter",
                 "pipeline",
                 "packing",
                 "temporal_relation_models",
@@ -410,9 +446,13 @@ async def run(
         "contexts_matched": len(rows),
         "accepted": statuses["accepted"],
         "changed_contexts": sum(row["context_changed"] for row in rows),
+        "routed": sum(row["resolver_called"] for row in rows),
+        "not_routed": statuses["not_routed"],
         "status_counts": dict(sorted(statuses.items())),
         "confirmation_protocol_aligned": all(
-            row["confirmation_protocol_aligned"] for row in rows
+            row["confirmation_protocol_aligned"] is True
+            for row in rows
+            if row["resolver_called"]
         ),
         "rows": rows,
     }
