@@ -177,7 +177,7 @@ def _validate_calibration(
     return controls, declaration, calibration
 
 
-def _protocol() -> dict[str, Any]:
+def _protocol(*, reader_reuse: bool) -> dict[str, Any]:
     return {
         "arms": list(ARMS),
         "arm_order": "counterbalanced by question-ID hash parity",
@@ -189,6 +189,12 @@ def _protocol() -> dict[str, Any]:
         "judge_calibration_required": True,
         "one_generation_per_arm": True,
         "no_selective_retries": True,
+        "reader_execution": (
+            "reuse the exact complete reader snapshot from the failed-closed v1 "
+            "judge run; make no new reader calls"
+            if reader_reuse
+            else "generate every reader answer after registration"
+        ),
     }
 
 
@@ -219,6 +225,9 @@ def create_registration(
     controls_path: Path,
     declaration_path: Path,
     calibration_path: Path,
+    reader_snapshot_path: Path,
+    reader_state_path: Path,
+    reader_origin_registration: Path,
     reader_model: str,
     base_url: str,
     project_root: Path,
@@ -242,6 +251,15 @@ def create_registration(
     reader = _model_identity(reader_model, base_url)
     reader["options"] = dict(READER_OPTIONS)
     reader["system_prompt_sha256"] = _sha256(GENERATION_SYSTEM_PROMPT.encode())
+    origin_registration_sha256 = _sha256_file(reader_origin_registration)
+    _validate_reader_snapshot(
+        prepared_path,
+        reader_snapshot_path,
+        reader_state_path,
+        model=reader_model,
+        model_digest=reader["model_digest"],
+        origin_registration_sha256=origin_registration_sha256,
+    )
     value: dict[str, Any] = {
         "schema_version": 1,
         "kind": "longmemeval-s-monotonic-answer-registration",
@@ -260,6 +278,9 @@ def create_registration(
             "controls_sha256": _sha256_file(controls_path),
             "judge_declaration_sha256": _sha256_file(declaration_path),
             "judge_calibration_sha256": _sha256_file(calibration_path),
+            "reader_snapshot_sha256": _sha256_file(reader_snapshot_path),
+            "reader_state_sha256": _sha256_file(reader_state_path),
+            "reader_origin_registration_sha256": origin_registration_sha256,
         },
         "dataset": {
             "name": "LongMemEval-S cleaned",
@@ -279,13 +300,14 @@ def create_registration(
             "metrics": calibration["metrics"],
             "cases": len(controls["cases"]),
         },
-        "protocol": _protocol(),
+        "protocol": _protocol(reader_reuse=True),
         "evaluation": _gates(),
         "limitations": [
             "The development split and its labels have appeared in prior PRME studies.",
             "Ollama cloud manifests pin local aliases, not immutable remote weights.",
             "One generation per arm does not estimate hosted-model variance.",
             "The custom calibrated judge is not the official LongMemEval judge.",
+            "Reader outputs are reused unchanged after the first judge run failed on output length.",
         ],
     }
     if len(references) != value["dataset"]["questions"]:
@@ -304,6 +326,9 @@ def _validate_registration(
     controls_path: Path,
     declaration_path: Path,
     calibration_path: Path,
+    reader_snapshot_path: Path,
+    reader_state_path: Path,
+    reader_origin_registration: Path,
     base_url: str,
     project_root: Path,
 ) -> None:
@@ -317,6 +342,9 @@ def _validate_registration(
         "controls_sha256": _sha256_file(controls_path),
         "judge_declaration_sha256": _sha256_file(declaration_path),
         "judge_calibration_sha256": _sha256_file(calibration_path),
+        "reader_snapshot_sha256": _sha256_file(reader_snapshot_path),
+        "reader_state_sha256": _sha256_file(reader_state_path),
+        "reader_origin_registration_sha256": _sha256_file(reader_origin_registration),
     }
     reader = registration.get("models", {}).get("reader", {})
     runtime_reader = _model_identity(reader.get("model", ""), base_url)
@@ -331,7 +359,7 @@ def _validate_registration(
         or registration.get("models", {}).get("reader") != runtime_reader
         or registration.get("models", {}).get("judge")
         != json.loads(declaration_path.read_text())
-        or registration.get("protocol") != _protocol()
+        or registration.get("protocol") != _protocol(reader_reuse=True)
         or registration.get("evaluation") != _gates()
         or any(
             not path.startswith("benchmarks/results/research/")
@@ -343,6 +371,14 @@ def _validate_registration(
         controls_path=controls_path,
         declaration_path=declaration_path,
         calibration_path=calibration_path,
+    )
+    _validate_reader_snapshot(
+        prepared_path,
+        reader_snapshot_path,
+        reader_state_path,
+        model=reader["model"],
+        model_digest=reader["model_digest"],
+        origin_registration_sha256=_sha256_file(reader_origin_registration),
     )
 
 
@@ -380,6 +416,80 @@ def _reader_payload(row: dict[str, Any], arm: str, model: str) -> dict[str, Any]
     }
 
 
+def _reader_jobs(
+    prepared: dict[str, Any], model: str
+) -> list[tuple[dict[str, Any], str, dict[str, Any], str]]:
+    jobs = []
+    for row in prepared["rows"]:
+        order = (
+            ARMS
+            if int(_sha256(row["question_id"].encode()), 16) % 2
+            else tuple(reversed(ARMS))
+        )
+        for arm in order:
+            body = _reader_payload(row, arm, model)
+            jobs.append((row, arm, body, _sha256(_canonical(body))))
+    return jobs
+
+
+def _validate_reader_snapshot(
+    prepared_path: Path,
+    snapshot_path: Path,
+    state_path: Path,
+    *,
+    model: str,
+    model_digest: str,
+    origin_registration_sha256: str,
+) -> dict[str, Any]:
+    prepared_raw = prepared_path.read_bytes()
+    prepared = json.loads(prepared_raw)
+    snapshot = json.loads(snapshot_path.read_text())
+    state = json.loads(state_path.read_text())
+    identity = snapshot.get("identity")
+    if (
+        snapshot.get("complete") is not True
+        or snapshot.get("questions") != len(prepared["rows"])
+        or snapshot.get("logical_predictions") != 2 * len(prepared["rows"])
+        or snapshot.get("failed_attempts")
+        or not isinstance(identity, dict)
+        or identity.get("registration_sha256") != origin_registration_sha256
+        or identity.get("prepared_sha256") != _sha256(prepared_raw)
+        or identity.get("model") != model
+        or identity.get("model_digest") != model_digest
+        or identity.get("options") != READER_OPTIONS
+        or state.get("complete") is not True
+        or state.get("identity") != identity
+        or state.get("failed_attempts")
+    ):
+        raise ValueError("complete unchanged reader snapshot is required")
+    jobs = _reader_jobs(prepared, model)
+    saved_generations = state.get("generations", {})
+    wanted = {key for _row, _arm, _body, key in jobs}
+    if set(saved_generations) != wanted:
+        raise ValueError("reader snapshot generations differ")
+    predictions = {
+        (row["question_id"], row["arm"]): row for row in snapshot.get("rows", [])
+    }
+    if len(predictions) != len(jobs) or set(predictions) != {
+        (row["question_id"], arm) for row, arm, _body, _key in jobs
+    }:
+        raise ValueError("reader snapshot prediction coverage differs")
+    for row, arm, _body, key in jobs:
+        saved = saved_generations[key]
+        response = saved["response"]
+        prediction = predictions[(row["question_id"], arm)]
+        if (
+            saved["response_sha256"] != _sha256(_canonical(response))
+            or not judge_runtime.matches_response_model(model, response.get("model"))
+            or prediction.get("prompt_sha256") != key
+            or prediction.get("context_sha256") != row["contexts"][arm]["sha256"]
+            or prediction.get("hypothesis")
+            != reader_runtime.validate_response(response)
+        ):
+            raise ValueError("reader snapshot response differs")
+    return snapshot
+
+
 def _reader_run(
     prepared_path: Path,
     state_path: Path,
@@ -398,16 +508,7 @@ def _reader_run(
         "model_digest": model_digest,
         "options": dict(READER_OPTIONS),
     }
-    jobs = []
-    for row in prepared["rows"]:
-        order = (
-            ARMS
-            if int(_sha256(row["question_id"].encode()), 16) % 2
-            else tuple(reversed(ARMS))
-        )
-        for arm in order:
-            body = _reader_payload(row, arm, model)
-            jobs.append((row, arm, body, _sha256(_canonical(body))))
+    jobs = _reader_jobs(prepared, model)
     with reader_runtime.exclusive_state(state_path):
         state = (
             json.loads(state_path.read_text())
@@ -602,6 +703,9 @@ def evaluate(
     controls_path: Path,
     declaration_path: Path,
     calibration_path: Path,
+    reader_snapshot_path: Path,
+    reader_state_path: Path,
+    reader_origin_registration: Path,
     base_url: str,
     project_root: Path,
     output_dir: Path,
@@ -618,19 +722,22 @@ def evaluate(
         controls_path=controls_path,
         declaration_path=declaration_path,
         calibration_path=calibration_path,
+        reader_snapshot_path=reader_snapshot_path,
+        reader_state_path=reader_state_path,
+        reader_origin_registration=reader_origin_registration,
         base_url=base_url,
         project_root=project_root,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     registration_sha256 = _sha256_file(registration_path)
     reader = registration["models"]["reader"]
-    predictions = _reader_run(
+    predictions = _validate_reader_snapshot(
         prepared_path,
-        output_dir / "reader-state.json",
-        registration_sha256=registration_sha256,
+        reader_snapshot_path,
+        reader_state_path,
         model=reader["model"],
         model_digest=reader["model_digest"],
-        base_url=base_url,
+        origin_registration_sha256=_sha256_file(reader_origin_registration),
     )
     _write(output_dir / "reader.json", predictions)
     if predictions["failed_attempts"]:
@@ -686,6 +793,9 @@ def _parser() -> argparse.ArgumentParser:
         command.add_argument("--controls", type=Path, required=True)
         command.add_argument("--judge-declaration", type=Path, required=True)
         command.add_argument("--judge-calibration", type=Path, required=True)
+        command.add_argument("--reader-snapshot", type=Path, required=True)
+        command.add_argument("--reader-state", type=Path, required=True)
+        command.add_argument("--reader-origin-registration", type=Path, required=True)
         command.add_argument("--base-url", default="http://127.0.0.1:11434")
         command.add_argument("--project-root", type=Path, default=Path.cwd())
     register.add_argument("--dataset", type=Path, required=True)
@@ -708,6 +818,9 @@ def main() -> None:
         "controls_path": args.controls.resolve(),
         "declaration_path": args.judge_declaration.resolve(),
         "calibration_path": args.judge_calibration.resolve(),
+        "reader_snapshot_path": args.reader_snapshot.resolve(),
+        "reader_state_path": args.reader_state.resolve(),
+        "reader_origin_registration": args.reader_origin_registration.resolve(),
         "base_url": args.base_url,
         "project_root": args.project_root.resolve(),
     }

@@ -16,7 +16,7 @@ from typing import Any
 from benchmarks.diagnostics import packing_reader as runtime
 from benchmarks.diagnostics._process import checked_report
 
-OPTIONS = {"temperature": 0, "seed": 42, "num_ctx": 32768, "num_predict": 512}
+OPTIONS = {"temperature": 0, "seed": 42, "num_ctx": 32768, "num_predict": 2048}
 SCHEMA = {
     "type": "object",
     "properties": {"correct": {"type": "boolean"}, "reason": {"type": "string"}},
