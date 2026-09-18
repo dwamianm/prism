@@ -126,3 +126,15 @@ trigger. The measured request messages totaled about 405,624
 `cl100k_base`-estimated tokens. That run replayed frozen outputs or an inert
 resolver, so these are payload estimates rather than live provider token,
 latency, or availability observations.
+
+A subsequent preregistered
+[12-case live-provider preflight](../benchmarks/results/research/2026-09-18/LONGMEMEVAL-S-TEMPORAL-RELATION-LIVE-PREFLIGHT-V1.md)
+reopened the frozen packs through the public product path. All 12 automatic
+gates passed with zero provider errors. Both accepted controls reproduced their
+prior contexts byte for byte, both rejection controls remained unchanged, and
+both no-call controls made no provider call. Ten resolver calls reported 28,205
+input and 1,067 output tokens; four Jev calls reported 1,772 input and 88 output
+tokens. End-to-end retrieval measured 0.939 seconds median and 1.884 seconds p95
+on this host. This short bounded run establishes live compatibility for the
+registered composition, not availability over time, an SLA, broader answer
+quality, or a competitive result.
