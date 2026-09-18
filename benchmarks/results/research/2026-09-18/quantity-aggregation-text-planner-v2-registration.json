@@ -1,0 +1,252 @@
+{
+  "schema_version": 1,
+  "kind": "quantity-aggregation-text-planner-registration",
+  "status": "registered_before_execution",
+  "registered_at": "2026-09-18T21:29:58.999094+00:00",
+  "claim_boundary": "Deterministic product-path validation over one previously completed authored pack; not held-out language coverage, extraction accuracy, answer quality, or competitive evidence.",
+  "source": {
+    "implementation_sha256": {
+      "benchmarks/diagnostics/quantity_aggregation_text_planner.py": "ffab503cdfed4f127623b3f5bbae8fbe003db0bb2200adcfbffa20d5c09d92e9",
+      "src/prme/models/aggregation.py": "7e80a696e5238078e9b96c37b3a831c4a65d9921981046006c31ead17571f5e5",
+      "src/prme/retrieval/aggregation.py": "cc81683361ef2cd95a53b6f5ff6a18f652fce571c004487b412a352cd81d8568",
+      "src/prme/retrieval/aggregation_planning.py": "4ca0f174fa995fa888f23bd517d1cefa189fe752d5af27d22caf8e5f0cb5a5ec",
+      "src/prme/storage/engine.py": "92b1b8b4b93e2cf96d87a7da3e59885f2e59f2b846707711fdc1242d9fa020c4"
+    },
+    "source_result_sha256": "cb2d9a2be7c5593e590b8ad64174444468152025aa6528fa085a6a028c28019d",
+    "source_result_self_sha256": "5d163b0bcea36d4e1299f26b86253ea0843993926d2f3de5f7741222aef4db9d",
+    "source_pack_manifest": {
+      "lexical/.managed.json": "92073082c4712612b72f736142c50504767e83cdac8084972753b7b78963a7fa",
+      "lexical/20854487f1614b298be44233a8bbf38d.fast": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae",
+      "lexical/20854487f1614b298be44233a8bbf38d.fieldnorm": "00bed601dddca61827ceea8cae4dc3e749b877e1fe8001e00ce6e60b772511f4",
+      "lexical/20854487f1614b298be44233a8bbf38d.idx": "4affcca150d9c40adf371904b66d436d0b0636838809c5b683f3c8c1314190b2",
+      "lexical/20854487f1614b298be44233a8bbf38d.pos": "2d5302da9731d9278a96e7b322eedef78cb1adff8b4896080124b2934407353b",
+      "lexical/20854487f1614b298be44233a8bbf38d.store": "47eed5156af0ad82b27e6760c51c0ab9a3442181c848586a85e006db1b494baa",
+      "lexical/20854487f1614b298be44233a8bbf38d.term": "6b363e99187bc7fed18b57eaea2dba19b2cfc2819dd4bdf18a938ea64c3cb151",
+      "lexical/898d492b36d34bac8b36749f8c5af10b.fast": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae",
+      "lexical/898d492b36d34bac8b36749f8c5af10b.fieldnorm": "00bed601dddca61827ceea8cae4dc3e749b877e1fe8001e00ce6e60b772511f4",
+      "lexical/898d492b36d34bac8b36749f8c5af10b.idx": "4affcca150d9c40adf371904b66d436d0b0636838809c5b683f3c8c1314190b2",
+      "lexical/898d492b36d34bac8b36749f8c5af10b.pos": "9826a2c2190d844f5b2b94cfd21fefb7382e504fe7ff6a036a5a668a41477811",
+      "lexical/898d492b36d34bac8b36749f8c5af10b.store": "c5af9e6bfdf02f35d0affcc738a02cc25dcbebdc159ae441fcf168b6d02f08c7",
+      "lexical/898d492b36d34bac8b36749f8c5af10b.term": "add23df7369e413adbbf2a732bccd8499c348741d007a1d9c312520d26448dd5",
+      "lexical/f9d3792a13344c40a12407033fd96733.fast": "a193aa2a3de6a1ee56a9dd03a470fdf3bdda40ba5e877e44706240f0875bc42d",
+      "lexical/f9d3792a13344c40a12407033fd96733.fieldnorm": "8342a9442bef29a7455c9654b5f1e0cd259e6fb4c550d67e30ba36218b5ae66a",
+      "lexical/f9d3792a13344c40a12407033fd96733.idx": "e65319e91de40ae23ddd81af3466e0cf241528aa94cbdf11dc1c4d3abe92e963",
+      "lexical/f9d3792a13344c40a12407033fd96733.pos": "e948aa8bba5f4fe4f90f04c4f8e463eadfc5bbe2940d530c5a9df05eefbf477f",
+      "lexical/f9d3792a13344c40a12407033fd96733.store": "ca4622bd308aaf63c5692ba1b876bfb36ba93915d91bf9f22990b3359f7cf30a",
+      "lexical/f9d3792a13344c40a12407033fd96733.term": "3bb30ff2a98e387aff5a7f4096965553b17615d6b66003a59cacc8358aacaaff",
+      "lexical/meta.json": "f4f80117e7c61350aa86223b577f0d96a821b4363eb112c3984b3776030946c9",
+      "memory.duckdb": "292e518a3ae2f248ea97960ac7abdebd3855b11531c59e0cd9a97c03c537c15a",
+      "vectors.usearch": "414ca7f50a369d06e342ab463246024e59a809d163d82d9dab9968a5a75f501b"
+    }
+  },
+  "protocol": {
+    "owner": "quantity-aggregation-e2e-owner",
+    "ready_cases": [
+      {
+        "name": "individual_fundraising_amount",
+        "question": "How much did I raise?",
+        "reason": "matched_amount_question",
+        "action": "raise",
+        "subject": "I",
+        "prefixes": [
+          "raise",
+          "raised",
+          "raising",
+          "help_raise",
+          "helped_raise",
+          "helping_raise"
+        ],
+        "units": [],
+        "matched_quantity_records": 4,
+        "groups": {
+          "$": {
+            "value_count": 3,
+            "total": "2750",
+            "minimum": "250",
+            "maximum": "2000",
+            "sample_values": [
+              "250",
+              "500",
+              "2000"
+            ]
+          },
+          "usd": {
+            "value_count": 1,
+            "total": "100",
+            "minimum": "100",
+            "maximum": "100",
+            "sample_values": [
+              "100"
+            ]
+          }
+        }
+      },
+      {
+        "name": "group_fundraising_amount",
+        "question": "How much did we raise?",
+        "reason": "matched_amount_question",
+        "action": "raise",
+        "subject": "we",
+        "prefixes": [
+          "raise",
+          "raised",
+          "raising",
+          "help_raise",
+          "helped_raise",
+          "helping_raise"
+        ],
+        "units": [],
+        "matched_quantity_records": 1,
+        "groups": {
+          "$": {
+            "value_count": 1,
+            "total": "1000",
+            "minimum": "1000",
+            "maximum": "1000",
+            "sample_values": [
+              "1000"
+            ]
+          }
+        }
+      },
+      {
+        "name": "distance_count",
+        "question": "How many kilometers did I run?",
+        "reason": "matched_count_question",
+        "action": "run",
+        "subject": "I",
+        "prefixes": [
+          "run",
+          "ran",
+          "running"
+        ],
+        "units": [
+          "kilometers"
+        ],
+        "matched_quantity_records": 1,
+        "groups": {
+          "kilometers": {
+            "value_count": 1,
+            "total": "5",
+            "minimum": "5",
+            "maximum": "5",
+            "sample_values": [
+              "5"
+            ]
+          }
+        }
+      },
+      {
+        "name": "spending_amount",
+        "question": "How much did I spend?",
+        "reason": "matched_amount_question",
+        "action": "spend",
+        "subject": "I",
+        "prefixes": [
+          "spend",
+          "spent",
+          "spending"
+        ],
+        "units": [],
+        "matched_quantity_records": 1,
+        "groups": {
+          "$": {
+            "value_count": 1,
+            "total": "300",
+            "minimum": "300",
+            "maximum": "300",
+            "sample_values": [
+              "300"
+            ]
+          }
+        }
+      },
+      {
+        "name": "total_shape",
+        "question": "What's the total amount I raised?",
+        "reason": "matched_amount_question",
+        "action": "raised",
+        "subject": "I",
+        "prefixes": [
+          "raise",
+          "raised",
+          "raising",
+          "help_raise",
+          "helped_raise",
+          "helping_raise"
+        ],
+        "units": [],
+        "matched_quantity_records": 4,
+        "groups": {
+          "$": {
+            "value_count": 3,
+            "total": "2750",
+            "minimum": "250",
+            "maximum": "2000",
+            "sample_values": [
+              "250",
+              "500",
+              "2000"
+            ]
+          },
+          "usd": {
+            "value_count": 1,
+            "total": "100",
+            "minimum": "100",
+            "maximum": "100",
+            "sample_values": [
+              "100"
+            ]
+          }
+        }
+      }
+    ],
+    "refusal_cases": [
+      {
+        "name": "qualifier_refused",
+        "question": "How much did I raise for charity?",
+        "reason": "unsupported_shape"
+      },
+      {
+        "name": "negation_refused",
+        "question": "How much did I not raise?",
+        "reason": "unsupported_shape"
+      },
+      {
+        "name": "future_refused",
+        "question": "How much will I raise?",
+        "reason": "unsupported_shape"
+      },
+      {
+        "name": "named_subject_refused",
+        "question": "How much did Alice raise?",
+        "reason": "unsupported_shape"
+      },
+      {
+        "name": "unknown_action_refused",
+        "question": "How much did I frobnicate?",
+        "reason": "unsupported_action"
+      },
+      {
+        "name": "unsupported_unit_refused",
+        "question": "How many dollars did I raise?",
+        "reason": "unsupported_unit"
+      }
+    ],
+    "assumptions": [
+      "owner_bound",
+      "first_person_subject_exact",
+      "positive_default_epistemic",
+      "predicate_token_prefix_family",
+      "unit_groups_are_never_converted"
+    ],
+    "gates": {
+      "ready_cases_passed": 5,
+      "refusal_cases_passed": 6,
+      "refusal_scan_calls": 0,
+      "exact_question_subject": true,
+      "units_kept_separate": true,
+      "provider_calls": 0
+    }
+  }
+}
