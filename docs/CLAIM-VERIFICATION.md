@@ -266,3 +266,57 @@ cross-fits found a threshold at 90% precision and 60% recall. Post hoc outer
 scores reached only 81.13% precision at 60.18% recall and 25.09% recall at 90%
 precision. Shallow lexical structure is therefore also rejected on this cohort;
 the sealed test set remains unopened.
+
+The preregistered source-bound typed-reference trial then replaced generated
+quotations with claim/evidence identifiers, but its 98% integrity gate became
+mathematically impossible after 285 valid cases, 17 timeouts and eight
+structural failures among 310 observed cases. A durable native-tool diagnostic
+eliminated the transport failures but showed that redundant generated ranges
+remained unstable. The subsequent
+[source-token atomic-partition diagnostic](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-ATOMIC-PARTITION-V2.md)
+reduced the provider task to complete source-token groups and obtained 310/310
+valid DeepSeek partitions plus 307/310 valid Qwen partitions with three safe
+abstentions. Structural success did not improve classification: the paired
+unsplit FactCG control reached 75.90% balanced accuracy and a 16.88%
+false-support rate, versus 74.67%/30.00% for DeepSeek atoms and 75.52%/35.62%
+for Qwen atoms. Neither provider reached 90% precision at 60% recall. This
+decomposition path is rejected, no larger local model is warranted for it, and
+the external test set remains unopened.
+
+A final whole-claim
+[evidence-lattice diagnostic](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-EVIDENCE-LATTICE-V1.md)
+scored each original claim against each ranked segment, both segments, and both
+segment orders. The lower score across pair orders produced a small post hoc
+balanced-accuracy increase from 75.90% to 76.25%, with false support increasing
+from 16.88% to 17.50%. Selecting the best evidence subset regressed to 72.69%
+balanced accuracy and 20.62% false support. No static lattice policy reached 90%
+precision at 60% recall. Evidence-subset maximization and learned tuning on this
+exposed cohort are therefore rejected; the external test set remains unopened.
+
+The next registered
+[HHEM-2.1-Open capacity trial](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-HHEM-WINDOWED-V2.md)
+used 780 fresh balanced development claims after excluding all 310 previously
+observed identities. Its first joined-evidence protocol failed closed before any
+selected model prediction because a prompt exceeded the registered
+non-truncating limit. The superseding protocol covered every selected evidence
+word once across 1,512 source-ordered windows of at most 512 tokens. HHEM still
+failed calibration: its best balanced accuracy was 72.82%, and its best precision
+above 60% recall was 77.67%. The exact-cohort FactCG control reached 74.87% and
+79.46%, respectively. HHEM is not integrated, and the external test remains
+sealed. This closes static maximum-over-window verification with that model;
+future work needs fresh data and explicit partial-support/abstention semantics.
+
+A fresh, preregistered
+[full-source support-certificate trial](../benchmarks/results/research/2026-09-17/LLM-AGGREFACT-SUPPORT-CERTIFICATE-V1.md)
+then tested those semantics directly with DeepSeek 4.1 Flash. Every accepted
+certificate covered all substantive claim tokens with source-bound evidence IDs
+and `supported`, `contradicted` or `unknown` atoms; the final claim was supported
+only when every atom was supported. Complete documents replaced the FactCG
+ranker. The provider produced 782/800 valid certificates, missing the 98%
+integrity gate by two. It reached 78.31% precision, 65.00% recall, 73.50%
+balanced accuracy and an 18.00% false-support rate. Reveal and LFQA passed the
+precision/recall boundary individually, while false support rose to 42% on media
+summaries and 36% on meeting summaries. This domain instability blocks global
+enablement. The routed provider completed 930 transport calls without a failure,
+so transport and structural source binding are no longer the main constraint;
+semantic verification quality is.

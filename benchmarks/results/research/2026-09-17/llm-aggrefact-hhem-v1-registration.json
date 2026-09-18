@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-hhem-capacity-registration",
+  "created_at": "2026-09-17T15:23:14.412330+00:00",
+  "claim_boundary": "Passing would establish disjoint development evidence that pinned HHEM-2.1-Open over the registered top-two evidence meets the frozen high-precision factual-support gates. It would not validate the sealed external test split, retrieval quality, universal factuality, or production latency.",
+  "source": {
+    "prme_revision": "0d31d81be0d0b93e7f61714bfb23ba2e0f6c9bac",
+    "files": {
+      "runner_sha256": "11a5e3a5ee60def622d80b53a458a7d5672435caf6396a147476f1efebb13485",
+      "typed_registration_sha256": "e38e4ccc7e3820972428d3e058b0b07bdf89a7728eecff9e3fef2c257e2ff2ec",
+      "typed_result_sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+      "typed_result_canonical_sha256": "ce9c9126e70060644d99903af01b3658b9d2a42f3115b8591a0db11515ee3cae"
+    }
+  },
+  "dataset": {
+    "name": "LLM-AggreFact",
+    "repository": "https://huggingface.co/datasets/lytang/LLM-AggreFact",
+    "revision": "981dfd0bd8e58e7238a9ab92b2e6ea44bce918e4",
+    "license": "cc-by-nd-4.0",
+    "split": "development",
+    "sha256": "ca9a5bda9561bbc6f7327ef81ab41727fa10e96f96e9dc74ef32ba3af3c1d8a8",
+    "source_text_policy": "Authenticated external development file only; public results may contain identifiers, labels, scores, counts and hashes but no document, evidence or claim text.",
+    "test_access": "forbidden_no_test_path"
+  },
+  "cohort": {
+    "selection_seed": "prme-llm-aggrefact-hhem-v1",
+    "parent_selected_identity_sha256": "84b3b16cf4310db8f6a8ad0cdea103926f8f1cad4c4bc34971cb181b9c7e3c33",
+    "observed_cases_excluded": 310,
+    "observed_identity_sha256": "8abb5c958f32cd47da5087a7a3090f1c6472cbff41da40361eb92c85a82e4ff9",
+    "sampling": "exclude_all_typed-reference-v2-observed-identities; group the remaining parent cohort by label; take the full minority-label capacity and the same hash-ranked count from the majority label; hash-order the combined rows",
+    "cases": 780,
+    "counts_by_label": {
+      "0": 390,
+      "1": 390
+    },
+    "counts_by_dataset_label": {
+      "ExpertQA": {
+        "0": 5,
+        "1": 49
+      },
+      "FactCheck-GPT": {
+        "0": 55,
+        "1": 49
+      },
+      "Lfqa": {
+        "0": 55,
+        "1": 50
+      },
+      "RAGTruth": {
+        "0": 55,
+        "1": 48
+      },
+      "Reveal": {
+        "0": 55,
+        "1": 45
+      },
+      "TofuEval-MediaS": {
+        "0": 55,
+        "1": 50
+      },
+      "TofuEval-MeetB": {
+        "0": 55,
+        "1": 49
+      },
+      "Wice": {
+        "0": 55,
+        "1": 50
+      }
+    },
+    "selected_identity_sha256": "154c936e2b2ec9a0305c75e2e6bf7f14ae887626f86d7d9fe207dda85a2d5eb6"
+  },
+  "ranker": {
+    "architecture": "sequence_classification",
+    "license": "mit",
+    "name": "yaxili96/FactCG-DeBERTa-v3-Large",
+    "revision": "0430e3509dbd28d2dff7a117c0eae25359ff3e80",
+    "support_label_index": 1,
+    "weights_filename": "model.safetensors",
+    "weights_sha256": "379a343d1ca25c9dfe24ae149f76cc958ea4f09c00dae88bd49bbbf58c749d5e",
+    "source_chunking": "nltk_sentence_chunks_max_550_word_tokens",
+    "chunk_selection": "highest_support_probability_then_lowest_index",
+    "top_k": 2
+  },
+  "model": {
+    "name": "vectara/hallucination_evaluation_model",
+    "revision": "8e4a2e6e96c708cc76c2344f7e4757df2515292c",
+    "license": "apache-2.0",
+    "architecture": "t5_token_classification_first_token",
+    "support_label_index": 1,
+    "parameter_count": 109630082,
+    "files": {
+      "config.json": "773139fe764fe20e146ab14e627b188ccafae35f93cf6f5258dc6c237016b870",
+      "configuration_hhem_v2.py": "ec57fe344e3104d0d4a99b13d893529aac1e2bd69e83c2814235baf37cdcacc7",
+      "modeling_hhem_v2.py": "fcc9cfcee513cc08eb46eac21f1acb498b122572fb35a7dec4d85fae45cb9bba",
+      "model.safetensors": "634de18a38cf1e991c1acd0f7a9e0d30f7ea187fba42bb4798f862d3edd31e72"
+    },
+    "remote_code_execution": false,
+    "state_dict_transform": "strip_t5_prefix_then_tie_encoder_embedding"
+  },
+  "foundation": {
+    "name": "google/flan-t5-base",
+    "revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "license": "apache-2.0",
+    "files": {
+      "config.json": "7c1853dbfa0e4aac093eb109a358b6ab25fe86b7c15185a91322f0ed26f0f940",
+      "special_tokens_map.json": "5c87151ef0f72a99d1f766a4c418bd2a1f90aaa30a8e22fe5eca9641daebb64f",
+      "spiece.model": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+      "tokenizer.json": "fe2ebbbbde2985be723e0ce18217853e4020c5e9d35bd07be2c27ab9d3ead57a",
+      "tokenizer_config.json": "4c55124402e4ce48c7125d04b9af152a125eda9e7c80829f8f99f2ec69f3f68d"
+    }
+  },
+  "protocol": {
+    "task": "whole_claim_factual_consistency_capacity",
+    "evidence": "registered_top_two_segments_joined_in_source_order",
+    "prompt_sha256": "06a8d004e8965985dbd4cec90b1ae31199b57e7ee1fd5e5cdeab84795cd1c87e",
+    "batch_size": 2,
+    "ranker_batch_size": 2,
+    "max_prompt_tokens": 4096,
+    "truncation": false,
+    "threshold_operator": "strictly_greater_than",
+    "published_threshold": 0.5,
+    "device": "auto",
+    "transformers_version": "5.3.0",
+    "emit_source_text": false,
+    "provider_calls": false,
+    "test_access": "forbidden_no_test_path"
+  },
+  "evaluation": {
+    "calibration": {
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "selection": "maximum_recall_then_precision_then_lowest_threshold"
+    },
+    "gates": {
+      "claims_evaluated_min": 780,
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "balanced_accuracy_min": 0.75,
+      "false_support_rate_max": 0.1
+    },
+    "decision_rule": "Do not register or access an external test cohort unless every development gate passes."
+  },
+  "selection": {
+    "rationale": "HHEM-2.1-Open is a small Apache-2.0 factual-consistency model with published AggreFact and RAGTruth evidence. The loader uses audited standard T5 classes and pinned safetensors without executing repository code.",
+    "disclosure": "The model card and aggregate published results were known. No HHEM output was observed for any selected identity before this registration."
+  }
+}

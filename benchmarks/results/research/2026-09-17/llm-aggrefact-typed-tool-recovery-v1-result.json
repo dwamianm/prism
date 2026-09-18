@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-typed-tool-recovery-diagnostic",
+  "completed_at": "2026-09-17T12:45:32.524623+00:00",
+  "development_only": true,
+  "test_accessed": false,
+  "source_trial": {
+    "registration_sha256": "e38e4ccc7e3820972428d3e058b0b07bdf89a7728eecff9e3fef2c257e2ff2ec",
+    "result_sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+    "result_canonical_sha256": "ce9c9126e70060644d99903af01b3658b9d2a42f3115b8591a0db11515ee3cae",
+    "observed_failures": 25,
+    "failure_identity_sha256": "1128b24e950fc5b05e538a1592041b3d360afd257d6af62567f96cae65ba24f8"
+  },
+  "transport": {
+    "provider": "ollama_cloud",
+    "model": "deepseek-v4.1-flash:cloud",
+    "remote_model": "deepseek-v4.1-flash",
+    "manifest_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+    "mode": "ollama_native_tool_call",
+    "options": {
+      "temperature": 0,
+      "seed": 17,
+      "num_predict": 2048
+    },
+    "timeout_seconds": 180.0,
+    "max_transport_attempts": 2,
+    "max_semantic_attempts": 3,
+    "concurrency": 4
+  },
+  "development": {
+    "cases": 25,
+    "complete_cases": 20,
+    "completion_rate": 0.8,
+    "job_statuses": {
+      "complete": 20,
+      "semantic_exhausted": 5
+    },
+    "semantic_attempts_per_case": {
+      "1": 13,
+      "2": 4,
+      "3": 8
+    },
+    "transport_statuses": {
+      "succeeded": 45
+    },
+    "transport_error_types": {}
+  },
+  "runtime": {
+    "ranker": {
+      "device": "mps",
+      "seconds": 7.687497999984771,
+      "pairs_scored": 48,
+      "torch": "2.10.0",
+      "transformers": "5.3.0",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit"
+    },
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit"
+  },
+  "limitations": [
+    "This diagnostic reuses only failures already observed during typed-reference v2.",
+    "It is tuning evidence and cannot estimate held-out classification quality.",
+    "The Ollama cloud alias identifies a manifest, not pinned remote weights.",
+    "No external test split was accepted or accessed."
+  ],
+  "result_sha256": "6be0a074ea99c20a989ce2d27dbdcd763bbf16852abcd03e922a50f3256ea4da"
+}
