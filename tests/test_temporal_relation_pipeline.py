@@ -161,6 +161,15 @@ async def test_temporal_relation_routing_covers_duration_arithmetic_without_chan
     assert _detect_context_type(count_query, count_analysis) == "aggregation"
     assert is_temporal_reasoning_query(count_query, count_analysis) is False
 
+    order_query = "What is the order of the three events?"
+    order_analysis = await analyze_query(order_query, reference_time=REFERENCE_TIME)
+    assert is_temporal_reasoning_query(order_query, order_analysis) is True
+
+    lookup_query = "When did I volunteer at the fundraising dinner?"
+    lookup_analysis = await analyze_query(lookup_query, reference_time=REFERENCE_TIME)
+    assert _detect_context_type(lookup_query, lookup_analysis) == "temporal"
+    assert is_temporal_reasoning_query(lookup_query, lookup_analysis) is False
+
 
 def test_temporal_relation_configuration_is_opt_in_and_env_addressable(
     monkeypatch,

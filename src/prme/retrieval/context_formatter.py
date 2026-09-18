@@ -230,9 +230,13 @@ _TEMPORAL_REASONING_RE = re.compile(
 # routing signal separate from ``_TEMPORAL_REASONING_RE`` so enabling the
 # optional resolver does not silently change the control bundle's guidance.
 _TEMPORAL_RELATION_ROUTE_RE = re.compile(
+    r"(?:"
     r"\bhow\s+many\s+"
     r"(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\b"
-    r"[^?.!]{0,120}\b(?:take|took|taking|spend|spent|after|when)\b",
+    r"[^?.!]{0,120}\b(?:take|took|taking|spend|spent|after|when)\b"
+    r"|\b(?:what|which)\s+(?:is|was)\s+the\s+"
+    r"(?:chronological\s+)?order\s+of\b"
+    r")",
     re.IGNORECASE,
 )
 
@@ -482,7 +486,7 @@ def is_temporal_reasoning_query(
 ) -> bool:
     """Return whether retrieval should perform explicit temporal reasoning."""
     return (
-        _detect_context_type(query, query_analysis) == "temporal"
+        _TEMPORAL_REASONING_RE.search(query) is not None
         or _TEMPORAL_RELATION_ROUTE_RE.search(query) is not None
     )
 

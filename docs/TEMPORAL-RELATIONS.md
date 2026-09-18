@@ -35,11 +35,14 @@ with:
 export PRME_TEMPORAL_RELATION__ENABLED=true
 ```
 
-The feature is disabled by default. Disabled and non-temporal retrievals make
-no resolver or Jev calls. Enabling it sends the temporal question and already
-packed record representations to the configured Ollama resolver, then sends
-the proposed operand alignments and exact evidence quotes to TypeSafe Jev. It
-does not send unrelated memories outside the packed bundle.
+The feature is disabled by default. Disabled retrievals and queries without an
+explicit interval, duration, or chronological-order construction make no
+resolver or Jev calls. Broad temporal formatting signals such as a lone
+“when,” “last,” or calendar reference do not activate the model path. Enabling
+it sends the routed question and already packed record representations to the
+configured Ollama resolver, then sends the proposed operand alignments and
+exact evidence quotes to TypeSafe Jev. It does not send unrelated memories
+outside the packed bundle.
 
 ## Execution boundary
 
