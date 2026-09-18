@@ -250,3 +250,49 @@ class QuantityAggregation(BaseModel):
         "complete_for_unchanged_store"
     )
     exclusions: dict[str, int] = Field(default_factory=dict)
+
+
+QuantityAggregationPlanStatus = Literal["ready", "unsupported"]
+QuantityAggregationPlanReason = Literal[
+    "matched_amount_question",
+    "matched_count_question",
+    "unsupported_shape",
+    "unsupported_action",
+    "unsupported_unit",
+]
+
+
+class QuantityAggregationPlan(BaseModel):
+    """Auditable fail-closed translation of a narrow natural-language query."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_version: Literal[1] = 1
+    question: str = Field(min_length=1)
+    status: QuantityAggregationPlanStatus
+    reason: QuantityAggregationPlanReason
+    action: str | None = None
+    query: QuantityAggregationQuery | None = None
+    assumptions: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_status(self) -> QuantityAggregationPlan:
+        if (self.status == "ready") != (self.query is not None):
+            raise ValueError("ready quantity plans require a query and unsupported plans forbid one")
+        return self
+
+
+class PlannedQuantityAggregation(BaseModel):
+    """A transparent natural-language plan and its optional exact execution."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_version: Literal[1] = 1
+    plan: QuantityAggregationPlan
+    aggregation: QuantityAggregation | None = None
+
+    @model_validator(mode="after")
+    def validate_execution(self) -> PlannedQuantityAggregation:
+        if (self.plan.status == "ready") != (self.aggregation is not None):
+            raise ValueError("ready plans require an aggregation and unsupported plans forbid one")
+        return self

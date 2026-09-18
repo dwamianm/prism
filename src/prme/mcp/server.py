@@ -1195,6 +1195,34 @@ async def memory_aggregate_quantities(
         return _internal_error("memory_aggregate_quantities", exc)
 
 
+async def memory_aggregate_quantities_from_text(
+    question: str,
+    user_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Plan and run a narrow natural-language quantity aggregation.
+
+    Supported questions are complete, qualifier-free amount or count shapes.
+    The response always includes the exact structured plan and its assumptions.
+    Unsupported wording returns a typed refusal and does not scan memory.
+
+    Args:
+        question: Natural-language amount or count question to plan.
+        user_id: Owner to aggregate; omit when the MCP server binds an owner.
+    """
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.aggregate_quantities_from_text(
+            question, user_id=owner
+        )
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_aggregate_quantities_from_text", exc)
+
+
 async def memory_get_assertion_state(
     subject: str,
     predicate: str,
@@ -1636,7 +1664,8 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_retrieve, memory_ingest, memory_organize,
                  memory_list_alias_proposals, memory_review_alias_proposal,
                  memory_get_node, memory_scan_nodes, memory_aggregate_assertions,
-                 memory_aggregate_quantities, memory_get_assertion_state,
+                 memory_aggregate_quantities, memory_aggregate_quantities_from_text,
+                 memory_get_assertion_state,
                  memory_get_event, memory_get_extraction,
                  memory_get_retrieval_receipt, memory_record_relevance,
                  memory_get_relevance, memory_list_relevance, memory_evaluate_learning,

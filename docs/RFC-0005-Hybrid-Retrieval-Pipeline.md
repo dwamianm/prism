@@ -602,8 +602,19 @@ The completeness and consistency boundary is identical to structured assertion
 aggregation: all matching grounded quantities are visited for an unchanged
 store, while source-extraction and real-world coverage remain unknown. HTTP
 exposes `POST /v1/quantities/aggregate`; MCP exposes
-`memory_aggregate_quantities`. Natural-language retrieval does not automatically
-route to this operation.
+`memory_aggregate_quantities`.
+
+`aggregate_quantities_from_text(question, user_id=...)` is a separate
+fail-closed planner and executor for a fixed set of complete, qualifier-free
+amount/count question shapes. It returns a typed plan with the exact structured
+query, action, assumptions and either an aggregation or an unsupported reason.
+Trailing qualifiers, negation, future wording, named subjects, unknown actions
+and unsupported units do not scan memory. Action inflections map through a fixed
+inspectable prefix table; first-person plans preserve the question's exact `I`
+or `we` subject.
+HTTP exposes `POST /v1/quantities/aggregate-text`; MCP exposes
+`memory_aggregate_quantities_from_text`. Natural-language retrieval does not
+automatically route to either exact operation.
 
 Natural-language count and list retrievals expose this boundary directly as
 `RetrievalMetadata.aggregation_coverage`. It reports unique candidates before

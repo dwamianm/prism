@@ -404,6 +404,14 @@ class QuantityAggregationRequest(BaseModel):
     query: QuantityAggregationQuery = Field(default_factory=QuantityAggregationQuery)
 
 
+class PlannedQuantityAggregationRequest(BaseModel):
+    """Fail-closed natural-language request for exact quantity aggregation."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+    question: str = Field(min_length=1)
+
+
 class AssertionStateRequest(BaseModel):
     """Exact, owner-scoped current candidates and temporal claim history."""
 

@@ -86,6 +86,7 @@ if TYPE_CHECKING:
         AssertionAggregation,
         AssertionQuery,
         QuantityAggregation,
+        PlannedQuantityAggregation,
         QuantityAggregationQuery,
     )
     from prme.models.temporal import AssertionState, AssertionStateQuery
@@ -832,6 +833,18 @@ class MemoryClient:
         """Calculate exact decimal statistics without implicit unit conversion."""
         return self._run(self._engine.aggregate_quantities(
             query, user_id=user_id, batch_size=batch_size,
+        ))
+
+    def aggregate_quantities_from_text(
+        self,
+        question: str,
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "PlannedQuantityAggregation":
+        """Plan and run a supported natural-language quantity aggregation."""
+        return self._run(self._engine.aggregate_quantities_from_text(
+            question, user_id=user_id, batch_size=batch_size,
         ))
 
     def get_assertion_state(

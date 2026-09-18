@@ -425,6 +425,25 @@ evidence count, event-time bounds, and bounded source samples. The API never
 combines different normalized units. HTTP uses
 `POST /v1/quantities/aggregate`; MCP uses `memory_aggregate_quantities`.
 
+For a small set of complete, qualifier-free questions, PRME can expose and run
+the exact plan in one call:
+
+```python
+planned = client.aggregate_quantities_from_text(
+    "How much did I raise?", user_id="alice"
+)
+if planned.plan.status == "ready":
+    for group in planned.aggregation.groups:
+        print(group.values["unit"], group.total)
+```
+
+The plan contains its structured selectors and assumptions, including the exact
+`I` or `we` subject from the question. Extra qualifiers,
+unknown actions or units, negation, future wording, named subjects, and other
+unsupported shapes return `status="unsupported"` without scanning memory.
+Units remain separate. HTTP uses `POST /v1/quantities/aggregate-text`; MCP uses
+`memory_aggregate_quantities_from_text`.
+
 <details>
 <summary>Async API (advanced)</summary>
 

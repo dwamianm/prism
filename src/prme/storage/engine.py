@@ -114,6 +114,7 @@ if TYPE_CHECKING:
         AssertionAggregation,
         AssertionQuery,
         QuantityAggregation,
+        PlannedQuantityAggregation,
         QuantityAggregationQuery,
     )
     from prme.models.temporal import AssertionState, AssertionStateQuery
@@ -2214,6 +2215,27 @@ class MemoryEngine:
             user_id=user_id,
             batch_size=batch_size,
         )
+
+    async def aggregate_quantities_from_text(
+        self,
+        question: str,
+        *,
+        user_id: str,
+        batch_size: int = 500,
+    ) -> "PlannedQuantityAggregation":
+        """Plan a narrow natural-language quantity query and execute when safe."""
+        from prme.models.aggregation import PlannedQuantityAggregation
+        from prme.retrieval.aggregation_planning import plan_quantity_aggregation
+
+        plan = plan_quantity_aggregation(question)
+        if plan.query is None:
+            return PlannedQuantityAggregation(plan=plan)
+        aggregation = await self.aggregate_quantities(
+            plan.query,
+            user_id=user_id,
+            batch_size=batch_size,
+        )
+        return PlannedQuantityAggregation(plan=plan, aggregation=aggregation)
 
     async def get_assertion_state(
         self,

@@ -42,7 +42,11 @@ from prme.models.learning import (
     RankingProfileState,
     RankingProfileStatus,
 )
-from prme.models.aggregation import AssertionAggregation, QuantityAggregation
+from prme.models.aggregation import (
+    AssertionAggregation,
+    PlannedQuantityAggregation,
+    QuantityAggregation,
+)
 from prme.models.temporal import AssertionState
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
@@ -70,6 +74,7 @@ from prme.api.models import (
     OrganizeRequest,
     OrganizeResponse,
     QuantityAggregationRequest,
+    PlannedQuantityAggregationRequest,
     RankingProfileChangeRequest,
     RankingProfileCreateRequest,
     RankingProfileRollbackRequest,
@@ -566,6 +571,26 @@ async def aggregate_quantities(
     try:
         return await _get_engine(request).aggregate_quantities(
             body.query,
+            user_id=_user_id(request, body.user_id, required=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/quantities/aggregate-text",
+    response_model=PlannedQuantityAggregation,
+    summary="Plan and run a supported natural-language quantity aggregation",
+    responses={422: {"model": ErrorResponse}},
+)
+async def aggregate_quantities_from_text(
+    request: Request,
+    body: PlannedQuantityAggregationRequest,
+) -> PlannedQuantityAggregation:
+    """Execute only a complete question shape supported by the exact planner."""
+    try:
+        return await _get_engine(request).aggregate_quantities_from_text(
+            body.question,
             user_id=_user_id(request, body.user_id, required=True),
         )
     except ValueError as exc:

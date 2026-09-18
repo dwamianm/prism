@@ -33,9 +33,11 @@ from prme.models.aggregation import (
     AssertionGroup,
     AssertionQuery,
     QuantityAggregation,
+    QuantityAggregationPlan,
     QuantityAggregationQuery,
     QuantityGroup,
     QuantitySample,
+    PlannedQuantityAggregation,
 )
 from prme.models.temporal import (
     AssertionState,
@@ -218,9 +220,11 @@ __all__ = [
     "ClaimVerifier",
     "LocalizedEvidenceAssessment",
     "QuantityAggregation",
+    "QuantityAggregationPlan",
     "QuantityAggregationQuery",
     "QuantityGroup",
     "QuantitySample",
+    "PlannedQuantityAggregation",
     "ConditionEvaluationMethod",
     "ConditionState",
     "ContextAblation",

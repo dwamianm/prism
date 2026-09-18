@@ -92,6 +92,22 @@ their payloads. The former `namespace` field was never applied and is now reject
 Scope and authenticated owner controls retain their documented meanings; metadata
 and session labels are not additional authorization boundaries.
 
+## Aggregate grounded quantities
+
+`POST /v1/quantities/aggregate` accepts an owner and a structured
+`QuantityAggregationQuery`. It performs a complete owner-scoped scan for an
+unchanged store, revalidates every decimal against its claim and evidence, and
+never converts units. Optional `predicate_prefixes` match only the normalized
+predicate itself or an underscore-delimited suffix.
+
+`POST /v1/quantities/aggregate-text` accepts `{"user_id": "alice",
+"question": "How much did I raise?"}`. This separate convenience route supports
+only a fixed set of complete, qualifier-free amount/count shapes. Its response
+always exposes the structured plan and assumptions and preserves the exact `I`
+or `we` subject. Unsupported wording returns
+`plan.status="unsupported"` and `aggregation=null` without scanning memory.
+Ordinary retrieval never auto-routes to either operation.
+
 ## Recover an accepted request
 
 If graph materialization or blocking extraction fails after source admission, the

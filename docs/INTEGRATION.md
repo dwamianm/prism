@@ -1265,6 +1265,26 @@ evidence. HTTP exposes `POST /v1/quantities/aggregate`; MCP exposes
 `memory_aggregate_quantities`. These operations use the same unchanged-store and
 extraction/real-world coverage boundaries as assertion aggregation.
 
+For supported simple questions, the convenience path returns its exact plan and
+execution together:
+
+```python
+planned = memory.aggregate_quantities_from_text(
+    "How many kilometers did I run?",
+    user_id="alice",
+)
+```
+
+The planner recognizes only complete, qualifier-free amount/count shapes in a
+fixed action and unit table. It preserves the exact `I` or `we` subject from the
+question and selects positive default epistemic state, explicit predicate-prefix
+families, and unit-separated groups. Unsupported qualifiers, negation, future
+wording, named subjects,
+actions, or units return `plan.status="unsupported"` with no scan. Inspect
+`plan.query` and `plan.assumptions`; the convenience result does not hide a
+semantic model call. HTTP exposes `POST /v1/quantities/aggregate-text`; MCP
+exposes `memory_aggregate_quantities_from_text`.
+
 Use the exact temporal state operation when the application already knows an
 assertion's subject and predicate:
 

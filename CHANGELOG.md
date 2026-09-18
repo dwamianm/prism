@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   four real charity memories while excluding unrelated, negated, conditional,
   approximate, incompatible-unit and cross-owner controls.
 
+- Python, HTTP and MCP now expose a fail-closed natural-language quantity
+  planner/executor for a fixed set of complete, qualifier-free amount and count
+  questions. It returns the exact structured query and assumptions alongside
+  the result and preserves the question's exact `I` or `we` subject. Unsupported
+  qualifiers, negation, future wording, named subjects, actions or units return
+  a typed refusal without scanning memory; ordinary retrieval remains unchanged.
+
 - A user-authored sentence such as `My final score was 3` no longer disappears
   when the model omits its claim. A narrow deterministic path admits terminal
   exact score, count, rating and level attributes with a source-literal concept

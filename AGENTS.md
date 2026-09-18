@@ -103,6 +103,11 @@ prefix selector for open-vocabulary predicates. `raised` matches `raised` and
 `raised_*`, but not `fundraised`; no synonym or embedding inference occurs.
 Responses report `semantic_equivalence="normalized_exact_and_predicate_prefix"`
 when it is used. Exact predicate selectors retain `normalized_exact_only`.
+`aggregate_quantities_from_text` is a separate fail-closed convenience path. It
+accepts only complete qualifier-free amount/count shapes in its fixed action and
+unit tables, preserves the exact `I` or `we` subject, returns the exact plan and
+assumptions, and does not scan on an unsupported shape. Ordinary `retrieve()`
+never auto-routes to aggregation.
 
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 

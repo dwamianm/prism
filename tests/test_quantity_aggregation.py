@@ -28,13 +28,14 @@ async def _store_quantity(
     value: str,
     unit: str,
     source_text: str,
+    subject: str = "Alice",
     predicate: str = "spent",
     polarity: str = "positive",
     epistemic_type: EpistemicType = EpistemicType.ASSERTED,
     year: int = 2025,
     stored_value: str | None = None,
 ):
-    content = f"Alice {predicate} {source_text}."
+    content = f"{subject} {predicate} {source_text}."
     return await engine.store_with_receipt(
         content,
         user_id=owner,
@@ -42,7 +43,7 @@ async def _store_quantity(
         epistemic_type=epistemic_type,
         event_time=datetime(year, 1, 1, tzinfo=timezone.utc),
         metadata={
-            "subject": "Alice",
+            "subject": subject,
             "predicate": predicate,
             "object": source_text,
             "polarity": polarity,
@@ -206,13 +207,13 @@ def test_quantity_query_requires_unit_in_every_group():
 
 def test_sync_client_exposes_quantity_aggregation(config, user):
     with MemoryClient(config=config) as client:
-        content = "Alice spent $4.50."
+        content = "I spent $4.50."
         client.store(
             content,
             user_id=user,
             node_type=NodeType.FACT,
             metadata={
-                "subject": "Alice",
+                "subject": "I",
                 "predicate": "spent",
                 "object": "$4.50",
                 "polarity": "positive",
@@ -229,16 +230,24 @@ def test_sync_client_exposes_quantity_aggregation(config, user):
             QuantityAggregationQuery(predicates=["spent"]), user_id=user
         )
         assert result.groups[0].total == Decimal("4.50")
+        planned = client.aggregate_quantities_from_text(
+            "How much did I spend?", user_id=user
+        )
+        assert planned.plan.status == "ready"
+        assert planned.aggregation is not None
+        assert planned.aggregation.groups[0].total == Decimal("4.50")
 
 
 async def test_http_and_mcp_expose_owner_bound_quantity_totals(config, user):
     config.mcp = MCPConfig(user_id=user)
     async with MemoryEngine.open(config) as engine:
         await _store_quantity(
-            engine, owner=user, value="4.50", unit="$", source_text="$4.50"
+            engine, owner=user, value="4.50", unit="$", source_text="$4.50",
+            subject="I",
         )
         await _store_quantity(
-            engine, owner=user + "-other", value="100", unit="$", source_text="$100"
+            engine, owner=user + "-other", value="100", unit="$", source_text="$100",
+            subject="I",
         )
 
         app = create_app(config)
@@ -264,6 +273,26 @@ async def test_http_and_mcp_expose_owner_bound_quantity_totals(config, user):
                 prefix_response.json()["semantic_equivalence"]
                 == "normalized_exact_and_predicate_prefix"
             )
+            text_response = await client.post(
+                "/v1/quantities/aggregate-text",
+                json={
+                    "user_id": user,
+                    "question": "How much did I spend?",
+                },
+            )
+            assert text_response.status_code == 200
+            assert text_response.json()["plan"]["status"] == "ready"
+            assert text_response.json()["aggregation"]["groups"][0]["total"] == "4.50"
+            refused_response = await client.post(
+                "/v1/quantities/aggregate-text",
+                json={
+                    "user_id": user,
+                    "question": "How much did I spend on lunch?",
+                },
+            )
+            assert refused_response.status_code == 200
+            assert refused_response.json()["plan"]["status"] == "unsupported"
+            assert refused_response.json()["aggregation"] is None
             assert (await client.post(
                 "/v1/quantities/aggregate",
                 json={"user_id": user, "query": {"group_by": ["predicate"]}},
@@ -280,6 +309,7 @@ async def test_http_and_mcp_expose_owner_bound_quantity_totals(config, user):
             await session.initialize()
             tools = {tool.name for tool in (await session.list_tools()).tools}
             assert "memory_aggregate_quantities" in tools
+            assert "memory_aggregate_quantities_from_text" in tools
             result = await session.call_tool(
                 "memory_aggregate_quantities", {"predicates": ["spent"]}
             )
@@ -295,6 +325,13 @@ async def test_http_and_mcp_expose_owner_bound_quantity_totals(config, user):
                 prefix_payload["semantic_equivalence"]
                 == "normalized_exact_and_predicate_prefix"
             )
+            text_result = await session.call_tool(
+                "memory_aggregate_quantities_from_text",
+                {"question": "How much did I spend?"},
+            )
+            text_payload = json.loads(text_result.content[0].text)
+            assert text_payload["plan"]["status"] == "ready"
+            assert text_payload["aggregation"]["groups"][0]["total"] == "4.50"
             for arguments in (
                 {"user_id": user + "-other"},
                 {"group_by": ["predicate"]},
