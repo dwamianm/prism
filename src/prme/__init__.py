@@ -56,6 +56,7 @@ from prme.models.processing import (
 from prme.models.value_bindings import (
     MemoryValueBinding,
     RetrievedValueBinding,
+    ToolArgumentBindingUse,
     ToolArgumentReplacement,
     ToolArgumentResolution,
 )
@@ -299,6 +300,7 @@ __all__ = [
     "StoreReceipt",
     "TemporalRelationConfig",
     "TemporalRelationMetadata",
+    "ToolArgumentBindingUse",
     "ToolArgumentReplacement",
     "ToolArgumentResolution",
     "ablate_context",

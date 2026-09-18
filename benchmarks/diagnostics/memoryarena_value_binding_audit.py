@@ -69,6 +69,31 @@ def _qualified_arguments(arguments: Any) -> list[tuple[str, str]]:
     ]
 
 
+def _expected_guidance(binding_uses: list[dict[str, Any]]) -> dict[str, Any] | None:
+    values = set()
+    for use in binding_uses:
+        if not isinstance(use, dict):
+            raise ValueError("Tool binding uses must be objects")
+        kind = use.get("kind")
+        presentation = use.get("presentation")
+        if not isinstance(kind, str) or not isinstance(presentation, str):
+            raise ValueError("Tool binding use is incomplete")
+        values.add((kind, presentation))
+    if not values:
+        return None
+    return {
+        "schema_version": 1,
+        "instruction": (
+            "When presenting this tool result, preserve these exact source-backed "
+            "values. This metadata is separate from the tool data."
+        ),
+        "values": [
+            {"kind": kind, "presentation": presentation}
+            for kind, presentation in sorted(values)
+        ],
+    }
+
+
 def _truth(cohort: list[dict[str, Any]]) -> dict[tuple[int, int, int, str], str]:
     result = {}
     for group in cohort:
@@ -124,6 +149,11 @@ def audit_value_bindings(
     executed_qualified_travelers = set()
     replacement_occurrences = []
     replacement_travelers = set()
+    binding_use_occurrences = []
+    binding_use_operations = {"replaced": 0, "already_lookup": 0}
+    guidance_record_count = 0
+    guidance_travelers = set()
+    guidance_evidence_modes = set()
     resolution_record_count = 0
     for (arm, group_id, person_idx), checkpoint in found.items():
         if arm != "prme":
@@ -141,10 +171,21 @@ def audit_value_bindings(
 
         scratchpad = (checkpoint.get("scratchpad") or {}).get("scratchpad") or []
         trace_calls = []
+        trace_results = []
         for step_index, step in enumerate(scratchpad):
-            for call_index, call in enumerate(step.get("tool_calls") or []):
+            calls = step.get("tool_calls") or []
+            results = step.get("tool_results") or []
+            if len(calls) != len(results):
+                raise ValueError(
+                    "Saved tool calls and results differ for "
+                    f"{group_id}/{person_idx}/{step_index}"
+                )
+            for call_index, (call, tool_result) in enumerate(
+                zip(calls, results, strict=True)
+            ):
                 arguments = call.get("args") or {}
                 trace_calls.append((call.get("name"), arguments))
+                trace_results.append((tool_result.get("name"), tool_result.get("result")))
                 values = _qualified_arguments(arguments)
                 if values:
                     qualified_calls.append(
@@ -190,6 +231,12 @@ def audit_value_bindings(
                     "Saved model tool call differs from resolver input for "
                     f"{group_id}/{person_idx}/{resolution_index}"
                 )
+            trace_result_name, trace_result = trace_results[resolution_index]
+            if trace_result_name != tool_name or not isinstance(trace_result, str):
+                raise ValueError(
+                    "Saved tool result differs from resolver call for "
+                    f"{group_id}/{person_idx}/{resolution_index}"
+                )
 
             original_leaves = _leaf_values(original)
             resolved_leaves = _leaf_values(resolved)
@@ -228,6 +275,84 @@ def audit_value_bindings(
                     f"{group_id}/{person_idx}/{resolution_index}"
                 )
 
+            has_guidance_evidence = (
+                "binding_uses" in resolution
+                or "result_presentation_guidance" in resolution
+            )
+            guidance_evidence_modes.add(has_guidance_evidence)
+            if has_guidance_evidence:
+                binding_uses = resolution.get("binding_uses")
+                guidance = resolution.get("result_presentation_guidance")
+                if not isinstance(binding_uses, list):
+                    raise ValueError("Tool resolution lacks binding-use evidence")
+                declared_uses = set()
+                for use in binding_uses:
+                    if not isinstance(use, dict):
+                        raise ValueError("Tool binding uses must be objects")
+                    pointer = use.get("json_pointer")
+                    operation = use.get("operation")
+                    presentation = use.get("presentation")
+                    lookup = use.get("lookup")
+                    kind = use.get("kind")
+                    if (
+                        not all(
+                            isinstance(item, str)
+                            for item in (pointer, presentation, lookup, kind)
+                        )
+                        or operation not in binding_use_operations
+                    ):
+                        raise ValueError("Tool binding use is incomplete")
+                    identity = (pointer, operation, presentation, lookup, kind)
+                    if identity in declared_uses:
+                        raise ValueError("Tool binding uses must be unique")
+                    declared_uses.add(identity)
+                    if operation == "replaced":
+                        if changed.get(pointer) != (presentation, lookup):
+                            raise ValueError("Replaced binding use differs from mutation")
+                    elif (
+                        original_leaves.get(pointer) != lookup
+                        or resolved_leaves.get(pointer) != lookup
+                    ):
+                        raise ValueError("Lookup binding use differs from argument")
+                    binding_use_operations[operation] += 1
+                    binding_use_occurrences.append(
+                        {
+                            "group_id": group_id,
+                            "person_idx": person_idx,
+                            "resolution_index": resolution_index,
+                            "tool": tool_name,
+                            "json_pointer": pointer,
+                            "operation": operation,
+                            "kind": kind,
+                            "presentation": presentation,
+                            "lookup": lookup,
+                        }
+                    )
+
+                expected_guidance = _expected_guidance(binding_uses)
+                if guidance != expected_guidance:
+                    raise ValueError("Saved tool-result guidance differs from binding uses")
+                marker = "<prme_value_presentations>"
+                if expected_guidance is None:
+                    if marker in trace_result:
+                        raise ValueError("Unmatched tool result contains presentation metadata")
+                else:
+                    guidance_record_count += 1
+                    guidance_travelers.add((group_id, person_idx))
+                    payload = json.dumps(
+                        expected_guidance,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    )
+                    suffix = (
+                        f"\n\n{marker}{payload}</prme_value_presentations>"
+                    )
+                    if not trace_result.endswith(suffix):
+                        raise ValueError(
+                            "Model-visible tool result lacks exact presentation metadata"
+                        )
+
             for pointer, _ in _qualified_arguments(resolved):
                 executed_qualified.append(
                     {
@@ -241,8 +366,11 @@ def audit_value_bindings(
                 executed_qualified_travelers.add((group_id, person_idx))
 
     passed = sum(_normalized(actual.get(key)) == _normalized(value) for key, value in truth.items())
+    if len(guidance_evidence_modes) > 1:
+        raise ValueError("Tool resolution guidance evidence is incomplete")
+    binding_use_evidence_available = guidance_evidence_modes == {True}
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "kind": "memoryarena-tool-boundary-value-audit",
         "registration_sha256": registration_sha256,
         "coverage": {
@@ -273,12 +401,19 @@ def audit_value_bindings(
                 executed_qualified_travelers
             ),
             "executed_qualified_arguments": executed_qualified,
+            "binding_use_evidence_available": binding_use_evidence_available,
+            "binding_use_count": len(binding_use_occurrences),
+            "binding_use_operations": binding_use_operations,
+            "binding_uses": binding_use_occurrences,
+            "guided_result_count": guidance_record_count,
+            "guided_result_traveler_count": len(guidance_travelers),
         },
         "limits": [
             "Exact normalized-string audit; it is not a semantic itinerary-validity judge.",
             "Qualified values are changed slots whose reference contains parentheses.",
             "Model-requested qualified calls are counted from immutable saved traces.",
             "Executed qualified arguments are counted recursively after exact resolution.",
+            "When available, call-local presentation metadata is matched to saved model-visible tool results.",
         ],
     }
 

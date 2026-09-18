@@ -74,7 +74,22 @@ async def test_store_retrieve_and_restart_preserve_typed_value_binding(config):
             "/city",
             "/nested~1key/0",
         ]
+        assert [item.operation for item in resolution.binding_uses] == [
+            "replaced",
+            "replaced",
+        ]
         assert arguments["city"] == "Salt Lake City(Utah)"
+
+        already_lookup = response.bundle.resolve_tool_arguments(
+            {"city": "Salt Lake City"}
+        )
+        assert already_lookup.changed is False
+        assert already_lookup.arguments == {"city": "Salt Lake City"}
+        assert len(already_lookup.binding_uses) == 1
+        assert already_lookup.binding_uses[0].operation == "already_lookup"
+        assert already_lookup.binding_uses[0].presentation == (
+            "Salt Lake City(Utah)"
+        )
 
     async with MemoryEngine.open(
         config, embedding_provider=MockEmbeddingProvider()
@@ -175,6 +190,30 @@ def test_resolution_rejects_conflicting_visible_lookup_values():
     bundle = _bundle(node("Salt Lake City"), node("SLC"))
     with pytest.raises(ValueError, match="Ambiguous lookup"):
         bundle.resolve_tool_arguments({"city": "Salt Lake City(Utah)"})
+
+
+def test_resolution_omits_ambiguous_reverse_lookup_match():
+    def node(presentation: str) -> MemoryNode:
+        binding = MemoryValueBinding(
+            reference=presentation.replace("(", "-").replace(")", "").replace(" ", "-"),
+            kind="city",
+            presentation=presentation,
+            lookup="Springfield",
+        )
+        return MemoryNode(
+            id=uuid4(),
+            user_id="alice",
+            node_type=NodeType.NOTE,
+            content=presentation,
+            metadata={
+                VALUE_BINDINGS_METADATA_KEY: [binding.model_dump(mode="json")]
+            },
+        )
+
+    bundle = _bundle(node("Springfield(Illinois)"), node("Springfield(Oregon)"))
+    resolution = bundle.resolve_tool_arguments({"city": "Springfield"})
+    assert resolution.arguments == {"city": "Springfield"}
+    assert resolution.binding_uses == ()
 
 
 def test_binding_is_unavailable_when_presentation_was_not_packed():

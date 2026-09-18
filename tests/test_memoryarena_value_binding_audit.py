@@ -26,6 +26,23 @@ def _cohort():
 def _checkpoint(arm, *, value="Portland(Oregon)", qualified_call=False):
     plan = [{"day": 1, **{slot: value for slot in SLOTS}}]
     calls = [{"name": "RestaurantSearch", "args": {"city": value}}] if qualified_call else []
+    guidance = {
+        "schema_version": 1,
+        "instruction": (
+            "When presenting this tool result, preserve these exact source-backed "
+            "values. This metadata is separate from the tool data."
+        ),
+        "values": [{"kind": "city", "presentation": value}],
+    }
+    payload = (
+        '{"instruction":"When presenting this tool result, preserve these exact '
+        'source-backed values. This metadata is separate from the tool data.",'
+        f'"schema_version":1,"values":[{{"kind":"city","presentation":"{value}"}}]}}'
+    )
+    results = [{
+        "name": "RestaurantSearch",
+        "result": f"found\n\n<prme_value_presentations>{payload}</prme_value_presentations>",
+    }] if qualified_call else []
     resolutions = []
     if arm == "prme" and qualified_call:
         resolutions.append({
@@ -37,6 +54,14 @@ def _checkpoint(arm, *, value="Portland(Oregon)", qualified_call=False):
                 "presentation": value,
                 "lookup": "Portland",
             }],
+            "binding_uses": [{
+                "json_pointer": "/city",
+                "operation": "replaced",
+                "kind": "city",
+                "presentation": value,
+                "lookup": "Portland",
+            }],
+            "result_presentation_guidance": guidance,
         })
     return {
         "registration_sha256": REGISTRATION,
@@ -47,7 +72,10 @@ def _checkpoint(arm, *, value="Portland(Oregon)", qualified_call=False):
             "plan": plan,
             "tool_argument_resolutions": resolutions if arm == "prme" else [],
         },
-        "scratchpad": {"scratchpad": [{"tool_calls": calls}]},
+        "scratchpad": {"scratchpad": [{
+            "tool_calls": calls,
+            "tool_results": results,
+        }]},
     }
 
 
@@ -92,6 +120,22 @@ def test_audit_counts_exact_values_and_qualified_tool_calls():
         "executed_qualified_argument_count": 0,
         "executed_qualified_traveler_count": 0,
         "executed_qualified_arguments": [],
+        "binding_use_evidence_available": True,
+        "binding_use_count": 1,
+        "binding_use_operations": {"replaced": 1, "already_lookup": 0},
+        "binding_uses": [{
+            "group_id": 7,
+            "person_idx": 1,
+            "resolution_index": 0,
+            "tool": "RestaurantSearch",
+            "json_pointer": "/city",
+            "operation": "replaced",
+            "kind": "city",
+            "presentation": "Portland(Oregon)",
+            "lookup": "Portland",
+        }],
+        "guided_result_count": 1,
+        "guided_result_traveler_count": 1,
     }
 
 
@@ -122,7 +166,9 @@ def test_audit_requires_full_string_equality():
     assert result["qualified_changed_values"]["observed"] == 6
 
 
-@pytest.mark.parametrize("mutation", ["missing_record", "trace", "undeclared"])
+@pytest.mark.parametrize(
+    "mutation", ["missing_record", "trace", "undeclared", "guidance"]
+)
 def test_audit_rejects_incomplete_or_changed_resolution_evidence(mutation):
     native = _checkpoint("native_full_history")
     prme = _checkpoint("prme", qualified_call=True)
@@ -130,8 +176,10 @@ def test_audit_rejects_incomplete_or_changed_resolution_evidence(mutation):
         prme["person"]["tool_argument_resolutions"] = []
     elif mutation == "trace":
         prme["person"]["tool_argument_resolutions"][0]["tool_name"] = "Other"
-    else:
+    elif mutation == "undeclared":
         prme["person"]["tool_argument_resolutions"][0]["replacements"] = []
+    else:
+        prme["scratchpad"]["scratchpad"][0]["tool_results"][0]["result"] = "found"
 
     with pytest.raises(ValueError):
         audit_value_bindings(

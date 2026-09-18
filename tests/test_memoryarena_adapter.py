@@ -184,6 +184,21 @@ def test_travel_context_hides_bindings_and_resolves_only_at_tool_boundary(config
             "/origin",
             "/nested/0",
         ]
+        assert [item["operation"] for item in resolved["binding_uses"]] == [
+            "replaced",
+            "replaced",
+        ]
+
+        already_lookup = client.post(
+            "/memory/resolve_tool_arguments",
+            json={**identity(), "arguments": {"city": "Salt Lake City"}},
+        ).json()["response"]
+        assert already_lookup["arguments"] == {"city": "Salt Lake City"}
+        assert already_lookup["replacements"] == []
+        assert already_lookup["binding_uses"][0]["operation"] == "already_lookup"
+        assert already_lookup["binding_uses"][0]["presentation"] == (
+            "Salt Lake City(Utah)"
+        )
 
         owner = app.state.owners["alice"]
         nodes = client.portal.call(

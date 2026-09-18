@@ -514,7 +514,9 @@ def register(
                 "Source-backed current-city values with parenthesized qualifiers are "
                 "stored as typed presentation/lookup pairs. Model context retains only "
                 "the confirmed plan text; exact complete-value resolution is applied "
-                "only when PRME-arm tool calls execute and every replacement is saved."
+                "only when PRME-arm tool calls execute. Each executed call saves its "
+                "binding uses, and only those exact source-backed presentation forms "
+                "are appended as separate metadata to that call's tool result."
             ),
             "prme_query_projection": (
                 "base traveler plus exact occurrences of previously stored traveler "
@@ -745,6 +747,37 @@ def _configure_actor_client(agent: Any, actor: dict[str, Any]) -> None:
     agent.client = OllamaNativeTravelClient(actor)
 
 
+def _presentation_guidance(binding_uses: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Build call-local output metadata without exposing lookup values."""
+    values = set()
+    for use in binding_uses:
+        if not isinstance(use, dict):
+            raise RuntimeError("memory adapter returned a malformed binding use")
+        operation = use.get("operation")
+        kind = use.get("kind")
+        presentation = use.get("presentation")
+        if (
+            operation not in {"replaced", "already_lookup"}
+            or not isinstance(kind, str)
+            or not isinstance(presentation, str)
+        ):
+            raise RuntimeError("memory adapter returned a malformed binding use")
+        values.add((kind, presentation))
+    if not values:
+        return None
+    return {
+        "schema_version": 1,
+        "instruction": (
+            "When presenting this tool result, preserve these exact source-backed "
+            "values. This metadata is separate from the tool data."
+        ),
+        "values": [
+            {"kind": kind, "presentation": presentation}
+            for kind, presentation in sorted(values)
+        ],
+    }
+
+
 class _ResolvingToolExecutor:
     """Apply visible PRME value bindings at the real tool boundary."""
 
@@ -776,17 +809,32 @@ class _ResolvingToolExecutor:
             raise RuntimeError("memory adapter returned no tool-argument resolution")
         resolved = resolution.get("arguments")
         replacements = resolution.get("replacements")
-        if not isinstance(resolved, dict) or not isinstance(replacements, list):
+        binding_uses = resolution.get("binding_uses")
+        if (
+            not isinstance(resolved, dict)
+            or not isinstance(replacements, list)
+            or not isinstance(binding_uses, list)
+        ):
             raise RuntimeError("memory adapter returned an invalid tool-argument resolution")
-        self._records.append(
-            {
-                "tool_name": tool_name,
-                "original_arguments": original,
-                "resolved_arguments": resolved,
-                "replacements": replacements,
-            }
+        guidance = _presentation_guidance(binding_uses)
+        record = {
+            "tool_name": tool_name,
+            "original_arguments": original,
+            "resolved_arguments": resolved,
+            "replacements": replacements,
+            "binding_uses": binding_uses,
+            "result_presentation_guidance": guidance,
+        }
+        self._records.append(record)
+        result = self.delegate.execute(tool_name, resolved)
+        if not isinstance(result, str):
+            raise RuntimeError("tool executor returned a non-string result")
+        if guidance is None:
+            return result
+        payload = json.dumps(
+            guidance, ensure_ascii=False, separators=(",", ":"), sort_keys=True
         )
-        return self.delegate.execute(tool_name, resolved)
+        return f"{result}\n\n<prme_value_presentations>{payload}</prme_value_presentations>"
 
 
 def _restore_actor_state(

@@ -39,6 +39,7 @@ from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, Profi
 from prme.models.value_bindings import (
     MemoryValueBinding,
     RetrievedValueBinding,
+    ToolArgumentBindingUse,
     ToolArgumentReplacement,
     ToolArgumentResolution,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "ProcessingStatus",
     "StoreReceipt",
     "RetrievedValueBinding",
+    "ToolArgumentBindingUse",
     "ToolArgumentReplacement",
     "ToolArgumentResolution",
     "ProfileJobStatus",

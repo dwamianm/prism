@@ -118,13 +118,28 @@ class ToolArgumentReplacement(BaseModel):
     source_references: tuple[str, ...]
 
 
+class ToolArgumentBindingUse(BaseModel):
+    """One visible binding matched at a tool-argument path."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    json_pointer: str
+    operation: Literal["replaced", "already_lookup"]
+    presentation: str
+    lookup: str
+    kind: str
+    source_node_ids: tuple[UUID, ...]
+    source_references: tuple[str, ...]
+
+
 class ToolArgumentResolution(BaseModel):
-    """A copied argument object and every exact substitution PRME applied."""
+    """A copied argument object and every visible binding PRME matched."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     arguments: dict[str, Any]
     replacements: tuple[ToolArgumentReplacement, ...] = ()
+    binding_uses: tuple[ToolArgumentBindingUse, ...] = ()
 
     @property
     def changed(self) -> bool:
@@ -264,24 +279,55 @@ def resolve_tool_arguments(
             )
 
     replacements: list[ToolArgumentReplacement] = []
+    binding_uses: list[ToolArgumentBindingUse] = []
+    lookup_grouped: dict[str, list[RetrievedValueBinding]] = {}
+    for binding in bindings:
+        lookup_grouped.setdefault(binding.lookup, []).append(binding)
+
+    def source_fields(sources: list[RetrievedValueBinding]) -> dict[str, Any]:
+        return {
+            "presentation": sources[0].presentation,
+            "lookup": sources[0].lookup,
+            "kind": sources[0].kind,
+            "source_node_ids": tuple(
+                sorted({item.node_id for item in sources}, key=str)
+            ),
+            "source_references": tuple(
+                sorted({item.reference for item in sources})
+            ),
+        }
 
     def visit(value: Any, pointer: str) -> Any:
         if isinstance(value, str) and value in grouped:
             sources = grouped[value]
             lookup = sources[0].lookup
+            fields = source_fields(sources)
             replacements.append(
                 ToolArgumentReplacement(
                     json_pointer=pointer,
-                    presentation=value,
-                    lookup=lookup,
-                    kind=sources[0].kind,
-                    source_node_ids=tuple(sorted({item.node_id for item in sources}, key=str)),
-                    source_references=tuple(
-                        sorted({item.reference for item in sources})
-                    ),
+                    **fields,
+                )
+            )
+            binding_uses.append(
+                ToolArgumentBindingUse(
+                    json_pointer=pointer,
+                    operation="replaced",
+                    **fields,
                 )
             )
             return lookup
+        if isinstance(value, str) and value in lookup_grouped:
+            sources = lookup_grouped[value]
+            forms = {(item.presentation, item.kind) for item in sources}
+            if len(forms) == 1:
+                binding_uses.append(
+                    ToolArgumentBindingUse(
+                        json_pointer=pointer,
+                        operation="already_lookup",
+                        **source_fields(sources),
+                    )
+                )
+            return value
         if isinstance(value, list):
             return [visit(item, f"{pointer}/{index}") for index, item in enumerate(value)]
         if isinstance(value, dict):
@@ -295,12 +341,14 @@ def resolve_tool_arguments(
     return ToolArgumentResolution(
         arguments=resolved,
         replacements=tuple(replacements),
+        binding_uses=tuple(binding_uses),
     )
 
 
 __all__ = [
     "MemoryValueBinding",
     "RetrievedValueBinding",
+    "ToolArgumentBindingUse",
     "ToolArgumentReplacement",
     "ToolArgumentResolution",
     "VALUE_BINDINGS_METADATA_KEY",

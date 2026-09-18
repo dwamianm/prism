@@ -31,6 +31,7 @@ with MemoryClient("./memory") as memory:
         {"city": "Salt Lake City(Utah)"}
     )
     assert resolution.arguments == {"city": "Salt Lake City"}
+    assert resolution.binding_uses[0].operation == "replaced"
 ```
 
 `presentation` is the exact source-backed form intended for output. `lookup` is
@@ -50,8 +51,12 @@ influence a tool call. `resolve_tool_arguments()` copies a finite JSON argument
 object and replaces only complete string values that exactly equal a visible
 presentation form. It never performs substring, fuzzy, case-folded, or model-
 generated rewriting. The result lists JSON-pointer paths, source node IDs and
-binding references for every substitution. Conflicting visible mappings fail
-instead of choosing one.
+binding references for every substitution. `binding_uses` also identifies an
+argument that already equals an unambiguous visible lookup form, using the
+`already_lookup` operation without changing it. This lets a tool adapter carry
+the source-backed presentation form into result rendering without exposing all
+lookup values in model context. Ambiguous reverse lookup forms are omitted, and
+conflicting presentation mappings fail instead of choosing one.
 
 The HTTP `POST /v1/store` body and MCP `memory_store` accept the same
 `value_bindings` array. HTTP retrieval returns visible bindings in the top-level
@@ -63,4 +68,7 @@ Bindings do not rewrite generated answers, validate a tool's schema, prove that
 the lookup form is correct, or turn caller metadata into a factual claim. They
 provide an explicit execution boundary with source provenance. Applications
 should still validate the resolved arguments against the target tool schema and
-retain the returned replacement audit when the action matters.
+retain the returned replacement and binding-use audit when the action matters.
+If an application adds presentation guidance to a tool result, it should use
+only the `binding_uses` from that exact call and keep the annotation separate
+from the tool's data.

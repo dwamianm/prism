@@ -198,6 +198,13 @@ def test_tool_executor_resolves_at_boundary_and_retains_audit():
                         "presentation": "Salt Lake City(Utah)",
                         "lookup": "Salt Lake City",
                     }],
+                    "binding_uses": [{
+                        "json_pointer": "/city",
+                        "operation": "replaced",
+                        "kind": "city",
+                        "presentation": "Salt Lake City(Utah)",
+                        "lookup": "Salt Lake City",
+                    }],
                 }
             }
 
@@ -207,7 +214,10 @@ def test_tool_executor_resolves_at_boundary_and_retains_audit():
     arguments = {"city": "Salt Lake City(Utah)"}
 
     executor.start_turn()
-    assert executor.execute("RestaurantSearch", arguments) == "found"
+    result = executor.execute("RestaurantSearch", arguments)
+    assert result.startswith("found\n\n<prme_value_presentations>")
+    assert '"presentation":"Salt Lake City(Utah)"' in result
+    assert '"lookup"' not in result
     assert arguments == {"city": "Salt Lake City(Utah)"}
     assert delegate.calls == [("RestaurantSearch", {"city": "Salt Lake City"})]
     assert memory.calls[0][0] == "/memory/resolve_tool_arguments"
@@ -215,7 +225,36 @@ def test_tool_executor_resolves_at_boundary_and_retains_audit():
     assert records[0]["original_arguments"] == arguments
     assert records[0]["resolved_arguments"] == {"city": "Salt Lake City"}
     assert records[0]["replacements"][0]["json_pointer"] == "/city"
+    assert records[0]["binding_uses"][0]["operation"] == "replaced"
+    assert records[0]["result_presentation_guidance"]["values"] == [{
+        "kind": "city",
+        "presentation": "Salt Lake City(Utah)",
+    }]
     assert executor.drain() == []
+
+
+def test_tool_executor_does_not_annotate_unmatched_result():
+    class Delegate:
+        def execute(self, _name, _arguments):
+            return "found"
+
+    class Memory:
+        user_id = "alice"
+        memory_system_name = "prme"
+
+        def _post(self, _path, payload):
+            return {
+                "response": {
+                    "arguments": payload["arguments"],
+                    "replacements": [],
+                    "binding_uses": [],
+                }
+            }
+
+    executor = runner._ResolvingToolExecutor(Delegate(), Memory())
+    executor.start_turn()
+    assert executor.execute("RestaurantSearch", {"city": "Boise"}) == "found"
+    assert executor.drain()[0]["result_presentation_guidance"] is None
 
 
 def test_native_response_parsing_preserves_parallel_tool_calls():
