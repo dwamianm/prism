@@ -144,3 +144,32 @@ def test_month_only_date_is_rejected_as_false_day_precision() -> None:
 
 def test_word_duration_is_parsed_without_float_coercion() -> None:
     assert probe._parse_duration("two weeks") == (2.0, "week")
+
+
+def test_just_alone_does_not_license_same_day_event_time() -> None:
+    record = probe.EvidenceRecord(
+        id=FIRST_ID,
+        event_time=datetime(2024, 3, 15, tzinfo=timezone.utc),
+        text="My niece just graduated yesterday.",
+    )
+    resolution = probe.RawResolution(
+        operation="absolute_date",
+        operands=[
+            probe.RawOperand(
+                name="graduation",
+                evidence_id=FIRST_ID,
+                quote="My niece just graduated yesterday",
+                time_expression="event_time",
+                time_basis="event_time",
+            )
+        ],
+    )
+
+    relation, errors = probe.compute_relation(
+        resolution,
+        {FIRST_ID: record},
+        datetime(2024, 3, 20, tzinfo=timezone.utc),
+    )
+
+    assert relation is None
+    assert errors == ("operand[0] event_time is not licensed",)

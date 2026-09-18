@@ -76,7 +76,7 @@ TimeBasis = Literal[
 ]
 
 _EVENT_TIME_MARKER_RE = re.compile(
-    r"\b(today|tonight|this morning|this afternoon|this evening|just)\b",
+    r"\b(today|tonight|this morning|this afternoon|this evening)\b",
     re.IGNORECASE,
 )
 _DAY_PRECISION_RE = re.compile(
@@ -218,7 +218,12 @@ def validate_operands(
     resolution: RawResolution,
     records: dict[UUID, EvidenceRecord],
 ) -> tuple[tuple[ValidatedOperand, ...], tuple[str, ...]]:
-    """Resolve only exact, bundle-local evidence; reject invented values."""
+    """Resolve only exact, bundle-local evidence; reject invented values.
+
+    ``just`` alone is deliberately insufficient to license ``event_time``. An
+    event can have "just" happened yesterday or recently; same-day resolution
+    requires an explicit same-day phrase.
+    """
     values: list[ValidatedOperand] = []
     errors: list[str] = []
     seen: set[UUID] = set()
