@@ -208,6 +208,7 @@ def pack_context(
     context_guidance: str | None = None,
     _required: Sequence[tuple[UUID, RepresentationLevel]] = (),
     _require_guidance: bool = False,
+    _group_conversations: bool = False,
 ) -> MemoryBundle:
     """Pack scored candidates into a MemoryBundle within token budget.
 
@@ -343,7 +344,10 @@ def pack_context(
             # context for hundreds of entries that cannot reasonably fit.
             # Whole-output counting below remains the authoritative check;
             # boundary token merges can only leave a few extra tokens unused.
-            if entry_cost > available - tokens_used:
+            if (
+                not _group_conversations
+                and entry_cost > available - tokens_used
+            ):
                 continue
             proposed = {key: list(values) for key, values in sections.items()}
             proposed.setdefault(section, []).append(candidate)
@@ -353,10 +357,15 @@ def pack_context(
                 context_guidance=guidance if _require_guidance else None,
                 context_format=config.context_format,
                 compact_refs=compact_refs,
+                group_conversations=_group_conversations,
             )
             total = count_tokens(text, config.tokenizer)
             if total <= available:
-                candidate.token_cost = entry_cost
+                candidate.token_cost = (
+                    max(0, total - tokens_used)
+                    if _group_conversations
+                    else entry_cost
+                )
                 sections.setdefault(section, []).append(candidate)
                 rendered, tokens_used = text, total
                 return
@@ -406,6 +415,7 @@ def pack_context(
             context_guidance=guidance,
             context_format=config.context_format,
             compact_refs=compact_refs,
+            group_conversations=_group_conversations,
         )
         guided_tokens = count_tokens(guided, config.tokenizer)
         if guided_tokens <= available:
@@ -434,6 +444,69 @@ def pack_context(
         if config.context_format == "compact"
         else {},
     )
+
+
+def pack_context_grouped_conversations(
+    scored_candidates: list[RetrievalCandidate],
+    config: PackingConfig = DEFAULT_PACKING_CONFIG,
+    *,
+    coverage_notice: str | None = None,
+    context_guidance: str | None = None,
+    admit_additional: bool = False,
+) -> MemoryBundle:
+    """Render selected session records as named, ordered conversation groups.
+
+    This experimental composition keeps the ordinary auditable control set at
+    its selected representations.  A group is used only when at least two
+    records share a section, scope, and non-empty session ID.  Singleton and
+    sessionless records retain the ordinary auditable JSON object format.
+
+    When ``admit_additional`` is true, bytes saved by grouping may be spent on
+    later scored candidates.  The control records and included guidance remain
+    mandatory.  Any failure to preserve them returns the ordinary control.
+    """
+    if config.context_format != "auditable":
+        raise ValueError("Grouped conversations require auditable context format")
+    control = pack_context(
+        scored_candidates,
+        config,
+        coverage_notice=coverage_notice,
+        context_guidance=context_guidance,
+    )
+    required = tuple(
+        (candidate.node.id, candidate.representation)
+        for values in control.sections.values()
+        for candidate in values
+        if candidate.representation is not None
+    )
+    if len(required) != control.included_count:
+        return control
+    required_ids = {node_id for node_id, _level in required}
+    inputs = (
+        scored_candidates
+        if admit_additional
+        else [candidate for candidate in scored_candidates if candidate.node.id in required_ids]
+    )
+    candidate = pack_context(
+        inputs,
+        config,
+        coverage_notice=coverage_notice,
+        context_guidance=context_guidance,
+        _required=required,
+        _require_guidance=control.context_guidance is not None,
+        _group_conversations=True,
+    )
+    candidate_ids = {
+        item.node.id for values in candidate.sections.values() for item in values
+    }
+    if not required_ids <= candidate_ids:
+        return control
+    if (
+        control.context_guidance is not None
+        and candidate.context_guidance != control.context_guidance
+    ):
+        return control
+    return candidate
 
 
 def pack_context_monotonic_compact(
@@ -555,6 +628,7 @@ def _render_sections(
     context_guidance: str | None = None,
     context_format: str = "auditable",
     compact_refs: dict[UUID, str] | None = None,
+    group_conversations: bool = False,
 ) -> str:
     if not sections:
         return coverage_notice or ""
@@ -576,10 +650,97 @@ def _render_sections(
         )
     for section, candidates in sections.items():
         parts.append(f"[{section}]")
-        parts.extend(
-            _render_context_entry(
-                c, context_format=context_format, compact_refs=compact_refs
+        if context_format == "auditable" and group_conversations:
+            parts.extend(_render_grouped_conversation_entries(candidates))
+        else:
+            parts.extend(
+                _render_context_entry(
+                    c, context_format=context_format, compact_refs=compact_refs
+                )
+                for c in candidates
             )
-            for c in candidates
-        )
     return "\n".join(parts)
+
+
+def _source_role(candidate: RetrievalCandidate) -> str | None:
+    metadata = candidate.node.metadata or {}
+    role = metadata.get("source_role")
+    if role in {"user", "assistant", "system", "tool"}:
+        return role
+    return None
+
+
+def _source_turn_index(candidate: RetrievalCandidate) -> int | None:
+    metadata = candidate.node.metadata or {}
+    value = metadata.get("source_turn_index")
+    if type(value) is int and value >= 0:
+        return value
+    return None
+
+
+def _conversation_sort_key(candidate: RetrievalCandidate) -> tuple[int, object, str]:
+    turn_index = _source_turn_index(candidate)
+    if turn_index is not None:
+        return 0, turn_index, str(candidate.node.id)
+    return 1, as_utc(candidate.node.created_at), str(candidate.node.id)
+
+
+def _render_grouped_conversation_entries(
+    candidates: list[RetrievalCandidate],
+) -> list[str]:
+    """Render multi-record sessions with shared named fields and turn order."""
+    ordered_groups: list[tuple[tuple[str, str] | None, list[RetrievalCandidate]]] = []
+    grouped: dict[tuple[str, str], list[RetrievalCandidate]] = {}
+    for candidate in candidates:
+        session_id = candidate.node.session_id
+        if session_id is None:
+            ordered_groups.append((None, [candidate]))
+            continue
+        key = (candidate.node.scope.value, session_id)
+        values = grouped.get(key)
+        if values is None:
+            values = []
+            grouped[key] = values
+            ordered_groups.append((key, values))
+        values.append(candidate)
+
+    rendered: list[str] = []
+    common_names = (
+        "type",
+        "scope",
+        "epistemic",
+        "memory_lifecycle",
+        "event_time",
+    )
+    for group_key, values in ordered_groups:
+        if group_key is None or len(values) < 2:
+            rendered.extend(_render_entry(candidate) for candidate in values)
+            continue
+        entries = [json.loads(_render_entry(candidate)) for candidate in values]
+        common = {
+            name: entries[0][name]
+            for name in common_names
+            if all(entry.get(name) == entries[0].get(name) for entry in entries)
+        }
+        turns = []
+        by_id = {str(candidate.node.id): candidate for candidate in values}
+        for entry in sorted(
+            entries, key=lambda item: _conversation_sort_key(by_id[item["id"]])
+        ):
+            candidate = by_id[entry["id"]]
+            turn = {name: value for name, value in entry.items() if name not in common}
+            turn_index = _source_turn_index(candidate)
+            role = _source_role(candidate)
+            if turn_index is not None:
+                turn = {"turn_index": turn_index, **turn}
+            if role is not None:
+                turn = {"role": role, **turn}
+            turns.append(turn)
+        group = {
+            "conversation": {"session_id": group_key[1], **common},
+            "turns": turns,
+        }
+        rendered.append(
+            json.dumps(group, ensure_ascii=False, separators=(",", ":"))
+        )
+    return rendered
