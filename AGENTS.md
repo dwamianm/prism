@@ -125,6 +125,13 @@ unresolved English personal references are event-local under new
 `event_local_references_v4` plans; old plans replay unchanged.
 See `docs/ENTITY-IDENTITY.md` for the precise boundaries and limitations.
 
+The deterministic product candidate ranker is validated only as a discovery
+stage. Registered candidate-to-Jev trials missed their frozen precision/recall
+gates, including a confirmation of a development-calibrated rule. Do not add a
+bulk candidate-to-proposal path or change the confirmed single-pair Jev rule on
+that evidence. Applications must select pairs explicitly and review every
+published proposal.
+
 Duplicate/alias merges publish evidence, relationship copies, source retirement
 and one supersedence edge in a backend transaction. `ORGANIZER_MERGED` retains
 checksummed complete inputs and outputs; repeated pair/kind operations do not

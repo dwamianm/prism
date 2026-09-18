@@ -79,6 +79,12 @@ shares compatible scope and provenance. It makes no provider calls and never
 creates an edge. Pass selected candidate pairs to the Jev advisor; candidate
 similarity is routing evidence, not an identity decision.
 
+Do not submit the complete generated set and publish every positive Jev answer
+automatically. Two registered end-to-end trials on the harder candidate-routed
+distribution missed their precision/recall gates. Candidate generation is a
+bounded discovery tool; the application must select pairs under its own catalog
+evidence and keep every published result in the explicit review workflow below.
+
 To bind a positive assessment to existing PRME product entities, pass the exact
 node IDs and product records:
 
@@ -204,10 +210,22 @@ and p95 was 0.330 seconds with six concurrent requests. The development cohort
 was directionally consistent at 94.38% precision, 75.50% recall, and 85.50%
 accuracy.
 
-These results validate proposal advice for candidate software-product pairs.
-They do not validate candidate generation, automatic merging, people,
-organizations, places, or arbitrary entity metadata. The full preregistration,
-runner, immutable results, checksums, and reports are under
+These results validate proposal advice for caller-selected software-product
+pairs. A separate untouched Walmart-Amazon candidate-generation trial routed
+193/193 positive pairs while reducing the catalog cross product by 99.8644%, so
+the deterministic ranker is confirmed as a discovery stage.
+
+The stages did not compose into a safe bulk proposal pipeline. On the validation
+split, the original Jev rule reached 73.76% precision and 77.20% recall. A typed
+three-signal calibration reached 92.52% precision and 51.30% recall on that
+development evidence, then fell to 88.17% precision and 42.49% recall on the
+untouched Jev test outputs. Both end-to-end pipelines were rejected under their
+frozen gates. The retained product boundary is candidate discovery, explicit
+pair selection, audited Jev advice, and explicit proposal review.
+
+None of these results validate automatic merging, people, organizations,
+places, or arbitrary entity metadata. The full preregistrations, runners,
+immutable results, checksums, and reports are under
 `benchmarks/results/research/2026-09-17/` and `benchmarks/integrations/`.
 
 See TypeSafe's [introduction](https://docs.typesafe.ai/introduction), [API
