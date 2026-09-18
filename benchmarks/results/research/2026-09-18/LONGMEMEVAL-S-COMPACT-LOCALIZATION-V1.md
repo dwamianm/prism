@@ -76,3 +76,9 @@ The registration is bound to commit `7a2d192`, the failed answer result, its
 complete execution, neutral prepared inputs, reference file, judge calibration
 and exact model declarations. Raw contexts, answers, judgments and retry state
 remain under `data/benchmarks/longmemeval-s-compact-localization-v1/`.
+
+The subsequent [named chronological view](LONGMEMEVAL-S-TEMPORAL-VIEW-DEV-V1.md)
+also failed its paired development gate, scoring 14/29 against the auditable
+control's 18/29 while retaining exactly the same records. The next temporal
+candidate therefore needs query-aware relation computation rather than another
+whole-context serialization change.
