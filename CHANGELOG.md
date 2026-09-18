@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the result and preserves the question's exact `I` or `we` subject. Unsupported
   qualifiers, negation, future wording, named subjects, actions or units return
   a typed refusal without scanning memory; ordinary retrieval remains unchanged.
+  A preregistered confirmation over a frozen end-to-end pack passed five
+  executable questions and six refusal controls with zero refusal scans.
 
 - Assertion and quantity aggregation queries now round-trip their serialized
   default empty scope selector. An empty scope list consistently means all

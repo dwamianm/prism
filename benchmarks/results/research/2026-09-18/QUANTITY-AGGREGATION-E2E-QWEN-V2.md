@@ -78,7 +78,10 @@ Raw state, pack, runner and log remain under
 
 This is authored product-path evidence with one local model artifact. It does
 not establish held-out extraction accuracy, exhaustive verb/unit coverage,
-natural-language query planning, automatic predicate discovery, answer quality,
-or competitive leadership. Predicate prefixes are caller-selected lexical
-composition and remain subject to false inclusion if an application chooses an
-overbroad action prefix.
+automatic predicate discovery, answer quality, or competitive leadership.
+Predicate prefixes are caller-selected lexical composition and remain subject
+to false inclusion if an application chooses an overbroad action prefix. A
+later, separate
+[frozen-pack confirmation](QUANTITY-AGGREGATION-TEXT-PLANNER-V2.md) established
+only the documented fixed-shape natural-language planner; it did not establish
+general semantic parsing.
