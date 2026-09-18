@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-temporal-relation-confirmation-result",
+  "completed_at": "2026-09-18T16:55:27.940345+00:00",
+  "registration_sha256": "cde14d90c05741a09a65beb6f7e4a76e6af44102f092bf2cff340df9372fc7b7",
+  "questions": 104,
+  "metrics": {
+    "arms": {
+      "control": "auditable",
+      "candidate": "temporal_relation"
+    },
+    "overall": {
+      "questions": 104,
+      "control_correct": 50,
+      "candidate_correct": 60,
+      "paired_wins": 10,
+      "paired_losses": 0,
+      "paired_ties": 94,
+      "accuracy_delta": 0.09615384615384616
+    },
+    "categories": {
+      "abstention": {
+        "questions": 5,
+        "control_correct": 5,
+        "candidate_correct": 5,
+        "paired_wins": 0,
+        "paired_losses": 0,
+        "paired_ties": 5,
+        "accuracy_delta": 0.0
+      },
+      "temporal-reasoning": {
+        "questions": 99,
+        "control_correct": 45,
+        "candidate_correct": 55,
+        "paired_wins": 10,
+        "paired_losses": 0,
+        "paired_ties": 89,
+        "accuracy_delta": 0.10101010101010101
+      }
+    },
+    "complete_reader_execution": true,
+    "complete_judge_execution": true,
+    "reader_failed_attempts": 0,
+    "judge_failed_attempts": 0,
+    "accepted_hints": {
+      "questions": 22,
+      "logical_judgments": 44,
+      "control_correct": 11,
+      "candidate_correct": 21,
+      "paired_wins": 10,
+      "paired_losses": 0,
+      "paired_ties": 12
+    },
+    "gate": {
+      "complete_reader_execution": true,
+      "complete_judge_execution": true,
+      "reader_failed_attempts": 0,
+      "judge_failed_attempts": 0,
+      "accepted_hints": 22,
+      "candidate_improved": true,
+      "wins_exceed_losses": true,
+      "accepted_hint_losses": 0,
+      "accepted_hint_wins": 10,
+      "passed": true
+    }
+  },
+  "packing": {
+    "hint_questions": 22,
+    "total_dropped_records": 22,
+    "maximum_dropped_records": 2,
+    "control_tokens": 413367,
+    "candidate_tokens": 412535
+  },
+  "execution_sha256": "193c5c8838b75e7686e79d16dae518c8067eaa680965f62c3ffd4c5a0376dc9d",
+  "runtime": {
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-i386-64bit"
+  },
+  "claim_boundary": "Disjoint LongMemEval-S temporal answer confirmation under the frozen PRME protocol; not an official leaderboard score or universal claim.",
+  "result_sha256": "ae34bd75b6ba8aee3cbf51ec1dbc312eb556a193a3590a6b1a6b6dbfee158d49"
+}
