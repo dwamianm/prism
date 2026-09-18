@@ -175,6 +175,49 @@ def test_actor_transport_rejects_unregistered_compatibility_path():
         })
 
 
+def test_tool_executor_resolves_at_boundary_and_retains_audit():
+    class Delegate:
+        calls = []
+
+        def execute(self, name, arguments):
+            self.calls.append((name, arguments))
+            return "found"
+
+    class Memory:
+        user_id = "alice"
+        memory_system_name = "prme"
+        calls = []
+
+        def _post(self, path, payload):
+            self.calls.append((path, payload))
+            return {
+                "response": {
+                    "arguments": {"city": "Salt Lake City"},
+                    "replacements": [{
+                        "json_pointer": "/city",
+                        "presentation": "Salt Lake City(Utah)",
+                        "lookup": "Salt Lake City",
+                    }],
+                }
+            }
+
+    delegate = Delegate()
+    memory = Memory()
+    executor = runner._ResolvingToolExecutor(delegate, memory)
+    arguments = {"city": "Salt Lake City(Utah)"}
+
+    executor.start_turn()
+    assert executor.execute("RestaurantSearch", arguments) == "found"
+    assert arguments == {"city": "Salt Lake City(Utah)"}
+    assert delegate.calls == [("RestaurantSearch", {"city": "Salt Lake City"})]
+    assert memory.calls[0][0] == "/memory/resolve_tool_arguments"
+    records = executor.drain()
+    assert records[0]["original_arguments"] == arguments
+    assert records[0]["resolved_arguments"] == {"city": "Salt Lake City"}
+    assert records[0]["replacements"][0]["json_pointer"] == "/city"
+    assert executor.drain() == []
+
+
 def test_native_response_parsing_preserves_parallel_tool_calls():
     client = runner.OllamaNativeTravelClient.__new__(runner.OllamaNativeTravelClient)
     client.accepted_models = {"deepseek"}

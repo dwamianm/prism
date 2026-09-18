@@ -142,7 +142,7 @@ def test_trace_projection_emits_typed_qualified_city_values():
     }]
 
 
-def test_travel_context_renders_typed_value_forms_without_rewriting(config):
+def test_travel_context_hides_bindings_and_resolves_only_at_tool_boundary(config):
     app = create_app(config)
     with TestClient(app) as client:
         client.post("/memory/initialize", json=identity())
@@ -160,20 +160,58 @@ def test_travel_context_renders_typed_value_forms_without_rewriting(config):
         )
         assert response.status_code == 200
         prompt = response.json()["prompt"]
-        assert '"presentation":"Salt Lake City(Utah)"' in prompt
-        assert '"lookup":"Salt Lake City"' in prompt
         assert "Current City: Salt Lake City(Utah)" in prompt
+        assert "Typed value bindings" not in prompt
+        assert '"lookup":"Salt Lake City"' not in prompt
+
+        resolution = client.post(
+            "/memory/resolve_tool_arguments",
+            json={
+                **identity(),
+                "arguments": {
+                    "origin": "Salt Lake City(Utah)",
+                    "nested": ["Salt Lake City(Utah)", "unchanged"],
+                },
+            },
+        )
+        assert resolution.status_code == 200
+        resolved = resolution.json()["response"]
+        assert resolved["arguments"] == {
+            "origin": "Salt Lake City",
+            "nested": ["Salt Lake City", "unchanged"],
+        }
+        assert [item["json_pointer"] for item in resolved["replacements"]] == [
+            "/origin",
+            "/nested/0",
+        ]
 
         owner = app.state.owners["alice"]
         nodes = client.portal.call(
             partial(app.state.engine.get_event_nodes, event_id, user_id=owner)
         )
         assert nodes[0].metadata["retrieval_projection"] == (
-            "traveler_confirmed_plan_v4"
+            "traveler_confirmed_plan_v5"
         )
         assert nodes[0].metadata["prme_value_bindings_v1"][0]["lookup"] == (
             "Salt Lake City"
         )
+
+
+def test_tool_resolution_requires_an_active_owner_context(config):
+    app = create_app(config)
+    with TestClient(app) as client:
+        client.post("/memory/initialize", json=identity())
+        response = client.post(
+            "/memory/resolve_tool_arguments",
+            json={**identity(), "arguments": {"city": "Boise(Idaho)"}},
+        )
+        assert response.status_code == 409
+
+        unknown = client.post(
+            "/memory/resolve_tool_arguments",
+            json={**identity("bob"), "arguments": {"city": "Boise(Idaho)"}},
+        )
+        assert unknown.status_code == 404
 
 
 def test_travel_trace_uses_projection_but_retains_raw_source(config):

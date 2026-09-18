@@ -509,11 +509,12 @@ def register(
                 "source-preserving trace-projection adapter; exact raw traces remain "
                 "events while traveler final plans are retrieved per query."
             ),
-            "prme_retrieval_projection": "traveler_confirmed_plan_v4",
+            "prme_retrieval_projection": "traveler_confirmed_plan_v5",
             "prme_value_binding_policy": (
                 "Source-backed current-city values with parenthesized qualifiers are "
-                "stored as typed presentation/lookup pairs. Context retains both exact "
-                "forms; no generated plan or tool call is rewritten."
+                "stored as typed presentation/lookup pairs. Model context retains only "
+                "the confirmed plan text; exact complete-value resolution is applied "
+                "only when PRME-arm tool calls execute and every replacement is saved."
             ),
             "prme_query_projection": (
                 "base traveler plus exact occurrences of previously stored traveler "
@@ -744,6 +745,50 @@ def _configure_actor_client(agent: Any, actor: dict[str, Any]) -> None:
     agent.client = OllamaNativeTravelClient(actor)
 
 
+class _ResolvingToolExecutor:
+    """Apply visible PRME value bindings at the real tool boundary."""
+
+    def __init__(self, delegate: Any, memory: Any):
+        self.delegate = delegate
+        self.memory = memory
+        self._records: list[dict[str, Any]] = []
+
+    def start_turn(self) -> None:
+        self._records = []
+
+    def drain(self) -> list[dict[str, Any]]:
+        records = self._records
+        self._records = []
+        return records
+
+    def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
+        original = json.loads(json.dumps(arguments, ensure_ascii=False))
+        response = self.memory._post(
+            "/memory/resolve_tool_arguments",
+            {
+                "user_id": self.memory.user_id,
+                "memory_system_name": self.memory.memory_system_name,
+                "arguments": original,
+            },
+        )
+        resolution = response.get("response")
+        if not isinstance(resolution, dict):
+            raise RuntimeError("memory adapter returned no tool-argument resolution")
+        resolved = resolution.get("arguments")
+        replacements = resolution.get("replacements")
+        if not isinstance(resolved, dict) or not isinstance(replacements, list):
+            raise RuntimeError("memory adapter returned an invalid tool-argument resolution")
+        self._records.append(
+            {
+                "tool_name": tool_name,
+                "original_arguments": original,
+                "resolved_arguments": resolved,
+                "replacements": replacements,
+            }
+        )
+        return self.delegate.execute(tool_name, resolved)
+
+
 def _restore_actor_state(
     agent: Any,
     memory: Any,
@@ -784,7 +829,10 @@ def _run_group(
     if observation.get("group_id") != row["id"]:
         raise RuntimeError("upstream environment reset selected the wrong group")
     agent.reset()
+    base_executor = getattr(agent.executor, "delegate", agent.executor)
+    agent.executor = base_executor
     memory = None
+    resolving_executor = None
     memory_contexts = []
     base = observation["base_person"]
     if arm == "prme":
@@ -793,6 +841,8 @@ def _run_group(
             memory_system_name="prme",
             base_url=memory_url,
         )
+        resolving_executor = _ResolvingToolExecutor(base_executor, memory)
+        agent.executor = resolving_executor
         base_plan = runtime["format_plan"](
             base["name"], base["daily_plans"]
         )
@@ -837,6 +887,8 @@ def _run_group(
 
         person_started = time.perf_counter()
         before = agent.get_usage_stats()
+        if resolving_executor is not None:
+            resolving_executor.start_turn()
         memory_context = None
         if memory is not None:
             wrapped = memory.wrap_user_prompt(question["query"])
@@ -857,6 +909,9 @@ def _run_group(
         )
         prior_plans = agent.accumulated_plans
         action = agent.act(question["query"])
+        tool_argument_resolutions = (
+            resolving_executor.drain() if resolving_executor is not None else []
+        )
         final_plan = _final_plan_block(action, question["name"])
         agent.accumulated_plans = prior_plans
         if final_plan:
@@ -897,6 +952,7 @@ def _run_group(
             "reward_hidden_from_agent": reward,
             "usage": _usage_delta(agent.get_usage_stats(), before),
             "duration_seconds": round(time.perf_counter() - person_started, 6),
+            "tool_argument_resolutions": tool_argument_resolutions,
         }
         scratchpad = {
             "person_idx": question["round_idx"],
@@ -918,6 +974,7 @@ def _run_group(
         persons.append(person)
         scratchpads.append(scratchpad)
     environment.close()
+    agent.executor = base_executor
     return {
         "schema_version": 1,
         "arm": arm,
