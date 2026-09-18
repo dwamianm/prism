@@ -116,3 +116,13 @@ over other memory products. A changed resolver model, digest, endpoint, gate,
 or threshold remains usable when explicitly configured, but
 `confirmation_protocol_aligned` becomes false. Evaluate changed configurations
 on the intended workload before relying on their output.
+
+The subsequent
+[500-pack product regression](../benchmarks/results/research/2026-09-18/LONGMEMEVAL-S-TEMPORAL-RELATION-FULL-REGRESSION-V1.md)
+matched every frozen ranking, context, and receipt and reproduced all 31 frozen
+development and confirmation changes. Explicit-operation routing invoked the
+resolver for 145/500 questions versus 195 under the earlier broad formatter
+trigger. The measured request messages totaled about 405,624
+`cl100k_base`-estimated tokens. That run replayed frozen outputs or an inert
+resolver, so these are payload estimates rather than live provider token,
+latency, or availability observations.
