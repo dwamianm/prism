@@ -140,12 +140,12 @@ def attach_value_bindings(
 ) -> dict | None:
     """Validate and snapshot caller bindings before storage can await work."""
     copied = _snapshot_object(metadata)
-    if value_bindings is None:
-        return copied
     if copied is not None and VALUE_BINDINGS_METADATA_KEY in copied:
         raise ValueError(
             f"metadata.{VALUE_BINDINGS_METADATA_KEY} is reserved; pass value_bindings instead"
         )
+    if value_bindings is None:
+        return copied
     if len(value_bindings) > 256:
         raise ValueError("A memory can contain at most 256 value bindings")
     parsed = [MemoryValueBinding.model_validate(item) for item in value_bindings]

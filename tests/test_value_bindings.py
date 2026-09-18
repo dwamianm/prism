@@ -128,7 +128,6 @@ async def test_store_rejects_reserved_metadata_and_duplicate_binding_identity(co
                 source,
                 user_id="alice",
                 metadata={VALUE_BINDINGS_METADATA_KEY: []},
-                value_bindings=[city_binding()],
             )
         with pytest.raises(ValueError, match="Duplicate value binding reference"):
             await engine.store(
