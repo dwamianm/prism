@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-temporal-relation-confirmation-paired-checkpoint",
+  "recorded_at": "2026-09-18T16:45:21.995104+00:00",
+  "registration_sha256": "cde14d90c05741a09a65beb6f7e4a76e6af44102f092bf2cff340df9372fc7b7",
+  "resolver_result_sha256": "2a82037cf982d843867d360baba2ed1a5695d48e27dc0c9a2ebbf1aa8e24e0e1",
+  "jev_result_sha256": "8f06882a19d1e03f46c9fc18b6bdb1b7e64d59cf69ec0f6cfdd649c5e46616c0",
+  "paired_inputs_sha256": "dcf725ddf6be28192b0d0bc9a86a2112499491f948a344f66cda8302b5466da4",
+  "paired_inputs_result_sha256": "ab2ecae6109cccac6b2934f3064a5ee36b1f4a58d59716e6db181269571be869",
+  "questions": 104,
+  "changed_contexts": 22,
+  "identical_contexts": 82,
+  "logical_predictions": 208,
+  "expected_unique_reader_calls": 126,
+  "answers_present": false,
+  "same_token_budget": true,
+  "total_dropped_uncited_records": 22,
+  "maximum_dropped_uncited_records": 2,
+  "control_tokens": 413367,
+  "candidate_tokens": 412535,
+  "result_sha256": "a8e061e40d6e23c2754cd1e41ed2670b74565ddc1791144525289c5e3b0654b5"
+}
