@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-temporal-relation-answer-result",
+  "completed_at": "2026-09-18T10:45:57.605156+00:00",
+  "registration_sha256": "2d3997e4f400a6dabe0ce6f491b51c67fc0982af75e3fbeabbc92a89d410d1ca",
+  "questions": 29,
+  "metrics": {
+    "arms": {
+      "control": "auditable",
+      "candidate": "temporal_relation"
+    },
+    "overall": {
+      "questions": 29,
+      "control_correct": 17,
+      "candidate_correct": 21,
+      "paired_wins": 4,
+      "paired_losses": 0,
+      "paired_ties": 25,
+      "accuracy_delta": 0.13793103448275862
+    },
+    "categories": {
+      "abstention": {
+        "questions": 1,
+        "control_correct": 1,
+        "candidate_correct": 1,
+        "paired_wins": 0,
+        "paired_losses": 0,
+        "paired_ties": 1,
+        "accuracy_delta": 0.0
+      },
+      "temporal-reasoning": {
+        "questions": 28,
+        "control_correct": 16,
+        "candidate_correct": 20,
+        "paired_wins": 4,
+        "paired_losses": 0,
+        "paired_ties": 24,
+        "accuracy_delta": 0.14285714285714285
+      }
+    },
+    "complete_reader_execution": true,
+    "complete_judge_execution": true,
+    "reader_failed_attempts": 0,
+    "judge_failed_attempts": 0,
+    "accepted_hints": {
+      "questions": 9,
+      "logical_judgments": 18,
+      "control_correct": 5,
+      "candidate_correct": 9,
+      "paired_wins": 4,
+      "paired_losses": 0,
+      "paired_ties": 5
+    },
+    "gate": {
+      "complete_reader_execution": true,
+      "complete_judge_execution": true,
+      "reader_failed_attempts": 0,
+      "judge_failed_attempts": 0,
+      "candidate_improved": true,
+      "wins_exceed_losses": true,
+      "accepted_hint_losses": 0,
+      "accepted_hint_wins": 4,
+      "passed": true
+    }
+  },
+  "packing": {
+    "hint_questions": 9,
+    "total_dropped_records": 9,
+    "maximum_dropped_records": 1,
+    "control_tokens": 115332,
+    "candidate_tokens": 115046
+  },
+  "execution_sha256": "fef2dfa54647f3db3432202de5d7e887438adbd01b5059b52267f3ac69ba4e75",
+  "runtime": {
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-i386-64bit"
+  },
+  "claim_boundary": "Paired temporal-relation answer evidence on an observed development cohort; not an official LongMemEval score or product-promotion result.",
+  "result_sha256": "293cbb495e92ecc31aa161cba7ec215488a925f6860a5d5ba7b34124a07806c0"
+}

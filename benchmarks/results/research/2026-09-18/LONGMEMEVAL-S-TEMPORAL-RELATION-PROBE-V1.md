@@ -86,3 +86,8 @@ Even a passing answer trial cannot promote the feature because the event
 resolver, threshold, and cohort have all been observed. A confirmation must run
 fresh resolution, deterministic validation, Jev gating, and paired answers on a
 separately frozen cohort. Until that passes, this remains benchmark-only code.
+
+The subsequent [paired answer trial](LONGMEMEVAL-S-TEMPORAL-RELATION-ANSWER-DEV-V1.md)
+passed every registered development gate: 21/29 versus 17/29, with four wins
+and zero losses. The policy therefore advances to a disjoint confirmation; it
+is still not integrated or exposed as product behavior.
