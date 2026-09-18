@@ -37,12 +37,67 @@ def test_reader_jobs_counterbalance_and_bind_both_arms() -> None:
     assert len({key for _row, _arm, _body, key in jobs}) == 2
 
 
+def test_reader_jobs_cover_three_arms_once_per_question() -> None:
+    arms = ("control", "same", "fill")
+    prepared = {
+        "rows": [
+            {
+                "question_id": "q1",
+                "question": "Question?",
+                "question_date": "2023/01/01 (Sun) 00:00",
+                "contexts": {
+                    arm: {"context": arm, "sha256": paired.digest(arm.encode())}
+                    for arm in arms
+                },
+            }
+        ]
+    }
+
+    jobs = paired.reader_jobs(
+        prepared,
+        arms,
+        model="reader:cloud",
+        options={"num_ctx": 65536, "num_predict": 100},
+        system_prompt="answer",
+    )
+
+    assert jobs == paired.reader_jobs(
+        prepared,
+        arms,
+        model="reader:cloud",
+        options={"num_ctx": 65536, "num_predict": 100},
+        system_prompt="answer",
+    )
+    assert {arm for _row, arm, _body, _key in jobs} == set(arms)
+    assert len(jobs) == 3
+
+
 def test_paired_metrics_report_direction_and_category() -> None:
     cases = [
-        {"id": "a:old", "question_id": "a", "arm": "old", "category": "temporal-reasoning"},
-        {"id": "a:new", "question_id": "a", "arm": "new", "category": "temporal-reasoning"},
-        {"id": "b:old", "question_id": "b", "arm": "old", "category": "temporal-reasoning"},
-        {"id": "b:new", "question_id": "b", "arm": "new", "category": "temporal-reasoning"},
+        {
+            "id": "a:old",
+            "question_id": "a",
+            "arm": "old",
+            "category": "temporal-reasoning",
+        },
+        {
+            "id": "a:new",
+            "question_id": "a",
+            "arm": "new",
+            "category": "temporal-reasoning",
+        },
+        {
+            "id": "b:old",
+            "question_id": "b",
+            "arm": "old",
+            "category": "temporal-reasoning",
+        },
+        {
+            "id": "b:new",
+            "question_id": "b",
+            "arm": "new",
+            "category": "temporal-reasoning",
+        },
     ]
     judgments = {
         "complete": True,
@@ -69,6 +124,34 @@ def test_paired_metrics_report_direction_and_category() -> None:
         "accuracy_delta": 0.5,
     }
     assert result["categories"]["temporal-reasoning"] == result["overall"]
+
+
+def test_paired_metrics_select_two_arms_from_three_arm_judgments() -> None:
+    cases = [
+        {
+            "id": f"q:{arm}",
+            "question_id": "q",
+            "arm": arm,
+            "category": "multi-session",
+        }
+        for arm in ("control", "same", "fill")
+    ]
+    judgments = {
+        "complete": True,
+        "prior_failed_attempts": [],
+        "judgments": [
+            {"id": "q:control", "correct": False},
+            {"id": "q:same", "correct": False},
+            {"id": "q:fill", "correct": True},
+        ],
+    }
+
+    result = paired.paired_metrics(
+        cases, judgments, control_arm="same", candidate_arm="fill"
+    )
+
+    assert result["overall"]["paired_wins"] == 1
+    assert result["overall"]["candidate_correct"] == 1
 
 
 def test_judge_cases_reject_missing_arm() -> None:

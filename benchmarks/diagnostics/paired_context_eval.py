@@ -1,4 +1,4 @@
-"""Reusable fail-closed execution for frozen two-arm context trials."""
+"""Reusable fail-closed execution for frozen multi-arm context trials."""
 
 from __future__ import annotations
 
@@ -69,12 +69,9 @@ def reader_payload(
             ),
         },
     ]
-    if (
-        sum(len(message["content"].encode()) for message in messages)
-        + 4096
-        + int(options["num_predict"])
-        > int(options["num_ctx"])
-    ):
+    if sum(len(message["content"].encode()) for message in messages) + 4096 + int(
+        options["num_predict"]
+    ) > int(options["num_ctx"]):
         raise ValueError("reader prompt exceeds conservative context headroom")
     return {
         "model": model,
@@ -87,7 +84,7 @@ def reader_payload(
 
 def reader_jobs(
     prepared: dict[str, Any],
-    arms: tuple[str, str],
+    arms: tuple[str, ...],
     *,
     model: str,
     options: dict[str, Any],
@@ -95,11 +92,22 @@ def reader_jobs(
 ) -> list[tuple[dict[str, Any], str, dict[str, Any], str]]:
     jobs = []
     for row in prepared["rows"]:
-        order = (
-            arms
-            if int(digest(row["question_id"].encode()), 16) % 2
-            else tuple(reversed(arms))
-        )
+        if len(arms) < 2 or len(set(arms)) != len(arms):
+            raise ValueError("reader arms must contain distinct alternatives")
+        if len(arms) == 2:
+            order = (
+                arms
+                if int(digest(row["question_id"].encode()), 16) % 2
+                else tuple(reversed(arms))
+            )
+        else:
+            offset = int(digest(row["question_id"].encode()), 16) % len(arms)
+            rotated = arms[offset:] + arms[:offset]
+            order = (
+                rotated
+                if int(digest((row["question_id"] + ":direction").encode()), 16) % 2
+                else tuple(reversed(rotated))
+            )
         for arm in order:
             body = reader_payload(
                 row,
@@ -114,7 +122,7 @@ def reader_jobs(
 
 def run_reader(
     prepared: dict[str, Any],
-    arms: tuple[str, str],
+    arms: tuple[str, ...],
     state_path: Path,
     *,
     registration_sha256: str,
@@ -230,7 +238,7 @@ def run_reader(
 def judge_cases(
     predictions: dict[str, Any],
     references: list[dict[str, Any]],
-    arms: tuple[str, str],
+    arms: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     by_id = {row["question_id"]: row for row in references}
     if len(by_id) != len(references):
@@ -270,11 +278,10 @@ def paired_metrics(
     verdicts = {row["id"]: row["correct"] for row in judgments["judgments"]}
     if set(verdicts) != {row["id"] for row in cases}:
         raise ValueError("judge verdict coverage differs")
+    selected_cases = [case for case in cases if case["arm"] in arms]
     grouped: dict[str, dict[str, Any]] = {}
-    for case in cases:
-        row = grouped.setdefault(
-            case["question_id"], {"category": case["category"]}
-        )
+    for case in selected_cases:
+        row = grouped.setdefault(case["question_id"], {"category": case["category"]})
         row[case["arm"]] = verdicts[case["id"]]
     if any(set(row) != {"category", *arms} for row in grouped.values()):
         raise ValueError("paired judgment coverage differs")
@@ -299,9 +306,7 @@ def paired_metrics(
         "arms": {"control": control_arm, "candidate": candidate_arm},
         "overall": summarize(values),
         "categories": {
-            category: summarize(
-                [row for row in values if row["category"] == category]
-            )
+            category: summarize([row for row in values if row["category"] == category])
             for category in sorted({row["category"] for row in values})
         },
         "complete_reader_execution": True,
