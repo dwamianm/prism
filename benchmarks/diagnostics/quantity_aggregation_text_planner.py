@@ -367,7 +367,7 @@ def _score_ready(case: dict[str, Any], result: Any, scan_calls: int) -> dict[str
         unit: {
             key: value
             for key, value in metrics.items()
-            if key != "evidence_count"
+            if key not in {"evidence_count", "unit"}
         }
         for unit, metrics in actual_groups.items()
     }
@@ -557,6 +557,8 @@ def main() -> None:
             }
         )
     )
+    if not result["metrics"]["passed"]:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
