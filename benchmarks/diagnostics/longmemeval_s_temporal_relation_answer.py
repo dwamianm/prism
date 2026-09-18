@@ -115,7 +115,11 @@ def _development_inputs(
     selection = {
         question_id: {
             "relation": probe_rows[question_id]["relation"],
-            "minimum_probability": scores[question_id]["minimum_probability"],
+            "minimum_probability": (
+                scores[question_id]["minimum_probability"]
+                if question_id in scores
+                else None
+            ),
             "accepted": question_id in accepted,
         }
         for question_id in question_ids
