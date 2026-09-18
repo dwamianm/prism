@@ -240,7 +240,7 @@ def register(args: argparse.Namespace, root: Path) -> dict[str, Any]:
                 **EXPECTED_AGGREGATION,
                 "stored_set_exhaustive": True,
                 "source_extraction_coverage": "unknown",
-                "semantic_equivalence": "normalized_exact_only",
+                "semantic_equivalence": "normalized_exact_and_predicate_prefix",
                 "real_world_coverage": "unknown",
                 "unit_conversion": "none",
                 "consistency": "complete_for_unchanged_store",
@@ -281,6 +281,10 @@ def verify_registration(
         or protocol.get("query") != json.loads(json.dumps(QUERY))
         or protocol.get("expected_aggregation")
         != json.loads(json.dumps(EXPECTED_AGGREGATION))
+        or protocol.get("gates", {}).get("semantic_equivalence")
+        != "normalized_exact_and_predicate_prefix"
+        or protocol.get("gates", {}).get("required_exclusions")
+        != ["selector_mismatch", "condition_filtered", "unit_mismatch"]
         or model.get("provider") != "ollama"
         or model.get("temperature") != 0.0
         or model.get("max_retries") != 3
