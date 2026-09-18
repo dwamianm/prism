@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-typed-tool-recovery-partial-diagnostic",
+  "completed_at": "2026-09-17T12:56:39.669435+00:00",
+  "development_only": true,
+  "test_accessed": false,
+  "status": "stopped_after_decisive_tuning_failure",
+  "source_trial": {
+    "result_file_sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+    "result_canonical_sha256": "ce9c9126e70060644d99903af01b3658b9d2a42f3115b8591a0db11515ee3cae",
+    "failure_identity_sha256": "1128b24e950fc5b05e538a1592041b3d360afd257d6af62567f96cae65ba24f8"
+  },
+  "provider": {
+    "provider": "ollama_local",
+    "model": "qwen3.5:35b-a3b",
+    "manifest_digest": "3460ffeede5453ead027dbd2f821b12ad0aa3de54630971993babdb2165221f7",
+    "parameter_size": "36.0B",
+    "quantization": "Q4_K_M",
+    "temperature": 0,
+    "seed": 17,
+    "concurrency": 1
+  },
+  "development": {
+    "registered_tuning_cases": 25,
+    "fully_observed_cases": 10,
+    "valid_complete_cases": 0,
+    "semantic_exhausted_cases": 10,
+    "unobserved_cases": 14,
+    "cancelled_partial_cases": 1,
+    "transport_statuses": {
+      "cancelled": 1,
+      "succeeded": 32
+    },
+    "validation_error_counts": {
+      "atom_0_incomplete_typed_coverage": 26,
+      "atom_0_object_has_no_word": 3,
+      "atom_0_qualifier_0_outside_atom": 3,
+      "atom_0_qualifier_0_reversed": 6,
+      "atom_0_qualifier_1_reversed": 10,
+      "atom_0_qualifier_2_reversed": 6,
+      "atom_0_relation_has_no_word": 3,
+      "atom_0_relation_reversed": 3,
+      "atom_0_subject_reversed": 6,
+      "atom_1_incomplete_typed_coverage": 29,
+      "atom_1_object_has_no_word": 3,
+      "atom_1_qualifier_0_reversed": 6,
+      "atom_1_qualifier_1_outside_atom": 3,
+      "atom_1_qualifier_1_reversed": 6,
+      "atom_1_qualifier_2_reversed": 3,
+      "atom_1_relation_reversed": 3,
+      "atom_1_subject_reversed": 6,
+      "atom_2_incomplete_typed_coverage": 17,
+      "atom_2_object_has_no_word": 3,
+      "atom_2_qualifier_0_reversed": 3,
+      "atom_2_relation_outside_atom": 3,
+      "atom_2_subject_reversed": 3,
+      "atom_3_incomplete_typed_coverage": 10,
+      "atom_3_object_has_no_word": 4,
+      "atom_3_qualifier_0_reversed": 3,
+      "atom_3_relation_outside_atom": 2,
+      "atom_4_incomplete_typed_coverage": 9,
+      "atom_4_qualifier_0_reversed": 3,
+      "atom_4_relation_outside_atom": 2,
+      "atom_5_incomplete_typed_coverage": 3,
+      "atom_6_incomplete_typed_coverage": 3,
+      "atom_7_incomplete_typed_coverage": 3,
+      "duplicate_claim_atom": 6,
+      "incomplete_claim_word_coverage": 16,
+      "tool_arguments_schema_invalid": 1
+    }
+  },
+  "protocol": {
+    "runner_sha256": "fcc0712b0461c1f4ad4f621abeb89a71f558c1fd8b9b74eec77028aea170298e",
+    "durable_runner_sha256": "fd100494c7a932743bff8f18dbe4c0075bc3839c6e691e6625eba98bab9e0489",
+    "system_prompt_sha256": "529888e92beca809d57bb34482f2682f1dc8d42f48ae3a2a185142e4461fa6f6",
+    "tool_sha256": "bdfe45dd45bcca55cee9418cad583f4df35300a8b6ba9c5d75a3849840c5974b",
+    "private_state_sha256": "7061e1b94585159ebaa05dd8e4937a1b58dbb82867321e487cca4ae0de50ab77",
+    "source_text_emitted": false
+  },
+  "decision": "Reject this generated-range representation for the installed pinned local control; redesign the representation before downloading or testing a larger local model.",
+  "limitations": [
+    "Stopped after the first ten fully observed cases all exhausted three semantic attempts.",
+    "This is a post hoc tuning diagnostic over previously observed failures, not a complete cohort estimate.",
+    "One eleventh case was cancelled and is excluded from the fully observed result.",
+    "No external test split was accepted or accessed."
+  ],
+  "result_sha256": "3d7eceae1b331e2a9904de3ae611f19e7fb9ef5b9e2f71ac6d00eed6705c399a"
+}
