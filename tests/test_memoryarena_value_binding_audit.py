@@ -120,6 +120,9 @@ def test_audit_counts_exact_values_and_qualified_tool_calls():
         "executed_qualified_argument_count": 0,
         "executed_qualified_traveler_count": 0,
         "executed_qualified_arguments": [],
+        "blocked_qualified_argument_count": 0,
+        "blocked_qualified_traveler_count": 0,
+        "blocked_qualified_arguments": [],
         "binding_use_evidence_available": True,
         "binding_use_count": 1,
         "binding_use_operations": {"replaced": 1, "already_lookup": 0},
@@ -210,3 +213,29 @@ def test_audit_supports_matched_no_guidance_control_arm():
     assert result["result_guidance_expected"] is False
     assert result["tool_boundary_resolution"]["binding_use_count"] == 1
     assert result["tool_boundary_resolution"]["guided_result_count"] == 0
+
+
+def test_audit_distinguishes_fail_closed_from_executed_qualified_arguments():
+    native = _checkpoint("native_full_history")
+    prme = _checkpoint("prme", qualified_call=True)
+    record = prme["person"]["tool_argument_resolutions"][0]
+    record.update({
+        "resolved_arguments": {"city": "Portland(Oregon)"},
+        "replacements": [],
+        "binding_uses": [],
+        "delegate_executed": False,
+        "blocked_qualified_argument_pointers": ["/city"],
+        "result_presentation_guidance": None,
+    })
+    prme["scratchpad"]["scratchpad"][0]["tool_results"][0]["result"] = (
+        "Tool execution blocked because source presentation values remain unresolved "
+        "at /city. Retry with the tool lookup form."
+    )
+
+    result = audit_value_bindings(
+        _cohort(), [native, prme], registration_sha256=REGISTRATION
+    )
+    resolution = result["tool_boundary_resolution"]
+    assert resolution["executed_qualified_argument_count"] == 0
+    assert resolution["blocked_qualified_argument_count"] == 1
+    assert resolution["blocked_qualified_arguments"][0]["json_pointer"] == "/city"

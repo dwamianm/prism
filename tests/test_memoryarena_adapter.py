@@ -142,6 +142,24 @@ def test_trace_projection_emits_typed_qualified_city_values():
     }]
 
 
+def test_trace_projection_decomposes_qualified_route_values():
+    source = (
+        '{"name":"Alice","final_plan":"=== Alice\'s Plan ===\\nDay 1:\\n'
+        'Current City: from Seattle to Dallas(Texas)\\nDay 2:\\n'
+        'Current City: from Dallas(Texas) to Houston(Texas)\\nDay 3:\\n'
+        'Current City: Houston(Texas)"}'
+    )
+    projection, name, is_base, bindings = _trace_projection(source)
+    assert (name, is_base) == ("Alice", False)
+    assert "from Dallas(Texas) to Houston(Texas)" in projection
+    assert [
+        (item.reference, item.presentation, item.lookup) for item in bindings
+    ] == [
+        ("current-city-1", "Dallas(Texas)", "Dallas"),
+        ("current-city-2", "Houston(Texas)", "Houston"),
+    ]
+
+
 def test_travel_context_hides_bindings_and_resolves_only_at_tool_boundary(config):
     app = create_app(config)
     with TestClient(app) as client:

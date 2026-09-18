@@ -69,6 +69,11 @@ the lookup form is correct, or turn caller metadata into a factual claim. They
 provide an explicit execution boundary with source provenance. Applications
 should still validate the resolved arguments against the target tool schema and
 retain the returned replacement and binding-use audit when the action matters.
+Unmatched strings remain unchanged because PRME cannot infer which fields a
+particular tool requires to be bound. A fail-closed integration should reject or
+return a retryable error for any schema field whose application-defined
+presentation form remains after resolution; it must not send that value to the
+underlying tool.
 If an application adds presentation guidance to a tool result, it should use
 only the `binding_uses` from that exact call and keep the annotation separate
 from the tool's data.

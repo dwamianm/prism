@@ -226,6 +226,8 @@ def test_tool_executor_resolves_at_boundary_and_retains_audit():
     assert records[0]["resolved_arguments"] == {"city": "Salt Lake City"}
     assert records[0]["replacements"][0]["json_pointer"] == "/city"
     assert records[0]["binding_uses"][0]["operation"] == "replaced"
+    assert records[0]["delegate_executed"] is True
+    assert records[0]["blocked_qualified_argument_pointers"] == []
     assert records[0]["result_presentation_guidance_enabled"] is True
     assert records[0]["result_presentation_guidance"]["values"] == [{
         "kind": "city",
@@ -266,6 +268,45 @@ def test_tool_executor_does_not_annotate_unmatched_result():
     executor.start_turn()
     assert executor.execute("RestaurantSearch", {"city": "Boise"}) == "found"
     assert executor.drain()[0]["result_presentation_guidance"] is None
+
+
+def test_tool_executor_blocks_unresolved_qualified_values():
+    class Delegate:
+        calls = []
+
+        def execute(self, name, arguments):
+            self.calls.append((name, arguments))
+            return "unsafe"
+
+    class Memory:
+        user_id = "alice"
+        memory_system_name = "prme"
+
+        def _post(self, _path, payload):
+            return {
+                "response": {
+                    "arguments": payload["arguments"],
+                    "replacements": [],
+                    "binding_uses": [],
+                }
+            }
+
+    delegate = Delegate()
+    executor = runner._ResolvingToolExecutor(delegate, Memory())
+    executor.start_turn()
+    result = executor.execute(
+        "FlightSearch",
+        {"origin": "Seattle", "destination": "Dallas(Texas)"},
+    )
+    assert result == (
+        "Tool execution blocked because source presentation values remain unresolved "
+        "at /destination. Retry with the tool lookup form."
+    )
+    assert delegate.calls == []
+    record = executor.drain()[0]
+    assert record["delegate_executed"] is False
+    assert record["blocked_qualified_argument_pointers"] == ["/destination"]
+    assert record["result_presentation_guidance"] is None
 
 
 def test_native_response_parsing_preserves_parallel_tool_calls():

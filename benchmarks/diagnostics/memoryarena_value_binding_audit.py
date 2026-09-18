@@ -152,6 +152,8 @@ def audit_value_bindings(
     qualified_travelers = set()
     executed_qualified = []
     executed_qualified_travelers = set()
+    blocked_qualified = []
+    blocked_qualified_travelers = set()
     replacement_occurrences = []
     replacement_travelers = set()
     binding_use_occurrences = []
@@ -225,10 +227,17 @@ def audit_value_bindings(
             original = resolution.get("original_arguments")
             resolved = resolution.get("resolved_arguments")
             replacements = resolution.get("replacements")
+            delegate_executed = resolution.get("delegate_executed", True)
+            blocked_pointers = resolution.get(
+                "blocked_qualified_argument_pointers", []
+            )
             if (
                 not isinstance(original, dict)
                 or not isinstance(resolved, dict)
                 or not isinstance(replacements, list)
+                or not isinstance(delegate_executed, bool)
+                or not isinstance(blocked_pointers, list)
+                or not all(isinstance(item, str) for item in blocked_pointers)
             ):
                 raise ValueError("Tool resolution record is incomplete")
             if trace_call != (tool_name, original):
@@ -279,6 +288,23 @@ def audit_value_bindings(
                     "Resolver mutations differ from declared replacements for "
                     f"{group_id}/{person_idx}/{resolution_index}"
                 )
+
+            qualified_resolved_pointers = sorted(
+                pointer for pointer, _ in _qualified_arguments(resolved)
+            )
+            if delegate_executed:
+                if blocked_pointers:
+                    raise ValueError("Executed tool call declares blocked arguments")
+            elif sorted(blocked_pointers) != qualified_resolved_pointers:
+                raise ValueError("Blocked tool call differs from unresolved arguments")
+            else:
+                expected_block = (
+                    "Tool execution blocked because source presentation values remain "
+                    f"unresolved at {', '.join(blocked_pointers)}. Retry with the "
+                    "tool lookup form."
+                )
+                if trace_result != expected_block:
+                    raise ValueError("Blocked tool result differs from fail-closed record")
 
             has_guidance_evidence = (
                 "binding_uses" in resolution
@@ -344,7 +370,9 @@ def audit_value_bindings(
 
                 eligible_guidance = _expected_guidance(binding_uses)
                 expected_guidance = (
-                    eligible_guidance if expect_result_guidance else None
+                    eligible_guidance
+                    if expect_result_guidance and delegate_executed
+                    else None
                 )
                 if guidance != expected_guidance:
                     raise ValueError("Saved tool-result guidance differs from binding uses")
@@ -369,17 +397,20 @@ def audit_value_bindings(
                             "Model-visible tool result lacks exact presentation metadata"
                         )
 
-            for pointer, _ in _qualified_arguments(resolved):
-                executed_qualified.append(
-                    {
-                        "group_id": group_id,
-                        "person_idx": person_idx,
-                        "resolution_index": resolution_index,
-                        "tool": tool_name,
-                        "json_pointer": pointer,
-                    }
-                )
-                executed_qualified_travelers.add((group_id, person_idx))
+            for pointer in qualified_resolved_pointers:
+                occurrence = {
+                    "group_id": group_id,
+                    "person_idx": person_idx,
+                    "resolution_index": resolution_index,
+                    "tool": tool_name,
+                    "json_pointer": pointer,
+                }
+                if delegate_executed:
+                    executed_qualified.append(occurrence)
+                    executed_qualified_travelers.add((group_id, person_idx))
+                else:
+                    blocked_qualified.append(occurrence)
+                    blocked_qualified_travelers.add((group_id, person_idx))
 
     passed = sum(_normalized(actual.get(key)) == _normalized(value) for key, value in truth.items())
     if len(guidance_evidence_modes) > 1:
@@ -419,6 +450,11 @@ def audit_value_bindings(
                 executed_qualified_travelers
             ),
             "executed_qualified_arguments": executed_qualified,
+            "blocked_qualified_argument_count": len(blocked_qualified),
+            "blocked_qualified_traveler_count": len(
+                blocked_qualified_travelers
+            ),
+            "blocked_qualified_arguments": blocked_qualified,
             "binding_use_evidence_available": binding_use_evidence_available,
             "binding_use_count": len(binding_use_occurrences),
             "binding_use_operations": binding_use_operations,

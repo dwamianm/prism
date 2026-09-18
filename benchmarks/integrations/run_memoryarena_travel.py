@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import random
+import re
 import subprocess
 import sys
 import time
@@ -45,6 +46,7 @@ CONFIRMATION_ARMS = (
     "prme",
 )
 PRME_ARMS = frozenset({"prme_no_result_guidance", "prme"})
+_QUALIFIED_TOOL_VALUE = re.compile(r"^.+\([^()\n]+\)$")
 FLIGHT_RELATIVE_PATH = (
     "env/env_systems/travel_planner_env/database/flights/clean_Flights_2022.csv"
 )
@@ -804,6 +806,28 @@ def _presentation_guidance(binding_uses: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
+def _pointer_segment(value: str) -> str:
+    return value.replace("~", "~0").replace("/", "~1")
+
+
+def _unresolved_qualified_pointers(value: Any, pointer: str = "") -> list[str]:
+    """Find complete qualified values that remain after exact resolution."""
+    if isinstance(value, dict):
+        result = []
+        for key, nested in value.items():
+            child = f"{pointer}/{_pointer_segment(str(key))}"
+            result.extend(_unresolved_qualified_pointers(nested, child))
+        return result
+    if isinstance(value, list):
+        result = []
+        for index, nested in enumerate(value):
+            result.extend(_unresolved_qualified_pointers(nested, f"{pointer}/{index}"))
+        return result
+    if isinstance(value, str) and _QUALIFIED_TOOL_VALUE.fullmatch(value):
+        return [pointer or "/"]
+    return []
+
+
 class _ResolvingToolExecutor:
     """Apply visible PRME value bindings at the real tool boundary."""
 
@@ -845,18 +869,32 @@ class _ResolvingToolExecutor:
             or not isinstance(binding_uses, list)
         ):
             raise RuntimeError("memory adapter returned an invalid tool-argument resolution")
+        blocked_pointers = _unresolved_qualified_pointers(resolved)
+        delegate_executed = not blocked_pointers
         eligible_guidance = _presentation_guidance(binding_uses)
-        guidance = eligible_guidance if self.annotate_results else None
+        guidance = (
+            eligible_guidance
+            if self.annotate_results and delegate_executed
+            else None
+        )
         record = {
             "tool_name": tool_name,
             "original_arguments": original,
             "resolved_arguments": resolved,
             "replacements": replacements,
             "binding_uses": binding_uses,
+            "delegate_executed": delegate_executed,
+            "blocked_qualified_argument_pointers": blocked_pointers,
             "result_presentation_guidance_enabled": self.annotate_results,
             "result_presentation_guidance": guidance,
         }
         self._records.append(record)
+        if blocked_pointers:
+            joined = ", ".join(blocked_pointers)
+            return (
+                "Tool execution blocked because source presentation values remain "
+                f"unresolved at {joined}. Retry with the tool lookup form."
+            )
         result = self.delegate.execute(tool_name, resolved)
         if not isinstance(result, str):
             raise RuntimeError("tool executor returned a non-string result")

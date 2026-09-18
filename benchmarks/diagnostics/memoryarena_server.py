@@ -31,6 +31,16 @@ _COMPANION_NAME = re.compile(
 _QUALIFIED_CITY = re.compile(r"^(?P<lookup>.+?)\((?P<qualifier>[^()\n]+)\)$")
 
 
+def _current_city_components(raw_value: str) -> tuple[str, ...]:
+    """Return atomic city values from one MemoryArena current-city field."""
+    value = raw_value.strip()
+    if value.casefold().startswith("from "):
+        origin, separator, destination = value[5:].partition(" to ")
+        if separator and origin.strip() and destination.strip():
+            return origin.strip(), destination.strip()
+    return (value,) if value else ()
+
+
 def _plan_value_bindings(plan: str) -> list[MemoryValueBinding]:
     """Extract exact display/tool city forms already present in a saved plan."""
     result: list[MemoryValueBinding] = []
@@ -39,22 +49,22 @@ def _plan_value_bindings(plan: str) -> list[MemoryValueBinding]:
         key, separator, raw_value = line.partition(":")
         if not separator or key.strip().casefold().replace("_", " ") != "current city":
             continue
-        presentation = raw_value.strip()
-        match = _QUALIFIED_CITY.fullmatch(presentation)
-        if match is None or presentation in seen:
-            continue
-        lookup = match.group("lookup").rstrip()
-        if not lookup:
-            continue
-        result.append(
-            MemoryValueBinding(
-                reference=f"current-city-{len(result) + 1}",
-                kind="city",
-                presentation=presentation,
-                lookup=lookup,
+        for presentation in _current_city_components(raw_value):
+            match = _QUALIFIED_CITY.fullmatch(presentation)
+            if match is None or presentation in seen:
+                continue
+            lookup = match.group("lookup").rstrip()
+            if not lookup:
+                continue
+            result.append(
+                MemoryValueBinding(
+                    reference=f"current-city-{len(result) + 1}",
+                    kind="city",
+                    presentation=presentation,
+                    lookup=lookup,
+                )
             )
-        )
-        seen.add(presentation)
+            seen.add(presentation)
     return result
 
 
