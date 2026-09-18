@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `fundraised`; no synonyms or embeddings are inferred. Responses distinguish
   this mode with
   `semantic_equivalence="normalized_exact_and_predicate_prefix"`.
+  A preregistered end-to-end Qwen 35B-A3B confirmation passed all ten source
+  contracts and all aggregation gates, returning the exact `$3,750` total from
+  four real charity memories while excluding unrelated, negated, conditional,
+  approximate, incompatible-unit and cross-owner controls.
 
 - A user-authored sentence such as `My final score was 3` no longer disappears
   when the model omits its claim. A narrow deterministic path admits terminal
