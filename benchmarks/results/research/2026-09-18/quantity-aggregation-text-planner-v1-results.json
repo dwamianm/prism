@@ -1,0 +1,1032 @@
+{
+  "schema_version": 1,
+  "kind": "quantity-aggregation-text-planner-result",
+  "completed_at": "2026-09-18T21:28:03.772429+00:00",
+  "registration_sha256": "434b6ddb8aa456ece6cc0a42bf948c843124915efe4e182a05c0f06c16c7a540",
+  "source_result_sha256": "cb2d9a2be7c5593e590b8ad64174444468152025aa6528fa085a6a028c28019d",
+  "source_pack_manifest_sha256": "a4f569af5ed74e041b8d40a367e8eb33c878f3d8e656b6240c434a0887b00ad3",
+  "metrics": {
+    "ready_cases": 5,
+    "ready_cases_passed": 0,
+    "refusal_cases": 6,
+    "refusal_cases_passed": 6,
+    "refusal_scan_calls": 0,
+    "provider_calls": 0,
+    "source_pack_unchanged": true,
+    "passed": false
+  },
+  "ready_cases": [
+    {
+      "name": "individual_fundraising_amount",
+      "question": "How much did I raise?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "action": true,
+        "query_present": true,
+        "subject_exact": true,
+        "prefixes_exact": true,
+        "units_exact": true,
+        "assumptions_exact": true,
+        "aggregation_present": true,
+        "owner_exact": true,
+        "matched_quantity_records": true,
+        "groups_exact": false,
+        "units_separate": true,
+        "scan_executed": true,
+        "stored_set_exhaustive": true,
+        "unit_conversion_none": true
+      },
+      "passed": false,
+      "scan_calls": 12,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much did I raise?",
+        "status": "ready",
+        "reason": "matched_amount_question",
+        "action": "raise",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "raise",
+            "raised",
+            "raising",
+            "help_raise",
+            "helped_raise",
+            "helping_raise"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "assumptions": [
+          "owner_bound",
+          "first_person_subject_exact",
+          "positive_default_epistemic",
+          "predicate_token_prefix_family",
+          "unit_groups_are_never_converted"
+        ]
+      },
+      "aggregation": {
+        "schema_version": 1,
+        "user_id": "quantity-aggregation-e2e-owner",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "raise",
+            "raised",
+            "raising",
+            "help_raise",
+            "helped_raise",
+            "helping_raise"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "scanned_nodes": 19,
+        "matched_quantity_records": 4,
+        "distinct_count": 2,
+        "groups": [
+          {
+            "values": {
+              "unit": "$"
+            },
+            "normalized_values": {
+              "unit": "$"
+            },
+            "value_count": 3,
+            "total": "2750",
+            "minimum": "250",
+            "maximum": "2000",
+            "evidence_count": 3,
+            "samples": [
+              {
+                "node_id": "32ae4020-f656-432d-8495-34ad422d0696",
+                "value": "2000",
+                "unit": "$",
+                "source_text": "$2,000",
+                "evidence_refs": [
+                  "9d022e8d-ea0b-4200-8d2c-5b7cea91e9cc"
+                ]
+              },
+              {
+                "node_id": "d6ab5f53-9dbb-4b03-ac8a-4eaef837615f",
+                "value": "250",
+                "unit": "$",
+                "source_text": "$250",
+                "evidence_refs": [
+                  "25693630-e4bf-4281-b84b-c7d5b1108ee5"
+                ]
+              },
+              {
+                "node_id": "d6b4906f-8513-47e1-9d13-bd757eafa36e",
+                "value": "500",
+                "unit": "$",
+                "source_text": "$500",
+                "evidence_refs": [
+                  "5f8043f9-1580-49e7-8ad8-ab134951b7d3"
+                ]
+              }
+            ],
+            "samples_truncated": false,
+            "earliest_event_time": "2026-01-20T00:00:00Z",
+            "latest_event_time": "2026-03-12T00:00:00Z"
+          },
+          {
+            "values": {
+              "unit": "USD"
+            },
+            "normalized_values": {
+              "unit": "usd"
+            },
+            "value_count": 1,
+            "total": "100",
+            "minimum": "100",
+            "maximum": "100",
+            "evidence_count": 1,
+            "samples": [
+              {
+                "node_id": "bd5697d5-c451-40be-8d81-17b38b7c6a1b",
+                "value": "100",
+                "unit": "USD",
+                "source_text": "100 USD",
+                "evidence_refs": [
+                  "9520e0ce-666e-452f-901b-f05bceab06c8"
+                ]
+              }
+            ],
+            "samples_truncated": false,
+            "earliest_event_time": "2026-09-18T21:15:40.994622Z",
+            "latest_event_time": "2026-09-18T21:15:40.994622Z"
+          }
+        ],
+        "groups_truncated": false,
+        "stored_set_exhaustive": true,
+        "source_extraction_coverage": "unknown",
+        "semantic_equivalence": "normalized_exact_and_predicate_prefix",
+        "real_world_coverage": "unknown",
+        "unit_conversion": "none",
+        "consistency": "complete_for_unchanged_store",
+        "exclusions": {
+          "condition_filtered": 1,
+          "missing_quantity": 1,
+          "selector_mismatch": 13
+        }
+      }
+    },
+    {
+      "name": "group_fundraising_amount",
+      "question": "How much did we raise?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "action": true,
+        "query_present": true,
+        "subject_exact": true,
+        "prefixes_exact": true,
+        "units_exact": true,
+        "assumptions_exact": true,
+        "aggregation_present": true,
+        "owner_exact": true,
+        "matched_quantity_records": true,
+        "groups_exact": false,
+        "units_separate": true,
+        "scan_executed": true,
+        "stored_set_exhaustive": true,
+        "unit_conversion_none": true
+      },
+      "passed": false,
+      "scan_calls": 12,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much did we raise?",
+        "status": "ready",
+        "reason": "matched_amount_question",
+        "action": "raise",
+        "query": {
+          "subjects": [
+            "we"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "raise",
+            "raised",
+            "raising",
+            "help_raise",
+            "helped_raise",
+            "helping_raise"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "assumptions": [
+          "owner_bound",
+          "first_person_subject_exact",
+          "positive_default_epistemic",
+          "predicate_token_prefix_family",
+          "unit_groups_are_never_converted"
+        ]
+      },
+      "aggregation": {
+        "schema_version": 1,
+        "user_id": "quantity-aggregation-e2e-owner",
+        "query": {
+          "subjects": [
+            "we"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "raise",
+            "raised",
+            "raising",
+            "help_raise",
+            "helped_raise",
+            "helping_raise"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "scanned_nodes": 19,
+        "matched_quantity_records": 1,
+        "distinct_count": 1,
+        "groups": [
+          {
+            "values": {
+              "unit": "$"
+            },
+            "normalized_values": {
+              "unit": "$"
+            },
+            "value_count": 1,
+            "total": "1000",
+            "minimum": "1000",
+            "maximum": "1000",
+            "evidence_count": 1,
+            "samples": [
+              {
+                "node_id": "dbabf8cc-794f-4935-a299-024fe3b2dce9",
+                "value": "1000",
+                "unit": "$",
+                "source_text": "$1,000",
+                "evidence_refs": [
+                  "bf0e4d3c-6161-4ab6-bf89-9482632b14f3"
+                ]
+              }
+            ],
+            "samples_truncated": false,
+            "earliest_event_time": "2026-09-18T21:14:12.926001Z",
+            "latest_event_time": "2026-09-18T21:14:12.926001Z"
+          }
+        ],
+        "groups_truncated": false,
+        "stored_set_exhaustive": true,
+        "source_extraction_coverage": "unknown",
+        "semantic_equivalence": "normalized_exact_and_predicate_prefix",
+        "real_world_coverage": "unknown",
+        "unit_conversion": "none",
+        "consistency": "complete_for_unchanged_store",
+        "exclusions": {
+          "condition_filtered": 1,
+          "selector_mismatch": 17
+        }
+      }
+    },
+    {
+      "name": "distance_count",
+      "question": "How many kilometers did I run?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "action": true,
+        "query_present": true,
+        "subject_exact": true,
+        "prefixes_exact": true,
+        "units_exact": true,
+        "assumptions_exact": true,
+        "aggregation_present": true,
+        "owner_exact": true,
+        "matched_quantity_records": true,
+        "groups_exact": false,
+        "units_separate": true,
+        "scan_executed": true,
+        "stored_set_exhaustive": true,
+        "unit_conversion_none": true
+      },
+      "passed": false,
+      "scan_calls": 12,
+      "plan": {
+        "schema_version": 1,
+        "question": "How many kilometers did I run?",
+        "status": "ready",
+        "reason": "matched_count_question",
+        "action": "run",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "run",
+            "ran",
+            "running"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [
+            "kilometers"
+          ],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "assumptions": [
+          "owner_bound",
+          "first_person_subject_exact",
+          "positive_default_epistemic",
+          "predicate_token_prefix_family",
+          "unit_groups_are_never_converted"
+        ]
+      },
+      "aggregation": {
+        "schema_version": 1,
+        "user_id": "quantity-aggregation-e2e-owner",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "run",
+            "ran",
+            "running"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [
+            "kilometers"
+          ],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "scanned_nodes": 19,
+        "matched_quantity_records": 1,
+        "distinct_count": 1,
+        "groups": [
+          {
+            "values": {
+              "unit": "kilometers"
+            },
+            "normalized_values": {
+              "unit": "kilometers"
+            },
+            "value_count": 1,
+            "total": "5",
+            "minimum": "5",
+            "maximum": "5",
+            "evidence_count": 1,
+            "samples": [
+              {
+                "node_id": "1f051cd5-333d-4d4a-bd41-93add54851b1",
+                "value": "5",
+                "unit": "kilometers",
+                "source_text": "5 kilometers",
+                "evidence_refs": [
+                  "25693630-e4bf-4281-b84b-c7d5b1108ee5"
+                ]
+              }
+            ],
+            "samples_truncated": false,
+            "earliest_event_time": "2026-09-18T21:14:34.202005Z",
+            "latest_event_time": "2026-09-18T21:14:34.202005Z"
+          }
+        ],
+        "groups_truncated": false,
+        "stored_set_exhaustive": true,
+        "source_extraction_coverage": "unknown",
+        "semantic_equivalence": "normalized_exact_and_predicate_prefix",
+        "real_world_coverage": "unknown",
+        "unit_conversion": "none",
+        "consistency": "complete_for_unchanged_store",
+        "exclusions": {
+          "condition_filtered": 1,
+          "selector_mismatch": 17
+        }
+      }
+    },
+    {
+      "name": "spending_amount",
+      "question": "How much did I spend?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "action": true,
+        "query_present": true,
+        "subject_exact": true,
+        "prefixes_exact": true,
+        "units_exact": true,
+        "assumptions_exact": true,
+        "aggregation_present": true,
+        "owner_exact": true,
+        "matched_quantity_records": true,
+        "groups_exact": false,
+        "units_separate": true,
+        "scan_executed": true,
+        "stored_set_exhaustive": true,
+        "unit_conversion_none": true
+      },
+      "passed": false,
+      "scan_calls": 12,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much did I spend?",
+        "status": "ready",
+        "reason": "matched_amount_question",
+        "action": "spend",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "spend",
+            "spent",
+            "spending"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "assumptions": [
+          "owner_bound",
+          "first_person_subject_exact",
+          "positive_default_epistemic",
+          "predicate_token_prefix_family",
+          "unit_groups_are_never_converted"
+        ]
+      },
+      "aggregation": {
+        "schema_version": 1,
+        "user_id": "quantity-aggregation-e2e-owner",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "spend",
+            "spent",
+            "spending"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "scanned_nodes": 19,
+        "matched_quantity_records": 1,
+        "distinct_count": 1,
+        "groups": [
+          {
+            "values": {
+              "unit": "$"
+            },
+            "normalized_values": {
+              "unit": "$"
+            },
+            "value_count": 1,
+            "total": "300",
+            "minimum": "300",
+            "maximum": "300",
+            "evidence_count": 1,
+            "samples": [
+              {
+                "node_id": "dc15e53a-87d8-4f2a-b3c4-ee2fc92173e6",
+                "value": "300",
+                "unit": "$",
+                "source_text": "$300",
+                "evidence_refs": [
+                  "bcb1318b-1fbf-4daa-be62-5c136199d6e1"
+                ]
+              }
+            ],
+            "samples_truncated": false,
+            "earliest_event_time": "2026-09-17T21:15:20.891843Z",
+            "latest_event_time": "2026-09-17T21:15:20.891843Z"
+          }
+        ],
+        "groups_truncated": false,
+        "stored_set_exhaustive": true,
+        "source_extraction_coverage": "unknown",
+        "semantic_equivalence": "normalized_exact_and_predicate_prefix",
+        "real_world_coverage": "unknown",
+        "unit_conversion": "none",
+        "consistency": "complete_for_unchanged_store",
+        "exclusions": {
+          "condition_filtered": 1,
+          "selector_mismatch": 17
+        }
+      }
+    },
+    {
+      "name": "total_shape",
+      "question": "What's the total amount I raised?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "action": true,
+        "query_present": true,
+        "subject_exact": true,
+        "prefixes_exact": true,
+        "units_exact": true,
+        "assumptions_exact": true,
+        "aggregation_present": true,
+        "owner_exact": true,
+        "matched_quantity_records": true,
+        "groups_exact": false,
+        "units_separate": true,
+        "scan_executed": true,
+        "stored_set_exhaustive": true,
+        "unit_conversion_none": true
+      },
+      "passed": false,
+      "scan_calls": 12,
+      "plan": {
+        "schema_version": 1,
+        "question": "What's the total amount I raised?",
+        "status": "ready",
+        "reason": "matched_amount_question",
+        "action": "raised",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "raise",
+            "raised",
+            "raising",
+            "help_raise",
+            "helped_raise",
+            "helping_raise"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "assumptions": [
+          "owner_bound",
+          "first_person_subject_exact",
+          "positive_default_epistemic",
+          "predicate_token_prefix_family",
+          "unit_groups_are_never_converted"
+        ]
+      },
+      "aggregation": {
+        "schema_version": 1,
+        "user_id": "quantity-aggregation-e2e-owner",
+        "query": {
+          "subjects": [
+            "I"
+          ],
+          "predicates": [],
+          "predicate_prefixes": [
+            "raise",
+            "raised",
+            "raising",
+            "help_raise",
+            "helped_raise",
+            "helping_raise"
+          ],
+          "objects": [],
+          "polarities": [
+            "positive"
+          ],
+          "units": [],
+          "group_by": [
+            "unit"
+          ],
+          "scopes": [],
+          "node_types": [
+            "fact",
+            "decision",
+            "preference"
+          ],
+          "lifecycle_states": null,
+          "retrieval_mode": "default",
+          "event_time_from": null,
+          "event_time_to": null,
+          "valid_at": null,
+          "knowledge_at": null,
+          "group_limit": 1000,
+          "sample_limit": 10
+        },
+        "scanned_nodes": 19,
+        "matched_quantity_records": 4,
+        "distinct_count": 2,
+        "groups": [
+          {
+            "values": {
+              "unit": "$"
+            },
+            "normalized_values": {
+              "unit": "$"
+            },
+            "value_count": 3,
+            "total": "2750",
+            "minimum": "250",
+            "maximum": "2000",
+            "evidence_count": 3,
+            "samples": [
+              {
+                "node_id": "32ae4020-f656-432d-8495-34ad422d0696",
+                "value": "2000",
+                "unit": "$",
+                "source_text": "$2,000",
+                "evidence_refs": [
+                  "9d022e8d-ea0b-4200-8d2c-5b7cea91e9cc"
+                ]
+              },
+              {
+                "node_id": "d6ab5f53-9dbb-4b03-ac8a-4eaef837615f",
+                "value": "250",
+                "unit": "$",
+                "source_text": "$250",
+                "evidence_refs": [
+                  "25693630-e4bf-4281-b84b-c7d5b1108ee5"
+                ]
+              },
+              {
+                "node_id": "d6b4906f-8513-47e1-9d13-bd757eafa36e",
+                "value": "500",
+                "unit": "$",
+                "source_text": "$500",
+                "evidence_refs": [
+                  "5f8043f9-1580-49e7-8ad8-ab134951b7d3"
+                ]
+              }
+            ],
+            "samples_truncated": false,
+            "earliest_event_time": "2026-01-20T00:00:00Z",
+            "latest_event_time": "2026-03-12T00:00:00Z"
+          },
+          {
+            "values": {
+              "unit": "USD"
+            },
+            "normalized_values": {
+              "unit": "usd"
+            },
+            "value_count": 1,
+            "total": "100",
+            "minimum": "100",
+            "maximum": "100",
+            "evidence_count": 1,
+            "samples": [
+              {
+                "node_id": "bd5697d5-c451-40be-8d81-17b38b7c6a1b",
+                "value": "100",
+                "unit": "USD",
+                "source_text": "100 USD",
+                "evidence_refs": [
+                  "9520e0ce-666e-452f-901b-f05bceab06c8"
+                ]
+              }
+            ],
+            "samples_truncated": false,
+            "earliest_event_time": "2026-09-18T21:15:40.994622Z",
+            "latest_event_time": "2026-09-18T21:15:40.994622Z"
+          }
+        ],
+        "groups_truncated": false,
+        "stored_set_exhaustive": true,
+        "source_extraction_coverage": "unknown",
+        "semantic_equivalence": "normalized_exact_and_predicate_prefix",
+        "real_world_coverage": "unknown",
+        "unit_conversion": "none",
+        "consistency": "complete_for_unchanged_store",
+        "exclusions": {
+          "condition_filtered": 1,
+          "missing_quantity": 1,
+          "selector_mismatch": 13
+        }
+      }
+    }
+  ],
+  "refusal_cases": [
+    {
+      "name": "qualifier_refused",
+      "question": "How much did I raise for charity?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "query_absent": true,
+        "aggregation_absent": true,
+        "no_scan": true
+      },
+      "passed": true,
+      "scan_calls": 0,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much did I raise for charity?",
+        "status": "unsupported",
+        "reason": "unsupported_shape",
+        "action": null,
+        "query": null,
+        "assumptions": []
+      },
+      "aggregation": null
+    },
+    {
+      "name": "negation_refused",
+      "question": "How much did I not raise?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "query_absent": true,
+        "aggregation_absent": true,
+        "no_scan": true
+      },
+      "passed": true,
+      "scan_calls": 0,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much did I not raise?",
+        "status": "unsupported",
+        "reason": "unsupported_shape",
+        "action": null,
+        "query": null,
+        "assumptions": []
+      },
+      "aggregation": null
+    },
+    {
+      "name": "future_refused",
+      "question": "How much will I raise?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "query_absent": true,
+        "aggregation_absent": true,
+        "no_scan": true
+      },
+      "passed": true,
+      "scan_calls": 0,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much will I raise?",
+        "status": "unsupported",
+        "reason": "unsupported_shape",
+        "action": null,
+        "query": null,
+        "assumptions": []
+      },
+      "aggregation": null
+    },
+    {
+      "name": "named_subject_refused",
+      "question": "How much did Alice raise?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "query_absent": true,
+        "aggregation_absent": true,
+        "no_scan": true
+      },
+      "passed": true,
+      "scan_calls": 0,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much did Alice raise?",
+        "status": "unsupported",
+        "reason": "unsupported_shape",
+        "action": null,
+        "query": null,
+        "assumptions": []
+      },
+      "aggregation": null
+    },
+    {
+      "name": "unknown_action_refused",
+      "question": "How much did I frobnicate?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "query_absent": true,
+        "aggregation_absent": true,
+        "no_scan": true
+      },
+      "passed": true,
+      "scan_calls": 0,
+      "plan": {
+        "schema_version": 1,
+        "question": "How much did I frobnicate?",
+        "status": "unsupported",
+        "reason": "unsupported_action",
+        "action": "frobnicate",
+        "query": null,
+        "assumptions": []
+      },
+      "aggregation": null
+    },
+    {
+      "name": "unsupported_unit_refused",
+      "question": "How many dollars did I raise?",
+      "checks": {
+        "status": true,
+        "reason": true,
+        "query_absent": true,
+        "aggregation_absent": true,
+        "no_scan": true
+      },
+      "passed": true,
+      "scan_calls": 0,
+      "plan": {
+        "schema_version": 1,
+        "question": "How many dollars did I raise?",
+        "status": "unsupported",
+        "reason": "unsupported_unit",
+        "action": "raise",
+        "query": null,
+        "assumptions": []
+      },
+      "aggregation": null
+    }
+  ],
+  "decision": "reject_fail_closed_quantity_text_planner",
+  "limits": "Deterministic product-path validation over one previously completed authored pack; not held-out language coverage, extraction accuracy, answer quality, or competitive evidence.",
+  "result_sha256": "a4221041cf2b77080b19aba07db86e9f0a5878aad3f578d545e06ff1d1b4282e"
+}
