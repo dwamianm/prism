@@ -1,7 +1,9 @@
 # LongMemEval-S monotonic compact packing v1
 
-**Decision:** advance to paired answer-quality evaluation. Do not change the
-default yet.
+**Source-retention decision:** advanced to paired answer-quality evaluation.
+The subsequent registered answer trial failed 76/119 to 72/119, so the policy
+is now rejected for confirmation and product integration. See the
+[answer report](LONGMEMEVAL-S-MONOTONIC-ANSWER-DEV-V2.md).
 
 ## Why this experiment exists
 
@@ -57,6 +59,7 @@ This establishes a source-retention improvement on the complete frozen
 LongMemEval-S workload. It does not establish answer improvement, an independent
 holdout result, Zep parity, or universal superiority. The implementation remains
 experimental and is not wired into the public configuration or receipt schema.
-The next gate is a paired reader trial with exact frozen contexts, counterbalanced
-arm order, a separately calibrated judge, and no default change unless answer
-quality is non-inferior.
+The paired reader trial used exact frozen contexts, counterbalanced arm order
+and a separately calibrated judge. It failed answer non-inferiority despite the
+source-retention gain. This source result must not be used by itself to justify
+a default or opt-in product policy.
