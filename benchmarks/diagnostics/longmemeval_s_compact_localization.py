@@ -198,7 +198,9 @@ async def _prepare_case(
                 selected,
                 config.packing.model_copy(update={"context_format": "compact"}),
                 coverage_notice=response.bundle.coverage_notice,
-                context_guidance=guidance,
+                context_guidance=(
+                    guidance if control.context_guidance is not None else None
+                ),
                 _required=required,
                 _require_guidance=control.context_guidance is not None,
             )
@@ -208,14 +210,35 @@ async def _prepare_case(
     candidate_rows = [item for values in candidate.sections.values() for item in values]
     control_pairs = {(item.node.id, item.representation) for item in control_rows}
     candidate_pairs = {(item.node.id, item.representation) for item in candidate_rows}
+    invariant = {
+        "context_format": candidate.context_format,
+        "missing_pairs": sorted(
+            (str(node_id), representation.value)
+            for node_id, representation in control_pairs - candidate_pairs
+        ),
+        "extra_pairs": sorted(
+            (str(node_id), representation.value)
+            for node_id, representation in candidate_pairs - control_pairs
+        ),
+        "control_records": control.included_count,
+        "candidate_records": candidate.included_count,
+        "candidate_tokens": candidate.tokens_used,
+        "available_tokens": max(
+            0, config.packing.token_budget - config.packing.overhead_tokens
+        ),
+        "guidance_preserved": candidate.context_guidance == control.context_guidance,
+    }
     if (
-        candidate.context_format != "compact"
-        or control_pairs != candidate_pairs
-        or control.included_count != candidate.included_count
-        or candidate.tokens_used > max(0, config.packing.token_budget - config.packing.overhead_tokens)
-        or candidate.context_guidance != control.context_guidance
+        invariant["context_format"] != "compact"
+        or invariant["missing_pairs"]
+        or invariant["extra_pairs"]
+        or invariant["control_records"] != invariant["candidate_records"]
+        or invariant["candidate_tokens"] > invariant["available_tokens"]
+        or invariant["guidance_preserved"] is not True
     ):
-        raise ValueError(f"same-set compact invariant failed for {question_id}")
+        raise ValueError(
+            f"same-set compact invariant failed for {question_id}: {invariant}"
+        )
     neutral = {
         "question_id": question_id,
         "question": case["question"],
