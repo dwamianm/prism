@@ -109,9 +109,12 @@ def _load_registration(path: Path, repository_root: Path) -> dict[str, Any]:
     product_sources = source.get("product_sources_sha256")
     if not isinstance(product_sources, dict) or not product_sources:
         raise ValueError("registered product source hashes are missing")
-    for relative, expected in product_sources.items():
+    benchmark_sources = source.get("benchmark_sources_sha256")
+    if not isinstance(benchmark_sources, dict) or not benchmark_sources:
+        raise ValueError("registered benchmark source hashes are missing")
+    for relative, expected in {**product_sources, **benchmark_sources}.items():
         if _sha256_file(repository_root / relative) != expected:
-            raise ValueError(f"registered product source differs: {relative}")
+            raise ValueError(f"registered source differs: {relative}")
     expected_provider = {
         "resolver": {
             "provider": "ollama",
@@ -165,7 +168,9 @@ def _evidence_records(bundle: Any, evidence_ids: list[str]) -> list[dict[str, An
                 records.append(
                     {
                         "id": str(node.id),
-                        "event_time": node.event_time.isoformat(),
+                        "event_time": (
+                            node.event_time.isoformat() if node.event_time else None
+                        ),
                         "text": node.content,
                     }
                 )
@@ -454,11 +459,16 @@ async def run(
     for case in specifications:
         frozen = full_rows[case["question_id"]]
         expected = case["expected"]
+        capture = captures[case["question_id"]]
         if (
             frozen["resolver_called"] != expected["routed"]
             or frozen["status"] != expected["offline_status"]
-            or frozen["question_type"]
-            != captures[case["question_id"]]["question_type"]
+            or frozen["question_type"] != capture["question_type"]
+            or case.get("question_type") != capture["question_type"]
+            or case.get("abstention") != capture["abstention"]
+            or case.get("query_sha256") != capture["question_sha256"]
+            or case.get("baseline_context_sha256")
+            != capture["context_sha256"]
         ):
             raise ValueError(f"registered case source differs: {case['question_id']}")
 
