@@ -38,7 +38,13 @@ DATASET_SPLIT = "test"
 REGISTRATION_KIND = "memoryarena-travel-paired-registration"
 RESULT_KIND = "memoryarena-travel-paired-result"
 SCHEMA_VERSION = 1
-ARMS = ("native_full_history", "prme")
+DEVELOPMENT_ARMS = ("native_full_history", "prme")
+CONFIRMATION_ARMS = (
+    "native_full_history",
+    "prme_no_result_guidance",
+    "prme",
+)
+PRME_ARMS = frozenset({"prme_no_result_guidance", "prme"})
 FLIGHT_RELATIVE_PATH = (
     "env/env_systems/travel_planner_env/database/flights/clean_Flights_2022.csv"
 )
@@ -437,6 +443,24 @@ def register(
         raise RuntimeError("registration output already exists")
     if cohort_role not in {"development", "confirmation"}:
         raise ValueError("cohort role must be development or confirmation")
+    arms = (
+        CONFIRMATION_ARMS
+        if cohort_role == "confirmation"
+        else DEVELOPMENT_ARMS
+    )
+    decision_rules = {
+        "complete_execution": True,
+        "minimum_prme_minus_native_strict_ps_points": -5.0,
+        "minimum_prme_minus_native_strict_sps_points": -5.0,
+        "targeted_audit_complete": True,
+        "maximum_executed_qualified_arguments": 0,
+    }
+    if cohort_role == "development":
+        decision_rules["minimum_exact_qualified_values"] = 244
+    else:
+        decision_rules[
+            "minimum_candidate_minus_control_exact_qualified_values"
+        ] = 5
     _check_upstream(upstream)
     revision = _check_prme_clean(root)
     dataset, dataset_identity = _load_dataset()
@@ -495,8 +519,8 @@ def register(
             "remote_weights_pinned": False,
         },
         "protocol": {
-            "arms": list(ARMS),
-            "arm_order": "counterbalanced within each registered group",
+            "arms": list(arms),
+            "arm_order": "cyclically counterbalanced within each registered group",
             "judgement_mode": "none",
             "use_step_memory": False,
             "prme_memory_tokens": 4096,
@@ -536,14 +560,7 @@ def register(
             "primary": "strict full-normalized-string PS, SPS and SR",
             "secondary": "unchanged upstream native PS, SPS and SR",
             "coverage": "exact registered group/person coverage in every arm",
-            "decision_rules": {
-                "complete_execution": True,
-                "minimum_prme_minus_native_strict_ps_points": -5.0,
-                "minimum_prme_minus_native_strict_sps_points": -5.0,
-                "targeted_audit_complete": True,
-                "minimum_exact_qualified_values": 244,
-                "maximum_executed_qualified_arguments": 0,
-            },
+            "decision_rules": decision_rules,
             "limits": [
                 (
                     "Fresh confirmation cohort; it does not establish universal "
@@ -557,6 +574,12 @@ def register(
             ],
         },
     }
+    if cohort_role == "confirmation":
+        registration["protocol"]["prme_no_result_guidance"] = (
+            "The same PRME retrieval and exact tool-argument resolution as the "
+            "candidate, while withholding call-local presentation metadata from "
+            "tool results. This is the causal output-fidelity control."
+        )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(_canonical(registration) + b"\n")
     return registration
@@ -784,9 +807,12 @@ def _presentation_guidance(binding_uses: list[dict[str, Any]]) -> dict[str, Any]
 class _ResolvingToolExecutor:
     """Apply visible PRME value bindings at the real tool boundary."""
 
-    def __init__(self, delegate: Any, memory: Any):
+    def __init__(
+        self, delegate: Any, memory: Any, *, annotate_results: bool = True
+    ):
         self.delegate = delegate
         self.memory = memory
+        self.annotate_results = annotate_results
         self._records: list[dict[str, Any]] = []
 
     def start_turn(self) -> None:
@@ -819,13 +845,15 @@ class _ResolvingToolExecutor:
             or not isinstance(binding_uses, list)
         ):
             raise RuntimeError("memory adapter returned an invalid tool-argument resolution")
-        guidance = _presentation_guidance(binding_uses)
+        eligible_guidance = _presentation_guidance(binding_uses)
+        guidance = eligible_guidance if self.annotate_results else None
         record = {
             "tool_name": tool_name,
             "original_arguments": original,
             "resolved_arguments": resolved,
             "replacements": replacements,
             "binding_uses": binding_uses,
+            "result_presentation_guidance_enabled": self.annotate_results,
             "result_presentation_guidance": guidance,
         }
         self._records.append(record)
@@ -886,13 +914,17 @@ def _run_group(
     resolving_executor = None
     memory_contexts = []
     base = observation["base_person"]
-    if arm == "prme":
+    if arm in PRME_ARMS:
         memory = runtime["memory_client"](
-            user_id=f"registered_{row['id']}_{model}_prme",
+            user_id=f"registered_{row['id']}_{model}_{arm}",
             memory_system_name="prme",
             base_url=memory_url,
         )
-        resolving_executor = _ResolvingToolExecutor(base_executor, memory)
+        resolving_executor = _ResolvingToolExecutor(
+            base_executor,
+            memory,
+            annotate_results=arm == "prme",
+        )
         agent.executor = resolving_executor
         base_plan = runtime["format_plan"](
             base["name"], base["daily_plans"]
@@ -1076,6 +1108,9 @@ def run(
     registration, cohort = _verify_registration(
         registration_path, root=root, upstream=upstream
     )
+    arms = tuple(registration["protocol"].get("arms") or ())
+    if arms not in {DEVELOPMENT_ARMS, CONFIRMATION_ARMS}:
+        raise RuntimeError("registered MemoryArena arms are unsupported")
     expected_runtime = registration["actor"]["runtime_identity"]
     observed_runtime = _ollama_reader_identity(
         expected_runtime["api_base_url"], registration["actor"]["model"]
@@ -1120,7 +1155,12 @@ def run(
     process = None
     log = None
     try:
-        pending_prme = any(("prme", row["id"]) not in checkpoints for row in cohort)
+        pending_prme = any(
+            (arm, row["id"]) not in checkpoints
+            for arm in arms
+            if arm in PRME_ARMS
+            for row in cohort
+        )
         if pending_prme:
             process, log = _start_server(
                 root,
@@ -1136,10 +1176,11 @@ def run(
         _configure_actor_client(shared_agent, registration["actor"])
         # The upstream reset removes all behavioral state. Reusing its immutable
         # local tool databases avoids loading the 305 MB flight table twice.
-        agents = {arm: shared_agent for arm in ARMS}
+        agents = {arm: shared_agent for arm in arms}
         memory_url = f"http://127.0.0.1:{memory_port}"
         for index, row in enumerate(cohort):
-            order = ARMS if index % 2 == 0 else tuple(reversed(ARMS))
+            offset = index % len(arms)
+            order = arms[offset:] + arms[:offset]
             for arm in order:
                 key = (arm, row["id"])
                 if key in checkpoints:
@@ -1188,7 +1229,7 @@ def run(
     }
     scores = {}
     ordered_records = {}
-    for arm in ARMS:
+    for arm in arms:
         records = [checkpoints[(arm, row["id"])] for row in cohort]
         ordered_records[arm] = records
         submission = output / f"submission-{arm}.jsonl"
@@ -1223,7 +1264,7 @@ def run(
     }
     rules = registration["evaluation"]["decision_rules"]
     gates = {
-        "complete_execution": len(checkpoints) == len(cohort) * len(ARMS),
+        "complete_execution": len(checkpoints) == len(cohort) * len(arms),
         "strict_ps_noninferiority": deltas["ps"]
         >= rules["minimum_prme_minus_native_strict_ps_points"],
         "strict_sps_noninferiority": deltas["sps"]

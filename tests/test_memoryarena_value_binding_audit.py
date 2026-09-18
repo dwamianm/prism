@@ -185,3 +185,28 @@ def test_audit_rejects_incomplete_or_changed_resolution_evidence(mutation):
         audit_value_bindings(
             _cohort(), [native, prme], registration_sha256=REGISTRATION
         )
+
+
+def test_audit_supports_matched_no_guidance_control_arm():
+    native = _checkpoint("native_full_history")
+    candidate = _checkpoint("prme", qualified_call=True)
+    control = copy.deepcopy(candidate)
+    control["arm"] = "prme_no_result_guidance"
+    record = control["person"]["tool_argument_resolutions"][0]
+    record["result_presentation_guidance_enabled"] = False
+    record["result_presentation_guidance"] = None
+    control["scratchpad"]["scratchpad"][0]["tool_results"][0]["result"] = "found"
+
+    result = audit_value_bindings(
+        _cohort(),
+        [native, control, candidate],
+        registration_sha256=REGISTRATION,
+        arms=("native_full_history", "prme_no_result_guidance", "prme"),
+        target_arm="prme_no_result_guidance",
+        expect_result_guidance=False,
+    )
+
+    assert result["arm"] == "prme_no_result_guidance"
+    assert result["result_guidance_expected"] is False
+    assert result["tool_boundary_resolution"]["binding_use_count"] == 1
+    assert result["tool_boundary_resolution"]["guided_result_count"] == 0

@@ -226,11 +226,22 @@ def test_tool_executor_resolves_at_boundary_and_retains_audit():
     assert records[0]["resolved_arguments"] == {"city": "Salt Lake City"}
     assert records[0]["replacements"][0]["json_pointer"] == "/city"
     assert records[0]["binding_uses"][0]["operation"] == "replaced"
+    assert records[0]["result_presentation_guidance_enabled"] is True
     assert records[0]["result_presentation_guidance"]["values"] == [{
         "kind": "city",
         "presentation": "Salt Lake City(Utah)",
     }]
     assert executor.drain() == []
+
+    control = runner._ResolvingToolExecutor(
+        delegate, memory, annotate_results=False
+    )
+    control.start_turn()
+    assert control.execute("RestaurantSearch", arguments) == "found"
+    control_record = control.drain()[0]
+    assert control_record["binding_uses"][0]["operation"] == "replaced"
+    assert control_record["result_presentation_guidance_enabled"] is False
+    assert control_record["result_presentation_guidance"] is None
 
 
 def test_tool_executor_does_not_annotate_unmatched_result():

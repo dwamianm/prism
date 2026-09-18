@@ -120,11 +120,16 @@ def audit_value_bindings(
     checkpoints: list[dict[str, Any]],
     *,
     registration_sha256: str,
+    arms: tuple[str, ...] = ("native_full_history", "prme"),
+    target_arm: str = "prme",
+    expect_result_guidance: bool = True,
 ) -> dict[str, Any]:
     """Return exact targeted counts after enforcing complete paired coverage."""
+    if target_arm not in arms:
+        raise ValueError("Target audit arm is absent from registered arms")
     expected = {
         (arm, group["id"], answer["round_idx"])
-        for arm in ("native_full_history", "prme")
+        for arm in arms
         for group in cohort
         for answer in group["answers"]
     }
@@ -156,7 +161,7 @@ def audit_value_bindings(
     guidance_evidence_modes = set()
     resolution_record_count = 0
     for (arm, group_id, person_idx), checkpoint in found.items():
-        if arm != "prme":
+        if arm != target_arm:
             continue
         person = checkpoint.get("person") or {}
         plan_by_day = {
@@ -283,8 +288,16 @@ def audit_value_bindings(
             if has_guidance_evidence:
                 binding_uses = resolution.get("binding_uses")
                 guidance = resolution.get("result_presentation_guidance")
+                guidance_enabled = resolution.get(
+                    "result_presentation_guidance_enabled"
+                )
                 if not isinstance(binding_uses, list):
                     raise ValueError("Tool resolution lacks binding-use evidence")
+                if guidance_enabled is not None and (
+                    not isinstance(guidance_enabled, bool)
+                    or guidance_enabled is not expect_result_guidance
+                ):
+                    raise ValueError("Tool-result guidance policy differs")
                 declared_uses = set()
                 for use in binding_uses:
                     if not isinstance(use, dict):
@@ -329,7 +342,10 @@ def audit_value_bindings(
                         }
                     )
 
-                expected_guidance = _expected_guidance(binding_uses)
+                eligible_guidance = _expected_guidance(binding_uses)
+                expected_guidance = (
+                    eligible_guidance if expect_result_guidance else None
+                )
                 if guidance != expected_guidance:
                     raise ValueError("Saved tool-result guidance differs from binding uses")
                 marker = "<prme_value_presentations>"
@@ -372,6 +388,8 @@ def audit_value_bindings(
     return {
         "schema_version": 3,
         "kind": "memoryarena-tool-boundary-value-audit",
+        "arm": target_arm,
+        "result_guidance_expected": expect_result_guidance,
         "registration_sha256": registration_sha256,
         "coverage": {
             "complete": True,
