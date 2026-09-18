@@ -426,7 +426,8 @@ def _gold_sessions(pack: Path, evidence_ids: list[UUID]) -> dict[str, str | None
     connection = duckdb.connect(str(pack / "memory.duckdb"), read_only=True)
     try:
         rows = connection.execute(
-            "SELECT CAST(id AS VARCHAR), session_id FROM nodes "
+            "SELECT CAST(id AS VARCHAR), "
+            "json_extract_string(metadata, '$.source_session_id') FROM nodes "
             "WHERE CAST(id AS VARCHAR) IN (SELECT UNNEST(?))",
             [[str(value) for value in evidence_ids]],
         ).fetchall()
