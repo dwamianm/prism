@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-temporal-relation-confirmation-aborted-result",
+  "recorded_at": "2026-09-18T11:02:46.772591+00:00",
+  "decision": "aborted; no answer trial or candidate decision",
+  "registration_sha256": "b303afee0322fdac3a9706d07ba5cccbafd96f65db8e52731ca5802bf1ea70f8",
+  "resolver_state_sha256": "91dfbbabfa6999eccc485bca8b78bb1a07e71726ab2603964fb4a21b689d0630",
+  "run_log_sha256": "3399cdfd204d5aa766295d266da645c5373f4227bbc58d8c080ffeb078bdd4df",
+  "questions": 104,
+  "successful_resolver_generations": 99,
+  "terminal_failed_questions": 1,
+  "unattempted_questions": 4,
+  "answer_references_deserialized": false,
+  "failure": {
+    "question_id": "gpt4_70e84552_abs",
+    "prompt_sha256": "825773809784413395bbffec4b3279806bfad0930e11216ea585754a642a5c48",
+    "error_type": "ValueError",
+    "category": "invalid resolver schema",
+    "response_sha256": "79a751c9bbb2653c418e14b2b28ab835b5a61edeed4ebe444661112237233d82",
+    "done": true,
+    "done_reason": "stop",
+    "response_model": "deepseek-v4.1-flash",
+    "detail": "The model emitted evidence_id=unsupported inside an order operand; the frozen UUID schema rejected it."
+  },
+  "next_experiment": {
+    "requires_new_registration": true,
+    "policy": "predeclare generic answer-blind schema repair and bind any reused valid generations by prompt, model, response, and state hashes"
+  },
+  "claim_boundary": "Infrastructure failure before Jev, reader, or judge; this result contains no answer-quality evidence.",
+  "result_sha256": "a33cb85af78dc205e2e04b7f534005e0edebf30b34e6923a45d9f920980716fd"
+}
