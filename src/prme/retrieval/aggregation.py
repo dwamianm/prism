@@ -152,6 +152,14 @@ async def _matching_assertions(
 ]:
     """Yield every exact matching assertion and accumulate transparent exclusions."""
     selectors = _selector_sets(query)
+    predicate_prefixes = (
+        {
+            normalize_assertion_value("predicate", value)
+            for value in query.predicate_prefixes
+        }
+        if isinstance(query, QuantityAggregationQuery)
+        else set()
+    )
     if query.lifecycle_states is not None:
         lifecycle_states = list(query.lifecycle_states)
     elif query.retrieval_mode == RetrievalMode.EXPLICIT:
@@ -204,8 +212,16 @@ async def _matching_assertions(
                         )
                         for field_name in _ASSERTION_FIELDS
                     }
-                    if any(
-                        selectors[field_name]
+                    predicate_matches = (
+                        not selectors["predicate"] and not predicate_prefixes
+                    ) or normalized["predicate"] in selectors["predicate"] or any(
+                        normalized["predicate"] == prefix
+                        or normalized["predicate"].startswith(prefix + "_")
+                        for prefix in predicate_prefixes
+                    )
+                    if not predicate_matches or any(
+                        field_name != "predicate"
+                        and selectors[field_name]
                         and normalized[field_name] not in selectors[field_name]
                         for field_name in _ASSERTION_FIELDS
                     ):
@@ -486,5 +502,10 @@ async def aggregate_quantities(
         distinct_count=len(groups),
         groups=tuple(result_groups),
         groups_truncated=len(groups) > len(result_groups),
+        semantic_equivalence=(
+            "normalized_exact_and_predicate_prefix"
+            if query.predicate_prefixes
+            else "normalized_exact_only"
+        ),
         exclusions=dict(sorted(stats.exclusions.items())),
     )

@@ -15,13 +15,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   existing exclusions for approximations, ranges, identifiers and unsupported
   notation. A separate user-only path recovers one complete first-person
   conditional quantified action when the model drops the whole claim. Fresh
-  outputs record `speech_act_v10`. V10 also suppresses conditional fallback
+  outputs recorded `speech_act_v10`. V10 also suppresses conditional fallback
   when an existing validated fact has the same evidence, predicate, polarity
   and quantity identity but quotes a different valid condition substring.
   Saved v9 through v6 outputs keep their bytes and continue to prepare v12
   plans. Registered 20-case runs passed all zero-tolerance gates on both hosted
   DeepSeek and a distinct local Qwen 35B-A3B artifact: 40/40 cases, 24/24
   expected quantity instances, no unexpected quantities and no provider errors.
+
+- Fresh `speech_act_v11` extraction can recover one leading exact measure from
+  a user-authored first-person completed action in a bounded verb lexicon. The
+  path retains the verbatim measured phrase as the fact object and runs the
+  existing evidence, quantity and reference checks. It excludes modals,
+  negations, examples, questions, conditions, approximations and ranges. Saved
+  v10 through v6 extraction records remain byte-compatible and prepare v12
+  plans.
+
+- Quantity aggregation accepts optional `predicate_prefixes` for explicit,
+  token-bounded composition of model-authored predicate detail. A normalized
+  prefix such as `raised` matches `raised` and `raised_*`, but not
+  `fundraised`; no synonyms or embeddings are inferred. Responses distinguish
+  this mode with
+  `semantic_equivalence="normalized_exact_and_predicate_prefix"`.
 
 - A user-authored sentence such as `My final score was 3` no longer disappears
   when the model omits its claim. A narrow deterministic path admits terminal

@@ -195,7 +195,7 @@ explicitly replaced, uniquely owned revision protocol above.
 
 Historical plans through materialization policy `speech_act_v11` keep
 their original behavior. Fresh built-in inference records
-`grounding_policy="speech_act_v10"`, and plans made from those records use
+`grounding_policy="speech_act_v11"`, and plans made from those records use
 `speech_act_v12`: relationship
 outputs become source-cited FACT nodes and normal subject/object association
 edges, unresolved personal references remain event-local, and claim polarity and
@@ -215,8 +215,12 @@ conditional quantified action from a user sentence. These paths retain the
 same exactness, evidence, condition and reference validation. V10 suppresses
 conditional fallback when a validated fact already has the same evidence,
 predicate, polarity and quantity identity, even if its valid condition is a
-different substring of that evidence. Saved v9, v8, v7 and v6 records also
-prepare v12. Type-qualified object
+different substring of that evidence. V11 can recover one leading exact measure
+from a user-authored first-person completed action in a bounded verb lexicon.
+The action remains sentence-level and passes the same evidence, quantity and
+closed-reference validators; modals, negations, examples, questions,
+conditions, approximations and ranges do not enter this path. Saved v10 through
+v6 records also prepare v12. Type-qualified object
 references avoid arbitrary namesake links. Conditional claims start with an
 unknown condition state and stay out of DEFAULT retrieval until confirmed.
 Literal first-person attempts and intentions must retain that non-completed

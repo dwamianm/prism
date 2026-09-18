@@ -31,6 +31,7 @@ from prme.ingestion.grounding import (
     _supporting_passage,
     exact_decimal_string_from_quantity_text,
     recover_exact_quantity_from_object,
+    recover_exact_quantity_prefix,
     validate_extracted_quantity,
 )
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
@@ -505,6 +506,82 @@ def _recover_conditional_quantified_actions(
         recovered.append(fact)
     return recovered
 
+
+_FIRST_PERSON_MEASURED_ACTION_RE = re.compile(
+    r"(?:^|(?<=[.!?])\s+)"
+    r"(?P<lead>(?:(?:by\s+the\s+way|also|additionally|then),?\s+)?)"
+    r"(?P<subject>I|we)\s+"
+    r"(?:(?:just|recently|previously|successfully|also)\s+)*"
+    r"(?P<verb>ran|run|walked|walk|hiked|hike|cycled|cycle|biked|bike|"
+    r"swam|swim|drove|drive|traveled|travelled|travel|lifted|lift|"
+    r"drank|drink|consumed|consume|shipped|ship|sent|send|processed|"
+    r"process|completed|complete)\s+"
+    r"(?P<body>[^!?;\n]{1,300}?)(?P<terminal>[.!])(?=\s|$)",
+    re.IGNORECASE,
+)
+
+
+def _recover_exact_first_person_measured_actions(
+    extraction: ExtractionResult,
+    source: str,
+    *,
+    role: str | None,
+) -> list[_CitedFact]:
+    """Recover one leading exact measure from a bounded completed action.
+
+    The pattern is deliberately user-only and sentence-level. It accepts a
+    small completed-action lexicon, optional harmless discourse lead-ins and a
+    leading currency or bounded measurement phrase. Modals, negations,
+    examples, questions and condition-prefixed clauses do not match.
+    """
+    if role != "user":
+        return []
+    recovered: list[_CitedFact] = []
+    for match in _FIRST_PERSON_MEASURED_ACTION_RE.finditer(source):
+        quote = match.group(0).strip()
+        quantity = recover_exact_quantity_prefix(
+            match.group("body"),
+            claim_passage=quote,
+        )
+        if quantity is None:
+            continue
+        subject = match.group("subject")
+        if any(
+            fact.subject.casefold() == subject.casefold()
+            and fact.quantity == quantity
+            and (
+                (passage := _supporting_claim_passage(
+                    fact.evidence_quote or "", source
+                ))
+                is not None
+                and quote in passage
+            )
+            for fact in extraction.facts
+        ):
+            continue
+        try:
+            fact = _CitedFact(
+                subject=subject,
+                predicate=match.group("verb").casefold(),
+                object=quantity.source_text,
+                quantity=quantity,
+                polarity="positive",
+                evidence_quote=quote,
+                confidence=1.0,
+                fact_type="fact",
+                epistemic_type="observed",
+                temporal_intent="assertion",
+            )
+            _validate_fact_source_support(fact, source)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "extraction_measured_action_not_recovered", reason=str(exc)
+            )
+            continue
+        recovered.append(fact)
+    return recovered
+
+
 class _CitedExtractionResult(ExtractionResult):
     facts: list[_CitedFact] = Field(default_factory=list)  # type: ignore[assignment]
     relationships: list[_CitedRelationship] = Field(default_factory=list)  # type: ignore[assignment]
@@ -649,6 +726,15 @@ class _CitedExtractionResult(ExtractionResult):
                     count=len(conditional_facts),
                 )
                 self.facts.extend(conditional_facts)
+            measured_actions = _recover_exact_first_person_measured_actions(
+                self, source, role=role
+            )
+            if measured_actions:
+                logger.info(
+                    "extraction_measured_actions_recovered",
+                    count=len(measured_actions),
+                )
+                self.facts.extend(measured_actions)
         fact_errors, relationship_errors = reference_errors_by_claim(self)
         closed_facts = []
         for index, (fact, errors) in enumerate(zip(self.facts, fact_errors, strict=True)):

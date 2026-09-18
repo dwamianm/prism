@@ -1118,6 +1118,7 @@ async def memory_aggregate_quantities(
     user_id: Optional[str] = None,
     subjects: Optional[list[str]] = None,
     predicates: Optional[list[str]] = None,
+    predicate_prefixes: Optional[list[str]] = None,
     objects: Optional[list[str]] = None,
     polarities: Optional[list[str]] = None,
     units: Optional[list[str]] = None,
@@ -1145,6 +1146,7 @@ async def memory_aggregate_quantities(
         user_id: Owner to aggregate; omit when the MCP server binds an owner.
         subjects: Optional exact subject selectors.
         predicates: Optional exact predicate selectors.
+        predicate_prefixes: Optional normalized token prefixes for predicates.
         objects: Optional exact object selectors.
         polarities: Optional exact polarity selectors; defaults to positive.
         units: Optional exact unit selectors after Unicode/case/whitespace normalization.
@@ -1166,6 +1168,7 @@ async def memory_aggregate_quantities(
         raw = {
             "subjects": subjects,
             "predicates": predicates,
+            "predicate_prefixes": predicate_prefixes,
             "objects": objects,
             "polarities": polarities,
             "units": units,

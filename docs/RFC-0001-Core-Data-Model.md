@@ -269,7 +269,7 @@ saved plans retain their original materialization policy and replay unchanged.
 
 Historical `speech_act_v11` and earlier plans keep their exact node
 metadata and replay unchanged. Fresh built-in extractions record
-`speech_act_v10`, and plans made from those outputs record `speech_act_v12`, which
+`speech_act_v11`, and plans made from those outputs record `speech_act_v12`, which
 retains the v7 source-effective validity rules and rejects an attempt or
 intention collapsed into a completed/current predicate, including component
 relationships inside the attempted action. If the target claim is omitted, v12
@@ -285,8 +285,12 @@ first-person conditional quantified action from a user source. It retains the
 same approximation, range, condition, evidence and reference guards.
 V10 suppresses that conditional fallback when a validated fact already has the
 same evidence, predicate, polarity and quantity identity, regardless of which
-valid source substring it uses for the condition. Saved v9, v8, v7 and v6
-records also prepare v12, saved v5 records prepare v11,
+valid source substring it uses for the condition. V11 can recover one leading
+exact measure from a user-authored first-person completed action in a bounded
+verb lexicon. It still uses the source phrase as the fact object and passes the
+ordinary evidence, quantity and closed-reference validators; modals, negations,
+examples, questions, conditions, approximations and ranges are excluded. Saved
+v10, v9, v8, v7 and v6 records also prepare v12, saved v5 records prepare v11,
 v4 prepare v10, v3 prepare v9, and v2 prepare v8. A legacy extraction
 record whose omitted policy defaults to `source_passage_v1` prepares a missing
 plan under v7 rather than claiming the new validator ran.

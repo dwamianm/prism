@@ -1244,9 +1244,9 @@ from prme import QuantityAggregationQuery
 
 totals = memory.aggregate_quantities(
     QuantityAggregationQuery(
-        predicates=["spent"],
-        units=["USD"],
-        group_by=["predicate", "unit"],
+        predicate_prefixes=["raised"],
+        units=["$"],
+        group_by=["unit"],
     ),
     user_id="alice",
 )
@@ -1256,6 +1256,10 @@ Each group returns an exact `Decimal` total, minimum, maximum, value/evidence
 counts, temporal bounds, and bounded per-node source samples. JSON serializes
 decimals as strings. `group_by` must contain `unit`; normalization is limited to
 Unicode, case, and whitespace, and no conversion or currency inference occurs.
+`predicate_prefixes` is opt-in and token-bounded after predicate normalization:
+`raised` includes `raised` and `raised_*`, but not `fundraised`. A response using
+it reports `semantic_equivalence="normalized_exact_and_predicate_prefix"` rather
+than `normalized_exact_only`; no synonym or embedding inference is performed.
 The read path revalidates the stored decimal against its claim object and source
 evidence. HTTP exposes `POST /v1/quantities/aggregate`; MCP exposes
 `memory_aggregate_quantities`. These operations use the same unchanged-store and
@@ -1455,6 +1459,12 @@ or accept an unlisted noun as a measure. Invalid optional quantity output is rem
 otherwise grounded fact remains. Ranges, approximations, scientific notation,
 locale decimal commas, and phrases with multiple numbers are not typed. No
 currency inference or unit conversion occurs.
+
+Fresh `speech_act_v11` extraction can also recover one leading exact measure
+from a user-authored first-person completed action in a bounded verb lexicon,
+such as `I just ran 5 kilometers`. It retains the source phrase as the object and
+uses the same validators; modals, negations, examples, questions, conditions,
+approximations and ranges do not use this recovery path.
 
 ### Custom Scoring Weights
 

@@ -11,6 +11,7 @@ from prme.ingestion.extraction import _CitedExtractionResult
 from prme.ingestion.grounding import (
     exact_decimal_string_from_quantity_text,
     recover_exact_quantity_from_object,
+    recover_exact_quantity_prefix,
     validate_grounding,
 )
 from prme.ingestion.schema import (
@@ -181,6 +182,29 @@ def test_bounded_quantity_recovery_from_grounded_object(
         )
 
 
+@pytest.mark.parametrize(
+    ("text", "passage", "expected"),
+    [
+        ("5 kilometers in the race", "I ran 5 kilometers in the race.", ("5", "kilometers", "5 kilometers")),
+        ("$ 500 for the shelter", "I raised $ 500 for the shelter.", ("500", "$", "$ 500")),
+        ("about 5 kilometers", "I ran about 5 kilometers.", None),
+        ("5-10 kilometers", "I ran 5-10 kilometers.", None),
+        ("CUDA 12.4", "I installed CUDA 12.4.", None),
+    ],
+)
+def test_bounded_quantity_recovery_from_text_prefix(text, passage, expected):
+    quantity = recover_exact_quantity_prefix(text, claim_passage=passage)
+    if expected is None:
+        assert quantity is None
+    else:
+        value, unit, source_text = expected
+        assert quantity == ExtractedQuantity(
+            value=value,
+            unit=unit,
+            source_text=source_text,
+        )
+
+
 def test_builtin_enriches_grounded_fact_when_provider_omits_quantity():
     source = "I did not raise $500 for the shelter."
     result = _CitedExtractionResult.model_validate(
@@ -223,6 +247,90 @@ def test_builtin_recovers_omitted_conditional_quantified_action():
     )
     assert fact.condition == "If the campaign succeeds"
     assert fact.quantity == ExtractedQuantity(value="500", unit="$", source_text="$500")
+
+
+def test_builtin_recovers_omitted_measured_action_from_complex_user_source():
+    source = (
+        "I've been trying to attend at least one charity event per month. "
+        "By the way, I just ran 5 kilometers in the Run for Hunger charity "
+        "event on March 12th and raised $250 for a local food bank."
+    )
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": "user"},
+    )
+
+    assert len(result.facts) == 1
+    fact = result.facts[0]
+    assert (fact.subject, fact.predicate, fact.object, fact.epistemic_type) == (
+        "I",
+        "ran",
+        "5 kilometers",
+        "observed",
+    )
+    assert fact.quantity == ExtractedQuantity(
+        value="5", unit="kilometers", source_text="5 kilometers"
+    )
+    assert fact.evidence_quote == source
+
+
+def test_builtin_does_not_duplicate_existing_measured_action():
+    source = "I ran 5 kilometers during the race."
+    result = _CitedExtractionResult.model_validate(
+        {
+            "entities": [],
+            "facts": [
+                {
+                    "subject": "I",
+                    "predicate": "ran_distance",
+                    "object": "5 kilometers",
+                    "quantity": {
+                        "value": "5",
+                        "unit": "kilometers",
+                        "source_text": "5 kilometers",
+                    },
+                    "polarity": "positive",
+                    "evidence_quote": source,
+                    "epistemic_type": "observed",
+                }
+            ],
+            "relationships": [],
+        },
+        context={"source_text": source, "source_role": "user"},
+    )
+
+    assert len(result.facts) == 1
+
+
+def test_builtin_recovers_decimal_measured_action():
+    source = "I lifted 1.5 kilograms during training."
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": "user"},
+    )
+
+    assert result.facts[0].quantity == ExtractedQuantity(
+        value="1.5", unit="kilograms", source_text="1.5 kilograms"
+    )
+
+
+@pytest.mark.parametrize(
+    ("source", "role"),
+    [
+        ("I ran 5 kilometers.", "assistant"),
+        ("For example, I ran 5 kilometers.", "user"),
+        ("Can I run 5 kilometers?", "user"),
+        ("I did not run 5 kilometers.", "user"),
+        ("I ran about 5 kilometers.", "user"),
+        ("I ran 5-10 kilometers.", "user"),
+    ],
+)
+def test_builtin_measured_action_recovery_stays_narrow(source, role):
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": role},
+    )
+    assert result.facts == []
 
 
 def test_builtin_does_not_duplicate_existing_conditional_quantity():

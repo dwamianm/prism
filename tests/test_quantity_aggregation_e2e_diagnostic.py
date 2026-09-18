@@ -24,7 +24,7 @@ def _row(case):
             }
         )
     return {
-        "grounding_policy": "speech_act_v10",
+        "grounding_policy": "speech_act_v11",
         "materialization_policy": "speech_act_v12",
         "nodes": nodes,
     }
@@ -51,13 +51,13 @@ def _aggregation():
         ],
         "stored_set_exhaustive": True,
         "source_extraction_coverage": "unknown",
-        "semantic_equivalence": "normalized_exact_only",
+        "semantic_equivalence": "normalized_exact_and_predicate_prefix",
         "real_world_coverage": "unknown",
         "unit_conversion": "none",
         "consistency": "complete_for_unchanged_store",
         "exclusions": {
             "selector_mismatch": 2,
-            "epistemic_filtered": 1,
+            "condition_filtered": 1,
             "unit_mismatch": 1,
         },
     }

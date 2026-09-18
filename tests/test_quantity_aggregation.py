@@ -166,6 +166,39 @@ async def test_quantity_unit_selector_is_normalized_without_conversion(config, u
         assert result.groups[0].normalized_values["unit"] == "kg"
 
 
+async def test_quantity_predicate_prefix_is_explicit_and_token_bounded(config, user):
+    async with MemoryEngine.open(config) as engine:
+        await _store_quantity(
+            engine,
+            owner=user,
+            value="250",
+            unit="$",
+            source_text="$250",
+            predicate="raised_amount_for_beneficiary",
+        )
+        await _store_quantity(
+            engine,
+            owner=user,
+            value="900",
+            unit="$",
+            source_text="$900",
+            predicate="fundraised",
+        )
+
+        result = await engine.aggregate_quantities(
+            QuantityAggregationQuery(predicate_prefixes=["raised"]),
+            user_id=user,
+        )
+
+        assert result.matched_quantity_records == 1
+        assert result.groups[0].total == Decimal("250")
+        assert (
+            result.semantic_equivalence
+            == "normalized_exact_and_predicate_prefix"
+        )
+        assert result.exclusions["selector_mismatch"] == 1
+
+
 def test_quantity_query_requires_unit_in_every_group():
     with pytest.raises(ValueError, match="must include unit"):
         QuantityAggregationQuery(group_by=["predicate"])
@@ -219,6 +252,18 @@ async def test_http_and_mcp_expose_owner_bound_quantity_totals(config, user):
             })
             assert response.status_code == 200
             assert response.json()["groups"][0]["total"] == "4.50"
+            prefix_response = await client.post(
+                "/v1/quantities/aggregate",
+                json={
+                    "user_id": user,
+                    "query": {"predicate_prefixes": ["spent"]},
+                },
+            )
+            assert prefix_response.status_code == 200
+            assert (
+                prefix_response.json()["semantic_equivalence"]
+                == "normalized_exact_and_predicate_prefix"
+            )
             assert (await client.post(
                 "/v1/quantities/aggregate",
                 json={"user_id": user, "query": {"group_by": ["predicate"]}},
@@ -241,6 +286,15 @@ async def test_http_and_mcp_expose_owner_bound_quantity_totals(config, user):
             payload = json.loads(result.content[0].text)
             assert payload["groups"][0]["total"] == "4.50"
             assert payload["matched_quantity_records"] == 1
+            prefix_result = await session.call_tool(
+                "memory_aggregate_quantities",
+                {"predicate_prefixes": ["spent"]},
+            )
+            prefix_payload = json.loads(prefix_result.content[0].text)
+            assert (
+                prefix_payload["semantic_equivalence"]
+                == "normalized_exact_and_predicate_prefix"
+            )
             for arguments in (
                 {"user_id": user + "-other"},
                 {"group_by": ["predicate"]},

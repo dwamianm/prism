@@ -60,7 +60,7 @@ encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
 metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
-Fresh built-in extractions record `grounding_policy="speech_act_v10"`; plans
+Fresh built-in extractions record `grounding_policy="speech_act_v11"`; plans
 made from those records use `speech_act_v12`. V7 recovers an exact decimal from
 its source phrase when provider JSON used a float, without converting or trusting
 that float, and rejects approximation or range cues from surrounding evidence.
@@ -76,7 +76,10 @@ sentence. Both paths retain ordinary exactness, evidence, condition and
 reference checks. V10 suppresses conditional fallback when a validated fact
 already has the same source evidence, predicate, polarity and quantity identity,
 even when its valid condition quote uses a different source substring. Saved v9,
-v8, v7 and v6 records remain on v12. Version 12 rejects completed
+v8, v7 and v6 records remain on v12. V11 can also recover one leading exact
+measure from a user-authored first-person completed action in a bounded verb
+lexicon. It remains sentence-level, source-grounded and excludes modals,
+negations, examples, questions, conditions, approximations and ranges. Version 12 rejects completed
 component relationships inside a first-person attempt clause and requires the
 attempted target even when the extractor also records a count or failure. A
 narrow recovery adds the first exact model-returned entity after a literal
@@ -94,6 +97,12 @@ checksums remain unchanged; do not infer unit aliases or rewrite historical meta
 facts start validity at their resolved source-effective time. Valid newer
 replacements close the prior interval atomically when the boundary does not
 precede its stored start; legacy intervals that would invert remain unchanged.
+
+`QuantityAggregationQuery.predicate_prefixes` is an explicit normalized token
+prefix selector for open-vocabulary predicates. `raised` matches `raised` and
+`raised_*`, but not `fundraised`; no synonym or embedding inference occurs.
+Responses report `semantic_equivalence="normalized_exact_and_predicate_prefix"`
+when it is used. Exact predicate selectors retain `normalized_exact_only`.
 
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 

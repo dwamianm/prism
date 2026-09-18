@@ -134,6 +134,7 @@ class QuantityAggregationQuery(BaseModel):
 
     subjects: tuple[str, ...] = ()
     predicates: tuple[str, ...] = ()
+    predicate_prefixes: tuple[str, ...] = ()
     objects: tuple[str, ...] = ()
     polarities: tuple[str, ...] = ("positive",)
     units: tuple[str, ...] = ()
@@ -153,7 +154,14 @@ class QuantityAggregationQuery(BaseModel):
     group_limit: int = Field(default=1000, ge=0, le=10000, strict=True)
     sample_limit: int = Field(default=10, ge=0, le=100, strict=True)
 
-    @field_validator("subjects", "predicates", "objects", "polarities", "units")
+    @field_validator(
+        "subjects",
+        "predicates",
+        "predicate_prefixes",
+        "objects",
+        "polarities",
+        "units",
+    )
     @classmethod
     def validate_selectors(cls, values: tuple[str, ...]) -> tuple[str, ...]:
         if any(not value.strip() for value in values):
@@ -232,7 +240,10 @@ class QuantityAggregation(BaseModel):
     groups_truncated: bool = False
     stored_set_exhaustive: Literal[True] = True
     source_extraction_coverage: Literal["unknown"] = "unknown"
-    semantic_equivalence: Literal["normalized_exact_only"] = "normalized_exact_only"
+    semantic_equivalence: Literal[
+        "normalized_exact_only",
+        "normalized_exact_and_predicate_prefix",
+    ] = "normalized_exact_only"
     real_world_coverage: Literal["unknown"] = "unknown"
     unit_conversion: Literal["none"] = "none"
     consistency: Literal["complete_for_unchanged_store"] = (

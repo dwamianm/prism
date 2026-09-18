@@ -123,13 +123,9 @@ CASES: tuple[dict[str, Any], ...] = (
 
 
 QUERY = {
-    "predicates": (
+    "predicate_prefixes": (
         "raised",
-        "raised_amount_for",
-        "raised_funds_for",
         "helped_raise",
-        "helped_raise_amount_for",
-        "helped_raise_funds_for",
     ),
     "units": ("$",),
     "group_by": ("unit",),
@@ -250,7 +246,7 @@ def register(args: argparse.Namespace, root: Path) -> dict[str, Any]:
                 "consistency": "complete_for_unchanged_store",
                 "required_exclusions": (
                     "selector_mismatch",
-                    "epistemic_filtered",
+                    "condition_filtered",
                     "unit_mismatch",
                 ),
             },
@@ -413,7 +409,7 @@ def score_case(case: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
         available.remove(index)
         matches.append(actual[index])
     policy_errors = []
-    if row.get("grounding_policy") != "speech_act_v10":
+    if row.get("grounding_policy") != "speech_act_v11":
         policy_errors.append("grounding_policy")
     if row.get("materialization_policy") != "speech_act_v12":
         policy_errors.append("materialization_policy")
@@ -448,7 +444,7 @@ def score(
     exclusions = aggregation.get("exclusions", {})
     required_exclusions = (
         "selector_mismatch",
-        "epistemic_filtered",
+        "condition_filtered",
         "unit_mismatch",
     )
     aggregation_checks = {
@@ -471,7 +467,7 @@ def score(
         "source_extraction_coverage": aggregation.get("source_extraction_coverage")
         == "unknown",
         "semantic_equivalence": aggregation.get("semantic_equivalence")
-        == "normalized_exact_only",
+        == "normalized_exact_and_predicate_prefix",
         "real_world_coverage": aggregation.get("real_world_coverage") == "unknown",
         "unit_conversion": aggregation.get("unit_conversion") == "none",
         "consistency": aggregation.get("consistency")

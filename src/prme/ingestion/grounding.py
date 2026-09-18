@@ -192,6 +192,46 @@ def recover_exact_quantity_from_object(
     )
 
 
+def recover_exact_quantity_prefix(
+    text: str,
+    *,
+    claim_passage: str,
+) -> ExtractedQuantity | None:
+    """Derive one exact bounded measure from the beginning of source text.
+
+    This helper supports deterministic recovery of an omitted measured action.
+    It consumes only a leading currency phrase or decimal plus a unit from the
+    same conservative lexicon as :func:`recover_exact_quantity_from_object`.
+    Remaining clause text is ignored only after that exact phrase is isolated;
+    the ordinary validator still checks the phrase and its local qualifiers in
+    the complete claim passage.
+    """
+    stripped = text.lstrip()
+    if not stripped:
+        return None
+    number_start = 0
+    if stripped[0] in _CURRENCY_SYMBOLS:
+        number_start = 1
+        while number_start < len(stripped) and stripped[number_start].isspace():
+            number_start += 1
+    number = _QUANTITY_NUMBER_RE.match(stripped, number_start)
+    if number is None:
+        return None
+    start, end = number.span()
+    if number_start:
+        start = 0
+    else:
+        unit_match = _RECOVERABLE_QUANTITY_UNIT_RE.match(stripped[end:])
+        if unit_match is None:
+            return None
+        end += unit_match.end()
+    phrase = stripped[start:end]
+    return recover_exact_quantity_from_object(
+        phrase,
+        claim_passage=claim_passage,
+    )
+
+
 def validate_extracted_quantity(
     quantity: ExtractedQuantity | None,
     *,
