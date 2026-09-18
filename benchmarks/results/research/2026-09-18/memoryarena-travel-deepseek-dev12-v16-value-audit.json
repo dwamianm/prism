@@ -1,0 +1,6447 @@
+{
+  "coverage": {
+    "checkpoint_count": 156,
+    "complete": true,
+    "group_count": 12,
+    "person_count": 78
+  },
+  "evidence": {
+    "audit_source_sha256": "b1a898805c6acefbe9114e507b75da4a407e4a3f0501e3a15db0c791c5120a96",
+    "paired_result_file": "memoryarena-travel-deepseek-dev12-v16-result.json",
+    "paired_result_sha256": "8d0d5d109cf08eb6d0f987dafbc7dfe22b9657fdd3335dd603ceabc1b15b8a15",
+    "person_checkpoints_file": "person_checkpoints.jsonl",
+    "person_checkpoints_sha256": "a28604b4d5c23a4649ab108d4f3c598ec4e979c6d0a00b872d48f61c5796262c",
+    "registered_prme_revision": "50f5cf6726568b70e47f6f9cd0d73826d6fd0195",
+    "registration_file": "memoryarena-travel-deepseek-dev12-v16-registration.json",
+    "registration_sha256": "57d7646cb99b180f983c0bbbe00aae181f23582c4c643c68f233559a0e0f46a2",
+    "upstream_revision": "6cd9de14b71915e39ac742a20dc33785e14b6aab"
+  },
+  "kind": "memoryarena-tool-boundary-value-audit",
+  "limits": [
+    "Exact normalized-string audit; it is not a semantic itinerary-validity judge.",
+    "Qualified values are changed slots whose reference contains parentheses.",
+    "Model-requested qualified calls are counted from immutable saved traces.",
+    "Executed qualified arguments are counted recursively after exact resolution.",
+    "When available, call-local presentation metadata is matched to saved model-visible tool results."
+  ],
+  "qualified_changed_values": {
+    "observed": 318,
+    "passed": 252,
+    "rate": 0.7924528301886793,
+    "total": 318
+  },
+  "qualified_tool_calls": {
+    "count": 67,
+    "occurrences": [
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/destination"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/destination",
+          "/origin"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/origin"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 1,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/destination"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/destination",
+          "/origin"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/origin"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 2,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 3,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 3,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 3,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 54,
+        "person_idx": 3,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 54,
+        "person_idx": 3,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 54,
+        "person_idx": 3,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 4,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 4,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 4,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 54,
+        "person_idx": 4,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 54,
+        "person_idx": 4,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 54,
+        "person_idx": 4,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/destination"
+        ],
+        "call_index": 0,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/destination",
+          "/origin"
+        ],
+        "call_index": 1,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/origin"
+        ],
+        "call_index": 2,
+        "group_id": 54,
+        "person_idx": 5,
+        "step_index": 2,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/destination"
+        ],
+        "call_index": 6,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "argument_pointers": [
+          "/origin"
+        ],
+        "call_index": 0,
+        "group_id": 67,
+        "person_idx": 2,
+        "step_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 6,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 7,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 8,
+        "group_id": 148,
+        "person_idx": 2,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 0,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 1,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 2,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 3,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 4,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 5,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 6,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 7,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/city"
+        ],
+        "call_index": 8,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 0,
+        "tool": "AttractionSearch"
+      },
+      {
+        "argument_pointers": [
+          "/destination"
+        ],
+        "call_index": 0,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "argument_pointers": [
+          "/origin"
+        ],
+        "call_index": 1,
+        "group_id": 148,
+        "person_idx": 5,
+        "step_index": 1,
+        "tool": "FlightSearch"
+      }
+    ],
+    "traveler_count": 8
+  },
+  "registration_sha256": "57d7646cb99b180f983c0bbbe00aae181f23582c4c643c68f233559a0e0f46a2",
+  "schema_version": 3,
+  "tool_boundary_resolution": {
+    "binding_use_count": 462,
+    "binding_use_evidence_available": true,
+    "binding_use_operations": {
+      "already_lookup": 392,
+      "replaced": 70
+    },
+    "binding_uses": [
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 3,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 8,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 12,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 8,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Bemidji",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Bemidji(Minnesota)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 216,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Minneapolis",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Minneapolis(Minnesota)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 12,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 12,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 13,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 13,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 14,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 12,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Abilene",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Abilene(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Amarillo",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Amarillo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 116,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Lubbock",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Lubbock(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 3,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 3,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 3,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 3,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 3,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 3,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 4,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 4,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 4,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 4,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 4,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 4,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "State College",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Johnstown",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 7,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 7,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 7,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 3,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "New Orleans",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Baton Rouge",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 5,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 6,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 8,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 9,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 10,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "replaced",
+        "person_idx": 2,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 6,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 7,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 9,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 10,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 5,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 6,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 7,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 9,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 10,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "replaced",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 5,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 6,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 7,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Dallas",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "San Angelo",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 9,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Houston",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 10,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 3,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 8,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 5,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 2,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 3,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 6,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 7,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 7,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 0,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 1,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Boise",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Boise(Idaho)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 203,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Idaho Falls",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Idaho Falls(Idaho)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 2,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 6,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 7,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 1,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 2,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 3,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 4,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 9,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 5,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 10,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 6,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 11,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 12,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 7,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 12,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 4,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Medford",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Medford(Oregon)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/city",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/destination",
+        "kind": "city",
+        "lookup": "Portland",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Portland(Oregon)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 210,
+        "json_pointer": "/origin",
+        "kind": "city",
+        "lookup": "Eugene",
+        "operation": "already_lookup",
+        "person_idx": 8,
+        "presentation": "Eugene(Oregon)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      }
+    ],
+    "executed_qualified_argument_count": 0,
+    "executed_qualified_arguments": [],
+    "executed_qualified_traveler_count": 0,
+    "guided_result_count": 444,
+    "guided_result_traveler_count": 47,
+    "record_count": 626,
+    "replacement_count": 70,
+    "replacement_traveler_count": 8,
+    "replacements": [
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "lookup": "State College",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "lookup": "State College",
+        "person_idx": 1,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "lookup": "Johnstown",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "lookup": "Johnstown",
+        "person_idx": 1,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "lookup": "State College",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "lookup": "State College",
+        "person_idx": 2,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "lookup": "Johnstown",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "lookup": "Johnstown",
+        "person_idx": 2,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 3,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 3,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 3,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 3,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 3,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 3,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 4,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 4,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 4,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 4,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 4,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 4,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "State College",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/city",
+        "lookup": "Johnstown",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "lookup": "State College",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 8,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "lookup": "State College",
+        "person_idx": 5,
+        "presentation": "State College(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/destination",
+        "lookup": "Johnstown",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 9,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 54,
+        "json_pointer": "/origin",
+        "lookup": "Johnstown",
+        "person_idx": 5,
+        "presentation": "Johnstown(Pennsylvania)",
+        "resolution_index": 10,
+        "tool": "DistanceMatrix"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "lookup": "New Orleans",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "lookup": "Baton Rouge",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "lookup": "New Orleans",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 2,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "lookup": "Baton Rouge",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "lookup": "New Orleans",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 4,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/city",
+        "lookup": "Baton Rouge",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 5,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/destination",
+        "lookup": "New Orleans",
+        "person_idx": 2,
+        "presentation": "New Orleans(Louisiana)",
+        "resolution_index": 6,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 67,
+        "json_pointer": "/origin",
+        "lookup": "Baton Rouge",
+        "person_idx": 2,
+        "presentation": "Baton Rouge(Louisiana)",
+        "resolution_index": 7,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Dallas",
+        "person_idx": 2,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "San Angelo",
+        "person_idx": 2,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Houston",
+        "person_idx": 2,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Dallas",
+        "person_idx": 2,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "San Angelo",
+        "person_idx": 2,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Houston",
+        "person_idx": 2,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Dallas",
+        "person_idx": 2,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "San Angelo",
+        "person_idx": 2,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Houston",
+        "person_idx": 2,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Dallas",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 0,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "San Angelo",
+        "person_idx": 5,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 1,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Houston",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 2,
+        "tool": "RestaurantSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Dallas",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 3,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "San Angelo",
+        "person_idx": 5,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 4,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Houston",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 5,
+        "tool": "AccommodationSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Dallas",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 6,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "San Angelo",
+        "person_idx": 5,
+        "presentation": "San Angelo(Texas)",
+        "resolution_index": 7,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/city",
+        "lookup": "Houston",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 8,
+        "tool": "AttractionSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/destination",
+        "lookup": "Dallas",
+        "person_idx": 5,
+        "presentation": "Dallas(Texas)",
+        "resolution_index": 9,
+        "tool": "FlightSearch"
+      },
+      {
+        "group_id": 148,
+        "json_pointer": "/origin",
+        "lookup": "Houston",
+        "person_idx": 5,
+        "presentation": "Houston(Texas)",
+        "resolution_index": 10,
+        "tool": "FlightSearch"
+      }
+    ],
+    "trace_coverage_complete": true
+  }
+}
