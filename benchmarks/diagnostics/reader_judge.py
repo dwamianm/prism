@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
+from typing import Any
 
 from benchmarks.diagnostics import packing_reader as runtime
 from benchmarks.diagnostics._process import checked_report
@@ -89,9 +90,21 @@ def payload(case: dict, declared: dict) -> dict:
     }
 
 
+def matches_response_model(requested: str, observed: object) -> bool:
+    """Match an Ollama tag or its explicitly resolved cloud model name."""
+    resolved = (
+        requested.removesuffix(":cloud")
+        if requested.endswith(":cloud")
+        else requested.removesuffix("-cloud")
+        if requested.endswith("-cloud")
+        else requested
+    )
+    return observed == requested or (resolved != requested and observed == resolved)
+
+
 def verdict(response: dict, model: str) -> dict:
     if (
-        response.get("model") != model
+        not matches_response_model(model, response.get("model"))
         or response.get("done") is not True
         or response.get("done_reason") != "stop"
     ):
@@ -245,7 +258,7 @@ def calibration_metrics(controls: dict, result: dict) -> dict:
         raise ValueError("Calibration coverage differs from the declared controls")
     by_id = {row["id"]: row for row in rows}
     correct = false_accepts = false_rejects = 0
-    categories = {}
+    categories: dict[str, dict[str, int]] = {}
     for case in cases:
         predicted = by_id[case["id"]]["correct"]
         expected = case["expected_correct"]
@@ -407,7 +420,7 @@ def study_metrics(cases: list[dict], result: dict) -> dict:
         or any(type(value) is not bool for value in rows.values())
     ):
         raise ValueError("Judge results do not cover the paired study")
-    grouped = {}
+    grouped: dict[str, dict[str, Any]] = {}
     for case in cases:
         group = grouped.setdefault(case["question_id"], {"category": case["category"]})
         if (
