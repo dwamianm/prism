@@ -1,6 +1,16 @@
 import json
+from argparse import Namespace
+from pathlib import Path
 
 from benchmarks.diagnostics import longmemeval_s_temporal_relation_confirmation as trial
+
+
+class _StaticParser:
+    def __init__(self, args: Namespace) -> None:
+        self.args = args
+
+    def parse_args(self) -> Namespace:
+        return self.args
 
 
 def test_confirmation_protocol_freezes_disjoint_stages_and_gate() -> None:
@@ -136,3 +146,61 @@ def test_resolver_repairs_seeded_schema_failure_without_new_original_call(
     assert len(requests) == 1
     assert requests[0]["format"] == trial.resolver.RawResolution.model_json_schema()
     assert requests[0]["messages"][-1]["content"] == trial.SCHEMA_REPAIR_PROMPT
+
+
+def test_reader_cli_dispatch_does_not_pass_resolver_inputs(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    paths = {
+        name: tmp_path / f"{name}.json"
+        for name in (
+            "registration",
+            "development_registration",
+            "baseline_identity",
+            "source_identity",
+            "resolver_inputs",
+            "references",
+            "controls",
+            "judge_declaration",
+            "judge_calibration",
+            "resolver_seed_registration",
+            "resolver_seed_state",
+            "resolver_result",
+            "jev_result",
+            "paired_inputs",
+            "state",
+            "output",
+        )
+    }
+    args = Namespace(
+        command="reader",
+        source_cases_root=tmp_path,
+        base_url="http://example.invalid",
+        project_root=tmp_path,
+        **paths,
+    )
+    seen: dict[str, object] = {}
+
+    def exact_reader(
+        *,
+        registration_path: Path,
+        resolver_result_path: Path,
+        jev_result_path: Path,
+        paired_inputs_path: Path,
+        state_path: Path,
+        output_path: Path,
+        base_url: str,
+        validation: dict,
+    ) -> dict:
+        seen.update(locals())
+        return {"questions": 104}
+
+    monkeypatch.setattr(trial, "_parser", lambda: _StaticParser(args))
+    monkeypatch.setattr(trial, "_validation", lambda _args: {"checked": True})
+    monkeypatch.setattr(trial, "run_reader", exact_reader)
+
+    trial.main()
+
+    assert seen["registration_path"] == paths["registration"]
+    assert seen["validation"] == {"checked": True}
+    assert json.loads(capsys.readouterr().out) == {"questions": 104}

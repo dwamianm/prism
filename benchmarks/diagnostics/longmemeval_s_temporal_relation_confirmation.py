@@ -1436,11 +1436,11 @@ def main() -> None:
     validation = _validation(args)
     shared = {
         "registration_path": args.registration.resolve(),
-        "resolver_inputs_path": args.resolver_inputs.resolve(),
         "validation": validation,
     }
     if args.command == "resolve":
         value = run_resolver(
+            resolver_inputs_path=args.resolver_inputs.resolve(),
             state_path=args.state.resolve(),
             output_path=args.output.resolve(),
             base_url=args.base_url,
@@ -1449,6 +1449,7 @@ def main() -> None:
     elif args.command == "gate":
         value = asyncio.run(
             run_jev_gate(
+                resolver_inputs_path=args.resolver_inputs.resolve(),
                 resolver_result_path=args.resolver_result.resolve(),
                 state_path=args.state.resolve(),
                 output_path=args.output.resolve(),
