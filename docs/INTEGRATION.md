@@ -1447,7 +1447,11 @@ requires the quantified phrase in both the object and source evidence and checks
 the parsed decimal. When JSON transport emits a float, built-in extraction can
 recover the decimal only by reparsing one exact supported token from the grounded
 source phrase; it never converts the float. Approximation or range cues in the
-surrounding evidence reject clipped exact-looking output. Invalid optional quantity output is removed while the
+surrounding evidence reject clipped exact-looking output. If model-authored
+quantity fields are absent or invalid, built-in extraction can recognize one
+verbatim currency or unit from its bounded physical, data and count-unit
+lexicon in an otherwise grounded fact object. It does not normalize that unit
+or accept an unlisted noun as a measure. Invalid optional quantity output is removed while the
 otherwise grounded fact remains. Ranges, approximations, scientific notation,
 locale decimal commas, and phrases with multiple numbers are not typed. No
 currency inference or unit conversion occurs.

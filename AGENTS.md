@@ -60,7 +60,7 @@ encoding; finite record bytes and old raw checksums must remain unchanged. Do
 not restore Pydantic JSON serialization that silently converts non-finite
 metadata to null. See `docs/METADATA.md` for exact compatibility limits.
 
-Fresh built-in extractions record `grounding_policy="speech_act_v8"`; plans
+Fresh built-in extractions record `grounding_policy="speech_act_v9"`; plans
 made from those records use `speech_act_v12`. V7 recovers an exact decimal from
 its source phrase when provider JSON used a float, without converting or trusting
 that float, and rejects approximation or range cues from surrounding evidence.
@@ -68,8 +68,12 @@ V8 can additionally recover a user-authored, sentence-level exact numeric
 score/count/rating/level that the model omitted; it creates a source-literal
 concept subject and still runs normal evidence, quantity and reference checks.
 It does not run for assistant messages, examples, unsupported attributes,
-approximations, ranges or multi-number values. Saved v7 and v6 records remain on
-v12. Version 12 rejects completed
+approximations, ranges or multi-number values. V9 can derive one currency or
+bounded verbatim measurement unit from an already grounded fact object when a
+provider omitted or malformed quantity fields. It also recovers a complete
+first-person conditional action with one such quantity from a user-authored
+sentence. Both paths retain ordinary exactness, evidence, condition and
+reference checks. Saved v8, v7 and v6 records remain on v12. Version 12 rejects completed
 component relationships inside a first-person attempt clause and requires the
 attempted target even when the extractor also records a count or failure. A
 narrow recovery adds the first exact model-returned entity after a literal

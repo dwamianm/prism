@@ -30,6 +30,7 @@ from prme.ingestion.grounding import (
     _supporting_claim_passage,
     _supporting_passage,
     exact_decimal_string_from_quantity_text,
+    recover_exact_quantity_from_object,
     validate_extracted_quantity,
 )
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
@@ -402,6 +403,95 @@ def _recover_exact_dimensionless_attributes(
         facts.append(fact)
     return entities, facts
 
+
+def _enrich_missing_fact_quantities(
+    extraction: ExtractionResult,
+    source: str,
+) -> int:
+    """Attach one bounded source-derived measure to an existing grounded fact."""
+    recovered = 0
+    for fact in extraction.facts:
+        if fact.quantity is not None:
+            continue
+        claim_passage = _supporting_claim_passage(fact.evidence_quote or "", source)
+        if claim_passage is None:
+            continue
+        quantity = recover_exact_quantity_from_object(
+            fact.object,
+            claim_passage=claim_passage,
+        )
+        if quantity is not None:
+            fact.quantity = quantity
+            recovered += 1
+    return recovered
+
+
+_CONDITIONAL_QUANTIFIED_ACTION_RE = re.compile(
+    r"(?<!\w)(?P<condition>(?:if|unless|provided\s+that|as\s+long\s+as|only\s+if)"
+    r"\s+[^,!?;\n]{1,200}),\s*"
+    r"(?P<subject>I|we)\s+(?P<modal>will|would)\s+"
+    r"(?P<negative>not\s+)?(?P<verb>[A-Za-z][A-Za-z'-]*)\s+"
+    r"(?P<object>[^.!?;\n]{1,300})(?P<terminal>[.!?])",
+    re.IGNORECASE,
+)
+
+
+def _recover_conditional_quantified_actions(
+    extraction: ExtractionResult,
+    source: str,
+    *,
+    role: str | None,
+) -> list[_CitedFact]:
+    """Recover a complete first-person conditional action with one exact measure."""
+    if role != "user":
+        return []
+    recovered: list[_CitedFact] = []
+    for match in _CONDITIONAL_QUANTIFIED_ACTION_RE.finditer(source):
+        before = source[: match.start()].rstrip()
+        if before and before[-1] not in ".!?":
+            continue
+        subject = match.group("subject")
+        object_value = match.group("object").strip()
+        condition = match.group("condition")
+        if any(
+            fact.subject.casefold() == subject.casefold()
+            and fact.object.casefold() == object_value.casefold()
+            and fact.condition == condition
+            for fact in extraction.facts
+        ):
+            continue
+        quantity = recover_exact_quantity_from_object(
+            object_value,
+            claim_passage=match.group(0),
+        )
+        if quantity is None:
+            continue
+        try:
+            fact = _CitedFact(
+                subject=subject,
+                predicate=(
+                    f"{match.group('modal').casefold()}_"
+                    f"{match.group('verb').casefold()}"
+                ),
+                object=object_value,
+                quantity=quantity,
+                polarity="negative" if match.group("negative") else "positive",
+                evidence_quote=match.group(0),
+                confidence=1.0,
+                fact_type="fact",
+                epistemic_type="conditional",
+                condition=condition,
+                temporal_intent="assertion",
+            )
+            _validate_fact_source_support(fact, source)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "extraction_conditional_quantity_not_recovered", reason=str(exc)
+            )
+            continue
+        recovered.append(fact)
+    return recovered
+
 class _CitedExtractionResult(ExtractionResult):
     facts: list[_CitedFact] = Field(default_factory=list)  # type: ignore[assignment]
     relationships: list[_CitedRelationship] = Field(default_factory=list)  # type: ignore[assignment]
@@ -515,6 +605,12 @@ class _CitedExtractionResult(ExtractionResult):
                     supported_relationships.append(relationship)
             self.facts = supported_facts
             self.relationships = supported_relationships
+            enriched = _enrich_missing_fact_quantities(self, source)
+            if enriched:
+                logger.info(
+                    "extraction_fact_quantities_recovered",
+                    count=enriched,
+                )
             recovered = _recover_omitted_nonactual_targets(self, source)
             if recovered:
                 logger.info(
@@ -531,6 +627,15 @@ class _CitedExtractionResult(ExtractionResult):
                 )
                 self.entities.extend(recovered_entities)
                 self.facts.extend(recovered_facts)
+            conditional_facts = _recover_conditional_quantified_actions(
+                self, source, role=role
+            )
+            if conditional_facts:
+                logger.info(
+                    "extraction_conditional_quantities_recovered",
+                    count=len(conditional_facts),
+                )
+                self.facts.extend(conditional_facts)
         fact_errors, relationship_errors = reference_errors_by_claim(self)
         closed_facts = []
         for index, (fact, errors) in enumerate(zip(self.facts, fact_errors, strict=True)):

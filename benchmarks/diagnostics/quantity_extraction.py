@@ -323,7 +323,7 @@ def score_case(case: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
         else:
             matches.append(item)
     policy_errors = []
-    if row.get("extraction_grounding_policy") != "speech_act_v8":
+    if row.get("extraction_grounding_policy") != "speech_act_v9":
         policy_errors.append("grounding_policy")
     if row.get("materialization_policy") != "speech_act_v12":
         policy_errors.append("materialization_policy")

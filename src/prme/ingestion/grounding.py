@@ -71,6 +71,21 @@ _RANGE_AFTER_QUANTITY_RE = re.compile(
     r"^\s*(?:[-–—]|to\b)\s*(?:[$€£¥]\s*)?\d",
     re.IGNORECASE,
 )
+_RECOVERABLE_QUANTITY_UNIT_RE = re.compile(
+    r"^(?P<space>\s*)(?P<unit>"
+    r"USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|INR|"
+    r"%|percent(?:age)?s?|"
+    r"mm|cm|km|millimet(?:er|re)s?|centimet(?:er|re)s?|met(?:er|re)s?|"
+    r"kilomet(?:er|re)s?|"
+    r"mg|kg|milligrams?|grams?|kilograms?|"
+    r"ml|millilit(?:er|re)s?|lit(?:er|re)s?|gallons?|"
+    r"volts?|amps?|amperes?|watts?|"
+    r"bytes?|KB|MB|GB|TB|"
+    r"packages?|items?|files?|records?|requests?|users?|tickets?|tasks?|units?|people"
+    r")(?=$|[^A-Za-z/])",
+    re.IGNORECASE,
+)
+_CURRENCY_SYMBOLS = frozenset("$€£¥")
 
 
 def normalize_quantity_unit(value: str) -> str:
@@ -115,6 +130,66 @@ def exact_decimal_string_from_quantity_text(source_text: str) -> str | None:
     if not parsed.is_finite():
         return None
     return token
+
+
+def recover_exact_quantity_from_object(
+    object_value: str,
+    *,
+    claim_passage: str,
+) -> ExtractedQuantity | None:
+    """Derive one supported exact measure from an already grounded object.
+
+    This is a bounded provider-independent repair, not general unit inference.
+    It copies a currency symbol/code or a unit from a conservative lexicon and
+    delegates approximation, range, value, object, and evidence checks to the
+    ordinary quantity validator.
+    """
+    numbers = list(_QUANTITY_NUMBER_RE.finditer(object_value))
+    if len(numbers) != 1:
+        return None
+    number = numbers[0]
+    if (
+        number.start() >= 2
+        and object_value[number.start() - 1] in {"-", ","}
+        and object_value[number.start() - 2].isalnum()
+    ):
+        return None
+    start, end = number.span()
+    unit: str | None = None
+    prefix = object_value[:start]
+    symbol_index = len(prefix.rstrip()) - 1
+    if symbol_index >= 0 and prefix[symbol_index] in _CURRENCY_SYMBOLS:
+        start = symbol_index
+        unit = prefix[symbol_index]
+    else:
+        unit_match = _RECOVERABLE_QUANTITY_UNIT_RE.match(object_value[end:])
+        if unit_match is not None:
+            unit = unit_match.group("unit")
+            end += unit_match.end()
+    if unit is None:
+        return None
+    if (
+        object_value[:start].rstrip().endswith("(")
+        or object_value[end:].lstrip().startswith(")")
+    ):
+        return None
+    source_text = object_value[start:end]
+    exact_value = exact_decimal_string_from_quantity_text(source_text)
+    if exact_value is None:
+        return None
+    try:
+        quantity = ExtractedQuantity(
+            value=Decimal(exact_value),
+            unit=unit,
+            source_text=source_text,
+        )
+    except (ValueError, TypeError):
+        return None
+    return validate_extracted_quantity(
+        quantity,
+        object_value=object_value,
+        claim_passage=claim_passage,
+    )
 
 
 def validate_extracted_quantity(

@@ -10,6 +10,7 @@ from prme import MemoryEngine
 from prme.ingestion.extraction import _CitedExtractionResult
 from prme.ingestion.grounding import (
     exact_decimal_string_from_quantity_text,
+    recover_exact_quantity_from_object,
     validate_grounding,
 )
 from prme.ingestion.schema import (
@@ -141,6 +142,105 @@ def test_builtin_does_not_recover_dimensionless_attribute_for_assistant_source()
         context={"source_text": source, "source_role": "assistant"},
     )
     assert result.entities == []
+    assert result.facts == []
+
+
+@pytest.mark.parametrize(
+    ("object_value", "claim_passage", "expected"),
+    [
+        ("$500 for the shelter", "I raised $500 for the shelter.", ("500", "$", "$500")),
+        ("250 USD to the bank", "I donated 250 USD to the bank.", ("250", "USD", "250 USD")),
+        ("1.5 liters of water", "I drank 1.5 liters of water.", ("1.5", "liters", "1.5 liters")),
+        ("-3.25 volts", "The battery delivered -3.25 volts.", ("-3.25", "volts", "-3.25 volts")),
+        ("5kg", "I lifted 5kg.", ("5", "kg", "5kg")),
+        ("$500 for the shelter", "I raised about $500 for the shelter.", None),
+        ("$400-$500", "The budget was $400-$500.", None),
+        ("CUDA 12.4", "I installed CUDA 12.4.", None),
+        ("AB-1234 packages", "The code was AB-1234 packages.", None),
+        ("1,5 liters", "The bottle held 1,5 liters.", None),
+        ("3 A.M.", "The call starts at 3 A.M.", None),
+        ("500 Main Street", "The office is at 500 Main Street.", None),
+        ("2nd place", "I finished in 2nd place.", None),
+    ],
+)
+def test_bounded_quantity_recovery_from_grounded_object(
+    object_value, claim_passage, expected
+):
+    quantity = recover_exact_quantity_from_object(
+        object_value,
+        claim_passage=claim_passage,
+    )
+    if expected is None:
+        assert quantity is None
+    else:
+        value, unit, source_text = expected
+        assert quantity == ExtractedQuantity(
+            value=value,
+            unit=unit,
+            source_text=source_text,
+        )
+
+
+def test_builtin_enriches_grounded_fact_when_provider_omits_quantity():
+    source = "I did not raise $500 for the shelter."
+    result = _CitedExtractionResult.model_validate(
+        {
+            "entities": [{"name": "shelter", "entity_type": "organization"}],
+            "facts": [
+                {
+                    "subject": "I",
+                    "predicate": "raised",
+                    "object": "$500 for the shelter",
+                    "polarity": "negative",
+                    "evidence_quote": source,
+                    "confidence": 1.0,
+                    "epistemic_type": "observed",
+                }
+            ],
+            "relationships": [],
+        },
+        context={"source_text": source, "source_role": "user"},
+    )
+    assert result.facts[0].quantity == ExtractedQuantity(
+        value="500", unit="$", source_text="$500"
+    )
+    assert result.facts[0].polarity == "negative"
+
+
+def test_builtin_recovers_omitted_conditional_quantified_action():
+    source = "If the campaign succeeds, I will donate $500 to the shelter."
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": "user"},
+    )
+    assert len(result.facts) == 1
+    fact = result.facts[0]
+    assert (fact.subject, fact.predicate, fact.object, fact.epistemic_type) == (
+        "I",
+        "will_donate",
+        "$500 to the shelter",
+        "conditional",
+    )
+    assert fact.condition == "If the campaign succeeds"
+    assert fact.quantity == ExtractedQuantity(value="500", unit="$", source_text="$500")
+
+
+@pytest.mark.parametrize("role", ["assistant", "system", "tool"])
+def test_builtin_conditional_quantity_recovery_is_user_only(role):
+    source = "If the campaign succeeds, I will donate $500 to the shelter."
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": role},
+    )
+    assert result.facts == []
+
+
+def test_builtin_does_not_recover_conditional_quantity_from_example():
+    source = "For example, if the campaign succeeds, I will donate $500 to the shelter."
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": "user"},
+    )
     assert result.facts == []
 
 
@@ -298,22 +398,26 @@ def test_builtin_keeps_exact_grounded_quantity():
     {"value": "12.50", "unit": "USD", "source_text": "$12.50"},
     {"value": "99", "unit": "$", "source_text": "$99"},
 ])
-def test_builtin_discards_unsupported_quantity_without_losing_fact(quantity):
+def test_builtin_repairs_unsupported_quantity_from_grounded_object(quantity):
     source, payload = _payload(quantity)
     result = _CitedExtractionResult.model_validate(
         payload, context={"source_text": source}
     )
     assert len(result.facts) == 1
-    assert result.facts[0].quantity is None
+    assert result.facts[0].quantity == ExtractedQuantity(
+        value="12.50", unit="$", source_text="$12.50"
+    )
 
 
-def test_builtin_discards_malformed_quantity_without_losing_fact():
+def test_builtin_repairs_malformed_quantity_from_grounded_object():
     source, payload = _payload({"value": "NaN", "unit": "", "source_text": ""})
     result = _CitedExtractionResult.model_validate(
         payload, context={"source_text": source}
     )
     assert len(result.facts) == 1
-    assert result.facts[0].quantity is None
+    assert result.facts[0].quantity == ExtractedQuantity(
+        value="12.50", unit="$", source_text="$12.50"
+    )
 
 
 @pytest.mark.parametrize("object_value, quantity", [
@@ -322,7 +426,6 @@ def test_builtin_discards_malformed_quantity_without_losing_fact():
     ("1,5 hours", {"value": "5", "unit": "hours", "source_text": "1,5 hours"}),
     ("about 3 hours", {"value": "3", "unit": "hours", "source_text": "about 3 hours"}),
     ("(12 USD)", {"value": "12", "unit": "USD", "source_text": "(12 USD)"}),
-    ("3 tickets", {"value": "3", "unit": "1", "source_text": "3 tickets"}),
 ])
 def test_ambiguous_or_unsupported_notation_is_not_admitted(object_value, quantity):
     source = f"Alice requested {object_value}."
@@ -342,6 +445,27 @@ def test_ambiguous_or_unsupported_notation_is_not_admitted(object_value, quantit
     )
     assert len(result.facts) == 1
     assert result.facts[0].quantity is None
+
+
+def test_builtin_repairs_wrong_dimensionless_unit_to_verbatim_count_unit():
+    source = "Alice requested 3 tickets."
+    payload = {
+        "entities": [{"name": "Alice", "entity_type": "person"}],
+        "facts": [{
+            "subject": "Alice",
+            "predicate": "requested",
+            "object": "3 tickets",
+            "polarity": "positive",
+            "evidence_quote": source,
+            "quantity": {"value": "3", "unit": "1", "source_text": "3 tickets"},
+        }],
+    }
+    result = _CitedExtractionResult.model_validate(
+        payload, context={"source_text": source}
+    )
+    assert result.facts[0].quantity == ExtractedQuantity(
+        value="3", unit="tickets", source_text="3 tickets"
+    )
 
 
 @pytest.mark.parametrize(("object_value", "quantity", "expected"), [

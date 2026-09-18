@@ -40,9 +40,12 @@ removed. If provider JSON encodes the value as a binary float, the float is
 discarded and the exact decimal may be reconstructed only from one supported
 token in `source_text`; ordinary object and evidence grounding must still pass.
 Approximation and range cues in the surrounding evidence reject a clipped
-exact-looking phrase. No unit, currency, plural, or locale conversion is
-implied. New extraction records use `speech_act_v8`, and their materialization
-plans use `speech_act_v12`; saved v7 and v6 records remain v12, v5 remain v11, v4 remain
+exact-looking phrase. When quantity fields are absent or invalid, one verbatim
+currency or unit may be recognized from a bounded physical, data and count-unit
+lexicon in the grounded object. The unit is not normalized and an unlisted noun
+is not inferred as a measure. No unit, currency, plural, or locale conversion
+is implied. New extraction records use `speech_act_v9`, and their materialization
+plans use `speech_act_v12`; saved v8, v7 and v6 records remain v12, v5 remain v11, v4 remain
 v10, v3 remain v9, and v2 remain v8. The quantity representation is unchanged from
 `grounded_quantities_v6`, and older records, plans, and checksums remain
 unchanged. A missing policy in a legacy extraction record means
