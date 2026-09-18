@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from contextvars import ContextVar
+from decimal import Decimal
 import os
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
@@ -17,7 +18,13 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 import structlog
 from pydantic import Field, SecretStr, ValidationError, ValidationInfo, model_validator
 
-from prme.ingestion.schema import ExtractedFact, ExtractedRelationship, ExtractionResult
+from prme.ingestion.schema import (
+    ExtractedEntity,
+    ExtractedFact,
+    ExtractedQuantity,
+    ExtractedRelationship,
+    ExtractionResult,
+)
 from prme.ingestion.grounding import (
     _mentioned,
     _supporting_claim_passage,
@@ -37,6 +44,9 @@ logger = structlog.get_logger(__name__)
 
 _VALIDATION_SOURCE: ContextVar[str | None] = ContextVar(
     "prme_extraction_validation_source", default=None
+)
+_VALIDATION_ROLE: ContextVar[str | None] = ContextVar(
+    "prme_extraction_validation_role", default=None
 )
 
 _EXPLICIT_CONDITION_RE = re.compile(
@@ -308,9 +318,93 @@ def _recover_omitted_nonactual_targets(
         recovered.append(fact)
     return recovered
 
+
+_EXACT_DIMENSIONLESS_ATTRIBUTE_RE = re.compile(
+    r"(?<!\w)(?P<determiner>my|our|his|her|their|its|the)\s+"
+    r"(?P<attribute>(?:[A-Za-z][A-Za-z'-]*\s+){0,3}"
+    r"(?:score|count|rating|level))\s+"
+    r"(?P<predicate>is|was|equals?|equaled|reached)\s+"
+    r"(?P<value>[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+))"
+    r"(?P<terminal>[.!?])?(?=\s|$)",
+    re.IGNORECASE,
+)
+
+
+def _recover_exact_dimensionless_attributes(
+    extraction: ExtractionResult,
+    source: str,
+    *,
+    role: str | None,
+) -> tuple[list[ExtractedEntity], list[_CitedFact]]:
+    """Recover narrow source-literal numeric attributes omitted by the model.
+
+    Recovery is limited to user-authored, sentence-level score/count/rating/level
+    assertions with one terminal exact decimal. The ordinary fact, quantity and
+    closed-reference validators still run before anything is admitted.
+    """
+    if role != "user":
+        return [], []
+    entities: list[ExtractedEntity] = []
+    facts: list[_CitedFact] = []
+    known_concepts = {
+        entity.name.casefold()
+        for entity in extraction.entities
+        if entity.entity_type.casefold() == "concept"
+    }
+    for match in _EXACT_DIMENSIONLESS_ATTRIBUTE_RE.finditer(source):
+        before = source[: match.start()].rstrip()
+        after = source[match.end() :].lstrip()
+        if before and before[-1] not in ".!?":
+            continue
+        if match.group("terminal") is None and after:
+            continue
+        attribute = match.group("attribute")
+        source_text = match.group("value")
+        exact_value = exact_decimal_string_from_quantity_text(source_text)
+        if exact_value is None:
+            continue
+        if any(
+            fact.subject.casefold() == attribute.casefold()
+            and fact.quantity is not None
+            and fact.quantity.source_text == source_text
+            for fact in extraction.facts
+        ):
+            continue
+        if attribute.casefold() not in known_concepts:
+            entities.append(
+                ExtractedEntity(name=attribute, entity_type="concept")
+            )
+            known_concepts.add(attribute.casefold())
+        try:
+            fact = _CitedFact(
+                subject=attribute,
+                subject_entity_type="concept",
+                predicate=match.group("predicate").casefold(),
+                object=source_text,
+                quantity=ExtractedQuantity(
+                    value=Decimal(exact_value),
+                    unit="1",
+                    source_text=source_text,
+                ),
+                polarity="positive",
+                evidence_quote=match.group(0),
+                confidence=1.0,
+                fact_type="fact",
+                epistemic_type="observed",
+                temporal_intent="assertion",
+            )
+            _validate_fact_source_support(fact, source)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "extraction_dimensionless_attribute_not_recovered", reason=str(exc)
+            )
+            continue
+        facts.append(fact)
+    return entities, facts
+
 class _CitedExtractionResult(ExtractionResult):
-    facts: list[_CitedFact] = Field(default_factory=list)
-    relationships: list[_CitedRelationship] = Field(default_factory=list)
+    facts: list[_CitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+    relationships: list[_CitedRelationship] = Field(default_factory=list)  # type: ignore[assignment]
 
     @model_validator(mode="before")
     @classmethod
@@ -389,8 +483,11 @@ class _CitedExtractionResult(ExtractionResult):
     @model_validator(mode="after")
     def supported_closed_references(self, info: ValidationInfo):
         source = (info.context or {}).get("source_text")
+        role = (info.context or {}).get("source_role")
         if source is None:
             source = _VALIDATION_SOURCE.get()
+        if role is None:
+            role = _VALIDATION_ROLE.get()
         if source is not None:
             supported_facts = []
             for index, fact in enumerate(self.facts):
@@ -424,6 +521,16 @@ class _CitedExtractionResult(ExtractionResult):
                     "extraction_nonactual_target_recovered", count=len(recovered)
                 )
                 self.facts.extend(recovered)
+            recovered_entities, recovered_facts = (
+                _recover_exact_dimensionless_attributes(self, source, role=role)
+            )
+            if recovered_facts:
+                logger.info(
+                    "extraction_dimensionless_attributes_recovered",
+                    count=len(recovered_facts),
+                )
+                self.entities.extend(recovered_entities)
+                self.facts.extend(recovered_facts)
         fact_errors, relationship_errors = reference_errors_by_claim(self)
         closed_facts = []
         for index, (fact, errors) in enumerate(zip(self.facts, fact_errors, strict=True)):
@@ -559,9 +666,9 @@ cannot carry quantity metadata and must not replace the quantified fact.
 it to dates, times, versions, identifiers, addresses, phone numbers, model names, \
 or ordinals even when they contain a decimal-looking token.
 - Preserve explicit dimensionless counts as quantities. For a possessive numeric \
-attribute such as "My final score was 3", use the literal attribute "final score" \
-as the subject and the exact number as the fact object instead of inventing "I" \
-as a source mention.
+attribute such as "My final score was 3", list "final score" as a concept entity, \
+use that exact entity as the subject, and use the exact number as the fact object \
+instead of inventing "I" as a source mention.
 - Using something does not imply preferring it. One occurrence does not imply \
 a habit. Multiple values can coexist (e.g., liking tea and coffee).
 - Set replaces_object only for an explicit replacement of a named previous value \
@@ -757,8 +864,12 @@ class InstructorExtractionProvider:
             if provider_prefix:
                 local = dotenv_values(".env")
                 key_name, url_name = f"{provider_prefix}_API_KEY", f"{provider_prefix}_BASE_URL"
-                key = self._api_key.get_secret_value() if self._api_key else os.environ.get(key_name, local.get(key_name))
-                url = self._base_url or os.environ.get(url_name, local.get(url_name))
+                key = (
+                    self._api_key.get_secret_value()
+                    if self._api_key
+                    else os.environ.get(key_name) or local.get(key_name)
+                )
+                url = self._base_url or os.environ.get(url_name) or local.get(url_name)
                 if key:
                     kwargs["api_key"] = key
                 if url:
@@ -833,13 +944,15 @@ class InstructorExtractionProvider:
             # Instructor treats validation context as Jinja template context for
             # every prompt message. Keep grounding input task-local so literal
             # user code such as ``{{ variable }}`` reaches the model unchanged.
-            token = _VALIDATION_SOURCE.set(content)
+            source_token = _VALIDATION_SOURCE.set(content)
+            role_token = _VALIDATION_ROLE.set(role.strip().casefold())
             try:
                 result = await asyncio.wait_for(
                     client.create(**create_kwargs), timeout=self._timeout
                 )
             finally:
-                _VALIDATION_SOURCE.reset(token)
+                _VALIDATION_ROLE.reset(role_token)
+                _VALIDATION_SOURCE.reset(source_token)
             return result
         except Exception as exc:
             logger.error(

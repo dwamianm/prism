@@ -94,6 +94,56 @@ def test_builtin_recovers_exact_decimal_from_source_instead_of_json_float():
     )
 
 
+def test_builtin_recovers_terminal_dimensionless_attribute_for_user_source():
+    source = "Today was competitive. My final score was 3. It improved."
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": "user"},
+    )
+    assert [(entity.name, entity.entity_type) for entity in result.entities] == [
+        ("final score", "concept")
+    ]
+    assert len(result.facts) == 1
+    fact = result.facts[0]
+    assert (fact.subject, fact.subject_entity_type, fact.predicate, fact.object) == (
+        "final score",
+        "concept",
+        "was",
+        "3",
+    )
+    assert fact.quantity == ExtractedQuantity(value="3", unit="1", source_text="3")
+    assert fact.evidence_quote == source
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "For example, my final score was 3.",
+        "My ticket number was 3.",
+        "My final score was about 3.",
+        "My final score was 3 out of 5.",
+        "My final score was 3-4.",
+    ],
+)
+def test_builtin_dimensionless_recovery_stays_narrow(source):
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": "user"},
+    )
+    assert result.entities == []
+    assert result.facts == []
+
+
+def test_builtin_does_not_recover_dimensionless_attribute_for_assistant_source():
+    source = "My final score was 3."
+    result = _CitedExtractionResult.model_validate(
+        {"entities": [], "facts": [], "relationships": []},
+        context={"source_text": source, "source_role": "assistant"},
+    )
+    assert result.entities == []
+    assert result.facts == []
+
+
 @pytest.mark.parametrize(
     ("source_text", "expected"),
     [

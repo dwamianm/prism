@@ -1,7 +1,7 @@
 from benchmarks.diagnostics import quantity_extraction as diagnostic
 
 
-def _row(*quantities, grounding="speech_act_v7", materialization="speech_act_v12"):
+def _row(*quantities, grounding="speech_act_v8", materialization="speech_act_v12"):
     return {
         "extraction_grounding_policy": grounding,
         "materialization_policy": materialization,

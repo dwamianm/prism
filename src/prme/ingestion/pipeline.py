@@ -454,7 +454,7 @@ class IngestionPipeline:
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
-                grounding_policy="speech_act_v7",
+                grounding_policy="speech_act_v8",
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -805,7 +805,11 @@ class IngestionPipeline:
                 ] = (
                     "speech_act_v12"
                     if extraction is not None
-                    and extraction.grounding_policy in {"speech_act_v6", "speech_act_v7"}
+                    and extraction.grounding_policy in {
+                        "speech_act_v6",
+                        "speech_act_v7",
+                        "speech_act_v8",
+                    }
                     else (
                         "speech_act_v11"
                         if extraction is not None
