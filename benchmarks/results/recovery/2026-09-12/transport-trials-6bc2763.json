@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/engine.py",
+  "candidate_count": 2,
+  "receipt_version": 3,
+  "context_sha256": "9e8980d1ff98215c35d4cf70a3e8c71ee5484aeeb07325042b6025a86718656f",
+  "execution_features": {
+    "python": "3.13.3",
+    "packages": {
+      "prme": "0.11.0",
+      "duckdb": "1.5.5",
+      "usearch": "2.26.2",
+      "tantivy": "0.26.0",
+      "fastembed": "0.8.0",
+      "onnxruntime": "1.30.0",
+      "sentence-transformers": null
+    },
+    "source_files_sha256": {
+      "scoring": "0d6d6f25737c494353cce34a75b5122779f05d97a72a3e68ed598d337b2848ec",
+      "ranking_adjustments": "16bff12559a285e26ee1b62f23e95c9f8e7dc864c91bd6ca3c7ed5904dda05ec",
+      "query_analysis": "2fd0fd577bca604f301134f915aff0a388411a1e34806023d99af70088c5fd8b",
+      "scope": "5d6d349f8381c78efefeaa8b91ece73d734f144cc013acb8d7f9be352fcc3085",
+      "candidates": "c529ba2fbbfb08403faa1fab0b752a84b5ee01e88f7b63b68ef0e15f3c786787",
+      "filtering": "0a435d5b2c720444d35168e3e09b03ef1be1112497fda6bb89e1bbe7f08325a5",
+      "session_context": "ae4dfd5476405cd6dd7507e87bd81ffcb70cfa54d497eca4d0d254fe1565dccf",
+      "reranker": "af9a79644ebf6f1e1f47eb105f315d5ed169a100aa1996fa91e7be6169b678cb",
+      "packing": "f866f55be38c519574790b58c2b55888919dd27e7a62e7a52fb77bcbf52528b9"
+    },
+    "embedding": {
+      "provider": "prme.storage.embedding.CachedEmbeddingProvider",
+      "model": "BAAI/bge-small-en-v1.5",
+      "version": "fastembed-0.8.0",
+      "dimension": 384
+    },
+    "reranker": {
+      "enabled": false,
+      "provider": "builtins.NoneType",
+      "model": null
+    },
+    "vector_backend": "prme.storage.vector_index.VectorIndex",
+    "lexical_backend": "prme.storage.lexical_index.LexicalIndex"
+  },
+  "checks": [
+    "real BGE provider through HTTP and MCP",
+    "context equals Python pipeline at fixed clock",
+    "owner and scope boundaries",
+    "receipt exported through both transports",
+    "exact trial score replay",
+    "empty HTTP scope rejected"
+  ],
+  "limits": "One authored interface workflow; no extraction, answer judging, or retrieval accuracy claim.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0
+}

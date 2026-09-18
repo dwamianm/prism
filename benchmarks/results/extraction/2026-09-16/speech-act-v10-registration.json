@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "speech-act-extraction-registration",
+  "status": "preregistered",
+  "created_at": "2026-09-16T05:48:58.307666+00:00",
+  "source": {
+    "implementation_sha256": {
+      "benchmarks/diagnostics/entity_references.py": "d2ea7c688ba5c43ebe3e0c9a58a707c390572b4fff356b76cdcfbb8fc381d583",
+      "benchmarks/diagnostics/speech_act_extraction.py": "a6fe6a3aad030ff3a05bf81dddc903abbee2757a990a4eee72790561b9d4d9da",
+      "src/prme/ingestion/extraction.py": "161ab5f3c504528c86a37d5c983e6206ff0bfd5431e873adb2dde830231d9139",
+      "src/prme/ingestion/pipeline.py": "eb1f0c65d2b222bd4e38ae20d5ed4f0e2ee4be7e0504a3c9698750bfcd0fdbf8",
+      "src/prme/ingestion/planning.py": "9bfd9b15e88cf29537a80c4afabbd930c017d4daf1ac5a14136a507c9c3fe23d",
+      "src/prme/models/derivation.py": "6e0ae787b0b22a1f46be70d17654eef2faed62313d315281c8029734c91d7174",
+      "src/prme/models/extraction.py": "d48187a5b06c1b219fb393514f3273e9c7dadc92b3ada341d380daeab1eab919"
+    },
+    "cases_sha256": "5a46ba96f2d60c9a0af93d8bb044d5b19205b1e2448ebe13704d2a994c54bd58",
+    "prompt_sha256": "028fabb15e14de5dedbbd3895fb72ed7dcfec8d2528fd3acd97b458a6e48ce31",
+    "response_schema_sha256": "ce8073a10a443cda39eaa36f00c7c6c09eda21470dc7ccc6405dccaa4eed70fb"
+  },
+  "model": {
+    "provider": "ollama",
+    "model": "deepseek-v4.1-flash:cloud",
+    "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0.0,
+    "max_retries": 3,
+    "timeout_seconds": 180.0
+  },
+  "protocol": {
+    "cases": 14,
+    "targets": 15,
+    "gates": {
+      "unsafe_nonactual_claims_max": 0,
+      "missing_expected_targets_max": 0,
+      "policy_errors_max": 0
+    },
+    "limits": "Authored development contrasts; no held-out or competitive claim."
+  }
+}

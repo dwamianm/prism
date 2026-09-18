@@ -51,6 +51,11 @@ class ConfidenceMatrix(BaseModel):
         ("hypothetical", "user_stated"): 0.35,      # [HYPOTHESIS]
         ("hypothetical", "system_inferred"): 0.25,  # [HYPOTHESIS]
         ("hypothetical", "external_document"): 0.30,  # [HYPOTHESIS]
+        # CONDITIONAL -- applicability depends on an unresolved condition
+        ("conditional", "user_stated"): 0.45,        # [HYPOTHESIS]
+        ("conditional", "system_inferred"): 0.30,    # [HYPOTHESIS]
+        ("conditional", "external_document"): 0.35,  # [HYPOTHESIS]
+        ("conditional", "tool_output"): 0.40,        # [HYPOTHESIS]
         # UNVERIFIED -- external/untrusted, awaiting corroboration
         ("unverified", "system_inferred"): 0.20,    # [HYPOTHESIS]
         ("unverified", "external_document"): 0.25,  # [HYPOTHESIS]

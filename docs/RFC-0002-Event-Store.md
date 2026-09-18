@@ -22,12 +22,184 @@ Implementations MUST use a storage backend that provides:
 
 - Append-only writes (no in-place modification of committed records).
 - ACID transaction semantics for individual write operations.
+
+PRME graph replacements use a transaction covering lifecycle state, replacement
+pointer, provenance edge, and a checksummed `SUPERSEDENCE_APPLIED` operation with
+complete before/after snapshots. Its deterministic pair identity makes exact
+actor/evidence retries durable and rejects conflicting retries. `supersede_many`
+applies a batch atomically and rejects self-replacement, retired replacements,
+or pairs across users/scopes.
+New LLM ingestion uses the journaled derivation protocol in RFC-0016: saved
+extraction and prepared inputs, idempotent index staging, and fenced atomic
+graph publication. New duplicate/alias merges atomically append a checksummed
+`ORGANIZER_MERGED` operation containing complete node and relationship inputs and
+outputs. New unverified alias links similarly use deterministic pair and edge
+identities and commit a checksummed `ALIAS_PROPOSED` record with complete node
+inputs and the published edge. This is distinct from full replay of historical
+organizer and manual mutations, whose complete operation inputs are not all
+journaled.
+TTL expiration also uses a backend transaction to bind the archived graph state
+to a deterministic, checksummed `TOMBSTONE_SWEEP` record. Its portable summary
+contains the RFC-0007 policy, reason, content hash and clocks; its authoritative
+record retains complete before/after nodes. External index eviction follows the
+durable transition.
 - Efficient range scans by timestamp and stream.
 - Content-addressed deduplication by `content_hash`.
 
 The reference implementation uses DuckDB for the event store. Implementations MAY use alternatives (SQLite, PostgreSQL, a custom log format) provided the above requirements are met and the portability artifact format (Section 9) is supported.
 
+Local engines optionally accept `duckdb_threads` at instance creation. The
+default retains DuckDB's worker setting; conflicting settings for concurrent
+opens of the same file fail before schema initialization. This runtime resource
+control does not change event semantics or persist in the portable pack.
+
+An optional expected `namespace_id` binds a fresh local pack inside DuckDB and
+must match on later opens, before normal schema/backfill/index startup. Existing
+unbound packs are not silently adopted. The workspace registry records initialized
+projects so a missing database cannot be replaced silently. This identity metadata
+is part of the physical artifact, not a shared-table filter or access grant.
+PostgreSQL workspaces similarly bind schema identity before engine startup and
+publish initial schema/registry state in one transaction. Missing previously
+initialized relations cannot be silently recreated. PostgreSQL backup/restore
+must preserve both the registry and project schemas; see [workspaces](WORKSPACES.md).
+
 ---
+
+### Raw-source recovery
+
+Both fast ingestion and LLM ingestion atomically queue raw-source indexing with
+the event. A provider failure leaves that job pending; scoped retrieval or explicit
+processing can materialize the original NOTE after restart. Its ID and timestamps
+come from the source event. Processing completion acknowledges this raw index,
+not LLM derivation completion. Model summaries cannot overwrite source indexes.
+Events are immutable, so the API's inherited `updated_at` equals `created_at`
+rather than the time a row happened to be read.
+
+`ingest_fast_many()` extends that boundary to an ordered, single-owner raw batch.
+All items and metadata snapshots are validated before acquiring a backend
+connection. DuckDB and PostgreSQL commit every event and materialization job in
+one transaction or roll back the whole batch. Graph and index work remains
+deferred, owner scoped, bounded, and restart safe; event IDs preserve input
+order. This path creates deterministic raw NOTEs and does not accept typed-node
+overrides or queue model extraction. An optional caller request UUID derives an
+owner-scoped operation identity. Its checksummed input binding, ordered event
+IDs, immutable events and materialization jobs commit in the same transaction.
+An exact retry returns the retained IDs after restart; changed inputs fail, and
+an unkeyed call remains a separate admission. PostgreSQL arbitrates concurrent
+same-key requests at the operation insert. DuckDB may surface a native
+transaction conflict across engine instances; a fresh retry resolves the saved
+record without duplicating events.
+
+### Historical source clocks
+
+LLM ingestion accepts an explicit timezone-aware `event_time` through the engine,
+synchronous client, HTTP and MCP. Batch messages can supply individual clocks.
+`timestamp` continues to record admission time. Relative temporal references in
+new derivation plans use `event_time` when provided and otherwise `timestamp`.
+Raw NOTE recovery retains the saved source clock, and extracted claims without a
+resolved temporal reference inherit it. Explicit older-effective replacements
+remain historical rather than retiring later facts. Existing saved plans retain
+their original timestamps on retry; this is not a retroactive temporal migration.
+New extracted facts set `valid_from` to that resolved source-effective time.
+Direct Python, HTTP, and MCP storage can provide a separate timezone-aware
+`valid_from` and exclusive `valid_to`; omission retains the admission-time start.
+An end requires an explicit earlier start, and invalid intervals fail before the
+event or recovery job is admitted. New source-grounded replacements close the
+prior validity interval inside the derivation commit when the boundary is not
+earlier than its stored start. Older ingestion-based intervals that cannot be
+closed without inversion retain their stored dates and are retired by lifecycle
+and supersedence state.
+Timezone-free new imports are rejected; missing source time is not guessed.
+This admission check also applies to Python `store()` and `ingest_fast()` and
+their synchronous client equivalents, before any event or recovery job is
+written. MCP `memory_store` accepts the same aware source clock; returned nodes
+expose `event_time`, `valid_from` and `valid_to` separately. An omitted source
+clock remains null through raw-source and direct-store recovery. Existing stored
+rows are still readable under their original semantics.
+
+### Direct typed storage recovery
+
+New event and direct-node metadata are validated and copied to a finite JSON
+snapshot before waiting for the backend lock/connection. Non-finite or unsupported
+values and object keys that collide during JSON normalization fail before
+event/work admission on both backends. A string key and a numeric key must not
+silently overwrite each other after serialization. Existing source rows
+are not rewritten. Legacy non-finite graph metadata can be retained in lifecycle,
+reinforcement and merge journals using the versioned `prme-special-floats-v1`
+path encoding; finite snapshot bytes and old raw checksums remain unchanged.
+See [metadata handling](METADATA.md) for encoding and compatibility boundaries.
+
+Content hashing covers the exact source string, including empty text and
+whitespace. New empty events carry SHA-256 of the empty byte sequence, not an
+empty hash field, so they can satisfy the same durable source-binding checks.
+This correction does not rewrite historical event rows.
+
+New `store()` calls commit the event, an `event_materializations` job and a
+`DIRECT_STORE_REQUESTED` operation in one database transaction. The operation
+contains a versioned complete initial `MemoryNode` snapshot and source binding,
+including its generated ID, classification, confidence, timestamps and TTL. Its
+UUID is derived from the event ID. A checksum covers the serialized record; the
+record remains a string within the JSON payload so JSONB numeric normalization
+does not change it. Reads verify the checksum and source owner, scope, session,
+content hash and evidence reference before recovery. Version 1 requires event
+and node content to match and retains its original bytes and checksum. Version 2
+allows an explicit `retrieval_content` projection: the exact caller source stays
+in the immutable event while the separately checksummed node text is indexed and
+packed into model context. Version 2 rejects an identical projection so ordinary
+stores continue to produce version-1 records.
+
+Recovery creates a missing graph node from the saved values and repairs its
+indexes without an LLM. Existing graph state is retained, including retirement.
+Lexical replacement commits deletion and insertion together; vector replacement
+publishes a new durable vector before removing old keys. Failure retains pending
+work and the previously healthy search path. `processing_status()` completion
+covers this node and indexing, not optional reinforcement, supersedence or QA
+pairing. A graph creation failure raises `MaterializationError` with the accepted
+event ID; index failures remain nonfatal after confirming the node is durable.
+Legacy direct stores have no repair record and are not retroactively queued.
+This does not add cross-process work fencing or exactly-once execution.
+
+The unreplayed QA-pair heuristic is disabled by default. Explicitly enabling it
+is a hypothesis for applications willing to accept an in-process, best-effort
+derived copy; it is not evidence-backed durable ingestion.
+
+### Validated extraction journal
+
+LLM ingestion now appends an `EXTRACTION_VALIDATED` operation before graph
+materialization. Its stable operation ID is derived from the source event ID;
+concurrent attempts retain the first committed result. Both backends verify the
+event's owner, scope, and content hash before accepting a record. The operation
+contains structured grounded output, provider/model names, creation time, and
+explicit schema/grounding versions, excluding credentials and raw SDK responses.
+An indexing retry loads the saved output instead of calling the LLM again.
+
+`get_extraction(event_id, user_id=...)` reads this record through the source owner
+boundary in the engine, sync client, HTTP and MCP. Empty extraction results are
+also recorded. A saved extraction does not mean graph materialization completed
+and lexical grounding does not establish semantic truth. Interrupted extraction
+jobs and saved derivation plans are recovered using RFC-0016. Explicit replanning
+can revise a derivation from the same saved extraction. Re-extraction under a new
+policy needs a future revision protocol; it must not overwrite this operation.
+
+### Current source-reading API
+
+`MemoryEngine.get_event(event_id, user_id=...)` enforces optional owner scoping;
+`MemoryClient` exposes the same operation. `get_event_nodes(event_id, user_id=...)`
+requires an owner and reads graph evidence references directly, including retired
+nodes. This lookup avoids races from selecting the most recently created node.
+HTTP store and MCP store receipts use it to identify their own created node.
+HTTP event endpoints and MCP `memory_get_event` bind source access to the current
+principal. These APIs expose durable sources and current derivations; they do not
+claim complete graph replay from the event log.
+
+Framework chat adapters represent clear, replacement and individual deletion as
+versioned system control events. They interpret those events when reading logical
+history, while prior message events remain immutable and owner scoped. Control
+events intentionally have no derived graph node or search-index entry; they are
+history operations rather than memories. Exact scope filtering prevents a clear
+in one scope from hiding messages in another. The logical history operation does
+not retire memory nodes already derived from prior message events; applications
+use the explicit owner-scoped lifecycle API when retrieval retirement is intended.
 
 ## 3. Event Log Schema
 
@@ -185,6 +357,8 @@ The following operation types MUST be supported. The `payload` field is operatio
 |---|---|---|
 | `SUMMARY_CREATED` | A summary object was generated. | `object_ids_summarised`, `time_window`, `summary_type` |
 | `DEDUP_RESOLVED` | Duplicate objects were resolved. | `primary_id`, `merged_ids`, `resolution_strategy` |
+| `ORGANIZER_MERGED` | Atomically publish one duplicate or verified name-variant merge. | checksummed versioned merge record |
+| `ALIAS_PROPOSED` | Atomically publish one unverified alias relationship. | checksummed versioned node inputs and edge output |
 
 ---
 

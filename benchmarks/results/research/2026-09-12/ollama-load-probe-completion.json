@@ -1,0 +1,104 @@
+{
+  "attempts": [
+    {
+      "complete": true,
+      "loaded": {
+        "context_length": 65536,
+        "digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd",
+        "name": "qwen3.5:4b",
+        "size": 5818338507,
+        "size_vram": 5818338507
+      },
+      "model": "qwen3.5:4b",
+      "ordinal": 1,
+      "requested_context": 65536,
+      "wall_seconds": 2.084953458979726
+    },
+    {
+      "complete": true,
+      "loaded": {
+        "context_length": 65536,
+        "digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd",
+        "name": "qwen3.5:4b",
+        "size": 5818338507,
+        "size_vram": 5818338507
+      },
+      "model": "qwen3.5:4b",
+      "ordinal": 2,
+      "requested_context": 65536,
+      "wall_seconds": 0.1944809160195291
+    },
+    {
+      "complete": true,
+      "loaded": {
+        "context_length": 65536,
+        "digest": "08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68",
+        "name": "gemma4:26b",
+        "size": 1355378851,
+        "size_vram": 1355378851
+      },
+      "model": "gemma4:26b",
+      "ordinal": 1,
+      "requested_context": 65536,
+      "wall_seconds": 3.6691477919812314
+    },
+    {
+      "complete": true,
+      "loaded": {
+        "context_length": 65536,
+        "digest": "08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68",
+        "name": "gemma4:26b",
+        "size": 1355378851,
+        "size_vram": 1355378851
+      },
+      "model": "gemma4:26b",
+      "ordinal": 2,
+      "requested_context": 65536,
+      "wall_seconds": 0.2188236250076443
+    },
+    {
+      "complete": true,
+      "loaded": {
+        "context_length": 32768,
+        "digest": "6316f0629137b426c9d9b853ffc4c8209589f30ee39aebede6285096c0ff47e7",
+        "name": "gemma4:31b",
+        "size": 20573994352,
+        "size_vram": 20573994352
+      },
+      "model": "gemma4:31b",
+      "ordinal": 1,
+      "requested_context": 32768,
+      "wall_seconds": 6.8498885839944705
+    },
+    {
+      "complete": true,
+      "loaded": {
+        "context_length": 32768,
+        "digest": "6316f0629137b426c9d9b853ffc4c8209589f30ee39aebede6285096c0ff47e7",
+        "name": "gemma4:31b",
+        "size": 20573994352,
+        "size_vram": 20573994352
+      },
+      "model": "gemma4:31b",
+      "ordinal": 2,
+      "requested_context": 32768,
+      "wall_seconds": 1.1063018749991897
+    }
+  ],
+  "complete": true,
+  "limits": [
+    "Six short canaries do not prove long benchmark reliability.",
+    "Task server shares host hardware with other processes.",
+    "No benchmark answers, quality judgments or response retries."
+  ],
+  "log_sha256": "af9047ec4c8d8095434cdf62ba6b3b579cf35a5f746820920b7b01d4b7cb0f82",
+  "native_exit_code": 0,
+  "native_session_id": 73348,
+  "observed_at": "2026-09-13T19:07:32.297130+00:00",
+  "output_sha256": "0942e680403b38e384fbd8ddd3914984ee3de2d2aeef17cd23fd7bc7f7c9f9cc",
+  "owned_port_closed": true,
+  "owned_server_exit_code": 0,
+  "plan_sha256": "43941a5fb0fee34984934c37187e9af63d8b1805010c8bb4b8a04d6dea568240",
+  "server_log_sha256": "65eba6c6eb31c9e93496246addf23e7fd0d14320d0d46a5276aedd46f99506e1",
+  "source_commit": "d6e75b7"
+}

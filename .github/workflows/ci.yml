@@ -9,42 +9,51 @@ on:
 jobs:
   test-duckdb:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           enable-cache: true
+          version: latest-known
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev --extra api --extra mcp
+        run: uv sync --python ${{ matrix.python-version }} --dev --extra api --extra mcp
 
       - name: Run tests (DuckDB)
         run: uv run --no-sync python -m pytest tests/ -q
 
+      - name: Check public client types
+        run: uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py
+
   test-postgres:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           enable-cache: true
+          version: latest-known
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev --extra postgres --extra api --extra mcp
+        run: uv sync --python ${{ matrix.python-version }} --dev --extra postgres --extra api --extra mcp
 
       - name: Start PostgreSQL
         run: docker compose up -d --wait
@@ -60,36 +69,90 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.13"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           enable-cache: true
+          version: latest-known
 
       - name: Set up Python
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --python 3.13 --dev
 
       - name: Run ruff
         run: uv run ruff check src/ tests/
 
+      - name: Build wheel and source distribution
+        run: uv build
+
+      - name: Verify installed wheel
+        run: |
+          uv pip install --python .venv/bin/python --reinstall dist/*.whl
+          cd /tmp
+          "$GITHUB_WORKSPACE/.venv/bin/python" - <<'PY'
+          import importlib.metadata as metadata
+          from pathlib import Path
+
+          import prme
+
+          package = Path(prme.__file__).parent
+          assert metadata.version("prme") == prme.__version__
+          assert (package / "py.typed").is_file()
+          PY
+
   simulations:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.13"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           enable-cache: true
+          version: latest-known
 
       - name: Set up Python
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --python 3.13 --dev
 
       - name: Run simulations
         run: uv run python -m scripts.run_simulations
+
+  test-integrations:
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          version: latest-known
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install integration dependencies
+        run: >-
+          uv sync --python ${{ matrix.python-version }} --dev
+          --extra langchain --extra llamaindex
+
+      - name: Run framework integration tests
+        run: >-
+          uv run --no-sync python -m pytest
+          tests/test_integration_chat_history.py
+          tests/test_integrations_langchain.py
+          tests/test_integrations_llamaindex.py -q

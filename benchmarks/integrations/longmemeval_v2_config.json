@@ -1,0 +1,15 @@
+{
+  "memory_type": "prme",
+  "memory_params": {
+    "storage_path": null,
+    "trajectories_root_dir": null,
+    "user_id": "evaluation",
+    "token_budget": 32768,
+    "context_format": "auditable",
+    "result_limit": 100,
+    "include_images": true,
+    "image_limit": 8,
+    "max_chunk_chars": 8000,
+    "context_item_max_chars": 12000
+  }
+}

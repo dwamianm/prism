@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "kind": "integration_smoke",
+  "date": "2026-09-14",
+  "source": {
+    "prme_revision": "6700f1306828b7e73061dd5b7e71557055b57aa3",
+    "prme_version": "0.11.0",
+    "memoryagentbench_revision": "fe1735de8cf8b9908e1e3d3b5612afc815698062",
+    "dataset_revision": "7ea066982b140a19337e17e60d45d4076e042faf",
+    "adapter_sha256": "a3a3134e8bdf0773481f8b9cd0a955e9e81a64b89322f804fe6b5e665157e86e",
+    "installer_sha256": "72c14525cf9c8f69516559f0764112d8774920eead1133644a07441a5f9e40e9",
+    "agent_config_sha256": "7c99f96f2fbd1a9b0a658ca50abbdb7c408c9f450bce9f1bc1cbfbac50270a4e"
+  },
+  "protocol": {
+    "contexts_per_suite": 1,
+    "queries_per_context": 1,
+    "answer_generation": false,
+    "answer_scoring": false,
+    "scope": "project",
+    "token_budget": 4096,
+    "packing": "balanced",
+    "embedding": {
+      "provider": "fastembed",
+      "model": "BAAI/bge-small-en-v1.5",
+      "dimension": 384
+    },
+    "checks": [
+      "all upstream source chunks recorded in the completed manifest",
+      "nonempty retrieval",
+      "rendered context within the exact PRME token budget",
+      "retrieval receipt persisted"
+    ]
+  },
+  "runtime": {
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "duckdb": "1.4.1",
+    "usearch": "2.23.0",
+    "tantivy": "0.25.1",
+    "fastembed": "0.7.4",
+    "tiktoken": "0.9.0",
+    "datasets": "2.19.0"
+  },
+  "results": [
+    {
+      "suite": "accurate_retrieval",
+      "sub_dataset": "eventqa_65536",
+      "data_config_sha256": "c622321b2c16eb4a7374db8663f2cdb1db2c6e3a33702e93189d989b00911374",
+      "manifest_sha256": "1acb9c45010721fd40e426c764ac7013b4ef4f755e565ed6b581520e8ea29405",
+      "upstream_chunks": 17,
+      "stored_nodes": 65,
+      "available_questions": 100,
+      "ingest_seconds": 9.764,
+      "retrieval_pipeline_ms": 296.01,
+      "retrieved_candidates": 65,
+      "included_records": 7,
+      "tokens_used": 3988,
+      "receipt_persisted": true,
+      "status": "pass"
+    },
+    {
+      "suite": "test_time_learning",
+      "sub_dataset": "icl_banking77_5900shot_balance",
+      "data_config_sha256": "917e4b5b4b86e1bb394d0e1019715bb56275a4b46e2c4e7443790492ba0c00ac",
+      "manifest_sha256": "be6a6b3c437e1604661087483e90cc75395d0bbe1f6a70856011cd0c9aaf8d2b",
+      "upstream_chunks": 26,
+      "stored_nodes": 78,
+      "available_questions": 100,
+      "ingest_seconds": 11.347,
+      "retrieval_pipeline_ms": 103.54,
+      "retrieved_candidates": 78,
+      "included_records": 7,
+      "tokens_used": 3994,
+      "receipt_persisted": true,
+      "status": "pass"
+    },
+    {
+      "suite": "long_range_understanding",
+      "sub_dataset": "detective_qa",
+      "data_config_sha256": "b561d0e3432e7c8e9509a12d7466101d763a3a7a0357990aa203189f23f784ab",
+      "manifest_sha256": "048c088c473a7efa7e54778cf9785787ff0eeba5cbb84165df02789b5dca63e0",
+      "upstream_chunks": 25,
+      "stored_nodes": 91,
+      "available_questions": 6,
+      "ingest_seconds": 13.542,
+      "retrieval_pipeline_ms": 152.49,
+      "retrieved_candidates": 91,
+      "included_records": 11,
+      "tokens_used": 3965,
+      "receipt_persisted": true,
+      "status": "pass"
+    },
+    {
+      "suite": "conflict_resolution",
+      "sub_dataset": "factconsolidation_mh_6k",
+      "data_config_sha256": "63312c1dd54a06490f3747e97632d39284ec8eeba2128ee5c599dae72defa6fc",
+      "manifest_sha256": "b166dd680f7759630ef44a424d8c1ac6153b875dd5f166219fb5c73ff823abab",
+      "upstream_chunks": 2,
+      "stored_nodes": 6,
+      "available_questions": 100,
+      "ingest_seconds": 0.941,
+      "retrieval_pipeline_ms": 33.9,
+      "retrieved_candidates": 6,
+      "included_records": 6,
+      "tokens_used": 3753,
+      "receipt_persisted": true,
+      "status": "pass"
+    }
+  ],
+  "limitations": [
+    "This is one source context and one retrieval per suite.",
+    "No reader was called and no answer was scored.",
+    "Latency is a single local observation, not a distribution or cross-system comparison.",
+    "The test-time-learning and conflict-resolution task labels do not directly evaluate PRME ranking-profile learning or graph supersedence."
+  ]
+}

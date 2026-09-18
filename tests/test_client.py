@@ -15,15 +15,18 @@ Tests cover:
 from __future__ import annotations
 
 import logging
+import subprocess
+import sys
 import tempfile
 import warnings
 from pathlib import Path
 
 import pytest
 
+from prme import FastIngestItem, StoreReceipt
 from prme.client import MemoryClient, config_from_directory
 from prme.config import PRMEConfig
-from prme.types import NodeType, Scope
+from prme.types import ConditionState, EpistemicType, LifecycleState, NodeType, Scope
 
 
 # ---------------------------------------------------------------------------
@@ -99,10 +102,13 @@ class TestClientLifecycle:
     def test_methods_after_close_raise(self, tmp_dir):
         client = MemoryClient(tmp_dir)
         client.close()
-        with pytest.raises(RuntimeError, match="closed"):
-            client.store("hello", user_id="u1")
-        with pytest.raises(RuntimeError, match="closed"):
-            client.retrieve("hello", user_id="u1")
+        with warnings.catch_warnings(record=True) as observed:
+            warnings.simplefilter("always")
+            with pytest.raises(RuntimeError, match="closed"):
+                client.store("hello", user_id="u1")
+            with pytest.raises(RuntimeError, match="closed"):
+                client.retrieve("hello", user_id="u1")
+        assert not [w for w in observed if issubclass(w.category, RuntimeWarning)]
 
     def test_resource_warning_on_gc(self, tmp_dir):
         client = MemoryClient(tmp_dir)
@@ -113,6 +119,26 @@ class TestClientLifecycle:
             assert len(resource_warnings) == 1
             assert "not closed" in str(resource_warnings[0].message)
         client.close()
+
+    def test_implicit_process_shutdown_precedes_executor_shutdown(self, tmp_path):
+        pack = tmp_path / "implicit-close"
+        script = (
+            "from prme import MemoryClient\n"
+            f"client = MemoryClient({str(pack)!r})\n"
+            "client.store('durable implicit shutdown', user_id='alice')\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "cannot schedule new futures after shutdown" not in result.stderr
+        assert "Error closing vector index" not in result.stderr
+        assert "Error closing lexical index" not in result.stderr
+        assert (pack / "vectors.usearch").is_file()
 
     def test_custom_config_overrides_directory(self, tmp_dir):
         lexical_path = str(Path(tmp_dir) / "lexical_index")
@@ -133,18 +159,131 @@ class TestClientLifecycle:
 
 
 class TestStoreRetrieve:
+    def test_lifecycle_retries_with_request_ids(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_id = client.store(
+                "Lifecycle claim", user_id="alice", node_type=NodeType.FACT,
+            )
+            node = client.get_event_nodes(event_id, user_id="alice")[0]
+            promote_id = "8a41eede-58ad-4f09-9983-76cb75f57c16"
+            client.promote(str(node.id), user_id="alice", request_id=promote_id)
+            client.promote(str(node.id), user_id="alice", request_id=promote_id)
+            archive_id = "ba064fb7-a2d7-4832-802b-b810b1d9e098"
+            client.archive(str(node.id), user_id="alice", request_id=archive_id)
+            client.archive(str(node.id), user_id="alice", request_id=archive_id)
+            saved = client.get_node(
+                str(node.id), user_id="alice", include_superseded=True,
+            )
+            assert saved.lifecycle_state == LifecycleState.ARCHIVED
+
+    def test_contradiction_roundtrip_is_retry_safe(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            first_event = client.store(
+                "Atlas uses east.", user_id="alice", node_type=NodeType.FACT,
+            )
+            second_event = client.store(
+                "Atlas uses west.", user_id="alice", node_type=NodeType.FACT,
+            )
+            first = client.get_event_nodes(first_event, user_id="alice")[0]
+            second = client.get_event_nodes(second_event, user_id="alice")[0]
+
+            contested = client.contradict(
+                str(first.id), str(second.id), user_id="alice", actor_id="reviewer",
+            )
+            assert [node.lifecycle_state for node in contested] == [
+                LifecycleState.CONTESTED,
+                LifecycleState.CONTESTED,
+            ]
+            assert client.contradict(
+                str(first.id), str(second.id), user_id="alice", actor_id="reviewer",
+            ) == contested
+
+            winner, loser = client.resolve_contradiction(
+                str(second.id), str(first.id), user_id="alice",
+                resolver_actor_id="reviewer",
+            )
+            assert winner.lifecycle_state == LifecycleState.STABLE
+            assert loser.lifecycle_state == LifecycleState.DEPRECATED
+            assert client.resolve_contradiction(
+                str(second.id), str(first.id), user_id="alice",
+                resolver_actor_id="reviewer",
+            ) == (winner, loser)
+
+    def test_condition_evaluation_roundtrip(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_id = client.store(
+                "If approved, deploy Atlas.", user_id="alice",
+                epistemic_type=EpistemicType.CONDITIONAL,
+                metadata={"condition": "approved"},
+            )
+            node = client.get_event_nodes(event_id, user_id="alice")[0]
+            updated = client.evaluate_condition(
+                str(node.id), ConditionState.TRUE, user_id="alice",
+                request_id="4fae6bcc-3904-4ad3-859e-ea14c3ec31c5",
+            )
+            assert updated.metadata["condition_state"] == "true"
+            assert any(
+                result.node.id == node.id
+                for result in client.retrieve("deploy Atlas", user_id="alice").results
+            )
+            provenance = client.get_provenance(str(node.id), user_id="alice")
+            assert provenance.node.id == node.id
+            assert provenance.operations[0].op_type == "EPISTEMIC_TRANSITION"
+
+    def test_deferred_ingestion_has_public_processing_status(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_id = client.ingest_fast("Alice uses a telescope", user_id="alice")
+            assert client.processing_status(event_id, user_id="alice").status == "pending"
+            result = client.process_pending(user_id="alice")
+            assert result.pending == 0 and result.processed == 1
+            assert client.processing_status(event_id, user_id="alice").status == "complete"
+            assert client.retrieve("telescope", user_id="alice").results
+
+    def test_fast_batch_ingestion_is_ordered_and_processes_once(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            event_ids = client.ingest_fast_many(
+                [
+                    FastIngestItem(content="First telescope note"),
+                    {"content": "Second telescope note", "scope": "project"},
+                ],
+                user_id="alice",
+            )
+            assert [
+                client.get_event(event_id, user_id="alice").content
+                for event_id in event_ids
+            ] == ["First telescope note", "Second telescope note"]
+            assert client.process_pending(user_id="alice", budget_ms=5000).processed == 2
+            assert all(
+                client.processing_status(event_id, user_id="alice").status == "complete"
+                for event_id in event_ids
+            )
+
     def test_store_returns_uuid(self, tmp_dir):
         with MemoryClient(tmp_dir) as client:
             event_id = client.store("Alice likes dark mode", user_id="alice")
             assert isinstance(event_id, str)
             assert len(event_id) == 36  # UUID format
 
+    def test_store_with_receipt_returns_a_lifecycle_ready_node(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            receipt = client.store_with_receipt(
+                "Promote this exact memory", user_id="alice", node_type=NodeType.FACT,
+            )
+            assert isinstance(receipt, StoreReceipt)
+            assert receipt.processing_status.status == "complete"
+            client.promote(str(receipt.node_id), user_id="alice")
+            assert client.get_node(str(receipt.node_id), user_id="alice").lifecycle_state == LifecycleState.STABLE
+
     def test_store_and_retrieve_roundtrip(self, tmp_dir):
+        from datetime import datetime, timezone
+
         with MemoryClient(tmp_dir) as client:
             client.store("Alice likes dark mode", user_id="alice")
             client.store("Bob prefers vim", user_id="alice")
 
-            response = client.retrieve("preferences?", user_id="alice")
+            clock = datetime.now(timezone.utc)
+            response = client.retrieve("preferences?", user_id="alice", reference_time=clock)
+            assert response.metadata.reference_time == clock
             assert len(response.results) > 0
             contents = [r.node.content for r in response.results]
             assert any("dark mode" in c for c in contents)
@@ -219,3 +358,28 @@ class TestOrganize:
             client.store("some content", user_id="alice")
             result = client.organize(user_id="alice", jobs=["promote"])
             assert "promote" in result.jobs_run
+
+
+class TestFailedConstruction:
+    def test_invalid_directory_preserves_original_error(self):
+        partial = MemoryClient.__new__(MemoryClient)
+        with pytest.raises(TypeError):
+            partial.__init__(object())
+        assert partial._closed
+        partial.__del__()  # Must not emit an unraisable AttributeError.
+
+    def test_engine_creation_failure_stops_thread_and_loop(self, tmp_dir, monkeypatch):
+        from unittest.mock import AsyncMock
+        from prme import MemoryEngine
+        monkeypatch.setattr(MemoryEngine, "create", AsyncMock(side_effect=RuntimeError("startup failed")))
+        partial = MemoryClient.__new__(MemoryClient)
+        with pytest.raises(RuntimeError, match="startup failed"):
+            partial.__init__(tmp_dir)
+        assert partial._closed and not partial._thread.is_alive()
+        assert partial._loop.is_closed()
+        partial.close()
+
+    def test_normal_close_releases_event_loop(self, tmp_dir):
+        with MemoryClient(tmp_dir) as client:
+            assert not client._loop.is_closed()
+        assert client._loop.is_closed() and not client._thread.is_alive()

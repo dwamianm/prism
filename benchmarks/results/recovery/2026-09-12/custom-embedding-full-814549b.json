@@ -1,0 +1,11 @@
+{
+  "source_commit": "814549b",
+  "native_process_exit_code": 0,
+  "passed": 2633,
+  "skipped": 81,
+  "failed": 0,
+  "seconds": 384.01,
+  "log_sha256": "bf96091dbf184352f09884791b8829025a06c7ded60dc80ddb788c4d6698bbf6",
+  "database": "fresh loopback-only PostgreSQL test database with explicit sslmode=disable",
+  "limits": "Complete source regression with both backends. Installed custom-provider integration and real-BGE workflow are recorded separately. No memory-quality claim."
+}

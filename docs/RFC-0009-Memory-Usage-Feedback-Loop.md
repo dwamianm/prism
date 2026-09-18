@@ -18,6 +18,19 @@ This RFC explicitly separates the feedback lifecycle from signal detection. Sign
 
 ---
 
+### Implementation status
+
+The legacy memory-only feedback tracker and global heuristic weight tuner do not
+implement the durable, attributed lifecycle below. New owner-scoped retrieval
+receipts and explicit relevance records are implemented separately under
+[RFC-0017](RFC-0017-Scoped-Retrieval-Learning.md). They preserve returned candidate
+features and context membership, enforce retry identities, and survive restart.
+They do not assert that an application injected the context into a model and do
+not yet activate learned ranking profiles. The global legacy tuner does not
+consume these records. It runs only when explicitly selected in an unscoped
+operator call; default maintenance and session completion do not tune weights.
+Passing a user scope with `feedback_apply` raises `ValueError` before any work.
+
 ## 2. The Feedback Lifecycle
 
 ```

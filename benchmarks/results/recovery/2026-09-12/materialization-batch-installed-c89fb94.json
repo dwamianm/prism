@@ -1,0 +1,22 @@
+{
+  "source_commit": "c89fb94",
+  "native_process_exit_code": 0,
+  "production_imports_verified_in_site_packages": true,
+  "production_source_bytes_match_frozen_commit": true,
+  "wheel_sha256": "2035d7d173abf13d9b9e7427d56695ea6ec0c2c0688fa2b0905d8767911b375d",
+  "passed": 63,
+  "skipped": 10,
+  "failed": 0,
+  "seconds": 34.94,
+  "log_sha256": "32825b19d6d2b273e4621bd35cd6dfcf8a2ad04429217d373fe82eed9f66a018",
+  "coverage": [
+    "Atomic native replacement and lost acknowledgements",
+    "Cancellation retains native index lock",
+    "One batch commit precedes individual source acknowledgements",
+    "Selective vector/lexical failure recovery and owner isolation",
+    "Process exits before and after batch commit",
+    "Exact serial versus batched retrieval candidate and context parity",
+    "Direct store and deferred-source recovery on DuckDB and live PostgreSQL"
+  ],
+  "limits": "Installed Python 3.13; native and authored fault checks. Backend-specific cases account for skips. No memory quality or competitive speed claim."
+}

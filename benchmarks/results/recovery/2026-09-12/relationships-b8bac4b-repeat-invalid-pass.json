@@ -1,0 +1,212 @@
+{
+  "passed": false,
+  "invalidated_original_pass": true,
+  "reason": "The diagnostic ignored PREFERENCE and DECISION nodes, allowing an additional FACT to mask a wrong claim kind.",
+  "installed_package_commit": "b8bac4b",
+  "harness_commit": "7fbfa51",
+  "original_report": {
+    "passed": true,
+    "cases": [
+      {
+        "case": "service",
+        "passed": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "edge_types": [
+          "has_fact",
+          "mentions"
+        ],
+        "facts": 1,
+        "claim_node_types": [
+          "fact"
+        ],
+        "has_fact_edges": 1,
+        "extraction": {
+          "entities": [
+            {
+              "name": "Aster",
+              "entity_type": "product",
+              "description": null,
+              "scope": null
+            },
+            {
+              "name": "PostgreSQL",
+              "entity_type": "product",
+              "description": null,
+              "scope": null
+            }
+          ],
+          "facts": [
+            {
+              "subject": "Aster",
+              "subject_entity_type": null,
+              "object_entity_type": null,
+              "predicate": "uses",
+              "object": "PostgreSQL",
+              "evidence_quote": "The Aster service uses PostgreSQL.",
+              "confidence": 0.9,
+              "temporal_ref": null,
+              "fact_type": "fact",
+              "scope": "organisation",
+              "epistemic_type": "asserted",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            }
+          ],
+          "relationships": [],
+          "summary": "The text states that the Aster service uses PostgreSQL database system."
+        },
+        "fact_epistemic_types": [
+          "asserted"
+        ],
+        "materialization_policy": "relationship_claims_v3"
+      },
+      {
+        "case": "namesake",
+        "passed": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "edge_types": [
+          "has_fact",
+          "mentions"
+        ],
+        "facts": 1,
+        "claim_node_types": [
+          "fact"
+        ],
+        "has_fact_edges": 1,
+        "extraction": {
+          "entities": [
+            {
+              "name": "Jordan",
+              "entity_type": "person",
+              "description": null,
+              "scope": "personal"
+            },
+            {
+              "name": "Jordan",
+              "entity_type": "location",
+              "description": null,
+              "scope": "organisation"
+            }
+          ],
+          "facts": [
+            {
+              "subject": "Jordan",
+              "subject_entity_type": "person",
+              "object_entity_type": "location",
+              "predicate": "lives_in",
+              "object": "Jordan",
+              "evidence_quote": "Jordan, the engineer, lives in Jordan, the country.",
+              "confidence": 0.9,
+              "temporal_ref": null,
+              "fact_type": "fact",
+              "scope": "personal",
+              "epistemic_type": "observed",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            }
+          ],
+          "relationships": [
+            {
+              "source_entity": "Jordan",
+              "source_entity_type": "person",
+              "target_entity": "Jordan",
+              "target_entity_type": "location",
+              "relationship_type": "lives_in",
+              "evidence_quote": "Jordan, the engineer, lives in Jordan, the country.",
+              "epistemic_type": "observed",
+              "confidence": 0.9
+            }
+          ],
+          "summary": "The text states that Jordan, an engineer, lives in Jordan (the country)."
+        },
+        "fact_epistemic_types": [
+          "observed"
+        ],
+        "materialization_policy": "relationship_claims_v3"
+      },
+      {
+        "case": "conditional",
+        "passed": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "edge_types": [
+          "has_fact",
+          "mentions",
+          "has_fact",
+          "mentions"
+        ],
+        "facts": 1,
+        "claim_node_types": [
+          "preference",
+          "fact"
+        ],
+        "has_fact_edges": 2,
+        "extraction": {
+          "entities": [
+            {
+              "name": "Alice",
+              "entity_type": "person",
+              "description": null,
+              "scope": "project"
+            },
+            {
+              "name": "PostgreSQL",
+              "entity_type": "product",
+              "description": null,
+              "scope": "project"
+            },
+            {
+              "name": "Atlas project",
+              "entity_type": "concept",
+              "description": null,
+              "scope": null
+            }
+          ],
+          "facts": [
+            {
+              "subject": "Alice",
+              "subject_entity_type": null,
+              "object_entity_type": null,
+              "predicate": "uses",
+              "object": "PostgreSQL",
+              "evidence_quote": "Alice might use PostgreSQL for the Atlas project if the evaluation succeeds.",
+              "confidence": 0.6,
+              "temporal_ref": null,
+              "fact_type": "preference",
+              "scope": "project",
+              "epistemic_type": "hypothetical",
+              "temporal_intent": null,
+              "replaces_object": null
+            }
+          ],
+          "relationships": [
+            {
+              "source_entity": "Alice",
+              "source_entity_type": null,
+              "target_entity": "Atlas project",
+              "target_entity_type": null,
+              "relationship_type": "works_on",
+              "evidence_quote": "Alice might use PostgreSQL for the Atlas project if the evaluation succeeds.",
+              "epistemic_type": "hypothetical",
+              "confidence": 0.5
+            }
+          ],
+          "summary": "Alice may potentially use PostgreSQL for the Atlas project, contingent on successful evaluation results."
+        },
+        "fact_epistemic_types": [
+          "hypothetical"
+        ],
+        "materialization_policy": "relationship_claims_v3"
+      }
+    ],
+    "limits": "Three synthetic structural-link checks, not semantic accuracy or competitive evidence.",
+    "elapsed_seconds": 36.748,
+    "provider": "ollama",
+    "model": "qwen3.5:4b",
+    "provider_max_retries": 3,
+    "workflow_assertions_passed": true,
+    "process_exit_code": 0
+  }
+}

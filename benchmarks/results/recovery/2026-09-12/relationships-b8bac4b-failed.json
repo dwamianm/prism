@@ -1,0 +1,135 @@
+{
+  "passed": false,
+  "cases": [
+    {
+      "case": "service",
+      "passed": true,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "edge_types": [
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 1,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Aster",
+            "entity_type": "product",
+            "description": null,
+            "scope": null
+          },
+          {
+            "name": "PostgreSQL",
+            "entity_type": "product",
+            "description": null,
+            "scope": null
+          }
+        ],
+        "facts": [
+          {
+            "subject": "Aster",
+            "subject_entity_type": null,
+            "object_entity_type": null,
+            "predicate": "uses",
+            "object": "PostgreSQL",
+            "evidence_quote": "The Aster service uses PostgreSQL.",
+            "confidence": 0.8,
+            "temporal_ref": null,
+            "fact_type": "fact",
+            "scope": null,
+            "epistemic_type": "asserted",
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [
+          {
+            "source_entity": "Aster",
+            "source_entity_type": null,
+            "target_entity": "PostgreSQL",
+            "target_entity_type": null,
+            "relationship_type": "uses",
+            "evidence_quote": "The Aster service uses PostgreSQL.",
+            "epistemic_type": "observed",
+            "confidence": 0.8
+          }
+        ],
+        "summary": "The message states that the Aster service uses the PostgreSQL database system."
+      },
+      "fact_epistemic_types": [
+        "asserted"
+      ],
+      "materialization_policy": "relationship_claims_v3"
+    },
+    {
+      "case": "namesake",
+      "passed": false,
+      "error_type": "ExtractionError"
+    },
+    {
+      "case": "conditional",
+      "passed": false,
+      "association_edges_only": true,
+      "full_source_preserved": true,
+      "edge_types": [
+        "has_fact",
+        "mentions"
+      ],
+      "facts": 0,
+      "has_fact_edges": 1,
+      "extraction": {
+        "entities": [
+          {
+            "name": "Alice",
+            "entity_type": "person",
+            "description": "Individual speaker or collaborator",
+            "scope": null
+          },
+          {
+            "name": "PostgreSQL",
+            "entity_type": "product",
+            "description": "Database software product",
+            "scope": null
+          },
+          {
+            "name": "Atlas",
+            "entity_type": "concept",
+            "description": "Project being worked on",
+            "scope": null
+          }
+        ],
+        "facts": [
+          {
+            "subject": "Alice",
+            "subject_entity_type": "person",
+            "object_entity_type": "product",
+            "predicate": "uses",
+            "object": "PostgreSQL",
+            "evidence_quote": "Alice might use PostgreSQL for the Atlas project if the evaluation succeeds.",
+            "confidence": 0.4,
+            "temporal_ref": null,
+            "fact_type": "preference",
+            "scope": "project",
+            "epistemic_type": "hypothetical",
+            "temporal_intent": "assertion",
+            "replaces_object": null
+          }
+        ],
+        "relationships": [],
+        "summary": "A conditional statement about Alice potentially using PostgreSQL for the Atlas project, dependent on evaluation success."
+      },
+      "fact_epistemic_types": [],
+      "materialization_policy": "relationship_claims_v3"
+    }
+  ],
+  "limits": "Incomplete end-to-end process; no success or accuracy claim.",
+  "elapsed_seconds": 73.402,
+  "provider": "ollama",
+  "model": "qwen3.5:4b",
+  "provider_max_retries": 3,
+  "workflow_assertions_passed": false,
+  "process_exit_code": 1,
+  "error_type": "WorkerExitError"
+}

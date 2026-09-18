@@ -33,8 +33,15 @@ from uuid import UUID
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 warnings.filterwarnings("ignore")
 
-from prme import EdgeType, LifecycleState, MemoryEngine, NodeType, PRMEConfig, Scope
-from prme.models.edges import MemoryEdge
+from prme import (  # noqa: E402
+    EdgeType,
+    LifecycleState,
+    MemoryEngine,
+    NodeType,
+    PRMEConfig,
+    Scope,
+)
+from prme.models.edges import MemoryEdge  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -346,26 +353,30 @@ async def test_03_lifecycle_transitions(engine: MemoryEngine, log: TestLogger):
 
     # Store a fact that starts as TENTATIVE
     with Timer() as t:
-        event_id = await engine.store(
+        initial_receipt = await engine.store_with_receipt(
             "The recommendation service runs on port 8080.",
             user_id="alex",
             node_type=NodeType.FACT,
             scope=Scope.PROJECT,
         )
-    log.log_op("store/initial_fact", {"content": "port 8080 fact"}, {"event_id": event_id}, t.ms)
+    log.log_op(
+        "store/initial_fact",
+        {"content": "port 8080 fact"},
+        {
+            "event_id": str(initial_receipt.event_id),
+            "node_id": str(initial_receipt.node_id),
+        },
+        t.ms,
+    )
 
-    # Find the node
-    nodes = await engine.query_nodes(user_id="alex", node_type=NodeType.FACT)
-    port_node = next((n for n in nodes if "port 8080" in n.content), None)
-    assert port_node is not None, "Could not find port 8080 node"
-
-    node_id = str(port_node.id)
-    log.log_detail(f"Found node: {node_id}, state={port_node.lifecycle_state.value}")
+    port_node = initial_receipt.node
+    node_id = str(initial_receipt.node_id)
+    log.log_detail(f"Stored node: {node_id}, state={port_node.lifecycle_state.value}")
 
     # TENTATIVE -> STABLE
     with Timer() as t:
-        await engine.promote(node_id)
-    promoted = await engine.get_node(node_id)
+        await engine.promote(node_id, user_id="alex")
+    promoted = await engine.get_node(node_id, user_id="alex")
     log.log_op(
         "promote/tentative_to_stable",
         {"node_id": node_id},
@@ -376,23 +387,34 @@ async def test_03_lifecycle_transitions(engine: MemoryEngine, log: TestLogger):
 
     # Store a corrected fact
     with Timer() as t:
-        correction_id = await engine.store(
+        correction_receipt = await engine.store_with_receipt(
             "The recommendation service runs on port 9090, not 8080.",
             user_id="alex",
             node_type=NodeType.FACT,
             scope=Scope.PROJECT,
         )
-    log.log_op("store/correction", {"content": "port 9090 correction"}, {"event_id": correction_id}, t.ms)
+    log.log_op(
+        "store/correction",
+        {"content": "port 9090 correction"},
+        {
+            "event_id": str(correction_receipt.event_id),
+            "node_id": str(correction_receipt.node_id),
+        },
+        t.ms,
+    )
 
-    new_nodes = await engine.query_nodes(user_id="alex", node_type=NodeType.FACT)
-    new_node = next((n for n in new_nodes if "port 9090" in n.content), None)
-    assert new_node is not None
-    new_node_id = str(new_node.id)
+    new_node_id = str(correction_receipt.node_id)
 
     # STABLE -> SUPERSEDED
     with Timer() as t:
-        await engine.supersede(node_id, new_node_id)
-    old_node = await engine.get_node(node_id, include_superseded=True)
+        await engine.supersede(
+            node_id,
+            new_node_id,
+            evidence_id=str(correction_receipt.event_id),
+            user_id="alex",
+            actor_id="alex",
+        )
+    old_node = await engine.get_node(node_id, user_id="alex", include_superseded=True)
     log.log_op(
         "supersede/stable_to_superseded",
         {"old_node_id": node_id, "new_node_id": new_node_id},
@@ -406,8 +428,8 @@ async def test_03_lifecycle_transitions(engine: MemoryEngine, log: TestLogger):
 
     # SUPERSEDED -> ARCHIVED
     with Timer() as t:
-        await engine.archive(node_id)
-    archived = await engine.get_node(node_id, include_superseded=True)
+        await engine.archive(node_id, user_id="alex")
+    archived = await engine.get_node(node_id, user_id="alex", include_superseded=True)
     log.log_op(
         "archive/superseded_to_archived",
         {"node_id": node_id},
@@ -756,6 +778,11 @@ async def test_09_epistemic_types_and_confidence(engine: MemoryEngine, log: Test
                 scope=Scope.PERSONAL,
                 epistemic_type=epistemic_type,
                 source_type=source_type,
+                metadata=(
+                    {"condition": "the team grows"}
+                    if epistemic_type == EpistemicType.CONDITIONAL
+                    else None
+                ),
             )
         # Look up the created node to check confidence
         nodes = await engine.query_nodes(user_id="alex")

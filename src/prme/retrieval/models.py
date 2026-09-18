@@ -7,14 +7,18 @@ RetrievalResponse, RetrievalMetadata, and ExcludedCandidate.
 
 from __future__ import annotations
 
-from typing import Literal
+import math
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from prme.models.nodes import MemoryNode
+from prme.models.learning import RankingMultipliers
+from prme.retrieval.config import ScoringWeights
+from prme.retrieval.temporal_relation_models import TemporalRelationMetadata
 from prme.types import QueryIntent, RepresentationLevel, RetrievalMode
 
 
@@ -47,7 +51,7 @@ class QueryAnalysis(BaseModel):
         default_factory=list,
         description="Extracted entity names from query",
     )
-    temporal_signals: list[dict] = Field(
+    temporal_signals: list[dict[str, Any]] = Field(
         default_factory=list,
         description="Temporal signals (each has type/value/resolved keys)",
     )
@@ -118,6 +122,94 @@ class ScoreTrace(BaseModel):
     )
 
 
+class ScoreAdjustment(BaseModel):
+    """An ordered, recorded operation after the base composite score."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    kind: Literal[
+        "neural_blend",
+        "session_decay",
+        "episode_decay",
+        "evidence_projection",
+        "evidence_augmentation",
+        "current_update",
+    ]
+    coefficient: float = Field(allow_inf_nan=False)
+    neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
+    source_node_id: UUID
+
+    @model_validator(mode="after")
+    def validate_operation(self) -> ScoreAdjustment:
+        if (self.kind == "neural_blend") != (self.neural_score is not None):
+            raise ValueError("Only neural blending requires a neural score")
+        if self.kind == "neural_blend" and not 0 <= self.coefficient <= 1:
+            raise ValueError("Neural prior weight must be between zero and one")
+        if self.kind == "current_update" and not 1 <= self.coefficient <= 2:
+            raise ValueError("Current-update multiplier must be between one and two")
+        if self.kind in {"evidence_projection", "evidence_augmentation"} and not (
+            0 < self.coefficient <= 1
+        ):
+            raise ValueError("Evidence-context coefficient must be in (0, 1]")
+        return self
+
+
+class ScoreProvenance(BaseModel):
+    """Replay a score using saved features, without mutable graph state.
+
+    Version 1 fixes the composite formula, including ten-decimal rounding,
+    the relevance cap, and the order of subsequent score operations. Applied
+    weights can differ from the request's configured weights.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    formula_version: Literal[1] = 1
+    base_node_id: UUID
+    trace: ScoreTrace
+    weights: ScoringWeights
+    adjustments: tuple[ScoreAdjustment, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_components(self) -> ScoreProvenance:
+        values = list(self.trace.model_dump().values())
+        values.extend(v for k, v in self.weights.model_dump().items() if k != "node_type_boost")
+        values.extend(self.weights.node_type_boost.values())
+        if not all(math.isfinite(v) for v in values):
+            raise ValueError("Score provenance components must be finite")
+        if self.replay_base_score() != self.trace.composite_score:
+            raise ValueError("Score provenance does not reproduce the base trace")
+        return self
+
+    def replay_base_score(self) -> float:
+        """Recompute the recorded base score, including its relevance cap."""
+        t, w = self.trace, self.weights
+        additive = (w.w_semantic * t.semantic_similarity
+                    + w.w_lexical * t.lexical_relevance
+                    + w.w_graph * t.graph_proximity
+                    + w.w_recency * t.recency_factor
+                    + w.w_salience * t.salience
+                    + w.w_confidence * t.confidence)
+        score = additive * t.epistemic_weight
+        if w.temporal_boost > 0:
+            score += w.temporal_boost * t.temporal_affinity
+        score *= t.node_type_boost
+        relevance = t.semantic_similarity + t.lexical_relevance
+        if w.relevance_floor > 0 and relevance < w.relevance_floor:
+            score = min(score, relevance)
+        return round(score, 10)
+
+    def replay_score(self) -> float:
+        """Apply saved neural blends and session inheritance in order."""
+        score = self.replay_base_score()
+        for operation in self.adjustments:
+            if operation.kind == "neural_blend":
+                assert operation.neural_score is not None
+                score = ((1 - operation.coefficient) * operation.neural_score
+                         + operation.coefficient * score)
+            else:
+                score *= operation.coefficient
+        return score
+
+
 class RetrievalCandidate(BaseModel):
     """Enriched candidate carrying all score components.
 
@@ -146,14 +238,24 @@ class RetrievalCandidate(BaseModel):
     composite_score: float = Field(
         default=0.0, description="Final composite score after scoring stage"
     )
+    reranker_score: float | None = Field(
+        default=None, ge=0, le=1,
+        description="Normalized neural score when reranked; not a calibrated relevance probability",
+    )
     score_trace: ScoreTrace | None = Field(
-        default=None, description="Full score breakdown (always-on)"
+        default=None, description="Base score breakdown before optional neural blending"
+    )
+    score_provenance: ScoreProvenance | None = Field(
+        default=None, description="Applied weights and ordered operations for exact score replay"
     )
     representation: RepresentationLevel | None = Field(
         default=None, description="Set in packing stage"
     )
     token_cost: int = Field(
         default=0, description="Estimated token cost (set in packing stage)"
+    )
+    rendered_text: str | None = Field(
+        default=None, description="Faithful text at the selected representation level",
     )
     conflict_flag: bool = Field(
         default=False,
@@ -195,6 +297,38 @@ class MemoryBundle(BaseModel):
         default=RepresentationLevel.REFERENCE,
         description="Minimum representation level used",
     )
+    rendered_context: str = Field(default="", description="The exact context counted against the budget")
+    tokenizer: str | None = Field(default=None, description="Encoding used for tokens_used")
+    coverage_notice: str | None = Field(
+        default=None,
+        description="System-authored coverage boundary included in rendered_context",
+    )
+    context_guidance: str | None = Field(
+        default=None,
+        description=(
+            "Optional task guidance included only when it fits without changing "
+            "the selected memory records"
+        ),
+    )
+    context_format: Literal["auditable", "compact"] = Field(
+        default="auditable",
+        description="Serialization format used by rendered_context",
+    )
+    context_references: dict[str, UUID] = Field(
+        default_factory=dict,
+        description="Bundle-local compact references mapped to full memory node IDs",
+    )
+
+    def render(self) -> str:
+        """Return the already-budgeted context; do not reconstruct full nodes."""
+        return self.rendered_context
+
+    def resolve_context_ref(self, reference: str) -> UUID:
+        """Resolve a compact context reference such as ``m3`` to a node ID."""
+        try:
+            return self.context_references[reference]
+        except KeyError as exc:
+            raise ValueError(f"Unknown context reference: {reference}") from exc
 
     def render_system_instructions(self) -> str:
         """Render system instructions as a formatted prompt block.
@@ -211,8 +345,66 @@ class MemoryBundle(BaseModel):
             return ""
         lines = ["## System Instructions"]
         for candidate in instructions:
-            lines.append(f"- {candidate.node.content}")
+            content = candidate.rendered_text if candidate.rendered_text is not None else candidate.node.content
+            lines.append(f"- {content}")
         return "\n".join(lines) + "\n"
+
+
+AggregationLimitation = Literal[
+    "semantic_matching",
+    "candidate_limit",
+    "backend_failure",
+    "score_floor",
+    "result_limit",
+    "token_budget",
+]
+
+
+class AggregationCoverage(BaseModel):
+    """Coverage boundary for a natural-language count or list request.
+
+    Hybrid retrieval can surface useful evidence but cannot prove that a
+    semantic criterion matched every stored real-world item. ``exhaustive`` is
+    therefore deliberately false; complete stored-record traversal is exposed
+    separately through ``scan_nodes`` and ``iter_nodes``.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: Literal["semantic_candidates", "candidate_limited", "context_limited"]
+    exhaustive: Literal[False] = False
+    candidate_count: int = Field(ge=0, description="Unique candidates before explicit selection")
+    selected_count: int = Field(ge=0, description="Candidates returned after score/count selection")
+    context_count: int = Field(ge=0, description="Selected candidates present in the packed context")
+    limitations: tuple[AggregationLimitation, ...] = ("semantic_matching",)
+    candidate_limit_paths: tuple[str, ...] = ()
+
+
+HistoricalLimitation = Literal[
+    "current_lifecycle_state",
+    "current_derived_indexes",
+    "mutations_not_replayed",
+]
+
+
+class HistoricalCoverage(BaseModel):
+    """Boundary for ``knowledge_at`` ingestion-time filtering.
+
+    The current engine applies the cutoff to candidates produced by current
+    graph and search-index state. It does not replay lifecycle transitions,
+    corrections, organizer mutations, or evicted index entries.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    knowledge_at: datetime
+    semantics: Literal["ingestion_cutoff"] = "ingestion_cutoff"
+    exact_snapshot: Literal[False] = False
+    limitations: tuple[HistoricalLimitation, ...] = (
+        "current_lifecycle_state",
+        "current_derived_indexes",
+        "mutations_not_replayed",
+    )
 
 
 class RetrievalMetadata(BaseModel):
@@ -223,6 +415,10 @@ class RetrievalMetadata(BaseModel):
     """
 
     request_id: UUID = Field(description="Request identifier from QueryAnalysis")
+    receipt_persisted: bool = Field(default=False, description="An owner-scoped feedback receipt was durably logged")
+    reference_time: datetime | None = Field(
+        default=None, description="UTC clock used for relative dates and scoring decay",
+    )
     candidates_generated: dict[str, int] = Field(
         default_factory=dict,
         description="Per-backend candidate counts",
@@ -230,21 +426,65 @@ class RetrievalMetadata(BaseModel):
     candidates_filtered: int = Field(
         default=0, description="Candidates removed by filtering"
     )
+    min_score: float | None = None
+    result_limit: int | None = None
+    max_per_source: int | None = Field(
+        default=None,
+        description=(
+            "Optional maximum returned nodes for one exact nonempty evidence "
+            "set and byte-identical source passage"
+        ),
+    )
+    max_per_evidence: int | None = Field(
+        default=None,
+        description=(
+            "Optional maximum returned nodes for one exact nonempty evidence set, "
+            "regardless of whether their content differs"
+        ),
+    )
     candidates_included: int = Field(
         default=0, description="Candidates included in final response"
     )
     scoring_config_version: str = Field(
-        description="ScoringWeights version_id used for this retrieval"
+        description="Configured base ScoringWeights version; applied weights are recorded in score provenance"
     )
+    ranking_multipliers: RankingMultipliers | None = None
+    ranking_profile_id: UUID | None = None
+    ranking_profile_status: Literal[
+        "none", "applied", "inapplicable", "request_override"
+    ] = "none"
+    ranking_profile_reason: Literal[
+        "feature_identity_mismatch", "base_scoring_mismatch", "explicit_multipliers"
+    ] | None = None
     timing_ms: float = Field(
-        default=0.0, description="Total retrieval time in milliseconds"
+        default=0.0, description="Pipeline time including receipt logging; excludes engine startup and queue draining"
     )
+    receipt_logging_ms: float = Field(default=0.0, ge=0, description="Receipt construction and operation-log latency")
     backends_used: list[str] = Field(
         default_factory=list, description="List of backends queried"
     )
     embedding_mismatch: bool = Field(
         default=False,
         description="Flag if embedding model mismatch detected (per research)",
+    )
+    backend_failures: dict[str, str] = Field(
+        default_factory=dict,
+        description="Failed primary candidate paths with sanitized reason codes; empty means no detected failure",
+    )
+    aggregation_coverage: AggregationCoverage | None = Field(
+        default=None,
+        description="Explicit non-exhaustive coverage for detected count/list queries",
+    )
+    historical_coverage: HistoricalCoverage | None = Field(
+        default=None,
+        description="Explicit non-snapshot boundary when knowledge_at is requested",
+    )
+    temporal_relation: TemporalRelationMetadata | None = Field(
+        default=None,
+        description=(
+            "Outcome and non-secret provider provenance when opt-in temporal "
+            "relation enrichment ran for this retrieval"
+        ),
     )
 
 
@@ -262,6 +502,23 @@ class FilterMetadata(BaseModel):
     )
     cross_scope_enabled: bool = Field(
         default=False, description="Whether cross-scope hints were requested"
+    )
+
+
+class ExcludedCandidate(BaseModel):
+    """Record of a candidate excluded from final results.
+
+    For full candidate audit trail -- captures why each candidate was dropped.
+    """
+
+    node_id: UUID = Field(description="ID of the excluded node")
+    reason: str = Field(
+        description="Exclusion reason (e.g., 'epistemic_filtered', "
+        "'below_threshold', 'budget_exceeded')"
+    )
+    composite_score: float | None = Field(
+        default=None,
+        description="Composite score at time of exclusion (if scored)",
     )
 
 
@@ -288,24 +545,8 @@ class RetrievalResponse(BaseModel):
         default=None,
         description="Metadata about active filters (scope, temporal, cross-scope)",
     )
+    excluded: list[ExcludedCandidate] = Field(default_factory=list, description="Epistemic and selection exclusions; packing exclusions are in bundle.excluded_ids")
     cross_scope_hints: list[RetrievalCandidate] = Field(
         default_factory=list,
         description="Highly relevant results from outside the requested scope",
-    )
-
-
-class ExcludedCandidate(BaseModel):
-    """Record of a candidate excluded from final results.
-
-    For full candidate audit trail -- captures why each candidate was dropped.
-    """
-
-    node_id: UUID = Field(description="ID of the excluded node")
-    reason: str = Field(
-        description="Exclusion reason (e.g., 'epistemic_filtered', "
-        "'below_threshold', 'budget_exceeded')"
-    )
-    composite_score: float | None = Field(
-        default=None,
-        description="Composite score at time of exclusion (if scored)",
     )

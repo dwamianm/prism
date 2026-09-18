@@ -1,0 +1,156 @@
+{
+  "runtime_package_commit": "b8bac4b",
+  "runtime_environment": "classification-environment.json",
+  "runs": [
+    {
+      "harness_commit": "9f3ee7f",
+      "mode": "support_and_classification",
+      "input_sha256": "0a85cdf8910459b2583a7e7b80b86b79dbc5a67d1470e694c13bf2fb2c3b5dfa",
+      "cases_sha256": "4bb1861a591962dd8c735d71cdbda1ad55567ad5887e8088744c84e4c1aa25e1",
+      "case_count": 12,
+      "original_cases_passed": 9,
+      "reviewed_cases_passed": 7,
+      "review_median_seconds": 7.323,
+      "review_min_seconds": 4.361,
+      "review_max_seconds": 17.948,
+      "cases": [
+        {
+          "case": "usage",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "possible_usage",
+          "original_passed": false,
+          "reviewed_passed": false
+        },
+        {
+          "case": "conditional_usage",
+          "original_passed": false,
+          "reviewed_passed": false
+        },
+        {
+          "case": "explicit_preference",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "dislike",
+          "original_passed": true,
+          "reviewed_passed": false
+        },
+        {
+          "case": "choice",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "rejected_choice",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "mixed",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "past_choice",
+          "original_passed": true,
+          "reviewed_passed": false
+        },
+        {
+          "case": "service",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "namesake",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "conditional_preference",
+          "original_passed": false,
+          "reviewed_passed": false
+        }
+      ]
+    },
+    {
+      "harness_commit": "0a6366d",
+      "mode": "classification_only",
+      "input_sha256": "0a85cdf8910459b2583a7e7b80b86b79dbc5a67d1470e694c13bf2fb2c3b5dfa",
+      "cases_sha256": "4bb1861a591962dd8c735d71cdbda1ad55567ad5887e8088744c84e4c1aa25e1",
+      "case_count": 12,
+      "original_cases_passed": 9,
+      "reviewed_cases_passed": 11,
+      "review_median_seconds": 7.675,
+      "review_min_seconds": 5.007,
+      "review_max_seconds": 12.053,
+      "cases": [
+        {
+          "case": "usage",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "possible_usage",
+          "original_passed": false,
+          "reviewed_passed": true
+        },
+        {
+          "case": "conditional_usage",
+          "original_passed": false,
+          "reviewed_passed": false
+        },
+        {
+          "case": "explicit_preference",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "dislike",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "choice",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "rejected_choice",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "mixed",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "past_choice",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "service",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "namesake",
+          "original_passed": true,
+          "reviewed_passed": true
+        },
+        {
+          "case": "conditional_preference",
+          "original_passed": false,
+          "reviewed_passed": true
+        }
+      ]
+    }
+  ],
+  "decision": "Keep experimental; rejection lost valid qualified memories, while label-only review improved this narrow trial but remained imperfect and added a model call.",
+  "limits": "Authored development probes with one unseeded local model. Not independent validation, answer accuracy, competitive evidence, or isolated latency measurement."
+}

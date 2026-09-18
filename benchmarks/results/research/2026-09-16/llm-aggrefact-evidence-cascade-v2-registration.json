@@ -1,0 +1,85 @@
+{
+  "artifacts": {
+    "factcg_registration_sha256": "505e04451f1e7d4ca29e40fe5592f6e9c669b4d74ed632fa1676b5c5f77df517",
+    "factcg_result_canonical_sha256": "e3906ee0b0fa5966d535c814fc48fef5b685ffb8bee9093b154fa9acd0f661b7",
+    "factcg_result_sha256": "fd29b06dee6f35002031ee3fa17e5cf3e554e3c20c0331e70754bb409b2b9122"
+  },
+  "claim_boundary": "Passing development would unlock an untouched external confirmation. Passing test would support an optional evidence-local provider verifier, not universal factuality detection or retrieval quality.",
+  "cohort": {
+    "dev_cases": 1100,
+    "dev_selected_identity_sha256": "8f40221503bc677f2ac3345302cfb363a2b5584620423c3eeb21bc0ca6dfd9cf",
+    "per_label_per_dataset": 50,
+    "sampling": "For each split and exact (dataset,label) group, sort by SHA256(seed NUL split NUL contamination_identifier), then identifier, and take 50.",
+    "seed": "prme-llm-aggrefact-factcg-v1",
+    "test_cases": 1100,
+    "test_selected_identity_sha256": "61c9e6c450cfb618044da9127df1bc76bef4f571b9698ccf7e0296522a13bbbd"
+  },
+  "created_at": "2026-09-16T16:58:34.291166+00:00",
+  "evaluation": {
+    "calibration": {
+      "reference_integrity_rate_min": 0.98,
+      "selection": "maximum_recall_then_precision_then_lowest_ranker_threshold",
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "test_unlock": "all_calibration_gates_pass"
+    },
+    "decision_rule": "Score the test cohort only if the evidence-local cascade satisfies every development calibration gate. Promote no provider verifier unless every fixed test gate passes.",
+    "gates": {
+      "balanced_accuracy_min": 0.75,
+      "claims_evaluated_min": 1100,
+      "false_support_rate_max": 0.1,
+      "reference_integrity_rate_min": 0.98,
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6
+    }
+  },
+  "kind": "llm-aggrefact-evidence-cascade-registration",
+  "protocol": {
+    "acceptance": "valid_supported_verdict_and_ranker_score_above_calibrated_threshold",
+    "concurrency": 6,
+    "emit_source_text": false,
+    "evidence_segmentation": "paragraph_or_conservative_sentence_v1",
+    "ranker_batch_size": 2,
+    "schema_retries": 1,
+    "seed": 17,
+    "task": "factcg_ranked_evidence_local_grounding",
+    "temperature": 0,
+    "threshold_operator": "strictly_greater_than",
+    "timeout_seconds": 180,
+    "verification_prompt_sha256": "25e7445f21843824fd062994c199578b9fe5d3b7825fc122bacbaa405059f29a"
+  },
+  "purpose": "Test whether FactCG evidence ranking plus fixed-claim, segment-ID verification by a stronger independent model closes the observed relation-local precision gap without sacrificing required recall",
+  "ranker": {
+    "architecture": "sequence_classification",
+    "chunk_selection": "highest_support_probability_then_lowest_index",
+    "license": "mit",
+    "name": "yaxili96/FactCG-DeBERTa-v3-Large",
+    "revision": "0430e3509dbd28d2dff7a117c0eae25359ff3e80",
+    "source_chunking": "nltk_sentence_chunks_max_550_word_tokens",
+    "support_label_index": 1,
+    "top_k": 2,
+    "weights_filename": "model.safetensors",
+    "weights_sha256": "379a343d1ca25c9dfe24ae149f76cc958ea4f09c00dae88bd49bbbf58c749d5e"
+  },
+  "schema_version": 1,
+  "selection": {
+    "disclosure": "The FactCG development scores and labels on this cohort were observed and motivated using FactCG as an evidence ranker. No Mistral verdicts on selected development rows and no model outputs on the separately selected test rows were observed before registration.",
+    "single_variable_boundary": "The cohort, FactCG checkpoint, chunking, safety gates and sealed test rule are inherited from v1. FactCG now selects the top two source chunks and a pinned Mistral model verifies the fixed claim against numbered local evidence before the calibrated FactCG threshold is applied."
+  },
+  "source": {
+    "files": {
+      "factcg_runner_sha256": "cab0c1065632af5ed39ce38c65bae138fda03dedd7b639f38b3a97797773d219",
+      "runner_sha256": "6c824719b325efc1150aec34422d307a9021ea039cdab604836ad3e92944f1b8"
+    },
+    "prme_revision": "1c8945f895b1bc9a73f76a15cb39d916fadd84df"
+  },
+  "verifier": {
+    "base_url": "http://127.0.0.1:11434",
+    "manifest_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+    "name": "mistral-large-3:675b-cloud",
+    "parameter_size": "675B",
+    "provider": "ollama",
+    "quantization": "FP8",
+    "remote_model": "mistral-large-3:675b"
+  }
+}

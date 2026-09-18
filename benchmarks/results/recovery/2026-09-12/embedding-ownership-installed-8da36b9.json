@@ -1,0 +1,91 @@
+{
+  "commit": "8da36b9",
+  "before": {
+    "failed": 3,
+    "passed": 1,
+    "native_exit_code": 1,
+    "seconds": 0.07
+  },
+  "source": {
+    "passed": 49,
+    "native_exit_code": 0,
+    "seconds": 7.85
+  },
+  "installed": {
+    "passed": 49,
+    "native_exit_code": 0,
+    "seconds": 6.51
+  },
+  "production_files_verified": 116,
+  "wheel_sha256": "621e22a3fa4f38756787ecea9545ca8bae40ded11d551ff0dd16e3462f7365e5",
+  "real_bge_validation": {
+    "passed": true,
+    "maximum_absolute_differences": {
+      "cold_vs_partial_cache": 0.0,
+      "batch_vs_individual": 0.0,
+      "input_order": 0.0
+    },
+    "package_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/embedding.py",
+    "provider_source_sha256": "a87bb10b91325c0661f140193235527e8be4414c95e8a2450d308b538a7d4339",
+    "versions": {
+      "fastembed": "0.8.0",
+      "onnxruntime": "1.30.0",
+      "numpy": "2.5.3"
+    },
+    "model": "BAAI/bge-small-en-v1.5",
+    "model_version": "fastembed-0.8.0",
+    "model_assets_sha256": {
+      "config.json": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd",
+      "model_optimized.onnx": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+      "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+      "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+      "tokenizer_config.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+    },
+    "timings": {
+      "short": {
+        "texts": 64,
+        "corpus_sha256": "27501e35b09e26fd0248a372c1cff1fed0785fb3c575614bcf2a6c8d35bf446f",
+        "seconds": {
+          "1": [
+            0.12242066700127907,
+            0.11387916599051096,
+            0.11389333300758153
+          ],
+          "256": [
+            0.0609893340151757,
+            0.05578854199848138,
+            0.05656816600821912
+          ]
+        },
+        "median_seconds": {
+          "1": 0.11389333300758153,
+          "256": 0.05656816600821912
+        }
+      },
+      "mixed_length": {
+        "texts": 64,
+        "corpus_sha256": "e900f65c6de95a6b2899fb17f4ecdef5b0d4692f59e532c8b2cfb53e5a7428e2",
+        "seconds": {
+          "1": [
+            0.45104600000195205,
+            0.46951479199924506,
+            0.44683958298992366
+          ],
+          "256": [
+            0.8730180419806857,
+            0.8288792920066044,
+            0.824036125006387
+          ]
+        },
+        "median_seconds": {
+          "1": 0.45104600000195205,
+          "256": 0.8288792920066044
+        }
+      }
+    },
+    "limits": "Four authored invariance inputs and two small timing corpora on one host. No cross-hardware bitwise guarantee, full ingestion throughput or answer-quality claim.",
+    "workflow_assertions_passed": true,
+    "process_exit_code": 0
+  },
+  "limits": "Tests cover caller/provider buffer ownership, concurrent initialization, retry, cancellation, local/PG vector behavior. Timing probes ran under concurrent workload and do not support a speed claim. No embedding-model or retrieval-quality improvement claim."
+}

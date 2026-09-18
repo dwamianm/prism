@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "kind": "beam-retrieval-ablation-registration",
+  "status": "preregistered",
+  "registered_at": "2026-09-16T04:12:11.028164Z",
+  "purpose": "Run the conv0 arm of a failure-informed two-conversation diagnostic for non-entity evidence anchors",
+  "diagnostic_cohort": {
+    "id": "beam-100k-non-entity-augmentation-diagnostic-v1",
+    "arms": [
+      "conversation_0_tuned_pack",
+      "conversation_1_prior_untouched_pack"
+    ],
+    "disclosure": "This policy was designed after inspecting the conversation-1 unconditional-augmentation loss. Both conversations and prior answers are therefore examined development evidence, not an untouched confirmation.",
+    "fixed_policy": {
+      "evidence_augmentation_top_k": 10,
+      "evidence_augmentation_max_sources": 1,
+      "evidence_augmentation_score_decay": 0.99,
+      "evidence_augmentation_anchor_policy": "non_entity"
+    },
+    "cohort_rule": "Advance to a new untouched conversation only if there are zero pass-level losses across both arms, conversation 0 retains its q5 event-ordering pass-level win, and the combined mean rubric-score delta is nonnegative."
+  },
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "b24f385320ef26d908fd2033ec1682869f06b862",
+    "upstream_repository": "mem0ai/memory-benchmarks",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "files": {
+      "runner_sha256": "0cf87ba92392a013b8feec36439bc331a779c817c11371fa8b91251e0e3ffd89",
+      "dataset_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+      "baseline_result_sha256": "141959bfde80301d314b1f69867efbfd984fd17616c894e113957d17e0e78c00",
+      "pack_sha256": {
+        "beam_adapter_manifest.json": "b8534a850a1a6b7faa1d9a3b8635d7b302f8920b9c7c45b1e7046745f26b820f",
+        "lexical/.managed.json": "307209819fc3f27e99237b2790bc06668c19b00f4fc1213883edeb2b09b48da5",
+        "lexical/.tantivy-meta.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "lexical/.tantivy-writer.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "lexical/e50b4c80230e429abbb8d310a1ac4675.fast": "33a7293fe7b0e86ee80468560d59fbcd8b5766ab03aff6c2c528038a4dbc352b",
+        "lexical/e50b4c80230e429abbb8d310a1ac4675.fieldnorm": "31b4128f8456200473b24260a7f0fb6cc09ca75a564c22ca7cfb534e8424ad8e",
+        "lexical/e50b4c80230e429abbb8d310a1ac4675.idx": "e64415e9dad3ae5de359ac77347b150c85f3651c1a5f9088e4270c3cfc9462f6",
+        "lexical/e50b4c80230e429abbb8d310a1ac4675.pos": "956b2a71164965ff8551c57bb9b63fd081675982cfaa41401f540791a104ff5b",
+        "lexical/e50b4c80230e429abbb8d310a1ac4675.store": "344e179b5ab0bf24a5c687664a209a937894dc5bf9f126abb6d985c9fc09dae2",
+        "lexical/e50b4c80230e429abbb8d310a1ac4675.term": "5c82947fe9898a6a8fafe42fedf98855b1382ffeb30ef317ed9abfd8be38ff0a",
+        "lexical/meta.json": "6ffa97ed5c513ba5b2436836da176eec916adc1aee6e21ee54de04334513ab74",
+        "memory.duckdb": "1860a362341b4bfd589e5af23698af441487fda6b46b564967a003d609bc2987",
+        "vectors.usearch": "377c6ffb93a87801ecd487264d5dbf54163f0d7bfa229f0f67478ab4311701a5"
+      }
+    }
+  },
+  "baseline": {
+    "registration": "beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev5-registration.json",
+    "registration_sha256": "8016fed543e63e468ee3cbdc1855cd6dc9969d8d06177bd7b6a6dbab60dd216a",
+    "result": "beam_results_20260915_165519.json",
+    "correct": 13,
+    "total": 20,
+    "average_score": 0.5675,
+    "pack_policy": {
+      "max_per_source": 1,
+      "max_per_evidence": null,
+      "evidence_projection_top_k": 0,
+      "evidence_augmentation_top_k": 0
+    }
+  },
+  "protocol": {
+    "profile": "frozen_extracted_pack_non_entity_evidence_augmentation_diagnostic",
+    "chat_size": "100K",
+    "conversation_index": 0,
+    "questions": 20,
+    "question_types": [
+      "abstention",
+      "contradiction_resolution",
+      "event_ordering",
+      "information_extraction",
+      "instruction_following",
+      "knowledge_update",
+      "multi_session_reasoning",
+      "preference_following",
+      "summarization",
+      "temporal_reasoning"
+    ],
+    "top_k": 50,
+    "top_k_cutoffs": [
+      50
+    ],
+    "max_per_source": 1,
+    "max_per_evidence": null,
+    "evidence_projection_top_k": 0,
+    "evidence_augmentation_top_k": 10,
+    "evidence_augmentation_max_sources": 1,
+    "evidence_augmentation_score_decay": 0.99,
+    "evidence_augmentation_anchor_policy": "non_entity",
+    "include_cross_scope": false,
+    "reference_time": "latest owner source event",
+    "passage_time": "latest cited source event",
+    "user_id": "beam_100K_0_prme-beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev5",
+    "max_workers": 1,
+    "rpm": 60,
+    "model_timeout_seconds": 120
+  },
+  "models": {
+    "answerer": {
+      "provider": "openai",
+      "model": "mistral-large-3:675b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "mistral-large-3:675b",
+      "parameter_size": "675B",
+      "quantization": "FP8",
+      "advertised_context_tokens": 262144,
+      "thinking": false,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    },
+    "judge": {
+      "provider": "openai",
+      "model": "gpt-oss:120b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "gpt-oss:120b",
+      "parameter_size": "117B",
+      "quantization": "MXFP4",
+      "advertised_context_tokens": 131072,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    }
+  },
+  "hypothesis": "Entity candidates are effective search routes but unsafe evidence routes; excluding them will preserve claim-backed source detail while preventing the observed API-key contradiction regression.",
+  "evaluation": {
+    "primary": "paired pass transitions at score >= 0.5",
+    "secondary": "mean rubric-score delta and per-category scores",
+    "arm_rule": "Retain and report every transition; any pass-level loss fails the cohort rule.",
+    "stop_rule": "Run all 20 questions once per arm; resume only after infrastructure failure without changing policy or models."
+  },
+  "claim_boundary": "This is a post hoc two-conversation diagnostic over examined packs and mutable hosted aliases. It can reject or advance the policy to a new untouched confirmation, but cannot itself confirm generalization or establish market leadership."
+}

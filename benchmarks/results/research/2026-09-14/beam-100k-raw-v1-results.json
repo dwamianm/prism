@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "kind": "beam-raw-predict-only-result",
+  "status": "complete",
+  "registration": {
+    "path": "beam-100k-raw-v1-registration.json",
+    "sha256": "e903720877ac01cf4362c3de6562d28eae32014b348f3c06afd940fe286383ad"
+  },
+  "source": {
+    "prme_revision": "670d603363aa235b60eb476c57996437b4d84547",
+    "upstream_repository": "mem0ai/memory-benchmarks",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "dataset_repository": "Mohammadta/BEAM",
+    "dataset_revision": "3205395e897e7318c7b094ef4e6047b9b82dbb03",
+    "dataset_cache_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3"
+  },
+  "protocol": {
+    "profile": "raw",
+    "chat_sizes": [
+      "100K"
+    ],
+    "conversations": [
+      0
+    ],
+    "question_types": [
+      "abstention",
+      "contradiction_resolution",
+      "event_ordering",
+      "information_extraction",
+      "instruction_following",
+      "knowledge_update",
+      "multi_session_reasoning",
+      "preference_following",
+      "summarization",
+      "temporal_reasoning"
+    ],
+    "top_k": 50,
+    "predict_only": true,
+    "project_name": "prme-beam-100k-raw-v1",
+    "run_id": "prme-beam-100k-raw-v1",
+    "chunk_size": 2
+  },
+  "system": {
+    "id": "prme",
+    "version": "0.11.0",
+    "profile": "raw",
+    "embedding_provider": "fastembed",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "embedding_dimension": 384,
+    "duckdb_threads": 1,
+    "extraction": null
+  },
+  "coverage": {
+    "ingestion_checkpoints": 1,
+    "expected_ingestion_checkpoints": 1,
+    "chunks_processed": 94,
+    "chunks_failed": 0,
+    "questions": 20,
+    "expected_questions": 20,
+    "questions_per_type": 2,
+    "retrieval_result_min": 50,
+    "retrieval_result_max": 50,
+    "validation_errors": []
+  },
+  "retrieval_latency_ms": {
+    "minimum": 76.4,
+    "mean": 110.54,
+    "median": 86.75,
+    "p95": 152.5,
+    "maximum": 473.5
+  },
+  "artifacts": {
+    "execution_manifest_sha256": "6a16f361a86fc5c21eca68f989940af505d77510e100a2427278cfe333053ca0",
+    "adapter_manifest_sha256": "7530ae73af00e8b8f6804298b0c53e39afe64d30dc0ef189f97cc72ab2e05220",
+    "ingestion_checkpoint_sha256": "0038902bb3e1e5150ed78bc4b257606eb492730156b02c3c098459282b5ffae0",
+    "prediction_sha256": {
+      "100K_0_q0_abstention.json": "2eb1add0d96c2778317b56e363da4fe56ad014dc5edec585082113434469ee74",
+      "100K_0_q1_abstention.json": "c484b6347609625be3e46a166fcbe53f196ff1084b98a3e6c8777773aa3af67a",
+      "100K_0_q2_contradiction_resolution.json": "93033cee674dcc3d6ce92b491e16c89080464697d9da56c79bea452f072894b1",
+      "100K_0_q3_contradiction_resolution.json": "b6a3aa4ed47972ff61cde20d715a89652354b0f854914633e366e2af6c3e81b3",
+      "100K_0_q4_event_ordering.json": "d988869deaf9669c93a6ff32899de46411a02ea3e4514b829fdb51a3ac351945",
+      "100K_0_q5_event_ordering.json": "0e8bc196f695ddf5130521be4c352fea1ce4adb497e3ed3835a483c29acfa7ce",
+      "100K_0_q6_information_extraction.json": "bde61a8cb29dc8d0aafc864537efe1bdf0b0035a00c961a2addbde4a5b88014e",
+      "100K_0_q7_information_extraction.json": "06eb1444826c13a3583e2ec85321d6b96b422b163e4dd663ea2641dbf02d5bca",
+      "100K_0_q8_instruction_following.json": "ecfa3c90d5359971abfdb2e880eca860ba8211e54726bc210fe2c012430023d6",
+      "100K_0_q9_instruction_following.json": "27b27341bdadfd47c4c371bab27eae730eb2689e9ccc4d5dd9ee3feed025b079",
+      "100K_0_q10_knowledge_update.json": "f32d6955fcc41ac1d2e59d4763aeac5f3333a4771f038cb58c2b101fe5d72811",
+      "100K_0_q11_knowledge_update.json": "ae965b317b425f41639a419b39865780966487ea19de75520d9e70a39f8e5d13",
+      "100K_0_q12_multi_session_reasoning.json": "1bf2efe18246a20f2ea624a0a4ad2c988485c2bdf5f2db206a66814dfb8738a4",
+      "100K_0_q13_multi_session_reasoning.json": "93229b94af5e5ca745cdb702a9d0106854aba6e69264311f79106d835118d7e0",
+      "100K_0_q14_preference_following.json": "3fbe29ed2e5e39f93bde18d93e1b8d4309cd6685aeb6266c7932197911c41ff5",
+      "100K_0_q15_preference_following.json": "9ef03706d68384ff377d4a1e72ea2dfc679bd8ef25176c8e6cb3807f0bad3319",
+      "100K_0_q16_summarization.json": "173d30f1803f12bdbc1df0c2560ceade5f97ae22a1be917e4dea4f6bc3ea9cd2",
+      "100K_0_q17_summarization.json": "1afec4dae1cb3ed855aaf0e743eb5780b24b352e07bfbe1772daf467116f3206",
+      "100K_0_q18_temporal_reasoning.json": "f4e45afc1b6b3350954a24a811d3aab84547976a54be9a5db78860f452778e05",
+      "100K_0_q19_temporal_reasoning.json": "812293641eb48eb5ce4fb0ee516f0b012e9d7d2ecbb34f2a79abb3be1cf7ed8f"
+    }
+  },
+  "claim_boundary": "This registered result establishes complete raw ingestion and retrieval through the pinned official BEAM client for one public 100K conversation. Predict-only execution does not measure generated-answer or rubric-judge quality and is not a matched comparison with Mem0's managed service."
+}

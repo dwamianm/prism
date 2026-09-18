@@ -165,7 +165,7 @@ async def test_explicit_window_survives_the_pre_gate():
 async def test_analyze_query_forwards_languages(monkeypatch):
     seen: dict = {}
 
-    def _spy(query, languages=DEFAULT_TEMPORAL_LANGUAGES):
+    def _spy(query, languages=DEFAULT_TEMPORAL_LANGUAGES, reference_time=None):
         seen["languages"] = languages
         return []
 
@@ -173,3 +173,32 @@ async def test_analyze_query_forwards_languages(monkeypatch):
 
     await analyze_query("what happened last week", languages=["fr"])
     assert seen["languages"] == ["fr"]
+
+
+async def test_relative_dates_use_request_clock():
+    from datetime import datetime, timedelta, timezone
+
+    base = datetime(2024, 5, 10, 12, tzinfo=timezone(timedelta(hours=-5)))
+    analysis = await analyze_query("What happened two days ago?", reference_time=base)
+    assert analysis.time_from == datetime(2024, 5, 8, 17, tzinfo=timezone.utc)
+    assert analysis.time_to == analysis.time_from
+    later = await analyze_query("What happened two days ago?", reference_time=base + timedelta(days=30))
+    assert later.time_from == analysis.time_from + timedelta(days=30)
+
+
+async def test_reference_clock_requires_timezone():
+    from datetime import datetime
+
+    with pytest.raises(ValueError, match="reference_time must include a timezone"):
+        await analyze_query("What happened yesterday?", reference_time=datetime(2024, 5, 10))
+
+
+async def test_concurrent_query_clocks_are_independent():
+    import asyncio
+    from datetime import datetime, timedelta, timezone
+
+    clocks = [datetime(2020 + i, 5, 10, 12, tzinfo=timezone.utc) for i in range(12)]
+    results = await asyncio.gather(*[
+        analyze_query("What happened two days ago?", reference_time=clock) for clock in clocks
+    ])
+    assert [r.time_from for r in results] == [c - timedelta(days=2) for c in clocks]

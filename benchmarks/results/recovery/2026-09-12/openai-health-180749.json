@@ -1,0 +1,18 @@
+[
+  {
+    "checked_at": "2026-09-12T18:07:47.581274+00:00",
+    "model": "gpt-4o-2024-08-06",
+    "credential_source": "explicit project .env",
+    "status": 429,
+    "error_type": "RateLimitError",
+    "error_code": "unclassified"
+  },
+  {
+    "checked_at": "2026-09-12T18:07:48.945142+00:00",
+    "model": "gpt-4o-mini",
+    "credential_source": "explicit project .env",
+    "status": 429,
+    "error_type": "RateLimitError",
+    "error_code": "unclassified"
+  }
+]

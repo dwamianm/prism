@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "kind": "beam-answer-stability-registration",
+  "status": "preregistered",
+  "registered_at": "2026-09-16T04:27:25.043221Z",
+  "purpose": "Measure answerer and judge repeatability for the observed conversation-0 q19 score transition while holding both retrieval lists byte-for-byte fixed",
+  "selection": {
+    "disclosure": "Conversation 0 question 19 was selected after the non-entity augmentation diagnostic produced its only pass-level loss. This is a post-hoc stability diagnostic, not confirmation evidence.",
+    "observed_baseline_score": 0.5,
+    "observed_candidate_score": 0.0,
+    "retrieval_observation": "The first 20 retrieved results were identical. The candidate added one unrelated passage at rank 21 within top 50, and the hosted answerer chose a different sprint-end interpretation."
+  },
+  "source": {
+    "prme_repository": "dwamianm/prism",
+    "prme_revision": "ee0361fdf48302a6be9e6c43a868e2b235b8d6c5",
+    "upstream_repository": "mem0ai/memory-benchmarks",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+    "files": {
+      "runner_sha256": "a10b63e84122ddbb911a2e9077ec3511b5fbe915c1fb127aa966186067a1c94e",
+      "dataset_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+      "baseline_artifact_sha256": "c89f285e4e54d2409472cd8d7a7160a1ca2086404ae6908f36e994285aa8e6db",
+      "candidate_artifact_sha256": "5fac51aff701cd748a9c8df2c751d117ca584440d67964c1b147a811ce1f8455"
+    }
+  },
+  "dataset": {
+    "repository": "Mohammadta/BEAM",
+    "revision": "3205395e897e7318c7b094ef4e6047b9b82dbb03",
+    "split": "100K",
+    "normalized_cache_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3"
+  },
+  "artifacts": {
+    "baseline": {
+      "origin": "accepted extracted dev5 execution",
+      "question_id": "100K_0_q19_temporal_reasoning",
+      "retrieval_count": 50,
+      "original_score": 0.5
+    },
+    "candidate": {
+      "origin": "non-entity augmentation diagnostic conversation-0 execution",
+      "question_id": "100K_0_q19_temporal_reasoning",
+      "retrieval_count": 50,
+      "original_score": 0.0
+    }
+  },
+  "protocol": {
+    "chat_size": "100K",
+    "conversation_index": 0,
+    "question_index": 19,
+    "top_k": 50,
+    "repeats": 5,
+    "arm_order": [
+      [
+        "baseline",
+        "candidate"
+      ],
+      [
+        "candidate",
+        "baseline"
+      ],
+      [
+        "baseline",
+        "candidate"
+      ],
+      [
+        "candidate",
+        "baseline"
+      ],
+      [
+        "baseline",
+        "candidate"
+      ]
+    ],
+    "rpm": 60,
+    "model_timeout_seconds": 120,
+    "generation_temperature": 0,
+    "no_retrieval_calls": true
+  },
+  "models": {
+    "answerer": {
+      "provider": "openai",
+      "model": "mistral-large-3:675b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "mistral-large-3:675b",
+      "parameter_size": "675B",
+      "quantization": "FP8",
+      "advertised_context_tokens": 262144,
+      "thinking": false,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    },
+    "judge": {
+      "provider": "openai",
+      "model": "gpt-oss:120b-cloud",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_digest": "ac7f7a1e778577c4418f6a25e46e0b45dced6746c75422d4b343aa1495a022ed",
+      "execution": "ollama_cloud",
+      "remote_host": "https://ollama.com",
+      "remote_model": "gpt-oss:120b",
+      "parameter_size": "117B",
+      "quantization": "MXFP4",
+      "advertised_context_tokens": 131072,
+      "digest_scope": "The digest pins the local Ollama cloud manifest; Ollama does not expose an immutable remote weight revision."
+    }
+  },
+  "evaluation": {
+    "primary": "Per-arm pass count at the fixed score >= 0.5 threshold across five repeats",
+    "secondary": "Per-arm score distribution, mean score, score range, and generated-answer differences",
+    "supports_retrieval_regression": "baseline passes at least 4 of 5 and candidate passes at most 1 of 5",
+    "rejects_stable_regression": "candidate pass count is greater than baseline pass count, or either arm contains both pass and fail outcomes",
+    "otherwise": "inconclusive; retain the observed full-trial loss and report instability without causal attribution",
+    "stop_rule": "Run exactly five repeats of each arm in the registered order; resume only after infrastructure failure without changing inputs or models."
+  },
+  "claim_boundary": "This post-hoc single-question diagnostic estimates answerer/judge stability for two examined retrieval artifacts using mutable hosted model aliases. It cannot confirm retrieval quality, generalization, or product leadership."
+}

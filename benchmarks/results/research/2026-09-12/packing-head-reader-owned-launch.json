@@ -1,0 +1,18 @@
+{
+  "child_log": "/tmp/prme-owned-reader-child.log",
+  "completion_observed_at": "2026-09-13T19:41:13.534074+00:00",
+  "completion_record": "packing-head-reader-owned-incomplete.json",
+  "directory": "data/benchmarks/packing-head-reader-owned-9dd6a91",
+  "execution_plan_sha256": "4deca676c9853a5862f409abe08e800a4b41e026f5751000c53ab91b377873ac",
+  "execution_report": "data/benchmarks/packing-head-reader-owned-execution.json",
+  "native_driver_exit_code": 1,
+  "native_session_id": 52995,
+  "no_quality_score_before_complete_native_chain": true,
+  "observed_at": "2026-09-13T19:09:19.993357+00:00",
+  "outer_log": "/tmp/prme-owned-reader-driver.log",
+  "reader_source_commit": "9dd6a91",
+  "registration_commit": "c6580b0",
+  "server_log": "/tmp/prme-owned-reader-ollama.log",
+  "status": "incomplete_native_failure",
+  "wrapper_source_commit": "1cc4795"
+}

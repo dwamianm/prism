@@ -1,8 +1,11 @@
-"""Framework integrations for PRME.
+"""External integrations for PRME.
 
-Provides adapters for LangChain and LlamaIndex. Each integration
-requires its framework as an optional dependency:
+LangChain and LlamaIndex require their framework as an optional dependency:
 
     pip install prme[langchain]    # LangChain adapter
     pip install prme[llamaindex]   # LlamaIndex adapter
+
+The TypeSafe Jev product-alignment advisor uses PRME's core dependencies and a
+caller-supplied credential. It remains opt-in, can publish only unverified alias
+proposals for explicit node pairs, and never performs entity merges.
 """

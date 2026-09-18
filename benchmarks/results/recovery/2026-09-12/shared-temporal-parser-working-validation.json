@@ -1,0 +1,31 @@
+{
+  "base_commit": "7f67fde",
+  "before": {
+    "native_process_exit_code": 1,
+    "failed": 2,
+    "passed": 1,
+    "seconds": 0.21,
+    "log_sha256": "48772082ce6738e6e64b8d4c6486732b3897df8317b3f823897d46543bf5df31",
+    "finding": "Instrumented product entrypoints overlap in both ingestion-first and retrieval-first schedules; the existing lock only covers retrieval."
+  },
+  "after": {
+    "native_process_exit_code": 0,
+    "passed": 109,
+    "skipped": 7,
+    "failed": 0,
+    "seconds": 21.11,
+    "log_sha256": "0440d6697e6615b5960abc25ac2f16c4a98bbe9b6b6b99d1d5fd1e9c95fede5d"
+  },
+  "runtime": {
+    "python": "3.11.6",
+    "dateparser": "1.3.0",
+    "regex": "2026.2.19"
+  },
+  "primary_audit_inspiration": {
+    "repository": "https://github.com/vectorize-io/hindsight",
+    "commit": "bde55237f53bf55aacd048b01e29d7dc23b83a85",
+    "file": "hindsight-api-slim/hindsight_api/engine/query_analyzer.py",
+    "observation": "Upstream guards all internal dateparser entries against shared settings and locale caches. PRME independently had a retrieval-only lock."
+  },
+  "limits": "Reproduced overlapping calls with controlled instrumentation. The real mixed-clock smoke test also passed before the fix; no native crash or erroneous date was reproduced in that smoke test. Shared locking guards PRME entrypoints, not unrelated application calls to dateparser."
+}

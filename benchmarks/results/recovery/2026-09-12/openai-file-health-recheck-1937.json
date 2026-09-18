@@ -1,0 +1,22 @@
+{
+  "credential_source": "Explicitly reloaded root .env OPENAI_API_KEY; overrides differing inherited process value",
+  "checks": [
+    {
+      "model": "gpt-4o-mini",
+      "checked_at": "2026-09-12T19:36:58.883752+00:00",
+      "status": 429,
+      "success": false,
+      "error_type": "RateLimitError"
+    },
+    {
+      "model": "gpt-4o-2024-08-06",
+      "checked_at": "2026-09-12T19:37:00.082669+00:00",
+      "status": 429,
+      "success": false,
+      "error_type": "RateLimitError"
+    }
+  ],
+  "retries": 0,
+  "response_token_limit": 1,
+  "limits": "Connectivity/status probes only; no extraction quality or judge calibration. No keys, endpoints, response bodies or billing diagnosis retained."
+}

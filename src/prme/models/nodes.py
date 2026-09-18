@@ -54,8 +54,8 @@ class MemoryNode(MemoryObject):
         default=None,
         description=(
             "When the underlying event actually happened in the real world (UTC). "
-            "None means same as created_at (ingestion time). Enables bi-temporal "
-            "queries: created_at = ingestion_time vs event_time (issue #21)."
+            "None means the source time is unknown or unspecified. "
+            "The created_at field records creation time separately."
         ),
     )
     valid_from: datetime = Field(

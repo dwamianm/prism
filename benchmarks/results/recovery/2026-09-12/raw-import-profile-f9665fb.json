@@ -1,0 +1,61 @@
+{
+  "diagnostic_commit": "365e162",
+  "embedding_assets": {
+    "assets_sha256": {
+      "config.json": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd",
+      "model_optimized.onnx": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+      "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+      "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+      "tokenizer_config.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+    },
+    "dependencies": {
+      "fastembed": "0.8.0",
+      "numpy": "2.5.3",
+      "onnxruntime": "1.30.0"
+    },
+    "model": "BAAI/bge-small-en-v1.5",
+    "version": "fastembed-0.8.0"
+  },
+  "engine_sha256": "fea99f047a2a14c90b6c8a0fb4b68ff3975facea4feffec5a4149254f8434732",
+  "limits": "One authored history per existing API, one host, warmed model, fixed deferred-then-store order under concurrent reader load. Startup, validation reads, final shutdown and retrieval excluded from timings. No competitive speed, statistical, or context parity claim.",
+  "observed_native_exit_code": 0,
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/engine.py",
+  "passed": true,
+  "process_exit_code": 0,
+  "raw_report": {
+    "path": "data/benchmarks/raw-import-profile-f9665fb.json",
+    "sha256": "8c0e80851c727e273db3275241121ade63161c647abb502f8c913027557db799"
+  },
+  "runner_sha256": "cabf8ac811e1b3cf0c0b619983887688903413fbe1c46c49d13864f4d3aaec49",
+  "source_commit": "f9665fb",
+  "source_texts_sha256": "49508e3bcfe589b60eec27987fc5c40d9d5baa0c976d15354675f10ca3839813",
+  "sources": 128,
+  "tool_session_id": 52769,
+  "trials": [
+    {
+      "accept_seconds": 0.11855254200054333,
+      "event_append_calls": 128,
+      "event_append_seconds": 0.11264029491576366,
+      "lexical_commits": 1,
+      "mode": "deferred",
+      "processing_seconds": 1.8297292499919422,
+      "retrieval_nonempty": true,
+      "source_and_node_fidelity_verified": 128,
+      "source_count": 128,
+      "total_seconds": 1.9482817919924855
+    },
+    {
+      "accept_seconds": 10.207050124998204,
+      "event_append_calls": 128,
+      "event_append_seconds": 0.26999629315105267,
+      "lexical_commits": 128,
+      "mode": "store",
+      "processing_seconds": 0.0018634579901117831,
+      "retrieval_nonempty": true,
+      "source_and_node_fidelity_verified": 128,
+      "source_count": 128,
+      "total_seconds": 10.208913582988316
+    }
+  ],
+  "workflow_assertions_passed": true
+}

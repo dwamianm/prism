@@ -29,11 +29,11 @@ class Event(MemoryObject):
         default=None,
         description=(
             "When the event actually happened in the real world (UTC). "
-            "None means same as ingestion timestamp. Enables bi-temporal "
-            "queries: ingestion_time vs event_time (issue #21)."
+            "None means the source time is unknown or unspecified. "
+            "The timestamp field records ingestion time separately."
         ),
     )
-    role: str = Field(description="Role: 'user', 'assistant', or 'system'")
+    role: str = Field(description="Conversation role, e.g. 'user', 'assistant', 'tool', or 'system'")
     content: str = Field(description="Event content text")
     content_hash: str = Field(
         default="",
@@ -43,13 +43,20 @@ class Event(MemoryObject):
         default=None, description="Optional structured metadata"
     )
 
+    @model_validator(mode="after")
+    def immutable_update_time(self):
+        # Events never change. Inheriting MemoryObject's wall-clock default
+        # made the same persisted event appear newly updated on every read.
+        object.__setattr__(self, "updated_at", self.created_at)
+        return self
+
     @model_validator(mode="before")
     @classmethod
     def compute_content_hash(cls, data: dict) -> dict:
         """Compute SHA-256 hash of content if not already provided."""
         if isinstance(data, dict):
             content = data.get("content", "")
-            if content and not data.get("content_hash"):
+            if isinstance(content, str) and not data.get("content_hash"):
                 data["content_hash"] = hashlib.sha256(
                     content.encode("utf-8")
                 ).hexdigest()

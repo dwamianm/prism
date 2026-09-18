@@ -123,6 +123,10 @@ class TestUpdateLanguageDetection:
             "The database was upgraded to version 15",
             "The new provider is AWS",
             "This change is effective immediately",
+            "The user has moved and now lives in Lisbon",
+            "The user changed jobs and now works as an architect",
+            "The user's preference changed; they now prefer tea",
+            "The updated project budget is 5000 dollars",
             "MIGRATED FROM heroku to AWS",  # case insensitive
         ],
     )
@@ -165,6 +169,8 @@ class TestCurrentStateQueryDetection:
             "What is our stack at the moment?",
             "What language is the project written in these days?",
             "What is presently the main database?",
+            "What database does the project use?",
+            "Who is the CEO of the company?",
         ],
     )
     def test_detects_current_state_query(self, query: str):
@@ -172,15 +178,15 @@ class TestCurrentStateQueryDetection:
         analysis = _make_query_analysis(query)
         assert _is_current_state_query(analysis) is True
 
-    def test_temporal_intent_no_time_reference_is_current(self):
-        """TEMPORAL intent with no time_from/time_to implies current state."""
+    def test_temporal_intent_without_a_date_does_not_imply_current_state(self):
+        """A date-free historical query still needs historical evidence."""
         analysis = _make_query_analysis(
             "When did we last update?",
             intent=QueryIntent.TEMPORAL,
             time_from=None,
             time_to=None,
         )
-        assert _is_current_state_query(analysis) is True
+        assert _is_current_state_query(analysis) is False
 
     def test_temporal_intent_with_time_reference_is_not_current(self):
         """TEMPORAL intent with specific time references is historical, not current."""
@@ -190,6 +196,15 @@ class TestCurrentStateQueryDetection:
             intent=QueryIntent.TEMPORAL,
             time_from=now - timedelta(days=7),
             time_to=now,
+        )
+        assert _is_current_state_query(analysis) is False
+
+    def test_present_tense_wording_with_historical_date_is_not_current(self):
+        analysis = _make_query_analysis(
+            "What database is used in 2024?",
+            intent=QueryIntent.TEMPORAL,
+            time_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            time_to=datetime(2024, 12, 31, tzinfo=timezone.utc),
         )
         assert _is_current_state_query(analysis) is False
 
@@ -251,6 +266,182 @@ class TestSupersedenceAwareScoring:
 
         # The update fact should rank higher despite lower semantic score
         assert ranked[0].node.content == update_fact.node.content
+
+    @pytest.mark.parametrize(
+        ("old_content", "new_content", "query"),
+        [
+            (
+                "The user currently lives in OLD_LOCATION.",
+                "The user has moved and now lives in NEW_LOCATION.",
+                "Where does the user currently live?",
+            ),
+            (
+                "The user works as an OLD_ROLE.",
+                "The user changed jobs and now works as a NEW_ROLE.",
+                "What is the user's current job?",
+            ),
+            (
+                "The user prefers OLD_PREFERENCE.",
+                "The user's preference changed; they now prefer NEW_PREFERENCE.",
+                "What does the user currently prefer?",
+            ),
+            (
+                "The project status is OLD_STATUS.",
+                "The project status has changed to NEW_STATUS.",
+                "What is the project's current status?",
+            ),
+            (
+                "The project budget is OLD_BUDGET dollars.",
+                "The updated project budget is NEW_BUDGET dollars.",
+                "What is the current project budget?",
+            ),
+        ],
+    )
+    def test_newest_explicit_update_beats_rapid_prior_assertion(
+        self, old_content: str, new_content: str, query: str
+    ):
+        now = datetime.now(timezone.utc)
+        old = _make_candidate(
+            content=old_content,
+            semantic_score=0.85,
+            lexical_score=1.0,
+            updated_at=now - timedelta(microseconds=1),
+        )
+        update = _make_candidate(
+            content=new_content,
+            semantic_score=0.80,
+            lexical_score=0.0,
+            updated_at=now,
+        )
+
+        ranked, _ = score_and_rank(
+            [old, update],
+            DEFAULT_SCORING_WEIGHTS,
+            now=now,
+            query_analysis=_make_query_analysis(query),
+        )
+
+        assert ranked[0] is update
+        adjustment = update.score_provenance.adjustments[-1]
+        assert adjustment.kind == "current_update"
+        assert adjustment.source_node_id == update.node.id
+        assert update.score_provenance.replay_score() == update.composite_score
+
+    def test_older_update_marker_does_not_override_newer_plain_assertion(self):
+        now = datetime.now(timezone.utc)
+        old_update = _make_candidate(
+            content="The project was updated to use SQLite.",
+            semantic_score=0.9,
+            lexical_score=0.9,
+            updated_at=now - timedelta(days=30),
+        )
+        current = _make_candidate(
+            content="The project database is PostgreSQL.",
+            semantic_score=0.9,
+            lexical_score=0.9,
+            updated_at=now,
+        )
+
+        ranked, _ = score_and_rank(
+            [old_update, current],
+            DEFAULT_SCORING_WEIGHTS,
+            now=now,
+            query_analysis=_make_query_analysis("What is the current database?"),
+        )
+
+        assert ranked[0] is current
+        assert all(
+            adjustment.kind != "current_update"
+            for adjustment in old_update.score_provenance.adjustments
+        )
+
+    def test_current_update_multiplier_can_be_disabled_and_is_versioned(self):
+        now = datetime.now(timezone.utc)
+        old = _make_candidate(
+            content="The project budget is OLD_BUDGET dollars.",
+            semantic_score=0.85,
+            lexical_score=1.0,
+            updated_at=now - timedelta(microseconds=1),
+        )
+        update = _make_candidate(
+            content="The updated project budget is NEW_BUDGET dollars.",
+            semantic_score=0.80,
+            lexical_score=0.0,
+            updated_at=now,
+        )
+        disabled = DEFAULT_SCORING_WEIGHTS.model_copy(
+            update={"current_update_multiplier": 1.0}
+        )
+
+        ranked, _ = score_and_rank(
+            [old, update],
+            disabled,
+            now=now,
+            query_analysis=_make_query_analysis(
+                "What is the current project budget?"
+            ),
+        )
+
+        assert ranked[0] is old
+        assert update.score_provenance.adjustments == ()
+        assert disabled.version_id != DEFAULT_SCORING_WEIGHTS.version_id
+
+    def test_relational_question_without_update_uses_semantic_answer_class(self):
+        candidate = _make_candidate(
+            content="PostgreSQL is the primary database",
+            semantic_score=0.8,
+            lexical_score=0.8,
+        )
+
+        ranked, _ = score_and_rank(
+            [candidate],
+            DEFAULT_SCORING_WEIGHTS,
+            query_analysis=_make_query_analysis(
+                "What database does the project use?"
+            ),
+        )
+
+        applied = ranked[0].score_provenance.weights
+        assert applied.w_recency == 0.10
+        assert applied.w_semantic == pytest.approx(0.45)
+        assert applied.w_lexical == 0
+
+    def test_relational_answer_class_is_not_swamped_by_generic_overlap(self):
+        relevant = _make_candidate(
+            content="Services deploy to Kubernetes clusters on AWS",
+            semantic_score=0.70,
+            lexical_score=0.0,
+        )
+        generic_overlap = _make_candidate(
+            content="The team meets every Monday",
+            semantic_score=0.65,
+            lexical_score=1.0,
+        )
+
+        ranked, _ = score_and_rank(
+            [generic_overlap, relevant],
+            DEFAULT_SCORING_WEIGHTS,
+            query_analysis=_make_query_analysis(
+                "What infrastructure does the team use?"
+            ),
+        )
+
+        assert ranked[0].node.content == relevant.node.content
+
+    def test_broad_multi_answer_question_keeps_lexical_evidence(self):
+        candidate = _make_candidate(
+            content="The team implemented zero-trust networking",
+            semantic_score=0.5,
+            lexical_score=0.8,
+        )
+        ranked, _ = score_and_rank(
+            [candidate],
+            DEFAULT_SCORING_WEIGHTS,
+            query_analysis=_make_query_analysis(
+                "What technologies and tools does the team use?"
+            ),
+        )
+        assert ranked[0].score_provenance.weights.w_lexical == pytest.approx(0.2)
 
     def test_regular_query_does_not_boost(self):
         """Non-current-state queries should not apply supersedence boost."""
@@ -493,3 +684,56 @@ class TestSupersedenceAwareScoring:
 
         # All 50 runs should produce identical scores
         assert len(set(scores)) == 1, f"Non-deterministic: {set(scores)}"
+
+
+def test_imported_history_uses_episode_time_for_relative_recency():
+    imported = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    old = _make_candidate(content="The database is SQLite", updated_at=imported,
+                          semantic_score=.7, lexical_score=.7)
+    new = _make_candidate(content="The database is PostgreSQL", updated_at=imported,
+                          semantic_score=.7, lexical_score=.7)
+    old.node.event_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    new.node.event_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    ranked, traces = score_and_rank(
+        [old, new], now=imported, query_analysis=_make_query_analysis("What is the current database?"),
+    )
+    assert new.composite_score > old.composite_score
+    assert ranked[0] is new
+    assert traces[0].recency_factor == 1
+    assert traces[1].recency_factor < .01
+
+
+def test_update_language_cannot_bypass_relevance_floor():
+    candidate = _make_candidate(content="We switched to an unrelated brand", semantic_score=.01, lexical_score=.01)
+    ranked, _ = score_and_rank(
+        [candidate], query_analysis=_make_query_analysis("What is the current database?"),
+    )
+    assert ranked[0].composite_score <= .02
+
+
+def test_current_query_preserves_configured_relevance_floor():
+    from prme.retrieval.config import ScoringWeights
+
+    candidate = _make_candidate(semantic_score=.2, lexical_score=.2, confidence=1, salience=1)
+    weights = ScoringWeights(w_semantic=.1, w_lexical=.1, w_graph=0, w_recency=.1,
+                             w_salience=.3, w_confidence=.4, relevance_floor=.8)
+    ranked, _ = score_and_rank(
+        [candidate], weights, query_analysis=_make_query_analysis("What is the current database?"),
+    )
+    assert ranked[0].composite_score <= .4
+
+
+@pytest.mark.parametrize("query", [
+    "When did I submit the proposal?",
+    "What did I use before my current laptop?",
+    "How many devices do I use during a typical day?",
+    "How many hours do I normally work across both jobs?",
+    "How long have I lived in my current apartment?",
+    "Since when do I use my current computer?",
+    "When did I start my current job?",
+])
+async def test_historical_and_aggregate_questions_do_not_suppress_earlier_evidence(query):
+    from prme.retrieval.query_analysis import analyze_query
+
+    analysis = await analyze_query(query)
+    assert not _is_current_state_query(analysis)

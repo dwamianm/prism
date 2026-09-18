@@ -1,13 +1,13 @@
 """PostgreSQL-backed vector index using pgvector.
 
 Embeddings are stored directly on the ``nodes`` table in a ``vector(N)``
-column. pgvector's HNSW index handles approximate nearest-neighbor search
-with native WHERE-clause filtering — no overfetch strategy or USearch
-integer-key mapping needed.
+column. Exact search materializes the eligible rows before ordering, so a
+different owner's closer vectors cannot consume an approximate candidate budget.
+Approximate search remains an explicit opt-in; HNSW filters after its index scan
+and can return fewer eligible neighbors than requested.
 
-Non-node content (events indexed during ingestion) is stored in the
-``lexical_documents`` table with a separate embedding column if needed,
-but the primary path is node-level embeddings.
+Only existing node rows receive embeddings; indexing an unknown node logs a
+debug message and does not create a fallback vector record.
 """
 
 from __future__ import annotations
@@ -17,7 +17,9 @@ from datetime import datetime
 
 import asyncpg
 
-from prme.storage.embedding import EmbeddingProvider
+from prme.storage.pg.vector_sql import VectorSQL, resolve_vector_sql
+
+from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +35,22 @@ class PgVectorIndex:
         self,
         pool: asyncpg.Pool,
         embedding_provider: EmbeddingProvider,
+        *,
+        exact_search: bool = True,
+        vector_sql: VectorSQL | None = None,
     ) -> None:
         self._pool = pool
         self._provider = embedding_provider
+        self._exact_search = exact_search
+        self._vector_sql = vector_sql
 
-    async def index(self, node_id: str, content: str, user_id: str) -> int:
+    async def _sql(self) -> VectorSQL:
+        if self._vector_sql is None:
+            async with self._pool.acquire() as conn:
+                self._vector_sql = await resolve_vector_sql(conn)
+        return self._vector_sql
+
+    async def index(self, node_id: str, content: str, user_id: str, *, replace: bool = False) -> int:
         """Embed content and store the vector on the node row.
 
         Args:
@@ -48,21 +61,25 @@ class PgVectorIndex:
         Returns:
             0 (no integer key; pgvector uses the node UUID directly).
         """
-        embedding = await self._provider.embed([content])
+        sql = await self._sql()
+        embedding = await encode_texts(self._provider, [content])
         vector = embedding[0]
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
 
         async with self._pool.acquire() as conn:
             # Try to update the node's embedding column first.
             result = await conn.execute(
-                "UPDATE nodes SET embedding = $1::vector WHERE id = $2",
+                f"UPDATE nodes SET embedding = $1::{sql.type}, embedding_model = $3, "
+                "embedding_version = $4 WHERE id = $2 AND user_id = $5",
                 vector_str,
                 node_id,
+                self._provider.model_name,
+                self._provider.model_version,
+                user_id,
             )
 
-            # If no row was updated, the node_id might be non-node content
-            # (e.g., event indexed during ingestion). Store in lexical_documents
-            # as a fallback — the vector search will UNION both tables.
+            # Non-node IDs have no vector fallback; raw materialization creates
+            # its durable node before indexing it.
             if result == "UPDATE 0":
                 logger.debug(
                     "Node %s not found for embedding; content may be non-node",
@@ -82,8 +99,7 @@ class PgVectorIndex:
         time_to: datetime | None = None,
     ) -> list[dict]:
         """Search for nearest neighbors by text query."""
-        embedding = await self._provider.embed([query])
-        vector = embedding[0]
+        vector = await encode_query(self._provider, query)
         return await self.search_by_vector(
             vector, user_id, k=k,
             scope=scope, time_from=time_from, time_to=time_to,
@@ -101,8 +117,9 @@ class PgVectorIndex:
     ) -> list[dict]:
         """Search for nearest neighbors by pre-computed vector.
 
-        pgvector applies WHERE clauses natively during the HNSW scan,
-        so no overfetch strategy is needed.
+        Exact mode evaluates all eligible vectors, with stable ID ordering for
+        equal distances. Approximate mode allows the planner's HNSW scan and
+        may under-return after filters. Neither mode returns another owner's rows.
 
         Args:
             vector: Pre-computed embedding vector.
@@ -115,11 +132,14 @@ class PgVectorIndex:
         Returns:
             List of dicts with keys: node_id, score, distance.
         """
+        if k <= 0:
+            return []
+        sql = await self._sql()
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
-
         conditions: list[str] = [
             "user_id = $1",
             "embedding IS NOT NULL",
+            "lifecycle_state IN ('tentative', 'stable', 'contested')",
         ]
         params: list = [user_id]
         idx = 2
@@ -148,15 +168,23 @@ class PgVectorIndex:
 
         where = " AND ".join(conditions)
 
-        # pgvector cosine distance: embedding <=> query_vector
-        query = (
+        scored = (
             f"SELECT id::text AS node_id, "
-            f"  (embedding <=> ${idx}::vector) AS distance "
+            f"  (embedding {sql.cosine} ${idx}::{sql.type}) AS distance, "
+            f"embedding_model, embedding_version, {sql.dimensions}(embedding) AS embedding_dim "
             f"FROM nodes "
             f"WHERE {where} "
-            f"ORDER BY embedding <=> ${idx}::vector "
-            f"LIMIT ${idx + 1}"
         )
+        if self._exact_search:
+            # The materialization boundary prevents LIMIT/ordering from becoming
+            # an ANN scan before eligibility is established. Store only scored
+            # rows in the CTE, not another copy of every embedding. Undefined
+            # cosine distances (zero-norm vectors) do not become scored results.
+            query = (f"WITH eligible AS MATERIALIZED ({scored}) "
+                     "SELECT * FROM eligible WHERE distance < 'Infinity'::float8 "
+                     f"ORDER BY distance, node_id::uuid LIMIT ${idx + 1}")
+        else:
+            query = (scored + f"ORDER BY embedding {sql.cosine} ${idx}::{sql.type} LIMIT ${idx + 1}")
         params.extend([vector_str, k])
 
         async with self._pool.acquire() as conn:
@@ -164,6 +192,12 @@ class PgVectorIndex:
 
         results = []
         for row in rows:
+            if (row["embedding_model"], row["embedding_version"], row["embedding_dim"]) != (
+                self._provider.model_name, self._provider.model_version, self._provider.dimension,
+            ):
+                raise EmbeddingVersionMismatchError(
+                    "Stored embeddings have unknown or incompatible model metadata; run prme rebuild"
+                )
             distance = float(row["distance"])
             results.append({
                 "node_id": row["node_id"],

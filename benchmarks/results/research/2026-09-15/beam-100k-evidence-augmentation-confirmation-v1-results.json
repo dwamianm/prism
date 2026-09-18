@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "kind": "beam-retrieval-confirmation-result",
+  "status": "complete; failed registered confirmation rule",
+  "master_registration": "beam-100k-evidence-augmentation-confirmation-v1-registration.json",
+  "master_registration_sha256": "ca2da701d5055ba7fdce299adc777b72b7e791d1bef81acc227d449bc431678a",
+  "candidate_registration": "beam-100k-evidence-augmentation-confirmation-v1-candidate-registration.json",
+  "candidate_registration_sha256": "c5d6a32c17f9476e7dddd24dba74681255bea0707f9dc1ed571b8c8723510887",
+  "source": {
+    "prme_revision": "f7ff32fc972fd957b448682284dfa59d0b594944",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "protocol": {
+    "profile": "fresh_extracted_pack_paired_evidence_augmentation_confirmation",
+    "chat_size": "100K",
+    "conversation_index": 1,
+    "questions": 20,
+    "top_k": 50,
+    "baseline_evidence_augmentation_top_k": 0,
+    "candidate_evidence_augmentation_top_k": 10,
+    "candidate_evidence_augmentation_max_sources": 1,
+    "candidate_evidence_augmentation_score_decay": 0.99,
+    "max_per_source": 1,
+    "max_per_evidence": null
+  },
+  "validation": {
+    "baseline_complete": true,
+    "baseline_errors": [],
+    "durable_events": 200,
+    "materializations_complete": 200,
+    "extractions_complete": 200,
+    "questions_complete_per_arm": 20,
+    "source_pack_unchanged_after_candidate": true
+  },
+  "baseline": {
+    "correct": 15,
+    "total": 20,
+    "accuracy": 75.0,
+    "average_score": 0.64125,
+    "by_question_type": {
+      "abstention": {"correct": 0, "total": 2, "average_score": 0.0},
+      "contradiction_resolution": {"correct": 2, "total": 2, "average_score": 0.5},
+      "event_ordering": {"correct": 2, "total": 2, "average_score": 0.85},
+      "information_extraction": {"correct": 2, "total": 2, "average_score": 1.0},
+      "instruction_following": {"correct": 2, "total": 2, "average_score": 1.0},
+      "knowledge_update": {"correct": 1, "total": 2, "average_score": 0.5},
+      "multi_session_reasoning": {"correct": 1, "total": 2, "average_score": 0.5},
+      "preference_following": {"correct": 2, "total": 2, "average_score": 1.0},
+      "summarization": {"correct": 2, "total": 2, "average_score": 0.5625},
+      "temporal_reasoning": {"correct": 1, "total": 2, "average_score": 0.5}
+    }
+  },
+  "candidate": {
+    "correct": 14,
+    "total": 20,
+    "accuracy": 70.0,
+    "average_score": 0.6075,
+    "by_question_type": {
+      "abstention": {"correct": 0, "total": 2, "average_score": 0.0},
+      "contradiction_resolution": {"correct": 1, "total": 2, "average_score": 0.375},
+      "event_ordering": {"correct": 2, "total": 2, "average_score": 0.7},
+      "information_extraction": {"correct": 2, "total": 2, "average_score": 1.0},
+      "instruction_following": {"correct": 2, "total": 2, "average_score": 1.0},
+      "knowledge_update": {"correct": 1, "total": 2, "average_score": 0.5},
+      "multi_session_reasoning": {"correct": 1, "total": 2, "average_score": 0.5},
+      "preference_following": {"correct": 2, "total": 2, "average_score": 1.0},
+      "summarization": {"correct": 2, "total": 2, "average_score": 0.5},
+      "temporal_reasoning": {"correct": 1, "total": 2, "average_score": 0.5}
+    }
+  },
+  "paired_comparison": {
+    "pass_level_wins": 0,
+    "pass_level_losses": 1,
+    "pass_level_ties": 19,
+    "mean_score_delta": -0.03375,
+    "pass_level_loss": ["100K_1_q2_contradiction_resolution"],
+    "loss_detail": "Added raw API-key setup passages led the answerer to assert that a key existed while omitting the retrieved explicit statement that none had been obtained and failing to surface the contradiction."
+  },
+  "retrieval_latency_ms": {
+    "baseline": {"min": 148.0, "median": 193.7, "mean": 235.95, "max": 1006.8},
+    "candidate": {"min": 73.1, "median": 111.9, "mean": 119.725, "max": 323.8},
+    "comparison_limit": "The arms ran sequentially, so latency differences are descriptive and not a controlled performance claim."
+  },
+  "decision": "The candidate failed the registered untouched-confirmation rule because it had one pass-level loss, no wins, and a negative mean-score delta. Keep evidence augmentation opt-in and do not make top-10 unconditional augmentation the default.",
+  "follow_up": "Investigate query- and epistemic-state-aware source admission that preserves direct evidence for chronology and omitted-detail questions without adding affirmative implementation passages to contradiction or claim-state queries.",
+  "claim_boundary": "This is one preregistered untouched 100K conversation using mutable Ollama cloud aliases. It rejects this unconditional augmentation policy as a default under the registered rule; it is not an official-scale result or a cross-product comparison.",
+  "artifact_sha256": {
+    "baseline_execution_result": "d2a6d8517010e54b055c7b6ccb5ed079d4ada53d441206f33546fea09bf6b419",
+    "baseline_validation": "09ffb5ba93c1cc42fd45eae9c15f1850512f7624b060e69b9e6e756732f7b485",
+    "candidate_execution_result": "ff900cef9312d0275c896a53d4a511e3b977cb749fafd0759cf98137bb51f219",
+    "source_pack/memory.duckdb": "3dbf91d0205dccb83a385b86041059cedd4e925519bbe70487a764b155d0dc2a",
+    "source_pack/vectors.usearch": "eb6c2aea8fa726efe6321a9596e1c8c63662e9d80c8972011501444ea79e6d31",
+    "source_pack/lexical/meta.json": "99f3c3f7e9bdb85460f54c15dc7b123d98214b49f640e70d85c118d23b1e2fcb"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "checked_at": "2026-09-12T23:39:15.378866+00:00",
+  "credential_source": "explicit root .env",
+  "model": "gpt-4o-mini",
+  "success": false,
+  "error_type": "RateLimitError",
+  "http_status": 429
+}

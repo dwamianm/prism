@@ -34,7 +34,7 @@ async def test_schedule_returns_before_the_pass_completes(runner, monkeypatch):
     started = asyncio.Event()
     release = asyncio.Event()
 
-    async def _slow():
+    async def _slow(*, user_id=None):
         started.set()
         await release.wait()
         return MaintenanceResult()
@@ -58,7 +58,7 @@ async def test_schedule_does_not_stack_passes(runner, monkeypatch):
     release = asyncio.Event()
     calls = 0
 
-    async def _slow():
+    async def _slow(*, user_id=None):
         nonlocal calls
         calls += 1
         await release.wait()
@@ -82,7 +82,7 @@ async def test_schedule_does_not_stack_passes(runner, monkeypatch):
 async def test_schedule_respects_the_cooldown(runner, monkeypatch):
     calls = 0
 
-    async def _fast():
+    async def _fast(*, user_id=None):
         nonlocal calls
         calls += 1
         return MaintenanceResult()
@@ -102,7 +102,7 @@ async def test_schedule_is_a_noop_when_disabled(monkeypatch):
         _StubEngine(), OrganizerConfig(opportunistic_enabled=False)
     )
 
-    async def _fail():
+    async def _fail(*, user_id=None):
         raise AssertionError("maintenance must not run when disabled")
 
     monkeypatch.setattr(runner, "_run_maintenance", _fail)
@@ -113,7 +113,7 @@ async def test_schedule_is_a_noop_when_disabled(monkeypatch):
 
 
 async def test_background_failure_does_not_escape(runner, monkeypatch, caplog):
-    async def _boom():
+    async def _boom(*, user_id=None):
         raise RuntimeError("maintenance exploded")
 
     monkeypatch.setattr(runner, "_run_maintenance", _boom)
@@ -154,7 +154,7 @@ async def test_retrieve_does_not_await_maintenance(engine, monkeypatch):
     release = asyncio.Event()
     ran = asyncio.Event()
 
-    async def _slow():
+    async def _slow(*, user_id=None):
         ran.set()
         await release.wait()
         return MaintenanceResult()
@@ -175,7 +175,7 @@ async def test_retrieve_does_not_await_maintenance(engine, monkeypatch):
 async def test_close_drains_the_scheduled_pass(engine, monkeypatch):
     finished = False
 
-    async def _pass():
+    async def _pass(*, user_id=None):
         nonlocal finished
         await asyncio.sleep(0.05)
         finished = True

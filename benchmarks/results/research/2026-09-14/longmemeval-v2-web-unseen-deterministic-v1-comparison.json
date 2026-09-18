@@ -1,0 +1,182 @@
+{
+  "artifacts": {
+    "left": {
+      "aggregated_metrics.json": "a8fcc444590160ec726d81811178945d3064f1ee7107198e79193c392ffa7a34",
+      "per_question.jsonl": "caeb1f18124733bf3f2dec289e39da7df8271d01ec8d1638fc81c794b17a664f",
+      "prompt_build_summary.json": "9e5fd8f1ce9b5d93bd49ca29a001cf3f1133f88d169aad4cafbe534971c55016",
+      "prompt_rows.jsonl": "83fe7a625bbb58a1a48a61284ecc75b6319902765af61bd474b55bf8c75b56e3",
+      "reader_outputs.checkpoint.jsonl": "bf87b9c8545f02df5c03755196dfcf59a8c8260b3b99ba1d3fb9c476e646b815",
+      "run_args.json": "e58cf1883831c640a5c2b91095c00028c0c4bc5aefdc4613226630649d3a68d2"
+    },
+    "right": {
+      "aggregated_metrics.json": "193f75e47b23f376208ffd4fa6802c78fc39e03e51e445eb1a6b5dec869f05ad",
+      "per_question.jsonl": "c579ef60881421fe80e8426f514c13d37284b6815ad4eadf60080a903a5814c1",
+      "prompt_build_summary.json": "a6ccdead62600a15ba08a385ca3d4c6cc82822ecf6e30a7ee2d6c3464ecc0dc7",
+      "prompt_rows.jsonl": "bf2145e47905f74a5976761040569398567e3700960799b58494e4b9a5a50e3c",
+      "reader_outputs.checkpoint.jsonl": "c2abb226b6f008b877e55f4dbf8bcf51c208aaf3b8da4da882d0944397d56eda",
+      "run_args.json": "e525b2850fb37e7aa971e8a4df2758cd52c47bacac23f1e71d6db4392ff3f30c"
+    }
+  },
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 42,
+    "unit": "question"
+  },
+  "categories": {
+    "dynamic": {
+      "left_correct": 20,
+      "left_empty_responses": 0,
+      "left_unknown": 8,
+      "paired_left_minus_right": {
+        "after": 0.40816326530612246,
+        "before": 0.0,
+        "delta": 0.40816326530612246,
+        "exact_mcnemar_p_two_sided": 1.9073486328125e-06,
+        "interval_95": [
+          0.2653061224489796,
+          0.5510204081632653
+        ],
+        "losses": 0,
+        "queries": 49,
+        "ties": 29,
+        "wins": 20
+      },
+      "questions": 49,
+      "right_correct": 0,
+      "right_empty_responses": 0,
+      "right_unknown": 28
+    },
+    "procedure": {
+      "left_correct": 25,
+      "left_empty_responses": 0,
+      "left_unknown": 1,
+      "paired_left_minus_right": {
+        "after": 0.6097560975609756,
+        "before": 0.07317073170731707,
+        "delta": 0.5365853658536586,
+        "exact_mcnemar_p_two_sided": 2.9802322387695312e-06,
+        "interval_95": [
+          0.36585365853658536,
+          0.7073170731707317
+        ],
+        "losses": 1,
+        "queries": 41,
+        "ties": 17,
+        "wins": 23
+      },
+      "questions": 41,
+      "right_correct": 3,
+      "right_empty_responses": 0,
+      "right_unknown": 15
+    },
+    "static": {
+      "left_correct": 35,
+      "left_empty_responses": 0,
+      "left_unknown": 5,
+      "paired_left_minus_right": {
+        "after": 0.5932203389830508,
+        "before": 0.11864406779661017,
+        "delta": 0.4745762711864407,
+        "exact_mcnemar_p_two_sided": 1.941574737429619e-06,
+        "interval_95": [
+          0.3050847457627119,
+          0.6271186440677966
+        ],
+        "losses": 4,
+        "queries": 59,
+        "ties": 23,
+        "wins": 32
+      },
+      "questions": 59,
+      "right_correct": 7,
+      "right_empty_responses": 0,
+      "right_unknown": 23
+    }
+  },
+  "efficiency": {
+    "left": {
+      "completion_tokens": 123976,
+      "memory_context_tokens_mean": 43195.281879194634,
+      "memory_query_seconds_max": 1.1661616250057705,
+      "memory_query_seconds_mean": 0.5203531747797173,
+      "prompt_tokens": 6528210,
+      "total_tokens": 6652186,
+      "wall_seconds": 10682.961533
+    },
+    "right": {
+      "completion_tokens": 114796,
+      "memory_context_tokens_mean": 0.0,
+      "memory_query_seconds_max": 1.2708012945950031e-05,
+      "memory_query_seconds_mean": 9.169948956110333e-07,
+      "prompt_tokens": 33751,
+      "total_tokens": 148547,
+      "wall_seconds": 2690.907761
+    }
+  },
+  "input_sha256": {
+    "haystack_path": "d7466326ea7dbd705fbe657259d29fc2bf945b3bb23ec8c671cbfb6b0a1f2cf0",
+    "questions_path": "848f46be62bbc15525e89148cbac4bdee9dd92458138b8c3a4f46fca2f70f10e",
+    "trajectories_path": "363cec9a8e87aa8d9101ce4e600aadbf7031d674056ebe4f969e8424abc5f3c6"
+  },
+  "kind": "longmemeval-v2-paired-comparison",
+  "labels": {
+    "left": "prme",
+    "right": "no_memory"
+  },
+  "limitations": [
+    "Question bootstrap intervals condition on this selected cohort; shared haystacks can make questions dependent.",
+    "Results compare the recorded reader and execution settings only and do not establish universal system leadership."
+  ],
+  "overall": {
+    "left_correct": 80,
+    "left_empty_responses": 0,
+    "left_unknown": 14,
+    "paired_left_minus_right": {
+      "after": 0.5369127516778524,
+      "before": 0.06711409395973154,
+      "delta": 0.4697986577181208,
+      "exact_mcnemar_p_two_sided": 4.252865905071769e-17,
+      "interval_95": [
+        0.37583892617449666,
+        0.5570469798657718
+      ],
+      "losses": 5,
+      "queries": 149,
+      "ties": 69,
+      "wins": 75
+    },
+    "questions": 149,
+    "right_correct": 10,
+    "right_empty_responses": 0,
+    "right_unknown": 66
+  },
+  "reader_settings": {
+    "base_url": "http://127.0.0.1:11434/v1",
+    "domain": "web",
+    "max_completion_tokens": 4096,
+    "memory_context_max_tokens": 65536,
+    "model": "qwen3.5:9b",
+    "presence_penalty": null,
+    "prompt_build_max_workers": 1,
+    "reader_enable_thinking": false,
+    "reader_max_concurrent_requests": 1,
+    "reasoning_effort": "none",
+    "repetition_penalty": null,
+    "shuffle_questions_seed": null,
+    "temperature": 0.6,
+    "top_k": 20,
+    "top_p": 0.95
+  },
+  "registration_schema_version": 1,
+  "registration_sha256": "504970ad3b0dd4a728ae6fbc918287ec83fce67f551d058e62bd3df14a053823",
+  "schema_version": 1,
+  "system_binding": {
+    "baseline_memory_context_tokens_zero": true,
+    "left_memory_config": "evaluation/memory_configs/prme.json",
+    "prme_adapter_schema_version": 2,
+    "prme_memory_config_sha256": "6df1b58baf8401ffeeedc463091e40a786b88cee819f6bb20c46046d38801db3",
+    "prme_pack_manifest_sha256": "14046b5a6310aaac30f974b3c4b2408b6ce4e588593a5559153ccfe997560644",
+    "right_memory_config": "evaluation/memory_configs/no_retrieval.json",
+    "upstream_revision": "2cc8c540bdb87fe6761629b585e727e1c4704520"
+  }
+}

@@ -1,0 +1,2706 @@
+{
+  "source_output_sha256": "dc7a8abe0cf78fcd536ec03170fdc23e0c92308c36ff229c0d31fee31ef62c5a",
+  "plan_sha256": "2f99da744ca36142bd22dae5c55fe594ebeec7230a9335d6146be3016b9af434",
+  "study_commit": "a3314791f0954dc54151eb5df3e66b3b7126df49",
+  "native_study_exit_code": 0,
+  "questions": 96,
+  "personas": 24,
+  "contexts_reproduced": 288,
+  "raw_responses_verified": 384,
+  "durable_pack_sha256": {
+    "0": "d15cedbcada72fe3e38cca9ab1ac3acd258ddb30dcb3c41b85c5eee14fbc678e",
+    "1": "8d5c533df02ce731d7fed14b7546322fb3f80dbd0f2ff85e2bde562884265e4b",
+    "2": "367b692379285bef749ad907bcb4cf062f896851e2f264cf82a6377824a0eccd",
+    "3": "bf14ab4cd4991c5a2130d6b4b3181da0cb20248aaa1d26637d4d9efd21abbb6c",
+    "4": "e66cff1937ecbbc53985bb6725a8c2fdb8134dd8ddad256de61562acb3c4fca7",
+    "5": "83c9433fc88df2c9de5e8d1504dee9bdbe867f0ee2f7af0d524b5fc46ba0b314",
+    "6": "de195efb630b721473fa701df74dada56efcecf1b019e7d13f83c55c81c1afa7",
+    "7": "91d49fae7bfd71b448cdebbe3bf4a7ca40da850c067b04d80b0e877a265f4aba",
+    "8": "adb5a43d172a6204740d4f12ab46b282311ce9bb5d926cf4b417a1b41b06c798",
+    "9": "5f8d54bab2bd12c32cad5c1175c2f8c03de2aa53f0788f0554fc2e8172537014",
+    "10": "c7964c51f5bda7c23d7cde959a8400be5f94f5a24e0741a787648facc309ed92",
+    "11": "9eb919822dd11e41f140b94339ca0b2aed3337b5d97b76876c4625f42d726652",
+    "12": "5bddbd3b2f0309fe06cb5a54c1511a62b352551529de4a1ef029f546a7a9cca0",
+    "13": "17eaba9c4c3548144141b54a8cdb60554a7d144647d06f5b1e272547622cefe5",
+    "14": "13e2463b9abb6385c45e3474159f62fe90e0f3ac80626d5ccb53817c6513e365",
+    "15": "31436606d9cc85a8b08508cc2cd3cba8be51996ca362b788c2a1a39b408a167f",
+    "16": "8d67ed62191b4e9ae6c4c29146c1b7ee5db134effe6da79fef765219eecc15bd",
+    "17": "7a4fae3dd90c3d0589e57a945f84a5e039a8c93f699f552ae99e7ac0b1ca1e25",
+    "18": "912b92db753bec5157657711bb9f889f3052e3b9cc51b763f1c23fc45a17d545",
+    "19": "eb59e0044a933b7a3a701b9a967f7f6a69165be0bea84c0f1f208ed906167805",
+    "20": "2df560d89deec41928d1aa9ec2e7b45fec357864bdf8e59615f3df37aeab5d79",
+    "21": "8d1cf1f7fb32ce47f34455b27762534275cacc79302ea8effa0fd43d94771869",
+    "22": "2a8760ef16ad736f6ca99b7e29920ebd4d0cb1b5153285d9e6777cec1fad45c9",
+    "23": "df20b61522fb7cb87e8a8c04862a2880cf5877a154b233122b0858522fd2300c"
+  },
+  "reader_repeats": {
+    "total": 24,
+    "disagreements": [],
+    "invalid_answers": 0
+  },
+  "comparison": {
+    "arms": {
+      "density": {
+        "correct": 36,
+        "total": 96,
+        "accuracy": 0.375,
+        "invalid_answers": 0
+      },
+      "quarter": {
+        "correct": 42,
+        "total": 96,
+        "accuracy": 0.4375,
+        "invalid_answers": 0
+      },
+      "score": {
+        "correct": 41,
+        "total": 96,
+        "accuracy": 0.4270833333333333,
+        "invalid_answers": 0
+      },
+      "no_memory": {
+        "correct": 33,
+        "total": 96,
+        "accuracy": 0.34375,
+        "invalid_answers": 0
+      }
+    },
+    "categories": {
+      "pref_type": {
+        "anti_stereotypical_pref": {
+          "density": {
+            "correct": 6,
+            "total": 20,
+            "accuracy": 0.3,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 8,
+            "total": 20,
+            "accuracy": 0.4,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 7,
+            "total": 20,
+            "accuracy": 0.35,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 3,
+            "total": 20,
+            "accuracy": 0.15,
+            "invalid_answers": 0
+          }
+        },
+        "ask_to_forget": {
+          "density": {
+            "correct": 8,
+            "total": 18,
+            "accuracy": 0.4444444444444444,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 10,
+            "total": 18,
+            "accuracy": 0.5555555555555556,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 7,
+            "total": 18,
+            "accuracy": 0.3888888888888889,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 2,
+            "total": 18,
+            "accuracy": 0.1111111111111111,
+            "invalid_answers": 0
+          }
+        },
+        "health_and_medical_conditions": {
+          "density": {
+            "correct": 5,
+            "total": 11,
+            "accuracy": 0.45454545454545453,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 3,
+            "total": 11,
+            "accuracy": 0.2727272727272727,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 3,
+            "total": 11,
+            "accuracy": 0.2727272727272727,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 5,
+            "total": 11,
+            "accuracy": 0.45454545454545453,
+            "invalid_answers": 0
+          }
+        },
+        "neutral_preferences": {
+          "density": {
+            "correct": 7,
+            "total": 23,
+            "accuracy": 0.30434782608695654,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 9,
+            "total": 23,
+            "accuracy": 0.391304347826087,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 10,
+            "total": 23,
+            "accuracy": 0.43478260869565216,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 11,
+            "total": 23,
+            "accuracy": 0.4782608695652174,
+            "invalid_answers": 0
+          }
+        },
+        "sensitive_info": {
+          "density": {
+            "correct": 4,
+            "total": 6,
+            "accuracy": 0.6666666666666666,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 4,
+            "total": 6,
+            "accuracy": 0.6666666666666666,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 3,
+            "total": 6,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 4,
+            "total": 6,
+            "accuracy": 0.6666666666666666,
+            "invalid_answers": 0
+          }
+        },
+        "stereotypical_pref": {
+          "density": {
+            "correct": 4,
+            "total": 9,
+            "accuracy": 0.4444444444444444,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 6,
+            "total": 9,
+            "accuracy": 0.6666666666666666,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 7,
+            "total": 9,
+            "accuracy": 0.7777777777777778,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 5,
+            "total": 9,
+            "accuracy": 0.5555555555555556,
+            "invalid_answers": 0
+          }
+        },
+        "therapy_background": {
+          "density": {
+            "correct": 2,
+            "total": 9,
+            "accuracy": 0.2222222222222222,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 2,
+            "total": 9,
+            "accuracy": 0.2222222222222222,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 4,
+            "total": 9,
+            "accuracy": 0.4444444444444444,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 3,
+            "total": 9,
+            "accuracy": 0.3333333333333333,
+            "invalid_answers": 0
+          }
+        }
+      },
+      "who": {
+        "others": {
+          "density": {
+            "correct": 4,
+            "total": 10,
+            "accuracy": 0.4,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 1,
+            "total": 10,
+            "accuracy": 0.1,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 1,
+            "total": 10,
+            "accuracy": 0.1,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 0,
+            "total": 10,
+            "accuracy": 0,
+            "invalid_answers": 0
+          }
+        },
+        "self": {
+          "density": {
+            "correct": 32,
+            "total": 86,
+            "accuracy": 0.37209302325581395,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 41,
+            "total": 86,
+            "accuracy": 0.47674418604651164,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 40,
+            "total": 86,
+            "accuracy": 0.46511627906976744,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 33,
+            "total": 86,
+            "accuracy": 0.38372093023255816,
+            "invalid_answers": 0
+          }
+        }
+      },
+      "updated": {
+        "False": {
+          "density": {
+            "correct": 28,
+            "total": 78,
+            "accuracy": 0.358974358974359,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 32,
+            "total": 78,
+            "accuracy": 0.41025641025641024,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 34,
+            "total": 78,
+            "accuracy": 0.4358974358974359,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 31,
+            "total": 78,
+            "accuracy": 0.3974358974358974,
+            "invalid_answers": 0
+          }
+        },
+        "True": {
+          "density": {
+            "correct": 8,
+            "total": 18,
+            "accuracy": 0.4444444444444444,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 10,
+            "total": 18,
+            "accuracy": 0.5555555555555556,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 7,
+            "total": 18,
+            "accuracy": 0.3888888888888889,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 2,
+            "total": 18,
+            "accuracy": 0.1111111111111111,
+            "invalid_answers": 0
+          }
+        }
+      },
+      "conversation_scenario": {
+        "chat_message": {
+          "density": {
+            "correct": 4,
+            "total": 8,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 4,
+            "total": 8,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 3,
+            "total": 8,
+            "accuracy": 0.375,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 4,
+            "total": 8,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          }
+        },
+        "creative_writing": {
+          "density": {
+            "correct": 3,
+            "total": 11,
+            "accuracy": 0.2727272727272727,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 4,
+            "total": 11,
+            "accuracy": 0.36363636363636365,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 3,
+            "total": 11,
+            "accuracy": 0.2727272727272727,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 4,
+            "total": 11,
+            "accuracy": 0.36363636363636365,
+            "invalid_answers": 0
+          }
+        },
+        "knowledge_query": {
+          "density": {
+            "correct": 6,
+            "total": 20,
+            "accuracy": 0.3,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 7,
+            "total": 20,
+            "accuracy": 0.35,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 10,
+            "total": 20,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 5,
+            "total": 20,
+            "accuracy": 0.25,
+            "invalid_answers": 0
+          }
+        },
+        "personal_email": {
+          "density": {
+            "correct": 3,
+            "total": 10,
+            "accuracy": 0.3,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 4,
+            "total": 10,
+            "accuracy": 0.4,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 4,
+            "total": 10,
+            "accuracy": 0.4,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 3,
+            "total": 10,
+            "accuracy": 0.3,
+            "invalid_answers": 0
+          }
+        },
+        "professional_email": {
+          "density": {
+            "correct": 4,
+            "total": 11,
+            "accuracy": 0.36363636363636365,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 5,
+            "total": 11,
+            "accuracy": 0.45454545454545453,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 4,
+            "total": 11,
+            "accuracy": 0.36363636363636365,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 4,
+            "total": 11,
+            "accuracy": 0.36363636363636365,
+            "invalid_answers": 0
+          }
+        },
+        "professional_writing": {
+          "density": {
+            "correct": 3,
+            "total": 6,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 4,
+            "total": 6,
+            "accuracy": 0.6666666666666666,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 5,
+            "total": 6,
+            "accuracy": 0.8333333333333334,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 4,
+            "total": 6,
+            "accuracy": 0.6666666666666666,
+            "invalid_answers": 0
+          }
+        },
+        "social_media_post": {
+          "density": {
+            "correct": 3,
+            "total": 10,
+            "accuracy": 0.3,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 4,
+            "total": 10,
+            "accuracy": 0.4,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 5,
+            "total": 10,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 3,
+            "total": 10,
+            "accuracy": 0.3,
+            "invalid_answers": 0
+          }
+        },
+        "translation": {
+          "density": {
+            "correct": 7,
+            "total": 14,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 6,
+            "total": 14,
+            "accuracy": 0.42857142857142855,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 4,
+            "total": 14,
+            "accuracy": 0.2857142857142857,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 4,
+            "total": 14,
+            "accuracy": 0.2857142857142857,
+            "invalid_answers": 0
+          }
+        },
+        "trouble_consult": {
+          "density": {
+            "correct": 3,
+            "total": 6,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "quarter": {
+            "correct": 4,
+            "total": 6,
+            "accuracy": 0.6666666666666666,
+            "invalid_answers": 0
+          },
+          "score": {
+            "correct": 3,
+            "total": 6,
+            "accuracy": 0.5,
+            "invalid_answers": 0
+          },
+          "no_memory": {
+            "correct": 2,
+            "total": 6,
+            "accuracy": 0.3333333333333333,
+            "invalid_answers": 0
+          }
+        }
+      }
+    },
+    "primary": {
+      "arm": "quarter",
+      "control": "density",
+      "questions": 96,
+      "personas": 24,
+      "delta_accuracy": 0.0625,
+      "ci95_percentile": [
+        0.0,
+        0.13541666666666666
+      ],
+      "bootstrap_samples": 2000,
+      "seed": 42
+    },
+    "secondary": [
+      {
+        "arm": "score",
+        "control": "density",
+        "questions": 96,
+        "personas": 24,
+        "delta_accuracy": 0.052083333333333336,
+        "ci95_percentile": [
+          -0.052083333333333336,
+          0.15625
+        ],
+        "bootstrap_samples": 2000,
+        "seed": 42
+      },
+      {
+        "arm": "quarter",
+        "control": "score",
+        "questions": 96,
+        "personas": 24,
+        "delta_accuracy": 0.010416666666666666,
+        "ci95_percentile": [
+          -0.07291666666666667,
+          0.09375
+        ],
+        "bootstrap_samples": 2000,
+        "seed": 42
+      },
+      {
+        "arm": "density",
+        "control": "no_memory",
+        "questions": 96,
+        "personas": 24,
+        "delta_accuracy": 0.03125,
+        "ci95_percentile": [
+          -0.10416666666666667,
+          0.16666666666666666
+        ],
+        "bootstrap_samples": 2000,
+        "seed": 42
+      },
+      {
+        "arm": "quarter",
+        "control": "no_memory",
+        "questions": 96,
+        "personas": 24,
+        "delta_accuracy": 0.09375,
+        "ci95_percentile": [
+          -0.03125,
+          0.22916666666666666
+        ],
+        "bootstrap_samples": 2000,
+        "seed": 42
+      },
+      {
+        "arm": "score",
+        "control": "no_memory",
+        "questions": 96,
+        "personas": 24,
+        "delta_accuracy": 0.08333333333333333,
+        "ci95_percentile": [
+          -0.03125,
+          0.20833333333333334
+        ],
+        "bootstrap_samples": 2000,
+        "seed": 42
+      }
+    ]
+  },
+  "details": [
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": true,
+        "quarter": false,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "275",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "d785109a4415f95ce0c008a7361a2cb055b0d5c519235d5624d8b387f8c4dbf0",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "D",
+        "quarter": "D",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "275",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "7968bd7429e716cffeac4fadaed7ad487472d76eb20cc3f63cf17be10ebb9f78",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "275",
+      "pref_type": "neutral_preferences",
+      "question_id": "002b515a24c38a9e717bff9189e8b529899d697106b22bfedd0966bf837aed70",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "275",
+      "pref_type": "neutral_preferences",
+      "question_id": "06cc7dccf1749dab8694a5e3f87b0da03d900945c4faf16705b51ce596375cdc",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "884",
+      "pref_type": "sensitive_info",
+      "question_id": "fdcc6339e9ea68e1abf044073616279368df155682acc1ccbe5739a9e1dfa872",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "D",
+        "quarter": "D",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "884",
+      "pref_type": "neutral_preferences",
+      "question_id": "dc1c5fdf68f98db59ddf6606c0881e9069f9c70b1467b22ffb7b1d82caafde77",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "884",
+      "pref_type": "ask_to_forget",
+      "question_id": "751a0e63c15482b43ad8b475058fceec800dc4fedb9132ec36c7d9486c4a5ee3",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "884",
+      "pref_type": "ask_to_forget",
+      "question_id": "e48ec04d3b62fee5583eb2d70ab475629584279cb6a8385184f333198f4efe1d",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "893",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "58623f06beeb29bbcf23581092f69a7db39fcdaa563d42453aab122c67701d08",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "A",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "trouble_consult",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "893",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "b8d1923b7fce3b57dde655f0fe76612e7a13cc671fac66cce6e9b60dfc610419",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "B",
+        "no_memory": "C",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "trouble_consult",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "893",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "322d87b000b54481ca17dd53b8b0272571b5729dcd5660d38d99ac93ac11d62d",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "893",
+      "pref_type": "ask_to_forget",
+      "question_id": "e7efe8cc437d7e241aeceb8c24fd31a7c3f3248c7bf3f4a300c42df7641a2e51",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "985",
+      "pref_type": "neutral_preferences",
+      "question_id": "8e4816ff2df57eabd4128bd85fde5f0b90bc0307bb16657a40353e3d5ace186c",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "985",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "07ad3d1c886cc52d2a5288fc72d45acff90775183184fead41f5172d69e701b2",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "A",
+        "quarter": "C",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "985",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "5c6da06bf3b381a483b25ba5e9edaed1c13fdf8a1391ba89b7e27d4bbf6304f3",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "985",
+      "pref_type": "sensitive_info",
+      "question_id": "66906dd8eb1396ae6925abb9f721c6a1d39d826b548b20107d582b71a07d4c6e",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "215",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "0e0ecffaa74e1d780213783b69c425880c3ffb9edd446a0ced93c1d052abdfb8",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "C",
+      "answers": {
+        "density": "A",
+        "no_memory": "B",
+        "quarter": "A",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "215",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "3b144dad05d985a7c1fdcee074298bdaa775eb87ce3f73ac55ab53edefd075b8",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "D",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "215",
+      "pref_type": "therapy_background",
+      "question_id": "d9798c9bc7b2757ef8e1b6df1db9e77b28f8393ba1e3329b1aeaa1d84cce4542",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "A",
+        "no_memory": "B",
+        "quarter": "A",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "trouble_consult",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "215",
+      "pref_type": "neutral_preferences",
+      "question_id": "3097566f1a64949c212fe3ccc525cfb65952d1e9e29af0af1be97398586c22ba",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "277",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "21210f3690f40e8de61c6c27531e0bd397112ac23b71c7a4bca9009d797c7c5f",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "277",
+      "pref_type": "ask_to_forget",
+      "question_id": "a7ce182a68c362984e4e877d56a84ce1125d7e2b920f21076276100fbc2dd19f",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "B",
+        "no_memory": "A",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": true,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "277",
+      "pref_type": "neutral_preferences",
+      "question_id": "2831966830fc8af4d59f993c1342c4b834f02833bb358c7ab23f06e6571c1f35",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "C",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "277",
+      "pref_type": "ask_to_forget",
+      "question_id": "4f2e49fcd83566affa2fed9074a5cf3901eb46011d7717b7c1eec875fedc8b16",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "B",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "528",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "f2f4adbc3084fd9facbbbbdb88fb6233914935be5da8c49557d15c9907526ccf",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "C",
+        "no_memory": "A",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "528",
+      "pref_type": "neutral_preferences",
+      "question_id": "4cc3d232cb761a4bedfe4a39d963b0214cf5289d889c150c34d61ddc922ad0de",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "professional_writing",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "528",
+      "pref_type": "neutral_preferences",
+      "question_id": "32b4bfc7f825d44858788bbea839d65c607f2a052ec635bdab6f10139688c82f",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "A",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "528",
+      "pref_type": "neutral_preferences",
+      "question_id": "c6d6a1ddc7161473fee3658efc6e4ef5ba8f7c5a0814199f456e4a829a0a58c3",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "A",
+        "no_memory": "B",
+        "quarter": "A",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "76",
+      "pref_type": "neutral_preferences",
+      "question_id": "cd444e9f4a4033d936f3d5adcce818dd9c881541cc51386ae5e3e28d19aa4dbe",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "B",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": true,
+        "quarter": false,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "76",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "01d0bae3ab2349a1e0abf4543d9118e668de5e7901f5b441c5773190f9c1a1d4",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "trouble_consult",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "76",
+      "pref_type": "sensitive_info",
+      "question_id": "0d1b350d5ba194066b1c37a6050c88bb467e7bec5c3107c3d847a0c3c5dc50eb",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "76",
+      "pref_type": "therapy_background",
+      "question_id": "c2527fed68cc83aee0af0c3a2de26bb882daaac26347da8a81adedc12588bd01",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "C",
+      "answers": {
+        "density": "B",
+        "no_memory": "D",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "462",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "93c0e5c54fa5dcc4fbfac8c52290042e7961341b60225a11448c01207ad3fb08",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "B",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "462",
+      "pref_type": "neutral_preferences",
+      "question_id": "eff4facc30b32d44237a72de99b24999d914a8f0704c3b02db78fcc2affef262",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "462",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "fb31710d8d972a81a23270141987007848cc93817247de144a0713b5eef10203",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "D",
+        "no_memory": "D",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "462",
+      "pref_type": "neutral_preferences",
+      "question_id": "e3c71de323c54ef0483614d20df59de31b4aa6ef83f1a2597efa55d8d6db4b86",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "D",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "235",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "e85797110ac209ca94a1321cd419ceab863b4c402b4b4e9a8b7000bd649440a2",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": true,
+        "quarter": false,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "235",
+      "pref_type": "therapy_background",
+      "question_id": "97c5fb152e0d5ec89546ad7c6b9f0151fbb547c1e3da8c606506e3422b562dbc",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "B",
+      "answers": {
+        "density": "B",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "235",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "c94755e06f27ce1134a03ed9826818502a5a42e0978662830bd9cc408624e898",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "235",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "4409beab479683717437dcdc90f57d9b089cf2fbd56f17f6f4295c5ff531a39d",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "D",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "526",
+      "pref_type": "neutral_preferences",
+      "question_id": "f6203f8b2899fb55d2b54773eedb560c7de374991b0a9e8f19601f2c5bfef060",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "526",
+      "pref_type": "stereotypical_pref",
+      "question_id": "c3ee3abcf60c47430f4d0be43b40f3e41f17a42f97474688ba8f92d67f2a5086",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "D",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "526",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "7b2ebc3a1606feee6556a3ea32612c619aeded39a21c62ff27cca442c67e074e",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "A",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "526",
+      "pref_type": "ask_to_forget",
+      "question_id": "1b8cd02aa59030eeafa1a915330ca44454665c0a24fd71d67c890f0a44a8e578",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "265",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "c2664daebe02e73c84d9f32a2eeac0ce6488bfb6b996522592096f66c94a0c62",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "265",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "3aedb3136513b3c79dbdc744c4cec7cbb309d56aa7e6e85dbf9b97de8c956b7f",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "A",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "265",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "33ade488667977e34afcfa4046ded01df4881b34aeaea51bf7057ecb3c179c78",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "265",
+      "pref_type": "ask_to_forget",
+      "question_id": "39434978d959a89ac457ce9834a94ab6123c1fcf47ff90d2632ae17c2e568ba3",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "A",
+        "quarter": "C",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "professional_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "499",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "7e981beb605af33f1ca08011859ef6bb51aeb7c319e31f8cc321d7127e787d3a",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "499",
+      "pref_type": "sensitive_info",
+      "question_id": "b1bdd10543d4ef9d0738933d50f15ab1b68d42e99eebeeae5fb4cc81da2090e9",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "499",
+      "pref_type": "sensitive_info",
+      "question_id": "b8f49ac61e7cccf626b918723fa1d6d6b4463904f402ef54851a222c8a1faf42",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "499",
+      "pref_type": "ask_to_forget",
+      "question_id": "52c629e4e53bcf11f819b1d18de545bf43ca30cae3ccdb4172931cffb06a675f",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": true,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "902",
+      "pref_type": "therapy_background",
+      "question_id": "70c45d06cab1012afe8b2a42eb84f0050ff9ac4f9d980941601f02ecd10c64f8",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "D",
+        "quarter": "D",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "902",
+      "pref_type": "therapy_background",
+      "question_id": "58e17380c31e261f4087e3ef908f1c3e0e46707b2e9d9a8b708bcb6b4e275ffa",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "C",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "902",
+      "pref_type": "neutral_preferences",
+      "question_id": "914d10b99a370579739430233855ca034760c69ef8fc09229892e3f9a9f17dfb",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "C",
+        "no_memory": "A",
+        "quarter": "C",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "902",
+      "pref_type": "neutral_preferences",
+      "question_id": "c2531296ce7cc276029d1ce103ced0abcf69046b38d13802f46d37eb37ea1946",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "837",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "7e94a15559100f11d2bbef0b8e88acd40df81dff8a773caf68c21f0a61243431",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "D",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "professional_writing",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "837",
+      "pref_type": "ask_to_forget",
+      "question_id": "f6e7ac58d54c22ac5cfb0c357a1dbc890dd6f66c118448e5e88b2fcf47a90738",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "837",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "f04159b909d206c61bd40d573960ed1042050a7560facf955fc81b960b006f42",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "837",
+      "pref_type": "sensitive_info",
+      "question_id": "db6b6ce8fbb68f0639b79e063c5218c5edd3dd08df5eac6f44e177a67c5f2e58",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "351",
+      "pref_type": "therapy_background",
+      "question_id": "a855d12749c891d775b7597d60cba5bc447ac54a873c653bfadaedfd75c994c5",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "351",
+      "pref_type": "neutral_preferences",
+      "question_id": "bbd0ebcc3dcef4d53143f339d5a262ebcdbb7be0fdb0ac0137663abe9c1fc6d7",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "351",
+      "pref_type": "neutral_preferences",
+      "question_id": "6e77eba3de5e4168b6ebfd3f4db63ced0ec7c854740e30437ee473576a312e3d",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "A",
+        "no_memory": "C",
+        "quarter": "A",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "351",
+      "pref_type": "neutral_preferences",
+      "question_id": "6e752e0caa604cc55d53f831115926912d5782ec89dc773f7e2a30a98ed30837",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "C",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "408",
+      "pref_type": "stereotypical_pref",
+      "question_id": "058235b615e3a966414777832062298f023e199d8ef1e80a5168f180a70f24c2",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "408",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "a56a8b2a350627c9dfd386e591707690b57cb1fa9a5ba03af665dae60e1c367b",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "408",
+      "pref_type": "neutral_preferences",
+      "question_id": "889f53ffaf8c322050b1f68dd4d0a1d8f5354d4bfc212396a1461ebf53943899",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "408",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "43a65ef4dfead3439e61a1207bbfd069c834514fed70c969a3f1937db7aa82d3",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "C",
+        "no_memory": "A",
+        "quarter": "C",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "361",
+      "pref_type": "stereotypical_pref",
+      "question_id": "7c74c1a28c46f8fb9ae1f799b36bd95bcd45fb6bf93606b92e282af3f78e5ac9",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "B",
+        "no_memory": "A",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "professional_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "361",
+      "pref_type": "stereotypical_pref",
+      "question_id": "9088b41d5baabf42274b71229c5ff9d93524cc17abce878c18b325d099626efa",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "D",
+        "quarter": "B",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "361",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "4dc304feee988be443993bcb6683ee20f68dc5f65e0f0d0f9389f03d1c637ab3",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "361",
+      "pref_type": "neutral_preferences",
+      "question_id": "af2d3f71901e0963d1f3cfd9f623eafc198e891757ba449a260171a6d4dd1ddf",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "chat_message",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "652",
+      "pref_type": "stereotypical_pref",
+      "question_id": "85799d806efd3cdf80531d44fbfa10a6a56963e40a52dd5ffc75ee2489ece033",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "B",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "trouble_consult",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "652",
+      "pref_type": "ask_to_forget",
+      "question_id": "e211489ecd6e83a198f2db3811404cf211379718f83cf119bbeca7dee1a31004",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "B",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "creative_writing",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "652",
+      "pref_type": "therapy_background",
+      "question_id": "cc127dd7df966cd6a99039a00289aa5d57bda343449504caf0188e9ce7eaced2",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "652",
+      "pref_type": "neutral_preferences",
+      "question_id": "945bcb0f84d47646f80fa80b222e922721ec86e670061257c20a99cf24a8f347",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "259",
+      "pref_type": "ask_to_forget",
+      "question_id": "b213066eaf2955a138cea4760465450ca1cdf49bc706014ed5661121722c98ab",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "B",
+        "no_memory": "C",
+        "quarter": "B",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "trouble_consult",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "259",
+      "pref_type": "ask_to_forget",
+      "question_id": "431e14c574c7d5cadabaaa6b8f79ffd4f3b274fca7213aa8daf202c24f9dcae3",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "259",
+      "pref_type": "ask_to_forget",
+      "question_id": "0324768853a2868c7b1976e40b74ae6b94f3331ce5332f7af52861f3eeb534c5",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "B",
+        "no_memory": "A",
+        "quarter": "B",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "259",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "17bd634c237d558f0ba2c55435990a8179ba189d705bd39e206d31e273c0efd8",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "209",
+      "pref_type": "stereotypical_pref",
+      "question_id": "2bf06f0ce29108c789f05454f8e9c238c4c073766d2c01ce64215f404c051e4b",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "professional_writing",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "209",
+      "pref_type": "neutral_preferences",
+      "question_id": "ee71bc38e1cf43bc19c898353cd7176a3677e95c21c263be3bbd4f7fe3974b48",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": true,
+        "quarter": false,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "209",
+      "pref_type": "health_and_medical_conditions",
+      "question_id": "e40634cb9226e59327b66be9517a08335eedc7b50e789e4133f7fd6f032752b0",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "A",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "209",
+      "pref_type": "ask_to_forget",
+      "question_id": "f8ce9053c573f8bb57e398381e2cb419b54202db8ee159a57168d4010dae5503",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "D",
+        "no_memory": "D",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": false,
+        "no_memory": true
+      },
+      "persona_id": "973",
+      "pref_type": "stereotypical_pref",
+      "question_id": "15721b8237567d754d3b05cda282868977080734ef0fbd7dfedee72b08ae6c26",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "A",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "973",
+      "pref_type": "therapy_background",
+      "question_id": "ee99a951b9e9658c26d45c0834ecae954ebbd94be7451c409484b0395da8bff1",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "D",
+      "answers": {
+        "density": "B",
+        "no_memory": "A",
+        "quarter": "B",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "973",
+      "pref_type": "ask_to_forget",
+      "question_id": "c0207fdedffe5cc153466a11be548a6307a53f51b6084f351162d4aefdb00de6",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "C",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "973",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "31c257f8326bca650574abf8e14de1de7edf62fb78fa2c751a6059eadc90873d",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "C",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "professional_writing",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "740",
+      "pref_type": "stereotypical_pref",
+      "question_id": "30685aeb99f9e78d9113da65788eac759be668308568bd89de0e42b9af744dfe",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "740",
+      "pref_type": "neutral_preferences",
+      "question_id": "c84d78db03060bfbc65777dcc2f0925e78bd750ea773ea0cd53d2445963b2f03",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "B",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "professional_email",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "740",
+      "pref_type": "ask_to_forget",
+      "question_id": "92eb25034c7813d3d3f0e8d8ae8375adf6f570970d29407b4a28d5c9891c4651",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "D",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "social_media_post",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "740",
+      "pref_type": "ask_to_forget",
+      "question_id": "18c63a8f3c7065115b3ea209cc0a712f15bbb06ca77d6f40850231a9887d908b",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "C",
+        "no_memory": "C",
+        "quarter": "C",
+        "score": "C"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": true,
+        "no_memory": true
+      },
+      "persona_id": "107",
+      "pref_type": "therapy_background",
+      "question_id": "caf45eb6e9140b965c267876989417426ad0f7e260b00b00a84899d762535278",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "B",
+      "answers": {
+        "density": "D",
+        "no_memory": "B",
+        "quarter": "B",
+        "score": "B"
+      }
+    },
+    {
+      "conversation_scenario": "knowledge_query",
+      "correct": {
+        "density": false,
+        "quarter": false,
+        "score": true,
+        "no_memory": false
+      },
+      "persona_id": "107",
+      "pref_type": "stereotypical_pref",
+      "question_id": "743ab4e38f92ce0f1c0424a7c9ec451c45e78aec706912ef510af92bcc2458b3",
+      "updated": "False",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "A",
+        "score": "D"
+      }
+    },
+    {
+      "conversation_scenario": "personal_email",
+      "correct": {
+        "density": false,
+        "quarter": true,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "107",
+      "pref_type": "ask_to_forget",
+      "question_id": "1b685912e126730f5b0f55e5943e01e03e004ddd032afe4e0440664cb9dfa02d",
+      "updated": "True",
+      "who": "self",
+      "correct_answer": "D",
+      "answers": {
+        "density": "A",
+        "no_memory": "A",
+        "quarter": "D",
+        "score": "A"
+      }
+    },
+    {
+      "conversation_scenario": "translation",
+      "correct": {
+        "density": true,
+        "quarter": true,
+        "score": false,
+        "no_memory": false
+      },
+      "persona_id": "107",
+      "pref_type": "anti_stereotypical_pref",
+      "question_id": "feda3b0080df89fe2d3d8828a5536917b72377a4bdd2024820f9e310ce7f0c12",
+      "updated": "False",
+      "who": "others",
+      "correct_answer": "B",
+      "answers": {
+        "density": "B",
+        "no_memory": "C",
+        "quarter": "B",
+        "score": "C"
+      }
+    }
+  ],
+  "limits": [
+    "Custom persona-hidden 32k-text variant; not official PersonaMem-v2 leaderboard accuracy.",
+    "Synthetic authored personas and answers, no independent human label audit.",
+    "No real session/time observations; do not claim temporal coverage from import timestamps.",
+    "Selected after LongMemEval tuning but before any PRME outcome on this cohort.",
+    "Native parser only; quarter penalty remains an offline experimental packer."
+  ],
+  "default_promotion": false,
+  "verifier_sha256": "8c70819c61f785ffa0ca0e75fe723287dd0f1772c0761c375100a0c67de3cedc"
+}

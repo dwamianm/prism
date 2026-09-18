@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "embedding_provider_sha256": "1fb3d1b9eb12b693187dbee4e1b20a6e27c51561af5d4fb2d90b59b950495a0c",
+  "onnxruntime_version": "1.30.0",
+  "onnx_telemetry_disabled": "1",
+  "pipeline_sha256": "90518ca5c4d643ef0fffb3e6410acb25767a879b25a9ce5c3f8c7fedc5ef3b51",
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/ingestion/pipeline.py",
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "old_revision": 1,
+  "committed_revision": 2,
+  "facts": 1,
+  "prepared_nodes": 1,
+  "elapsed_seconds": 28.978,
+  "checks": [
+    "real local extraction with reused entity",
+    "changed dependency rejects publication",
+    "public replan after restart without repeated extraction",
+    "immutable original plan and extraction",
+    "scoped revision status",
+    "receipt and exact artifact identities",
+    "retrieval finds database fact"
+  ],
+  "limits": "One synthetic workflow. Replanning may recompute embeddings. No extraction accuracy or comparative claim.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0,
+  "source_commit": "d542266",
+  "python": "3.13.3",
+  "packages": {
+    "prme": "0.11.0",
+    "duckdb": "1.5.5",
+    "usearch": "2.26.2",
+    "tantivy": "0.26.0",
+    "fastembed": "0.8.0",
+    "asyncpg": "0.31.0",
+    "pydantic": "2.13.5",
+    "onnxruntime": "1.30.0"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "beam-raw-scored-incomplete-result",
+  "status": "stopped after the registered retry policy failed on the first question",
+  "registration": "beam-100k-raw-qwen35b-gemma31b-dev1-registration.json",
+  "registration_sha256": "122a26597f9cce884ed090ba7f82fda57a3fba390e4a2019e15a8d3858890bb6",
+  "stopped_at_utc": "2026-09-15T18:29:16Z",
+  "coverage": {
+    "ingestion_chunks_processed": 94,
+    "ingestion_chunks_failed": 0,
+    "questions_written": 1,
+    "questions_expected": 20,
+    "complete": false
+  },
+  "observations": {
+    "first_generated_answer_was_empty": true,
+    "first_judge_reason_was_empty": true,
+    "first_question_score": 0.0,
+    "retrieved_memories": 50,
+    "retrieved_memory_characters": 135984,
+    "serialized_search_result_characters": 146288,
+    "registered_answerer_configured_context_tokens": 8192,
+    "judge_attempts": 5,
+    "judge_timeout_seconds_per_attempt": 120,
+    "judge_attempts_timed_out": 5
+  },
+  "decision": "The execution was stopped instead of publishing invalid scores or spending roughly four hours repeating the same known failure. The replacement trial retains the complete selection and changes models only after synthetic long-context and structured-output preflights.",
+  "limitations": [
+    "The upstream terminal transcript was not persisted by launcher schema 2, so the timeout counts are an operator observation rather than a hashed artifact.",
+    "The empty generated answer and incomplete question coverage are present in the hashed upstream result artifacts.",
+    "This incomplete execution is not an answer-quality result and must not be compared with published BEAM scores."
+  ],
+  "artifact_sha256": {
+    "execution-manifest.json": "5664cf1eb0cc785bdaad74470f0a1d4422a649ade5dbf7aec67e68cc65cf16c6",
+    "dataset/beam_100K.json": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+    "prme-pack/beam_adapter_manifest.json": "13818b34d493498d7e28de83963cf85ad9bac412f853ea64edc46cc9999a7046",
+    "service.log": "485f7ff8e4a6a561a8b023e54cefabf4b71c5bbcfd423c7aac854a6e4c013c1d",
+    "upstream-results/predicted_prme-beam-100k-raw-qwen35b-gemma31b-dev1/_ingestion_100K_0.json": "c7768c49411f52b1d4c1230db7c688b86a4d534e3cb283537cac8b8d2fdf343e",
+    "upstream-results/predicted_prme-beam-100k-raw-qwen35b-gemma31b-dev1/100K_0_q0_abstention.json": "75c8af2ce78e6d7e38e806e0852b5e2256da1bd3f37889ca47464185d583a6a5"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "kind": "wice-grounding-model-registration",
+  "created_at": "2026-09-16T15:48:27.995534+00:00",
+  "purpose": "Measure whether the published strongest sub-billion-parameter MiniCheck model clears the unchanged WiCE quality gates before any PRME integration",
+  "source": {
+    "prme_revision": "c3048fd5a570bb3919ddd6bcc8ef0078fd1199d0",
+    "files": {
+      "runner_sha256": "6f8deaa5b9448afb207721ac669a5d2314a0054848b314abfa73682d72887062"
+    }
+  },
+  "dataset": {
+    "name": "WiCE",
+    "repository": "https://github.com/ryokamoi/wice.git",
+    "revision": "ddeb6c183665e2a20c5f03c5aa07f03888b9870f",
+    "relative_path": "code_and_resources/entailment_inputs/oracle_chunks/claim/test.jsonl",
+    "sha256": "234bb8c2ca4511ca078e49e07c895a2db61a581d03237e7e1ecb7c48c8510a3e",
+    "expected_shape": {
+      "rows": 1070,
+      "claims": 358,
+      "labels": {
+        "not_supported": 32,
+        "partially_supported": 216,
+        "supported": 110
+      }
+    },
+    "annotation_license": "ODC-BY-1.0",
+    "source_text_terms": [
+      "Wikipedia CC-BY-SA",
+      "Common Crawl terms of use"
+    ]
+  },
+  "model": {
+    "name": "lytang/MiniCheck-Flan-T5-Large",
+    "revision": "5294ece54f6e7a4445bf86cd20250df6e1ce9548",
+    "license": "mit",
+    "weights_filename": "model.safetensors",
+    "weights_sha256": "d38bd7f79e74ba25dbeff988dfff32dd758a74ef389b746b982e984646d3d47c",
+    "architecture": "flan_t5_label_logits",
+    "unsupported_token_id": 3,
+    "support_token_id": 209,
+    "input_prefix": "predict: ",
+    "support_threshold": 0.5
+  },
+  "protocol": {
+    "task": "oracle_retrieval_binary_grounding",
+    "input_serialization": "document_eos_claim",
+    "empty_evidence_sentences": "omit",
+    "max_length": 2048,
+    "truncation": true,
+    "variant_aggregation": "maximum_support_probability",
+    "threshold_operator": "strictly_greater_than",
+    "batch_size": 4,
+    "device": "auto",
+    "emit_source_text": false
+  },
+  "evaluation": {
+    "gates": {
+      "claims_evaluated_min": 358,
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "balanced_accuracy_min": 0.7,
+      "false_support_rate_max": 0.1,
+      "not_supported_false_support_rate_max": 0.1
+    },
+    "decision_rule": "All unchanged WiCE gates must pass before integration. Preserve failure without threshold tuning on this observed cohort."
+  },
+  "selection": {
+    "disclosure": "Generic NLI and MiniCheck DeBERTa WiCE outcomes were observed before this selection. Flan-T5 weights, binary token mapping, input prefix, and 0.5 threshold were published beforehand; no score-dependent changes are allowed.",
+    "safetensors_provenance": "Pinned verified Hugging Face conversion commit refs/pr/1; the official main repository distributes the same model as PyTorch pickle weights."
+  },
+  "claim_boundary": "Passing would establish model capacity on WiCE oracle retrieval only. It would not establish safe PRME integration, contradiction handling, retrieval quality, untouched generalization, or product leadership."
+}

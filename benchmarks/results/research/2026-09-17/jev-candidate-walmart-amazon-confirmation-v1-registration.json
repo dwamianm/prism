@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "kind": "jev-candidate-product-pipeline-registration",
+  "registered_at": "2026-09-18T00:10:06.494151+00:00",
+  "claim_boundary": "Passing confirms candidate routing followed by Jev as an optional unverified product-alias proposal pipeline on one held-out dataset. It does not authorize automatic identity merges.",
+  "source": {
+    "prme_revision": "3d463191703a42c61dbca77aaae0b06cded9e5c4",
+    "runner_sha256": "3c6e5dc0ef80a8fdf961ccda7d9afd883c22fbc130a8468e412fa8d27c3b9b13",
+    "candidate_source_sha256": "f9364b72e2b7a10c58ed8863056f364f0eab6e009b7e3277abd5d4956209ef6a",
+    "jev_runner_sha256": "882ec668d95a5a226711b0c195e3d818ffde3e3a7135ad23462d340b5b967e79",
+    "typesafe_source_sha256": "2bcfd8ba2a62aa17b4bdc510fa874b1d6db8356aa2e3a8b630ec5d06e0784260",
+    "upstream_evidence": {
+      "candidate_registration": {
+        "path": "benchmarks/results/research/2026-09-17/product-candidate-walmart-amazon-confirmation-v1-registration.json",
+        "file_sha256": "54ff980358aa9ea37953e838141cb9a7ab89b2d24cde3307c0d08dc5eee653c6",
+        "kind": "product-candidate-generation-registration",
+        "passed": null,
+        "result_sha256": null
+      },
+      "candidate_result": {
+        "path": "benchmarks/results/research/2026-09-17/product-candidate-walmart-amazon-confirmation-v1-result.json",
+        "file_sha256": "a79400806b44c5ed5291b5b2da2479f8b1f295c6ba445c550907a0c047b8ec9d",
+        "kind": "product-candidate-generation-result",
+        "passed": true,
+        "result_sha256": "fdbfe3a6a3c5bcdac1aecf214b30701552dc8607ab67784a1d80a67b585c0bcb"
+      },
+      "jev_registration": {
+        "path": "benchmarks/results/research/2026-09-17/jev-product-alignment-confirmation-v1-registration.json",
+        "file_sha256": "ecc8dc33261a2e8f315e670a2899189df93f5d64bcf5414728f5b8a97bd71504",
+        "kind": "jev-product-alignment-registration",
+        "passed": null,
+        "result_sha256": null
+      },
+      "jev_result": {
+        "path": "benchmarks/results/research/2026-09-17/jev-product-alignment-confirmation-v1-result.json",
+        "file_sha256": "d9d5117376ff27f0e069961f9fd60eabb670a427493224bbc848020130397534",
+        "kind": "jev-product-alignment-result",
+        "passed": true,
+        "result_sha256": "0b539eca119efe2051fdee320a9268eebb85d08298ac95137afb0f33b2b5b51d"
+      }
+    }
+  },
+  "dataset": {
+    "name": "DeepMatcher Structured Walmart-Amazon",
+    "source": "https://pages.cs.wisc.edu/~anhai/data1/deepmatcher_data/Structured/Walmart-Amazon/exp_data/",
+    "split": "valid",
+    "files": {
+      "tableA.csv": {
+        "sha256": "29046fe92f842041117d803094ee028c30510d8844d90008c0fefeef8af5c119",
+        "bytes": 258750
+      },
+      "tableB.csv": {
+        "sha256": "922963a71b42c3964c261d5e5bae98a82b46761c81a68b7cb16d962cb81fe169",
+        "bytes": 2502281
+      },
+      "train.csv": {
+        "sha256": "a1bb613fab6d216e74c9d4353b3ee7c3696d9907475417046651dbad12a349a9",
+        "bytes": 73995
+      },
+      "valid.csv": {
+        "sha256": "cd3de90dcf2a9b319c1870cdd82c54985fc437173a33f95295e4178eb1e1ac6e",
+        "bytes": 24701
+      },
+      "test.csv": {
+        "sha256": "ad23487a5c7f9e719e9b7cbea38b07d05940466b4bf040cd1cbc8fb251a53883",
+        "bytes": 24696
+      }
+    },
+    "left_entities": 2554,
+    "right_entities": 22074,
+    "labeled_pairs": 2049,
+    "labels": {
+      "0": 1856,
+      "1": 193
+    },
+    "pair_identity_sha256": "334209591ebf42c628c49bda411084cc80869863af07cefced257541bab040ef"
+  },
+  "candidate_snapshot": {
+    "candidate_pairs": 76456,
+    "cross_product_pairs": 56376996,
+    "cross_product_reduction": 0.9986438440246089,
+    "candidate_identity_sha256": "bcc5644354b594a285c469f8d63f5b430d2baa972de9bd288ac80cdfdbcf601b",
+    "routed_labeled_pairs": 1706,
+    "routed_labels": {
+      "0": 1517,
+      "1": 189
+    },
+    "routed_pair_identity_sha256": "234c3985524009e9896ab0f256e6a688b09852246fc1de31894ebdcee3518900"
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "candidate_policy": "product_tfidf_candidates_v1",
+    "candidate_top_k_per_entity": 5,
+    "candidate_minimum_cosine_score": 0.1,
+    "candidate_pair_union": "a pair survives when selected by either endpoint",
+    "catalog_labels": [
+      "walmart",
+      "amazon"
+    ],
+    "cross_catalog_only": true,
+    "product_fields": {
+      "name": "title",
+      "manufacturer": "brand",
+      "price": "price"
+    },
+    "jev_model": "jev-1.13.0",
+    "jev_api_url": "https://api.typesafe.ai/v1/systemone",
+    "jev_questions": {
+      "link_state": {
+        "type": "score",
+        "instructions": "How do the two entity descriptions relate as products?",
+        "criteria": [
+          "They are different catalog products.",
+          "They are related but not safely identical: a different version, edition, bundle, platform, capacity, pack size, or an ambiguous listing.",
+          "They are the same catalog product despite formatting differences, abbreviations, price variation, or a missing optional field."
+        ]
+      },
+      "same_name": {
+        "type": "noul",
+        "instructions": "Do the two listings name the same product?"
+      },
+      "same_manufacturer": {
+        "type": "noul",
+        "instructions": "Are the two listings from the same manufacturer?"
+      },
+      "compatible_price": {
+        "type": "noul",
+        "instructions": "Could the stated prices plausibly describe the same product listing, allowing a missing price or ordinary price variation?"
+      }
+    },
+    "jev_questions_sha256": "39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905",
+    "proposal_rule": "link_state.score >= 1.5",
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "mutation_authorized": false,
+    "automatic_merge_authorized": false
+  },
+  "evaluation": {
+    "gates": {
+      "pairs_evaluated_min": 2049,
+      "valid_provider_responses_min": 1706,
+      "candidate_positive_recall_min": 0.95,
+      "proposal_precision_min": 0.9,
+      "proposal_recall_min": 0.5,
+      "false_positive_rate_max": 0.05,
+      "recall_gain_over_exact_name_min": 0.2,
+      "cross_product_reduction_min": 0.99,
+      "p95_request_seconds_max": 1.0
+    },
+    "decision_rule": "Every gate must pass before candidate routing and Jev may ship as an optional proposal pipeline. Automatic identity merges remain forbidden."
+  }
+}

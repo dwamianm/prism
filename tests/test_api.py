@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -58,6 +59,14 @@ def client(app):
 
 
 class TestHealth:
+    def test_reference_time_is_validated_and_returned(self, client):
+        payload = {"query": "yesterday", "user_id": "clock-user", "reference_time": "2024-05-10T12:00:00Z"}
+        result = client.post("/v1/retrieve", json=payload)
+        assert result.status_code == 200
+        assert result.json()["metrics"]["reference_time"] == "2024-05-10T12:00:00Z"
+        payload["reference_time"] = "2024-05-10T12:00:00"
+        assert client.post("/v1/retrieve", json=payload).status_code == 422
+
     def test_health_returns_ok(self, client):
         resp = client.get("/v1/health")
         assert resp.status_code == 200
@@ -123,6 +132,85 @@ class TestStore:
         assert resp.status_code == 422
 
 
+class TestFastIngestBatch:
+    def test_atomic_batch_admission_and_explicit_processing(self, client):
+        request_id = str(uuid4())
+        response = client.post(
+            "/v1/ingest/fast",
+            headers={"Idempotency-Key": request_id},
+            json={
+                "user_id": "batch-user",
+                "items": [
+                    {
+                        "content": "First imported note",
+                        "role": "tool",
+                        "session_id": "episode-1",
+                        "scope": "project",
+                    },
+                    {"content": "Second imported note"},
+                ],
+            },
+        )
+        assert response.status_code == 200
+        admitted = response.json()
+        assert admitted["accepted"] == 2
+        assert len(admitted["event_ids"]) == 2
+        replay = client.post(
+            "/v1/ingest/fast",
+            headers={"Idempotency-Key": request_id},
+            json={
+                "user_id": "batch-user",
+                "items": [
+                    {
+                        "content": "First imported note",
+                        "role": "tool",
+                        "session_id": "episode-1",
+                        "scope": "project",
+                    },
+                    {"content": "Second imported note"},
+                ],
+            },
+        )
+        assert replay.status_code == 200
+        assert replay.json() == admitted
+        conflict = client.post(
+            "/v1/ingest/fast",
+            headers={"Idempotency-Key": request_id},
+            json={"user_id": "batch-user", "items": [{"content": "changed"}]},
+        )
+        assert conflict.status_code == 409
+        for event_id in admitted["event_ids"]:
+            status = client.get(
+                f"/v1/events/{event_id}/processing-status",
+                params={"user_id": "batch-user"},
+            )
+            assert status.status_code == 200
+            assert status.json()["status"] == "pending"
+
+        processed = client.post(
+            "/v1/materializations/process",
+            json={"user_id": "batch-user", "budget_ms": 5000},
+        )
+        assert processed.status_code == 200
+        assert processed.json() == {"processed": 2, "pending": 0, "failed": 0}
+
+    def test_empty_or_invalid_batch_is_rejected(self, client):
+        assert client.post(
+            "/v1/ingest/fast",
+            json={"user_id": "batch-user", "items": []},
+        ).status_code == 422
+        assert client.post(
+            "/v1/ingest/fast",
+            json={
+                "user_id": "batch-user",
+                "items": [
+                    {"content": "valid"},
+                    {"content": "invalid", "event_time": "2026-09-14T12:00:00"},
+                ],
+            },
+        ).status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Retrieve
 # ---------------------------------------------------------------------------
@@ -175,6 +263,36 @@ class TestRetrieve:
             json={"user_id": "test-user"},
         )
         assert resp.status_code == 422
+
+    def test_retrieve_exposes_aggregation_coverage(self, client):
+        resp = client.post(
+            "/v1/retrieve",
+            json={"query": "How many museums did I visit?", "user_id": "counter"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        coverage = data["metrics"]["aggregation_coverage"]
+        assert coverage["exhaustive"] is False
+        assert coverage["status"] == "semantic_candidates"
+        assert coverage["candidate_count"] == 0
+        assert data["bundle"]["rendered_context"].startswith("Aggregation coverage:")
+
+    def test_retrieve_exposes_knowledge_at_boundary(self, client):
+        resp = client.post(
+            "/v1/retrieve",
+            json={
+                "query": "What was known?",
+                "user_id": "historian",
+                "filters": {"knowledge_at": "2026-09-13T00:00:00Z"},
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        coverage = data["metrics"]["historical_coverage"]
+        assert coverage["semantics"] == "ingestion_cutoff"
+        assert coverage["exact_snapshot"] is False
+        assert "current_derived_indexes" in coverage["limitations"]
+        assert data["bundle"]["rendered_context"].startswith("Historical coverage:")
 
 
 # ---------------------------------------------------------------------------
@@ -287,14 +405,159 @@ class TestPromote:
 
         if node_id:
             # Promote it
-            resp = client.put(f"/v1/nodes/{node_id}/promote")
+            headers = {"Idempotency-Key": "16d38ee9-c035-4410-8a32-fd625c83cd02"}
+            resp = client.put(f"/v1/nodes/{node_id}/promote", headers=headers)
             assert resp.status_code == 200
             data = resp.json()
             assert data["lifecycle_state"] == "stable"
+            assert client.put(
+                f"/v1/nodes/{node_id}/promote", headers=headers
+            ).status_code == 200
 
     def test_promote_nonexistent_returns_404(self, client):
         resp = client.put("/v1/nodes/00000000-0000-0000-0000-000000000000/promote")
         assert resp.status_code == 404
+
+
+class TestConditionEvaluation:
+    def test_new_condition_must_start_unresolved(self, client):
+        base = {
+            "content": "If approved, deploy Atlas.",
+            "user_id": "condition-user",
+            "epistemic_type": "conditional",
+        }
+        missing = client.post("/v1/store", json=base)
+        assert missing.status_code == 422
+        bypass = client.post(
+            "/v1/store",
+            json={**base, "metadata": {"condition": "approved", "condition_state": "true"}},
+        )
+        assert bypass.status_code == 422
+
+    def test_evaluate_condition_and_retry(self, client):
+        stored = client.post(
+            "/v1/store",
+            json={
+                "content": "If approved, deploy Atlas.",
+                "user_id": "condition-user",
+                "epistemic_type": "conditional",
+                "metadata": {
+                    "condition": "approved",
+                    "condition_state": "unknown",
+                },
+            },
+        ).json()
+        request_id = "d02ff165-b68f-4d5f-8883-5fb1c171f457"
+        body = {
+            "state": "true",
+            "evaluation_method": "tool",
+            "reason": "Approval service confirmed",
+            "evaluated_at": "2026-09-13T12:30:00Z",
+        }
+        response = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition",
+            json=body,
+            headers={"Idempotency-Key": request_id},
+        )
+        assert response.status_code == 200
+        assert response.json()["metadata"]["condition_state"] == "true"
+        replay = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition",
+            json=body,
+            headers={"Idempotency-Key": request_id},
+        )
+        assert replay.status_code == 200
+        conflict = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition",
+            json={**body, "state": "false"},
+            headers={"Idempotency-Key": request_id},
+        )
+        assert conflict.status_code == 409
+        provenance = client.get(f"/v1/nodes/{stored['node_id']}/provenance")
+        assert provenance.status_code == 200
+        history = provenance.json()
+        assert history["node"]["id"] == stored["node_id"]
+        assert history["operations"][0]["op_type"] == "EPISTEMIC_TRANSITION"
+        assert client.get(
+            f"/v1/nodes/{stored['node_id']}/provenance",
+            params={"operation_cursor": "bad"},
+        ).status_code == 422
+
+    def test_condition_validation_errors(self, client):
+        stored = client.post(
+            "/v1/store", json={"content": "Ordinary fact", "user_id": "condition-user"}
+        ).json()
+        invalid = client.put(
+            f"/v1/nodes/{stored['node_id']}/condition", json={"state": "true"}
+        )
+        assert invalid.status_code == 422
+        assert client.put(
+            "/v1/nodes/00000000-0000-0000-0000-000000000000/condition",
+            json={"state": "true"},
+        ).status_code == 404
+        assert client.put(
+            f"/v1/nodes/{stored['node_id']}/condition", json={"state": "maybe"}
+        ).status_code == 422
+
+
+class TestContradictions:
+    def test_mark_resolve_and_retry(self, client):
+        ids = []
+        for content in ("Atlas uses east.", "Atlas uses west."):
+            response = client.post("/v1/store", json={
+                "content": content, "user_id": "conflict-user", "node_type": "fact",
+            })
+            ids.append(response.json()["node_id"])
+        body = {"node_a_id": ids[0], "node_b_id": ids[1]}
+        marked = client.post("/v1/contradictions", json=body)
+        assert marked.status_code == 200
+        assert {node["lifecycle_state"] for node in marked.json()["nodes"]} == {"contested"}
+        assert client.post("/v1/contradictions", json=body).status_code == 200
+
+        resolution = {"winner_id": ids[1], "loser_id": ids[0]}
+        resolved = client.post("/v1/contradictions/resolve", json=resolution)
+        assert resolved.status_code == 200
+        assert [node["lifecycle_state"] for node in resolved.json()["nodes"]] == ["stable", "deprecated"]
+        assert client.post("/v1/contradictions/resolve", json=resolution).status_code == 200
+
+    def test_conflict_body_ids_are_validated(self, client):
+        assert client.post("/v1/contradictions", json={
+            "node_a_id": "bad", "node_b_id": "also-bad",
+        }).status_code == 422
+
+
+class TestSupersedence:
+    def test_replace_and_exact_retry(self, client):
+        stored = [
+            client.post("/v1/store", json={
+                "content": content,
+                "user_id": "correction-user",
+                "node_type": "fact",
+            }).json()
+            for content in ("Atlas uses east.", "Atlas uses west.")
+        ]
+        body = {
+            "old_node_id": stored[0]["node_id"],
+            "new_node_id": stored[1]["node_id"],
+            "evidence_id": stored[1]["event_id"],
+        }
+        response = client.post("/v1/supersedences", json=body)
+        assert response.status_code == 200
+        assert [node["lifecycle_state"] for node in response.json()["nodes"]] == [
+            "superseded", "tentative",
+        ]
+        assert client.post("/v1/supersedences", json=body).status_code == 200
+        provenance = client.get(
+            f"/v1/nodes/{stored[0]['node_id']}/provenance"
+        ).json()
+        assert [item["op_type"] for item in provenance["operations"]] == [
+            "SUPERSEDENCE_APPLIED"
+        ]
+
+    def test_supersedence_body_ids_are_validated(self, client):
+        assert client.post("/v1/supersedences", json={
+            "old_node_id": "bad", "new_node_id": "also-bad",
+        }).status_code == 422
 
 
 # ---------------------------------------------------------------------------
@@ -315,10 +578,14 @@ class TestArchive:
         node_id = store_resp.json().get("node_id")
 
         if node_id:
-            resp = client.put(f"/v1/nodes/{node_id}/archive")
+            headers = {"Idempotency-Key": "d5655e7a-ec2e-4d40-9e9d-908cfc3ca98c"}
+            resp = client.put(f"/v1/nodes/{node_id}/archive", headers=headers)
             assert resp.status_code == 200
             data = resp.json()
             assert data["lifecycle_state"] == "archived"
+            assert client.put(
+                f"/v1/nodes/{node_id}/archive", headers=headers
+            ).status_code == 200
 
 
 # ---------------------------------------------------------------------------

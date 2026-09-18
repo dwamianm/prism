@@ -1,9 +1,8 @@
 """Predictive forgetting / consolidation pipeline (issue #22).
 
-Identifies clusters of semantically similar episodic memories, abstracts
-them into summary nodes, and archives the individual episodes. This is
-pattern-based consolidation -- not just time-based -- inspired by
-predictive forgetting theory (arXiv 2603.04688).
+Identifies clusters of semantically similar episodic memories and creates
+source-labelled extractive excerpts. Only fully represented, unchanged
+sources are eligible for retirement. Similarity alone never justifies loss.
 
 All clustering uses vector similarity (no LLM required). Consolidation
 is extractive: the summary picks the highest-confidence content from the
@@ -16,20 +15,29 @@ opportunistic maintenance.
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid5
 
+from prme.models.consolidation import (
+    ConsolidationPublication,
+    consolidation_key,
+    consolidation_request_hash,
+)
+from prme.models.derivation import PreparedEmbedding
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.models import ConsolidationResult
 from prme.types import (
     EdgeType,
+    DecayProfile,
     EpistemicType,
     LifecycleState,
     NodeType,
-    Scope,
     SourceType,
 )
 
@@ -55,9 +63,36 @@ class MemoryCluster:
     topic_summary: str
 
 
+def _stable_source_key(node: MemoryNode) -> tuple:
+    """Order equivalent source histories independently of generated UUIDs."""
+    source_time = node.event_time or node.created_at
+    return (
+        node.user_id,
+        node.scope.value,
+        source_time,
+        node.content.casefold(),
+        node.content,
+        str(node.id),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Pipeline functions
 # ---------------------------------------------------------------------------
+
+
+def _render_source(node: MemoryNode) -> str:
+    return (
+        f"[source={node.id}; event_time={node.event_time}; "
+        f"valid_from={node.valid_from}; valid_to={node.valid_to}; "
+        f"epistemic={node.epistemic_type.value}; source_type={node.source_type.value}]\n"
+        f"{node.content}"
+    )
+
+
+def _source_fingerprint(node: MemoryNode) -> str:
+    snapshot = {"source": _render_source(node), "user_id": node.user_id, "scope": node.scope.value}
+    return hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
 
 
 async def cluster_similar_memories(
@@ -105,7 +140,7 @@ async def cluster_similar_memories(
     assigned: set[str] = set()
     clusters: list[MemoryCluster] = []
 
-    for node in all_nodes:
+    for node in sorted(all_nodes, key=_stable_source_key):
         nid = str(node.id)
         if nid in assigned:
             continue
@@ -115,7 +150,7 @@ async def cluster_similar_memories(
             results = await engine._vector_index.search(
                 node.content,
                 node.user_id,
-                k=50,
+                k=50, scope=[node.scope.value],
             )
         except Exception:
             logger.debug("Vector search failed for node %s, skipping", nid)
@@ -137,7 +172,7 @@ async def cluster_similar_memories(
                 continue
             # A cluster becomes one summary node with one owner, so members
             # from another tenant would leak content into it (issue #66).
-            if node_map[rid].user_id != node.user_id:
+            if (node_map[rid].user_id, node_map[rid].scope) != (node.user_id, node.scope):
                 continue
             if score < similarity_threshold:
                 continue
@@ -152,9 +187,12 @@ async def cluster_similar_memories(
         avg_sim = sum(similarities) / len(similarities) if similarities else 0.0
 
         # Centroid = the member with the highest confidence
-        centroid_id = max(
+        centroid_id = min(
             member_ids,
-            key=lambda mid: node_map[mid].confidence if mid in node_map else 0.0,
+            key=lambda mid: (
+                -node_map[mid].confidence,
+                _stable_source_key(node_map[mid]),
+            ),
         )
 
         # Topic summary = content of the centroid node
@@ -179,17 +217,17 @@ async def consolidate_cluster(
     engine: MemoryEngine,
     cluster: MemoryCluster,
 ) -> MemoryNode:
-    """Create a SUMMARY node that abstracts a cluster's shared pattern.
+    """Create a source-labelled SUMMARY excerpt within one namespace.
 
     The summary is extractive: it combines the highest-confidence content
     from the cluster members. The summary node gets:
     - node_type = SUMMARY
     - epistemic_type = INFERRED (system-generated abstraction)
-    - confidence = average confidence of cluster members
-    - salience = max salience of cluster members
-    - evidence_refs = all cluster member IDs
+    - confidence = average confidence of selected members
+    - salience = max salience of selected members
+    - evidence_refs = selected member IDs and their original evidence
 
-    Creates DERIVED_FROM edges from summary to each member.
+    Creates DERIVED_FROM edges only for the fully represented sources.
 
     Args:
         engine: The MemoryEngine for storage operations.
@@ -198,106 +236,222 @@ async def consolidate_cluster(
     Returns:
         The created SUMMARY MemoryNode.
     """
-    # Fetch all member nodes
+    summary, _created = await _consolidate_cluster(engine, cluster)
+    return summary
+
+
+async def _lineage_summaries(
+    engine: MemoryEngine, *, user_id: str, scope, key: str
+) -> tuple[list[MemoryNode], list[MemoryNode]]:
+    """Return active and retired summaries for one exact owner-scoped lineage."""
+    active_states = {LifecycleState.TENTATIVE, LifecycleState.STABLE}
+    active: list[MemoryNode] = []
+    retired: list[MemoryNode] = []
+    after_id: str | None = None
+    while True:
+        page = await engine._graph_store.scan_nodes(
+            user_id=user_id,
+            scope=scope,
+            node_type=NodeType.SUMMARY,
+            lifecycle_states=list(LifecycleState),
+            after_id=after_id,
+            limit=500,
+        )
+        if not page:
+            break
+        for node in page:
+            metadata = node.metadata or {}
+            if (
+                metadata.get("consolidation_summary") is True
+                and metadata.get("consolidation_key") == key
+            ):
+                (active if node.lifecycle_state in active_states else retired).append(node)
+        after_id = str(page[-1].id)
+    return active, retired
+
+
+async def publish_consolidation_plan(
+    engine: MemoryEngine,
+    plan: ConsolidationPublication,
+    *,
+    retired: tuple[MemoryNode, ...] | list[MemoryNode] = (),
+) -> MemoryNode:
+    """Stage and atomically publish a prepared extractive summary plan."""
+    owner = plan.node.user_id
+    if engine._pool is None:
+        import asyncio
+        import duckdb
+
+        from prme.models.consolidation import StaleConsolidationError
+        from prme.storage.consolidation_publication import ConsolidationStageFence
+
+        fence = ConsolidationStageFence(
+            engine._conn, engine._event_store._conn_lock, plan
+        )
+        for attempt in range(10):
+            try:
+                await engine._vector_index.stage(
+                    plan.embedding, user_id=owner, fence=fence
+                )
+                await engine._lexical_index.stage_consolidation(plan, fence=fence)
+                break
+            except (duckdb.ConstraintException, duckdb.TransactionException) as exc:
+                if attempt == 9:
+                    raise StaleConsolidationError(
+                        "Concurrent consolidation staging did not settle; retry"
+                    ) from exc
+                await asyncio.sleep(0.01 * (attempt + 1))
+            except ValueError as exc:
+                if "LockBusy" not in str(exc) or attempt == 9:
+                    raise
+                await asyncio.sleep(0.01 * (attempt + 1))
+    node_id = await engine._write_queue.submit(
+        lambda: engine._graph_store.publish_consolidation(plan),
+        label=f"consolidation.publish:{plan.node.id}",
+    )
+    for stale in (*plan.previous, *retired):
+        await engine._evict_from_indexes(str(stale.id))
+    published = await engine.get_node(node_id)
+    if published is None:
+        raise RuntimeError("Consolidation publication did not produce an active summary")
+    return published
+
+
+async def _consolidate_cluster(
+    engine: MemoryEngine,
+    cluster: MemoryCluster,
+) -> tuple[MemoryNode, bool]:
+    """Prepare, stage, and atomically publish one extractive summary."""
+    # Fetch all member nodes from a de-duplicated input identity list.
     members: list[MemoryNode] = []
-    for mid in cluster.member_ids:
+    for mid in dict.fromkeys(cluster.member_ids):
         node = await engine.get_node(mid, include_superseded=False)
-        if node is not None:
+        if node is not None and node.lifecycle_state in {LifecycleState.TENTATIVE, LifecycleState.STABLE}:
             members.append(node)
 
     if not members:
         raise ValueError("No valid member nodes found for consolidation")
 
-    # A summary carries one user_id, so drop any member that does not share
-    # the centroid's owner rather than folding its content in (issue #66).
-    owner = next(
-        (m.user_id for m in members if str(m.id) == cluster.centroid_id),
-        members[0].user_id,
+    # A summary belongs to the centroid's namespace. A stale/malformed
+    # cluster cannot combine private/project contents or different owners.
+    centroid = next((m for m in members if str(m.id) == cluster.centroid_id), None)
+    if centroid is None:
+        raise ValueError("Consolidation centroid no longer exists")
+    owner = centroid.user_id
+    members = [m for m in members if (m.user_id, m.scope) == (owner, centroid.scope)]
+
+    # This is an extractive excerpt, not a lossless abstraction of every
+    # cluster member. Preserve complete source text and its temporal meaning.
+    selected = sorted(
+        members,
+        key=lambda node: (-node.confidence, _stable_source_key(node)),
+    )[:3]
+    summary_content = f"[Consolidated excerpt: {len(selected)} of {len(members)} memories]\n" + "\n\n".join(
+        _render_source(m) for m in selected
     )
-    foreign = [m for m in members if m.user_id != owner]
-    if foreign:
-        logger.warning(
-            "Dropping %d cross-user member(s) from cluster centroid=%s",
-            len(foreign),
-            cluster.centroid_id,
-        )
-        members = [m for m in members if m.user_id == owner]
-
-    # Extractive summary: pick the highest-confidence content
-    # and combine unique content from top members
-    sorted_members = sorted(members, key=lambda n: n.confidence, reverse=True)
-    best_content = sorted_members[0].content
-
-    # Build summary content from top 3 unique contents
-    seen_content: set[str] = set()
-    summary_parts: list[str] = []
-    for m in sorted_members:
-        if m.content not in seen_content:
-            seen_content.add(m.content)
-            summary_parts.append(m.content)
-            if len(summary_parts) >= 3:
-                break
-
-    summary_content = (
-        f"[Consolidated from {len(members)} memories] {best_content}"
-        if len(summary_parts) == 1
-        else f"[Consolidated from {len(members)} memories] "
-        + " | ".join(summary_parts)
-    )
-
-    # Compute aggregate scores
-    avg_confidence = sum(m.confidence for m in members) / len(members)
-    max_salience = max(m.salience for m in members)
-    evidence_refs = [m.id for m in members]
-
-    user_id = owner
-
-    # Store the summary node via engine.store()
-    _event_id = await engine.store(
-        summary_content,
-        user_id=user_id,
-        node_type=NodeType.SUMMARY,
-        scope=Scope.SYSTEM,
+    coverage = {str(m.id): _source_fingerprint(m) for m in selected}
+    avg_confidence = sum(m.confidence for m in selected) / len(selected)
+    max_salience = max(m.salience for m in selected)
+    evidence_refs = list(dict.fromkeys(ref for m in selected for ref in [m.id, *m.evidence_refs]))
+    members = sorted(members, key=lambda node: str(node.id))
+    selected_ids = [str(node.id) for node in selected]
+    key = consolidation_key(owner, centroid.scope, (node.id for node in members))
+    provider = engine._vector_index._provider
+    request_hash = consolidation_request_hash(
+        members,
+        content=summary_content,
         confidence=avg_confidence,
-        epistemic_type=EpistemicType.INFERRED,
-        source_type=SourceType.SYSTEM_INFERRED,
-    )
-
-    # Retrieve the created summary node
-    nodes = await engine.query_nodes(user_id=user_id, limit=500)
-    summary_node: MemoryNode | None = None
-    for n in nodes:
-        if n.content == summary_content and n.node_type == NodeType.SUMMARY:
-            summary_node = n
-            break
-
-    if summary_node is None:
-        raise RuntimeError("Failed to retrieve created summary node")
-
-    # Update the summary node with proper evidence_refs and salience
-    await engine._graph_store.update_node(
-        str(summary_node.id),
-        evidence_refs=evidence_refs,
-        salience_base=max_salience,
         salience=max_salience,
-        confidence_base=avg_confidence,
-        confidence=avg_confidence,
+        selected_ids=selected_ids,
+        embedding_identity=(
+            provider.model_name,
+            provider.model_version,
+            provider.dimension,
+        ),
     )
+    previous, retired = await _lineage_summaries(
+        engine, user_id=owner, scope=centroid.scope, key=key
+    )
+    matching = [
+        node
+        for node in previous
+        if (node.metadata or {}).get("consolidation_request_hash") == request_hash
+    ]
+    if len(previous) == 1 and len(matching) == 1:
+        for stale in retired:
+            await engine._evict_from_indexes(str(stale.id))
+        return matching[0], False
 
-    # Create DERIVED_FROM edges from summary to each member
-    for member in members:
-        edge = MemoryEdge(
-            source_id=summary_node.id,
-            target_id=member.id,
-            edge_type=EdgeType.DERIVED_FROM,
-            user_id=user_id,
+    generation = await engine._graph_store.consolidation_generation(key)
+    summary_id = uuid5(UUID(key), f"{request_hash}:{generation}")
+    plan = await engine._graph_store.get_prepared_consolidation(
+        str(summary_id), user_id=owner
+    )
+    if plan is None:
+        summary_node = MemoryNode(
+            id=summary_id,
+            user_id=owner,
+            node_type=NodeType.SUMMARY,
+            scope=centroid.scope,
+            content=summary_content,
+            metadata={
+                "consolidation_summary": True,
+                "consolidation_key": key,
+                "consolidation_request_hash": request_hash,
+                "consolidation_generation": generation,
+                "consolidation_coverage": coverage,
+                "source_node_ids": [str(node.id) for node in members],
+                "selected_source_node_ids": selected_ids,
+                "cluster_size": len(members),
+                "consolidation_content_sha256": hashlib.sha256(summary_content.encode()).hexdigest(),
+                "consolidation_format_version": 2,
+            },
+            evidence_refs=evidence_refs,
             confidence=avg_confidence,
+            confidence_base=avg_confidence,
+            salience=max_salience,
+            salience_base=max_salience,
+            epistemic_type=EpistemicType.INFERRED,
+            source_type=SourceType.SYSTEM_INFERRED,
+            decay_profile=DecayProfile.FAST,
         )
-        await engine._graph_store.create_edge(edge)
+        edges = tuple(
+            MemoryEdge(
+                id=uuid5(summary_id, f"derived-from:{member.id}"),
+                source_id=summary_id,
+                target_id=member.id,
+                edge_type=EdgeType.DERIVED_FROM,
+                user_id=owner,
+                confidence=avg_confidence,
+                valid_from=summary_node.created_at,
+                created_at=summary_node.created_at,
+            )
+            for member in selected
+        )
+        from prme.storage.embedding import encode_texts
 
-    # Re-fetch the updated node
-    updated_node = await engine.get_node(str(summary_node.id))
-    return updated_node if updated_node is not None else summary_node
+        vectors = await encode_texts(provider, [summary_content])
+        if len(vectors) != 1:
+            raise ValueError("Consolidation embedding provider must return exactly one vector")
+        plan = ConsolidationPublication(
+            node=summary_node,
+            sources=tuple(members),
+            previous=tuple(sorted(previous, key=lambda node: str(node.id))),
+            edges=edges,
+            embedding=PreparedEmbedding(
+                node_id=summary_id,
+                content=summary_content,
+                model=provider.model_name,
+                version=provider.model_version,
+                dimension=provider.dimension,
+                values=tuple(vectors[0]),
+            ),
+            generation=generation,
+            request_hash=request_hash,
+        )
+        plan = await engine._graph_store.prepare_consolidation(plan)
+
+    return await publish_consolidation_plan(engine, plan, retired=retired), True
 
 
 async def forget_consolidated(
@@ -314,6 +468,8 @@ async def forget_consolidated(
     Preserves:
     - High-confidence nodes (>= min_confidence_preserve)
     - Recent nodes (created < preserve_recent_days ago)
+    - Pinned, unrepresented, changed, or other-namespace nodes
+    - All nodes when the summary is retired or lacks verified coverage
 
     Marks archived nodes with superseded_by pointing to the summary.
 
@@ -329,49 +485,25 @@ async def forget_consolidated(
     Returns:
         Count of archived nodes.
     """
+    import math
+    if (type(preserve_recent_days) is not int or preserve_recent_days < 0
+            or not math.isfinite(min_confidence_preserve)
+            or not 0 <= min_confidence_preserve <= 1):
+        raise ValueError("Invalid consolidation retirement policy")
     now = datetime.now(timezone.utc)
-    recent_cutoff = now - timedelta(days=preserve_recent_days)
-    archived_count = 0
-
-    for mid in cluster.member_ids:
-        node = await engine.get_node(
-            mid, include_superseded=False, user_id=user_id
+    retired = 0
+    for source_id in dict.fromkeys(cluster.member_ids):
+        changed = await engine._graph_store.retire_consolidated(
+            source_id, summary_node_id, user_id=user_id, at=now,
+            preserve_recent_days=preserve_recent_days,
+            min_confidence_preserve=min_confidence_preserve,
         )
-        if node is None:
-            continue
-
-        # Preserve high-confidence nodes
-        if node.confidence >= min_confidence_preserve:
-            logger.debug(
-                "Preserving high-confidence node %s (confidence=%.2f)",
-                mid, node.confidence,
-            )
-            continue
-
-        # Preserve recent nodes
-        if node.created_at > recent_cutoff:
-            logger.debug(
-                "Preserving recent node %s (created_at=%s)",
-                mid, node.created_at,
-            )
-            continue
-
-        # Archive via supersede (marks superseded_by and transitions state)
-        try:
-            await engine.supersede(mid, summary_node_id, user_id=user_id)
-            archived_count += 1
-        except ValueError:
-            # Node may already be in a terminal state
-            logger.debug(
-                "Could not supersede node %s, attempting direct archive", mid
-            )
-            try:
-                await engine.archive(mid, user_id=user_id)
-                archived_count += 1
-            except ValueError:
-                logger.debug("Could not archive node %s, skipping", mid)
-
-    return archived_count
+        if changed:
+            # External index eviction follows the durable transaction. An
+            # error must never compensate by archiving against stale evidence.
+            retired += 1
+            await engine._evict_from_indexes(source_id)
+    return retired
 
 
 async def run_consolidation_pipeline(
@@ -427,9 +559,9 @@ async def run_consolidation_pipeline(
 
         try:
             # Consolidate
-            summary_node = await consolidate_cluster(engine, cluster)
-            summaries_created += 1
-            total_consolidated += len(cluster.member_ids)
+            summary_node, created = await _consolidate_cluster(engine, cluster)
+            summaries_created += int(created)
+            total_consolidated += len((summary_node.metadata or {}).get("consolidation_coverage", {}))
 
             # Forget
             archived = await forget_consolidated(

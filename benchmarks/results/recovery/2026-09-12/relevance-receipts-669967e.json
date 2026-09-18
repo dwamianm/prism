@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "candidate_count": 1,
+  "receipt_bytes": 4229,
+  "elapsed_seconds": 1.341,
+  "repository_sha256": "5f4a6107726fefc6045703cb25dede616c558d84550b2d67da3b7f3ddaab78cc",
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/relevance.py",
+  "checks": [
+    "real embeddings through public sync client",
+    "returned candidate snapshot and explicit labels",
+    "owner isolation",
+    "retry identity survives archival and restart",
+    "collection leaves weights unchanged",
+    "exact ranking replay before and after archival and restart",
+    "public learning evaluation rejects insufficient evidence and reproduces after restart",
+    "explicit full-pipeline trial matches frozen feature rescore at a fixed clock"
+  ],
+  "limits": "One authored persistence workflow; no learned profile or retrieval accuracy claim.",
+  "workflow_assertions_passed": true,
+  "process_exit_code": 0
+}

@@ -7,11 +7,22 @@ DuckPGQ limitations.
 """
 
 from datetime import datetime
+from uuid import UUID
 from typing import Any, Protocol, runtime_checkable
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
-from prme.types import EdgeType, LifecycleState, NodeType, Scope
+from prme.storage.organizer_merge import MergeResult
+from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewResult,
+    AliasProposalStatus,
+)
+from prme.models.derivation import DerivationPlan, DerivationReceipt
+from prme.models.extraction_work import ExtractionClaim
+from prme.models.profile import ProfilePublication
+from prme.types import ConditionState, EdgeType, LifecycleState, NodeType, Scope
 
 
 @runtime_checkable
@@ -30,6 +41,60 @@ class GraphStore(Protocol):
     """
 
     # --- Node Operations ---
+
+    async def reinforce_node(self, node_id: str, *, user_id: str | None, evidence_id: str | None, request_id: str | UUID | None = None) -> None:
+        """Atomically validate, reinforce and journal a node without lost updates."""
+        ...
+
+    async def apply_oscillation_penalty(
+        self, node_id: str, chain_node_ids: list[str], *, user_id: str,
+    ) -> bool:
+        """Atomically validate and journal one detected oscillation penalty."""
+        ...
+
+    async def evaluate_condition(
+        self, node_id: str, state: ConditionState | str, **kwargs: Any
+    ) -> MemoryNode:
+        """Atomically evaluate a conditional claim and journal the transition."""
+        ...
+
+    async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
+        """Atomically publish the exact journaled plan or return its receipt."""
+        ...
+
+    async def profile_generation(self, key: str) -> int:
+        """Read the current generation for an owner/scope/entity profile key."""
+        ...
+
+    async def publish_profile(self, plan: ProfilePublication) -> str:
+        """Publish a prepared profile and retire its predecessors atomically."""
+        ...
+
+    async def merge_nodes(self, node_a_id: str, node_b_id: str, *, user_id: str, kind: str, score: float) -> MergeResult | None:
+        """Validate and journal an organizer merge in one backend transaction."""
+        ...
+
+    async def propose_alias(
+        self, node_a_id: str, node_b_id: str, *, user_id: str,
+        alias_type: str, score: float,
+        evidence: AliasProposalEvidence | dict[str, Any] | None = None,
+    ) -> AliasProposalResult | None:
+        """Publish one durable, unverified alias relationship for a node pair."""
+        ...
+
+    async def review_alias_proposal(
+        self, proposal_operation_id: str, *, user_id: str, decision: str,
+        reviewer_id: str, reason: str | None = None,
+    ) -> AliasProposalReviewResult:
+        """Atomically accept or reject one durable alias proposal."""
+        ...
+
+    async def list_alias_proposals(
+        self, *, user_id: str, scope: Scope | str | None = None,
+        status: AliasProposalStatus | str | None = None, limit: int = 100,
+    ) -> list[AliasProposalInboxItem]:
+        """List decoded alias proposals and their owner-scoped review state."""
+        ...
 
     async def create_node(self, node: MemoryNode) -> str:
         """Create a new node in the graph.
@@ -80,6 +145,27 @@ class GraphStore(Protocol):
 
         Returns:
             List of found, visible MemoryNodes (order not guaranteed).
+        """
+        ...
+
+    async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
+        """Return all scoped graph nodes citing the event, including retired nodes."""
+        ...
+
+    async def get_session_neighbors(
+        self,
+        trigger_ids: list[str],
+        *,
+        user_id: str,
+        window: int,
+        scopes: list[Scope] | None = None,
+    ) -> dict[str, list[MemoryNode]]:
+        """Return active nodes within ``window`` turns of owned trigger nodes.
+
+        Ordering and adjacency are computed independently for each exact
+        ``(session_id, scope)`` partition using ``(created_at, id)``. The
+        Each trigger ID maps to its own ordered window, including the visible
+        trigger node. There is no whole-session row cap.
         """
         ...
 
@@ -152,6 +238,16 @@ class GraphStore(Protocol):
 
     # --- Node Update ---
 
+    async def scan_nodes(
+        self, *, user_id: str | None, scope: Scope | None = None,
+        node_type: NodeType | None = None,
+        lifecycle_states: list[LifecycleState] | None = None,
+        after_id: str | None = None, limit: int = 100,
+        operator_unscoped: bool = False,
+    ) -> list[MemoryNode]:
+        """Read an owner page, or an explicit operator page, in immutable ID order."""
+        ...
+
     async def update_node(self, node_id: str, **updates: Any) -> None:
         """Update specific fields on an existing node.
 
@@ -169,6 +265,23 @@ class GraphStore(Protocol):
         ...
 
     # --- Edge Operations ---
+
+    async def retire_consolidated(self, source_id: str, summary_id: str, **policy: Any) -> bool:
+        """Atomically retire a source only while its summary coverage is valid."""
+        ...
+
+    async def supersede_many(
+        self,
+        replacements: list[tuple[str, str, str | None]],
+        *,
+        actor_id: str = "system",
+    ) -> None:
+        """Atomically replace nodes, create edges and journal each correction.
+
+        Every pair must belong to the same user/scope. Failure leaves all
+        states, pointers, and edges unchanged.
+        """
+        ...
 
     async def create_edge(self, edge: MemoryEdge) -> str:
         """Create a new edge between two nodes.
@@ -219,6 +332,7 @@ class GraphStore(Protocol):
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node.
 
@@ -229,6 +343,9 @@ class GraphStore(Protocol):
             valid_at: Temporal filter for edges.
             min_confidence: Minimum edge confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse alias proposals that have not
+                been accepted as identity. Disabled by default so proposals do
+                not affect ordinary retrieval.
 
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
@@ -244,6 +361,7 @@ class GraphStore(Protocol):
         valid_at: datetime | None = None,
         min_confidence: float | None = None,
         include_superseded: bool = False,
+        include_unverified_aliases: bool = False,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops along with their minimum hop distance.
 
@@ -258,6 +376,8 @@ class GraphStore(Protocol):
             valid_at: Temporal filter for edges.
             min_confidence: Minimum edge confidence.
             include_superseded: Include superseded/archived nodes.
+            include_unverified_aliases: Traverse alias proposals that have not
+                been accepted as identity. Disabled by default.
 
         Returns:
             List of (MemoryNode, min_depth) tuples, excluding the
@@ -271,6 +391,7 @@ class GraphStore(Protocol):
         target_id: str,
         *,
         edge_types: list[EdgeType] | None = None,
+        include_unverified_aliases: bool = False,
     ) -> list[str] | None:
         """Find the shortest path between two nodes.
 
@@ -278,6 +399,7 @@ class GraphStore(Protocol):
             source_id: Starting node ID.
             target_id: Target node ID.
             edge_types: Only traverse edges of these types.
+            include_unverified_aliases: Traverse unaccepted alias proposals.
 
         Returns:
             List of node IDs forming the shortest path (including
@@ -307,7 +429,10 @@ class GraphStore(Protocol):
 
     # --- Lifecycle Transitions ---
 
-    async def promote(self, node_id: str) -> None:
+    async def promote(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Promote a tentative node to stable.
 
         Args:
@@ -324,6 +449,7 @@ class GraphStore(Protocol):
         new_node_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark a node as superseded by another.
 
@@ -333,6 +459,7 @@ class GraphStore(Protocol):
             evidence_id: Optional event ID providing evidence for
                 the supersedence. Required for automated transitions,
                 optional for manual.
+            actor_id: Actor recording the correction.
 
         Raises:
             ValueError: If the transition is invalid.
@@ -345,6 +472,7 @@ class GraphStore(Protocol):
         node_b_id: str,
         *,
         evidence_id: str | None = None,
+        actor_id: str = "system",
     ) -> None:
         """Mark two nodes as contradicting each other.
 
@@ -358,6 +486,7 @@ class GraphStore(Protocol):
             node_a_id: First conflicting node (typically the existing/older node).
             node_b_id: Second conflicting node (typically the new/incoming node).
             evidence_id: Optional event ID providing evidence.
+            actor_id: Actor that identified the contradiction.
 
         Raises:
             ValueError: If either node is not found or not in an active state.
@@ -390,7 +519,17 @@ class GraphStore(Protocol):
         """
         ...
 
-    async def archive(self, node_id: str) -> None:
+    async def deprecate(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
+        """Atomically transition a contested node to deprecated and journal it."""
+        ...
+
+    async def archive(
+        self, node_id: str, *, request_id: str | UUID | None = None,
+        actor_id: str = "system",
+    ) -> None:
         """Archive a node (terminal state).
 
         Args:
@@ -399,6 +538,12 @@ class GraphStore(Protocol):
         Raises:
             ValueError: If the transition is invalid.
         """
+        ...
+
+    async def archive_expired(
+        self, node_id: str, *, user_id: str, evaluated_at: datetime,
+    ) -> bool:
+        """Atomically archive an expired node with its retention tombstone."""
         ...
 
     # --- Cleanup / Rollback ---

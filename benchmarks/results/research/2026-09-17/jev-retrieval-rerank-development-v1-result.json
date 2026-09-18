@@ -1,0 +1,4964 @@
+{
+  "schema_version": 1,
+  "kind": "jev-retrieval-rerank-development-result",
+  "completed_at": "2026-09-17T20:35:41.054673+00:00",
+  "development_only": true,
+  "confirmation_accessed": false,
+  "registration_sha256": "766ab45aa20a085479552b25bba6ed9572afaa8d66cadeea19192f36c57095a7",
+  "cohort": {
+    "role": "development",
+    "selection_seed": "prme-jev-agentmembench-rerank-development-v1",
+    "excluded_prior_cases": 100,
+    "cases": 200,
+    "identity_sha256": "e3da382cd6e776ac7a7ad5bdfb3d712d25f71f065871c90a25b8fa4dca66d63b",
+    "baseline_exact_source_present": 193,
+    "baseline_exact_source_at_1": 161
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "query_candidate_relevance_reranking",
+    "state_fields": [
+      "query",
+      "candidates"
+    ],
+    "candidate_count": 5,
+    "questions": {
+      "candidate_0": {
+        "type": "noul",
+        "instructions": "Does candidates[0] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_1": {
+        "type": "noul",
+        "instructions": "Does candidates[1] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_2": {
+        "type": "noul",
+        "instructions": "Does candidates[2] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_3": {
+        "type": "noul",
+        "instructions": "Does candidates[3] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      },
+      "candidate_4": {
+        "type": "noul",
+        "instructions": "Does candidates[4] directly provide the specific information needed to answer the query?",
+        "criteria": {
+          "true": "The candidate directly states the answer or supplies the specific facts needed to answer the query.",
+          "false": "The candidate is unrelated, merely on a similar topic, or omits a material detail needed by the query."
+        }
+      }
+    },
+    "questions_sha256": "888c99d973dd64d91299f9dd0d5f40dce79e779f537b20f00197ecab3e0a364a",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "ordering": "descending_noul_then_original_rank",
+    "relevance_unit": "exact_source_memory",
+    "candidate_set_mutation": false,
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_query_or_candidate_text": false
+  },
+  "development": {
+    "baseline": {
+      "cases": 200,
+      "exact_source_present": 193,
+      "hit_at_1": 0.805,
+      "recall_at_5": 0.965,
+      "mrr": 0.8701666666666666,
+      "rank_counts": {
+        "1": 161,
+        "2": 18,
+        "3": 7,
+        "4": 6,
+        "5": 1,
+        "missing": 7
+      }
+    },
+    "candidate": {
+      "cases": 200,
+      "exact_source_present": 193,
+      "hit_at_1": 0.715,
+      "recall_at_5": 0.965,
+      "mrr": 0.808083333333333,
+      "rank_counts": {
+        "1": 143,
+        "2": 20,
+        "3": 17,
+        "4": 7,
+        "5": 6,
+        "missing": 7
+      }
+    },
+    "paired": {
+      "top1_gains": 9,
+      "top1_losses": 27,
+      "top1_net_gains": -18
+    },
+    "candidate_set_preserved": true,
+    "gate_results": {
+      "cases_evaluated_min": true,
+      "response_validity_min": true,
+      "candidate_set_preservation": true,
+      "hit_at_1_gain_min": false,
+      "mrr_gain_min": false,
+      "recall_at_5_noninferiority_min": true,
+      "top1_net_gains_min": false,
+      "p95_request_seconds_max": true
+    },
+    "samples": [
+      {
+        "id": "fb45d96c6f719001495620fb280e4acb",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.71,
+          0.73,
+          0.69,
+          0.61,
+          0.54
+        ],
+        "order": [
+          2,
+          1,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.419116,
+        "input_tokens": 808,
+        "output_tokens": 94
+      },
+      {
+        "id": "15056c6979974c3063356be69da3a050",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.02,
+          0.03,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.366558,
+        "input_tokens": 785,
+        "output_tokens": 94
+      },
+      {
+        "id": "8c3735ce0b82b57d405a91221bbf2961",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.59,
+          0.14,
+          0.63,
+          0.41,
+          0.46
+        ],
+        "order": [
+          3,
+          1,
+          5,
+          4,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.406888,
+        "input_tokens": 779,
+        "output_tokens": 94
+      },
+      {
+        "id": "a9668a5bb0d4355e424003c0fef4f06f",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": null,
+        "candidate_rank": null,
+        "scores_by_original_rank": [
+          0.64,
+          0.61,
+          0.67,
+          0.65,
+          0.15
+        ],
+        "order": [
+          3,
+          4,
+          1,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.440461,
+        "input_tokens": 801,
+        "output_tokens": 94
+      },
+      {
+        "id": "a35d73ed6e11315181d3a23d49c38191",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.79,
+          0.44,
+          0.15,
+          0.13,
+          0.08
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.409906,
+        "input_tokens": 793,
+        "output_tokens": 94
+      },
+      {
+        "id": "75238e97f1e371ee0440b58134773675",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.02,
+          0.04,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.383582,
+        "input_tokens": 778,
+        "output_tokens": 94
+      },
+      {
+        "id": "5371bb0990574045cd1e14f792d183f7",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 3,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.29,
+          0.49,
+          0.54,
+          0.57,
+          0.63
+        ],
+        "order": [
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.523367,
+        "input_tokens": 824,
+        "output_tokens": 94
+      },
+      {
+        "id": "cfbe602446ea86bc671563dc2831d567",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 2,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.57,
+          0.62,
+          0.62,
+          0.69,
+          0.77
+        ],
+        "order": [
+          5,
+          4,
+          2,
+          3,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.175776,
+        "input_tokens": 755,
+        "output_tokens": 94
+      },
+      {
+        "id": "af869144b6495031613ba95a9ac34988",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.95,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.200957,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "07f066f38d0f869a0f4dbfde4156da01",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 3,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.64,
+          0.58,
+          0.66,
+          0.59,
+          0.54
+        ],
+        "order": [
+          3,
+          1,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.187724,
+        "input_tokens": 800,
+        "output_tokens": 94
+      },
+      {
+        "id": "896ba5c8cbdd4d9ea95f6bfac072f2e0",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.69,
+          0.86,
+          0.03,
+          0.04,
+          0.45
+        ],
+        "order": [
+          2,
+          1,
+          5,
+          4,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 1.245756,
+        "input_tokens": 774,
+        "output_tokens": 94
+      },
+      {
+        "id": "2dc41f1e4b1690c3b3aff1c5e05dc958",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.02,
+          0.19,
+          0.11,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.149443,
+        "input_tokens": 796,
+        "output_tokens": 94
+      },
+      {
+        "id": "36df3c570c62a3c56ee111f8e54df149",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.83,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.187057,
+        "input_tokens": 815,
+        "output_tokens": 94
+      },
+      {
+        "id": "ff8d50f2d7bb99aa1569ca34a2c9d180",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.57,
+          0.52,
+          0.56,
+          0.15,
+          0.15
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.295355,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "3d75ee471817914ee4932e8987c2512b",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.02,
+          0.1,
+          0.06,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.160292,
+        "input_tokens": 827,
+        "output_tokens": 94
+      },
+      {
+        "id": "a87c40c933051cb9cb698bb29ab4e219",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.87,
+          0.03,
+          0.15,
+          0.07,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.236957,
+        "input_tokens": 789,
+        "output_tokens": 94
+      },
+      {
+        "id": "3e4cc6a16201efb9a8731702a9164dcf",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.02,
+          0.07,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.18581,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "0608f1344ba98344c27d037f9eb13508",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.73,
+          0.62,
+          0.06,
+          0.05,
+          0.05
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.186453,
+        "input_tokens": 785,
+        "output_tokens": 94
+      },
+      {
+        "id": "cf12f3bc08fe1fcb371c2fb7afa21f94",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 4,
+        "candidate_rank": 5,
+        "scores_by_original_rank": [
+          0.58,
+          0.53,
+          0.47,
+          0.32,
+          0.42
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.226124,
+        "input_tokens": 785,
+        "output_tokens": 94
+      },
+      {
+        "id": "7e751158a95afae0b8eeefb48883aeee",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.7,
+          0.41,
+          0.33,
+          0.47,
+          0.1
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.21054,
+        "input_tokens": 801,
+        "output_tokens": 94
+      },
+      {
+        "id": "43dee24fd4dc868005ad8119cd650701",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": null,
+        "candidate_rank": null,
+        "scores_by_original_rank": [
+          0.6,
+          0.63,
+          0.66,
+          0.68,
+          0.25
+        ],
+        "order": [
+          4,
+          3,
+          2,
+          1,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.150658,
+        "input_tokens": 778,
+        "output_tokens": 94
+      },
+      {
+        "id": "dd19e2372a7ef330b69955a66918344c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.68,
+          0.55,
+          0.1,
+          0.12,
+          0.06
+        ],
+        "order": [
+          1,
+          2,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.169882,
+        "input_tokens": 792,
+        "output_tokens": 94
+      },
+      {
+        "id": "6a7638d645b835e11019a3bf7f1d4c25",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.88,
+          0.03,
+          0.68,
+          0.12,
+          0.04
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.222761,
+        "input_tokens": 823,
+        "output_tokens": 94
+      },
+      {
+        "id": "172160c674a5ce62f7f29d8e5f1b49e9",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": null,
+        "candidate_rank": null,
+        "scores_by_original_rank": [
+          0.61,
+          0.54,
+          0.37,
+          0.34,
+          0.55
+        ],
+        "order": [
+          1,
+          5,
+          2,
+          3,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.205374,
+        "input_tokens": 780,
+        "output_tokens": 94
+      },
+      {
+        "id": "386c187e525d5cfc78fef4f58d30fce4",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.83,
+          0.03,
+          0.17,
+          0.12,
+          0.04
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167907,
+        "input_tokens": 805,
+        "output_tokens": 94
+      },
+      {
+        "id": "648d83ca9c2a5b10b51a17397f4166cd",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.1,
+          0.02,
+          0.04,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.145884,
+        "input_tokens": 822,
+        "output_tokens": 94
+      },
+      {
+        "id": "eca2d519aae6f37925c8855d4522437b",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.74,
+          0.5,
+          0.47,
+          0.34,
+          0.64
+        ],
+        "order": [
+          1,
+          5,
+          2,
+          3,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.196208,
+        "input_tokens": 796,
+        "output_tokens": 94
+      },
+      {
+        "id": "e23a9d7e658fe05987d70b3ee5c39518",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.77,
+          0.02,
+          0.03,
+          0.02,
+          0.01
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167316,
+        "input_tokens": 801,
+        "output_tokens": 94
+      },
+      {
+        "id": "7856c9708276efd81c1702b2709718f7",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.79,
+          0.03,
+          0.04,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.160606,
+        "input_tokens": 786,
+        "output_tokens": 94
+      },
+      {
+        "id": "a1913cb16cd37ebb0a1620ebf7372b68",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.55,
+          0.65,
+          0.58,
+          0.45,
+          0.45
+        ],
+        "order": [
+          2,
+          3,
+          1,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.162419,
+        "input_tokens": 799,
+        "output_tokens": 94
+      },
+      {
+        "id": "666a2749ca072d15272f51ca9a4f82ec",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.9,
+          0.06,
+          0.17,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.236267,
+        "input_tokens": 810,
+        "output_tokens": 94
+      },
+      {
+        "id": "6d6d8dc5b1d54aa3bf3d545bc7928563",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.73,
+          0.74,
+          0.78,
+          0.6,
+          0.73
+        ],
+        "order": [
+          3,
+          2,
+          1,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.172137,
+        "input_tokens": 800,
+        "output_tokens": 94
+      },
+      {
+        "id": "ae25c8bcf71513a6007b389d3f7ce0a4",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.79,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.191723,
+        "input_tokens": 807,
+        "output_tokens": 94
+      },
+      {
+        "id": "f80674cd28a7e24cd928b408d0ecb954",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.95,
+          0.02,
+          0.05,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.153804,
+        "input_tokens": 773,
+        "output_tokens": 94
+      },
+      {
+        "id": "a1e00794d7c858190f686240daa5fa82",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.02,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.205873,
+        "input_tokens": 826,
+        "output_tokens": 94
+      },
+      {
+        "id": "60b6805ee7bc594519b7d170c607a735",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.72,
+          0.63,
+          0.68,
+          0.04,
+          0.07
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.178425,
+        "input_tokens": 794,
+        "output_tokens": 94
+      },
+      {
+        "id": "f49541533ab1970b12d5faad48c4eeda",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.59,
+          0.62,
+          0.38,
+          0.41,
+          0.14
+        ],
+        "order": [
+          2,
+          1,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.253167,
+        "input_tokens": 826,
+        "output_tokens": 94
+      },
+      {
+        "id": "4dbc60c89f7162deb326bbc62349a82b",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": null,
+        "candidate_rank": null,
+        "scores_by_original_rank": [
+          0.62,
+          0.6,
+          0.58,
+          0.66,
+          0.69
+        ],
+        "order": [
+          5,
+          4,
+          1,
+          2,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.153712,
+        "input_tokens": 821,
+        "output_tokens": 94
+      },
+      {
+        "id": "61aa0abbfad655990e0436711aba148e",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.81,
+          0.13,
+          0.34,
+          0.41,
+          0.44
+        ],
+        "order": [
+          1,
+          5,
+          4,
+          3,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.194283,
+        "input_tokens": 793,
+        "output_tokens": 94
+      },
+      {
+        "id": "0032ef81e1808b1427566a672fa1b23c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.02,
+          0.2,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167384,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "65cdfffac3180f9030039525f4c9d44f",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.75,
+          0.03,
+          0.03,
+          0.02,
+          0.16
+        ],
+        "order": [
+          1,
+          5,
+          2,
+          3,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.204349,
+        "input_tokens": 789,
+        "output_tokens": 94
+      },
+      {
+        "id": "9e3531efe2292955a7b2dac6cfeda26d",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.73,
+          0.38,
+          0.39,
+          0.4,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.177513,
+        "input_tokens": 785,
+        "output_tokens": 94
+      },
+      {
+        "id": "eeb3c9f22277cf8ec97482dc89d3a1d2",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.61,
+          0.7,
+          0.59,
+          0.54,
+          0.69
+        ],
+        "order": [
+          2,
+          5,
+          1,
+          3,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.20727,
+        "input_tokens": 775,
+        "output_tokens": 94
+      },
+      {
+        "id": "6eb73c762e0b2b21304390759806254c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.53,
+          0.81,
+          0.26,
+          0.1,
+          0.11
+        ],
+        "order": [
+          2,
+          1,
+          3,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.206108,
+        "input_tokens": 778,
+        "output_tokens": 94
+      },
+      {
+        "id": "7f96ab5e6e288cc70c7cf3ad3f336794",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.04,
+          0.08,
+          0.03,
+          0.04
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.263989,
+        "input_tokens": 827,
+        "output_tokens": 94
+      },
+      {
+        "id": "3e5d5e01a8c6e26bbce5a6c1ee122ad8",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.05,
+          0.03,
+          0.04,
+          0.04
+        ],
+        "order": [
+          1,
+          2,
+          4,
+          5,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.163465,
+        "input_tokens": 817,
+        "output_tokens": 94
+      },
+      {
+        "id": "7caaafcd9814b67bd1da2e73d4001012",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.75,
+          0.58,
+          0.29,
+          0.64,
+          0.11
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.175188,
+        "input_tokens": 806,
+        "output_tokens": 94
+      },
+      {
+        "id": "f2e75dfa4a1f476222c461669e577923",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.69,
+          0.42,
+          0.43,
+          0.35,
+          0.48
+        ],
+        "order": [
+          1,
+          5,
+          3,
+          2,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.25602,
+        "input_tokens": 794,
+        "output_tokens": 94
+      },
+      {
+        "id": "06725f3eabf0a25b9ce259909d68c7ba",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.89,
+          0.04,
+          0.04,
+          0.04,
+          0.04
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.293112,
+        "input_tokens": 763,
+        "output_tokens": 94
+      },
+      {
+        "id": "aa65de07335e6ee3be3621902b58c30d",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.68,
+          0.69,
+          0.07,
+          0.13,
+          0.06
+        ],
+        "order": [
+          2,
+          1,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.298241,
+        "input_tokens": 812,
+        "output_tokens": 94
+      },
+      {
+        "id": "9a87af171d6c8d4d469c74a42019200c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.68,
+          0.16,
+          0.21,
+          0.3,
+          0.2
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.174234,
+        "input_tokens": 824,
+        "output_tokens": 94
+      },
+      {
+        "id": "de39ae4b19fad171f0508c4d24dd6432",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.14159,
+        "input_tokens": 783,
+        "output_tokens": 94
+      },
+      {
+        "id": "17705347f9c42ef17580e518b0bd6954",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.06,
+          0.1,
+          0.04,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.205916,
+        "input_tokens": 806,
+        "output_tokens": 94
+      },
+      {
+        "id": "dc4760c0cdf3339d81d82b1aec654bdc",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.84,
+          0.04,
+          0.04,
+          0.06,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.241733,
+        "input_tokens": 777,
+        "output_tokens": 94
+      },
+      {
+        "id": "ba86142c5504c2d9ae25708fa3200031",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.55,
+          0.05,
+          0.09,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.158823,
+        "input_tokens": 803,
+        "output_tokens": 94
+      },
+      {
+        "id": "4780701198d85d5b2fc77bb7ba2d7c67",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.48,
+          0.03,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.134603,
+        "input_tokens": 807,
+        "output_tokens": 94
+      },
+      {
+        "id": "6d747f1f2036acc0238ff74af4425222",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.03,
+          0.02,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          2,
+          4,
+          5,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.165253,
+        "input_tokens": 833,
+        "output_tokens": 94
+      },
+      {
+        "id": "450500ad08e3e70511788932cdf94634",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.7,
+          0.4,
+          0.7,
+          0.39,
+          0.42
+        ],
+        "order": [
+          1,
+          3,
+          5,
+          2,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.146266,
+        "input_tokens": 792,
+        "output_tokens": 94
+      },
+      {
+        "id": "a5a85e69d58b29f2fe31576ea50caef7",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.83,
+          0.63,
+          0.46,
+          0.48,
+          0.06
+        ],
+        "order": [
+          1,
+          2,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.14457,
+        "input_tokens": 768,
+        "output_tokens": 94
+      },
+      {
+        "id": "71bb4b44f03d6b3275bd9ac0c9d8c95d",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 2,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.71,
+          0.76,
+          0.79,
+          0.62,
+          0.74
+        ],
+        "order": [
+          3,
+          2,
+          5,
+          1,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.195306,
+        "input_tokens": 800,
+        "output_tokens": 94
+      },
+      {
+        "id": "22ae20897ea7e5532abf032c562f74a5",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.02,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.190749,
+        "input_tokens": 784,
+        "output_tokens": 94
+      },
+      {
+        "id": "0a266569647dbbd8e664f2da5867e5f0",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 2,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.68,
+          0.75,
+          0.67,
+          0.62,
+          0.46
+        ],
+        "order": [
+          2,
+          1,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.179005,
+        "input_tokens": 763,
+        "output_tokens": 94
+      },
+      {
+        "id": "aa15bcff75400849be5bc820c013c9ba",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.95,
+          0.03,
+          0.35,
+          0.06,
+          0.04
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.149489,
+        "input_tokens": 808,
+        "output_tokens": 94
+      },
+      {
+        "id": "52772e265c20381ad604ec7c6dcfed4c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.06,
+          0.06,
+          0.06,
+          0.06
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.138587,
+        "input_tokens": 817,
+        "output_tokens": 94
+      },
+      {
+        "id": "6cd1e89b93debc89e5b132633b51a6f3",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.6,
+          0.68,
+          0.56,
+          0.4,
+          0.2
+        ],
+        "order": [
+          2,
+          1,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.140326,
+        "input_tokens": 795,
+        "output_tokens": 94
+      },
+      {
+        "id": "d9bbf74a49574d704305aa9e7cf97cab",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.54,
+          0.55,
+          0.53,
+          0.57,
+          0.14
+        ],
+        "order": [
+          4,
+          2,
+          1,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.198212,
+        "input_tokens": 821,
+        "output_tokens": 94
+      },
+      {
+        "id": "741574c12c7e5ce05b30d5319b2b19d6",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.02,
+          0.16,
+          0.05,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.247209,
+        "input_tokens": 831,
+        "output_tokens": 94
+      },
+      {
+        "id": "48716e8336f0e0823acac4801b9d1cb7",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.53,
+          0.7,
+          0.13,
+          0.06,
+          0.04
+        ],
+        "order": [
+          2,
+          1,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.150301,
+        "input_tokens": 806,
+        "output_tokens": 94
+      },
+      {
+        "id": "8d2621b677ebf59b079f115067066c8f",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.87,
+          0.03,
+          0.13,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.222595,
+        "input_tokens": 781,
+        "output_tokens": 94
+      },
+      {
+        "id": "9f055cabc40c4648dc12327b89881df8",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.86,
+          0.04,
+          0.06,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.227835,
+        "input_tokens": 805,
+        "output_tokens": 94
+      },
+      {
+        "id": "376ea48ce165fc40355d6f9b39c417c8",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.85,
+          0.03,
+          0.06,
+          0.07,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.232943,
+        "input_tokens": 781,
+        "output_tokens": 94
+      },
+      {
+        "id": "73ba76e9e26b2fd1bc47996c60306152",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.57,
+          0.02,
+          0.03,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.186635,
+        "input_tokens": 753,
+        "output_tokens": 94
+      },
+      {
+        "id": "e97bcf3a511aae44bbec95da88e16f8d",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.82,
+          0.1,
+          0.8,
+          0.05,
+          0.04
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.165855,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "e9ef86b1ec167c901f17c5d07b47ce98",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.8,
+          0.21,
+          0.31,
+          0.11,
+          0.08
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.160505,
+        "input_tokens": 776,
+        "output_tokens": 94
+      },
+      {
+        "id": "22d127334eca59b5a9ce4b731637f95d",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.83,
+          0.04,
+          0.08,
+          0.04,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.206843,
+        "input_tokens": 776,
+        "output_tokens": 94
+      },
+      {
+        "id": "4d9f0487cc9a0fdbc12837810a653f3f",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.02,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.172134,
+        "input_tokens": 839,
+        "output_tokens": 94
+      },
+      {
+        "id": "fead398ae6a905a917241eefa9c362e7",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": null,
+        "candidate_rank": null,
+        "scores_by_original_rank": [
+          0.72,
+          0.76,
+          0.43,
+          0.08,
+          0.11
+        ],
+        "order": [
+          2,
+          1,
+          3,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.152978,
+        "input_tokens": 783,
+        "output_tokens": 94
+      },
+      {
+        "id": "a6b9ff90c6b409483270f1e20f354228",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.76,
+          0.02,
+          0.05,
+          0.06,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.143824,
+        "input_tokens": 781,
+        "output_tokens": 94
+      },
+      {
+        "id": "0e27f1ed519579505abba03d6d6975d7",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.03,
+          0.05,
+          0.06,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.151061,
+        "input_tokens": 773,
+        "output_tokens": 94
+      },
+      {
+        "id": "0f1e32ea58f9d581f4f081ee0307772e",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 4,
+        "scores_by_original_rank": [
+          0.52,
+          0.49,
+          0.56,
+          0.59,
+          0.33
+        ],
+        "order": [
+          4,
+          3,
+          1,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.147018,
+        "input_tokens": 810,
+        "output_tokens": 94
+      },
+      {
+        "id": "c6ba576e03dd842359bba7440006ffb5",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 2,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.67,
+          0.74,
+          0.78,
+          0.72,
+          0.82
+        ],
+        "order": [
+          5,
+          3,
+          2,
+          4,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.159635,
+        "input_tokens": 789,
+        "output_tokens": 94
+      },
+      {
+        "id": "4dac1d67e49505b23fea4f23380bc18d",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.96,
+          0.03,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.145744,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "bef6d32a8093be7a50db47a217b94d36",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 5,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.55,
+          0.56,
+          0.51,
+          0.45,
+          0.54
+        ],
+        "order": [
+          2,
+          1,
+          5,
+          3,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.233283,
+        "input_tokens": 813,
+        "output_tokens": 94
+      },
+      {
+        "id": "79767f0480f666949e9fc1c1fff31323",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 4,
+        "scores_by_original_rank": [
+          0.59,
+          0.66,
+          0.62,
+          0.57,
+          0.61
+        ],
+        "order": [
+          2,
+          3,
+          5,
+          1,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.1699,
+        "input_tokens": 808,
+        "output_tokens": 94
+      },
+      {
+        "id": "9089788452844649e7e16f5dacb131c3",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.03,
+          0.03,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.166338,
+        "input_tokens": 795,
+        "output_tokens": 94
+      },
+      {
+        "id": "cd59a21a9b2b66b0f43cc7c2bd1bbd9a",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.56,
+          0.63,
+          0.15,
+          0.44,
+          0.55
+        ],
+        "order": [
+          2,
+          1,
+          5,
+          4,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.145665,
+        "input_tokens": 802,
+        "output_tokens": 94
+      },
+      {
+        "id": "9f11db20a2ade4df57a40f4c2491e11e",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.85,
+          0.02,
+          0.02,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          5,
+          2,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.173761,
+        "input_tokens": 803,
+        "output_tokens": 94
+      },
+      {
+        "id": "8ef672ab22e69eea507e19d3b296dc4d",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.88,
+          0.04,
+          0.1,
+          0.06,
+          0.04
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.229016,
+        "input_tokens": 777,
+        "output_tokens": 94
+      },
+      {
+        "id": "61cccd44343526899845a0f5ed7131cb",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.73,
+          0.33,
+          0.06,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.155231,
+        "input_tokens": 793,
+        "output_tokens": 94
+      },
+      {
+        "id": "c88210fee3180da3ba2b2e2cfd3de17d",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 4,
+        "scores_by_original_rank": [
+          0.53,
+          0.63,
+          0.63,
+          0.59,
+          0.52
+        ],
+        "order": [
+          2,
+          3,
+          4,
+          1,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167062,
+        "input_tokens": 813,
+        "output_tokens": 94
+      },
+      {
+        "id": "e61133b83658ab173983f896d01d07b0",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": null,
+        "candidate_rank": null,
+        "scores_by_original_rank": [
+          0.71,
+          0.27,
+          0.59,
+          0.59,
+          0.45
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.145332,
+        "input_tokens": 787,
+        "output_tokens": 94
+      },
+      {
+        "id": "3e1d9d0ec5d700c0a61ff55a6e86e0c6",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.76,
+          0.09,
+          0.08,
+          0.68,
+          0.11
+        ],
+        "order": [
+          1,
+          4,
+          5,
+          2,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.174389,
+        "input_tokens": 772,
+        "output_tokens": 94
+      },
+      {
+        "id": "e4ae1a80fc89ef9678f99881ac543acf",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.01,
+          0.02,
+          0.05,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.217689,
+        "input_tokens": 812,
+        "output_tokens": 94
+      },
+      {
+        "id": "e7ae0a1595583d747de5f04dbe95a641",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.52,
+          0.44,
+          0.51,
+          0.41,
+          0.4
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.170747,
+        "input_tokens": 802,
+        "output_tokens": 94
+      },
+      {
+        "id": "8d39f8e7c030bbb9505480215b3b5ada",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.16,
+          0.05,
+          0.05,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.242287,
+        "input_tokens": 799,
+        "output_tokens": 94
+      },
+      {
+        "id": "2341c2c2cc8d7edeb3ca3493794d9767",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.65,
+          0.66,
+          0.62,
+          0.61,
+          0.67
+        ],
+        "order": [
+          5,
+          2,
+          1,
+          3,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167688,
+        "input_tokens": 826,
+        "output_tokens": 94
+      },
+      {
+        "id": "48eb9eaa42381dd0fd9619af031f11f3",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.61,
+          0.53,
+          0.55,
+          0.55,
+          0.58
+        ],
+        "order": [
+          1,
+          5,
+          3,
+          4,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.249648,
+        "input_tokens": 817,
+        "output_tokens": 94
+      },
+      {
+        "id": "dac59ba60ace8a8090cd386bd404b050",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.84,
+          0.02,
+          0.03,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.137548,
+        "input_tokens": 796,
+        "output_tokens": 94
+      },
+      {
+        "id": "f3c0268895258cc86a953c1177a8ad01",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 3,
+        "candidate_rank": 4,
+        "scores_by_original_rank": [
+          0.51,
+          0.54,
+          0.51,
+          0.56,
+          0.13
+        ],
+        "order": [
+          4,
+          2,
+          1,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.406401,
+        "input_tokens": 823,
+        "output_tokens": 94
+      },
+      {
+        "id": "5b606572d70923f35e9040e7f89ccd13",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.79,
+          0.02,
+          0.12,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.17729,
+        "input_tokens": 834,
+        "output_tokens": 94
+      },
+      {
+        "id": "bfb3411b6278c117d3c9a4ed5eade05d",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.82,
+          0.52,
+          0.04,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          2,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.187264,
+        "input_tokens": 788,
+        "output_tokens": 94
+      },
+      {
+        "id": "698de01931ee004380bf6d51e107fbd4",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.74,
+          0.81,
+          0.14,
+          0.2,
+          0.03
+        ],
+        "order": [
+          2,
+          1,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.202917,
+        "input_tokens": 799,
+        "output_tokens": 94
+      },
+      {
+        "id": "f7b89d9ab08965b3544f15cc25951997",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.49,
+          0.55,
+          0.55,
+          0.13,
+          0.07
+        ],
+        "order": [
+          2,
+          3,
+          1,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.158423,
+        "input_tokens": 802,
+        "output_tokens": 94
+      },
+      {
+        "id": "89b192de66498618857faf741e2ec72f",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.69,
+          0.69,
+          0.58,
+          0.39,
+          0.53
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.142426,
+        "input_tokens": 799,
+        "output_tokens": 94
+      },
+      {
+        "id": "ba29d5ce8f2644246d024e966db7fc17",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.02,
+          0.03,
+          0.04,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.220302,
+        "input_tokens": 769,
+        "output_tokens": 94
+      },
+      {
+        "id": "ca4bc530c412b5e5bf5cafc476f79f7d",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.9,
+          0.02,
+          0.08,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.195878,
+        "input_tokens": 777,
+        "output_tokens": 94
+      },
+      {
+        "id": "429122d251bb4ee46113dd963a46cc14",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 5,
+        "scores_by_original_rank": [
+          0.54,
+          0.55,
+          0.58,
+          0.58,
+          0.68
+        ],
+        "order": [
+          5,
+          3,
+          4,
+          2,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.283524,
+        "input_tokens": 833,
+        "output_tokens": 94
+      },
+      {
+        "id": "b389aa6556522326018028c8d049cac8",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.89,
+          0.05,
+          0.18,
+          0.11,
+          0.05
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.14852,
+        "input_tokens": 803,
+        "output_tokens": 94
+      },
+      {
+        "id": "eba4ef03ed0e63b1d979d83da80dd898",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.6,
+          0.5,
+          0.17,
+          0.47,
+          0.62
+        ],
+        "order": [
+          5,
+          1,
+          2,
+          4,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.179736,
+        "input_tokens": 774,
+        "output_tokens": 94
+      },
+      {
+        "id": "51842a791c6b97725ee52e98ea30f576",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.03,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.251341,
+        "input_tokens": 796,
+        "output_tokens": 94
+      },
+      {
+        "id": "b01f1cbd1f60b52d433358c81a189295",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.87,
+          0.09,
+          0.28,
+          0.25,
+          0.23
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.193572,
+        "input_tokens": 812,
+        "output_tokens": 94
+      },
+      {
+        "id": "a692319a644a380ec65814696cff35a3",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 4,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.68,
+          0.63,
+          0.66,
+          0.69,
+          0.73
+        ],
+        "order": [
+          5,
+          4,
+          1,
+          3,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.152108,
+        "input_tokens": 780,
+        "output_tokens": 94
+      },
+      {
+        "id": "712fffe2d3d47ee6a9ff838e3a8a23c4",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.84,
+          0.04,
+          0.06,
+          0.08,
+          0.04
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.178726,
+        "input_tokens": 776,
+        "output_tokens": 94
+      },
+      {
+        "id": "38a236d26bd6b9959c4d914ce14c3d22",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.02,
+          0.03,
+          0.05,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167806,
+        "input_tokens": 805,
+        "output_tokens": 94
+      },
+      {
+        "id": "55c251f83ea221df7add6672914104e9",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.23,
+          0.62,
+          0.64,
+          0.13,
+          0.1
+        ],
+        "order": [
+          3,
+          2,
+          1,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.185808,
+        "input_tokens": 791,
+        "output_tokens": 94
+      },
+      {
+        "id": "9da08b0388e3f14ebb3ccc61837845b8",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.03,
+          0.02,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.169909,
+        "input_tokens": 767,
+        "output_tokens": 94
+      },
+      {
+        "id": "9944930690804f6c58ab61a8f4094506",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.85,
+          0.02,
+          0.07,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.181079,
+        "input_tokens": 801,
+        "output_tokens": 94
+      },
+      {
+        "id": "006c2bb5e4fe72d361e3b0a598f1a383",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.157926,
+        "input_tokens": 806,
+        "output_tokens": 94
+      },
+      {
+        "id": "229822fe59d9a79d297d408fb823e334",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 4,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.63,
+          0.48,
+          0.19,
+          0.57,
+          0.57
+        ],
+        "order": [
+          1,
+          4,
+          5,
+          2,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.150439,
+        "input_tokens": 777,
+        "output_tokens": 94
+      },
+      {
+        "id": "4d0b07c9be684da7af4235b614375ef6",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 3,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.57,
+          0.16,
+          0.84,
+          0.8,
+          0.68
+        ],
+        "order": [
+          3,
+          4,
+          5,
+          1,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.612493,
+        "input_tokens": 764,
+        "output_tokens": 94
+      },
+      {
+        "id": "bf4b1985fb0d0b8e355b863d38b6c15d",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.63,
+          0.18,
+          0.14,
+          0.08,
+          0.04
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.134026,
+        "input_tokens": 775,
+        "output_tokens": 94
+      },
+      {
+        "id": "12c090dd37a69ccea8f6df9baf55b121",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.02,
+          0.03,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.158681,
+        "input_tokens": 815,
+        "output_tokens": 94
+      },
+      {
+        "id": "74cec2c05757821b0849c0af908df899",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.79,
+          0.05,
+          0.08,
+          0.05,
+          0.09
+        ],
+        "order": [
+          1,
+          5,
+          3,
+          2,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.149971,
+        "input_tokens": 767,
+        "output_tokens": 94
+      },
+      {
+        "id": "b56861e76ed6b4e690741d223a9574da",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 3,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.46,
+          0.51,
+          0.59,
+          0.59,
+          0.68
+        ],
+        "order": [
+          5,
+          3,
+          4,
+          2,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.15349,
+        "input_tokens": 798,
+        "output_tokens": 94
+      },
+      {
+        "id": "2c0613d3d8c07187a0bc500988ff8fe9",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.26,
+          0.54,
+          0.42,
+          0.37,
+          0.48
+        ],
+        "order": [
+          2,
+          5,
+          3,
+          4,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.13046,
+        "input_tokens": 823,
+        "output_tokens": 94
+      },
+      {
+        "id": "96d714bf1b80de954c3f54330ba35037",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.88,
+          0.02,
+          0.02,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.150933,
+        "input_tokens": 783,
+        "output_tokens": 94
+      },
+      {
+        "id": "4c75fa85df490491c46d14941021fb4f",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 5,
+        "scores_by_original_rank": [
+          0.46,
+          0.53,
+          0.49,
+          0.49,
+          0.52
+        ],
+        "order": [
+          2,
+          5,
+          3,
+          4,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.172281,
+        "input_tokens": 793,
+        "output_tokens": 94
+      },
+      {
+        "id": "29710b7e0ccf450008489bf43f126761",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.53,
+          0.56,
+          0.58,
+          0.06,
+          0.04
+        ],
+        "order": [
+          3,
+          2,
+          1,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.16323,
+        "input_tokens": 801,
+        "output_tokens": 94
+      },
+      {
+        "id": "293c743c80b4b9651e87dee39fb391e9",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.62,
+          0.6,
+          0.33,
+          0.62,
+          0.34
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          5,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.196484,
+        "input_tokens": 763,
+        "output_tokens": 94
+      },
+      {
+        "id": "badf5fea543c9a42497abc406907a954",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.04,
+          0.05,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.184964,
+        "input_tokens": 791,
+        "output_tokens": 94
+      },
+      {
+        "id": "b9dff68bd47b0e136c5dc38ce700cb71",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 4,
+        "scores_by_original_rank": [
+          0.67,
+          0.7,
+          0.68,
+          0.7,
+          0.08
+        ],
+        "order": [
+          2,
+          4,
+          3,
+          1,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.163043,
+        "input_tokens": 786,
+        "output_tokens": 94
+      },
+      {
+        "id": "c6890a7294062e04f009f17690517432",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.158874,
+        "input_tokens": 769,
+        "output_tokens": 94
+      },
+      {
+        "id": "02527c573a6e08bffa5acb6b51ef79e7",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.85,
+          0.36,
+          0.39,
+          0.38,
+          0.05
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.141463,
+        "input_tokens": 793,
+        "output_tokens": 94
+      },
+      {
+        "id": "f7dfdad2ce87645976e251efd69be165",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.95,
+          0.02,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.191942,
+        "input_tokens": 778,
+        "output_tokens": 94
+      },
+      {
+        "id": "dab10cea5d69c39f758363773d84792b",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.02,
+          0.05,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167876,
+        "input_tokens": 826,
+        "output_tokens": 94
+      },
+      {
+        "id": "64cc2644c95519a35da2879a61438e73",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.81,
+          0.42,
+          0.05,
+          0.04,
+          0.03
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.181632,
+        "input_tokens": 769,
+        "output_tokens": 94
+      },
+      {
+        "id": "c56cd2194fc231a4162ffc0b5d2e106a",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.96,
+          0.02,
+          0.12,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.250049,
+        "input_tokens": 782,
+        "output_tokens": 94
+      },
+      {
+        "id": "01e163d05deeca26952d62ef51658870",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.58,
+          0.51,
+          0.48,
+          0.32,
+          0.43
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.204673,
+        "input_tokens": 785,
+        "output_tokens": 94
+      },
+      {
+        "id": "a9e5e832bc14dc1d92eb626cf2e8ade9",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 5,
+        "scores_by_original_rank": [
+          0.43,
+          0.49,
+          0.6,
+          0.64,
+          0.59
+        ],
+        "order": [
+          4,
+          3,
+          5,
+          2,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.147468,
+        "input_tokens": 796,
+        "output_tokens": 94
+      },
+      {
+        "id": "be75b17905129cb102efa5523c83d9e4",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.82,
+          0.17,
+          0.04,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.158077,
+        "input_tokens": 815,
+        "output_tokens": 94
+      },
+      {
+        "id": "050c54c3c531b6cc0692d56d4707a909",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.9,
+          0.04,
+          0.03,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.335326,
+        "input_tokens": 788,
+        "output_tokens": 94
+      },
+      {
+        "id": "ec6c4558b716ecfbe4cb028782459f67",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.96,
+          0.02,
+          0.12,
+          0.08,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.204518,
+        "input_tokens": 790,
+        "output_tokens": 94
+      },
+      {
+        "id": "3895f190938bd357bfa77ea096cbe67f",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.69,
+          0.72,
+          0.55,
+          0.66,
+          0.66
+        ],
+        "order": [
+          2,
+          1,
+          4,
+          5,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167418,
+        "input_tokens": 775,
+        "output_tokens": 94
+      },
+      {
+        "id": "04d8e99ea67c0fc931979ed05ca0405a",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.95,
+          0.02,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.178525,
+        "input_tokens": 784,
+        "output_tokens": 94
+      },
+      {
+        "id": "572a113f9f63830b352e10a40e0d924f",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.74,
+          0.04,
+          0.04,
+          0.7,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.181762,
+        "input_tokens": 780,
+        "output_tokens": 94
+      },
+      {
+        "id": "7244b39e708d909f221ec330a1aaa099",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.59,
+          0.7,
+          0.62,
+          0.08,
+          0.05
+        ],
+        "order": [
+          2,
+          3,
+          1,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.132935,
+        "input_tokens": 803,
+        "output_tokens": 94
+      },
+      {
+        "id": "7b5021a831f83bb152329da823b8a633",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.32,
+          0.81,
+          0.05,
+          0.08,
+          0.03
+        ],
+        "order": [
+          2,
+          1,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.197652,
+        "input_tokens": 819,
+        "output_tokens": 94
+      },
+      {
+        "id": "82d6a49502c3e3da541a164968a1451f",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": null,
+        "candidate_rank": null,
+        "scores_by_original_rank": [
+          0.45,
+          0.61,
+          0.66,
+          0.63,
+          0.25
+        ],
+        "order": [
+          3,
+          4,
+          2,
+          1,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.128755,
+        "input_tokens": 775,
+        "output_tokens": 94
+      },
+      {
+        "id": "f4a14d5b11dcd75935cdce91e348b129",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.03,
+          0.07,
+          0.02,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.181024,
+        "input_tokens": 804,
+        "output_tokens": 94
+      },
+      {
+        "id": "6dd6ae1fd9246962ac092eeaee259e60",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 3,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.61,
+          0.53,
+          0.63,
+          0.55,
+          0.7
+        ],
+        "order": [
+          5,
+          3,
+          1,
+          4,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.143544,
+        "input_tokens": 811,
+        "output_tokens": 94
+      },
+      {
+        "id": "001ec54cd84b67f1cb5e4fe57e141036",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.96,
+          0.04,
+          0.03,
+          0.05,
+          0.05
+        ],
+        "order": [
+          1,
+          4,
+          5,
+          2,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.16466,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "6ea144c12d3c877b3d349d7ef66f317e",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.65,
+          0.59,
+          0.69,
+          0.38,
+          0.45
+        ],
+        "order": [
+          3,
+          1,
+          2,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167392,
+        "input_tokens": 808,
+        "output_tokens": 94
+      },
+      {
+        "id": "1085346b81aed339ba92f5c3da357972",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.87,
+          0.02,
+          0.03,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.290821,
+        "input_tokens": 824,
+        "output_tokens": 94
+      },
+      {
+        "id": "d1255e5a8bde0eb0500f1452dca27f77",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.9,
+          0.02,
+          0.08,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.13982,
+        "input_tokens": 799,
+        "output_tokens": 94
+      },
+      {
+        "id": "6a61eaaf2e98cdad9d5e44e40567ab27",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.7,
+          0.02,
+          0.11,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.142295,
+        "input_tokens": 810,
+        "output_tokens": 94
+      },
+      {
+        "id": "56f866b201d17d01885a351d5134e02f",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.85,
+          0.03,
+          0.03,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.25033,
+        "input_tokens": 757,
+        "output_tokens": 94
+      },
+      {
+        "id": "2b050becba05786d71b9c0549e1a3ce5",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.9,
+          0.75,
+          0.2,
+          0.82,
+          0.7
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          5,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.130144,
+        "input_tokens": 788,
+        "output_tokens": 94
+      },
+      {
+        "id": "6720887290a37639056f0f7650d3d9b8",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 4,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.03,
+          0.17,
+          0.09,
+          0.23,
+          0.04
+        ],
+        "order": [
+          4,
+          2,
+          3,
+          5,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.417429,
+        "input_tokens": 774,
+        "output_tokens": 94
+      },
+      {
+        "id": "0d5c9dfb557d2b8d02136b537d86de5a",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.88,
+          0.11,
+          0.03,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          2,
+          4,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.144891,
+        "input_tokens": 809,
+        "output_tokens": 94
+      },
+      {
+        "id": "cce8e52b98fb33f34ea24926bd487737",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.84,
+          0.04,
+          0.06,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.197152,
+        "input_tokens": 781,
+        "output_tokens": 94
+      },
+      {
+        "id": "b4edfaba8c249bb1ee656a689983acbb",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.9,
+          0.04,
+          0.06,
+          0.06,
+          0.05
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.272107,
+        "input_tokens": 815,
+        "output_tokens": 94
+      },
+      {
+        "id": "f10b5efa891cb5523b08bdfa764e830c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.58,
+          0.61,
+          0.44,
+          0.07,
+          0.04
+        ],
+        "order": [
+          2,
+          1,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.212899,
+        "input_tokens": 823,
+        "output_tokens": 94
+      },
+      {
+        "id": "a0b8e509651c922f8c3bb9a136715eab",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 4,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.59,
+          0.59,
+          0.59,
+          0.62,
+          0.64
+        ],
+        "order": [
+          5,
+          4,
+          1,
+          2,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.163929,
+        "input_tokens": 803,
+        "output_tokens": 94
+      },
+      {
+        "id": "e0869b8b5642f0c03e8cd0753d9ffbaf",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.78,
+          0.7,
+          0.12,
+          0.06,
+          0.05
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.166744,
+        "input_tokens": 810,
+        "output_tokens": 94
+      },
+      {
+        "id": "ae3e21e958703cd120966dcf6b53c741",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.94,
+          0.02,
+          0.03,
+          0.05,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.256334,
+        "input_tokens": 809,
+        "output_tokens": 94
+      },
+      {
+        "id": "f9110d032d673648714bedd6905c1e9c",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.83,
+          0.28,
+          0.03,
+          0.04,
+          0.08
+        ],
+        "order": [
+          1,
+          2,
+          5,
+          4,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.176617,
+        "input_tokens": 787,
+        "output_tokens": 94
+      },
+      {
+        "id": "913ab8d9c6b491ad6637754e8064ee5a",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.82,
+          0.02,
+          0.02,
+          0.02,
+          0.01
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.161494,
+        "input_tokens": 801,
+        "output_tokens": 94
+      },
+      {
+        "id": "4621ef51d8580696e434e319368f2fc2",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 5,
+        "scores_by_original_rank": [
+          0.48,
+          0.55,
+          0.56,
+          0.58,
+          0.65
+        ],
+        "order": [
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.199001,
+        "input_tokens": 793,
+        "output_tokens": 94
+      },
+      {
+        "id": "01b89ec4536d3e7e17d027a87b6b4d09",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.96,
+          0.02,
+          0.09,
+          0.04,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.166504,
+        "input_tokens": 828,
+        "output_tokens": 94
+      },
+      {
+        "id": "a70d9fdccab521f3ef45da5c0fc73f4f",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 4,
+        "scores_by_original_rank": [
+          0.58,
+          0.64,
+          0.68,
+          0.6,
+          0.42
+        ],
+        "order": [
+          3,
+          2,
+          4,
+          1,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.21415,
+        "input_tokens": 783,
+        "output_tokens": 94
+      },
+      {
+        "id": "72940ed46a5c5c445649c1e96a2b0195",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.87,
+          0.02,
+          0.17,
+          0.71,
+          0.05
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          5,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.219051,
+        "input_tokens": 795,
+        "output_tokens": 94
+      },
+      {
+        "id": "7a137e9ea20dfaa5fa1f85d2ab4c5224",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.83,
+          0.02,
+          0.03,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.212215,
+        "input_tokens": 772,
+        "output_tokens": 94
+      },
+      {
+        "id": "e1a7d3354cec69d7e7f0288da9673ae4",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.93,
+          0.03,
+          0.19,
+          0.03,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.179569,
+        "input_tokens": 772,
+        "output_tokens": 94
+      },
+      {
+        "id": "1a3d68d26ae9bef0b4064f7ea580d91f",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 2,
+        "candidate_rank": 4,
+        "scores_by_original_rank": [
+          0.67,
+          0.6,
+          0.8,
+          0.71,
+          0.24
+        ],
+        "order": [
+          3,
+          4,
+          1,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.159848,
+        "input_tokens": 772,
+        "output_tokens": 94
+      },
+      {
+        "id": "b1efcf0c9ffdc211462303734ed19c50",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.85,
+          0.36,
+          0.06,
+          0.05,
+          0.04
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.161008,
+        "input_tokens": 803,
+        "output_tokens": 94
+      },
+      {
+        "id": "a4a0f13a031c309bfbb970b942b1a41e",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.88,
+          0.03,
+          0.03,
+          0.05,
+          0.08
+        ],
+        "order": [
+          1,
+          5,
+          4,
+          2,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.156216,
+        "input_tokens": 764,
+        "output_tokens": 94
+      },
+      {
+        "id": "8b9cc2fe991bcaa7e5b7b92893d1b5f0",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.187467,
+        "input_tokens": 754,
+        "output_tokens": 94
+      },
+      {
+        "id": "2eaf2fd274449d91eaeaefb1bc04d69b",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 3,
+        "scores_by_original_rank": [
+          0.52,
+          0.62,
+          0.64,
+          0.61,
+          0.71
+        ],
+        "order": [
+          5,
+          3,
+          2,
+          4,
+          1
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.185935,
+        "input_tokens": 795,
+        "output_tokens": 94
+      },
+      {
+        "id": "0fc6fa62eb3818437f073f8860ab5cd3",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.83,
+          0.67,
+          0.13,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.152617,
+        "input_tokens": 816,
+        "output_tokens": 94
+      },
+      {
+        "id": "6e2db81d51bbb27775881f29f8daa5a2",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.86,
+          0.16,
+          0.05,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.168027,
+        "input_tokens": 810,
+        "output_tokens": 94
+      },
+      {
+        "id": "46f87d3b8c9551fd71b0f4135adf9f80",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.8,
+          0.29,
+          0.13,
+          0.07,
+          0.03
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.205059,
+        "input_tokens": 797,
+        "output_tokens": 94
+      },
+      {
+        "id": "dab6824e8e9b4b90d2d80a6c69bc4ae1",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.61,
+          0.44,
+          0.04,
+          0.37,
+          0.51
+        ],
+        "order": [
+          1,
+          5,
+          2,
+          4,
+          3
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.158831,
+        "input_tokens": 795,
+        "output_tokens": 94
+      },
+      {
+        "id": "3bcf9279ad93664913df21f132949f76",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 2,
+        "candidate_rank": 5,
+        "scores_by_original_rank": [
+          0.6,
+          0.49,
+          0.61,
+          0.56,
+          0.64
+        ],
+        "order": [
+          5,
+          3,
+          1,
+          4,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.211802,
+        "input_tokens": 811,
+        "output_tokens": 94
+      },
+      {
+        "id": "b3d0398bf8802b6511c625582451963b",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.91,
+          0.03,
+          0.04,
+          0.02,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.142877,
+        "input_tokens": 819,
+        "output_tokens": 94
+      },
+      {
+        "id": "7a70d4e844464ceeec2036381bdc4204",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.86,
+          0.07,
+          0.1,
+          0.06,
+          0.03
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.213175,
+        "input_tokens": 810,
+        "output_tokens": 94
+      },
+      {
+        "id": "066d27339f1efc174cf8756745894c0c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.86,
+          0.02,
+          0.06,
+          0.03,
+          0.33
+        ],
+        "order": [
+          1,
+          5,
+          3,
+          4,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.143561,
+        "input_tokens": 778,
+        "output_tokens": 94
+      },
+      {
+        "id": "d8742c9e1eb440c0f0a4adb195bb3905",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.78,
+          0.47,
+          0.46,
+          0.54,
+          0.35
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.252157,
+        "input_tokens": 790,
+        "output_tokens": 94
+      },
+      {
+        "id": "664a5fb993c5292b115f0b38bf1577b5",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.69,
+          0.13,
+          0.82,
+          0.03,
+          0.02
+        ],
+        "order": [
+          3,
+          1,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.171775,
+        "input_tokens": 777,
+        "output_tokens": 94
+      },
+      {
+        "id": "722b1908ee7b51df4c45bc0c904f3fb9",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 4,
+        "candidate_rank": 2,
+        "scores_by_original_rank": [
+          0.6,
+          0.57,
+          0.59,
+          0.67,
+          0.7
+        ],
+        "order": [
+          5,
+          4,
+          1,
+          3,
+          2
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.405854,
+        "input_tokens": 821,
+        "output_tokens": 94
+      },
+      {
+        "id": "ac6df8689aacb09708f2459eca3cab29",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.89,
+          0.02,
+          0.12,
+          0.04,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.167988,
+        "input_tokens": 806,
+        "output_tokens": 94
+      },
+      {
+        "id": "7a68a4d5e19e6b3edeecf7e98c79b3d6",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.59,
+          0.02,
+          0.03,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.179592,
+        "input_tokens": 809,
+        "output_tokens": 94
+      },
+      {
+        "id": "8b59db539a3835ae8d6e2d29d0ad2ed9",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.87,
+          0.02,
+          0.03,
+          0.15,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          3,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.143587,
+        "input_tokens": 791,
+        "output_tokens": 94
+      },
+      {
+        "id": "b8cc9d117ce3879cf08f12171540aad9",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.84,
+          0.04,
+          0.03,
+          0.05,
+          0.03
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.23466,
+        "input_tokens": 792,
+        "output_tokens": 94
+      },
+      {
+        "id": "404b66786df16f2967a067cf9621fd1b",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.02,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.158191,
+        "input_tokens": 803,
+        "output_tokens": 94
+      },
+      {
+        "id": "26ca462d820481ddfd8248d12275c31a",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.07,
+          0.01,
+          0.02,
+          0.02,
+          0.01
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.213752,
+        "input_tokens": 794,
+        "output_tokens": 94
+      },
+      {
+        "id": "dd6e15ddfa4851a27249c65e5c767bf0",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.87,
+          0.02,
+          0.03,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.16248,
+        "input_tokens": 799,
+        "output_tokens": 94
+      },
+      {
+        "id": "c3502ac16d40b40381e4f82bfa7b5a7c",
+        "event_type": "TASK_REQUEST",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.92,
+          0.03,
+          0.05,
+          0.02,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          2,
+          4,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.198919,
+        "input_tokens": 821,
+        "output_tokens": 94
+      },
+      {
+        "id": "47853407866c9cb372a435375a73e151",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 3,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.62,
+          0.71,
+          0.73,
+          0.09,
+          0.24
+        ],
+        "order": [
+          3,
+          2,
+          1,
+          5,
+          4
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.223471,
+        "input_tokens": 783,
+        "output_tokens": 94
+      },
+      {
+        "id": "f0f9c87b3ba50169459d5ffbcef44faf",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.96,
+          0.03,
+          0.03,
+          0.06,
+          0.02
+        ],
+        "order": [
+          1,
+          4,
+          2,
+          3,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.143932,
+        "input_tokens": 778,
+        "output_tokens": 94
+      },
+      {
+        "id": "de27dbd67d0e1643233e605566bfdfab",
+        "event_type": "PERSONAL_FACT",
+        "baseline_rank": 1,
+        "candidate_rank": 1,
+        "scores_by_original_rank": [
+          0.6,
+          0.02,
+          0.03,
+          0.03,
+          0.02
+        ],
+        "order": [
+          1,
+          3,
+          4,
+          2,
+          5
+        ],
+        "attempts": 1,
+        "elapsed_seconds": 0.14057,
+        "input_tokens": 802,
+        "output_tokens": 94
+      }
+    ]
+  },
+  "runtime": {
+    "requests": 200,
+    "attempts": 200,
+    "input_tokens": 159176,
+    "output_tokens": 18800,
+    "median_request_seconds": 0.177513,
+    "p95_request_seconds": 0.383582,
+    "max_request_seconds": 1.245756,
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit"
+  },
+  "passed": false,
+  "decision": "jev_retrieval_reranker_rejected",
+  "limitations": [
+    "Development subset of one public retrieval benchmark.",
+    "Exact-source ranking is stricter than semantic answer relevance in some cases.",
+    "The reranker cannot restore a source absent from the fixed candidate set.",
+    "No generated-answer quality was measured."
+  ],
+  "result_sha256": "2cffc404daf39941f094100eae673bc2308d992f226c0451c248706203ef67d6"
+}

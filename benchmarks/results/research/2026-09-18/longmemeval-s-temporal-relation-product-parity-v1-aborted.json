@@ -1,0 +1,34 @@
+{
+  "claim_boundary": "Terminal record of a stopped product-path replay; it is not confirmation evidence.",
+  "completed_questions": 11,
+  "failures": [
+    {
+      "error_type": "ValueError",
+      "question_id": "gpt4_1d80365e"
+    }
+  ],
+  "identity": {
+    "baseline_identity_sha256": "6c5f8e49259164cf2606a10c67dad775362a8daf7f17129b5196a4c01c0e0e3a",
+    "jev_result_sha256": "8f06882a19d1e03f46c9fc18b6bdb1b7e64d59cf69ec0f6cfdd649c5e46616c0",
+    "kind": "longmemeval-s-temporal-relation-product-parity-state",
+    "paired_inputs_sha256": "dcf725ddf6be28192b0d0bc9a86a2112499491f948a344f66cda8302b5466da4",
+    "product_sources_sha256": {
+      "packing": "f99508ea96bd37dbbe9fb1aa736b985c559e2ccdbcc20a50da5d1ad914289eb1",
+      "pipeline": "1c5fc0265520a18d098d7428df5383fb5b3e7c6016b0ea5e33c9d81ea90598a0",
+      "temporal_relation_models": "f0456d285814f0728e8a43087d67b753984fbb7c42ec08092d72b0598ca79e68",
+      "temporal_relation_providers": "1fec29c481f4446b3ed957cb1d8485ca73b8bc814360888d6ff4acbfebbb6d6d",
+      "temporal_relations": "cef457cb5de0bb73f84443f9a3c411c58ed330d126d69ab80a0dccec9094cef3"
+    },
+    "registration_sha256": "cde14d90c05741a09a65beb6f7e4a76e6af44102f092bf2cff340df9372fc7b7",
+    "resolver_result_sha256": "2a82037cf982d843867d360baba2ed1a5695d48e27dc0c9a2ebbf1aa8e24e0e1",
+    "runner_sha256": "01ae64178622c3e4c4fe02c719c2100a8788856c5c9e5f697dc76ee5dd800685",
+    "source_identity_sha256": "c8569ae4b6d1faebeddacaf82628a154b7ba1b83d6d792baf9666d5ab8b73d57"
+  },
+  "kind": "longmemeval-s-temporal-relation-product-parity-aborted",
+  "reason": "The initial runner required every frozen question to invoke the temporal stage. Product routing correctly skipped an unchanged rejected case, exposing both an overstrict replay assertion and two other accepted duration cases that routing would have skipped.",
+  "recorded_at": "2026-09-18T17:28:16.748651+00:00",
+  "result_sha256": "7bcbc80214a1f6873149eed1e8068425ee111125139fe67b872c867ca6d1440b",
+  "schema_version": 1,
+  "state_sha256": "b0bcffa34c9c2fd7f887e20c79a890d8d338e87ec26599bba53706dfc403f28d",
+  "total_questions": 104
+}

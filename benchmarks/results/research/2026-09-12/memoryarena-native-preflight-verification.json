@@ -1,0 +1,57 @@
+{
+  "adapter_commit": "b4f3d32",
+  "adapter_sha256": "9d53d396a4b8079b3897933c85f93a14036cd95a3d554fc14d1d02ce049d8a4b",
+  "checks": [
+    "native loopback server ready",
+    "unmodified upstream client initializes/adds/wraps",
+    "real BGE retrieval returns exact source",
+    "complete memory block fits 4096 tokens",
+    "other task cannot retrieve source",
+    "reinitialization starts fresh memory",
+    "source and external-trace provenance survive shutdown and reset"
+  ],
+  "client_sha256": "9efc1c037c9b94d4b17e5d69c4ed80bd5ad7c7f982688b56903b7e0116d62bff",
+  "context_sha256": "8e95774ace8c2d2cf8327eb470eb598e5ddda57080c7be756c76077eaa0f0a8c",
+  "embedding_assets": {
+    "assets_sha256": {
+      "config.json": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd",
+      "model_optimized.onnx": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+      "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+      "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+      "tokenizer_config.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+    },
+    "dependencies": {
+      "fastembed": "0.8.0",
+      "numpy": "2.5.3",
+      "onnxruntime": "1.30.0"
+    },
+    "model": "BAAI/bge-small-en-v1.5",
+    "version": "fastembed-0.8.0"
+  },
+  "engine_sha256": "fea99f047a2a14c90b6c8a0fb4b68ff3975facea4feffec5a4149254f8434732",
+  "expected_server_native_exit_code": -15,
+  "installed_source_commit": "f9665fb",
+  "limits": "Authored compatibility and durability only. No MemoryArena dataset, task agent, judge or task-success score was run. Server exit -15 is the explicitly requested daemon shutdown; preflight success requires exit zero.",
+  "memory_block_tokens": 130,
+  "package_path": "/private/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/engine.py",
+  "parent_log_sha256": "baa4dace45c915f95f93ae287101283afe913c3acbfd40c78ba2932a9ec91c21",
+  "parent_native_exit_code": 0,
+  "passed": true,
+  "preflight_commit": "ff15bf9",
+  "raw_report": {
+    "path": "data/benchmarks/memoryarena-native-preflight-ff15bf9.json",
+    "sha256": "eade086f595a3733bbd500272706caba482fdbeff967f3b9766fdb47adf143fc"
+  },
+  "runner_sha256": "69aeae91e9fbb6191976b6650bb51f6507911191c65fa79b9930f50836320a64",
+  "server_log_sha256": "6256ec16dbf870c908fd99c9084efddf9cf748a690572ae7b9b796f7831cd4b9",
+  "server_native_exit_code": -15,
+  "shutdown_signal_sent": true,
+  "source_tests": {
+    "log_sha256": "6f0b943e21ae39d60582364599d1db8ac60dd35ef3c43f844163292c9d8ea1cc",
+    "native_exit_code": 0,
+    "passed": 7,
+    "tool_session_id": 98105
+  },
+  "tool_session_id": 26584,
+  "upstream_commit": "6cd9de14b71915e39ac742a20dc33785e14b6aab"
+}

@@ -13,6 +13,8 @@ import logging
 
 import asyncpg
 
+from prme.storage.pg.vector_sql import VectorSQL, resolve_vector_sql
+
 logger = logging.getLogger(__name__)
 
 # DDL split into individual statements for asyncpg (no multi-statement execute).
@@ -81,6 +83,8 @@ _NODES_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes (node_type)",
     "CREATE INDEX IF NOT EXISTS idx_nodes_lifecycle ON nodes (lifecycle_state)",
     "CREATE INDEX IF NOT EXISTS idx_nodes_scope ON nodes (scope)",
+    "CREATE INDEX IF NOT EXISTS idx_nodes_session "
+    "ON nodes (user_id, session_id, scope, created_at, id)",
     "CREATE INDEX IF NOT EXISTS idx_nodes_content_tsv ON nodes USING GIN (content_tsv)",
 ]
 
@@ -147,7 +151,7 @@ async def initialize_pg_database(
     pool: asyncpg.Pool,
     *,
     embedding_dim: int = 384,
-) -> None:
+) -> VectorSQL:
     """Create all PRME tables, indexes and extensions in PostgreSQL.
 
     Safe to call multiple times (idempotent via IF NOT EXISTS).
@@ -157,50 +161,73 @@ async def initialize_pg_database(
         embedding_dim: Dimension for the pgvector embedding column on
             the nodes table. Must match the configured embedding model.
     """
+    if type(embedding_dim) is not int or embedding_dim < 1:
+        raise ValueError("embedding_dim must be a positive integer")
     async with pool.acquire() as conn:
         # Extensions
         for ext_sql in _EXTENSIONS:
             await conn.execute(ext_sql)
+
+        vector_sql = await resolve_vector_sql(conn)
 
         # Events
         await conn.execute(_EVENTS_TABLE)
         for idx in _EVENTS_INDEXES:
             await conn.execute(idx)
 
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS event_materializations (
+                event_id UUID PRIMARY KEY REFERENCES events(id),
+                status VARCHAR NOT NULL DEFAULT 'pending',
+                attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """)
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_materializations_pending "
+            "ON event_materializations (status, attempts, event_id)"
+        )
+        await conn.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")
+
         # Nodes (without embedding column initially)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS event_extractions (
+                event_id UUID PRIMARY KEY REFERENCES events(id),
+                work_order BIGSERIAL NOT NULL UNIQUE,
+                status VARCHAR NOT NULL DEFAULT 'pending',
+                attempts INTEGER NOT NULL DEFAULT 0,
+                generation BIGINT NOT NULL DEFAULT 0,
+                plan_id UUID,
+                lease_expires_at TIMESTAMPTZ,
+                next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                last_error VARCHAR,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """)
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_extractions_status ON event_extractions(status, work_order)")
+        await conn.execute("ALTER TABLE event_extractions ADD COLUMN IF NOT EXISTS plan_revision INTEGER DEFAULT 1")
+
         await conn.execute(_NODES_TABLE)
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS event_time TIMESTAMPTZ")
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ttl_days INTEGER")
+        # Nullable on migration: legacy vectors have unknown provenance until
+        # explicitly re-embedded; never guess their model from today's config.
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding_model VARCHAR")
+        await conn.execute("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding_version VARCHAR")
         for idx in _NODES_INDEXES:
             await conn.execute(idx)
 
-        # Add embedding vector column if it doesn't exist.
-        has_embedding = await conn.fetchval(
-            "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name = 'nodes' AND column_name = 'embedding'"
+        # Resolve the same table as the other DDL, never a same-named relation
+        # elsewhere in the database. PostgreSQL places an index in its parent
+        # table's schema; native IF NOT EXISTS handles this for HNSW too.
+        await conn.execute(
+            f"ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding {vector_sql.type}({embedding_dim})"
         )
-        if has_embedding is None:
-            await conn.execute(
-                f"ALTER TABLE nodes ADD COLUMN embedding vector({embedding_dim})"
-            )
-            logger.info(
-                "Added embedding column to nodes (dim=%d)", embedding_dim
-            )
-
-        # Create HNSW index on embedding column (if not exists).
-        # Use a DO block to conditionally create since IF NOT EXISTS
-        # isn't supported for HNSW indexes on all PG versions.
-        await conn.execute("""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_indexes
-                    WHERE indexname = 'idx_nodes_embedding_hnsw'
-                ) THEN
-                    CREATE INDEX idx_nodes_embedding_hnsw
-                    ON nodes USING hnsw (embedding vector_cosine_ops)
-                    WITH (m = 16, ef_construction = 64);
-                END IF;
-            END
-            $$
+        await conn.execute(f"""
+            CREATE INDEX IF NOT EXISTS idx_nodes_embedding_hnsw
+            ON nodes USING hnsw (embedding {vector_sql.cosine_ops})
+            WITH (m = 16, ef_construction = 64)
         """)
 
         # Edges
@@ -209,6 +236,10 @@ async def initialize_pg_database(
             await conn.execute(idx)
 
         # Operations
+        from prme.storage.profile_publication import HEADS_DDL
+        await conn.execute(HEADS_DDL)
+        from prme.storage.profile_work import PROFILE_WORK_DDL
+        await conn.execute(PROFILE_WORK_DDL)
         await conn.execute(_OPERATIONS_TABLE)
         for idx in _OPERATIONS_INDEXES:
             await conn.execute(idx)
@@ -218,4 +249,13 @@ async def initialize_pg_database(
         for idx in _LEXICAL_DOCUMENTS_INDEXES:
             await conn.execute(idx)
 
+        from prme.storage.derivation_registry import initialize_pg
+        await initialize_pg(conn)
+        from prme.storage.profile_registry import initialize_pg as initialize_profiles
+        await initialize_profiles(conn)
+        from prme.storage.consolidation_publication import initialize_pg as initialize_consolidations
+        await initialize_consolidations(conn)
+
     logger.info("PostgreSQL schema initialized (embedding_dim=%d)", embedding_dim)
+
+    return vector_sql

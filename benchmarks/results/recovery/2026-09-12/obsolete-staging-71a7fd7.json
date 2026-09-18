@@ -1,0 +1,15 @@
+{
+  "commit": "71a7fd7",
+  "backend": "duckdb",
+  "publication_error": "ValueError",
+  "retired_revision": 1,
+  "current_revision": 2,
+  "vector_staging_before": 0,
+  "vector_staging_after": 4,
+  "published_graph_nodes": 0,
+  "finding": "Obsolete work cannot publish graph state but can still write external index staging.",
+  "limits": "One synthetic component probe with fixed embeddings. No cleanup is enabled; no user-visible false memory demonstrated.",
+  "matching_lexical_documents_after": 2,
+  "reproducer": "tests/test_obsolete_derivation_staging.py",
+  "expected_failure": "UnexpectedStaging; strict xfail documents the unimplemented external-stage fence"
+}

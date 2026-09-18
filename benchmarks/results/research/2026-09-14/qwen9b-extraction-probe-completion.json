@@ -1,0 +1,14 @@
+{
+  "kind": "authored-extraction-model-selection-completion",
+  "recorded_at": "2026-09-14T06:12:14.852831+00:00",
+  "result_sha256": "2e054cb19d85d6662c962d7781e8e9da325712cbd0d5a0250a2bcbfea550dcb3",
+  "model": "prme-qwen3.5:9b-8k",
+  "model_digest": "1805492e55c52f46b37bbf5f4f5a8db62081b6b7c4b97c05b569d7871c7c95d8",
+  "native_process_exit_code": 0,
+  "complete": true,
+  "limitations": [
+    "The twelve authored cases are development probes, not held-out accuracy.",
+    "The model run was not separately preregistered; it reused the already frozen cases, prompt, schema, and assessment workflow.",
+    "Elapsed time was observed under different host conditions and is not a controlled performance comparison."
+  ]
+}

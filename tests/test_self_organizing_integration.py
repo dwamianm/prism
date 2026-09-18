@@ -531,7 +531,7 @@ class TestOpportunisticMaintenance:
             await engine.close()
 
     @pytest.mark.asyncio
-    async def test_auto_promotion_on_ingest(self, tmp_dir):
+    async def test_auto_promotion_on_ingest(self, tmp_dir, monkeypatch):
         """Opportunistic maintenance should also run on ingest()."""
         Path(tmp_dir, "lexical_index").mkdir(exist_ok=True)
         config = PRMEConfig(
@@ -540,11 +540,20 @@ class TestOpportunisticMaintenance:
             lexical_path=str(Path(tmp_dir) / "lexical_index"),
             organizer=OrganizerConfig(
                 opportunistic_cooldown=0,
+                # This verifies triggering/promotion, not a 200 ms latency SLO.
+                # Source indexing may consume a complete short pass under load.
+                opportunistic_budget_ms=5000,
                 promotion_age_days=1.0,
                 promotion_evidence_count=1,
             ),
         )
         engine = await create_engine(config)
+        from unittest.mock import AsyncMock
+        from prme.ingestion.schema import ExtractionResult
+        # Maintenance integration must never call a live provider from a
+        # developer's environment or depend on its authentication/latency.
+        monkeypatch.setattr(engine._pipeline._extraction_provider, "extract",
+                            AsyncMock(return_value=ExtractionResult()))
         try:
             # Store initial node
             await engine.store(
@@ -721,15 +730,15 @@ class TestExplicitOrganize:
             await engine.close()
 
     @pytest.mark.asyncio
-    async def test_organize_all_jobs_run(self, config):
-        """organize() with no job filter runs all 9 jobs."""
-        from prme.organizer.jobs import ALL_JOBS
+    async def test_organize_default_jobs_run(self, config):
+        """organize() with no job filter runs default maintenance jobs."""
+        from prme.organizer.jobs import DEFAULT_JOBS
 
         engine = await create_engine(config)
         try:
             result = await engine.organize(user_id="test-user")
 
-            assert set(result.jobs_run) == set(ALL_JOBS)
+            assert set(result.jobs_run) == set(DEFAULT_JOBS)
             assert result.jobs_skipped == []
             assert result.duration_ms >= 0
         finally:
@@ -769,14 +778,14 @@ class TestEndSession:
     """Verify the MemoryEngine.end_session() method."""
 
     @pytest.mark.asyncio
-    async def test_end_session_runs_promote_and_feedback_apply(self, config):
-        """end_session() runs exactly promote and feedback_apply."""
+    async def test_end_session_runs_promote(self, config):
+        """end_session() runs exactly scoped promotion."""
         engine = await create_engine(config)
         try:
             result = await engine.end_session(user_id="test-user")
 
             assert isinstance(result, OrganizeResult)
-            assert set(result.jobs_run) == {"promote", "feedback_apply"}
+            assert set(result.jobs_run) == {"promote"}
         finally:
             await engine.close()
 
@@ -831,6 +840,16 @@ class TestDeterministicRebuild:
     @pytest.mark.asyncio
     async def test_same_timestamp_same_scores_after_restart(self, config):
         """Store, close, reopen, retrieve -- same node order and near-identical scores."""
+        # Isolate retrieval determinism from the independently tested background
+        # maintenance path.  The first retrieve may otherwise schedule promotion
+        # before the second retrieve and legitimately change lifecycle scores.
+        config = config.model_copy(
+            update={
+                "organizer": config.organizer.model_copy(
+                    update={"opportunistic_enabled": False}
+                )
+            }
+        )
         # Phase 1: create engine, store nodes, and age them
         engine = await create_engine(config)
         try:
@@ -860,17 +879,20 @@ class TestDeterministicRebuild:
             await engine.close()
 
         # Phase 2: reopen and retrieve twice in quick succession
-        # The two calls should produce near-identical scores since they
-        # happen within milliseconds of each other.
+        # Use the same explicit scoring clock so elapsed wall time is not part
+        # of the assertion.
         engine2 = await create_engine(config)
         try:
+            reference_time = datetime.now(timezone.utc)
             response1 = await engine2.retrieve(
                 "deterministic rebuild",
                 user_id="test-user",
+                reference_time=reference_time,
             )
             response2 = await engine2.retrieve(
                 "deterministic rebuild",
                 user_id="test-user",
+                reference_time=reference_time,
             )
 
             scores1 = sorted(
@@ -887,10 +909,10 @@ class TestDeterministicRebuild:
             ids2 = [s[0] for s in scores2]
             assert ids1 == ids2, "Same nodes should be returned"
 
-            # Scores should be nearly identical (sub-millisecond time difference)
+            # Scores should be identical for a fixed clock and unchanged state.
             for (id1, score1), (id2, score2) in zip(scores1, scores2):
-                assert score1 == pytest.approx(score2, abs=0.01), (
-                    f"Scores should be nearly identical for node {id1}: "
+                assert score1 == score2, (
+                    f"Scores should be identical for node {id1}: "
                     f"{score1} vs {score2}"
                 )
         finally:

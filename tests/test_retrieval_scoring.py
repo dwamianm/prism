@@ -10,6 +10,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
+import pytest
 
 from prme.models.nodes import MemoryNode
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
@@ -147,6 +148,77 @@ class TestEpistemicFiltering:
 
         assert len(kept) == 1
         assert len(excluded) == 0
+
+    @pytest.mark.parametrize("state", [None, "unknown", "false", "expired", "invalid"])
+    def test_filter_excludes_unresolved_or_false_conditions(self, state):
+        metadata = {} if state is None else {"condition_state": state}
+        node = MemoryNode(
+            id=uuid4(),
+            user_id="user-1",
+            node_type=NodeType.FACT,
+            content="If approved, deploy.",
+            epistemic_type=EpistemicType.CONDITIONAL,
+            metadata=metadata,
+        )
+
+        kept, excluded = filter_epistemic(
+            [_make_candidate(node=node)], RetrievalMode.DEFAULT
+        )
+
+        assert kept == []
+        expected = state if state in {"false", "expired"} else "unknown"
+        assert excluded[0].reason == f"condition_filtered:{expected}"
+
+    def test_filter_keeps_confirmed_condition(self):
+        node = MemoryNode(
+            id=uuid4(),
+            user_id="user-1",
+            node_type=NodeType.FACT,
+            content="If approved, deploy.",
+            epistemic_type=EpistemicType.CONDITIONAL,
+            metadata={"condition_state": "true"},
+        )
+
+        kept, excluded = filter_epistemic(
+            [_make_candidate(node=node)], RetrievalMode.DEFAULT
+        )
+
+        assert [candidate.node.id for candidate in kept] == [node.id]
+        assert excluded == []
+
+    @pytest.mark.parametrize(
+        ("state", "effective_type"),
+        [
+            ("true", EpistemicType.ASSERTED),
+            ("unknown", EpistemicType.HYPOTHETICAL),
+            ("false", EpistemicType.DEPRECATED),
+            ("expired", EpistemicType.DEPRECATED),
+        ],
+    )
+    def test_condition_state_controls_epistemic_weight(self, state, effective_type):
+        node = MemoryNode(
+            id=uuid4(), user_id="user-1", node_type=NodeType.FACT,
+            content="If approved, deploy.", epistemic_type=EpistemicType.CONDITIONAL,
+            metadata={"condition_state": state},
+        )
+        trace = compute_composite_score(
+            _make_candidate(node=node), DEFAULT_SCORING_WEIGHTS,
+            now=node.updated_at,
+        )
+        assert trace.epistemic_weight == EPISTEMIC_WEIGHTS[effective_type]
+
+    def test_confirmed_condition_uses_configured_asserted_weight(self):
+        node = MemoryNode(
+            id=uuid4(), user_id="user-1", node_type=NodeType.FACT,
+            content="If approved, deploy.", epistemic_type=EpistemicType.CONDITIONAL,
+            metadata={"condition_state": "true"},
+        )
+        trace = compute_composite_score(
+            _make_candidate(node=node), DEFAULT_SCORING_WEIGHTS,
+            epistemic_weights={"asserted": 0.83, "conditional": 0.11},
+            now=node.updated_at,
+        )
+        assert trace.epistemic_weight == 0.83
 
 
 # ---------------------------------------------------------------------------

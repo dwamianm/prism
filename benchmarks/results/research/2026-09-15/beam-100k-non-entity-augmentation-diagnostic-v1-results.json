@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "beam-multi-pack-retrieval-diagnostic-result",
+  "status": "complete; failed registered cohort rule",
+  "source": {
+    "prme_revision": "b24f385320ef26d908fd2033ec1682869f06b862",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "policy": {
+    "evidence_augmentation_top_k": 10,
+    "evidence_augmentation_max_sources": 1,
+    "evidence_augmentation_score_decay": 0.99,
+    "evidence_augmentation_anchor_policy": "non_entity",
+    "max_per_source": 1,
+    "max_per_evidence": null
+  },
+  "conversation_0": {
+    "registration": "beam-100k-non-entity-augmentation-diagnostic-conv0-registration.json",
+    "registration_sha256": "203b4a1d3e8952df4a0fff51b0a504aed1b280782c7f001a3154e33e6406b95b",
+    "baseline": {"correct": 13, "total": 20, "average_score": 0.5675},
+    "candidate": {"correct": 13, "total": 20, "average_score": 0.52833},
+    "paired": {
+      "pass_level_wins": 1,
+      "pass_level_losses": 1,
+      "pass_level_ties": 18,
+      "mean_score_delta": -0.03917,
+      "win": "100K_0_q5_event_ordering",
+      "loss": "100K_0_q19_temporal_reasoning"
+    }
+  },
+  "conversation_1": {
+    "registration": "beam-100k-non-entity-augmentation-diagnostic-conv1-registration.json",
+    "registration_sha256": "41b769568679cb4bc0e9a4b17c55f90c06d60dfa62c0e61606b596720b6259da",
+    "baseline": {"correct": 15, "total": 20, "average_score": 0.64125},
+    "candidate": {"correct": 15, "total": 20, "average_score": 0.620415},
+    "paired": {
+      "pass_level_wins": 0,
+      "pass_level_losses": 0,
+      "pass_level_ties": 20,
+      "mean_score_delta": -0.02083,
+      "original_contradiction_loss_fixed": "100K_1_q2_contradiction_resolution remained a pass at 0.5"
+    }
+  },
+  "combined": {
+    "baseline_correct": 28,
+    "candidate_correct": 28,
+    "questions": 40,
+    "pass_level_wins": 1,
+    "pass_level_losses": 1,
+    "mean_score_delta": -0.0300025
+  },
+  "decision": "The non-entity policy identifies and removes the entity-route mechanism behind the prior API-key contradiction loss, but it fails the registered two-pack rule because another pass is lost and the combined mean delta is negative. Keep the policy opt-in and do not advance it unchanged to an untouched confirmation.",
+  "evaluation_limit": "The baseline answers came from earlier executions while candidate answers were regenerated through mutable hosted aliases. On the lost temporal question, the first twenty retrieval results were unchanged and the only candidate-only top-50 passage was unrelated, so answer-generation variance or context sensitivity is a material alternative explanation. Future answer trials should contemporaneously rerun both arms with repeated, interleaved samples.",
+  "claim_boundary": "This is a failure-informed diagnostic over two examined conversations. It is not an untouched confirmation, an official-scale result, or a cross-product comparison.",
+  "artifact_sha256": {
+    "conversation_0_execution": "b94cb0db4eb8214b3eb292e2850ef4fdd1b09a3c555b22e82416d75801bb2507",
+    "conversation_1_execution": "a3a5528bc423c2c0a92945e7f3b47f16a996f92bcf097319e214a2c839a76ef0"
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "reviewed_at": "2026-09-12T17:34:59.891105+00:00",
+  "reviewer": "Current Codex session; model identity not independently pinned",
+  "packet_sha256": "67e0f588cb043f47f44ea64fa54d44b770c8417082bf7437184ac129b742502b",
+  "plan_sha256": "a441a87d256680a1e64fe389133d8d5df55ea0724a1f957a8ac7824a226af209",
+  "counts": {
+    "accept": 19,
+    "ambiguous": 2,
+    "reject": 7
+  },
+  "reviews": [
+    {
+      "id": "088837c05be619e62a6ef4a081e6f95f8f3c338badec50357ff59932a2de58f3",
+      "category": "knowledge-update",
+      "verdict": "accept",
+      "reason": "Gives the updated high score of 132.",
+      "failure_tags": []
+    },
+    {
+      "id": "11e909bcd0499f64b2fb0f6e81b85e3dfab91d4fa83dae2b3c016e74fb6d6284",
+      "category": "single-session-user",
+      "verdict": "accept",
+      "reason": "Directly identifies the prior stance as staunch atheism.",
+      "failure_tags": []
+    },
+    {
+      "id": "14a7398da66c20fcdd7d8f402a6cb81ab5fe13d089b8da639ccada97c58d82f7",
+      "category": "abstention",
+      "verdict": "accept",
+      "reason": "Declines to calculate savings because the bus cost is missing.",
+      "failure_tags": []
+    },
+    {
+      "id": "223f478b552bb575e852e25a4262f68fcdcae5c05bc03ed2c91704b44911a518",
+      "category": "knowledge-update",
+      "verdict": "ambiguous",
+      "reason": "Reports both 1250 and an estimate near 1300 without clearly identifying which is the current count. The qualification may be source-faithful, but current-value selection is unclear.",
+      "failure_tags": [
+        "unclear_current_value"
+      ]
+    },
+    {
+      "id": "2a840dfe362fd60c0946d7e0f7b7539463d4f4e3b1f14f5e2f9ff8b9abffbdd3",
+      "category": "single-session-user",
+      "verdict": "accept",
+      "reason": "Directly gives the lighter shade of gray.",
+      "failure_tags": []
+    },
+    {
+      "id": "39b727d35b3f61451d2839cf56c2191c824b4ee7cd11676d079a5fb99308adba",
+      "category": "knowledge-update",
+      "verdict": "accept",
+      "reason": "Identifies the most recent estimate as near 1300, preserving uncertainty while matching the reference count.",
+      "failure_tags": []
+    },
+    {
+      "id": "422df2f12bc3235d21e6e0f8fbbf27b9c0b4ccfb4571d301c7ae8b8a3714efdf",
+      "category": "abstention",
+      "verdict": "accept",
+      "reason": "Explicitly declines precise savings. The additional transport prices are labeled estimates and are not asserted as the actual savings.",
+      "failure_tags": []
+    },
+    {
+      "id": "471ec2247847bc9fb989de9fe0b1fbc17ae879db5a72445f0f29efa50e03c260",
+      "category": "single-session-user",
+      "verdict": "accept",
+      "reason": "Directly identifies the prior stance as staunch atheism.",
+      "failure_tags": []
+    },
+    {
+      "id": "49921c167c789df37a13f8eefc97175c45942eead09552ce2c5af259723d0284",
+      "category": "temporal-reasoning",
+      "verdict": "accept",
+      "reason": "Correctly selects the Python webinar and explains the relative ordering.",
+      "failure_tags": []
+    },
+    {
+      "id": "4ded526b9b3641b53619a5c19fa119f08bf2d8971bd94740b70ef1cc67d33461",
+      "category": "single-session-preference",
+      "verdict": "reject",
+      "reason": "Refuses the personalized guitar-advice request without using the relevant preference.",
+      "failure_tags": [
+        "abstention_on_preference"
+      ]
+    },
+    {
+      "id": "4eb7d7144481ad5a7924e258131e6640e13d529e6ca6b195270ba90a772f882b",
+      "category": "single-session-preference",
+      "verdict": "reject",
+      "reason": "Refuses the personalized guitar-advice request without using the relevant preference.",
+      "failure_tags": [
+        "abstention_on_preference"
+      ]
+    },
+    {
+      "id": "524bf92438c7ebb01463cd9b69d7284ebffbc01cbaaa7394ce0a1e008ef1992e",
+      "category": "temporal-reasoning",
+      "verdict": "accept",
+      "reason": "Correctly identifies the cough as the earlier issue.",
+      "failure_tags": []
+    },
+    {
+      "id": "5f4673575048229b98f6c8e2ec8e8831e2963e43ef80a1d77e08771ff9c56469",
+      "category": "single-session-preference",
+      "verdict": "accept",
+      "reason": "Mentions stew and yogurt and supplies specific yogurt preparation tips; this meets the partial-preference rubric despite its unhelpful opening.",
+      "failure_tags": []
+    },
+    {
+      "id": "6d9f9441d97cff7d567883c9586b4afca3daa05237ec4b1b7a3f4fc1fd04e62f",
+      "category": "single-session-user",
+      "verdict": "accept",
+      "reason": "Directly gives the lighter shade of gray.",
+      "failure_tags": []
+    },
+    {
+      "id": "7a25ec3b06f4fa23d4dfc4cec15159cf2ac99f6762ae5aed6e6dbc8e2f31161c",
+      "category": "single-session-assistant",
+      "verdict": "reject",
+      "reason": "Abstains instead of identifying Pennsylvania.",
+      "failure_tags": [
+        "abstention_on_answerable"
+      ]
+    },
+    {
+      "id": "8033bbab4ad946a850fa93155a0593b58e5791267ab363f3d5ff042507f57e36",
+      "category": "single-session-assistant",
+      "verdict": "reject",
+      "reason": "Abstains instead of identifying Memrise.",
+      "failure_tags": [
+        "abstention_on_answerable"
+      ]
+    },
+    {
+      "id": "84d54f7c584ef591a09cba017a92446c255afa0844e011de410323ad19d65ed1",
+      "category": "multi-session",
+      "verdict": "reject",
+      "reason": "States a 10-minute excess despite giving times of 4:10 and 4:22; the stated answer is arithmetically wrong.",
+      "failure_tags": [
+        "arithmetic_error"
+      ]
+    },
+    {
+      "id": "919d600fc593a30e9bbe322785c842c6e97a38198770d0450c11ed5976b32d01",
+      "category": "single-session-assistant",
+      "verdict": "accept",
+      "reason": "Directly identifies Memrise.",
+      "failure_tags": []
+    },
+    {
+      "id": "b9a8445177cb8eda287f0f6907e27f7c4fec4aeb7b0ed6532235af40f7eb2fe8",
+      "category": "single-session-preference",
+      "verdict": "ambiguous",
+      "reason": "Recalls the stew experience and yogurt interest but offers no advice. The partial-preference rubric may credit the recall despite incomplete task completion.",
+      "failure_tags": [
+        "preference_recall_without_advice"
+      ]
+    },
+    {
+      "id": "bd31262024c3c0c4604a47cab2b1aa076e546be2606e15212ed6aa1ca88b275d",
+      "category": "multi-session",
+      "verdict": "accept",
+      "reason": "Gives the correct count of two and identifies the films.",
+      "failure_tags": []
+    },
+    {
+      "id": "c7515e465cd1d22030d1cefad96b7b394633087ceb8b38c6ff54a2b792f6cda2",
+      "category": "single-session-assistant",
+      "verdict": "accept",
+      "reason": "Directly identifies Pennsylvania.",
+      "failure_tags": []
+    },
+    {
+      "id": "ccbd0027aa4d8768fbcd1cc12b78b2034ca3980a48d11e7103d05f0cddaa86b6",
+      "category": "knowledge-update",
+      "verdict": "accept",
+      "reason": "Gives the updated high score of 132.",
+      "failure_tags": []
+    },
+    {
+      "id": "d324cd16bf9144c19a480dbb23543e5baa0e84e2ef87baaf926896590f476e50",
+      "category": "temporal-reasoning",
+      "verdict": "reject",
+      "reason": "Abstains instead of selecting the earlier Python webinar.",
+      "failure_tags": [
+        "abstention_on_answerable"
+      ]
+    },
+    {
+      "id": "d9321dccb0b28cfb1bd4db451bedd0bfe1089e9bba435de0f9bb3e62bf47ab80",
+      "category": "temporal-reasoning",
+      "verdict": "accept",
+      "reason": "Correctly identifies the cough as the earlier issue.",
+      "failure_tags": []
+    },
+    {
+      "id": "f257bd43a1e1ada5c026ccdb118b704703b67d6d9da3ae09a8e3514e2b134809",
+      "category": "multi-session",
+      "verdict": "accept",
+      "reason": "Gives the correct count of two and identifies the films.",
+      "failure_tags": []
+    },
+    {
+      "id": "f5d981e70bc14f824c16f6fafd9d3e46ff9a21c233b9d23cf40c87fedaf45030",
+      "category": "abstention",
+      "verdict": "accept",
+      "reason": "Correctly abstains from the unsupported frequency question.",
+      "failure_tags": []
+    },
+    {
+      "id": "f994262e7f8bd06bbc4da68a176ac2edfd4f70a434dca06662e7720c015608d7",
+      "category": "multi-session",
+      "verdict": "reject",
+      "reason": "Provides the target and finishing times but refuses to compute their 12-minute difference.",
+      "failure_tags": [
+        "arithmetic_refusal"
+      ]
+    },
+    {
+      "id": "fdd227ae54a68f57e0f760449cbf7985449cb93b40882ab45998b2742559a642",
+      "category": "abstention",
+      "verdict": "accept",
+      "reason": "Correctly distinguishes the mentioned doctor and abstains from the unsupported frequency question.",
+      "failure_tags": []
+    }
+  ],
+  "limits": "Arm-blinded development spot check completed before local judging. Not independent human annotation or an accuracy estimate; ambiguous cases must remain separate from binary judge agreement."
+}

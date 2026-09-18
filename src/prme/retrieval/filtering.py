@@ -2,9 +2,9 @@
 
 Filters candidates based on epistemic type, lifecycle state, and retrieval
 mode per RFC-0005 Section 6 and RFC-0003 Section 8. DEFAULT mode excludes
-HYPOTHETICAL and DEPRECATED candidates, UNVERIFIED candidates below the
-confidence threshold, and SUPERSEDED/ARCHIVED candidates; EXPLICIT mode
-retains all.
+HYPOTHETICAL and DEPRECATED candidates, unresolved or false CONDITIONAL
+candidates, UNVERIFIED candidates below the confidence threshold, and
+SUPERSEDED/ARCHIVED candidates; EXPLICIT mode retains all.
 """
 
 from __future__ import annotations
@@ -30,11 +30,15 @@ def filter_epistemic(
     candidates: list[RetrievalCandidate],
     mode: RetrievalMode = RetrievalMode.DEFAULT,
     unverified_threshold: float | None = None,
+    *,
+    filter_lifecycle: bool = True,
 ) -> tuple[list[RetrievalCandidate], list[ExcludedCandidate]]:
     """Filter candidates by epistemic type and lifecycle state.
 
     In DEFAULT mode:
     - Excludes HYPOTHETICAL and DEPRECATED candidates.
+    - Excludes CONDITIONAL candidates unless ``metadata.condition_state`` is
+      explicitly ``"true"``.
     - Excludes UNVERIFIED candidates with confidence <= threshold (0.30).
     - Excludes SUPERSEDED and ARCHIVED candidates.
     - Includes UNVERIFIED candidates above the threshold.
@@ -49,6 +53,8 @@ def filter_epistemic(
               EXPLICIT keeps all.
         unverified_threshold: Optional override for the UNVERIFIED confidence
             threshold. If None, uses module-level UNVERIFIED_CONFIDENCE_THRESHOLD.
+        filter_lifecycle: Apply the retrieval lifecycle exclusions. Exact APIs
+            that already select lifecycle states can disable this independently.
 
     Returns:
         Tuple of (kept candidates, excluded candidate records).
@@ -69,7 +75,7 @@ def filter_epistemic(
         node = candidate.node
 
         # Lifecycle filter: exclude superseded/archived nodes.
-        if node.lifecycle_state in DEFAULT_EXCLUDED_LIFECYCLE:
+        if filter_lifecycle and node.lifecycle_state in DEFAULT_EXCLUDED_LIFECYCLE:
             excluded.append(
                 ExcludedCandidate(
                     node_id=node.id,
@@ -78,10 +84,23 @@ def filter_epistemic(
             )
             continue
 
-        # Epistemic filter: exclude HYPOTHETICAL/DEPRECATED.
+        # Epistemic filter: exclude HYPOTHETICAL/DEPRECATED and treat an
+        # unevaluated condition as hypothetical per RFC-0003.
         epistemic_type = node.epistemic_type
 
-        if epistemic_type in DEFAULT_EXCLUDED_EPISTEMIC:
+        if epistemic_type == EpistemicType.CONDITIONAL:
+            raw_state = (node.metadata or {}).get("condition_state", "unknown")
+            condition_state = raw_state if raw_state in {"unknown", "true", "false", "expired"} else "unknown"
+            if condition_state != "true":
+                excluded.append(
+                    ExcludedCandidate(
+                        node_id=node.id,
+                        reason=f"condition_filtered:{condition_state}",
+                    )
+                )
+            else:
+                kept.append(candidate)
+        elif epistemic_type in DEFAULT_EXCLUDED_EPISTEMIC:
             excluded.append(
                 ExcludedCandidate(
                     node_id=node.id,

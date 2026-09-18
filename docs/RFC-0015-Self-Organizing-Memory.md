@@ -141,6 +141,12 @@ Opportunistic maintenance runs when ALL of the following are true:
 2. At least `OrganizerConfig.opportunistic_cooldown` seconds have elapsed since the last maintenance pass (default: 3600 seconds / 1 hour).
 3. The current operation is `retrieve()` or `ingest()` (not `store()`, which is a fast path).
 
+Request-triggered passes inherit the requesting `user_id`, including pending
+materialization, promotion, and archival. Cooldowns are independent per tenant,
+with at most one background pass in flight. The in-memory cooldown table retains
+up to 4,096 recently maintained users; eviction permits an earlier next pass,
+never a change of scope. An explicit unscoped runner call is operator maintenance.
+
 The `last_maintained_at` timestamp is stored in the engine's runtime state (not persisted — it resets on restart, which is intentional: the first operation after a restart triggers maintenance).
 
 ### 4.3 Maintenance Jobs
@@ -161,7 +167,10 @@ LIMIT batch_size
 
 Default thresholds `[HYPOTHESIS]`:
 - `promotion_age_threshold`: 7 days
-- `promotion_evidence_threshold`: 2 evidence refs
+- `promotion_evidence_threshold`: 1 evidence ref. Normal `store()` creates one
+  provenance reference, so a higher default prevents ordinary memories from
+  ever reaching stable state unless the application separately reinforces them.
+  Deployments that require corroboration can raise this threshold.
 - `batch_size`: 50
 
 Nodes meeting both criteria are promoted to STABLE via the existing `promote()` transition. Each promotion is logged as a `PROMOTE` operation with `trigger: "opportunistic_auto"`.
@@ -189,7 +198,14 @@ Pending signals are identified by `FEEDBACK_EVENT` operations that have not yet 
 
 ### 4.4 Time Budget
 
-The entire maintenance pass MUST complete within `OrganizerConfig.opportunistic_budget_ms` milliseconds (default: 200ms). If the budget is exhausted mid-pass, remaining work is deferred to the next pass. The engine MUST NOT block user-facing operations for longer than the budget.
+PRME schedules the pass in the background so the caller does not await it.
+`OrganizerConfig.opportunistic_budget_ms` (default 200ms) is a cooperative budget:
+the runner checks its deadline before each job query and node mutation, and gives
+pending materialization only the remaining time. Once exhausted, it defers further
+work. A database or index write already in flight may finish after the deadline;
+it is not cancelled midway through a durable operation. This supersedes the
+original hard wall-clock guarantee, which synchronous backend operations cannot
+provide safely. Node-count bounds remain in effect.
 
 ### 4.5 Failure Handling
 
@@ -235,12 +251,196 @@ async def organize(
 | `deduplicate` | Detect and merge duplicate entities and facts | RFC-0001 |
 | `alias_resolve` | Resolve entity aliases (e.g., "JS" → "JavaScript") | RFC-0001 |
 | `summarize` | Generate summary nodes from event windows | RFC-0001, RFC-0006 |
-| `feedback_apply` | Apply all pending feedback signals | RFC-0008, RFC-0009 |
-| `centrality_boost` | Recalculate graph centrality salience boost | RFC-0007 §11 |
+| `feedback_apply` | Legacy global tuner; explicit unscoped operator selection only | RFC-0008, RFC-0009 |
+| `centrality_boost` | Proposed graph centrality salience experiment; not registered | RFC-0007 §11 |
 | `tombstone_sweep` | Enforce retention policies and create tombstones | RFC-0007 §9 |
 | `snapshot_generation` | Generate entity snapshots for active entities | RFC-0006 |
 | `consolidate` | Cluster similar memories into summary abstractions | RFC-0006 |
 | `index_compaction` | Evict vector/lexical entries for inactive nodes | RFC-0002 |
+
+Index compaction preserves prepared vector identities with no graph node yet
+(RFC-0016). Their durable staging claims distinguish them from ordinary orphaned
+index entries. This includes derivations, entity profiles, and extractive
+consolidation publications. Published inactive nodes remain eligible for eviction.
+Automatic collection of abandoned consolidation identities is not yet exposed;
+an offline rebuild collects them.
+
+Consolidation currently produces an extractive excerpt of up to three sources,
+not a lossless abstraction of the entire cluster. Clusters and their summaries
+must retain one user and scope. Excerpts preserve complete text, source identity,
+episode dates, validity windows, and epistemic labels. Automatic retirement
+requires recorded coverage matching the current source and an unchanged active
+summary. Omitted, changed, pinned, recent, high-confidence, or other-namespace
+sources remain active. Legacy summaries without coverage metadata cannot
+authorize retirement. Similarity alone is not evidence that details are redundant.
+
+Greedy cluster discovery orders sources by owner, scope, source time and content,
+with UUID only as a final exact-duplicate tie-breaker. Centroid and excerpt-source
+ties use the same source order after confidence. Equivalent histories therefore
+do not change clustering merely because ingestion generated different UUIDs.
+
+Summary creation uses a checksummed `ConsolidationPublication`. A request hash
+covers every source snapshot, selected-source order, exact rendered content,
+scores, policy version, and embedding identity. The owner, scope, and sorted
+source identities form its lineage key. An unchanged active request reuses one
+summary. A changed source under the same lineage creates a new generation; new
+node and `DERIVED_FROM` edges, predecessor archival, generation advancement, and
+the complete `CONSOLIDATION_PUBLISHED` operation commit atomically. PostgreSQL
+writes pgvector in that transaction. DuckDB first journals
+`CONSOLIDATION_PREPARED`, reserves the artifact identity, and stages the exact
+vector and lexical document under a changing database fence. A restart reuses
+that saved numerical input without re-embedding. Independent engines either
+return the same committed identity or retry a transient staging conflict.
+
+The lineage is intentionally exact for a fixed source-identity set. If clustering
+adds or removes a source, it forms a new lineage; the earlier summary remains a
+separate generated view until normal lifecycle maintenance archives it. This
+avoids guessing that two changing similarity clusters represent the same concept.
+
+`forget_consolidated()` rechecks each source and its summary inside a backend
+transaction. Coverage, summary content, owner/scope, active state, source event
+time, pinning, age, confidence and retained evidence must still match the
+retirement policy. The source transition, supersedence edge and checksummed
+`CONSOLIDATION_RETIRED` before/after record commit together. The record includes
+the summary snapshot and policy clock, using the lossless metadata snapshot
+encoding. An ineligible or already retired source is a no-op. Storage failures
+propagate; there is no fallback that archives a source after supersedence fails.
+External index eviction follows commit and remains repairable.
+
+PostgreSQL locks both endpoints in UUID order. DuckDB makes a real `updated_at`
+write on both endpoints and rolls it back when retirement is ineligible; a no-op
+assignment can be optimized away. Local schema initialization removes
+the `idx_nodes_lifecycle` ART index: changing that indexed field could replace
+a row and bypass a concurrent column claim. Owner, type and scope indexes remain.
+Raw external SQL, custom mutable-column indexes and historical unjournaled
+retirements are outside this guarantee.
+
+Duplicate and alias discovery partitions exact/string matches by owner and scope.
+Semantic searches request the same scope and verify each returned node against
+the durable graph before proposing a pair. Both apply functions recheck owner
+and scope before transferring evidence, redirecting edges, superseding a node,
+or linking aliases. This also applies to unscoped operator runs and manually
+supplied candidate lists. The same owner's PERSONAL and PROJECT memories must
+remain independent even when their text or entity names match. These checks do
+not implement the broader namespace grant hierarchy in RFC-0004.
+
+Automatic merges additionally preserve memory/entity type, source and epistemic
+classification, session, event time, validity end, retention/pinning and complete
+metadata. Unresolved personal references are excluded from canonical identity
+merges and alias links. Non-entity duplicate copies require exact content and the
+same validity start; two separately admitted observations are not interchangeable.
+Similarity remains a proposal signal, not proof of equivalence. Duplicate jobs
+report `pairs_not_applied` alongside candidates/merges and the policy version.
+Known compatible name variants can merge; purely semantic alias candidates only
+create unverified `RELATES_TO` links, even above the former merge threshold.
+Apply functions recheck actual names and values rather than trusting candidate
+labels. These rules supersede automatic similarity-only deduplication and alias
+merging. See [the operational contract](ENTITY-IDENTITY.md) for limitations and
+historical-data behavior.
+
+The separate `consolidate_knowledge()` convenience API also processes one scope
+at a time. Its optional `scope` argument is available on the async engine and
+sync client; omission visits each scope separately. Profile graph nodes and
+lexical entries inherit the source scope. Earlier generated entity profiles
+are excluded from source matching so they cannot perpetuate mixed-scope content
+or recursively include themselves. On an explicit rebuild, existing profile
+names are reconsidered even if source counts fall below automatic discovery's
+threshold. Profiles without two eligible same-scope sources are archived and
+evicted; underlying source nodes and events remain intact. This handles obsolete
+legacy derived profiles in the scopes actually processed, without moving source
+memories between namespaces. It does not repair prior duplicate evidence writes.
+
+Profile format version 2 uses complete literal entity-name boundaries, preserving
+possessives without matching `Ann` inside `Joanna`. Distinct source identities
+remain distinct even when their text or first 80 characters match. It includes
+whole source excerpts with source IDs, event/recording dates, validity and
+original epistemic/provenance labels. The generated association is INFERRED /
+SYSTEM_INFERRED, with confidence capped by the configured inferred matrix value
+and the least-confident included source. It uses the inferred FAST decay profile;
+it does not upgrade quoted conditional or hypothetical statements into observed
+facts. Event evidence references and included source-node identities are retained.
+
+`max_profile_tokens`, exposed by both the async engine and sync client, is now
+an exact limit under the configured packing tokenizer,
+including the complete profile header, separators and source metadata. Oversized
+sources are skipped intact so smaller later sources can fit; omitted sources
+remain active. Metadata records included/available source counts, encoding and
+tokens. If no complete source fits, no new profile is published. Names and token
+limits are validated before storage access. Existing profiles take this format
+on explicit rebuild; prior artifacts are not silently rewritten. Name matching
+is still a heuristic association.
+
+Source collection uses scoped pages ordered by immutable node ID, rather than a
+newest-5,000 cutoff. Explicit entity names retain only matching source nodes in
+memory; automatic discovery still examines the full active scope. An interrupted
+scan fails before any profile publication or retirement. Source snapshots are
+rechecked at publication; the paginated scan itself is not a global database
+snapshot of concurrent writes.
+
+Each replacement now prepares an embedding before publishing graph state. Local
+DuckDB stages the exact numerical vector and commits the lexical document first;
+PostgreSQL writes pgvector and generated text search in its graph transaction.
+`ProfilePublication` is a separate primitive from assertion supersedence. Only
+active inferred entity profiles can be published; only same-owner, same-scope,
+same-entity profiles can be retired. It checks exact source/prior-node snapshots,
+the complete active prior-profile set and a database publication generation.
+New profile creation, predecessor archival, generation advancement and an
+immutable `PROFILE_PUBLISHED` operation commit together. The operation retains
+the complete plan (including numerical embedding) as a JSON string plus checksum.
+Replay returns the committed identity without reactivating subsequently archived
+profiles. Local index eviction of predecessors happens after commit.
+
+Failures now propagate instead of incrementing a success count. Source changes
+and concurrent rebuilds raise public `StaleProfileError`; a fresh explicit call
+rebuilds the plan. Cancellation or lost acknowledgement never compensates by
+deleting a possibly committed view. A call spanning several entities/scopes
+still consists of separate publications, and retiring unsupported old profiles
+uses the existing archive path.
+
+Profile preparation is now journaled as a checksummed `PROFILE_PREPARED` operation
+before external staging. Its fixed node identity, complete inputs and numerical
+embedding survive restart. Matching requests reuse the saved plan; a different
+explicit request atomically abandons pending predecessors and records
+`PROFILE_PREPARATION_REPLACED`. Prepared identities reserve the same global
+artifact namespace used by derivations. Managed staging holds a changing work-row
+epoch against replacement and publication for the duration of the native write;
+a no-op SQL update is insufficient on supported DuckDB builds.
+
+`profile_jobs`, `resume_profile` and `process_profiles` expose scoped inspection
+and explicit recovery through both Python clients. Successful graph publication
+and completed work state commit together. Recovery never repeats model inference;
+changed dependencies fail visibly. A cooperative budget applies between jobs,
+and failed attempts move behind unattempted work. Missing work and reservation
+rows are restored from validated immutable operations at startup. Corrupt journal
+records remain unregistered with identity-only diagnostics and prevent retired
+index collection; legacy ownership collisions remain ambiguous. Reconstructed
+work resets operational attempt diagnostics, which are not immutable history.
+
+Local CLI equivalents require `--user-id`: `profile-jobs`, `process-profiles`,
+`resume-profile`, `discard-profile` and `collect-profile-staging`. Batch operations
+accept a scope, limit and cooperative budget. JSON results remain on stdout;
+diagnostics use stderr. Failures and blocked collection return nonzero status.
+An explicit local file cannot be redirected by an ambient database URL. The
+[profile guide](ENTITY-PROFILES.md) describes exact results and exit behavior.
+
+`discard_profile` explicitly abandons owned unpublished work and appends an
+immutable `PROFILE_PREPARATION_DISCARDED` receipt. It is idempotent, cannot retire
+completed publications, and shares the changing work epoch with native staging.
+Startup reconstruction validates discard receipts before restoring abandoned work.
+
+`collect_profile_staging` explicitly reclaims uniquely owned abandoned inputs.
+It validates the journal, graph absence and exact native contents while holding
+a work-epoch transaction around each native deletion. Lexical deletion precedes
+vector removal; an immutable `PROFILE_STAGE_COLLECTED` receipt follows both.
+Cancellation, native failures and process exit retain discoverable work, even if
+both deletions completed before acknowledgement. Failed attempts move behind
+unattempted work. Unknown ownership blocks reclamation; mismatched entries are
+retained. PostgreSQL acknowledges eligible abandoned preparations without graph
+mutation, because it has no external pre-publication indexes. Source nodes,
+immutable receipts and reservations remain intact. There is no automatic profile
+scheduler or implicit collection of unpublished profiles by ordinary compaction. Publication completion describes the graph commit; predecessor
+index eviction occurs afterward. An interrupted call must not be described as
+completed without checking its saved work state.
 
 ### 5.4 OrganizeResult
 
@@ -267,7 +467,7 @@ The host application SHOULD call `organize()` at these lifecycle boundaries:
 
 | Trigger | Recommended jobs | Rationale |
 |---|---|---|
-| Session end | `promote`, `feedback_apply` | Finalize session learnings |
+| Session end | `promote` | Promote eligible memories without changing ranking weights |
 | Application startup | `decay_sweep`, `archive`, `promote` | Catch up after idle period |
 | Periodic (if host has a scheduler) | All | Full maintenance pass |
 | After bulk import | `deduplicate`, `alias_resolve`, `summarize` | Clean up imported data |
@@ -285,7 +485,89 @@ async def end_session(
 ) -> OrganizeResult
 ```
 
-This runs a lightweight organize pass with jobs `["promote", "feedback_apply"]` and a 1-second budget. It is semantically equivalent to calling `organize()` with those parameters.
+This runs a lightweight organize pass with jobs `["promote"]` and a 1-second budget. It is semantically equivalent to calling `organize()` with those parameters.
+
+Duplicate and alias merge application uses a backend transaction covering the
+canonical evidence union, complete relationship copies, source retirement and
+one supersedence edge. Admission is rechecked on current values inside the
+transaction. PostgreSQL takes ordered node locks before reading evidence;
+DuckDB transactions retain the connection lock until native work finishes.
+Conflicting DuckDB writes can fail safely and be retried.
+
+`ORGANIZER_MERGED` records complete before/after node values, original and
+published relationships, kind, score and a versioned identity for the unordered
+pair. The record is a checksummed JSON string inside the operation payload,
+preserving numeric bytes through PostgreSQL JSONB. A repeat verifies the record
+and returns its original identity without rewriting graph state. Deterministic
+copy IDs also recognize exact partial transfers from older versions; conflicting
+copies abort publication.
+
+Unverified alias links do not retire nodes and remain separate from merge
+operations. New links use `unverified_alias_proposals_v1`: the unordered node
+pair determines the operation and edge IDs, and the backend transaction commits
+the `RELATES_TO` edge with a checksummed `ALIAS_PROPOSED` record containing both
+complete node inputs and the edge output. Admission rechecks active lifecycle,
+owner, scope, entity type and compatible provenance under the node locks. A
+repeat returns the saved outcome without another edge. Preexisting random-ID
+alias links are reused without writing a record that would claim they were
+created atomically; their historical inputs remain unavailable.
+
+Versioned proposals can be decided through `explicit_alias_proposal_review_v1`.
+The proposal operation determines one review identity. Acceptance revalidates
+the exact node snapshots and proposal edge under the backend lock, then commits
+a verified `RELATES_TO` edge with `ALIAS_PROPOSAL_ACCEPTED`; both entities remain
+active. Rejection commits `ALIAS_PROPOSAL_REJECTED` and no edge. Each checksummed
+record retains the exact original proposal payload, owner, scope, reviewer ID,
+reason, timestamp, decision, and verified edge when present. Matching retries
+return the first decision and conflicting decisions fail. Ordinary traversal
+follows the accepted edge and continues to exclude the original unverified edge.
+
+The `tombstone_sweep` job publishes TTL archival through
+`ttl_expiration_v1`. Current owner, lifecycle, pinning, creation time and TTL are
+revalidated under the backend lock. The archived node and deterministic,
+checksummed `TOMBSTONE_SWEEP` record commit together on DuckDB and PostgreSQL;
+the record preserves complete before/after state and the RFC-0007 tombstone
+fields. Repeated and concurrent attempts converge on one operation. Index
+eviction occurs after commit and is repairable by compaction.
+
+External index eviction follows commit. Compaction repairs failures, while the
+durable retired lifecycle excludes stale index candidates. Cancellation and lost
+acknowledgments do not imply rollback. Full historical graph reconstruction still
+requires records for other organizer/manual mutations; this operation does not
+retroactively invent those inputs.
+
+Single-node `promote`, `archive` and `deprecate` now validate the current state
+and commit the update with a version 1 `LIFECYCLE_CHANGED` record in one backend
+transaction. The checksummed record retains complete before/after nodes and
+the action under `lifecycle_transitions_v1`. PostgreSQL locks the target row
+before reading it, preventing stale promotion from restoring an archived node.
+DuckDB retains its connection lock until native work finishes, including when
+the caller is cancelled. Both backends implement contested-to-deprecated
+transitions. Existing organizer summary logs remain separate from this atomic
+per-node record.
+
+Invalid or repeated terminal transitions still raise `ValueError`; there is no
+caller-supplied idempotency key for these actions. After an ambiguous outcome,
+inspect the current node with retired states included. Index eviction follows
+archival and remains repairable by compaction. These records cover the named
+transition methods and new alias proposals, not arbitrary low-level
+`update_node` calls or older unjournaled mutations. Full historical replay
+remains incomplete.
+
+`ALL_JOBS` lists available jobs. `DEFAULT_JOBS` excludes the legacy global
+`feedback_apply` tuner. Default `organize()` calls use `DEFAULT_JOBS`, with or
+without a user scope. Explicit scoped requests containing `feedback_apply`
+raise `ValueError` before any job or pending-work drain runs. Pending anonymous
+signals remain untouched. A trusted operator can explicitly call
+`organize(jobs=["feedback_apply"])` without a scope to retain legacy behavior.
+That operation affects every user of the engine and is not scoped learning.
+
+`centrality_boost` is not registered. RFC-0007 §11 labels its in-degree formula
+as a hypothesis, and the repository has no benchmark evidence supporting a
+retrieval or retention benefit. Returning a successful no-op misrepresents
+maintenance coverage and makes default runs harder to audit. A future
+implementation must first define drift-free persistence and pass a controlled
+quality and retention study before joining `ALL_JOBS`.
 
 ---
 
@@ -306,7 +588,7 @@ class OrganizerConfig(BaseModel):
 
     # Auto-promotion thresholds [HYPOTHESIS]
     promotion_age_days: float = 7.0
-    promotion_evidence_count: int = 2
+    promotion_evidence_count: int = 1
 
     # Decay profile mapping (epistemic_type → DecayProfile)
     decay_profile_mapping: dict[str, str] = {
@@ -372,7 +654,13 @@ The saturation controls (RFC-0008 §6) apply to the base values, not to the virt
 
 ### 8.3 RFC-0009 (Feedback Loop)
 
-Feedback signals are recorded as `FEEDBACK_EVENT` operations during retrieval. They are applied to node base values either:
+The originally proposed feedback lifecycle below is not the current implementation.
+Owner-scoped receipts and relevance records are described in RFC-0017; they do
+not automatically change nodes or weights. The separate legacy memory-only
+tuner requires explicit unscoped operator selection. The following remains a
+design proposal:
+
+Feedback signals would be recorded as `FEEDBACK_EVENT` operations during retrieval and applied to node base values either:
 - During opportunistic maintenance (Layer 2, §4.3.3), or
 - During explicit organize (Layer 3, `feedback_apply` job), or
 - Inline during `ingest()` if the ingestion pipeline detects a correction signal.
@@ -401,7 +689,37 @@ Virtual decay metadata (`decay_profile`, `last_reinforced_at`, `reinforcement_bo
 - `last_reinforced_at` is the timestamp of the most recent `REINFORCE` operation (or `created_at` if none).
 - `reinforcement_boost` is computable from the sequence of `REINFORCE` operations.
 
-All fields satisfy the deterministic rebuild requirement (RFC-0001 §4.6).
+This is the rebuild requirement, not a statement that historical mutations are
+fully replayable. New explicit `reinforce()` calls validate ownership and evidence,
+read current values, apply increments and append a versioned `REINFORCE` operation
+in one backend transaction. Its checksummed record retains complete before/after
+nodes and the optional evidence event. Recorded outputs are read back from the
+database so stored numeric precision is preserved. PostgreSQL locks the target
+row before reading; DuckDB holds the connection lock through native completion.
+Concurrent successful calls accumulate. An aborted transaction publishes neither
+the node change nor the operation.
+
+New store-time oscillation penalties likewise commit the target confidence and
+one checksummed `PENALTY` record in the same transaction. The record captures
+the exact owner-scoped node chain and supersedence edges used by the bounded
+lexical policy. Its deterministic target identity prevents repeat application
+after concurrency or restart. This narrows the unlogged-mutation gap; it does
+not provide a complete historical replay engine or validate the heuristic's
+confidence calibration.
+
+The current `additive_caps_v1` policy preserves the existing +0.15 boost / +0.05
+confidence increments, 0.5 / 0.95 increment caps and above-cap values. It does not
+prove that cited evidence semantically supports the claim, re-evaluate conditions,
+apply every proposed RFC-0008 saturation rule, or deduplicate separate calls.
+An optional owner-scoped `request_id` UUID binds a confirmation to its node and
+evidence. Same-request retries reuse the version 2 journal record, including after
+restart; changed requests using that key fail without mutation. Calls without a
+key or with a new UUID remain separate signals. Version 1 records retain their
+original checksum semantics and are not retroactively keyed. See
+[the confirmation guide](REINFORCEMENT.md) for sync, async and HTTP use.
+Older unjournaled reinforcement and other historical organizer/manual mutations
+cannot be reconstructed from these new records. Full historical replay remains
+incomplete.
 
 ### 9.3 Backend Agnostic
 
@@ -454,5 +772,34 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 6. **`[HYPOTHESIS]` Retrieval quality:** Compare retrieval precision@5 between a system with no organizing, virtual-decay-only, and full three-layer organizing across 100 sessions. The hypothesis is that each layer incrementally improves precision.
 
 ---
+
+## Hierarchical source excerpts in PRME
+
+Daily, weekly, and monthly summaries retain full selected source content with
+source IDs, epistemic/source labels, and temporal qualifiers. They are marked
+INFERRED, not promoted to newly observed facts. Their stable lineage is keyed by
+user, scope, level, and period; summaries retain that namespace. The immutable
+request hash covers every selected source snapshot, rendered content, scores,
+policy, and embedding identity. Calendar windows use UTC event time (falling
+back to creation time), including when rolling historical daily summaries into
+weeks and months. Source collection uses stable-ID pages over the complete active
+owner store. An unscoped organizer run must opt into the internal operator scan;
+the public enumeration API continues to require an owner.
+
+These are selected excerpts, not exhaustive or semantically compressed accounts.
+Sources omitted by the per-summary item limit remain intact. Nested excerpts can
+be large; the context packer must skip oversized entries rather than truncate
+their qualifications. Unchanged requests reuse one summary identity. A changed
+selected source publishes a deterministic new generation while archiving the
+active predecessor in the same graph transaction. Summary creation, provenance
+edges, generation advancement, predecessor archival, and the complete
+`CONSOLIDATION_PUBLISHED` record commit together. DuckDB first persists
+`CONSOLIDATION_PREPARED`, then stages the exact vector and lexical document under
+the consolidation fence; PostgreSQL writes pgvector inside publication. A retry
+reuses saved embedding work, and concurrent engines converge on one active
+identity. The first managed publication includes active legacy
+`source-excerpts-v1` nodes for the same bucket in its atomic predecessor set.
+Retired external-index entries are evicted after commit and remain repairable by
+compaction.
 
 *End of RFC-0015*

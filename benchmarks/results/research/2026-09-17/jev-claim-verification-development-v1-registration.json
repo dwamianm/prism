@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "kind": "jev-claim-verification-development-registration",
+  "created_at": "2026-09-17T20:22:08.700344+00:00",
+  "claim_boundary": "Passing establishes development evidence for pinned Jev on fresh complete-document claim verification. It does not establish an external confirmation, product integration, or universal quality.",
+  "source": {
+    "prme_revision": "ae6115529235c360e22ff9febf32de52d55108cf",
+    "runner_sha256": "10005d65fa6fa2a714185d80f337f3eef7c3f9d8158bef8732f37e02107e0f9c"
+  },
+  "dataset": {
+    "name": "LLM-AggreFact",
+    "repository": "https://huggingface.co/datasets/lytang/LLM-AggreFact",
+    "revision": "981dfd0bd8e58e7238a9ab92b2e6ea44bce918e4",
+    "license": "cc-by-nd-4.0",
+    "split": "development",
+    "sha256": "ca9a5bda9561bbc6f7327ef81ab41727fa10e96f96e9dc74ef32ba3af3c1d8a8",
+    "test_access": "forbidden_no_test_path"
+  },
+  "exclusions": {
+    "observed_cases": 3038,
+    "observed_identity_sha256": "ea2a19015b4af30bffea603f36174a7f2fc5eaf0668ef2761d53cb4a5af63ad8",
+    "artifacts": [
+      {
+        "path": "benchmarks/results/research/2026-09-16/llm-aggrefact-bespoke-sentence-fusion-v3c-result.json",
+        "sha256": "e6420a0151c305d24fb994523f6b18be715f601521124d9383c9de4ce4174b54",
+        "matched_ids": 1100
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-16/llm-aggrefact-evidence-cascade-v2-partial-result.json",
+        "sha256": "8fb646e3cd507a6e32474209f45b80f7269ca31b5258cd86546fb1b47df5cbfc",
+        "matched_ids": 1100
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-16/llm-aggrefact-factcg-v1-result.json",
+        "sha256": "fd29b06dee6f35002031ee3fa17e5cf3e554e3c20c0331e70754bb409b2b9122",
+        "matched_ids": 1100
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-16/llm-aggrefact-structured-stack-v1b-result.json",
+        "sha256": "68bcaa446f78f3376e42c611492e260ec2a616151546d070026715c108556e20",
+        "matched_ids": 1100
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-17/llm-aggrefact-atomic-partition-deepseek-observed-scoring.json",
+        "sha256": "96c4cfa83b7767f662f5986de3b34968fd5c6d4f91fb9764f6569aa7d8865454",
+        "matched_ids": 310
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-17/llm-aggrefact-atomic-partition-qwen35-observed-scoring.json",
+        "sha256": "fd94a4c7a2ca2c9be149894413f2f429c05ec0ef0b5f4cee210c077dfba63035",
+        "matched_ids": 310
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-17/llm-aggrefact-evidence-lattice-observed.json",
+        "sha256": "005ba211e5babf5ac981a5a13aa6b1765143899669b8a1034cdfab8d70421370",
+        "matched_ids": 310
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-17/llm-aggrefact-hhem-windowed-v2-result.json",
+        "sha256": "67ae7ddaa09a9bac9e92828f234b4390e80d2affb59f209c6d4a89651bb92e4f",
+        "matched_ids": 780
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-17/llm-aggrefact-support-certificate-v1-result.json",
+        "sha256": "bb716a4b927132a7547a09019f53b3b1f28fc3c77610c14b15d7898f89082380",
+        "matched_ids": 800
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-17/llm-aggrefact-typed-alignment-v1-invalid-result.json",
+        "sha256": "080dacc3ed7a4d8544d424a6b8f8b0d0aa8652ce41d828b582a905d9a3a4da1d",
+        "matched_ids": 48
+      },
+      {
+        "path": "benchmarks/results/research/2026-09-17/llm-aggrefact-typed-reference-v2-result.json",
+        "sha256": "7920890f553426bcb5062c6119ef7587e8c66e71143c7848d71aaca5f2d07c64",
+        "matched_ids": 310
+      }
+    ]
+  },
+  "cohort": {
+    "role": "development",
+    "selection_seed": "prme-jev-claim-verification-development-v1",
+    "eligible_datasets": [
+      "AggreFact-XSum",
+      "ClaimVerify",
+      "ExpertQA",
+      "FactCheck-GPT",
+      "Lfqa",
+      "Reveal",
+      "TofuEval-MediaS",
+      "TofuEval-MeetB"
+    ],
+    "per_label_per_dataset": 25,
+    "cases": 400,
+    "counts_by_label": {
+      "0": 200,
+      "1": 200
+    },
+    "counts_by_dataset_label": {
+      "AggreFact-XSum": {
+        "0": 25,
+        "1": 25
+      },
+      "ClaimVerify": {
+        "0": 25,
+        "1": 25
+      },
+      "ExpertQA": {
+        "0": 25,
+        "1": 25
+      },
+      "FactCheck-GPT": {
+        "0": 25,
+        "1": 25
+      },
+      "Lfqa": {
+        "0": 25,
+        "1": 25
+      },
+      "Reveal": {
+        "0": 25,
+        "1": 25
+      },
+      "TofuEval-MediaS": {
+        "0": 25,
+        "1": 25
+      },
+      "TofuEval-MeetB": {
+        "0": 25,
+        "1": 25
+      }
+    },
+    "selected_identity_sha256": "97f0474756443fb26460f2ad4b95cf6270e37e3b6e099895dd3a009f51480fdc",
+    "document_chars_sum": 1285353,
+    "document_chars_max": 50228,
+    "claim_chars_max": 422
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "complete_document_claim_support",
+    "state_fields": [
+      "claim",
+      "source_document"
+    ],
+    "questions": {
+      "fully_supported": {
+        "type": "noul",
+        "instructions": "Does the source document fully establish the entire claim exactly as written, using only the source document?",
+        "criteria": {
+          "true": "Every independently checkable assertion and every meaningful qualifier in the claim follows from the source document.",
+          "false": "Any assertion or qualifier is missing, only partially supported, ambiguous, hypothetical, conditional, attributed differently, or contradicted."
+        }
+      },
+      "has_unsupported_content": {
+        "type": "noul",
+        "instructions": "Does any meaningful part of the claim fail to follow from the source document?",
+        "criteria": {
+          "true": "At least one independently checkable assertion or qualifier is missing, partial, ambiguous, hypothetical, conditional, misattributed, or contradicted.",
+          "false": "The source document establishes every assertion and qualifier in the claim."
+        }
+      },
+      "relationship": {
+        "type": "choice",
+        "instructions": "Which option best describes how the complete source document relates to the complete claim?",
+        "criteria": {
+          "fully_supported": "Every assertion and qualifier in the claim is established.",
+          "partially_supported": "Some claim content is established, but at least one assertion or qualifier is missing, weaker, or ambiguous.",
+          "contradicted": "The source establishes information incompatible with at least one material part of the claim.",
+          "not_addressed": "The source does not provide evidence for the material claim."
+        }
+      }
+    },
+    "questions_sha256": "b07fe89bde8d9f895af4bf817fffea81a1b934bc687a577de57997a1f2674086",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "decision_arms": {
+      "choice_top": "relationship.choice == fully_supported",
+      "direct_noul": "fully_supported.noul > 0.5",
+      "conservative_agreement": "choice_top and fully_supported.noul > 0.5 and has_unsupported_content.noul < 0.5"
+    },
+    "threshold_operator": "strict",
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_source_text": false,
+    "test_access": "forbidden_no_test_path"
+  },
+  "evaluation": {
+    "gates_per_arm": {
+      "claims_evaluated_min": 400,
+      "response_validity_min": 396,
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "balanced_accuracy_min": 0.75,
+      "false_support_rate_max": 0.1
+    },
+    "selection": "Among arms passing every gate, choose greatest supported recall, then precision, then balanced accuracy, then lexicographically smallest name.",
+    "decision_rule": "Do not integrate Jev or access an external test split unless at least one frozen development arm passes every gate."
+  }
+}

@@ -24,8 +24,16 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from prme.models.nodes import MemoryNode
+from prme.models.learning import RankingMultipliers
+from prme.retrieval.ranking_adjustments import adjusted_weights
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
-from prme.retrieval.models import QueryAnalysis, RetrievalCandidate, ScoreTrace
+from prme.retrieval.models import (
+    QueryAnalysis,
+    RetrievalCandidate,
+    ScoreAdjustment,
+    ScoreProvenance,
+    ScoreTrace,
+)
 from prme.types import DECAY_LAMBDAS, EPISTEMIC_WEIGHTS, DecayProfile, EpistemicType, LifecycleState, QueryIntent
 
 
@@ -150,6 +158,8 @@ _UPDATE_LANGUAGE_RE = re.compile(
     r"|upgraded\s+to"
     r"|new\s+\S+\s+is"
     r"|effective\s+immediately"
+    r"|\b(?:changed|moved)\b[^.!?\n]{0,80}\bnow\b"
+    r"|\bupdated\b"
     r")",
     re.IGNORECASE,
 )
@@ -167,6 +177,26 @@ _CURRENT_STATE_QUERY_RE = re.compile(
     r"|^(?:do|does|am|are|have|has)\s+I\b"  # questions about current state
     r"|\bdo\s+I\s+(?:go|have|use|own|keep|play|attend|work)\b"
     r")",
+    re.IGNORECASE,
+)
+
+# Present-tense state questions imply "current" in ordinary conversation, but
+# only justify recency reweighting when the retrieved set contains an explicit
+# update. This avoids making unrelated newer memories outrank an older stable
+# fact merely because the caller omitted the word "current".
+_IMPLICIT_CURRENT_STATE_QUERY_RE = re.compile(
+    r"(?:^\s*who\s+(?:is|are)\b"
+    r"|^\s*what\s+(?:\w+\s+){1,4}(?:does|is|has)\b)",
+    re.IGNORECASE,
+)
+
+# In "What <category> does <subject> use?" questions, the category often names
+# the answer class rather than text expected in evidence ("infrastructure" ->
+# "Kubernetes"). Exact overlap is then dominated by generic subject/verb terms.
+_RELATIONAL_ANSWER_CLASS_QUERY_RE = re.compile(
+    r"^\s*what\s+"
+    r"(?![^?\n]*\b(?:and|or)\b[^?\n]*\bdoes\b)"
+    r"(?:\w+\s+){1,4}does\b",
     re.IGNORECASE,
 )
 
@@ -191,8 +221,8 @@ def _is_current_state_query(query_analysis: QueryAnalysis) -> bool:
 
     Returns True if the query text contains words like "current", "currently",
     "now", "latest", "today", "at the moment", "these days", "presently",
-    OR if the intent is TEMPORAL with no specific past time reference
-    (i.e., time_from and time_to are both None).
+    Historical comparisons and aggregation require earlier evidence too.
+    A TEMPORAL intent without a parsed date does not imply current state.
 
     Args:
         query_analysis: The analyzed query.
@@ -200,22 +230,21 @@ def _is_current_state_query(query_analysis: QueryAnalysis) -> bool:
     Returns:
         True if the query is asking about current state.
     """
-    from prme.types import QueryIntent
-
-    # Check for current-state keywords in query text.
-    if _CURRENT_STATE_QUERY_RE.search(query_analysis.query):
-        return True
-
-    # TEMPORAL intent with no specific past time reference implies
-    # "what is the current state?" rather than "what happened at time X?"
-    if (
-        query_analysis.intent == QueryIntent.TEMPORAL
-        and query_analysis.time_from is None
-        and query_analysis.time_to is None
-    ):
-        return True
-
-    return False
+    if query_analysis.is_aggregation:
+        return False
+    # Duration questions need the starting episode even when their subject is
+    # current ("How long have I lived in my current apartment?").
+    if re.search(r"\b(how\s+long|since\s+when|when\s+did|elapsed\s+time)\b", query_analysis.query, re.IGNORECASE):
+        return False
+    if re.search(r"\b(before|after|previously|formerly|originally|used to)\b", query_analysis.query, re.IGNORECASE):
+        return False
+    explicit_current = _CURRENT_STATE_QUERY_RE.search(query_analysis.query) is not None
+    if query_analysis.intent == QueryIntent.TEMPORAL and not explicit_current:
+        return False
+    return bool(
+        explicit_current
+        or _IMPLICIT_CURRENT_STATE_QUERY_RE.search(query_analysis.query)
+    )
 
 
 # Compiled regex for detecting recent-episodic query language.
@@ -296,6 +325,7 @@ def compute_composite_score(
     now: datetime | None = None,
     query_analysis: QueryAnalysis | None = None,
     recency_reference: datetime | None = None,
+    recency_multiplier: float = 1.0,
 ) -> ScoreTrace:
     """Compute the 8-input composite score for a single candidate.
 
@@ -332,6 +362,8 @@ def compute_composite_score(
             newest candidate in the batch), making recency meaningful even
             when all events are old relative to ``now``. When None, falls
             back to ``now``.
+        recency_multiplier: Apply an update-language boost before the shared
+            temporal, node-type, and relevance-floor scoring rules.
 
     Returns:
         ScoreTrace with all 8 component values and the composite score.
@@ -344,20 +376,37 @@ def compute_composite_score(
     effective_salience, effective_confidence = _compute_effective_scores(node, now)
 
     # Recency factor: exponential decay based on days since last update.
-    # Use updated_at if available, fall back to created_at.
+    # Use episode time for relative episode comparisons; otherwise use the
+    # ingestion/update time. Never subtract ingestion time from an episode
+    # anchor: historical imports would all appear equally recent.
     # When recency_reference is provided, compute relative recency (gap
     # between this candidate and the newest candidate) so that recency is
     # meaningful even when all events are old relative to ``now``.
-    reference_time = node.updated_at or node.created_at
+    reference_time = (
+        node.event_time or node.updated_at or node.created_at
+        if recency_reference is not None else node.updated_at or node.created_at
+    )
     recency_anchor = recency_reference or now
     days_since_update = max(0.0, (recency_anchor - reference_time).total_seconds() / 86400.0)
-    recency = math.exp(-weights.recency_lambda * days_since_update)
+    recency = min(1.0, math.exp(-weights.recency_lambda * days_since_update) * recency_multiplier)
+
+    # A condition's current state determines its effective epistemic treatment
+    # without erasing the durable fact that the claim is conditional.
+    effective_epistemic_type = node.epistemic_type
+    if node.epistemic_type == EpistemicType.CONDITIONAL:
+        condition_state = (node.metadata or {}).get("condition_state", "unknown")
+        effective_epistemic_type = {
+            "true": EpistemicType.ASSERTED,
+            "unknown": EpistemicType.HYPOTHETICAL,
+            "false": EpistemicType.DEPRECATED,
+            "expired": EpistemicType.DEPRECATED,
+        }.get(condition_state, EpistemicType.CONDITIONAL)
 
     # Epistemic weight: config override dict (str keys) or module-level default (Enum keys).
     if epistemic_weights is not None:
-        epistemic_weight = epistemic_weights.get(node.epistemic_type.value, 0.7)
+        epistemic_weight = epistemic_weights.get(effective_epistemic_type.value, 0.7)
     else:
-        epistemic_weight = EPISTEMIC_WEIGHTS.get(node.epistemic_type, 0.7)
+        epistemic_weight = EPISTEMIC_WEIGHTS.get(effective_epistemic_type, 0.7)
 
     # Path score: multi-path corroboration (tiebreaker only).
     path_score = min(candidate.path_count / 3.0, 1.0)
@@ -423,6 +472,7 @@ def score_and_rank(
     epistemic_weights: dict[str, float] | None = None,
     now: datetime | None = None,
     query_analysis: QueryAnalysis | None = None,
+    ranking_multipliers: RankingMultipliers | None = None,
 ) -> tuple[list[RetrievalCandidate], list[ScoreTrace]]:
     """Score all candidates and return them in deterministic ranked order.
 
@@ -452,9 +502,27 @@ def score_and_rank(
     Returns:
         Tuple of (sorted candidates, corresponding score traces).
     """
-    # Determine if supersedence-aware scoring applies.
-    is_current_query = (
-        query_analysis is not None and _is_current_state_query(query_analysis)
+    # Explicit current-state wording keeps the established recency behavior.
+    # For merely present-tense questions, require an update in the candidate
+    # set; otherwise unrelated newer memories can outrank an older stable fact.
+    implicit_current = bool(
+        query_analysis is not None
+        and _IMPLICIT_CURRENT_STATE_QUERY_RE.search(query_analysis.query)
+    )
+    has_update_evidence = bool(
+        query_analysis is not None
+        and any(
+            _has_update_language(candidate.node.content)
+            for candidate in candidates
+        )
+    )
+    is_current_query = bool(
+        query_analysis is not None
+        and _is_current_state_query(query_analysis)
+        and (
+            not implicit_current
+            or has_update_evidence
+        )
     )
 
     # If current-state query, compute adjusted weights: increase recency
@@ -463,6 +531,21 @@ def score_and_rank(
     # penalized. This makes newer facts rank above older ones even when
     # the older fact has higher semantic similarity.
     effective_weights = weights
+    if (
+        query_analysis is not None
+        and implicit_current
+        and not has_update_evidence
+        and _RELATIONAL_ANSWER_CLASS_QUERY_RE.search(query_analysis.query)
+    ):
+        # The literal terms after "does" usually identify the subject and a
+        # generic relation. Let semantic similarity resolve the answer class
+        # instead of rewarding those incidental overlaps. This changes only
+        # relevance composition; recency remains at the configured baseline.
+        effective_weights = ScoringWeights.model_validate({
+            **weights.model_dump(),
+            "w_semantic": weights.w_semantic + weights.w_lexical,
+            "w_lexical": 0.0,
+        })
     if is_current_query:
         target_recency = 0.25
         target_lambda = max(weights.recency_lambda, 0.05)
@@ -471,13 +554,17 @@ def score_and_rank(
             # Redistribute from semantic and lexical proportionally.
             sem_lex_total = weights.w_semantic + weights.w_lexical
             if sem_lex_total > 0:
+                # A valid custom configuration may have less semantic/lexical
+                # mass than the requested increase. Never borrow more than it
+                # owns: negative relevance weights would reward weaker matches.
+                recency_increase = min(recency_increase, sem_lex_total)
                 sem_reduction = recency_increase * (weights.w_semantic / sem_lex_total)
                 lex_reduction = recency_increase * (weights.w_lexical / sem_lex_total)
                 effective_weights = ScoringWeights(
-                    w_semantic=weights.w_semantic - sem_reduction,
-                    w_lexical=weights.w_lexical - lex_reduction,
+                    w_semantic=max(0.0, weights.w_semantic - sem_reduction),
+                    w_lexical=max(0.0, weights.w_lexical - lex_reduction),
                     w_graph=weights.w_graph,
-                    w_recency=target_recency,
+                    w_recency=weights.w_recency + recency_increase,
                     w_salience=weights.w_salience,
                     w_confidence=weights.w_confidence,
                     w_epistemic=weights.w_epistemic,
@@ -485,6 +572,8 @@ def score_and_rank(
                     recency_lambda=target_lambda,
                     temporal_boost=weights.temporal_boost,
                     node_type_boost=weights.node_type_boost,
+                    relevance_floor=weights.relevance_floor,
+                    current_update_multiplier=weights.current_update_multiplier,
                 )
 
     # Episodic recency boost: when query is about recent interactions,
@@ -501,13 +590,14 @@ def score_and_rank(
         if recency_increase > 0:
             sem_lex_total = effective_weights.w_semantic + effective_weights.w_lexical
             if sem_lex_total > 0:
+                recency_increase = min(recency_increase, sem_lex_total)
                 sem_reduction = recency_increase * (effective_weights.w_semantic / sem_lex_total)
                 lex_reduction = recency_increase * (effective_weights.w_lexical / sem_lex_total)
                 effective_weights = ScoringWeights(
-                    w_semantic=effective_weights.w_semantic - sem_reduction,
-                    w_lexical=effective_weights.w_lexical - lex_reduction,
+                    w_semantic=max(0.0, effective_weights.w_semantic - sem_reduction),
+                    w_lexical=max(0.0, effective_weights.w_lexical - lex_reduction),
                     w_graph=effective_weights.w_graph,
-                    w_recency=target_recency,
+                    w_recency=effective_weights.w_recency + recency_increase,
                     w_salience=effective_weights.w_salience,
                     w_confidence=effective_weights.w_confidence,
                     w_epistemic=effective_weights.w_epistemic,
@@ -515,7 +605,12 @@ def score_and_rank(
                     recency_lambda=effective_weights.recency_lambda,
                     temporal_boost=effective_weights.temporal_boost,
                     node_type_boost=effective_weights.node_type_boost,
+                    relevance_floor=effective_weights.relevance_floor,
+                    current_update_multiplier=effective_weights.current_update_multiplier,
                 )
+
+    if ranking_multipliers is not None:
+        effective_weights = adjusted_weights(effective_weights, ranking_multipliers)
 
     # Compute relative recency reference: use the newest event_time (or
     # updated_at/created_at) among all candidates. This makes the recency
@@ -524,11 +619,16 @@ def score_and_rank(
     # Only used for current-state queries where we need to differentiate
     # old vs new facts. For other queries (temporal, multi_session, etc.),
     # relative recency would hurt by biasing toward newer events.
+    def _ref_time(candidate: RetrievalCandidate) -> datetime:
+        return (
+            candidate.node.event_time
+            or candidate.node.updated_at
+            or candidate.node.created_at
+        )
+
     recency_ref: datetime | None = None
     if is_current_query and candidates:
-        def _ref_time(c: RetrievalCandidate) -> datetime:
-            return c.node.event_time or c.node.updated_at or c.node.created_at
-        recency_ref = max(_ref_time(c) for c in candidates)
+        recency_ref = max(_ref_time(candidate) for candidate in candidates)
 
     traces: list[ScoreTrace] = []
 
@@ -537,40 +637,45 @@ def score_and_rank(
             candidate, effective_weights, epistemic_weights, now=now,
             query_analysis=query_analysis,
             recency_reference=recency_ref,
+            recency_multiplier=2.0 if is_current_query and _has_update_language(candidate.node.content) else 1.0,
         )
 
-        # Supersedence boost: for current-state queries, candidates with
-        # update language get their recency score boosted by 2.0x.
-        if is_current_query and _has_update_language(candidate.node.content):
-            boosted_recency = min(trace.recency_factor * 2.0, 1.0)
-            # Recompute the additive score with the boosted recency.
-            additive = (
-                effective_weights.w_semantic * trace.semantic_similarity
-                + effective_weights.w_lexical * trace.lexical_relevance
-                + effective_weights.w_graph * trace.graph_proximity
-                + effective_weights.w_recency * boosted_recency
-                + effective_weights.w_salience * trace.salience
-                + effective_weights.w_confidence * trace.confidence
+        provenance = ScoreProvenance(
+            base_node_id=candidate.node.id,
+            trace=trace,
+            weights=effective_weights,
+        )
+        if (
+            is_current_query
+            and recency_ref is not None
+            and _ref_time(candidate) == recency_ref
+            and _has_update_language(candidate.node.content)
+            and trace.composite_score > 0
+            and effective_weights.current_update_multiplier > 1
+        ):
+            relevance = candidate.semantic_score + candidate.lexical_score
+            adjusted_score = (
+                trace.composite_score * effective_weights.current_update_multiplier
             )
-            composite = round(
-                additive * trace.epistemic_weight * trace.node_type_boost, 10,
-            )
-            # Create updated trace with boosted values.
-            trace = ScoreTrace(
-                semantic_similarity=trace.semantic_similarity,
-                lexical_relevance=trace.lexical_relevance,
-                graph_proximity=trace.graph_proximity,
-                recency_factor=boosted_recency,
-                salience=trace.salience,
-                confidence=trace.confidence,
-                epistemic_weight=trace.epistemic_weight,
-                path_score=trace.path_score,
-                composite_score=composite,
-                node_type_boost=trace.node_type_boost,
-            )
+            if (
+                effective_weights.relevance_floor > 0
+                and relevance < effective_weights.relevance_floor
+            ):
+                adjusted_score = min(adjusted_score, relevance)
+            if adjusted_score > trace.composite_score:
+                provenance = provenance.model_copy(update={
+                    "adjustments": provenance.adjustments + (
+                        ScoreAdjustment(
+                            kind="current_update",
+                            coefficient=adjusted_score / trace.composite_score,
+                            source_node_id=candidate.node.id,
+                        ),
+                    ),
+                })
 
-        candidate.composite_score = trace.composite_score
+        candidate.composite_score = provenance.replay_score()
         candidate.score_trace = trace
+        candidate.score_provenance = provenance
         traces.append(trace)
 
     # Deterministic sort: score descending, path_score descending, then ID ascending.

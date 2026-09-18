@@ -1,0 +1,19 @@
+{
+  "source_and_test_commit": "773a2f9",
+  "source_and_tests_unchanged_during_run": true,
+  "native_process_exit_code": 0,
+  "passed": 2494,
+  "skipped": 63,
+  "failed": 0,
+  "seconds": 660.68,
+  "python": "3.11.6",
+  "dependencies": {
+    "duckdb": "1.4.4",
+    "tantivy": "0.25.1",
+    "usearch": "2.23.0",
+    "fastembed": "0.7.4"
+  },
+  "live_postgresql": true,
+  "log_sha256": "9cfa70780df9df28961f9925c8b3df739561c95710903a40c3f94b147d0ef66e",
+  "limits": "Full repository regression, including examples and available backend/integration fixtures. 63 skipped cases remain unverified by this run. Not answer-quality or leadership evidence. Documentation-only commits advanced HEAD during execution."
+}

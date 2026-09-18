@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "kind": "summedits-proof-verification-registration",
+  "created_at": "2026-09-16T16:11:31.541512+00:00",
+  "purpose": "Test whether exhaustive atomic decomposition plus exact proof citations provides a safe and useful verifier on a fresh ten-domain external cohort",
+  "source": {
+    "prme_revision": "9bca7aef6573f2bb38297fbabc32d95fde805f2a",
+    "runner_sha256": "4a1909a4cf4682de453b0e8029de41563879e3d8e021ce1ad0466ff3fe0151a7"
+  },
+  "dataset": {
+    "name": "SummEdits",
+    "repository": "https://github.com/salesforce/factualNLG.git",
+    "revision": "b95184aba5f3bd2a3eb36fb1897c9b6394ca0207",
+    "files": {
+      "billsum": {
+        "relative_path": "data/summedits/summedits_billsum.json",
+        "sha256": "b9d28cda470febc83f654f9520e0db11296849df9d2eb0351c75573a898be2ab",
+        "expected_shape": {
+          "rows": 853,
+          "evaluation_labels": {
+            "0": 83,
+            "1": 44
+          }
+        }
+      },
+      "ectsum": {
+        "relative_path": "data/summedits/summedits_ectsum.json",
+        "sha256": "dc255beb81ff1194b9069dfe03c1f888e0c5357c117e304bb44baaaa381a718b",
+        "expected_shape": {
+          "rows": 668,
+          "evaluation_labels": {
+            "0": 71,
+            "1": 46
+          }
+        }
+      },
+      "news": {
+        "relative_path": "data/summedits/summedits_news.json",
+        "sha256": "aa06a1998cf7bfe6e40f8a79e0c10a1f77528165d8659056202c0ed679191c8e",
+        "expected_shape": {
+          "rows": 819,
+          "evaluation_labels": {
+            "0": 82,
+            "1": 51
+          }
+        }
+      },
+      "podcast": {
+        "relative_path": "data/summedits/summedits_podcast.json",
+        "sha256": "3d6c777190ff1cad633fed48b52856774e078d8a8b78ae00189df7abb506f8dc",
+        "expected_shape": {
+          "rows": 500,
+          "evaluation_labels": {
+            "0": 69,
+            "1": 55
+          }
+        }
+      },
+      "qmsumm": {
+        "relative_path": "data/summedits/summedits_qmsumm.json",
+        "sha256": "011e2b70ba291d1a75d14526fcacb156f70cb6ed66b375143768389b6db67bff",
+        "expected_shape": {
+          "rows": 431,
+          "evaluation_labels": {
+            "0": 58,
+            "1": 55
+          }
+        }
+      },
+      "sales_call": {
+        "relative_path": "data/summedits/summedits_sales_call.json",
+        "sha256": "81381ad89c8e3dd8450ee6355f847e8b76cbb134e126d5568a79a33334bb1fef",
+        "expected_shape": {
+          "rows": 520,
+          "evaluation_labels": {
+            "0": 80,
+            "1": 51
+          }
+        }
+      },
+      "sales_email": {
+        "relative_path": "data/summedits/summedits_sales_email.json",
+        "sha256": "8267fffdd318e513bde0f7efbd9226f908f1a5a2944f783902fdd0d6b0b8ccef",
+        "expected_shape": {
+          "rows": 613,
+          "evaluation_labels": {
+            "0": 97,
+            "1": 35
+          }
+        }
+      },
+      "samsum": {
+        "relative_path": "data/summedits/summedits_samsum.json",
+        "sha256": "1d65ca667e646c7cc1cde9e6b35bdf43531eeea9191c692a9ac9ec0aa84eb5b5",
+        "expected_shape": {
+          "rows": 664,
+          "evaluation_labels": {
+            "0": 73,
+            "1": 48
+          }
+        }
+      },
+      "scitldr": {
+        "relative_path": "data/summedits/summedits_scitldr.json",
+        "sha256": "b4d359277bafa11587505f0332797266b69c316c713db17376f0d99413e4b350",
+        "expected_shape": {
+          "rows": 466,
+          "evaluation_labels": {
+            "0": 87,
+            "1": 28
+          }
+        }
+      },
+      "shakespeare": {
+        "relative_path": "data/summedits/summedits_shakespeare.json",
+        "sha256": "fab3a53e1c98bc4419cedd1363a53a3ff983ea4d5982ce0414e9956031437e62",
+        "expected_shape": {
+          "rows": 814,
+          "evaluation_labels": {
+            "0": 75,
+            "1": 67
+          }
+        }
+      }
+    },
+    "source_text_policy": "External checkout only; results contain IDs, labels, decisions, integrity facts and hashes without document, summary, claims, quotations or explanations."
+  },
+  "cohort": {
+    "split": "evaluation",
+    "seed": "prme-summedits-proof-v1",
+    "per_label_per_domain": 5,
+    "excluded_prototype_ids": [
+      "63f9455b8d931ba6e664fb89_21"
+    ],
+    "max_document_chars": 48000,
+    "max_summary_chars": 4000,
+    "max_cases_per_document": 3,
+    "document_identity": "sha256_exact_utf8_text",
+    "selected_ids": [
+      "billsum_train_14480_13",
+      "billsum_train_14480_10",
+      "billsum_train_15801_20",
+      "billsum_train_14480_12",
+      "billsum_train_10541_32",
+      "billsum_train_10541_25",
+      "billsum_train_10541_11",
+      "billsum_train_15801_9",
+      "billsum_train_15801_32",
+      "billsum_train_18540_4",
+      "ectsum_SNA_q1_2021_17",
+      "ectsum_DLB_q2_2021_3",
+      "ectsum_SNA_q1_2021_21",
+      "ectsum_SNA_q1_2021_35",
+      "ectsum_COF_q3_2021_21",
+      "ectsum_OXY_q4_2021_28",
+      "ectsum_OXY_q4_2021_23",
+      "ectsum_COF_q3_2021_og",
+      "ectsum_COF_q3_2021_17",
+      "ectsum_OXY_q4_2021_17",
+      "63f9455b8d931ba6e664fb89_29",
+      "63f9455b8d931ba6e664fb89_5",
+      "63f9455b8d931ba6e664fb89_30",
+      "63f9455b8d931ba6e664fb88_2",
+      "63f9455b8d931ba6e664fb88_20",
+      "63f9455b8d931ba6e664fb84_8",
+      "63f9455b8d931ba6e664fb88_10",
+      "63f9455b8d931ba6e664fb85_5",
+      "63f9455b8d931ba6e664fb85_11",
+      "63f9455b8d931ba6e664fb84_29",
+      "spotify_podcast_2_12",
+      "spotify_podcast_4_20",
+      "spotify_podcast_3_14",
+      "spotify_podcast_3_18",
+      "spotify_podcast_4_22",
+      "spotify_podcast_4_9",
+      "spotify_podcast_7_25",
+      "spotify_podcast_3_3",
+      "spotify_podcast_2_18",
+      "spotify_podcast_7_11",
+      "q_test_18_0",
+      "q_test_17_13",
+      "q_test_16_29",
+      "q_test_18_9",
+      "q_test_16_5",
+      "q_test_16_0",
+      "q_test_15_33",
+      "q_test_15_og",
+      "q_test_18_17",
+      "q_test_15_10",
+      "sales_call_2_8",
+      "sales_call_3_16",
+      "sales_call_2_33",
+      "sales_call_1_7",
+      "sales_call_3_0",
+      "sales_call_1_3",
+      "sales_call_2_30",
+      "sales_call_1_0",
+      "sales_call_3_11",
+      "sales_call_0_5",
+      "sales_email_4_12",
+      "sales_email_2_4",
+      "sales_email_2_28",
+      "sales_email_2_8",
+      "sales_email_4_19",
+      "sales_email_3_3",
+      "sales_email_4_25",
+      "sales_email_1_13",
+      "sales_email_3_og",
+      "sales_email_3_10",
+      "samsum_train_13716074_16",
+      "samsum_train_13820270_8",
+      "samsum_train_13716074_1",
+      "samsum_train_13731241_10",
+      "samsum_train_13820270_25",
+      "samsum_train_13716509_26",
+      "samsum_train_13731241_25",
+      "samsum_train_13716509_13",
+      "samsum_train_13820270_21",
+      "samsum_train_13716074_5",
+      "B1gtK0NKwr_18",
+      "ryeT47FIIS_19",
+      "ryeT47FIIS_29",
+      "B1gtK0NKwr_37",
+      "rJIN_4lA-_14",
+      "B1gtK0NKwr_og",
+      "rJgMlhRctm_7",
+      "ryeT47FIIS_11",
+      "rJIN_4lA-_16",
+      "rJIN_4lA-_10",
+      "shakespeare_2_23",
+      "shakespeare_3_11",
+      "shakespeare_0_7",
+      "shakespeare_1_25",
+      "shakespeare_2_5",
+      "shakespeare_0_19",
+      "shakespeare_3_2",
+      "shakespeare_2_22",
+      "shakespeare_3_23",
+      "shakespeare_1_37"
+    ],
+    "selected_identity_sha256": "573c9d8d15fb95d68b0acb03d4cb5fde651beacc3fe02b66bd5b947b6990bd04"
+  },
+  "model": {
+    "provider": "ollama",
+    "name": "mistral-large-3:675b-cloud",
+    "manifest_digest": "951502e79e7f517bb49c298b597959501406b965420feacfa9ccfbce2e40d35c",
+    "remote_model": "mistral-large-3:675b",
+    "parameter_size": "675B",
+    "quantization": "FP8",
+    "base_url": "http://127.0.0.1:11434"
+  },
+  "protocol": {
+    "task": "proof_carrying_atomic_grounding",
+    "system_prompt_sha256": "caccc59d38e54aac37aa64d9ccfd0fa18cff803251dc314be28bbeebac6060fe",
+    "temperature": 0,
+    "seed": 17,
+    "schema_retries": 1,
+    "timeout_seconds": 180,
+    "concurrency": 4,
+    "acceptance": "all_atomic_claims_supported_with_exact_document_quotes_and_complete_summary_token_coverage",
+    "emit_source_text": false
+  },
+  "evaluation": {
+    "gates": {
+      "cases_evaluated_min": 100,
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "balanced_accuracy_min": 0.75,
+      "false_support_rate_max": 0.1,
+      "quote_integrity_rate_min": 0.98
+    },
+    "decision_rule": "All fixed gates must pass. Preserve failure without prompt, gate, cohort or model changes on observed outcomes."
+  },
+  "selection": {
+    "disclosure": "One news-domain negative prototype was inspected while validating structured output and is explicitly excluded. No selected cohort outcome was inspected before this registration.",
+    "rationale": "Five supported and five unsupported summaries from each of ten domains provide a balanced diagnostic. SummEdits evaluation has four controlled source documents per domain; selection is deterministic by SHA-256 and caps each source at three stateless calls."
+  },
+  "claim_boundary": "Passing would support this proof protocol on the named SummEdits cohort and model. It would not establish deterministic cloud inference, automatic correctness of explanations, retrieval quality, all-domain generalization, or product leadership."
+}

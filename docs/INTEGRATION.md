@@ -1,8 +1,8 @@
 # PRME Integration Reference
 
 > **Audience:** AI coding assistants and developers integrating PRME into applications.
-> **Version:** Based on source as of 2026-03-02.
-> **Single-file reference** — copy this into your assistant's context for complete API coverage.
+> **Original reference:** 2026-03-02, with subsequent sections updated incrementally.
+> **API coverage is partial.** See the [README](../README.md) for newer capabilities and focused guides.
 
 ---
 
@@ -163,6 +163,7 @@ async def store(
     content: str,
     *,
     user_id: str,
+    retrieval_content: str | None = None,
     session_id: str | None = None,
     role: str = "user",
     node_type: NodeType = NodeType.NOTE,
@@ -171,16 +172,47 @@ async def store(
     confidence: float | None = None,
     epistemic_type: EpistemicType | None = None,
     source_type: SourceType | None = None,
+    event_time: datetime | None = None,
+    valid_from: datetime | None = None,
+    valid_to: datetime | None = None,
+    ttl_days: int | None = ...,
 ) -> str
 ```
 
-Store content across all four backends in one call. No LLM needed.
+Store content across all four backends in one call. No LLM needed. By default,
+the exact source text is also the searchable and model-facing memory. For large
+agent traces, logs, or structured documents, pass compact
+`retrieval_content`; `get_event()` still returns the exact source while the graph,
+vector index, lexical index and context packer use the compact representation.
 
-**Auto-propagation:** Event → GraphNode → VectorIndex → LexicalIndex.
+The event, complete initial node snapshot and repair job are saved atomically,
+then the graph node and both indexes are written. Index failures leave the job
+pending; `processing_status()` and `process_pending()` expose scoped inspection
+and repair after restart. A graph creation failure raises `MaterializationError`
+with the accepted `event_id`. Recovery preserves the original node values without
+an LLM. Optional reinforcement, supersedence and QA pairing run afterward and
+are outside this job's completion boundary.
+
+Question/answer pairing is disabled by default. `enable_qa_pairing=True`
+enables an experimental in-process heuristic that creates an extra merged node
+for consecutive, differently-typed roles in one exact session and scope. It is
+not recovered after restart, its graph/index writes are not one atomic durable
+publication, and registered quality evaluations have not enabled it. Prefer
+normal session-aware retrieval unless you are explicitly evaluating this
+hypothesis.
+
+When `enable_store_supersedence=True`, a newly formed flip-flop chain can apply
+the existing bounded oscillation confidence penalty. The engine revalidates the
+exact owner, scope, node snapshots, and `SUPERSEDES` edges under the backend
+transaction, then commits the confidence update with one deterministic,
+checksummed `PENALTY` record. Concurrent and restarted attempts reuse that
+identity. This is a lexical heuristic behind the supersedence opt-in, not a
+truth judgment or calibrated confidence model.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `content` | `str` | required | Text content to store |
+| `content` | `str` | required | Exact source text retained in the immutable event log |
+| `retrieval_content` | `str \| None` | `None` | Optional compact text to index, rank and place in model context |
 | `user_id` | `str` | required | Owner user ID (all queries scoped to this) |
 | `session_id` | `str \| None` | `None` | Optional session identifier |
 | `role` | `str` | `"user"` | `"user"`, `"assistant"`, or `"system"` |
@@ -189,9 +221,78 @@ Store content across all four backends in one call. No LLM needed.
 | `metadata` | `dict \| None` | `None` | Optional structured metadata |
 | `confidence` | `float \| None` | `None` | Confidence 0.0-1.0. If None, derived from confidence matrix |
 | `epistemic_type` | `EpistemicType \| None` | `None` | If None, inferred from node_type |
-| `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role |
+| `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role; `role="tool"` selects `TOOL_OUTPUT` |
+| `event_time` | `datetime \| None` | `None` | Timezone-aware source event time; remains separate from admission and validity |
+| `valid_from` | `datetime \| None` | `None` | Timezone-aware inclusive validity start; omission uses admission time |
+| `valid_to` | `datetime \| None` | `None` | Exclusive validity end; requires an explicit earlier `valid_from` |
+| `ttl_days` | `int \| None` | `...` | Omit for configured default, pass `None` to disable, or set a nonnegative override |
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
+
+Use `store_with_receipt()` when the next operation needs the created node ID:
+
+```python
+receipt = await engine.store_with_receipt(
+    "The project uses PostgreSQL.",
+    user_id="alice",
+    node_type=NodeType.FACT,
+    scope=Scope.PROJECT,
+)
+await engine.promote(str(receipt.node_id), user_id="alice")
+```
+
+The immutable source ID is `receipt.event_id`; lifecycle methods accept
+`receipt.node_id`. `receipt.node` is the exact created node and
+`receipt.processing_status` reports its durable materialization state. Resolution
+follows the source event, so a concurrent write cannot be mistaken for this
+node. Existing `store()` callers retain the event-ID return for compatibility.
+
+For example, retain a complete tool trajectory without spending the retrieval
+budget on raw SDK payloads:
+
+```python
+receipt = await engine.store_with_receipt(
+    raw_trace_json,
+    retrieval_content="Traveler: Alice\nFinal plan:\n...",
+    user_id="alice",
+    metadata={"record_kind": "agent_trace"},
+)
+source = await engine.get_event(str(receipt.event_id), user_id="alice")
+assert source.content == raw_trace_json
+assert receipt.node.content.startswith("Traveler: Alice")
+```
+
+The projection is caller-supplied data, not a generated summary or a claim that
+the source supports it. It is durably journaled with the initial node and reused
+exactly during restart recovery.
+
+For raw imports that do not need typed-node overrides or model extraction, use
+`ingest_fast_many(items, user_id=...)`. Each `FastIngestItem` carries `content`,
+`role`, `session_id`, `scope`, `metadata`, and an optional timezone-aware
+`event_time`. PRME validates and snapshots the complete list before I/O, then
+admits every immutable event and materialization job in one transaction. It
+returns event IDs in input order; an empty Python batch is a no-op. Run
+`process_pending()` until `pending == 0` to build the deterministic raw NOTE and
+both indexes. Pass a persisted UUID as `request_id` to make a lost-response retry
+return the original event IDs. The identity is owner scoped and survives
+restart; reusing it with different items raises an input conflict. HTTP `POST
+/v1/ingest/fast` uses the UUID `Idempotency-Key` header, while MCP
+`memory_ingest_fast_many` accepts `request_id`. Both expose the same
+owner-scoped admission contract; their
+empty request lists are rejected. MCP `memory_process_materializations` mirrors
+the HTTP processing endpoint.
+
+An explicit `EpistemicType.CONDITIONAL` requires
+`metadata={"condition": "..."}`. New conditional memories always begin with
+`condition_state="unknown"`; setting a resolved state during creation is
+rejected so an evaluation cannot bypass its audit record.
+
+Validity intervals use `[valid_from, valid_to)`. Python, HTTP `/v1/store`, and
+MCP `memory_store` preserve the same fields. Timezone-free values, an end without
+an explicit start, and empty or inverted intervals fail before the immutable
+source is admitted. New extracted facts use their resolved source-effective time
+as `valid_from`; source-grounded replacements close the previous interval in the
+same derivation transaction when the stored interval can be closed safely.
 
 ---
 
@@ -212,8 +313,8 @@ async def ingest(
 ```
 
 Ingest with LLM-powered extraction. Two-phase pipeline:
-- **Phase 1 (immediate):** Persist event + index in lexical store.
-- **Phase 2 (background):** LLM extracts entities, facts, relationships → materialized into graph/vector/lexical.
+- **Phase 1 (immediate):** Atomically persist the source event and its raw indexing job.
+- **Phase 2 (background):** Extract and ground model output, save it in the operation log, then materialize the graph and indexes. Indexing retries reuse the saved output.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -283,7 +384,33 @@ Hybrid retrieval through the 6-stage pipeline.
 
 **Returns:** `RetrievalResponse` with bundle, scored results, metadata, score traces.
 
-> **Note:** The underlying `RetrievalPipeline` supports a `retrieval_mode` parameter (`DEFAULT` or `EXPLICIT`) that controls epistemic filtering. This is not currently exposed through `MemoryEngine.retrieve()` — it always uses `DEFAULT` mode (excludes HYPOTHETICAL and DEPRECATED). Access the pipeline directly if you need `EXPLICIT` mode.
+`retrieval_mode` accepts `DEFAULT` or `EXPLICIT` across the async engine, sync
+client, HTTP API, and MCP tool. `DEFAULT` excludes hypothetical and deprecated
+claims; `EXPLICIT` includes them within the generated candidate pool.
+
+---
+
+#### `engine.record_answer_citations()`
+
+```python
+async def record_answer_citations(
+    self,
+    submission: AnswerCitationSubmission,
+    *,
+    user_id: str,
+) -> AnswerCitationRecord
+```
+
+Append the memory citations for an answer created from a saved retrieval. The
+submission includes the retrieval `request_id`, a caller answer reference,
+zero or more cited node IDs, an optional answer SHA-256 digest, a collection
+method, and a caller-generated citation UUID used for safe retries. Every cited
+node must be content-bearing and included in the receipt's rendered context.
+
+An empty citation tuple explicitly records that the answer reported no memory
+citations. The record remains valid after graph changes or archival. It is
+telemetry and does not modify memory state or ranking. Use
+`get_answer_citations()` and `list_answer_citations()` to read owned records.
 
 ---
 
@@ -308,36 +435,156 @@ Retrieve a node by ID. Returns `None` if not found or not visible (superseded/ar
 async def query_nodes(self, **kwargs) -> list[MemoryNode]
 ```
 
-Query nodes with flexible filters. Defaults to active lifecycle states (tentative + stable). Accepts keyword arguments: `user_id`, `node_type`, `scope`, `lifecycle_state`, `limit`, `offset`.
+Query nodes with flexible filters. Defaults to active lifecycle states
+(tentative, stable and contested). Filters include `user_id`, `node_type`, `scope`
+or `scopes`, `session_ids`, `lifecycle_states`, `valid_at`, `min_confidence`,
+`min_salience`, `content_contains_any`, `created_before`, `oldest_first` and
+`limit`. Use the plural `lifecycle_states`; there is no `offset` argument.
+Pass the owner explicitly in application queries.
 
 ---
 
 #### `engine.get_event()` / `engine.get_events()`
 
 ```python
-async def get_event(self, event_id: str) -> Event | None
+async def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None
 async def get_events(self, user_id: str, **kwargs) -> list[Event]
+async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None
 ```
 
 Retrieve events by ID or by user. `get_events()` accepts `session_id`, `limit`, `offset`.
+`get_extraction()` reads saved grounded model output without inference or pending
+processing. `None` means no owned record exists. A record includes the source
+hash, provider/model, schema and grounding versions, and structured output; it
+does not acknowledge graph completion or prove its claims. The synchronous
+`MemoryClient` has the same method. HTTP and MCP expose the scoped source record
+through `/v1/events/{event_id}/extraction` and `memory_get_extraction`.
+
+---
+
+#### `engine.consolidate_knowledge()`
+
+```python
+created = await engine.consolidate_knowledge(
+    user_id="alice", scope=Scope.PROJECT,
+    entity_names=["Aurora"], max_profile_tokens=1000,
+)
+```
+
+Build inferred entity profiles from complete same-owner, same-scope source
+excerpts. Each replacement commits atomically after index preparation. Source
+changes or competing rebuilds raise `StaleProfileError`; embedding/storage
+errors also propagate. `MemoryClient` provides the equivalent synchronous API.
+See the [entity profile guide](ENTITY-PROFILES.md) for requirements and recovery.
 
 ---
 
 #### Lifecycle Transitions
 
 ```python
-async def promote(self, node_id: str) -> None        # TENTATIVE → STABLE
+async def promote(
+    self, node_id: str, *, user_id: str | None = None,
+    request_id: str | UUID | None = None,
+) -> None                                           # TENTATIVE → STABLE
 async def supersede(
     self,
     old_node_id: str,
     new_node_id: str,
     *,
     evidence_id: str | None = None,
+    user_id: str | None = None,
+    actor_id: str | None = None,
 ) -> None                                              # → SUPERSEDED
-async def archive(self, node_id: str) -> None          # → ARCHIVED (terminal)
+async def archive(
+    self, node_id: str, *, user_id: str | None = None,
+    request_id: str | UUID | None = None,
+) -> None                                           # → ARCHIVED (terminal)
 ```
 
-All raise `ValueError` if the transition is invalid per the lifecycle state machine.
+All raise `ValueError` if the transition is invalid per the lifecycle state
+machine. Supersedence commits a deterministic edge and checksummed before/after
+record with the state change. Repeating the same ordered nodes, evidence, and
+actor is safe across restarts; changing an input after publication is rejected.
+HTTP exposes `POST /v1/supersedences`, and MCP exposes `memory_supersede`.
+Promotion and archival accept an optional UUID `request_id`; reuse it with the
+same node, action, and actor after an ambiguous response. HTTP accepts that UUID
+as `Idempotency-Key`, and the MCP lifecycle tools accept `request_id`. Reusing a
+key with different inputs raises a conflict. Calls without a request ID retain
+strict lifecycle errors and reject a repeated transition.
+
+#### `engine.evaluate_condition()`
+
+```python
+updated = await engine.evaluate_condition(
+    node_id,
+    ConditionState.TRUE,
+    user_id="alice",
+    evidence_id=approval_event_id,
+    request_id="9ee0440b-4ea4-48c5-87ed-c1f43546475b",
+    evaluation_method=ConditionEvaluationMethod.TOOL,
+    reason="Approval service confirmed",
+)
+```
+
+This is an explicit recorded evaluation, not an automatic truth inference.
+Mutation and a checksummed `EPISTEMIC_TRANSITION` record with the complete
+before/after claim commit atomically. Evidence must belong to the same owner and
+scope. Reusing `request_id` safely retries the same evaluation; changing its
+inputs raises a conflict. The conditional epistemic type remains intact so a
+changing condition can be evaluated again. `MemoryClient.evaluate_condition()`
+provides the synchronous equivalent. HTTP uses
+`PUT /v1/nodes/{node_id}/condition` with an optional UUID `Idempotency-Key`
+header; MCP exposes `memory_evaluate_condition`.
+
+#### `engine.get_provenance()`
+
+```python
+history = await engine.get_provenance(
+    node_id, user_id="alice", operation_limit=100,
+)
+next_page = await engine.get_provenance(
+    node_id, user_id="alice",
+    operation_cursor=history.next_operation_cursor,
+)
+```
+
+Returns the current node, owned source events, references whose source event is
+missing or outside the node scope, same-owner/same-scope contradiction edges,
+and a chronological page of raw operation records. The page limit is 1–1000;
+the opaque cursor is stable for append-only operation history. Missing and
+foreign nodes return `None`. `MemoryClient.get_provenance()` is the synchronous
+equivalent. HTTP exposes `GET /v1/nodes/{node_id}/provenance`; MCP exposes
+`memory_get_provenance`.
+
+#### `engine.contradict()` and `engine.resolve_contradiction()`
+
+```python
+first, second = await engine.contradict(
+    first_claim_id,
+    second_claim_id,
+    user_id="alice",
+    actor_id="reviewer",
+    evidence_id=review_event_id,
+)
+winner, loser = await engine.resolve_contradiction(
+    second_claim_id,
+    first_claim_id,
+    user_id="alice",
+    resolver_actor_id="reviewer",
+    evidence_id=review_event_id,
+)
+```
+
+Each operation commits claim states, the contradiction edge, and its audit
+record atomically. Claims and optional evidence must share one owner and scope.
+An exact retry with the same ordered claims, actor, and evidence is a no-op;
+changing those inputs after the operation raises `ValueError` instead of
+silently accepting a different decision. Resolution returns the stable winner
+followed by the deprecated loser and removes the loser from derived search
+indexes after the durable transaction. `MemoryClient` provides synchronous
+methods with the same names. HTTP uses `POST /v1/contradictions` and
+`POST /v1/contradictions/resolve`; MCP uses `memory_mark_contradiction` and
+`memory_resolve_contradiction`.
 
 ---
 
@@ -624,12 +871,17 @@ from prme.config import EmbeddingConfig
 EmbeddingConfig(
     provider="fastembed",               # PRME_EMBEDDING_PROVIDER
     model_name="BAAI/bge-small-en-v1.5", # PRME_EMBEDDING_MODEL_NAME
-    dimension=384,                       # PRME_EMBEDDING_DIMENSION
+    dimension=384,                       # PRME_EMBEDDING_DIMENSION; optional for registered models
     api_key=None,                        # PRME_EMBEDDING_API_KEY
 )
 ```
 
 Supported providers: `"fastembed"` (local, default), `"openai"` (requires API key).
+When `dimension` is omitted, PRME reads registered FastEmbed model metadata or
+uses the known OpenAI model dimension without downloading weights. Selecting
+`provider="openai"` alone chooses `text-embedding-3-small` and 1,536 dimensions.
+Unknown or newly released model names require an explicit positive dimension,
+and fail during configuration instead of after an index has been opened.
 
 ### ExtractionConfig
 
@@ -641,14 +893,26 @@ ExtractionConfig(
     model="gpt-4o-mini",                 # PRME_EXTRACTION_MODEL
     max_retries=3,                       # PRME_EXTRACTION_MAX_RETRIES
     timeout=30.0,                        # PRME_EXTRACTION_TIMEOUT
+    temperature=0.0,                     # PRME_EXTRACTION_TEMPERATURE
+    reasoning_effort=None,               # PRME_EXTRACTION_REASONING_EFFORT
 )
 ```
 
-Supported providers: `"openai"`, `"anthropic"`, `"ollama"`.
+Supported providers: `"openai"`, `"anthropic"`, `"ollama"`. Temperature zero
+favors repeatable schema-constrained extraction. Ollama resolves an omitted
+reasoning effort to `"none"`, preventing thinking traces from exhausting the
+structured response window. Ollama also uses its constrained JSON output mode
+instead of requiring a tool-call envelope. Other providers retain their native default.
+Benchmark before increasing either setting.
 
 ### ScoringWeights
 
-Immutable (frozen). The six additive weights must sum to 1.0. Epistemic weight is multiplicative; paths weight is a tiebreaker.
+Scoring fields are frozen. The six additive weights must sum to 1.0. Epistemic weight is multiplicative; paths weight is a tiebreaker.
+
+Scoring and packing configuration reject `NaN` and positive/negative infinity
+at construction or environment loading, including nested node-type boosts and
+scoped scoring overrides. Validation errors identify the offending field before
+retrieval starts. Finite defaults and their version identifiers are unchanged.
 
 ```python
 from prme.retrieval.config import ScoringWeights
@@ -669,22 +933,90 @@ ScoringWeights(
 
 ### PackingConfig
 
+`multipath_ordering="score"` selects composite-score ordering within the multi-path
+priority tier. The default is `"balanced"`: it reserves the highest-scored ordinary
+multi-path candidate, then uses a quarter-length penalty. Pins, instructions,
+active tasks, other tiers and measured whole-output budgets keep their existing
+rules. The default change follows a complete 119-question answer trial at 4K:
+balanced scored 83 versus density at 67, with 26 wins and 10 losses. A separately
+registered 381-question answer confirmation scored 250 versus 185, with 88 wins
+and 23 losses. Both source partitions had already been inspected, so these results
+do not establish superior behavior for every workload.
+
+```python
+from prme import MemoryClient, config_from_directory
+from prme.retrieval.config import PackingConfig
+
+config = config_from_directory("./my_memories")
+config.packing = PackingConfig(multipath_ordering="density")
+
+with MemoryClient(config=config) as client:
+    client.store("Aurora requires deployment approval.", user_id="alice")
+    result = client.retrieve("Aurora deployment policy", user_id="alice")
+    print(result.bundle.render())
+```
+
+`config_from_directory()` creates the directory and resolves the database, vector
+and lexical paths together. Set typed options before opening the client. Passing
+a `config` to `MemoryClient` uses its paths as-is; its separate `directory` argument
+is ignored. The equivalent environment setting is
+`PRME_PACKING__MULTIPATH_ORDERING=density`.
+Temporal context guidance is enabled by default; disable it with
+`PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
+experimental current-state and personalization prompts. Every current retrieval
+receipt uses schema version 12 and retains ordering, guidance, context format,
+episode and evidence-projection settings in `receipt.packing`, and the
+current-update multiplier in `receipt.scoring`. Set
+`PRME_PACKING__CONTEXT_FORMAT=compact` to use
+schema-declared JSON arrays and bundle-local references; `auditable` remains the
+default. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+their original canonical JSON and feedback checksums and always mean auditable
+rendering. Versions 1–5 also mean context guidance was off. For source blocks or
+bounded dialogue episodes stored under meaningful session IDs, set
+`PRME_PACKING__EPISODE_CONTEXT_TOP_K=2` to trial deterministic episode routing;
+the default `0` disables it.
+Set `PRME_PACKING__EVIDENCE_PROJECTION_TOP_K=50` to trial source projection for
+the top exact evidence groups; its default `0` also disables it.
+Set `PRME_PACKING__EVIDENCE_AUGMENTATION_TOP_K=10` to retain the derived claims
+and add bounded direct sources beside them. Projection and augmentation are
+mutually exclusive and disabled by default.
+`PRME_PACKING__EVIDENCE_AUGMENTATION_ANCHOR_POLICY=non_entity` prevents an
+entity-name match from routing its whole source passage; the default `all`
+preserves version 11 behavior.
+
+Current-state retrieval gives the newest record that explicitly presents itself
+as an update a bounded, relevance-capped multiplier. Configure
+`PRME_SCORING__CURRENT_UPDATE_MULTIPLIER` between `1.0` and `2.0`; the default is
+the provisional `1.30`, and `1.0` disables it. Receipts record the exact applied
+coefficient. This ranking signal does not supersede or validate either claim.
+
+This example chooses smaller candidate limits explicitly; it is not a list of defaults.
+
 ```python
 from prme.retrieval.config import PackingConfig
+from prme.types import RepresentationLevel
 
 PackingConfig(
     token_budget=4096,               # Context budget in tokens
     min_fidelity=RepresentationLevel.REFERENCE,  # Minimum fidelity
-    overhead_tokens=100,             # Reserved for JSON envelope
-    chars_per_token=4.2,             # Token estimation ratio
+    overhead_tokens=100,             # Additional caller reserve beyond measured context
+    context_format="auditable",      # Or "compact" for schema-declared arrays
+    episode_context_top_k=0,         # Opt-in session-scoped episode routing
+    episode_context_local_k=8,       # Records reserved per selected episode
+    episode_context_score_decay=0.95,# Inherited episode-evidence score
     graph_max_candidates=50,         # Max from graph traversal
     vector_k=50,                     # Max from vector search
     lexical_k=50,                    # Max from lexical search
     graph_max_hops=3,                # Max graph hops (1-3)
     cross_scope_top_n=5,             # Top-N cross-scope hints
-    cross_scope_token_budget=512,    # Separate budget for hints
 )
 ```
+
+Context packing counts the complete rendered output with the configured
+`tokenizer`. The legacy `chars_per_token` and `cross_scope_token_budget` names
+remain accepted for configuration and receipt compatibility, but non-default
+values are ignored with a warning. Cross-scope hints live outside the packed
+context and are bounded by `cross_scope_top_n`.
 
 ---
 
@@ -720,6 +1052,19 @@ Runs **three backends in parallel:**
 3. **Lexical search** — BM25-style full-text search, top-`lexical_k`
 
 Candidates are deduplicated by `node_id`. Each candidate tracks which backends produced it (`paths` field) and multi-path count.
+
+For extracted stores, set `max_per_source=1` on `retrieve()` when the consuming
+surface presents `node.content` as a list of passages. This limits only results
+with the same exact nonempty evidence set and byte-identical content, so sibling
+claims cannot consume the result budget with repeated source text. The default
+is disabled while answer-quality trials establish when to promote it.
+
+Use `max_per_evidence=1` when that surface needs one ranked representative per
+exact cited evidence set even if extracted sibling nodes have different text.
+This broader option fills the requested result limit from later evidence groups.
+Nodes without evidence remain independent, and identical text citing distinct
+events remains distinct. The result metadata and retrieval receipt record the
+applied value; exclusions use `evidence_limit`.
 
 ### Stage 4: Epistemic Filtering
 
@@ -791,7 +1136,7 @@ When `scope` is filtered and `include_cross_scope=True`, a secondary vector+lexi
 **Output:** `MemoryBundle`.
 
 Greedy bin-packing within the token budget:
-1. Estimate token cost per candidate using `chars_per_token` ratio
+1. Count each serialized candidate with the configured tokenizer
 2. Reserve `overhead_tokens` for JSON envelope
 3. Pack candidates in score order, assigning representation levels:
    - High-budget: `FULL` or `PROSE`
@@ -808,6 +1153,8 @@ class MemoryBundle(BaseModel):
     token_budget: int
     budget_remaining: int
     min_fidelity: RepresentationLevel
+    rendered_context: str
+    coverage_notice: str | None       # Counted system boundary when applicable
 ```
 
 ### RetrievalResponse (full return type)
@@ -832,7 +1179,144 @@ class RetrievalMetadata(BaseModel):
     timing_ms: float
     backends_used: list[str]
     embedding_mismatch: bool
+    backend_failures: dict[str, str]
+    aggregation_coverage: AggregationCoverage | None
 ```
+
+For detected natural-language counts and lists, `aggregation_coverage` reports
+`exhaustive=False`, candidate/selection/context counts, stable limitation codes,
+and candidate paths observed at their configured caps. The rendered bundle also
+contains a token-counted non-exhaustive warning. Use `scan_nodes()` or
+`iter_nodes()` for complete stored-record traversal; semantic retrieval cannot
+prove that every real-world item matching a natural-language criterion was
+found or deduplicated.
+
+The same stored-record page is available to remote clients through
+`GET /v1/nodes/scan` and the MCP tool `memory_scan_nodes`. Both require an
+explicit or credential-bound owner, accept scope, node type, lifecycle, UUID
+cursor, and page-size filters, and return `has_more` plus `next_cursor`. Follow
+the cursor until `has_more` is false. The response reports `order="id"` and
+`consistency="page"`: traversal is complete for an unchanged store but is not a
+transaction snapshot across requests. `GET /v1/nodes` remains a bounded query
+convenience and must not be used as an export or counting contract.
+
+Structured assertion counts use the same complete scan without exposing page
+bookkeeping to the caller:
+
+```python
+from datetime import datetime, timezone
+
+from prme import AssertionQuery
+
+result = memory.aggregate_assertions(
+    AssertionQuery(
+        subjects=["I"],
+        predicates=["tried"],
+        group_by=["object"],
+        event_time_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+    ),
+    user_id="alice",
+)
+```
+
+`matched_records` counts assertion occurrences and `distinct_count` counts the
+normalized `group_by` keys. Each group carries occurrence/evidence counts,
+bounded provenance samples, and its earliest/latest event time. Selectors use
+exact NFKC/case/whitespace-normalized matching, with predicate spaces and
+hyphens normalized to underscores. Use `retrieval_mode="explicit"` to include
+all epistemic and lifecycle states, or pass explicit lifecycle states to narrow
+the exact state set independently.
+
+HTTP exposes this at `POST /v1/assertions/aggregate` with
+`{"user_id": "alice", "query": {...}}`; MCP exposes
+`memory_aggregate_assertions`. Both bind the result to the authenticated owner.
+`stored_set_exhaustive=true` covers matching structured records for an unchanged
+store. Separate fields report unknown source-extraction and real-world coverage,
+with semantic equivalence limited to normalized exact values. Finish pending
+ingestion and prevent concurrent mutation for audited counts. This API
+counts and groups text values; it does not parse or sum numeric quantities.
+
+For facts carrying `grounding="object_decimal_v1"`, use the dedicated exact
+quantity operation:
+
+```python
+from prme import QuantityAggregationQuery
+
+totals = memory.aggregate_quantities(
+    QuantityAggregationQuery(
+        predicate_prefixes=["raised"],
+        units=["$"],
+        group_by=["unit"],
+    ),
+    user_id="alice",
+)
+```
+
+Each group returns an exact `Decimal` total, minimum, maximum, value/evidence
+counts, temporal bounds, and bounded per-node source samples. JSON serializes
+decimals as strings. `group_by` must contain `unit`; normalization is limited to
+Unicode, case, and whitespace, and no conversion or currency inference occurs.
+`predicate_prefixes` is opt-in and token-bounded after predicate normalization:
+`raised` includes `raised` and `raised_*`, but not `fundraised`. A response using
+it reports `semantic_equivalence="normalized_exact_and_predicate_prefix"` rather
+than `normalized_exact_only`; no synonym or embedding inference is performed.
+The read path revalidates the stored decimal against its claim object and source
+evidence. HTTP exposes `POST /v1/quantities/aggregate`; MCP exposes
+`memory_aggregate_quantities`. These operations use the same unchanged-store and
+extraction/real-world coverage boundaries as assertion aggregation.
+
+For supported simple questions, the convenience path returns its exact plan and
+execution together:
+
+```python
+planned = memory.aggregate_quantities_from_text(
+    "How many kilometers did I run?",
+    user_id="alice",
+)
+```
+
+The planner recognizes only complete, qualifier-free amount/count shapes in a
+fixed action and unit table. It preserves the exact `I` or `we` subject from the
+question and selects positive default epistemic state, explicit predicate-prefix
+families, and unit-separated groups. Unsupported qualifiers, negation, future
+wording, named subjects,
+actions, or units return `plan.status="unsupported"` with no scan. Inspect
+`plan.query` and `plan.assumptions`; the convenience result does not hide a
+semantic model call. HTTP exposes `POST /v1/quantities/aggregate-text`; MCP
+exposes `memory_aggregate_quantities_from_text`.
+
+Use the exact temporal state operation when the application already knows an
+assertion's subject and predicate:
+
+```python
+from datetime import datetime, timezone
+from prme import AssertionStateQuery, Scope
+
+state = memory.get_assertion_state(
+    AssertionStateQuery(
+        subject="Alice",
+        predicate="lives_in",
+        scope=Scope.PERSONAL,
+        valid_at=datetime.now(timezone.utc),
+    ),
+    user_id="alice",
+)
+```
+
+This scans all matching FACT, DECISION, and PREFERENCE records for an unchanged
+store. It returns eligible current candidates separately from the bounded
+timeline, along with event time, ingestion time, validity windows, lifecycle,
+supersedence pointers, contradiction edges, and evidence IDs. Status is
+`unknown`, `single`, `consistent`, `multiple`, or `contested`. `multiple` does
+not imply a contradiction, and the operation never treats the latest record as
+truth. Scope and `valid_at` are required to prevent cross-scope state mixing and
+implicit wall-clock results. An optional `knowledge_at` remains an ingestion
+cutoff over current lifecycle state and returns `exact_snapshot=false`.
+
+HTTP exposes `POST /v1/assertions/state`; MCP exposes
+`memory_get_assertion_state`. Subject and predicate matching use the same exact
+normalization contract as assertion aggregation. Source extraction and
+real-world coverage remain explicitly unknown.
 
 ---
 
@@ -979,6 +1463,28 @@ event_ids = await engine.ingest_batch(
 # Now retrieve — extraction created entities (Alice, Sarah, Neovim) and facts
 response = await engine.retrieve("What tools does Alice use?", user_id="alice")
 ```
+
+When a fact object contains one exact numeric amount, built-in extraction may
+also populate `node.metadata["quantity"]` with decimal-string `value`, verbatim
+`unit`, verbatim `source_text`, and `grounding="object_decimal_v1"`. Grounding
+requires the quantified phrase in both the object and source evidence and checks
+the parsed decimal. When JSON transport emits a float, built-in extraction can
+recover the decimal only by reparsing one exact supported token from the grounded
+source phrase; it never converts the float. Approximation or range cues in the
+surrounding evidence reject clipped exact-looking output. If model-authored
+quantity fields are absent or invalid, built-in extraction can recognize one
+verbatim currency or unit from its bounded physical, data and count-unit
+lexicon in an otherwise grounded fact object. It does not normalize that unit
+or accept an unlisted noun as a measure. Invalid optional quantity output is removed while the
+otherwise grounded fact remains. Ranges, approximations, scientific notation,
+locale decimal commas, and phrases with multiple numbers are not typed. No
+currency inference or unit conversion occurs.
+
+Fresh `speech_act_v11` extraction can also recover one leading exact measure
+from a user-authored first-person completed action in a bounded verb lexicon,
+such as `I just ran 5 kilometers`. It retains the source phrase as the object and
+uses the same validators; modals, negations, examples, questions, conditions,
+approximations and ranges do not use this recovery path.
 
 ### Custom Scoring Weights
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -71,6 +72,47 @@ async def test_query_nodes(graph_store):
     assert any(r.content == "queryable fact" for r in results)
 
 
+async def test_session_neighbors_are_bounded_and_scope_partitioned(graph_store):
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    base_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    personal = [
+        MemoryNode(
+            user_id=uid,
+            session_id="shared-session",
+            node_type=NodeType.EVENT,
+            scope=Scope.PERSONAL,
+            content=f"personal {i}",
+            created_at=base_time + timedelta(minutes=i),
+            updated_at=base_time + timedelta(minutes=i),
+        )
+        for i in range(5)
+    ]
+    project = MemoryNode(
+        user_id=uid,
+        session_id="shared-session",
+        node_type=NodeType.EVENT,
+        scope=Scope.PROJECT,
+        content="project interloper",
+        created_at=base_time + timedelta(minutes=2),
+        updated_at=base_time + timedelta(minutes=2),
+    )
+    for node in [*personal, project]:
+        await graph_store.create_node(node)
+
+    windows = await graph_store.get_session_neighbors(
+        [str(personal[2].id)],
+        user_id=uid,
+        window=1,
+        scopes=[Scope.PERSONAL, Scope.PROJECT],
+    )
+
+    assert [node.content for node in windows[str(personal[2].id)]] == [
+        "personal 1",
+        "personal 2",
+        "personal 3",
+    ]
+
+
 async def test_create_edge(graph_store):
     uid = f"user-{uuid.uuid4().hex[:8]}"
     n1 = _make_node(user_id=uid, content="node A")
@@ -128,6 +170,37 @@ async def test_get_neighborhood(graph_store):
     neighbors = await graph_store.get_neighborhood(str(n1.id), max_hops=1)
     assert len(neighbors) >= 1
     assert any(n.content == "neighbor" for n in neighbors)
+
+
+async def test_unverified_aliases_require_explicit_traversal(graph_store):
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    left = _make_node(user_id=uid, content="product one")
+    right = _make_node(user_id=uid, content="product variant")
+    await graph_store.create_node(left)
+    await graph_store.create_node(right)
+    await graph_store.create_edge(
+        MemoryEdge(
+            source_id=left.id,
+            target_id=right.id,
+            edge_type=EdgeType.RELATES_TO,
+            user_id=uid,
+            metadata={
+                "relation": "alias",
+                "alias_type": "semantic",
+                "identity_verified": False,
+            },
+        )
+    )
+
+    assert await graph_store.get_neighborhood(str(left.id), max_hops=1) == []
+    explicit = await graph_store.get_neighborhood(
+        str(left.id), max_hops=1, include_unverified_aliases=True
+    )
+    assert [node.id for node in explicit] == [right.id]
+    assert await graph_store.find_shortest_path(str(left.id), str(right.id)) is None
+    assert await graph_store.find_shortest_path(
+        str(left.id), str(right.id), include_unverified_aliases=True
+    ) == [str(left.id), str(right.id)]
 
 
 async def test_delete_node(graph_store):

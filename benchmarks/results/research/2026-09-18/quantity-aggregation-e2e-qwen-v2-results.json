@@ -1,0 +1,376 @@
+{
+  "schema_version": 1,
+  "kind": "quantity-aggregation-e2e-result",
+  "completed_at": "2026-09-18T21:15:50.619668+00:00",
+  "registration_sha256": "ab5193e1fd2f41aa3eaabaaf60f11dfb85cb846dcb8b18541af687dc93cd28c5",
+  "model": {
+    "provider": "ollama",
+    "model": "prme-qwen3.5:35b-a3b-8k",
+    "model_digest": "45870b70b6fa65ab09355aeb7901897763ae40745c6cdd11d28bc33a6b818ffc",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "temperature": 0.0,
+    "max_retries": 3,
+    "timeout_seconds": 180.0
+  },
+  "metrics": {
+    "completed_cases": 10,
+    "case_contract_failures": 0,
+    "aggregation_check_failures": 0,
+    "cases_passed": 10,
+    "passed": true,
+    "failed_attempts": 0
+  },
+  "aggregation_checks": {
+    "matched_quantity_records": true,
+    "distinct_count": true,
+    "one_group": true,
+    "unit": true,
+    "value_count": true,
+    "total": true,
+    "minimum": true,
+    "maximum": true,
+    "evidence_count": true,
+    "sample_values": true,
+    "samples_complete": true,
+    "stored_set_exhaustive": true,
+    "source_extraction_coverage": true,
+    "semantic_equivalence": true,
+    "real_world_coverage": true,
+    "unit_conversion": true,
+    "consistency": true,
+    "required_exclusions": true
+  },
+  "cases": [
+    {
+      "name": "charity_bake_sale",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I'm looking for some tips on how to stay motivated to exercise regularly. I've been doing pretty well so far, but I want to keep the momentum going. By the way, I recently volunteered at a charity bake sale and it was amazing to see how much of an impact we can make - we raised $1,000 for the local children's hospital!",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "dbabf8cc-794f-4935-a299-024fe3b2dce9",
+          "value": "1000",
+          "unit": "$",
+          "source_text": "$1,000",
+          "predicate": "raised_amount_for",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "run_for_hunger",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I'm looking for some advice on finding volunteer opportunities in my area. I've been trying to attend at least one charity event per month, and it's been an incredible experience so far. By the way, I just ran 5 kilometers in the \"Run for Hunger\" charity event on March 12th and raised $250 for a local food bank.",
+      "expected_count": 2,
+      "actual_count": 2,
+      "matches": [
+        {
+          "node_id": "1f051cd5-333d-4d4a-bd41-93add54851b1",
+          "value": "5",
+          "unit": "kilometers",
+          "source_text": "5 kilometers",
+          "predicate": "ran",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        },
+        {
+          "node_id": "d6ab5f53-9dbb-4b03-ac8a-4eaef837615f",
+          "value": "250",
+          "unit": "$",
+          "source_text": "$250",
+          "predicate": "raised_amount_for_beneficiary",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "fitness_challenge",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I'm planning to participate in another charity run soon, do you have any tips on how to stay motivated during training? By the way, I recently completed a charity fitness challenge in February and managed to raise $500 for the American Cancer Society, which was a great feeling!",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "d6b4906f-8513-47e1-9d13-bd757eafa36e",
+          "value": "500",
+          "unit": "$",
+          "source_text": "$500",
+          "predicate": "raised_amount_for",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "cycling_event",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I'm planning to participate in a charity cycling event next month and I want to make sure I'm prepared. Can you give me some tips on how to train for it? By the way, I've been getting more into charity events lately - I helped raise $2,000 for a local animal shelter on January 20th, and it was an amazing experience!",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "32ae4020-f656-432d-8495-34ad422d0696",
+          "value": "2000",
+          "unit": "$",
+          "source_text": "$2,000",
+          "predicate": "raised_amount_for",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "unrelated_spending",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I spent $300 on groceries yesterday.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "dc15e53a-87d8-4f2a-b3c4-ee2fc92173e6",
+          "value": "300",
+          "unit": "$",
+          "source_text": "$300",
+          "predicate": "spent_amount_on",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "negated_fundraising",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I did not raise $700 for the library fundraiser.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "ab0b8174-6a1f-4f82-ad49-555a0f79223e",
+          "value": "700",
+          "unit": "$",
+          "source_text": "$700",
+          "predicate": "raised_amount_for",
+          "polarity": "negative",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "conditional_fundraising",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "If the sponsor agrees, I will raise $900 for the school.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "b0c0643a-f80c-43b6-9e6d-56cdf85b6924",
+          "value": "900",
+          "unit": "$",
+          "source_text": "$900",
+          "predicate": "will_raise",
+          "polarity": "positive",
+          "epistemic_type": "conditional"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "approximate_fundraising",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I raised about $600 for the community garden.",
+      "expected_count": 0,
+      "actual_count": 0,
+      "matches": [],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "incompatible_currency_unit",
+      "owner": "quantity-aggregation-e2e-owner",
+      "source": "I raised 100 USD for the music program.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "bd5697d5-c451-40be-8d81-17b38b7c6a1b",
+          "value": "100",
+          "unit": "USD",
+          "source_text": "100 USD",
+          "predicate": "raised",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    },
+    {
+      "name": "other_owner_fundraising",
+      "owner": "quantity-aggregation-e2e-other",
+      "source": "I raised $10,000 for the science museum.",
+      "expected_count": 1,
+      "actual_count": 1,
+      "matches": [
+        {
+          "node_id": "c9902bd0-cc26-4920-abbe-862625dfdf0f",
+          "value": "10000",
+          "unit": "$",
+          "source_text": "$10,000",
+          "predicate": "raised_amount_for",
+          "polarity": "positive",
+          "epistemic_type": "observed"
+        }
+      ],
+      "missing": [],
+      "unexpected": [],
+      "policy_errors": [],
+      "passed": true
+    }
+  ],
+  "aggregation": {
+    "schema_version": 1,
+    "user_id": "quantity-aggregation-e2e-owner",
+    "query": {
+      "subjects": [],
+      "predicates": [],
+      "predicate_prefixes": [
+        "raised",
+        "helped_raise"
+      ],
+      "objects": [],
+      "polarities": [
+        "positive"
+      ],
+      "units": [
+        "$"
+      ],
+      "group_by": [
+        "unit"
+      ],
+      "scopes": [],
+      "node_types": [
+        "fact",
+        "decision",
+        "preference"
+      ],
+      "lifecycle_states": null,
+      "retrieval_mode": "default",
+      "event_time_from": null,
+      "event_time_to": null,
+      "valid_at": null,
+      "knowledge_at": null,
+      "group_limit": 1000,
+      "sample_limit": 100
+    },
+    "scanned_nodes": 19,
+    "matched_quantity_records": 4,
+    "distinct_count": 1,
+    "groups": [
+      {
+        "values": {
+          "unit": "$"
+        },
+        "normalized_values": {
+          "unit": "$"
+        },
+        "value_count": 4,
+        "total": "3750",
+        "minimum": "250",
+        "maximum": "2000",
+        "evidence_count": 4,
+        "samples": [
+          {
+            "node_id": "32ae4020-f656-432d-8495-34ad422d0696",
+            "value": "2000",
+            "unit": "$",
+            "source_text": "$2,000",
+            "evidence_refs": [
+              "9d022e8d-ea0b-4200-8d2c-5b7cea91e9cc"
+            ]
+          },
+          {
+            "node_id": "d6ab5f53-9dbb-4b03-ac8a-4eaef837615f",
+            "value": "250",
+            "unit": "$",
+            "source_text": "$250",
+            "evidence_refs": [
+              "25693630-e4bf-4281-b84b-c7d5b1108ee5"
+            ]
+          },
+          {
+            "node_id": "d6b4906f-8513-47e1-9d13-bd757eafa36e",
+            "value": "500",
+            "unit": "$",
+            "source_text": "$500",
+            "evidence_refs": [
+              "5f8043f9-1580-49e7-8ad8-ab134951b7d3"
+            ]
+          },
+          {
+            "node_id": "dbabf8cc-794f-4935-a299-024fe3b2dce9",
+            "value": "1000",
+            "unit": "$",
+            "source_text": "$1,000",
+            "evidence_refs": [
+              "bf0e4d3c-6161-4ab6-bf89-9482632b14f3"
+            ]
+          }
+        ],
+        "samples_truncated": false,
+        "earliest_event_time": "2026-01-20T00:00:00Z",
+        "latest_event_time": "2026-09-18T21:14:12.926001Z"
+      }
+    ],
+    "groups_truncated": false,
+    "stored_set_exhaustive": true,
+    "source_extraction_coverage": "unknown",
+    "semantic_equivalence": "normalized_exact_and_predicate_prefix",
+    "real_world_coverage": "unknown",
+    "unit_conversion": "none",
+    "consistency": "complete_for_unchanged_store",
+    "exclusions": {
+      "condition_filtered": 1,
+      "missing_quantity": 1,
+      "selector_mismatch": 12,
+      "unit_mismatch": 1
+    }
+  },
+  "decision": "accept_explicit_quantity_aggregation_product_path",
+  "limits": "Authored end-to-end product-path assay over fixed natural-language sources; not held-out accuracy, answer quality, exhaustive unit coverage, or competitive evidence.",
+  "state_sha256": "9f0569a4dfd0fd45fbc8fb66a386741388d623721263f2409481ce89edc056f8",
+  "result_sha256": "5d163b0bcea36d4e1299f26b86253ea0843993926d2f3de5f7741222aef4db9d"
+}

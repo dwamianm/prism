@@ -1,0 +1,525 @@
+{
+  "categories": {
+    "knowledge-update": {
+      "2048": {
+        "after": 0.8,
+        "before": 0.75,
+        "delta": 0.05,
+        "groups": 20,
+        "interval_95": [
+          0.0,
+          0.125
+        ],
+        "losses": 0,
+        "queries": 20,
+        "ties": 18,
+        "wins": 2
+      },
+      "4096": {
+        "after": 0.85,
+        "before": 0.85,
+        "delta": 0.0,
+        "groups": 20,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 20,
+        "ties": 20,
+        "wins": 0
+      },
+      "8192": {
+        "after": 0.9,
+        "before": 0.9,
+        "delta": 0.0,
+        "groups": 20,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 20,
+        "ties": 20,
+        "wins": 0
+      }
+    },
+    "multi-session": {
+      "2048": {
+        "after": 0.5911458333333334,
+        "before": 0.5833333333333334,
+        "delta": 0.0078125,
+        "groups": 30,
+        "interval_95": [
+          -0.0234375,
+          0.0404040404040404
+        ],
+        "losses": 1,
+        "queries": 32,
+        "ties": 29,
+        "wins": 2
+      },
+      "4096": {
+        "after": 0.6848958333333334,
+        "before": 0.6666666666666666,
+        "delta": 0.018229166666666664,
+        "groups": 30,
+        "interval_95": [
+          0.0,
+          0.04838709677419355
+        ],
+        "losses": 0,
+        "queries": 32,
+        "ties": 30,
+        "wins": 2
+      },
+      "8192": {
+        "after": 0.8072916666666666,
+        "before": 0.796875,
+        "delta": 0.010416666666666668,
+        "groups": 30,
+        "interval_95": [
+          0.0,
+          0.03225806451612904
+        ],
+        "losses": 0,
+        "queries": 32,
+        "ties": 31,
+        "wins": 1
+      }
+    },
+    "single-session-assistant": {
+      "2048": {
+        "after": 0.7777777777777778,
+        "before": 0.0,
+        "delta": 0.7777777777777778,
+        "groups": 9,
+        "interval_95": [
+          0.4444444444444444,
+          1.0
+        ],
+        "losses": 0,
+        "queries": 9,
+        "ties": 2,
+        "wins": 7
+      },
+      "4096": {
+        "after": 0.7777777777777778,
+        "before": 0.0,
+        "delta": 0.7777777777777778,
+        "groups": 9,
+        "interval_95": [
+          0.4444444444444444,
+          1.0
+        ],
+        "losses": 0,
+        "queries": 9,
+        "ties": 2,
+        "wins": 7
+      },
+      "8192": {
+        "after": 0.7777777777777778,
+        "before": 0.0,
+        "delta": 0.7777777777777778,
+        "groups": 9,
+        "interval_95": [
+          0.4444444444444444,
+          1.0
+        ],
+        "losses": 0,
+        "queries": 9,
+        "ties": 2,
+        "wins": 7
+      }
+    },
+    "single-session-preference": {
+      "2048": {
+        "after": 0.8571428571428571,
+        "before": 0.8571428571428571,
+        "delta": 0.0,
+        "groups": 7,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 7,
+        "ties": 7,
+        "wins": 0
+      },
+      "4096": {
+        "after": 0.8571428571428571,
+        "before": 0.8571428571428571,
+        "delta": 0.0,
+        "groups": 7,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 7,
+        "ties": 7,
+        "wins": 0
+      },
+      "8192": {
+        "after": 0.8571428571428571,
+        "before": 0.8571428571428571,
+        "delta": 0.0,
+        "groups": 7,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 7,
+        "ties": 7,
+        "wins": 0
+      }
+    },
+    "single-session-user": {
+      "2048": {
+        "after": 0.9411764705882353,
+        "before": 0.8823529411764706,
+        "delta": 0.058823529411764705,
+        "groups": 17,
+        "interval_95": [
+          0.0,
+          0.17647058823529413
+        ],
+        "losses": 0,
+        "queries": 17,
+        "ties": 16,
+        "wins": 1
+      },
+      "4096": {
+        "after": 0.9411764705882353,
+        "before": 0.9411764705882353,
+        "delta": 0.0,
+        "groups": 17,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 17,
+        "ties": 17,
+        "wins": 0
+      },
+      "8192": {
+        "after": 1.0,
+        "before": 1.0,
+        "delta": 0.0,
+        "groups": 17,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 17,
+        "ties": 17,
+        "wins": 0
+      }
+    },
+    "temporal-reasoning": {
+      "2048": {
+        "after": 0.7471264367816092,
+        "before": 0.7126436781609196,
+        "delta": 0.034482758620689655,
+        "groups": 28,
+        "interval_95": [
+          0.0,
+          0.08928571428571429
+        ],
+        "losses": 0,
+        "queries": 29,
+        "ties": 27,
+        "wins": 2
+      },
+      "4096": {
+        "after": 0.8620689655172413,
+        "before": 0.8620689655172413,
+        "delta": 0.0,
+        "groups": 28,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 29,
+        "ties": 29,
+        "wins": 0
+      },
+      "8192": {
+        "after": 0.9310344827586207,
+        "before": 0.9310344827586207,
+        "delta": 0.0,
+        "groups": 28,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "losses": 0,
+        "queries": 29,
+        "ties": 29,
+        "wins": 0
+      }
+    }
+  },
+  "changes": {
+    "2048": [
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0000",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0002",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 0.5,
+        "before": 0.25,
+        "case_id": "case-0009",
+        "category": "multi-session"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0020",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 0.5,
+        "before": 0.0,
+        "case_id": "case-0022",
+        "category": "knowledge-update"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0029",
+        "category": "single-session-user"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0036",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0037",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0041",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 0.6666666666666666,
+        "before": 0.3333333333333333,
+        "case_id": "case-0042",
+        "category": "multi-session"
+      },
+      {
+        "after": 0.0,
+        "before": 0.3333333333333333,
+        "case_id": "case-0073",
+        "category": "multi-session"
+      },
+      {
+        "after": 0.5,
+        "before": 0.0,
+        "case_id": "case-0082",
+        "category": "temporal-reasoning"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0098",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 0.5,
+        "before": 0.0,
+        "case_id": "case-0103",
+        "category": "knowledge-update"
+      },
+      {
+        "after": 1.0,
+        "before": 0.5,
+        "case_id": "case-0110",
+        "category": "temporal-reasoning"
+      }
+    ],
+    "4096": [
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0000",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0002",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 0.5,
+        "before": 0.25,
+        "case_id": "case-0009",
+        "category": "multi-session"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0020",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0036",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0037",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0041",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 0.6666666666666666,
+        "before": 0.3333333333333333,
+        "case_id": "case-0042",
+        "category": "multi-session"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0098",
+        "category": "single-session-assistant"
+      }
+    ],
+    "8192": [
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0000",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0002",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0020",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0036",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0037",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0041",
+        "category": "single-session-assistant"
+      },
+      {
+        "after": 1.0,
+        "before": 0.6666666666666666,
+        "case_id": "case-0042",
+        "category": "multi-session"
+      },
+      {
+        "after": 1.0,
+        "before": 0.0,
+        "case_id": "case-0098",
+        "category": "single-session-assistant"
+      }
+    ]
+  },
+  "complete": true,
+  "controls_reproduced": 357,
+  "limits": [
+    "Post-hoc development experiment, not independent confirmation.",
+    "All 119 cases and all three budgets retained; no default promotion.",
+    "Fixed candidates; source retention is not answer accuracy.",
+    "Previous 381-question preference regression remains unresolved."
+  ],
+  "native_exit_code": 0,
+  "native_session_id": 81878,
+  "observed_at": "2026-09-13T17:34:34.001633+00:00",
+  "output_sha256": "10343d74697a18d07320677aeb13b9f3c58ac3f8989cb642aec086639cc3617a",
+  "overall": {
+    "2048": {
+      "after": 0.7507309941520468,
+      "before": 0.6608187134502924,
+      "delta": 0.08991228070175439,
+      "groups": 111,
+      "interval_95": [
+        0.0445906432748538,
+        0.14380530973451328
+      ],
+      "losses": 1,
+      "queries": 114,
+      "ties": 99,
+      "wins": 14
+    },
+    "4096": {
+      "after": 0.8150584795321637,
+      "before": 0.7485380116959064,
+      "delta": 0.06652046783625731,
+      "groups": 111,
+      "interval_95": [
+        0.02654867256637168,
+        0.11299435028248588
+      ],
+      "losses": 0,
+      "queries": 114,
+      "ties": 105,
+      "wins": 9
+    },
+    "8192": {
+      "after": 0.8845029239766082,
+      "before": 0.8201754385964912,
+      "delta": 0.06432748538011696,
+      "groups": 111,
+      "interval_95": [
+        0.02608695652173913,
+        0.11016949152542373
+      ],
+      "losses": 0,
+      "queries": 114,
+      "ties": 106,
+      "wins": 8
+    }
+  },
+  "plan_sha256": "792a21539aa77f1d6862a9eac39c0a58581c680c9490671a64cd29b7e0f1ab5d"
+}

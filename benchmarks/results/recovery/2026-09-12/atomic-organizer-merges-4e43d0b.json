@@ -1,0 +1,102 @@
+{
+  "source_commit": "4e43d0b",
+  "full_suite_commit": "31946c2",
+  "changes": {
+    "31946c2": "Atomic merge publication and checksummed durable operation records",
+    "4e43d0b": "Reject non-finite metadata before lossy JSON encoding"
+  },
+  "runs": {
+    "baseline": {
+      "path": "/tmp/prme-atomic-merge-before.log",
+      "sha256": "b4632f9738c6e3b21b47cb08a62b0284620f19aeb8efc67d871c656f1acbf202",
+      "source_commit": "fffc8da",
+      "native_exit_code": 1,
+      "summary": "16 failed in 1.31s"
+    },
+    "fixture_mistake": {
+      "path": "/tmp/prme-atomic-merge-final-contracts.log",
+      "sha256": "cc288966862a64b6f3af485bbec9d8b9e67a30ee17843d1c99be919955bd02e8",
+      "source_commit": "31946c2-worktree",
+      "native_exit_code": 1,
+      "summary": "2 failed, 50 passed in 10.84s"
+    },
+    "full_regression": {
+      "path": "/tmp/prme-atomic-merge-full-31946c2.log",
+      "sha256": "66affc1978c10234a195536b1feaf35a5edece509a8b7a18d698c041a5f26ae5",
+      "source_commit": "31946c2",
+      "native_exit_code": 0,
+      "summary": "2793 passed, 81 skipped in 367.55s (0:06:07)"
+    },
+    "installed_base": {
+      "path": "/tmp/prme-atomic-merge-installed.log",
+      "sha256": "ccc9d5967bca3cfa9e495d3a5f0b748c1ef6be2d8b72e59eb69c4e3a0859fcab",
+      "source_commit": "31946c2",
+      "native_exit_code": 0,
+      "summary": "178 passed in 33.40s"
+    },
+    "numeric_reproduction": {
+      "path": "/tmp/prme-atomic-journal-numeric-before.log",
+      "sha256": "fbd2eea94d36cfb9cda5f185390a58f3fe49305bb73a771f4915ea5487403cbc",
+      "source_commit": "31946c2",
+      "native_exit_code": 1,
+      "summary": "3 failed, 48 deselected in 0.09s"
+    },
+    "insufficient_first_numeric_fix": {
+      "path": "/tmp/prme-atomic-merge-strict-json-contracts.log",
+      "sha256": "b3f7800103a5839a9bd77c5360ed72c051277a5f1354fab9c03bfd589b696b67",
+      "source_commit": "4e43d0b-worktree",
+      "native_exit_code": 1,
+      "summary": "3 failed, 62 passed in 13.51s"
+    },
+    "final_source_contracts": {
+      "path": "/tmp/prme-atomic-merge-json-final-contracts.log",
+      "sha256": "790b7a788c54baec5e876f0002a4e16bd4754e9bcb88591e98bd9f5fb139964f",
+      "source_commit": "4e43d0b",
+      "native_exit_code": 0,
+      "summary": "65 passed in 13.32s"
+    },
+    "final_installed_confirmed": {
+      "path": "/tmp/prme-atomic-journal-installed-confirmed.log",
+      "sha256": "37c2436f835bfb9f521b23f5d176d54e2bad08b72de2439fd48059cab949aaf3",
+      "source_commit": "4e43d0b",
+      "native_exit_code": 0,
+      "summary": "183 passed in 25.12s"
+    }
+  },
+  "limits": [
+    "Full regression precedes the final numeric encoding guard; source and installed final checks are separate overlapping invocations.",
+    "Authored rollback, process exit and cancellation checks do not prove hardware power-loss resilience, all historical graph replay, or QA quality."
+  ],
+  "artifacts": [
+    {
+      "path": "data/benchmarks/atomic-merge-installed-4e43d0b.json",
+      "sha256": "7cd7ada9efd73c6649fbc73da1dbdabb45c53b922fa385841395c4303cf0b91e"
+    },
+    {
+      "path": "data/benchmarks/atomic-merge-installed-31946c2.json",
+      "sha256": "0181e47a0c7f9144050a24fa1d6f313e6cbdf5e15d6c57fecfebff01945a384c"
+    },
+    {
+      "path": "data/benchmarks/atomic-merge-source-workflow.json",
+      "sha256": "f238cc5dcb0bd994ce6c5dd8f79139d32bb78b4f7f0032fd083ce25625e7c325"
+    },
+    {
+      "path": "/tmp/prme-atomic-journal-wheel/prme-0.11.0-py3-none-any.whl",
+      "sha256": "658383b07c84fce7459f850a8805aefecff6f54d0a6a5b03d1f3f8beecd1f8b3"
+    }
+  ],
+  "installed_source_verification": {
+    "python": "3.13.3",
+    "matching_python_files": 119,
+    "source_commit": "4e43d0b"
+  },
+  "final_static_checks": {
+    "native_exit_code": 0,
+    "mypy": "organizer_merge.py --follow-imports=silent --check-untyped-defs",
+    "ruff": [
+      "organizer_merge.py",
+      "test_atomic_organizer_merges.py",
+      "atomic_merge_workflow.py"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "complete": false,
+  "reason": "Exact document readback failed because native Hindsight strips selected input control characters; no quality scores inspected",
+  "study_commit": "77486e2",
+  "stopped_at": "2026-09-13T00:00:09.396514+00:00",
+  "products": {
+    "hindsight": {
+      "native_exit_code": 130,
+      "report": "data/benchmarks/hindsight-dev-capture-77486e2.json",
+      "report_sha256": "1fa8a309f708916a6cef37a2cf86e7ff7a1735524eccdb0bfe00e8fb81a4a8c9",
+      "recorded_cases": 17,
+      "errors": 1,
+      "fatal_error_type": "KeyboardInterrupt"
+    },
+    "prme": {
+      "native_exit_code": 130,
+      "report": "data/benchmarks/prme-dev-capture-77486e2.json",
+      "report_sha256": "f0a5dc3791a38c061a3f6b3af9987aae9155670ca851a1fce462ec8ea65877f2",
+      "recorded_cases": 2,
+      "errors": 0,
+      "fatal_error_type": "KeyboardInterrupt"
+    }
+  },
+  "readback_failure": {
+    "path": "data/benchmarks/hindsight-dev-capture-77486e2/case-0008.readback-error.json",
+    "sha256": "4a9c93cb62836579d8702ac29610dd3798238e304782e5cca40ffeadc6959829",
+    "source_id": "s18:t0",
+    "original_characters": 8921,
+    "returned_characters": 8892,
+    "change": "29 U+0002 characters removed"
+  }
+}

@@ -61,7 +61,58 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_events_scope ON events (scope)"
     )
 
+    # Durable work is committed atomically with its source event. Completed
+    # records retain the event-to-node identity without mutating the event log.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS event_materializations (
+            event_id UUID PRIMARY KEY,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
+        )
+    """)
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_materializations_pending "
+        "ON event_materializations (status, attempts, event_id)"
+    )
+
     # --- Nodes table ---
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS extraction_work_sequence (
+            singleton BOOLEAN PRIMARY KEY CHECK (singleton), next_ordinal BIGINT NOT NULL
+        )
+    """)
+    conn.execute("INSERT INTO extraction_work_sequence VALUES (true, 1) ON CONFLICT DO NOTHING")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS event_extractions (
+            event_id UUID PRIMARY KEY,
+            work_order BIGINT NOT NULL UNIQUE,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            generation BIGINT NOT NULL DEFAULT 0,
+            plan_id UUID,
+            plan_revision INTEGER NOT NULL DEFAULT 1,
+            lease_expires_at TIMESTAMPTZ,
+            next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
+            last_error VARCHAR,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
+        )
+    """)
+    # DuckDB rewrites indexed-column UPDATEs as DELETE/INSERT. A concurrent
+    # claimant can then bypass the conflict with an in-flight work-row UPDATE.
+    # Keep mutable lease/state fields unindexed; immutable work_order is already
+    # UNIQUE/indexed. PostgreSQL uses explicit row locks and retains its index.
+    conn.execute("DROP INDEX IF EXISTS idx_extractions_status")
+    work_columns = {row[1] for row in conn.execute("PRAGMA table_info('event_extractions')").fetchall()}
+    if "plan_revision" not in work_columns:
+        conn.execute("ALTER TABLE event_extractions ADD COLUMN plan_revision INTEGER DEFAULT 1")
+        # DuckDB 1.4.4 cannot recover this ADD COLUMN from WAL after abrupt
+        # exit (GetDefaultDatabase during replay). Persist the schema migration
+        # before accepting any work so recovery never replays that ALTER.
+        conn.execute("CHECKPOINT")
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS nodes (
             id UUID PRIMARY KEY,
@@ -98,12 +149,18 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes (node_type)"
     )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_nodes_lifecycle "
-        "ON nodes (lifecycle_state)"
-    )
+    # An indexed lifecycle update is a delete/insert on supported DuckDB.
+    # That can bypass an in-flight updated_at column claim made by a source
+    # validator. Keep mutable lifecycle state out of ART indexes so supported
+    # graph mutations conflict on the shared updated_at write instead.
+    # Existing packs receive the same correction during initialization.
+    conn.execute("DROP INDEX IF EXISTS idx_nodes_lifecycle")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_nodes_scope ON nodes (scope)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_nodes_session "
+        "ON nodes (user_id, session_id, scope, created_at, id)"
     )
 
     # --- Edges table ---
@@ -139,6 +196,11 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_edges_user ON edges (user_id)"
     )
+
+    from prme.storage.profile_publication import HEADS_DDL
+    conn.execute(HEADS_DDL)
+    from prme.storage.profile_work import PROFILE_WORK_DDL
+    conn.execute(PROFILE_WORK_DDL)
 
     # --- Operations table ---
     # Stores RETRIEVAL_REQUEST records per RFC-0005 S9 and forward-compatible
@@ -239,9 +301,10 @@ def _migrate_nodes_epistemic_type(conn: duckdb.DuckDBPyConnection) -> None:
     """Add epistemic_type and source_type columns to nodes table if missing.
 
     For existing databases created before these columns were added, this
-    function detects the missing columns and adds them with sensible defaults.
-    DuckDB 1.4.x ALTER TABLE ADD COLUMN does not support NOT NULL, so we
-    use DEFAULT only. New databases use CREATE TABLE with NOT NULL DEFAULT.
+    function leaves legacy epistemic values NULL so startup can distinguish
+    them from explicit modern assignments. Source type defaults to user_stated.
+    New databases use CREATE TABLE with NOT NULL DEFAULT; normal node creation
+    explicitly supplies both values.
 
     Safe to call on databases that already have the columns (no-op).
 
@@ -255,15 +318,20 @@ def _migrate_nodes_epistemic_type(conn: duckdb.DuckDBPyConnection) -> None:
     if result is None:
         conn.execute("""
             ALTER TABLE nodes
-            ADD COLUMN epistemic_type VARCHAR DEFAULT 'asserted'
+            ADD COLUMN epistemic_type VARCHAR
         """)
+        logger.info("Migrated nodes table: added nullable epistemic_type for legacy backfill")
+    source_column = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'nodes' AND column_name = 'source_type'
+    """).fetchone()
+    if source_column is None:
         conn.execute("""
             ALTER TABLE nodes
             ADD COLUMN source_type VARCHAR DEFAULT 'user_stated'
         """)
         logger.info(
-            "Migrated nodes table: added epistemic_type and source_type "
-            "columns (backfilled as 'asserted'/'user_stated')"
+            "Migrated nodes table: added source_type (default 'user_stated')"
         )
 
 
@@ -479,18 +547,17 @@ def create_property_graph(conn: duckdb.DuckDBPyConnection) -> bool:
 def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     """Initialize the full PRME database schema.
 
-    Convenience function that calls install_duckpgq, create_schema,
-    and create_property_graph in order. Tables and indexes are always
-    created; DuckPGQ property graph is best-effort.
+    Creates tables, indexes, and migrations for the supported recursive-SQL
+    graph backend. Opening a local pack never downloads an unused community
+    extension or emits a misleading fallback warning.
 
     Args:
         conn: Active DuckDB connection.
 
     Returns:
-        True if DuckPGQ property graph was created, False if operating
-        in SQL-only fallback mode (tables still created successfully).
+        False, preserving the legacy return contract for SQL graph mode.
+        Installation/schema failures raise exceptions.
     """
-    pgq_available = install_duckpgq(conn)
     create_schema(conn)
     _migrate_events_scope(conn)
     _verify_nodes_scope(conn)
@@ -499,5 +566,10 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     _migrate_nodes_ttl_days(conn)
     _migrate_events_event_time(conn)
     _migrate_nodes_event_time(conn)
-    pgq_graph = create_property_graph(conn)
-    return pgq_available and pgq_graph
+    from prme.storage.derivation_registry import initialize_duck
+    initialize_duck(conn)
+    from prme.storage.profile_registry import initialize_duck as initialize_profiles
+    initialize_profiles(conn)
+    from prme.storage.consolidation_publication import initialize_duck as initialize_consolidations
+    initialize_consolidations(conn)
+    return False

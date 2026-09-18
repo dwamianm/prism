@@ -1,0 +1,88 @@
+{
+  "chat_failures_or_long_requests": [
+    {
+      "elapsed": "10m31s",
+      "status": 200,
+      "time": "2026/09/13 - 13:55:21"
+    },
+    {
+      "elapsed": "10m31s",
+      "status": 499,
+      "time": "2026/09/13 - 13:55:22"
+    }
+  ],
+  "client_closed_log_present": true,
+  "explicit_oom_lines": 0,
+  "health": {
+    "observed_at": "2026-09-13T18:59:02.072476+00:00",
+    "requests": {
+      "ps": {
+        "models": [
+          {
+            "context_length": 8192,
+            "digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd",
+            "expires_at": "2026-09-13T14:04:02.070999-05:00",
+            "name": "qwen3.5:4b",
+            "size": 3375617800,
+            "size_vram": 3375617800
+          },
+          {
+            "context_length": 8192,
+            "digest": "08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68",
+            "expires_at": "2026-09-13T14:03:33.065717-05:00",
+            "name": "gemma4:26b",
+            "size": 1239532174,
+            "size_vram": 1239532174
+          }
+        ]
+      },
+      "tags": {
+        "models": [
+          {
+            "context_length": null,
+            "digest": "6316f0629137b426c9d9b853ffc4c8209589f30ee39aebede6285096c0ff47e7",
+            "expires_at": null,
+            "name": "gemma4:31b",
+            "size": 19868981791,
+            "size_vram": null
+          },
+          {
+            "context_length": null,
+            "digest": "08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68",
+            "expires_at": null,
+            "name": "gemma4:26b",
+            "size": 18604148513,
+            "size_vram": null
+          },
+          {
+            "context_length": null,
+            "digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd",
+            "expires_at": null,
+            "name": "qwen3.5:4b",
+            "size": 3389983735,
+            "size_vram": null
+          }
+        ]
+      },
+      "version": {
+        "version": "0.34.0"
+      }
+    }
+  },
+  "limits": [
+    "Time-correlated server logs do not identify a particular request or prove the root cause.",
+    "Model inventories are point-in-time observations; no server configuration or loaded model was changed.",
+    "No new model generation, download, benchmark retry or answer scoring was performed for this diagnostic."
+  ],
+  "matching_log_lines": 124,
+  "model_load_timeout_log_present": true,
+  "native_health_command_exit_code": 0,
+  "observed_at": "2026-09-13T19:01:51.264412+00:00",
+  "server_listener_process": "ollama",
+  "server_log_window_local": "2026-09-13 13:43:00 through 13:55:59 America/Chicago",
+  "sources": [
+    "https://docs.ollama.com/faq",
+    "https://docs.ollama.com/api/ps",
+    "https://docs.ollama.com/troubleshooting"
+  ]
+}

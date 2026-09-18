@@ -1,0 +1,13 @@
+{
+  "installed_package": "/private/tmp/prme-reinforcement-atomic-wheel/lib/python3.13/site-packages/prme",
+  "package_files_matched": 125,
+  "package_manifest_sha256": "a05e2459362ffbf4dea6d6f6747dce5a746a599ad2725dd1b20fe0ce0a57a3e7",
+  "pytest_exit_code": 0,
+  "source_commit": "483cc68",
+  "test_files": [
+    "tests/test_reinforcement_atomic.py",
+    "tests/test_reinforcement_evidence.py",
+    "tests/test_reinforcement.py"
+  ],
+  "wheel_sha256": "cea9e6ba635c150683e5a4167c02c8c667da2ce2357cc59d2b2ed75728bf88b3"
+}

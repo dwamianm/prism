@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,43 @@ class OscillationResult:
     topic: str  # extracted topic of oscillation
     cycle_count: int  # number of times topic has flipped
     confidence_penalty: float  # suggested confidence reduction
+
+
+def analyze_oscillation_chain(
+    full_chain: Sequence[Any],
+    *,
+    similarity_threshold: float = _SIMILARITY_THRESHOLD,
+) -> OscillationResult | None:
+    """Analyze a current node followed by the nodes it superseded.
+
+    This pure policy function is shared by detection and the transactional
+    mutation path so the journaled penalty is derived from the exact locked
+    node snapshots it records.
+    """
+    if len(full_chain) < 3:
+        return None
+
+    chain_keywords = [_extract_keywords(node.content) for node in full_chain]
+    cycle_count = 0
+    oscillating_ids: list[str] = [str(full_chain[0].id)]
+
+    for i in range(2, len(full_chain), 2):
+        similarity = _jaccard_similarity(chain_keywords[0], chain_keywords[i])
+        if similarity >= similarity_threshold:
+            cycle_count += 1
+            for node in full_chain[1 : i + 1]:
+                node_id = str(node.id)
+                if node_id not in oscillating_ids:
+                    oscillating_ids.append(node_id)
+
+    if cycle_count == 0:
+        return None
+    return OscillationResult(
+        oscillating_node_ids=oscillating_ids,
+        topic=_extract_topic(chain_keywords[0], chain_keywords[2]),
+        cycle_count=cycle_count,
+        confidence_penalty=min(_PENALTY_PER_CYCLE * cycle_count, _MAX_PENALTY),
+    )
 
 
 def _extract_keywords(text: str) -> set[str]:
@@ -129,35 +168,7 @@ class OscillationDetector:
         # second is what that replaced, etc.
         full_chain = [current_node] + chain
 
-        # Extract keywords for each node in the chain
-        chain_keywords = [_extract_keywords(node.content) for node in full_chain]
-
-        # Look for oscillation: compare current node (index 0) with nodes
-        # at index 2, 4, 6, ... (nodes that are 2+ steps back)
-        results: list[OscillationResult] = []
-        cycle_count = 0
-        oscillating_ids: list[str] = [str(full_chain[0].id)]
-
-        for i in range(2, len(full_chain), 2):
-            sim = _jaccard_similarity(chain_keywords[0], chain_keywords[i])
-            if sim >= self._similarity_threshold:
-                cycle_count += 1
-                # Add intervening nodes and the matching node
-                for j in range(1, i + 1):
-                    nid = str(full_chain[j].id)
-                    if nid not in oscillating_ids:
-                        oscillating_ids.append(nid)
-
-        if cycle_count > 0:
-            topic = _extract_topic(chain_keywords[0], chain_keywords[2])
-            penalty = min(_PENALTY_PER_CYCLE * cycle_count, _MAX_PENALTY)
-            results.append(
-                OscillationResult(
-                    oscillating_node_ids=oscillating_ids,
-                    topic=topic,
-                    cycle_count=cycle_count,
-                    confidence_penalty=penalty,
-                )
-            )
-
-        return results
+        result = analyze_oscillation_chain(
+            full_chain, similarity_threshold=self._similarity_threshold
+        )
+        return [result] if result is not None else []

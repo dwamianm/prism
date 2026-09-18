@@ -1,0 +1,22 @@
+{
+  "source_commit": "83b03ac",
+  "native_process_exit_code": 1,
+  "passed": 2530,
+  "skipped": 70,
+  "failed": 1,
+  "seconds": 738.47,
+  "log_sha256": "3b5ab055a2bb523881ce7df9c8641aebdd8f484c89d578c30dc357a2f412433d",
+  "failure": {
+    "node_id": "tests/test_http_write_fidelity.py::test_accepted_failure_has_private_receipt_and_repairs_original_source[postgres-ingest]",
+    "stage": "PostgreSQL pool creation before test body",
+    "exception": "ConnectionError",
+    "bounded_cause": "Local PostgreSQL endpoint rejected SSL negotiation"
+  },
+  "isolated_reproduction": {
+    "native_process_exit_code": 0,
+    "passed": 1,
+    "seconds": 0.34,
+    "log_sha256": "fc4efa05ec8ff7ed11c8f5fb2578bb82b5de5a8d34ed02c3e116981f5db95c2e"
+  },
+  "limits": "This full run did not pass. The isolated pass does not replace it. Next full regression uses explicit SSL-disabled settings for the loopback-only test database."
+}

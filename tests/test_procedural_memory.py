@@ -319,11 +319,11 @@ class TestMemoryBundleSystemInstructions:
 
 
 class TestInstructionReinforcement:
-    """Tests for INSTRUCTION reinforcement via similar content."""
+    """Related content alone cannot confirm an instruction."""
 
     @pytest.mark.asyncio
-    async def test_instruction_reinforced_by_related_content(self, config):
-        """Storing content that validates an instruction should reinforce it."""
+    async def test_related_content_does_not_confirm_instruction(self, config):
+        """A related report is not an explicit repetition of the rule."""
         engine = await _create_engine(config)
         try:
             # Store an instruction
@@ -334,7 +334,7 @@ class TestInstructionReinforcement:
             assert original is not None
             original_boost = original.reinforcement_boost
 
-            # Store related content that validates the instruction
+            # Store related content without an explicit instruction confirmation
             await engine.store(
                 "I completed the data analysis using Python as we always do",
                 user_id="test-user",
@@ -342,11 +342,11 @@ class TestInstructionReinforcement:
                 scope=Scope.PERSONAL,
             )
 
-            # Check that the instruction was reinforced
+            # Check that similarity was not credited as confirmation
             updated = await engine.get_node(inst_id)
             assert updated is not None
-            assert updated.reinforcement_boost >= original_boost, (
-                f"Expected reinforcement_boost >= {original_boost}, "
+            assert updated.reinforcement_boost == original_boost, (
+                f"Expected reinforcement_boost == {original_boost}, "
                 f"got {updated.reinforcement_boost}"
             )
         finally:

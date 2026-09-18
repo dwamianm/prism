@@ -6,13 +6,32 @@ environment variables (PRME_ prefix), .env files, and direct arguments.
 
 from __future__ import annotations
 
-from pydantic import Field, SecretStr, model_validator
+from typing import Any, ClassVar, Literal
+from uuid import UUID
+
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
+from prme.retrieval.temporal_relations import TemporalRelationConfig
 
 
-class ExtractionConfig(BaseSettings):
+class _ProjectSettings(BaseSettings):
+    """Read project settings without exporting secrets into process globals."""
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "forbid"}
+
+    @classmethod
+    def settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings):
+        def scoped_dotenv():
+            # Shared .env files contain provider secrets and other applications'
+            # settings. Ignore those here while retaining constructor typo errors.
+            return {key: value for key, value in dotenv_settings().items() if key in settings_cls.model_fields}
+
+        return init_settings, env_settings, scoped_dotenv, file_secret_settings
+
+
+class ExtractionConfig(_ProjectSettings):
     """Configuration for the LLM extraction provider.
 
     Controls which LLM provider and model is used for structured
@@ -29,44 +48,129 @@ class ExtractionConfig(BaseSettings):
     )
     max_retries: int = Field(
         default=3,
-        description="Instructor retry count for schema validation failures",
+        description="Instructor retry count for response-schema validation failures",
     )
     timeout: float = Field(
         default=30.0,
         description="Seconds per extraction call",
     )
+    temperature: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=2.0,
+        allow_inf_nan=False,
+        description=(
+            "Sampling temperature for structured extraction. Zero favors "
+            "repeatable schema-constrained output; increase only after "
+            "benchmarking extraction quality for the selected provider."
+        ),
+    )
+    reasoning_effort: Literal["none", "low", "medium", "high"] | None = Field(
+        default=None,
+        description=(
+            "Optional provider reasoning level for structured extraction. "
+            "Ollama defaults to 'none' so reasoning traces cannot consume the "
+            "schema response budget; other providers keep their own default."
+        ),
+    )
+    lease_seconds: float = Field(
+        default=300.0, gt=0, allow_inf_nan=False,
+        description="Durable extraction lease; active workers renew it and commit rechecks ownership",
+    )
+    api_key: SecretStr | None = Field(
+        default=None, description="Optional extraction credential; overrides provider environment variables",
+    )
+    base_url: str | None = Field(
+        default=None, description="Optional extraction endpoint; overrides provider environment variables",
+    )
+
+    @model_validator(mode="after")
+    def default_ollama_reasoning_effort(self) -> ExtractionConfig:
+        if self.provider.strip().casefold() == "ollama" and self.reasoning_effort is None:
+            self.reasoning_effort = "none"
+        return self
 
     model_config = {
         "env_prefix": "PRME_EXTRACTION_",
     }
 
 
-class EmbeddingConfig(BaseSettings):
+class EmbeddingConfig(_ProjectSettings):
     """Configuration for the embedding provider."""
+
+    _DEFAULT_FASTEMBED_MODEL: ClassVar[str] = "BAAI/bge-small-en-v1.5"
+    _OPENAI_MODELS: ClassVar[dict[str, int]] = {
+        "text-embedding-3-small": 1536,
+        "text-embedding-3-large": 3072,
+    }
 
     provider: str = Field(
         default="fastembed", description="Embedding provider name"
     )
     model_name: str = Field(
-        default="BAAI/bge-small-en-v1.5", description="Embedding model identifier"
+        default=_DEFAULT_FASTEMBED_MODEL, description="Embedding model identifier"
     )
     dimension: int = Field(
-        default=384, description="Embedding vector dimension"
+        default=384,
+        ge=1,
+        description=(
+            "Embedding vector dimension. When omitted, registered FastEmbed and "
+            "OpenAI model dimensions are inferred without loading model weights."
+        ),
     )
     api_key: SecretStr | None = Field(
         default=None,
         description="API key for API-based embedding providers (e.g., OpenAI)",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def infer_builtin_model_dimension(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        data = dict(value)
+        provider = str(data.get("provider", "fastembed")).strip().casefold()
+        if provider == "openai" and "model_name" not in data:
+            data["model_name"] = "text-embedding-3-small"
+        model_name = str(data.get("model_name", cls._DEFAULT_FASTEMBED_MODEL))
+        if data.get("dimension") is not None:
+            return data
+        if provider == "openai":
+            dimension = cls._OPENAI_MODELS.get(model_name)
+            if dimension is None:
+                raise ValueError(
+                    f"OpenAI embedding model {model_name!r} has no known dimension; "
+                    "set dimension explicitly"
+                )
+        elif provider == "fastembed":
+            from prme.storage.embedding import fastembed_model_dimension
+
+            dimension = fastembed_model_dimension(model_name)
+        else:
+            raise ValueError(
+                f"Embedding provider {provider!r} cannot infer a dimension; "
+                "set dimension explicitly"
+            )
+        data["dimension"] = dimension
+        return data
+
     model_config = {
         "env_prefix": "PRME_EMBEDDING_",
     }
 
 
-class APIConfig(BaseSettings):
+def _validate_user_keys(keys: dict[str, SecretStr]) -> None:
+    values = [key.get_secret_value() for key in keys.values()]
+    if any(not user.strip() for user in keys) or any(not key.strip() for key in values):
+        raise ValueError("User IDs and bearer credentials must not be empty")
+    if len(values) != len(set(values)):
+        raise ValueError("Each user must have a distinct bearer credential")
+
+
+class APIConfig(_ProjectSettings):
     """Configuration for the HTTP API server (security hardening, issue #34)."""
 
-    api_key: str | None = Field(
+    api_key: SecretStr | None = Field(
         default=None,
         description=(
             "API key for bearer-token authentication. When set, every "
@@ -75,6 +179,19 @@ class APIConfig(BaseSettings):
             "authentication — only safe for single-user localhost use."
         ),
     )
+    user_keys: dict[str, SecretStr] = Field(
+        default_factory=dict,
+        description="User IDs mapped to distinct bearer credentials. Binds every HTTP operation "
+                    "to the authenticated user. Cannot be combined with the legacy global api_key.",
+    )
+
+    @model_validator(mode="after")
+    def validate_user_keys(self):
+        if self.user_keys and self.api_key is not None:
+            raise ValueError("Configure user_keys or the global api_key, not both")
+        _validate_user_keys(self.user_keys)
+        return self
+
     cors_origins: list[str] = Field(
         default_factory=list,
         description=(
@@ -97,7 +214,26 @@ class APIConfig(BaseSettings):
     }
 
 
-class OrganizerConfig(BaseSettings):
+class MCPConfig(_ProjectSettings):
+    """MCP identity: a fixed owner for stdio, or distinct credentials for HTTP."""
+
+    user_id: str | None = None
+    user_keys: dict[str, SecretStr] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_identity(self):
+        if self.user_id is not None and not self.user_id.strip():
+            raise ValueError("MCP user_id must not be empty")
+        if self.user_id is not None and self.user_keys:
+            raise ValueError("Use a fixed MCP user_id or per-user HTTP keys, not both")
+        # Same distinct, nonempty credential contract as the HTTP API.
+        _validate_user_keys(self.user_keys)
+        return self
+
+    model_config = {"env_prefix": "PRME_MCP_"}
+
+
+class OrganizerConfig(_ProjectSettings):
     """Configuration for self-organizing memory (RFC-0015)."""
 
     opportunistic_enabled: bool = Field(
@@ -226,7 +362,7 @@ class OrganizerConfig(BaseSettings):
     }
 
 
-class PRMEConfig(BaseSettings):
+class PRMEConfig(_ProjectSettings):
     """Root configuration for PRME.
 
     Loads from environment variables with PRME_ prefix,
@@ -238,9 +374,29 @@ class PRMEConfig(BaseSettings):
         default=None,
         description="PostgreSQL connection string. When set, all storage uses PostgreSQL.",
     )
+    namespace_id: UUID | None = Field(
+        default=None,
+        description="Expected physical local-pack identity. New packs bind this ID; existing packs "
+                    "must already match. PostgreSQL workspaces set their bound identity internally. "
+                    "This does not filter shared tables or grant access.",
+    )
     db_path: str = Field(
         default="./memory.duckdb", description="Path to DuckDB database file"
     )
+    duckdb_threads: int | None = Field(
+        default=None, ge=1,
+        description="Optional DuckDB worker-thread count per open database. None preserves "
+                    "DuckDB's default. Concurrent engines for the same file must use the same "
+                    "setting. Does not limit embedding/index threads or apply to PostgreSQL.",
+    )
+
+    @field_validator("duckdb_threads", mode="before")
+    @classmethod
+    def validate_duckdb_threads(cls, value):
+        if isinstance(value, bool):
+            raise ValueError("duckdb_threads must be a positive integer or None")
+        return value
+
     vector_path: str = Field(
         default="./vectors.usearch", description="Path to USearch vector index"
     )
@@ -269,10 +425,20 @@ class PRMEConfig(BaseSettings):
         default_factory=PackingConfig,
         description="Context packing configuration (RFC-0006)",
     )
+    temporal_relation: TemporalRelationConfig = Field(
+        default_factory=TemporalRelationConfig,
+        description=(
+            "Opt-in evidence-bound temporal arithmetic. Disabled by default; "
+            "when enabled, the configured resolver and independent gate may "
+            "make network calls during temporal retrieval."
+        ),
+    )
     organizer: OrganizerConfig = Field(
         default_factory=OrganizerConfig,
         description="Self-organizing memory configuration (RFC-0015)",
     )
+    mcp: MCPConfig = Field(default_factory=MCPConfig)
+
     api: APIConfig = Field(
         default_factory=APIConfig,
         description="HTTP API server configuration (auth, CORS)",
@@ -295,12 +461,13 @@ class PRMEConfig(BaseSettings):
         ),
     )
     enable_qa_pairing: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "When True, store() automatically creates merged Q-A nodes "
-            "when consecutive messages in the same session have different "
-            "roles. This improves retrieval by co-locating questions with "
-            "their answers. Requires session_id to be set."
+            "[HYPOTHESIS] When True, store() creates best-effort merged Q-A "
+            "nodes for consecutive, differently-typed session roles. The "
+            "heuristic is in-process, is not part of durable store recovery, "
+            "and has not improved a registered quality benchmark. Default "
+            "False; requires session_id."
         ),
     )
     enable_surprise_gating: bool = Field(
@@ -400,9 +567,10 @@ class PRMEConfig(BaseSettings):
     # Dual-stream ingestion (issue #25)
     materialization_queue_size: int = Field(
         default=500,
+        ge=1,
         description=(
-            "Maximum number of pending items in the materialization queue. "
-            "When full, oldest items are dropped. Used by ingest_fast()."
+            "Maximum number of durable pending events read in one materialization "
+            "batch. Additional work remains on disk; acknowledged events are never dropped."
         ),
     )
     materialization_budget_ms: int = Field(
@@ -435,11 +603,11 @@ class PRMEConfig(BaseSettings):
             "from the same event log can return different neighbor sets, "
             "violating the 'identical log + config -> identical retrieval' "
             "determinism claim. Exact search is order-independent and makes "
-            "retrieval reproducible. At current corpus sizes (<100k vectors) "
-            "brute-force cosine is fast. Set to False to trade determinism "
-            "for sub-linear ANN latency on very large corpora. Applies to "
-            "the DuckDB/USearch backend only; the PostgreSQL backend uses "
-            "pgvector's own index and ignores this flag."
+            "retrieval reproducible. Applies to both backends. PostgreSQL "
+            "materializes eligible rows before ordering, so filtered ANN "
+            "candidates cannot hide matching memories. Exact cost grows with "
+            "eligible corpus size; benchmark your workload. Set False to allow "
+            "approximate search, which may miss eligible neighbors."
         ),
     )
     lexical_commit_interval: int = Field(

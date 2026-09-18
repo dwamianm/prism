@@ -9,9 +9,11 @@ import pytest
 pytest.importorskip("langchain_core", reason="langchain-core not installed")
 
 from langchain_core.documents import Document
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
+from prme.integrations._chat_history import CHAT_CONTROL_METADATA_KEY
 from prme.integrations.langchain import PRMEChatMessageHistory, PRMERetriever
+from prme.types import Scope, SourceType
 
 
 @pytest.fixture
@@ -107,16 +109,97 @@ class TestPRMEChatMessageHistory:
         finally:
             history.close()
 
-    def test_clear_is_noop(self, tmpdir: str):
+    def test_clear_hides_messages_but_retains_source_events(self, tmpdir: str):
         history = PRMEChatMessageHistory(
             directory=tmpdir, user_id="test-user", session_id="s1"
         )
         try:
             history.add_user_message("Hello")
             history.clear()
-            # Messages should still be there (append-only)
-            msgs = history.messages
-            assert len(msgs) == 1
+            assert history.messages == []
+
+            events = history._client.get_events("test-user", session_id="s1")
+            assert len(events) == 2
+            control = next(
+                event
+                for event in events
+                if event.metadata and CHAT_CONTROL_METADATA_KEY in event.metadata
+            )
+            assert control.metadata[CHAT_CONTROL_METADATA_KEY]["operation"] == "clear"
+            assert history._client.get_event_nodes(
+                str(control.id), user_id="test-user"
+            ) == []
+
+            history.add_ai_message("Fresh start")
+            assert [message.content for message in history.messages] == ["Fresh start"]
+        finally:
+            history.close()
+
+    def test_clear_persists_across_instances(self, tmpdir: str):
+        history = PRMEChatMessageHistory(
+            directory=tmpdir, user_id="test-user", session_id="s1"
+        )
+        history.add_user_message("Old message")
+        history.clear()
+        history.close()
+
+        reopened = PRMEChatMessageHistory(
+            directory=tmpdir, user_id="test-user", session_id="s1"
+        )
+        try:
+            assert reopened.messages == []
+        finally:
+            reopened.close()
+
+    def test_preserves_structured_message_fields(self, tmpdir: str):
+        history = PRMEChatMessageHistory(
+            directory=tmpdir, user_id="test-user", session_id="s1"
+        )
+        message = ToolMessage(
+            content=[{"type": "text", "text": "Tool output"}],
+            tool_call_id="call-1",
+            name="lookup",
+            additional_kwargs={"source": "fixture"},
+        )
+        try:
+            history.add_message(message)
+            restored = history.messages[0]
+            assert isinstance(restored, ToolMessage)
+            assert restored.model_dump(mode="json") == message.model_dump(mode="json")
+            event = history._client.get_events("test-user", session_id="s1")[0]
+            assert event.role == "tool"
+            nodes = history._client.get_event_nodes(str(event.id), user_id="test-user")
+            assert nodes[0].source_type == SourceType.TOOL_OUTPUT
+        finally:
+            history.close()
+
+    def test_messages_assignment_replaces_history(self, tmpdir: str):
+        history = PRMEChatMessageHistory(
+            directory=tmpdir, user_id="test-user", session_id="s1"
+        )
+        try:
+            history.add_user_message("Old")
+            history.messages = [AIMessage(content="Replacement")]
+            restored = history.messages
+            assert len(restored) == 1
+            assert isinstance(restored[0], AIMessage)
+            assert restored[0].content == "Replacement"
+        finally:
+            history.close()
+
+    def test_scope_isolation(self, tmpdir: str):
+        history = PRMEChatMessageHistory(
+            directory=tmpdir, user_id="test-user", session_id="s1"
+        )
+        try:
+            history.add_user_message("Personal")
+            history._client.store(
+                "Project",
+                user_id="test-user",
+                session_id="s1",
+                scope=Scope.PROJECT,
+            )
+            assert [message.content for message in history.messages] == ["Personal"]
         finally:
             history.close()
 

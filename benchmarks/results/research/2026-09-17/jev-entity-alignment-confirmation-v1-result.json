@@ -1,0 +1,3043 @@
+{
+  "schema_version": 1,
+  "kind": "jev-entity-alignment-confirmation-result",
+  "completed_at": "2026-09-17T20:29:44.445126+00:00",
+  "registration_sha256": "a1b99beac25cbc2273191080fb03ba981e9a4a1a27f7fa43b24381c412c19c18",
+  "cohort": {
+    "role": "confirmation",
+    "splits": [
+      "valid",
+      "test"
+    ],
+    "pairs": 182,
+    "counts_by_label": {
+      "0": 154,
+      "1": 28
+    },
+    "identity_sha256": "32f529a4ce8bc8b25743354caec07280fbaac56e0f672cf31b76ca0e92953f5a"
+  },
+  "provider": {
+    "name": "TypeSafe AI",
+    "model": "jev-1.13.0",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "credential_environment": [
+      "JEV_API_KEY",
+      "TYPESAFE_API_KEY"
+    ]
+  },
+  "protocol": {
+    "task": "candidate_pair_entity_alignment",
+    "state_fields": [
+      "entity_a",
+      "entity_b"
+    ],
+    "questions": {
+      "link_state": {
+        "type": "score",
+        "instructions": "How do the two entity descriptions relate as products?",
+        "criteria": [
+          "They describe two different products.",
+          "They describe closely related products that may or may not be the same one: a variant, a special edition, or a name that could plausibly refer to either.",
+          "They describe one and the same product."
+        ]
+      },
+      "same_name": {
+        "type": "noul",
+        "instructions": "Do the two entities state the same beer name?"
+      },
+      "same_brewery": {
+        "type": "noul",
+        "instructions": "Are the two entities from the same brewery?"
+      },
+      "same_style": {
+        "type": "noul",
+        "instructions": "Do the two entities describe the same beer style?"
+      }
+    },
+    "questions_sha256": "5c49f064266e12eb6b375de6ad2d3ff1b688d4441d8c2ed6f97891e3b702faa6",
+    "model": "jev-1.13.0",
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "decision_arms": {
+      "score_route": "link_state.score >= 1.5"
+    },
+    "review_rule": "link_state.score >= 0.5",
+    "current_prme_baseline": "stripped case-insensitive exact entity name or built-in known alias",
+    "concurrency": 6,
+    "timeout_seconds": 120.0,
+    "max_attempts": 3,
+    "retryable_statuses": [
+      429,
+      500,
+      502,
+      503,
+      504,
+      529
+    ],
+    "emit_entity_text": false,
+    "selected_arm": "score_route"
+  },
+  "confirmation": {
+    "current_prme_baseline": {
+      "tp": 4,
+      "fp": 0,
+      "tn": 154,
+      "fn": 24,
+      "accuracy": 0.8681318681318682,
+      "merge_precision": 1.0,
+      "merge_recall": 0.14285714285714285,
+      "false_merge_rate": 0.0
+    },
+    "selected_arm": "score_route",
+    "metrics": {
+      "tp": 18,
+      "fp": 1,
+      "tn": 153,
+      "fn": 10,
+      "accuracy": 0.9395604395604396,
+      "merge_precision": 0.9473684210526315,
+      "merge_recall": 0.6428571428571429,
+      "false_merge_rate": 0.006493506493506494
+    },
+    "gate_results": {
+      "pairs_evaluated_min": true,
+      "response_validity_min": true,
+      "merge_precision_min": false,
+      "merge_recall_min": true,
+      "false_merges_max": true,
+      "recall_gain_over_current_min": true
+    },
+    "samples": [
+      {
+        "id": "valid-0000-496-1535",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.36481,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0001-2915-77",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.343866,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0002-319-692",
+        "label": 0,
+        "link_score": 0.38,
+        "link_confidence": 0.44,
+        "link_probabilities": {
+          "0": 0.63,
+          "1": 0.37,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.375455,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0003-3170-602",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.98,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.415565,
+        "input_tokens": 527,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0004-252-1073",
+        "label": 0,
+        "link_score": 0.22,
+        "link_confidence": 0.67,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.21,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.340268,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0005-2246-2249",
+        "label": 0,
+        "link_score": 0.4,
+        "link_confidence": 0.4,
+        "link_probabilities": {
+          "0": 0.6,
+          "1": 0.4,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.335637,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0006-3622-2020",
+        "label": 1,
+        "link_score": 0.92,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.14,
+          "1": 0.8,
+          "2": 0.06
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.19479,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0007-1524-1445",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.173726,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0008-138-1496",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.155955,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0009-492-461",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.172693,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0010-1004-20",
+        "label": 1,
+        "link_score": 1.56,
+        "link_confidence": 0.34,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.42,
+          "2": 0.57
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.136271,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0011-732-1414",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.20875,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0012-928-2275",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.18041,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0013-2934-980",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.81,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.227724,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0014-2934-2582",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.16863,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0015-1522-467",
+        "label": 1,
+        "link_score": 1.39,
+        "link_confidence": 0.37,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.58,
+          "2": 0.41
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.169327,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0016-3748-1626",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.128124,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0017-2930-628",
+        "label": 0,
+        "link_score": 0.24,
+        "link_confidence": 0.64,
+        "link_probabilities": {
+          "0": 0.76,
+          "1": 0.24,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.142945,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0018-1725-447",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.16431,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0019-3963-623",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.212106,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0020-2125-1534",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.199308,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0021-3661-1090",
+        "label": 0,
+        "link_score": 0.42,
+        "link_confidence": 0.37,
+        "link_probabilities": {
+          "0": 0.59,
+          "1": 0.41,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.195602,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0022-1237-1862",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.211661,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0023-519-2070",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.20779,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0024-3251-572",
+        "label": 0,
+        "link_score": 0.4,
+        "link_confidence": 0.4,
+        "link_probabilities": {
+          "0": 0.6,
+          "1": 0.4,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.144675,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0025-3593-2636",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.173097,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0026-3963-1120",
+        "label": 0,
+        "link_score": 0.33,
+        "link_confidence": 0.51,
+        "link_probabilities": {
+          "0": 0.69,
+          "1": 0.3,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.166457,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0027-2491-1230",
+        "label": 1,
+        "link_score": 1.6,
+        "link_confidence": 0.39,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.4,
+          "2": 0.6
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.280096,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0028-674-2615",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.188279,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0029-2614-2627",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.188447,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0030-833-90",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.159405,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0031-1880-2948",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.271145,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0032-1322-1308",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.15423,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0033-1748-652",
+        "label": 1,
+        "link_score": 0.36,
+        "link_confidence": 0.47,
+        "link_probabilities": {
+          "0": 0.65,
+          "1": 0.35,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.180148,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0034-2423-1414",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.152159,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0035-1743-2334",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.81,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.253546,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0036-429-2805",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.07,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.129011,
+        "input_tokens": 531,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0037-1743-600",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.81,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.195484,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0038-3402-1096",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.182663,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0039-2751-2550",
+        "label": 0,
+        "link_score": 0.47,
+        "link_confidence": 0.3,
+        "link_probabilities": {
+          "0": 0.54,
+          "1": 0.45,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.158769,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0040-2975-2899",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.19209,
+        "input_tokens": 500,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0041-4173-2425",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.83,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.157222,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0042-2700-1380",
+        "label": 1,
+        "link_score": 1.64,
+        "link_confidence": 0.46,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.35,
+          "2": 0.64
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.226459,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0043-354-1661",
+        "label": 0,
+        "link_score": 0.31,
+        "link_confidence": 0.53,
+        "link_probabilities": {
+          "0": 0.69,
+          "1": 0.31,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.2131,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0044-3126-1889",
+        "label": 0,
+        "link_score": 0.39,
+        "link_confidence": 0.41,
+        "link_probabilities": {
+          "0": 0.62,
+          "1": 0.36,
+          "2": 0.02
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.31699,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0045-3468-1921",
+        "label": 1,
+        "link_score": 1.66,
+        "link_confidence": 0.49,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.32,
+          "2": 0.67
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.158242,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0046-655-1661",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.72,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.165045,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0047-3388-838",
+        "label": 0,
+        "link_score": 0.02,
+        "link_confidence": 0.97,
+        "link_probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176374,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0048-1249-583",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.21385,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0049-354-698",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.163575,
+        "input_tokens": 522,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0050-99-90",
+        "label": 0,
+        "link_score": 0.21,
+        "link_confidence": 0.69,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.177194,
+        "input_tokens": 523,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0051-2614-1645",
+        "label": 0,
+        "link_score": 0.21,
+        "link_confidence": 0.68,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.16311,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0052-287-2581",
+        "label": 0,
+        "link_score": 0.95,
+        "link_confidence": 0.81,
+        "link_probabilities": {
+          "0": 0.09,
+          "1": 0.87,
+          "2": 0.04
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.198633,
+        "input_tokens": 501,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0053-4050-2517",
+        "label": 0,
+        "link_score": 0.28,
+        "link_confidence": 0.58,
+        "link_probabilities": {
+          "0": 0.74,
+          "1": 0.24,
+          "2": 0.02
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.135166,
+        "input_tokens": 533,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0054-4104-2416",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.16859,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0055-732-461",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176787,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0056-977-1601",
+        "label": 0,
+        "link_score": 1.51,
+        "link_confidence": 0.26,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.47,
+          "2": 0.52
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.147736,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0057-4323-2378",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.204458,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0058-3533-1962",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.535931,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0059-1474-427",
+        "label": 1,
+        "link_score": 0.99,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.07,
+          "1": 0.87,
+          "2": 0.06
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.185836,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0060-4083-2378",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.16192,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0061-1030-43",
+        "label": 1,
+        "link_score": 0.43,
+        "link_confidence": 0.35,
+        "link_probabilities": {
+          "0": 0.57,
+          "1": 0.42,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.396374,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0062-487-2582",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176111,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0063-704-124",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.171094,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0064-3372-2546",
+        "label": 0,
+        "link_score": 0.46,
+        "link_confidence": 0.31,
+        "link_probabilities": {
+          "0": 0.55,
+          "1": 0.45,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.165104,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0065-1972-2091",
+        "label": 0,
+        "link_score": 0.47,
+        "link_confidence": 0.29,
+        "link_probabilities": {
+          "0": 0.53,
+          "1": 0.46,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.223149,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0066-925-2564",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.162453,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0067-113-2975",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.171075,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0068-3073-1647",
+        "label": 1,
+        "link_score": 1.88,
+        "link_confidence": 0.81,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.12,
+          "2": 0.88
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.150824,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0069-1394-358",
+        "label": 1,
+        "link_score": 1.96,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.04,
+          "2": 0.96
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.188259,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0070-3652-1911",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.139474,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0071-4152-2463",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.563878,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0072-2423-22",
+        "label": 0,
+        "link_score": 0.2,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.193974,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0073-4162-2936",
+        "label": 0,
+        "link_score": 0.02,
+        "link_confidence": 0.97,
+        "link_probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.154322,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0074-1060-1230",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.14069,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0075-2163-985",
+        "label": 1,
+        "link_score": 1.92,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.08,
+          "2": 0.92
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.173263,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0076-167-1367",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.202588,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0077-2320-524",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.173719,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0078-2764-1423",
+        "label": 1,
+        "link_score": 1.95,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.05,
+          "2": 0.95
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.187104,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0079-3246-709",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.168555,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0080-3818-1535",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.178888,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0081-128-1230",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.315057,
+        "input_tokens": 510,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0082-1491-865",
+        "label": 0,
+        "link_score": 0.24,
+        "link_confidence": 0.64,
+        "link_probabilities": {
+          "0": 0.76,
+          "1": 0.24,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.166963,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0083-2777-1166",
+        "label": 0,
+        "link_score": 0.45,
+        "link_confidence": 0.32,
+        "link_probabilities": {
+          "0": 0.55,
+          "1": 0.45,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.185115,
+        "input_tokens": 526,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0084-2423-2618",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.15253,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0085-355-373",
+        "label": 0,
+        "link_score": 0.34,
+        "link_confidence": 0.49,
+        "link_probabilities": {
+          "0": 0.67,
+          "1": 0.33,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.25413,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0086-2867-1493",
+        "label": 1,
+        "link_score": 1.84,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.16,
+          "2": 0.84
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.147309,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0087-1713-549",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.147148,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0088-4336-2510",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.175338,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0089-3185-411",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.226075,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "valid-0090-1042-1403",
+        "label": 0,
+        "link_score": 0.6,
+        "link_confidence": 0.33,
+        "link_probabilities": {
+          "0": 0.42,
+          "1": 0.56,
+          "2": 0.02
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.20001,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0000-1219-2470",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.98,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.141919,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0001-492-1635",
+        "label": 0,
+        "link_score": 0.11,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.183188,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0002-3917-2224",
+        "label": 1,
+        "link_score": 1.54,
+        "link_confidence": 0.32,
+        "link_probabilities": {
+          "0": 0.02,
+          "1": 0.42,
+          "2": 0.56
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.21355,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0003-2155-2948",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.9,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.225048,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0004-271-1410",
+        "label": 1,
+        "link_score": 1.17,
+        "link_confidence": 0.56,
+        "link_probabilities": {
+          "0": 0.06,
+          "1": 0.71,
+          "2": 0.23
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.23234,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0005-3309-716",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.161006,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0006-1024-37",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.18386,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0007-1780-685",
+        "label": 1,
+        "link_score": 1.68,
+        "link_confidence": 0.52,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.3,
+          "2": 0.69
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.245775,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0008-1479-1563",
+        "label": 0,
+        "link_score": 0.37,
+        "link_confidence": 0.45,
+        "link_probabilities": {
+          "0": 0.64,
+          "1": 0.36,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.1625,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0009-2026-1679",
+        "label": 0,
+        "link_score": 0.2,
+        "link_confidence": 0.7,
+        "link_probabilities": {
+          "0": 0.8,
+          "1": 0.2,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.162413,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0010-2155-1261",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.170999,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0011-525-433",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.149244,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0012-3-641",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.261048,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0013-4068-2374",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.180942,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0014-4203-2425",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.228432,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0015-2572-221",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.13745,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0016-309-2621",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.170823,
+        "input_tokens": 503,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0017-309-418",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.448541,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0018-200-559",
+        "label": 0,
+        "link_score": 1.05,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.03,
+          "1": 0.88,
+          "2": 0.09
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.143585,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0019-3963-63",
+        "label": 0,
+        "link_score": 0.35,
+        "link_confidence": 0.48,
+        "link_probabilities": {
+          "0": 0.65,
+          "1": 0.34,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.218637,
+        "input_tokens": 502,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0020-2633-2143",
+        "label": 0,
+        "link_score": 0.23,
+        "link_confidence": 0.66,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.219147,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0021-2558-1284",
+        "label": 1,
+        "link_score": 1.94,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.06,
+          "2": 0.94
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.250729,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0022-1218-2463",
+        "label": 0,
+        "link_score": 0.01,
+        "link_confidence": 0.98,
+        "link_probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.165969,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0023-285-411",
+        "label": 0,
+        "link_score": 0.24,
+        "link_confidence": 0.65,
+        "link_probabilities": {
+          "0": 0.77,
+          "1": 0.23,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.249054,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0024-184-1889",
+        "label": 0,
+        "link_score": 0.38,
+        "link_confidence": 0.42,
+        "link_probabilities": {
+          "0": 0.63,
+          "1": 0.36,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.167798,
+        "input_tokens": 518,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0025-1178-1255",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.171039,
+        "input_tokens": 525,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0026-501-216",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.159024,
+        "input_tokens": 524,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0027-29-2883",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.145611,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0028-184-1255",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.190697,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0029-563-1177",
+        "label": 1,
+        "link_score": 1.31,
+        "link_confidence": 0.52,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.6900000000000001,
+          "2": 0.31
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.210074,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0030-507-716",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.84,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.186758,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0031-1755-1635",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.78,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.226616,
+        "input_tokens": 524,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0032-1904-2681",
+        "label": 0,
+        "link_score": 0.41,
+        "link_confidence": 0.39,
+        "link_probabilities": {
+          "0": 0.6,
+          "1": 0.4,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.322174,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0033-3402-1889",
+        "label": 0,
+        "link_score": 0.4,
+        "link_confidence": 0.4,
+        "link_probabilities": {
+          "0": 0.63,
+          "1": 0.35,
+          "2": 0.02
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.157167,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0034-1251-812",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.228064,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0035-113-475",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.179593,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0036-2596-2124",
+        "label": 0,
+        "link_score": 0.33,
+        "link_confidence": 0.5,
+        "link_probabilities": {
+          "0": 0.68,
+          "1": 0.32,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.15307,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0037-406-2071",
+        "label": 0,
+        "link_score": 0.03,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.137573,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0038-1900-333",
+        "label": 0,
+        "link_score": 0.03,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.179824,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0039-4181-2300",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.159544,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0040-982-348",
+        "label": 0,
+        "link_score": 0.1,
+        "link_confidence": 0.85,
+        "link_probabilities": {
+          "0": 0.9,
+          "1": 0.1,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.159465,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0041-1621-548",
+        "label": 1,
+        "link_score": 0.94,
+        "link_confidence": 0.69,
+        "link_probabilities": {
+          "0": 0.13,
+          "1": 0.79,
+          "2": 0.08
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.253249,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0042-184-1679",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.201239,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0043-487-1519",
+        "label": 0,
+        "link_score": 0.25,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.76,
+          "1": 0.24,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.207644,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0044-4168-2381",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176354,
+        "input_tokens": 522,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0045-3963-980",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.74,
+        "link_probabilities": {
+          "0": 0.83,
+          "1": 0.17,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.199207,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0046-2007-203",
+        "label": 1,
+        "link_score": 1.97,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.03,
+          "2": 0.97
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.152486,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0047-1218-1445",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.91,
+        "link_probabilities": {
+          "0": 0.94,
+          "1": 0.06,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.18295,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0048-833-2728",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.229496,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0049-3842-1853",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.93,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176576,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0050-1030-679",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.205043,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0051-2444-1348",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.95,
+        "link_probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.318345,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0052-29-2582",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.79,
+        "link_probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.24161,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0053-76-2831",
+        "label": 0,
+        "link_score": 0.77,
+        "link_confidence": 0.65,
+        "link_probabilities": {
+          "0": 0.23,
+          "1": 0.77,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.166085,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0054-3626-646",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.182932,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0055-525-2972",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.72,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.151145,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0056-2215-1120",
+        "label": 0,
+        "link_score": 0.05,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.223251,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0057-2494-2565",
+        "label": 0,
+        "link_score": 0.16,
+        "link_confidence": 0.76,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.164261,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0058-1042-55",
+        "label": 1,
+        "link_score": 1.91,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.09,
+          "2": 0.91
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.196015,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0059-1661-1163",
+        "label": 0,
+        "link_score": 0.15,
+        "link_confidence": 0.77,
+        "link_probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.203866,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0060-1621-2601",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.140058,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0061-2026-1496",
+        "label": 0,
+        "link_score": 0.27,
+        "link_confidence": 0.6,
+        "link_probabilities": {
+          "0": 0.74,
+          "1": 0.26,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176975,
+        "input_tokens": 515,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0062-4027-2510",
+        "label": 0,
+        "link_score": 0.97,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.03,
+          "1": 0.96,
+          "2": 0.01
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.17028,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0063-3130-1414",
+        "label": 0,
+        "link_score": 0.21,
+        "link_confidence": 0.68,
+        "link_probabilities": {
+          "0": 0.79,
+          "1": 0.21,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.165573,
+        "input_tokens": 507,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0064-3959-447",
+        "label": 0,
+        "link_score": 0.09,
+        "link_confidence": 0.87,
+        "link_probabilities": {
+          "0": 0.91,
+          "1": 0.09,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.125072,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0065-3626-90",
+        "label": 0,
+        "link_score": 0.23,
+        "link_confidence": 0.66,
+        "link_probabilities": {
+          "0": 0.77,
+          "1": 0.23,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.165808,
+        "input_tokens": 532,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0066-2316-838",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.145554,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0067-3381-1859",
+        "label": 1,
+        "link_score": 1.27,
+        "link_confidence": 0.54,
+        "link_probabilities": {
+          "0": 0.02,
+          "1": 0.69,
+          "2": 0.29
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.150801,
+        "input_tokens": 509,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0068-4256-1825",
+        "label": 0,
+        "link_score": 0.0,
+        "link_confidence": 0.99,
+        "link_probabilities": {
+          "0": 1.0,
+          "1": 0.0,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.193503,
+        "input_tokens": 517,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0069-3956-2249",
+        "label": 0,
+        "link_score": 1.08,
+        "link_confidence": 0.86,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.9,
+          "2": 0.09
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.134385,
+        "input_tokens": 513,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0070-285-1551",
+        "label": 0,
+        "link_score": 0.26,
+        "link_confidence": 0.62,
+        "link_probabilities": {
+          "0": 0.75,
+          "1": 0.25,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.219052,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0071-2115-2673",
+        "label": 0,
+        "link_score": 0.04,
+        "link_confidence": 0.94,
+        "link_probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.159684,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0072-3185-1551",
+        "label": 0,
+        "link_score": 0.17,
+        "link_confidence": 0.75,
+        "link_probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.205537,
+        "input_tokens": 519,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0073-3098-1638",
+        "label": 0,
+        "link_score": 0.18,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.154566,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0074-4117-838",
+        "label": 0,
+        "link_score": 0.0,
+        "link_confidence": 1.0,
+        "link_probabilities": {
+          "0": 1.0,
+          "1": 0.0,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.181122,
+        "input_tokens": 521,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0075-1842-737",
+        "label": 1,
+        "link_score": 1.98,
+        "link_confidence": 0.97,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.02,
+          "2": 0.98
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.16165,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0076-3079-2048",
+        "label": 0,
+        "link_score": 0.49,
+        "link_confidence": 0.27,
+        "link_probabilities": {
+          "0": 0.52,
+          "1": 0.48,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.20486,
+        "input_tokens": 524,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0077-652-1534",
+        "label": 0,
+        "link_score": 0.13,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.176392,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0078-1661-1428",
+        "label": 0,
+        "link_score": 0.19,
+        "link_confidence": 0.71,
+        "link_probabilities": {
+          "0": 0.81,
+          "1": 0.19,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.225628,
+        "input_tokens": 516,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0079-3372-1281",
+        "label": 0,
+        "link_score": 0.06,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.197083,
+        "input_tokens": 506,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0080-2156-1973",
+        "label": 0,
+        "link_score": 0.12,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.88,
+          "1": 0.12,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.124586,
+        "input_tokens": 520,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0081-262-419",
+        "label": 0,
+        "link_score": 0.07,
+        "link_confidence": 0.89,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.150663,
+        "input_tokens": 501,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0082-696-1496",
+        "label": 0,
+        "link_score": 0.26,
+        "link_confidence": 0.6,
+        "link_probabilities": {
+          "0": 0.74,
+          "1": 0.26,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.249331,
+        "input_tokens": 514,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0083-1471-1165",
+        "label": 0,
+        "link_score": 0.08,
+        "link_confidence": 0.88,
+        "link_probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.177407,
+        "input_tokens": 505,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0084-2972-218",
+        "label": 0,
+        "link_score": 0.14,
+        "link_confidence": 0.8,
+        "link_probabilities": {
+          "0": 0.87,
+          "1": 0.13,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.1956,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0085-3-439",
+        "label": 0,
+        "link_score": 0.03,
+        "link_confidence": 0.96,
+        "link_probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.158226,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0086-2115-77",
+        "label": 0,
+        "link_score": 0.23,
+        "link_confidence": 0.66,
+        "link_probabilities": {
+          "0": 0.78,
+          "1": 0.22,
+          "2": 0.0
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.448565,
+        "input_tokens": 508,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0087-4063-2331",
+        "label": 1,
+        "link_score": 1.95,
+        "link_confidence": 0.92,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.05,
+          "2": 0.95
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.21905,
+        "input_tokens": 512,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0088-4161-2409",
+        "label": 1,
+        "link_score": 1.88,
+        "link_confidence": 0.82,
+        "link_probabilities": {
+          "0": 0.0,
+          "1": 0.12,
+          "2": 0.88
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.171972,
+        "input_tokens": 504,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0089-862-2906",
+        "label": 1,
+        "link_score": 1.62,
+        "link_confidence": 0.43,
+        "link_probabilities": {
+          "0": 0.01,
+          "1": 0.35,
+          "2": 0.64
+        },
+        "predicted_merge": true,
+        "attempts": 1,
+        "elapsed_seconds": 0.239119,
+        "input_tokens": 511,
+        "output_tokens": 71
+      },
+      {
+        "id": "test-0090-2242-1048",
+        "label": 1,
+        "link_score": 0.94,
+        "link_confidence": 0.73,
+        "link_probabilities": {
+          "0": 0.12,
+          "1": 0.82,
+          "2": 0.06
+        },
+        "predicted_merge": false,
+        "attempts": 1,
+        "elapsed_seconds": 0.175782,
+        "input_tokens": 506,
+        "output_tokens": 71
+      }
+    ]
+  },
+  "runtime": {
+    "requests": 182,
+    "attempts": 182,
+    "input_tokens": 93325,
+    "output_tokens": 12922,
+    "median_request_seconds": 0.179593,
+    "max_request_seconds": 0.563878,
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit"
+  },
+  "passed": false,
+  "decision": "jev_entity_alignment_not_confirmed",
+  "limitations": [
+    "Held-out splits from the same public product-matching dataset.",
+    "Candidate pairs are supplied; this does not evaluate candidate generation.",
+    "The cookbook publicly described this dataset for an earlier Jev version.",
+    "No graph mutation occurred and no cross-domain superiority is claimed."
+  ],
+  "result_sha256": "8555ac1149e4c3e6108a70348c1be4e67cdef4d251d367fd12e11f9f3eaed7e9"
+}

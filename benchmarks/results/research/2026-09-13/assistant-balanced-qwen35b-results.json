@@ -1,0 +1,37 @@
+{
+  "complete": true,
+  "correct": {
+    "balanced": 8,
+    "density": 2,
+    "empty": 1
+  },
+  "details": [
+    {"answers": {"balanced": true, "density": false, "empty": false}, "case_id": "case-0000"},
+    {"answers": {"balanced": true, "density": false, "empty": false}, "case_id": "case-0002"},
+    {"answers": {"balanced": true, "density": true, "empty": false}, "case_id": "case-0020"},
+    {"answers": {"balanced": true, "density": false, "empty": false}, "case_id": "case-0036"},
+    {"answers": {"balanced": true, "density": false, "empty": false}, "case_id": "case-0037"},
+    {"answers": {"balanced": true, "density": false, "empty": false}, "case_id": "case-0041"},
+    {"answers": {"balanced": false, "density": true, "empty": true}, "case_id": "case-0066"},
+    {"answers": {"balanced": true, "density": false, "empty": false}, "case_id": "case-0092"},
+    {"answers": {"balanced": true, "density": false, "empty": false}, "case_id": "case-0098"}
+  ],
+  "judge_report_sha256": "4461b1230aa9e256a6f965e3f5f6228b9a7e5d57fdf243776cff503abf567695",
+  "judge_unique_calls": 27,
+  "limits": [
+    "Focused post-hoc diagnosis of nine previously examined development questions.",
+    "One local reader and a custom calibrated local judge; no independent holdout.",
+    "Source support and judged answer correctness are separate measurements.",
+    "Complete coverage and zero provider failures are required; failed calls cannot be retried in place.",
+    "No default-policy or competitive leadership claim follows from this diagnostic."
+  ],
+  "paired": {
+    "balanced_vs_density": {"losses": 1, "ties": 1, "wins": 7},
+    "balanced_vs_empty": {"losses": 1, "ties": 0, "wins": 8},
+    "density_vs_empty": {"losses": 0, "ties": 8, "wins": 1}
+  },
+  "questions": 9,
+  "reader_report_sha256": "5e817c5b0fe767475fe030756c7dff639981e55d5a87832e65bdbcf083887b8a",
+  "reader_state_sha256": "7363fbf8c253a8307d420def29acf9569ac8e9f7db31e75d28cfca0610a1e905",
+  "registration_sha256": "4e45615e6e6d203625a8f818aa08a68d4c6ad3d21f8a323fe336086d1682ac0a"
+}

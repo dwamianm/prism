@@ -12,6 +12,15 @@
 
 This RFC specifies the namespace model: the mechanism by which memory is partitioned into isolated, policy-governed scopes. Namespaces determine what memory is visible to whom, under what conditions, and with what access rights.
 
+**Current implementation boundary:** the engine isolates owners and scope types.
+The Python `MemoryWorkspace` API manages named local projects as identity-checked
+packs and PostgreSQL projects as identity-checked schemas over a shared bounded
+pool; see [workspace contracts](WORKSPACES.md). Lease/cache ownership is common
+to both backends. PostgreSQL connections exclude public-table fallback and clear
+temporary tables; extension symbols are explicitly qualified. Registry and schema
+creation publish atomically. These storage boundaries do not implement hosted
+project grants, hierarchy, database RLS or the complete policy model below.
+
 Namespaces are not a convenience feature. They are the boundary between a user's personal memory and a shared project memory, between a trusted agent's view and an untrusted connector's view, between what is retained forever and what expires in 30 days. Without namespaces, every piece of memory is accessible from everywhere, which is both a privacy failure and a retrieval quality failure.
 
 ---
@@ -72,6 +81,14 @@ Namespaces MAY have a single parent namespace. The hierarchy is a tree, not a DA
 
 This design prevents the common failure mode where a project-level namespace accidentally exposes its members' personal memories to all project participants.
 
+Ingestion must treat the caller's scope as its write boundary. An extraction
+model's scope classification is advisory and cannot override that boundary.
+Entity matching and consolidation must remain within the same user and scope;
+matching names or embedding similarity do not grant cross-scope write access.
+Automatic adjacent question-answer pairing keys its in-process turn cache by
+owner, session and exact scope. Messages that share an owner and session but
+cross a scope boundary are never combined into one derived node.
+
 ---
 
 ## 5. Access Policy
@@ -109,6 +126,29 @@ Permissions are NOT hierarchical. Having `ADMIN` does not imply `READ`. Implemen
 
 ---
 
+### Current HTTP identity binding
+
+`APIConfig.user_keys` maps server-configured user IDs to distinct bearer
+credentials. The authenticated user scopes every HTTP memory route, including
+node-ID reads/mutations, lists, graph results, counts, and organizer runs. A
+request cannot select a different user. Unscoped requests inherit the identity;
+foreign node IDs behave as missing. Global feedback maintenance is unavailable
+to tenant credentials. The legacy global key is a separate operator mode and
+cannot coexist with user keys.
+
+This implements user binding at the application boundary. It does not implement
+the full grant hierarchy above, database RLS, or index-level partitioning below.
+MCP authentication is configured separately; HTTP settings do not protect it.
+`MCPConfig.user_id` binds a trusted stdio process to one owner.
+`MCPConfig.user_keys` enables independently authenticated stateless HTTP requests
+using the MCP SDK bearer/context middleware. Every tool and memory resource
+resolves its user from that verified identity. A shared HTTP engine lives at
+application scope; resources no longer use a module-global engine reference.
+This static credential mode requires client provisioning and does not implement
+OAuth token issuance or discovery. Unauthenticated SSE is no longer offered.
+
+---
+
 ## 6. Retrieval Isolation
 
 **This section contains the most critical requirement in this RFC.**
@@ -134,6 +174,18 @@ Option 3 is acceptable only if the storage engine provides proven row-level secu
 **Side-channel mitigation:** To prevent inference of namespace membership through result count or latency differences, implementations SHOULD pad response times and result counts to fixed values when returning empty namespace-filtered results. This is a SHOULD, not a MUST, due to the performance cost involved.
 
 ---
+
+### Retrieval scope input validation
+
+Python retrieval accepts a scope enum, its string value, or a nonempty sequence
+of either. Only `None` means no scope filter. Unknown values, empty sequences and
+unsupported input types raise `ValueError`; they must not become unfiltered
+searches. The engine validates and copies the input before materialization or
+other awaited work, and direct pipeline calls use the same normalizer. HTTP
+rejects empty scope arrays during request validation. Each new retrieval receipt
+records the normalized scope and observes the normalizer's source hash alongside
+other execution features. Scope validation does not replace user authentication
+or the explicit `include_cross_scope` hint policy.
 
 ## 7. Retention Policy
 

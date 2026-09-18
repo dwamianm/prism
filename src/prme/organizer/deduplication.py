@@ -1,13 +1,13 @@
 """Deduplication logic for the organizer (issue #11).
 
-Detects duplicate memory nodes via vector similarity and exact content
-matching, then merges them by archiving the lower-quality duplicate and
-creating a SUPERSEDES edge from the canonical (kept) node to the
-duplicate. Evidence refs and edges are transferred to the canonical node.
+Proposes duplicate memory nodes via vector similarity and exact content
+matching, then atomically publishes compatible copies, their evidence and
+relationships, source retirement and one SUPERSEDES edge. A checksummed
+operation records complete merge inputs and outputs.
 
-Conservative by design: only merges when vector similarity >= 0.92
-(configurable). The canonical node is the one with higher confidence or
-more evidence_refs; ties broken by creation time (older wins).
+Similarity is only a proposal signal. Merging requires equivalent text,
+provenance/type metadata and effective validity (except named entity identity).
+Canonical selection prefers confidence, evidence count, then age.
 """
 
 from __future__ import annotations
@@ -15,10 +15,9 @@ from __future__ import annotations
 import logging
 import time
 from typing import TYPE_CHECKING
-from uuid import UUID
 
-from prme.models.edges import MemoryEdge
-from prme.types import EdgeType, LifecycleState
+from prme.organizer.merge_policy import compatible_provenance, duplicate_merge_allowed
+from prme.types import LifecycleState, Scope
 
 if TYPE_CHECKING:
     from prme.config import OrganizerConfig
@@ -78,7 +77,7 @@ async def find_duplicates(
         user_id: When given, only this user's nodes are scanned.
 
     Returns:
-        List of DuplicateCandidate pairs, never spanning two users.
+        List of DuplicateCandidate pairs within one user and scope.
     """
     start = time.monotonic()
     threshold = config.dedup_similarity_threshold
@@ -94,21 +93,21 @@ async def find_duplicates(
     seen_pairs: set[tuple[str, str]] = set()
     candidates: list[DuplicateCandidate] = []
 
-    # Index by owner plus normalized content for exact matching. The owner is
-    # part of the key so that two tenants storing the same string -- likely
-    # for short or templated content -- are never paired (issue #66).
-    content_groups: dict[tuple[str, str], list[MemoryNode]] = {}
+    # Matching text does not grant permission to combine namespaces.
+    content_groups: dict[tuple[str, Scope, str], list[MemoryNode]] = {}
     for node in nodes:
-        key = (node.user_id, node.content.strip().lower())
+        key = (node.user_id, node.scope, node.content.strip().lower())
         content_groups.setdefault(key, []).append(node)
 
     # Phase 1: Exact content matches
     for _content_key, group in content_groups.items():
         if len(group) < 2:
             continue
-        # All nodes with identical content (case-insensitive) are duplicates
+        # Normalized text proposes candidates; application checks equivalence.
         for i in range(len(group)):
             for j in range(i + 1, len(group)):
+                if not compatible_provenance(group[i], group[j]):
+                    continue
                 # Budget check
                 elapsed_ms = (time.monotonic() - start) * 1000.0
                 if elapsed_ms >= budget_ms:
@@ -137,6 +136,7 @@ async def find_duplicates(
                 node.content,
                 node.user_id,
                 k=10,
+                scope=[node.scope.value],
             )
         except Exception:
             logger.debug("Vector search failed for node %s", node_id, exc_info=True)
@@ -156,6 +156,12 @@ async def find_duplicates(
 
             pair_key = (min(node_id, other_id), max(node_id, other_id))
             if pair_key in seen_pairs:
+                continue
+
+            # Recheck durable graph ownership/scope before proposing a merge;
+            # an index may lag graph updates or be supplied by a custom backend.
+            other_node = await engine.get_node(other_id, user_id=node.user_id)
+            if other_node is None or not compatible_provenance(node, other_node):
                 continue
 
             seen_pairs.add(pair_key)
@@ -206,19 +212,17 @@ async def merge_duplicates(
 ) -> int:
     """Merge duplicate node pairs.
 
-    For each pair:
-    1. Determine canonical (kept) vs duplicate (archived) node.
-    2. Transfer evidence_refs from duplicate to canonical.
-    3. Transfer edges from duplicate to canonical.
-    4. Create SUPERSEDES edge from canonical to duplicate.
-    5. Archive the duplicate node.
+    Each backend revalidates the pair and selects its canonical node inside a
+    transaction covering evidence, relationship copies, source retirement,
+    supersedence and the immutable operation record. Index eviction follows
+    commit. A failed transaction leaves no partial merge visible.
 
     Args:
         engine: The MemoryEngine for storage operations.
         duplicates: List of DuplicateCandidate pairs from find_duplicates().
 
     Returns:
-        Count of nodes merged (archived).
+        Count of newly merged (superseded) nodes.
     """
     merged_count = 0
     # Track nodes already merged to avoid double-processing
@@ -237,13 +241,19 @@ async def merge_duplicates(
             # One was already archived/superseded
             continue
 
-        # Never merge across owners, whatever produced the pair (issue #66).
-        if node_a.user_id != node_b.user_id:
+        # Revalidate at application time, including caller-constructed pairs.
+        if (node_a.user_id, node_a.scope) != (node_b.user_id, node_b.scope):
             logger.warning(
-                "Refusing to merge cross-user duplicate pair (%s, %s)",
+                "Refusing to merge cross-namespace duplicate pair (%s, %s)",
                 dup.node_a_id,
                 dup.node_b_id,
             )
+            continue
+
+        # Recompute equivalence from durable values, not candidate labels or a
+        # similarity threshold. A caller-constructed "exact" pair is not proof.
+        if not duplicate_merge_allowed(node_a, node_b):
+            logger.debug("Retaining non-equivalent duplicate candidates (%s, %s)", dup.node_a_id, dup.node_b_id)
             continue
 
         # Skip if either is not in a mergeable state
@@ -252,38 +262,17 @@ async def merge_duplicates(
         if node_b.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE):
             continue
 
-        canonical, duplicate = _pick_canonical(node_a, node_b)
-        canonical_id = str(canonical.id)
-        duplicate_id = str(duplicate.id)
-
         try:
-            # Transfer evidence_refs from duplicate to canonical
-            new_refs = list(canonical.evidence_refs)
-            for ref in duplicate.evidence_refs:
-                if ref not in new_refs:
-                    new_refs.append(ref)
-
-            if len(new_refs) > len(canonical.evidence_refs):
-                await engine._graph_store.update_node(
-                    canonical_id, evidence_refs=new_refs
-                )
-
-            # Transfer edges from duplicate to canonical
-            await _transfer_edges(engine, duplicate_id, canonical_id)
-
-            # Create SUPERSEDES edge from canonical to duplicate
-            supersedes_edge = MemoryEdge(
-                source_id=UUID(canonical_id),
-                target_id=UUID(duplicate_id),
-                edge_type=EdgeType.SUPERSEDES,
-                user_id=canonical.user_id,
-                confidence=1.0,
-                metadata={"reason": "deduplication", "similarity": dup.similarity},
+            result = await engine._graph_store.merge_nodes(
+                dup.node_a_id, dup.node_b_id, user_id=node_a.user_id,
+                kind="duplicate", score=dup.similarity,
             )
-            await engine._graph_store.create_edge(supersedes_edge)
-
-            # Supersede the duplicate (sets lifecycle_state and superseded_by)
-            await engine.supersede(duplicate_id, canonical_id)
+            if result is None or not result.applied:
+                continue
+            canonical_id, duplicate_id = result.canonical_id, result.retired_id
+            # Graph publication is already durable. Index eviction is repairable
+            # and candidate admission checks the retired lifecycle independently.
+            await engine._evict_from_indexes(duplicate_id)
 
             merged_ids.add(duplicate_id)
             merged_count += 1
@@ -305,63 +294,3 @@ async def merge_duplicates(
             )
 
     return merged_count
-
-
-async def _transfer_edges(
-    engine: MemoryEngine,
-    from_node_id: str,
-    to_node_id: str,
-) -> None:
-    """Transfer edges from one node to another.
-
-    For each edge where from_node is source or target, create a
-    corresponding edge pointing to/from to_node. SUPERSEDES edges
-    are not transferred (they are structural, not semantic).
-    """
-    graph = engine._graph_store
-
-    # Get all edges where from_node is source
-    outgoing = await graph.get_edges(source_id=from_node_id)
-    for edge in outgoing:
-        if edge.edge_type == EdgeType.SUPERSEDES:
-            continue
-        # Skip self-referential edges to the canonical node
-        if str(edge.target_id) == to_node_id:
-            continue
-        new_edge = MemoryEdge(
-            source_id=UUID(to_node_id),
-            target_id=edge.target_id,
-            edge_type=edge.edge_type,
-            user_id=edge.user_id,
-            confidence=edge.confidence,
-            metadata=edge.metadata,
-        )
-        try:
-            await graph.create_edge(new_edge)
-        except Exception:
-            logger.debug(
-                "Failed to transfer outgoing edge %s", edge.id, exc_info=True
-            )
-
-    # Get all edges where from_node is target
-    incoming = await graph.get_edges(target_id=from_node_id)
-    for edge in incoming:
-        if edge.edge_type == EdgeType.SUPERSEDES:
-            continue
-        # Skip self-referential edges from the canonical node
-        if str(edge.source_id) == to_node_id:
-            continue
-        new_edge = MemoryEdge(
-            source_id=edge.source_id,
-            target_id=UUID(to_node_id),
-            edge_type=edge.edge_type,
-            user_id=edge.user_id,
-            confidence=edge.confidence,
-            metadata=edge.metadata,
-        )
-        try:
-            await graph.create_edge(new_edge)
-        except Exception:
-            logger.debug(
-                "Failed to transfer incoming edge %s", edge.id, exc_info=True
-            )

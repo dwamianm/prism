@@ -35,6 +35,7 @@ class PgLexicalIndex:
         user_id: str,
         node_type: str = "note",
         scope: str | None = None,
+        *, replace: bool = False,
     ) -> None:
         """Index a document for full-text search.
 
@@ -59,12 +60,14 @@ class PgLexicalIndex:
                 "SELECT 1 FROM nodes WHERE id = $1::uuid", node_id
             )
             if exists is None:
+                conflict = (
+                    "ON CONFLICT (node_id) DO UPDATE SET content = EXCLUDED.content, "
+                    "node_type = EXCLUDED.node_type, scope = EXCLUDED.scope "
+                    "WHERE lexical_documents.user_id = EXCLUDED.user_id"
+                ) if replace else "ON CONFLICT DO NOTHING"
                 await conn.execute(
-                    """
-                    INSERT INTO lexical_documents (node_id, content, user_id, node_type, scope)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT DO NOTHING
-                    """,
+                    "INSERT INTO lexical_documents (node_id, content, user_id, node_type, scope) "
+                    "VALUES ($1, $2, $3, $4, $5) " + conflict,
                     node_id,
                     content,
                     user_id,
@@ -96,33 +99,8 @@ class PgLexicalIndex:
         Returns:
             List of dicts with keys: node_id, content, score, node_type.
         """
-        # Build WHERE clauses for both tables
-        # Nodes query
-        n_conditions = ["n.user_id = $1", "n.content_tsv @@ plainto_tsquery('english', $2)"]
-        n_params: list = [user_id, query_text]
-        n_idx = 3
-
-        if node_type is not None:
-            n_conditions.append(f"n.node_type = ${n_idx}")
-            n_params.append(node_type)
-            n_idx += 1
-
-        if scope is not None and scope:
-            placeholders = ", ".join(f"${n_idx + i}" for i in range(len(scope)))
-            n_conditions.append(f"n.scope IN ({placeholders})")
-            n_params.extend(scope)
-            n_idx += len(scope)
-
-        _n_where = " AND ".join(n_conditions)
-
-        # lexical_documents query — same parameter positions offset
-        d_conditions = ["d.user_id = $1", "d.content_tsv @@ plainto_tsquery('english', $2)"]
-        if node_type is not None:
-            # Reuse the same parameter index as nodes query for node_type
-            d_conditions.append(f"d.node_type = ${3 if node_type else n_idx}")
-
-        # Build the UNION ALL query using a single parameter set.
-        # We rebuild with unified parameters to keep it simple.
+        # Both sources use the same parameters and enforce isolation before
+        # deduplication. Duplicate copies must not consume the candidate limit.
         params: list = [user_id, query_text]
         idx = 3
 
@@ -164,12 +142,13 @@ class PgLexicalIndex:
         params.append(limit)
 
         query = f"""
-            SELECT node_id, content, score, node_type FROM (
+            WITH combined AS (
                 SELECT
                     n.id::text AS node_id,
                     n.content,
                     ts_rank_cd(n.content_tsv, plainto_tsquery('english', $2)) AS score,
-                    n.node_type
+                    n.node_type,
+                    0 AS source_priority
                 FROM nodes n
                 WHERE {nodes_where}
 
@@ -179,32 +158,27 @@ class PgLexicalIndex:
                     d.node_id,
                     d.content,
                     ts_rank_cd(d.content_tsv, plainto_tsquery('english', $2)) AS score,
-                    d.node_type
+                    d.node_type,
+                    1 AS source_priority
                 FROM lexical_documents d
                 WHERE {docs_where}
-            ) combined
-            ORDER BY score DESC
+            ), unique_hits AS (
+                SELECT DISTINCT ON (node_id)
+                    node_id, content, score, node_type
+                FROM combined
+                ORDER BY node_id, score DESC, source_priority
+            )
+            SELECT node_id, content, score, node_type FROM unique_hits
+            ORDER BY score DESC, node_id COLLATE "C"
             LIMIT ${limit_idx}
         """
 
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
 
-        # Deduplicate by node_id (keep highest score)
-        seen: dict[str, dict] = {}
-        for row in rows:
-            nid = row["node_id"]
-            score = float(row["score"])
-            if nid not in seen or score > seen[nid]["score"]:
-                seen[nid] = {
-                    "node_id": nid,
-                    "content": row["content"],
-                    "score": score,
-                    "node_type": row["node_type"],
-                }
-
-        results = sorted(seen.values(), key=lambda x: x["score"], reverse=True)
-        return results[:limit]
+        return [{"node_id": row["node_id"], "content": row["content"],
+                 "score": float(row["score"]), "node_type": row["node_type"]}
+                for row in rows]
 
     async def delete_by_node_id(self, node_id: str) -> None:
         """Delete a document from lexical_documents by node_id."""

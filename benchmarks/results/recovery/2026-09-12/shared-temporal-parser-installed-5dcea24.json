@@ -1,0 +1,18 @@
+{
+  "source_commit": "5dcea24",
+  "native_process_exit_code": 0,
+  "passed": 109,
+  "skipped": 7,
+  "failed": 0,
+  "seconds": 23.79,
+  "log_sha256": "ec7d8792ecea931895903393b1ea0b680cbe6d17a8f2258db4ace4cbe686bd01",
+  "production_imports_verified_in_site_packages": true,
+  "production_source_files_verified": 116,
+  "wheel_sha256": "a138c7e349a928239953554cb164967e3e39b4c1bd1fc61346c30d436167a8da",
+  "runtime": {
+    "python": "3.13.3",
+    "dateparser": "1.4.3",
+    "regex": "2026.9.10"
+  },
+  "limits": "Mixed parser entry scheduling, real reference-clock parsing, public historical ingestion, retrieval, temporal scoring and derivation regression. No reproduced native crash or competitive quality claim."
+}

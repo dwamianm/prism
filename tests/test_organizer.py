@@ -29,7 +29,7 @@ from prme.organizer.decay import (
     compute_effective_confidence,
     compute_effective_salience,
 )
-from prme.organizer.jobs import ALL_JOBS, run_job
+from prme.organizer.jobs import DEFAULT_JOBS, run_job
 from prme.organizer.maintenance import MaintenanceRunner
 from prme.organizer.models import JobResult, MaintenanceResult, OrganizeResult
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
@@ -845,11 +845,11 @@ class TestOrganize:
     """Tests for MemoryEngine.organize() and end_session()."""
 
     @pytest.mark.asyncio
-    async def test_organize_runs_all_jobs_by_default(self, engine_parts):
+    async def test_organize_runs_default_jobs(self, engine_parts):
         """organize() runs all jobs when no specific jobs are requested."""
         engine, _, _ = engine_parts
         result = await engine.organize()
-        assert set(result.jobs_run) == set(ALL_JOBS)
+        assert set(result.jobs_run) == set(DEFAULT_JOBS)
         assert result.jobs_skipped == []
 
     @pytest.mark.asyncio
@@ -881,11 +881,11 @@ class TestOrganize:
         assert result.duration_ms >= 0
 
     @pytest.mark.asyncio
-    async def test_end_session_runs_promote_and_feedback(self, engine_parts):
-        """end_session() runs promote + feedback_apply."""
+    async def test_end_session_runs_promote(self, engine_parts):
+        """end_session() runs scoped promotion."""
         engine, _, _ = engine_parts
         result = await engine.end_session(user_id="test-user")
-        assert set(result.jobs_run) == {"promote", "feedback_apply"}
+        assert set(result.jobs_run) == {"promote"}
 
     @pytest.mark.asyncio
     async def test_invalid_job_name_skipped(self, engine_parts):
@@ -941,14 +941,15 @@ class TestRunJob:
         assert result.details.get("status") == "no_signals"
 
     @pytest.mark.asyncio
-    async def test_stub_jobs(self, engine_parts):
-        """Stub jobs return empty results with status note."""
+    async def test_unimplemented_jobs_are_not_advertised(self, engine_parts):
+        """A registered organizer job must perform real work."""
         engine, _, _ = engine_parts
         config = OrganizerConfig()
-        for job_name in ["centrality_boost"]:
-            result = await run_job(job_name, engine, config, 5000.0)
-            assert result.job == job_name
-            assert result.details.get("status") == "stub"
+        from prme.organizer.jobs import ALL_JOBS
+
+        assert "centrality_boost" not in ALL_JOBS
+        with pytest.raises(ValueError, match="Unknown organizer job"):
+            await run_job("centrality_boost", engine, config, 5000.0)
 
     @pytest.mark.asyncio
     async def test_implemented_dedup_and_alias_jobs(self, engine_parts):

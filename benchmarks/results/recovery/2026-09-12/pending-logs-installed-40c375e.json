@@ -1,0 +1,22 @@
+{
+  "source_commit": "40c375e",
+  "native_process_exit_code": 0,
+  "package_paths": [
+    "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/durable_queue.py",
+    "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme/storage/write_queue.py"
+  ],
+  "wheel_sha256": "a9be72424359ab91fa081fac27f6da49a2821bbe1494d2cad04241224d97f6af",
+  "passed": 30,
+  "skipped": 3,
+  "failed": 0,
+  "seconds": 10.29,
+  "log_sha256": "674443517161447d4b939182dded81de65053d5c0b250ac1fd37862d086f27ff",
+  "coverage": [
+    "DuckDB and live PostgreSQL pending-work failure logs exclude provider messages",
+    "Persisted status and retry/restart recovery",
+    "Original write-job exceptions still reach callers",
+    "Unprintable provider exception cannot stop the write consumer",
+    "Concurrent writes"
+  ],
+  "limits": "Installed Python 3.13; authored failure and recovery tests. No package-wide log sanitization or quality claim."
+}

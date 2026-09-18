@@ -21,7 +21,8 @@ import pytest
 import pytest_asyncio
 
 from prme.models.nodes import MemoryNode
-from prme.retrieval.candidates import generate_candidates
+from prme.retrieval.candidates import generate_candidates, merge_normalized_bm25_hits
+from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import QueryAnalysis
 from prme.retrieval.pipeline import RetrievalPipeline
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
@@ -71,6 +72,26 @@ class MockEmbeddingProvider:
                 base[i] += ((h >> i) % 5) * 0.01
             results.append(base)
         return results
+
+
+def test_supplementary_bm25_queries_are_normalized_before_merge():
+    first = [
+        {"node_id": "shared", "score": 20.0},
+        {"node_id": "first-low", "score": 10.0},
+    ]
+    second = [
+        {"node_id": "second-high", "score": 500.0},
+        {"node_id": "shared", "score": 100.0},
+    ]
+
+    merged = merge_normalized_bm25_hits([first, second])
+
+    assert {hit["node_id"] for hit in merged} == {
+        "shared", "first-low", "second-high",
+    }
+    assert all(0.0 <= hit["normalized_score"] <= 1.0 for hit in merged)
+    assert next(hit for hit in merged if hit["node_id"] == "shared")["normalized_score"] == 1.0
+    assert "normalized_score" not in first[0]
 
 
 # ---------------------------------------------------------------------------
@@ -533,3 +554,38 @@ async def test_cross_scope_hints_disabled(backends):
     # filter_metadata should show cross_scope_enabled=False
     assert response.filter_metadata is not None
     assert response.filter_metadata.cross_scope_enabled is False
+
+
+@pytest.mark.asyncio
+async def test_zero_cross_scope_limit_returns_no_hints(backends):
+    """A zero hint limit disables the secondary result surface."""
+    conn, graph_store, vector_index, lexical_index = backends
+
+    project_node = _make_node(
+        scope=Scope.PROJECT,
+        content="Project architecture review meeting summary",
+    )
+    personal_node = _make_node(
+        scope=Scope.PERSONAL,
+        content="Personal architecture review notes",
+    )
+    await _store_node(project_node, graph_store, vector_index, lexical_index)
+    await _store_node(personal_node, graph_store, vector_index, lexical_index)
+
+    pipeline = RetrievalPipeline(
+        graph_store=graph_store,
+        vector_index=vector_index,
+        lexical_index=lexical_index,
+        conn=conn,
+        packing_config=PackingConfig(cross_scope_top_n=0),
+    )
+    response = await pipeline.retrieve(
+        "architecture review",
+        user_id="test-user",
+        scope=[Scope.PROJECT],
+    )
+
+    assert response.results
+    assert response.cross_scope_hints == []
+    assert response.filter_metadata is not None
+    assert response.filter_metadata.cross_scope_enabled is True

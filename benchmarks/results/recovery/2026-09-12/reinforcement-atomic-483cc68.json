@@ -1,0 +1,41 @@
+{
+  "focused_source": {
+    "duration_seconds": 8.56,
+    "log_sha256": "ad257d48dad47edc098aac8ca399a66fb6efade2ab2bd87defc299edaa588f36",
+    "native_exit_code": 0,
+    "passed": 39,
+    "skipped": 0
+  },
+  "full_suite": {
+    "log_sha256": "ac88a384cafd74458802ba8a4b68b33d46222137e76694af6ba8847db0a39ddc",
+    "native_exit_code": 0,
+    "native_session_id": 76837,
+    "passed": 2510,
+    "postgres_configured": false,
+    "seconds": 432.36,
+    "skipped": 577,
+    "status": "complete"
+  },
+  "installed": {
+    "duration_seconds": 18.23,
+    "log_sha256": "f9c1b3acbcaca5607904a072fff481338a3141fcc54b26782b1b01658c870050",
+    "native_exit_code": 0,
+    "passed": 39,
+    "skipped": 0,
+    "verification_sha256": "e1618c8e7a44420cb32c8f0e270e38fed273df77cd2a3ace4aae81d08df6e0e1"
+  },
+  "limits": [
+    "No idempotency key; separate calls remain separate signals.",
+    "New before/after records do not reconstruct missing historical mutations.",
+    "Evidence ownership validation does not prove semantic support."
+  ],
+  "observed_at": "2026-09-13T17:46:27.490573+00:00",
+  "regression_before": {
+    "failed": 1,
+    "log_sha256": "42f8743a5fe018b03684cbd1bcd3ac600ff896bf80d9dcacd273bd1ddb518883",
+    "native_exit_code": 1,
+    "observed": "Three confirmations retained boost 0.15 instead of 0.45.",
+    "skipped": 1
+  },
+  "source_commit": "483cc68"
+}

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "kind": "beam-retrieval-ablation-result",
+  "status": "complete; passed tuned development promotion rule",
+  "registration": "beam-100k-evidence-augmentation-ablation-v3-registration.json",
+  "registration_sha256": "ad5b16c2265556f8837a4ab1e573b6989a3c4956799fbfa5a3bebcf63933ec96",
+  "source": {
+    "prme_revision": "053b8838297a6b3dfa95526be9edec9a004b32ca",
+    "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b"
+  },
+  "protocol": {
+    "profile": "frozen_extracted_pack_evidence_augmentation_ablation",
+    "chat_size": "100K",
+    "conversation_index": 0,
+    "questions": 20,
+    "top_k": 50,
+    "max_per_source": 1,
+    "max_per_evidence": null,
+    "evidence_projection_top_k": 0,
+    "evidence_augmentation_top_k": 10,
+    "evidence_augmentation_max_sources": 1,
+    "evidence_augmentation_score_decay": 0.99
+  },
+  "accepted_baseline": {
+    "correct": 13,
+    "total": 20,
+    "accuracy": 65.0,
+    "average_score": 0.5675
+  },
+  "candidate": {
+    "correct": 14,
+    "total": 20,
+    "accuracy": 70.0,
+    "average_score": 0.596665,
+    "by_question_type": {
+      "abstention": {"correct": 0, "total": 2, "average_score": 0.0},
+      "contradiction_resolution": {"correct": 1, "total": 2, "average_score": 0.375},
+      "event_ordering": {"correct": 1, "total": 2, "average_score": 0.46665},
+      "information_extraction": {"correct": 1, "total": 2, "average_score": 0.5},
+      "instruction_following": {"correct": 2, "total": 2, "average_score": 0.75},
+      "knowledge_update": {"correct": 2, "total": 2, "average_score": 1.0},
+      "multi_session_reasoning": {"correct": 2, "total": 2, "average_score": 0.875},
+      "preference_following": {"correct": 2, "total": 2, "average_score": 1.0},
+      "summarization": {"correct": 2, "total": 2, "average_score": 0.75},
+      "temporal_reasoning": {"correct": 1, "total": 2, "average_score": 0.25}
+    }
+  },
+  "paired_comparison": {
+    "pass_level_wins": 1,
+    "pass_level_losses": 0,
+    "pass_level_ties": 19,
+    "mean_score_delta": 0.02916,
+    "pass_level_win": ["100K_0_q5_event_ordering"],
+    "partial_score_gains": [
+      "100K_0_q7_information_extraction",
+      "100K_0_q16_summarization",
+      "100K_0_q17_summarization"
+    ]
+  },
+  "execution": {
+    "questions_written": 20,
+    "retrieval_results_per_question_min": 50,
+    "retrieval_results_per_question_max": 50,
+    "retrieval_latency_ms_min": 69.9,
+    "retrieval_latency_ms_median": 107.1,
+    "retrieval_latency_ms_mean": 271.375,
+    "retrieval_latency_ms_max": 2992.2,
+    "source_pack_unchanged": true
+  },
+  "decision": "The candidate met the registered tuned-development rule with one pass-level win, no losses, and a positive mean delta. Evidence augmentation remains opt-in and advances to a separately registered untouched confirmation; this result does not authorize a default change.",
+  "remaining_failures": "Both abstention questions, one contradiction question, one event-ordering question, one information-extraction question, and the initial-schedule temporal question still fail.",
+  "claim_boundary": "This is a paired, tuned one-conversation development ablation over an already examined frozen pack. It is not an untouched confirmation, official-scale BEAM result, or evidence of market leadership.",
+  "artifact_sha256": {
+    "full_execution_result": "f01d434d5eb120a282590f9a03fc10b42f36b356f0743a86db79a7db79a247d6",
+    "source_pack/memory.duckdb": "1860a362341b4bfd589e5af23698af441487fda6b46b564967a003d609bc2987",
+    "source_pack/vectors.usearch": "377c6ffb93a87801ecd487264d5dbf54163f0d7bfa229f0f67478ab4311701a5",
+    "source_pack/lexical/meta.json": "6ffa97ed5c513ba5b2436836da176eec916adc1aee6e21ee54de04334513ab74"
+  }
+}

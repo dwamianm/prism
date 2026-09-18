@@ -11,11 +11,52 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import importlib.metadata
+import math
+import os
+import threading
 from collections import OrderedDict
+from functools import lru_cache
+from numbers import Real
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from prme.config import EmbeddingConfig
+    from fastembed import TextEmbedding
+
+
+class EmbeddingVersionMismatchError(ValueError):
+    """Stored vectors cannot be compared with the configured embedding model."""
+
+
+_KNOWN_FASTEMBED_DIMENSIONS = {
+    "BAAI/bge-small-en-v1.5": 384,
+    "BAAI/bge-base-en-v1.5": 768,
+    "BAAI/bge-large-en-v1.5": 1024,
+    "mixedbread-ai/mxbai-embed-large-v1": 1024,
+    "nomic-ai/nomic-embed-text-v1.5": 768,
+    "sentence-transformers/all-MiniLM-L6-v2": 384,
+}
+
+
+@lru_cache(maxsize=None)
+def fastembed_model_dimension(model_name: str) -> int:
+    """Resolve a registered FastEmbed model dimension without loading weights."""
+    known = _KNOWN_FASTEMBED_DIMENSIONS.get(model_name)
+    if known is not None:
+        return known
+    from fastembed import TextEmbedding
+
+    for description in TextEmbedding.list_supported_models():
+        if description.get("model") != model_name:
+            continue
+        dimension = description.get("dim")
+        if type(dimension) is int and dimension > 0:
+            return dimension
+        break
+    raise ValueError(
+        f"FastEmbed model {model_name!r} has no registered dimension; "
+        "set dimension explicitly"
+    )
 
 
 @runtime_checkable
@@ -53,6 +94,88 @@ class EmbeddingProvider(Protocol):
         ...
 
 
+@runtime_checkable
+class QueryEmbeddingProvider(EmbeddingProvider, Protocol):
+    """Optional asymmetric query encoder paired with embed()'s document space.
+
+    model_version must identify both document and query encoding recipes.
+    Existing providers implementing only embed() remain supported unchanged.
+    """
+
+    async def embed_query(self, text: str) -> list[float]:
+        """Encode one search query in the compatible document vector space."""
+        ...
+
+
+def validate_embedding_provider(provider: EmbeddingProvider) -> tuple[str, str, int]:
+    """Validate non-secret metadata without initializing a model or calling it."""
+    name = getattr(provider, "model_name", None)
+    version = getattr(provider, "model_version", None)
+    dimension = getattr(provider, "dimension", None)
+    if not isinstance(name, str) or not name.strip() or not isinstance(version, str) or not version.strip():
+        raise ValueError("Embedding provider needs nonempty model_name and model_version")
+    if type(dimension) is not int or dimension < 1:
+        raise ValueError("Embedding provider dimension must be a positive integer")
+    if not callable(getattr(provider, "embed", None)):
+        raise ValueError("Embedding provider needs an async embed(texts) method")
+    query = getattr(provider, "embed_query", None)
+    if query is not None and not callable(query):
+        raise ValueError("Optional embed_query must be an async callable")
+    return name, version, dimension
+
+
+def has_query_encoder(provider: EmbeddingProvider | None) -> bool:
+    if isinstance(provider, CachedEmbeddingProvider):
+        return has_query_encoder(provider._provider)
+    return callable(getattr(provider, "embed_query", None))
+
+
+def _validated_vectors(vectors, *, count: int, dimension: int) -> list[list[float]]:
+    """Own and validate the complete response before any cache/index admission."""
+    try:
+        values = list(vectors)
+        if len(values) != count:
+            raise ValueError("Embedding provider must return exactly one vector per input")
+        result = []
+        for vector in values:
+            items = list(vector)
+            if len(items) != dimension:
+                raise ValueError("Embedding provider returned an unexpected vector dimension")
+            if any(isinstance(v, bool) or not isinstance(v, Real) for v in items):
+                raise ValueError("Embedding provider vectors must contain finite float32-compatible numbers")
+            converted = [float(v) for v in items]
+            if any(not math.isfinite(v) or abs(v) > 3.4028234663852886e38 for v in converted):
+                raise ValueError("Embedding provider vectors must contain finite float32-compatible numbers")
+            result.append(converted)
+        return result
+    except (TypeError, OverflowError) as exc:
+        raise ValueError("Embedding provider returned a malformed vector response") from exc
+
+
+async def encode_texts(provider: EmbeddingProvider, texts: list[str]) -> list[list[float]]:
+    """Validate cardinality, dimensions and values without exposing input text."""
+    identity = validate_embedding_provider(provider)
+    count = len(texts)
+    if not count:
+        return []
+    vectors = await provider.embed(list(texts))
+    if validate_embedding_provider(provider) != identity:
+        raise ValueError("Embedding provider identity changed during encoding")
+    return _validated_vectors(vectors, count=count, dimension=identity[2])
+
+
+async def encode_query(provider: EmbeddingProvider, text: str) -> list[float]:
+    """Use an optional query encoder and validate the returned vector."""
+    encoder = getattr(provider, "embed_query", None)
+    if callable(encoder):
+        identity = validate_embedding_provider(provider)
+        vector = await encoder(text)
+        if validate_embedding_provider(provider) != identity:
+            raise ValueError("Embedding provider identity changed during encoding")
+        return _validated_vectors([vector], count=1, dimension=identity[2])[0]
+    return (await encode_texts(provider, [text]))[0]
+
+
 class FastEmbedProvider:
     """EmbeddingProvider using FastEmbed (ONNX-based local inference).
 
@@ -68,14 +191,6 @@ class FastEmbedProvider:
         dimension: Vector dimension for the chosen model. Defaults to 384.
     """
 
-    # Known model dimensions for common models
-    _KNOWN_DIMENSIONS: dict[str, int] = {
-        "BAAI/bge-small-en-v1.5": 384,
-        "BAAI/bge-base-en-v1.5": 768,
-        "BAAI/bge-large-en-v1.5": 1024,
-        "sentence-transformers/all-MiniLM-L6-v2": 384,
-    }
-
     def __init__(
         self,
         model_name: str = "BAAI/bge-small-en-v1.5",
@@ -85,8 +200,17 @@ class FastEmbedProvider:
     ) -> None:
         self._model_name = model_name
         self._cache_dir = cache_dir
-        self._dimension = dimension or self._KNOWN_DIMENSIONS.get(model_name, 384)
-        self._model = None  # Lazy-initialized
+        if dimension is not None and (
+            isinstance(dimension, bool) or not isinstance(dimension, int) or dimension < 1
+        ):
+            raise ValueError("FastEmbed dimension must be a positive integer")
+        self._dimension = (
+            dimension
+            if dimension is not None
+            else fastembed_model_dimension(model_name)
+        )
+        self._model: TextEmbedding | None = None  # Lazy-initialized
+        self._initialization_lock = threading.Lock()
 
     @property
     def model_name(self) -> str:
@@ -108,7 +232,18 @@ class FastEmbedProvider:
 
     def _ensure_model(self) -> None:
         """Lazily initialize the TextEmbedding model on first use."""
-        if self._model is None:
+        if self._model is not None:
+            return
+        # embed() runs in native worker threads. Hold this guard through model
+        # construction, including after an awaiting caller is cancelled. A
+        # failed construction leaves None and permits a later explicit retry.
+        with self._initialization_lock:
+            if self._model is not None:
+                return
+            # Set before FastEmbed imports ONNX Runtime: its optional native
+            # telemetry uploader can outlive its shutdown mutexes on macOS.
+            # Respect a host application's explicit telemetry setting.
+            os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
             from fastembed import TextEmbedding
 
             kwargs: dict = {"model_name": self._model_name}
@@ -130,8 +265,15 @@ class FastEmbedProvider:
         """
         self._ensure_model()
         assert self._model is not None
-        # TextEmbedding.embed() returns a generator of numpy arrays
-        return [embedding.tolist() for embedding in self._model.embed(texts)]
+        # Quantized ONNX output can vary with batch padding. In particular,
+        # caching changes which neighbors remain in a miss batch. Embed each
+        # text with the same inference shape so cache residency and ingestion
+        # grouping cannot change its vector. This trades short-text throughput
+        # for reproducibility; the model weights and vector space are unchanged.
+        return [
+            embedding.tolist()
+            for embedding in self._model.embed(texts, batch_size=1)
+        ]
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Embed texts asynchronously using FastEmbed's ONNX inference.
@@ -250,7 +392,7 @@ class CachedEmbeddingProvider:
     ) -> None:
         self._provider = provider
         self._maxsize = maxsize
-        self._cache: OrderedDict[str, list[float]] = OrderedDict()
+        self._cache: OrderedDict[str, tuple[float, ...]] = OrderedDict()
 
     @property
     def model_name(self) -> str:
@@ -292,20 +434,22 @@ class CachedEmbeddingProvider:
             if key in self._cache:
                 # Move to end for LRU ordering
                 self._cache.move_to_end(key)
-                results[i] = self._cache[key]
+                results[i] = list(self._cache[key])
             else:
                 uncached_indices.append(i)
                 uncached_texts.append(texts[i])
 
         # Batch embed uncached texts
         if uncached_texts:
-            new_embeddings = await self._provider.embed(uncached_texts)
+            new_embeddings = await encode_texts(self._provider, uncached_texts)
             for j, idx in enumerate(uncached_indices):
-                embedding = new_embeddings[j]
+                # Providers and callers may reuse or modify list buffers. The
+                # cache owns an immutable snapshot; each result owns its list.
+                embedding = list(new_embeddings[j])
                 cache_key = keys[idx]
                 results[idx] = embedding
                 # Store in cache
-                self._cache[cache_key] = embedding
+                self._cache[cache_key] = tuple(embedding)
                 self._cache.move_to_end(cache_key)
                 # Evict oldest if over maxsize
                 while len(self._cache) > self._maxsize:
@@ -313,6 +457,21 @@ class CachedEmbeddingProvider:
 
         # All slots should be filled
         return results  # type: ignore[return-value]
+
+    async def embed_query(self, text: str) -> list[float]:
+        """Cache query vectors separately only when the provider distinguishes them."""
+        if not has_query_encoder(self._provider):
+            return (await self.embed([text]))[0]
+        key = "query:" + hashlib.sha256(text.encode()).hexdigest()
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return list(self._cache[key])
+        vector = tuple(await encode_query(self._provider, text))
+        self._cache[key] = vector
+        self._cache.move_to_end(key)
+        while len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
+        return list(vector)
 
 
 def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
@@ -332,6 +491,7 @@ def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
     Raises:
         ValueError: If the configured provider is not recognized.
     """
+    provider: EmbeddingProvider
     if config.provider == "fastembed":
         provider = FastEmbedProvider(
             model_name=config.model_name,

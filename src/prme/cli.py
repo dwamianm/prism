@@ -7,6 +7,7 @@ async engine lifecycle internally.
 Commands:
     prme init [directory]    -- Initialize a new memory directory
     prme doctor [directory]  -- Check memory pack health
+    prme config-audit        -- Inspect provisional configuration policies
     prme info <db_path>      -- Show memory pack info
     prme nodes <db_path>     -- List nodes with filters
     prme edges <db_path>     -- List edges with filters
@@ -14,6 +15,11 @@ Commands:
     prme chain <db_path> <id> -- Show supersedence chain
     prme search <db_path> <q> -- Run retrieval query
     prme organize <db_path>  -- Run organizer jobs
+    prme profile-jobs <db_path> -- Inspect owned profile preparations
+    prme process-profiles <db_path> -- Resume owned profile preparations
+    prme resume-profile <db_path> <id> -- Resume one owned preparation
+    prme discard-profile <db_path> <id> -- Abandon one owned preparation
+    prme collect-profile-staging <db_path> -- Reclaim abandoned profile indexes
     prme rebuild <db_path>   -- Rebuild indexes from the durable graph
     prme stats <db_path>     -- Show memory statistics
     prme export <db_path>    -- Export memory pack as JSON
@@ -24,14 +30,18 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import os
 import sys
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
+from uuid import UUID
 
 from prme.config import PRMEConfig
+from prme.config_audit import audit_hypotheses
 from prme.models import MemoryEdge, MemoryNode
-from prme.types import EdgeType, LifecycleState, NodeType
+from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +73,9 @@ async def _create_engine(db_path: str) -> Any:
 
     db_dir = os.path.dirname(abs_path)
     config = PRMEConfig(
+        # A positional local artifact is the command's target. Ambient settings
+        # must not silently redirect inspection or maintenance to PostgreSQL.
+        database_url=None,
         db_path=abs_path,
         vector_path=os.path.join(db_dir, "vectors.usearch"),
         lexical_path=os.path.join(db_dir, "lexical_index"),
@@ -492,6 +505,67 @@ async def cmd_organize(args: argparse.Namespace) -> None:
         await engine.close()
 
 
+async def cmd_extractions(args: argparse.Namespace) -> None:
+    """Inspect, queue or execute explicitly scoped durable extraction work."""
+    engine = await _create_engine(args.db_path)
+    try:
+        if args.action == "process":
+            result = await engine.process_extractions(user_id=args.user_id, limit=args.limit, budget_ms=args.budget_ms)
+        elif args.action == "retry":
+            result = await engine.retry_extraction(args.event_id, user_id=args.user_id, replan=args.replan)
+        else:
+            result = await engine.extraction_status(args.event_id, user_id=args.user_id)
+        if result is None:
+            raise ValueError("Extraction work not found")
+        values = result.model_dump(mode="json")
+        if args.format == "json":
+            print(json.dumps(values, indent=2))
+        else:
+            for name, value in values.items():
+                if value is not None:
+                    print(f"{name}: {value}")
+        if args.action == "process" and result.failed:
+            raise SystemExit(1)
+    finally:
+        await engine.close()
+
+
+async def cmd_profiles(args: argparse.Namespace) -> None:
+    """Inspect or recover explicitly owned profile work without model calls."""
+    engine = await _create_engine(args.db_path)
+    failed = False
+    try:
+        scope = Scope(args.scope) if getattr(args, "scope", None) else None
+        if args.action == "jobs":
+            result = await engine.profile_jobs(
+                user_id=args.user_id, scope=scope, status=args.status, limit=args.limit,
+            )
+        elif args.action in {"process", "collect"}:
+            method = engine.process_profiles if args.action == "process" else engine.collect_profile_staging
+            result = await method(user_id=args.user_id, scope=scope, limit=args.limit, budget_ms=args.budget_ms)
+            failed = bool(result["failed"] or result.get("blocked_reason"))
+        elif args.action == "resume":
+            profile_id = await engine.resume_profile(args.profile_id, user_id=args.user_id)
+            result = {"profile_id": profile_id, "resumed": profile_id is not None}
+            failed = profile_id is None
+        else:
+            discarded = await engine.discard_profile(args.profile_id, user_id=args.user_id)
+            result = {"profile_id": args.profile_id, "discarded": discarded}
+            failed = not discarded
+        if args.format == "json":
+            print(json.dumps(result, indent=2))
+        elif isinstance(result, list):
+            columns = ["plan_id", "scope", "status", "attempts", "last_error"]
+            print(_format_table(columns, [[str(row[c]) if row.get(c) is not None else "" for c in columns] for row in result]))
+        else:
+            for key, value in result.items():
+                print(f"{key}: {value}")
+        if failed:
+            raise SystemExit(1)
+    finally:
+        await engine.close()
+
+
 async def cmd_rebuild(args: argparse.Namespace) -> None:
     """Rebuild the vector and lexical indexes from the durable graph.
 
@@ -705,6 +779,77 @@ async def cmd_init(args: argparse.Namespace) -> None:
     print()
 
 
+async def _verify_extraction_provider(
+    extraction: Any,
+    local: dict[str, str | None],
+    *,
+    timeout: float,
+    transport: Any = None,
+) -> tuple[bool, str]:
+    """Verify provider reachability, credential, and model without generation."""
+    import httpx
+
+    provider = extraction.provider.strip().casefold()
+    prefix = {"openai": "OPENAI", "anthropic": "ANTHROPIC"}.get(provider)
+    key = extraction.api_key.get_secret_value() if extraction.api_key else None
+    if prefix and not key:
+        key_name = f"{prefix}_API_KEY"
+        key = os.environ.get(key_name, local.get(key_name))
+    if prefix and not key:
+        return False, f"{provider} extraction credential is missing"
+
+    provider_url_name = f"{prefix}_BASE_URL" if prefix else None
+    configured_url = extraction.base_url
+    if not configured_url and provider_url_name:
+        configured_url = os.environ.get(
+            provider_url_name, local.get(provider_url_name)
+        )
+    if provider == "openai":
+        base_url = (configured_url or "https://api.openai.com/v1").rstrip("/")
+        url = f"{base_url}/models/{quote(extraction.model, safe='')}"
+        method = "GET"
+        headers = {"Authorization": f"Bearer {key}"}
+        body = None
+    elif provider == "anthropic":
+        base_url = (configured_url or "https://api.anthropic.com/v1").rstrip("/")
+        url = f"{base_url}/models/{quote(extraction.model, safe='')}"
+        method = "GET"
+        headers = {"x-api-key": key, "anthropic-version": "2023-06-01"}
+        body = None
+    elif provider == "ollama":
+        base_url = (configured_url or "http://127.0.0.1:11434").rstrip("/")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        url = f"{base_url}/api/show"
+        method = "POST"
+        headers = {}
+        body = {"model": extraction.model}
+    else:
+        return False, f"provider verification is unavailable for {provider}"
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout, transport=transport) as client:
+            response = await client.request(method, url, headers=headers, json=body)
+    except httpx.TimeoutException:
+        return False, f"{provider} verification timed out after {timeout:g}s"
+    except httpx.HTTPError as error:
+        return False, f"{provider} connection failed ({type(error).__name__})"
+
+    if response.status_code == 200:
+        if provider == "ollama":
+            return True, "ollama endpoint and model metadata verified"
+        return (
+            True,
+            f"{provider} credential and model metadata verified "
+            "(generation quota not checked)",
+        )
+    if response.status_code in (401, 403):
+        return False, f"{provider} credential rejected (HTTP {response.status_code})"
+    if response.status_code == 404:
+        return False, f"{provider} model is unavailable at the configured endpoint (HTTP 404)"
+    return False, f"{provider} verification failed (HTTP {response.status_code})"
+
+
 async def cmd_doctor(args: argparse.Namespace) -> None:
     """Check memory pack health."""
     import duckdb as _duckdb
@@ -773,13 +918,65 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
         warn("Lexical index not found (will be created on first use)")
 
     # 5. LLM provider (advisory)
-    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get(
-        "ANTHROPIC_API_KEY"
-    )
-    if api_key:
-        ok("LLM API key found in environment")
+    from dotenv import dotenv_values
+    from prme.config import ExtractionConfig
+
+    extraction = ExtractionConfig()
+    local = dotenv_values(".env")
+    key_name = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}.get(extraction.provider)
+    configured = bool(extraction.api_key)
+    if key_name:
+        configured = configured or bool(os.environ.get(key_name, local.get(key_name)))
+    if extraction.provider == "ollama":
+        suffix = (
+            ""
+            if getattr(args, "verify_extraction", False)
+            else " (server availability not checked)"
+        )
+        ok(f"Local Ollama extraction selected{suffix}")
+    elif configured:
+        ok(f"{extraction.provider} extraction credential configured (not verified)")
     else:
-        warn("No LLM API key found (ingest() requires one; store() works without)")
+        warn(f"No credential found for {extraction.provider} extraction; store() works without an LLM")
+
+    # Diagnose the settings used by this CLI, without exposing values or making
+    # a provider request. PRME settings are case-insensitive; SDK variables are
+    # case-sensitive. Ignore lower-priority SDK settings when PRME overrides them.
+    process_settings = {name.upper(): value for name, value in os.environ.items()}
+    file_settings = {name.upper(): value for name, value in local.items()}
+    active_settings = ["PRME_EXTRACTION_PROVIDER", "PRME_EXTRACTION_MODEL"]
+    if extraction.api_key:
+        active_settings.append("PRME_EXTRACTION_API_KEY")
+    if extraction.base_url:
+        active_settings.append("PRME_EXTRACTION_BASE_URL")
+    shadowed = [name for name in active_settings if (
+        name in process_settings and file_settings.get(name) is not None
+        and process_settings[name] != file_settings[name]
+    )]
+    if key_name:
+        for name, overridden in (
+            (key_name, bool(extraction.api_key)),
+            (key_name.replace("API_KEY", "BASE_URL"), bool(extraction.base_url)),
+        ):
+            if (not overridden and name in os.environ and local.get(name) is not None
+                    and os.environ[name] != local[name]):
+                shadowed.append(name)
+    for name in shadowed:
+        warn(
+            f"{name} in the process environment overrides a different value in .env; "
+            f"update or unset {name} before recreating the client"
+        )
+
+    if getattr(args, "verify_extraction", False):
+        verified, message = await _verify_extraction_provider(
+            extraction,
+            local,
+            timeout=args.provider_timeout,
+        )
+        if verified:
+            ok(message)
+        else:
+            fail(message)
 
     # Summary
     print()
@@ -787,6 +984,38 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
     print(f"  {checks_passed}/{total} passed, {checks_warned} warnings, {checks_failed} failures")
     if checks_failed > 0:
         sys.exit(1)
+
+
+async def cmd_config_audit(args: argparse.Namespace) -> None:
+    """Report every hypothesis-tagged setting in the effective configuration."""
+    report = audit_hypotheses(PRMEConfig())
+    if args.format == "json":
+        print(report.model_dump_json(indent=2))
+        return
+
+    print(
+        "Provisional configuration: "
+        f"{report.hypothesis_count} hypothesis-tagged settings, "
+        f"{report.effective_count} effective, "
+        f"{report.customized_count} customized"
+    )
+    print()
+    rows = [
+        [
+            item.path,
+            "effective" if item.effective else "dormant",
+            "yes" if item.customized else "no",
+            _truncate(json.dumps(item.value, sort_keys=True), 44),
+            item.environment_variable,
+        ]
+        for item in report.settings
+    ]
+    print(_format_table(["SETTING", "STATE", "CUSTOM", "VALUE", "ENVIRONMENT"], rows))
+    print()
+    print(
+        "Effective means the governing feature is enabled; a setting may still "
+        "apply only to its documented query, ingestion, or organizer path."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -812,7 +1041,74 @@ def build_parser() -> argparse.ArgumentParser:
             help="Output format (default: table)",
         )
 
+    def owner(value: str) -> str:
+        if not value.strip():
+            raise argparse.ArgumentTypeError("A nonempty owner is required")
+        return value
+
+    def work_limit(value: str) -> int:
+        number = int(value)
+        if not 1 <= number <= 1000:
+            raise argparse.ArgumentTypeError("Limit must be between 1 and 1000")
+        return number
+
+    def work_budget(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number) or number < 0:
+            raise argparse.ArgumentTypeError("Budget must be finite and nonnegative")
+        return number
+
+    def positive_timeout(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number) or number <= 0:
+            raise argparse.ArgumentTypeError("Timeout must be finite and positive")
+        return number
+
+    def profile_uuid(value: str) -> str:
+        try:
+            return str(UUID(value))
+        except ValueError:
+            raise argparse.ArgumentTypeError("Profile identity must be a UUID") from None
+
+    for command, action, help_text in (
+        ("profile-jobs", "jobs", "Inspect owned prepared-profile jobs"),
+        ("process-profiles", "process", "Resume owned profiles without new model calls"),
+        ("resume-profile", "resume", "Resume one owned prepared profile"),
+        ("discard-profile", "discard", "Abandon one unpublished profile; preserve sources and journal"),
+        ("collect-profile-staging", "collect", "Reclaim uniquely owned abandoned profile indexes"),
+    ):
+        sub = subparsers.add_parser(command, help=help_text)
+        add_common(sub)
+        sub.add_argument("--user-id", required=True, type=owner, help="Profile owner")
+        if action in {"resume", "discard"}:
+            sub.add_argument("profile_id", type=profile_uuid, help="Prepared profile UUID")
+        else:
+            sub.add_argument("--scope", choices=[s.value for s in Scope], help="Omit to visit every scope for this owner")
+            sub.add_argument("--limit", type=work_limit, default=100, help="Maximum preparations (1–1000)")
+        if action == "jobs":
+            sub.add_argument("--status", choices=["pending", "complete", "abandoned"], default="pending")
+        if action in {"process", "collect"}:
+            sub.add_argument("--budget-ms", type=work_budget, default=5000, help="Cooperative budget checked between preparations")
+        sub.set_defaults(func=cmd_profiles, action=action)
+
     # info
+    for command, action, help_text in (
+        ("extraction-status", "status", "Inspect owned extraction progress"),
+        ("retry-extraction", "retry", "Queue an owned extraction retry without calling a model"),
+        ("process-extractions", "process", "Run due owned extraction jobs (may call a model)"),
+    ):
+        sub = subparsers.add_parser(command, help=help_text)
+        add_common(sub)
+        sub.add_argument("--user-id", required=True, help="Source owner; required for every extraction operation")
+        if action == "process":
+            sub.add_argument("--limit", type=int, default=100)
+            sub.add_argument("--budget-ms", type=float, default=5000, help="Cooperative budget checked between jobs")
+        else:
+            sub.add_argument("event_id", help="Source event UUID")
+        if action == "retry":
+            sub.add_argument("--replan", action="store_true", help="Prepare a new revision from saved extraction")
+        sub.set_defaults(func=cmd_extractions, action=action)
+
     p_info = subparsers.add_parser("info", help="Show memory pack info")
     add_common(p_info)
     p_info.set_defaults(func=cmd_info)
@@ -920,7 +1216,31 @@ def build_parser() -> argparse.ArgumentParser:
         default=".",
         help="Memory directory to check (default: current directory)",
     )
+    p_doctor.add_argument(
+        "--verify-extraction",
+        action="store_true",
+        help="Contact the configured model endpoint without generating or storing content",
+    )
+    p_doctor.add_argument(
+        "--provider-timeout",
+        type=positive_timeout,
+        default=10.0,
+        help="Seconds to wait for --verify-extraction (default: 10)",
+    )
     p_doctor.set_defaults(func=cmd_doctor)
+
+    # config-audit
+    p_config_audit = subparsers.add_parser(
+        "config-audit",
+        help="Inspect hypothesis-tagged configuration policies",
+    )
+    p_config_audit.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table)",
+    )
+    p_config_audit.set_defaults(func=cmd_config_audit)
 
     return parser
 
@@ -937,6 +1257,11 @@ def main() -> None:
     if not hasattr(args, "func"):
         parser.print_help()
         sys.exit(1)
+
+    # Keep command output, including --format json, usable by pipes. Preserve
+    # configured processors/levels while directing library diagnostics to stderr.
+    import structlog
+    structlog.configure(logger_factory=structlog.PrintLoggerFactory(file=sys.stderr))
 
     try:
         asyncio.run(args.func(args))

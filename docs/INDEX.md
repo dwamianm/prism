@@ -21,6 +21,56 @@ This index covers the complete Revised Relational Memory Substrate (RMS) RFC sui
 
 ---
 
+## Current implementation evidence
+
+The [research agenda](RESEARCH-AGENDA.md) tracks verified results, active
+comparison protocols and remaining capability gaps. RFC status and historical
+benchmark targets are not evidence of current product quality.
+
+The [2026-09-17 competitive landscape snapshot](COMPETITIVE-LANDSCAPE-2026-09-17.md)
+records PRME's point-in-time position against direct and adjacent memory
+products, including source URLs, adoption metadata, benchmark boundaries, and
+the source revision evaluated. Future reviews create new dated snapshots rather
+than rewriting this reference.
+
+Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
+[custom embedding providers](CUSTOM-EMBEDDINGS.md), and
+[entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
+Python and CLI contracts separately from draft RFC requirements.
+
+[Framework integrations](FRAMEWORK-INTEGRATIONS.md) documents the LangChain and
+LlamaIndex retrievers, lossless structured-message storage, and append-only
+logical history mutations.
+
+[Jev product-alignment advisor](JEV-PRODUCT-ADVISOR.md) documents the opt-in,
+pinned external advisor for caller-selected software-product pairs, its held-out
+evidence, audit fields, durable unverified-proposal workflow, and proposal-only
+safety boundary.
+
+[Scoped retrieval learning](LEARNING.md) documents the two-stage evidence gate,
+immutable owner/scope profiles, automatic application, and rollback workflow.
+
+[Explicit memory corrections](MEMORY-CORRECTIONS.md) documents source retention,
+node/event identities, scoped evidence and the sync/async replacement workflow.
+
+[Metadata handling](METADATA.md) covers finite JSON admission, copied inputs and
+lossless special-float snapshots for previously admitted graph metadata.
+
+[Context packing](PACKING.md) explains the default balanced policy plus density and score
+ordering, exact token budgets, evidence limits and receipt compatibility.
+
+[Evidence-bound temporal relations](TEMPORAL-RELATIONS.md) documents the opt-in
+resolver, deterministic citation validation and arithmetic, independent Jev
+gate, fixed-budget repacking, failure behavior, receipts and held-out evidence.
+
+[Answerability and grounded abstention](ANSWERABILITY.md) documents the optional
+post-retrieval evidence-sufficiency evaluator, partial answers, cited conflicts,
+provider configuration and audit boundary.
+
+[Local claim verification](CLAIM-VERIFICATION.md) documents the optional pinned
+NLI verifier, bounded minimal evidence groups, typed bundle evidence and the
+explicit completeness boundary for derived counts and lists.
+
 ## RFC Listing
 
 ### Tier 0 — Foundation
@@ -37,6 +87,7 @@ This index covers the complete Revised Relational Memory Substrate (RMS) RFC sui
 | RFC-0002 | Event Store and Append-Only Log | Draft | [RFC-0002-Event-Store.md](RFC-0002-Event-Store.md) |
 | RFC-0003 | Epistemic State Model | Draft | [RFC-0003-Epistemic-State-Model.md](RFC-0003-Epistemic-State-Model.md) |
 | RFC-0004 | Namespace and Scope Isolation | Draft | [RFC-0004-Namespace-and-Scope-Isolation.md](RFC-0004-Namespace-and-Scope-Isolation.md) |
+| RFC-0016 | Durable Derivation Commits | Partially implemented; fenced recovery and explicit revisions | [RFC-0016-Durable-Derivation-Commits.md](RFC-0016-Durable-Derivation-Commits.md) |
 
 ### Tier 2 — Retrieval
 
@@ -52,6 +103,7 @@ This index covers the complete Revised Relational Memory Substrate (RMS) RFC sui
 | RFC-0007 | Decay and Forgetting Model | Draft | [RFC-0007-Decay-and-Forgetting.md](RFC-0007-Decay-and-Forgetting.md) |
 | RFC-0008 | Confidence Evolution and Reinforcement | Draft | [RFC-0008-Confidence-Evolution.md](RFC-0008-Confidence-Evolution.md) |
 | RFC-0009 | Memory Usage Feedback Loop | Draft | [RFC-0009-Memory-Usage-Feedback-Loop.md](RFC-0009-Memory-Usage-Feedback-Loop.md) |
+| RFC-0017 | Scoped Retrieval Feedback and Evaluated Learning | Implemented with two-stage evaluation and scoped profile rollback | [RFC-0017-Scoped-Retrieval-Learning.md](RFC-0017-Scoped-Retrieval-Learning.md) |
 | RFC-0015 | Self-Organizing Memory Execution Model | Draft | [RFC-0015-Self-Organizing-Memory.md](RFC-0015-Self-Organizing-Memory.md) |
 
 ### Tier 4 — Advanced Capabilities
@@ -149,3 +201,6 @@ Because the original suite implicitly required all features simultaneously. A mi
 ---
 
 *End of Index*
+
+[Memory confirmations and safe retries](REINFORCEMENT.md) covers the async engine,
+synchronous client and HTTP idempotency header.

@@ -14,7 +14,7 @@ from typing import Iterator
 
 import numpy as np
 
-from research.vsa.core import HV, DEFAULT_DIM, random_hv, bind, similarity
+from research.vsa.core import HV, DEFAULT_DIM, random_hv, similarity
 
 
 class Codebook:
@@ -165,7 +165,7 @@ class Codebook:
         Returns:
             Hypervector representing the text.
         """
-        from research.vsa.core import bundle, bind, normalize
+        from research.vsa.core import bind, bundle
 
         # Tokenize and clean
         raw_words = text.lower().split()

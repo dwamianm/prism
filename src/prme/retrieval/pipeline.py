@@ -9,7 +9,9 @@ Chains the stages in sequence:
 4. Epistemic Filtering (exclude HYPOTHETICAL/DEPRECATED in DEFAULT mode)
 5. Scoring + Ranking (8-input composite score, deterministic sort)
 5.5b. Session Context Expansion (pull adjacent turns from same session)
-6. Context Packing (3-priority greedy bin-packing within token budget)
+5.5c. Episode Context Expansion (route sessions, then select local evidence)
+5.5d. Evidence Projection (replace derived groups with bounded direct sources)
+6. Context Packing (deterministic priority packing within token budget)
 
 Each retrieval generates a RETRIEVAL_REQUEST operation record with a unique
 request_id for replay capability and audit trail.
@@ -23,21 +25,40 @@ import logging
 import time
 import uuid
 from collections.abc import Sequence
+from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 import duckdb
 
-from prme.retrieval.candidates import generate_candidates
+from prme.models.learning import RankingMultipliers
+from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
+from prme.retrieval.candidates import (
+    CandidateDiagnostics,
+    generate_candidates,
+    merge_normalized_bm25_hits,
+)
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
     DEFAULT_SCORING_WEIGHTS,
     PackingConfig,
     ScoringWeights,
 )
+from prme.retrieval.context_formatter import (
+    build_context_guidance,
+    is_temporal_reasoning_query,
+)
+from prme.retrieval.evidence_context import (
+    augment_evidence_context,
+    project_evidence_context,
+)
+from prme.retrieval.episode_context import expand_episode_context
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
+    AggregationCoverage,
+    AggregationLimitation,
     FilterMetadata,
+    HistoricalCoverage,
     RetrievalCandidate,
     RetrievalMetadata,
     RetrievalResponse,
@@ -45,15 +66,40 @@ from prme.retrieval.models import (
 from prme.retrieval.packing import pack_context
 from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
+from prme.retrieval.scope import ScopeInput, normalize_scope
+from prme.retrieval.selection import select_candidates, validate_selection
 from prme.retrieval.session_context import expand_session_context
-from prme.types import EdgeType, LifecycleState, RepresentationLevel, RetrievalMode, Scope
+from prme.retrieval.temporal_relations import (
+    TemporalRelationConfig,
+    TemporalRelationEnricher,
+)
+from prme.types import EdgeType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope
 
 if TYPE_CHECKING:
+    from prme.models.relevance import RankingPolicy
     from prme.storage.graph_store import GraphStore
     from prme.storage.lexical_index import LexicalIndex
     from prme.storage.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
+
+_AGGREGATION_COVERAGE_NOTICE = (
+    "Aggregation coverage: semantic candidates only; this is not an exhaustive "
+    "stored-record enumeration. Do not claim a complete count or list from this context."
+)
+_HISTORICAL_COVERAGE_NOTICE = (
+    "Historical coverage: knowledge_at is an ingestion-time cutoff over current "
+    "lifecycle and derived indexes; mutations are not replayed. Do not treat this "
+    "context as an exact historical snapshot."
+)
+
+
+class _OperationConnection(Protocol):
+    async def execute(self, query: str, *args: Any) -> Any: ...
+
+
+class _OperationPool(Protocol):
+    def acquire(self) -> AbstractAsyncContextManager[_OperationConnection]: ...
 
 
 def _apply_bitemporal_filters(
@@ -61,6 +107,8 @@ def _apply_bitemporal_filters(
     knowledge_at: datetime | None,
     event_time_from: datetime | None,
     event_time_to: datetime | None,
+    time_from: datetime | None = None,
+    time_to: datetime | None = None,
 ) -> list[RetrievalCandidate]:
     """Drop candidates outside the bi-temporal window (issue #21).
 
@@ -68,6 +116,17 @@ def _apply_bitemporal_filters(
     regardless of which stage produced the candidate. Nodes without an
     ``event_time`` fall back to ``created_at`` (ingestion time).
     """
+    # Match graph/vector validity semantics for every source, including
+    # lexical scans, pinned nodes, session expansion, and cross-scope hints.
+    exempt = {NodeType.ENTITY, NodeType.PREFERENCE}
+    if time_from is not None:
+        candidates = [c for c in candidates if (
+            c.node.node_type in exempt or c.node.valid_to is None or c.node.valid_to > time_from
+        )]
+    if time_to is not None:
+        candidates = [c for c in candidates if (
+            c.node.node_type in exempt or c.node.valid_from is None or c.node.valid_from <= time_to
+        )]
     if knowledge_at is not None:
         candidates = [c for c in candidates if c.node.created_at <= knowledge_at]
     if event_time_from is not None:
@@ -101,7 +160,7 @@ class RetrievalPipeline:
         lexical_index: LexicalIndex,
         conn: duckdb.DuckDBPyConnection | None = None,
         conn_lock: asyncio.Lock | None = None,
-        pool: object | None = None,
+        pool: _OperationPool | None = None,
         scoring_weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
         packing_config: PackingConfig = DEFAULT_PACKING_CONFIG,
         epistemic_weights: dict[str, float] | None = None,
@@ -114,6 +173,8 @@ class RetrievalPipeline:
         query_reformulation_provider: str = "openai",
         query_reformulation_model: str = "gpt-4o-mini",
         temporal_languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
+        temporal_relation_config: TemporalRelationConfig | None = None,
+        temporal_relation_enricher: TemporalRelationEnricher | None = None,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -131,6 +192,28 @@ class RetrievalPipeline:
         self._query_reformulation_provider = query_reformulation_provider
         self._query_reformulation_model = query_reformulation_model
         self._temporal_languages = temporal_languages
+        self._temporal_relation_config = (
+            temporal_relation_config or TemporalRelationConfig()
+        ).model_copy(deep=True)
+        if (
+            temporal_relation_enricher is not None
+            and not self._temporal_relation_config.enabled
+        ):
+            raise ValueError(
+                "temporal_relation_enricher requires temporal relation configuration to be enabled"
+            )
+        self._temporal_relation_enricher = temporal_relation_enricher
+        if (
+            self._temporal_relation_config.enabled
+            and self._temporal_relation_enricher is None
+        ):
+            from prme.retrieval.temporal_relation_providers import (
+                create_temporal_relation_enricher,
+            )
+
+            self._temporal_relation_enricher = create_temporal_relation_enricher(
+                self._temporal_relation_config
+            )
 
         # Lazy-init cross-encoder reranker when enabled.
         self._reranker = None
@@ -139,19 +222,45 @@ class RetrievalPipeline:
 
             self._reranker = CrossEncoderReranker(model_name=reranker_model)
 
+        self._feature_identity = feature_identity(vector_index, lexical_index, self._reranker)
+        self._feature_identity["temporal_relation"] = {
+            "enabled": self._temporal_relation_config.enabled,
+            "protocol": "temporal_relation_v1",
+            "resolver_provider": self._temporal_relation_config.resolver_provider,
+            "resolver_model": self._temporal_relation_config.resolver_model,
+            "gate_provider": self._temporal_relation_config.gate_provider,
+            "gate_model": self._temporal_relation_config.gate_model,
+            "gate_threshold": self._temporal_relation_config.gate_threshold,
+            "confirmation_protocol_aligned": (
+                self._temporal_relation_config.confirmation_protocol_aligned
+            ),
+            "configuration_sha256": self._temporal_relation_config.configuration_sha256,
+        }
+
+    def execution_features(self) -> dict:
+        """Return the exact feature identity used for a new receipt."""
+        return {**self._feature_identity, "reranker": reranker_identity(self._reranker)}
+
     async def retrieve(
         self,
         query: str,
         *,
         user_id: str,
-        scope: Scope | list[Scope] | None = None,
+        scope: ScopeInput = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
+        reference_time: datetime | None = None,
         knowledge_at: datetime | None = None,
         event_time_from: datetime | None = None,
         event_time_to: datetime | None = None,
         token_budget: int | None = None,
+        min_score: float | None = None,
+        limit: int | None = None,
+        max_per_source: int | None = None,
+        max_per_evidence: int | None = None,
         weights: ScoringWeights | None = None,
+        ranking_multipliers: RankingMultipliers | None = None,
+        ranking_profile: dict | None = None,
         min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
@@ -163,27 +272,39 @@ class RetrievalPipeline:
         MemoryBundle, scored results, metadata, and always-on score traces.
 
         Bi-temporal query support (issue #21):
-        - ``knowledge_at``: Point-in-time knowledge snapshot. Post-filters
-          results to include only nodes with created_at <= knowledge_at.
+        - ``knowledge_at``: Ingestion-time cutoff. Post-filters current
+          candidates to include only nodes with created_at <= knowledge_at;
+          it does not replay historical lifecycle or index state.
         - ``event_time_from``/``event_time_to``: Filters results by the
           event_time field (when events actually happened).
 
         Args:
             query: Raw query text from the user.
             user_id: User ID for scoping all backend queries.
-            scope: Optional scope filter. Accepts a single Scope, a list of
+            scope: Optional scope filter. Accepts a scope name or a nonempty sequence of
                 Scopes, or None (no filter). Single Scope is normalized to
                 a list for backward compatibility.
             time_from: Explicit start of temporal window. If provided,
                 overrides any temporal signal from query analysis.
             time_to: Explicit end of temporal window. If provided,
                 overrides any temporal signal from query analysis.
-            knowledge_at: Point-in-time knowledge snapshot (bi-temporal).
-                Only includes nodes ingested on or before this datetime.
+            reference_time: Timezone-aware clock for relative dates and
+                scoring decay. Defaults to request time; not a knowledge cutoff.
+            knowledge_at: Timezone-aware ingestion-time cutoff. Only includes
+                current-index candidates ingested on or before this datetime;
+                historical lifecycle and index state are not replayed.
             event_time_from: Filter by event_time >= this value (bi-temporal).
             event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
+            min_score: Inclusive ranking score floor; not a probability.
+            limit: Maximum primary results before context packing. Zero returns none.
+            max_per_source: Optional maximum results with the same exact source
+                passage and evidence set.
+            max_per_evidence: Optional maximum results with the same exact
+                nonempty evidence set, including differently worded siblings.
             weights: Override default scoring weights for this request.
+            ranking_multipliers: Explicit bounded adjustment after query-specific
+                weight redistribution, before reranking and session expansion.
             min_fidelity: Override minimum representation level.
             retrieval_mode: Retrieval mode controlling epistemic filtering.
             include_cross_scope: Whether to include cross-scope hints when
@@ -196,15 +317,18 @@ class RetrievalPipeline:
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
+        validate_selection(min_score, limit, max_per_source, max_per_evidence)
+        if ranking_multipliers is not None:
+            ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
+        execution_features = self.execution_features()
         start_time = time.monotonic()
+        if reference_time is not None and reference_time.utcoffset() is None:
+            raise ValueError("reference_time must include a timezone")
+        if knowledge_at is not None and knowledge_at.utcoffset() is None:
+            raise ValueError("knowledge_at must include a timezone")
+        scoring_now = (reference_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
 
-        # Normalize scope: single Scope -> list, list -> as-is, None -> None.
-        normalized_scope: list[Scope] | None = None
-        if isinstance(scope, Scope):
-            normalized_scope = [scope]
-        elif isinstance(scope, list):
-            normalized_scope = scope
-        # else: None means "all scopes, no filter"
+        normalized_scope = normalize_scope(scope)
 
         # String form used by the lexical/vector index scope filters.
         scope_values = (
@@ -233,12 +357,14 @@ class RetrievalPipeline:
             time_to=time_to,
             retrieval_mode=retrieval_mode,
             languages=self._temporal_languages,
+            reference_time=scoring_now,
         )
 
-        # Determine effective temporal window: explicit params take priority
-        # over analysis-derived values from query text.
-        effective_time_from = time_from if time_from is not None else analysis.time_from
-        effective_time_to = time_to if time_to is not None else analysis.time_to
+        # Query dates guide temporal affinity; they are not assertion-validity
+        # cutoffs. An episode from 2024 may legitimately be imported in 2026.
+        # Only caller-supplied bounds impose a hard validity filter.
+        effective_time_from = time_from
+        effective_time_to = time_to
 
         # --- Aggregation boost: widen candidate pool for count/total queries ---
         candidate_config = effective_packing_config
@@ -255,11 +381,13 @@ class RetrievalPipeline:
                 }
             )
 
-        # --- Aggregation: exhaustive keyword scan ---
+        # --- Aggregation: supplementary keyword scan ---
         # For aggregation queries, supplement embedding search with a
-        # comprehensive lexical scan using key terms from the query.
+        # broader bounded lexical scan using key terms from the query.
         # This catches events that embedding similarity misses.
         aggregation_extra: list[RetrievalCandidate] = []
+        aggregation_term_limit_reached = False
+        aggregation_scan_failed = False
         if analysis.is_aggregation:
             import re
             # Extract content words (nouns, verbs) from the query
@@ -293,16 +421,15 @@ class RetrievalPipeline:
                 ],
                 return_exceptions=True,
             )
-            agg_seen_ids: set[str] = set()
-            agg_hits: list[dict] = []
+            successful_term_results: list[list[dict]] = []
             for hits in term_results:
                 if isinstance(hits, BaseException):
+                    aggregation_scan_failed = True
                     continue
-                for hit in hits:
-                    nid = hit["node_id"]
-                    if nid not in agg_seen_ids:
-                        agg_seen_ids.add(nid)
-                        agg_hits.append(hit)
+                if len(hits) >= 50:
+                    aggregation_term_limit_reached = True
+                successful_term_results.append(hits)
+            agg_hits = merge_normalized_bm25_hits(successful_term_results)
             if agg_hits:
                 try:
                     agg_nodes = await self._graph_store.get_nodes(
@@ -316,12 +443,17 @@ class RetrievalPipeline:
                                 node=node,
                                 paths=["LEXICAL"],
                                 path_count=1,
-                                lexical_score=hit.get("score", 0.0),
+                                lexical_score=hit.get("normalized_score", 0.0),
                             ))
                 except Exception:
-                    pass
+                    aggregation_scan_failed = True
+                    logger.debug(
+                        "Aggregation candidate resolution failed; continuing",
+                        exc_info=True,
+                    )
 
         # --- Stages 2-3: Candidate Generation + Merging ---
+        candidate_diagnostics = CandidateDiagnostics()
         candidates, candidate_counts = await generate_candidates(
             analysis,
             graph_store=self._graph_store,
@@ -332,7 +464,26 @@ class RetrievalPipeline:
             time_from=effective_time_from,
             time_to=effective_time_to,
             config=candidate_config,
+            diagnostics=candidate_diagnostics,
         )
+
+        aggregation_candidate_limit_paths: list[str] = []
+        if analysis.is_aggregation:
+            backend_limits = {
+                "GRAPH": candidate_config.graph_max_candidates,
+                "VECTOR": candidate_config.vector_k,
+                "LEXICAL": candidate_config.lexical_k,
+                "PINNED": 500,
+            }
+            aggregation_candidate_limit_paths.extend(
+                backend
+                for backend, backend_limit in backend_limits.items()
+                if candidate_counts.get(backend, 0) >= backend_limit
+            )
+            if aggregation_term_limit_reached:
+                aggregation_candidate_limit_paths.append("LEXICAL_AGG")
+            if aggregation_scan_failed:
+                candidate_diagnostics.backend_failures["LEXICAL_AGG"] = "backend_error"
 
         # Merge aggregation extras into candidate pool
         if aggregation_extra:
@@ -364,7 +515,7 @@ class RetrievalPipeline:
                 ],
                 return_exceptions=True,
             )
-            entity_hits: list[dict] = []
+            successful_entity_results: list[list[dict]] = []
             for name, hits in zip(entity_names, entity_results):
                 if isinstance(hits, BaseException):
                     logger.debug(
@@ -373,12 +524,13 @@ class RetrievalPipeline:
                         exc_info=hits,
                     )
                     continue
-                for hit in hits:
-                    nid = hit["node_id"]
-                    if nid in existing_ids:
-                        continue
-                    existing_ids.add(nid)
-                    entity_hits.append(hit)
+                successful_entity_results.append(hits)
+            entity_hits = [
+                hit
+                for hit in merge_normalized_bm25_hits(successful_entity_results)
+                if hit["node_id"] not in existing_ids
+            ]
+            existing_ids.update(hit["node_id"] for hit in entity_hits)
             if entity_hits:
                 try:
                     entity_nodes = await self._graph_store.get_nodes(
@@ -392,7 +544,7 @@ class RetrievalPipeline:
                                 node=node,
                                 paths=["LEXICAL"],
                                 path_count=1,
-                                lexical_score=hit.get("score", 0.0),
+                                lexical_score=hit.get("normalized_score", 0.0),
                             ))
                             candidate_counts["LEXICAL"] = candidate_counts.get("LEXICAL", 0) + 1
                 except Exception:
@@ -416,19 +568,18 @@ class RetrievalPipeline:
                 time_to=effective_time_to,
                 retrieval_mode=analysis.retrieval_mode,
                 config=candidate_config,
+                reference_time=scoring_now,
             )
             if reform_added:
                 candidate_counts["REFORMULATION"] = reform_added
 
-        # Track embedding mismatch from candidates module.
-        # If VECTOR count is 0 but no explicit error, we check the flag
-        # via the candidates module's logging. For now, infer from counts.
-        embedding_mismatch = candidate_counts.get("VECTOR", 0) == 0
+        embedding_mismatch = candidate_diagnostics.embedding_mismatch
 
         # --- Stage 3.5: Bi-temporal Post-Filtering (issue #21) ---
         # Applied after candidate generation and before epistemic filtering.
         candidates = _apply_bitemporal_filters(
-            candidates, knowledge_at, event_time_from, event_time_to
+            candidates, knowledge_at, event_time_from, event_time_to,
+            effective_time_from, effective_time_to,
         )
 
         # --- Stage 4: Epistemic Filtering ---
@@ -440,21 +591,23 @@ class RetrievalPipeline:
         # --- Stage 5: Scoring + Ranking ---
         # Capture a single timestamp so all candidates in this retrieval
         # use the same reference point for deterministic decay computation.
-        scoring_now = datetime.now(timezone.utc)
         scored, traces = score_and_rank(
             filtered, effective_weights,
             epistemic_weights=self._epistemic_weights,
             now=scoring_now,
             query_analysis=analysis,
+            ranking_multipliers=ranking_multipliers,
         )
 
         # --- Stage 5a: Neural Reranking (optional) ---
+        ranking_policy: RankingPolicy = "score_path_id"
         if self._reranker is not None:
             scored = await self._reranker.rerank(
                 query=query,
                 candidates=scored,
                 top_k=self._reranker_top_k,
             )
+            ranking_policy = "reranked_prefix"
 
         # --- Stage 5.5: Conflict Metadata Annotation ---
         # Batch-annotate CONTESTED candidates with conflict_flag and
@@ -509,24 +662,126 @@ class RetrievalPipeline:
                     config=effective_packing_config,
                     scope=normalized_scope,
                 )
-                # Expansion appends adjacent turns that never went through
-                # Stages 3.5 and 4, so the same predicates run once more over
-                # the expanded set (issue #60). Nodes that already passed are
-                # unaffected; only the newly appended ones can be dropped.
-                if len(expanded) != len(scored):
-                    expanded = _apply_bitemporal_filters(
-                        expanded, knowledge_at, event_time_from, event_time_to
-                    )
-                    expanded, late_excluded = filter_epistemic(
-                        expanded,
-                        analysis.retrieval_mode,
-                        unverified_threshold=self._unverified_confidence_threshold,
-                    )
-                    excluded.extend(late_excluded)
+                if expanded is not scored:
+                    original_by_id = {candidate.node.id: candidate for candidate in scored}
+                    if any(candidate.node.id not in original_by_id for candidate in expanded):
+                        # Newly appended nodes did not pass the earlier temporal
+                        # and epistemic filters (issue #60). Existing candidates
+                        # already did, but filtering the combined list is stable.
+                        expanded = _apply_bitemporal_filters(
+                            expanded, knowledge_at, event_time_from, event_time_to,
+                            effective_time_from, effective_time_to,
+                        )
+                        expanded, late_excluded = filter_epistemic(
+                            expanded,
+                            analysis.retrieval_mode,
+                            unverified_threshold=self._unverified_confidence_threshold,
+                        )
+                        excluded.extend(late_excluded)
+                    if (
+                        [candidate.node.id for candidate in expanded]
+                        != [candidate.node.id for candidate in scored]
+                        or any(
+                            candidate.composite_score
+                            != original_by_id[candidate.node.id].composite_score
+                            or candidate.reranker_score
+                            != original_by_id[candidate.node.id].reranker_score
+                            for candidate in expanded
+                            if candidate.node.id in original_by_id
+                        )
+                    ):
+                        ranking_policy = "score_id"
                 scored = expanded
             except Exception:
                 logger.warning(
                     "Session context expansion failed; continuing without expansion",
+                    exc_info=True,
+                )
+
+        # --- Stage 5.5c: Two-stage Episode Context Expansion ---
+        # Sessions are the existing episode boundary. Route complete candidate
+        # episodes, then reserve a bounded local evidence set without an LLM.
+        if effective_packing_config.episode_context_top_k > 0:
+            try:
+                expanded = expand_episode_context(
+                    scored,
+                    query,
+                    effective_packing_config,
+                )
+                if (
+                    [candidate.node.id for candidate in expanded]
+                    != [candidate.node.id for candidate in scored]
+                    or any(
+                        candidate.composite_score != original.composite_score
+                        for candidate, original in zip(expanded, scored)
+                    )
+                ):
+                    ranking_policy = "score_id"
+                scored = expanded
+            except Exception:
+                logger.warning(
+                    "Episode context expansion failed; continuing without expansion",
+                    exc_info=True,
+                )
+
+        # --- Stage 5.5d: Direct Evidence Projection ---
+        # Derived claims route an evidence group; its direct source carries the
+        # complete context. This opt-in stage replaces only groups with a visible,
+        # owner/scope/time/epistemic-eligible source node.
+        if effective_packing_config.evidence_projection_top_k > 0:
+            try:
+                projected = await project_evidence_context(
+                    scored,
+                    graph_store=self._graph_store,
+                    user_id=user_id,
+                    config=effective_packing_config,
+                    scopes=normalized_scope,
+                    retrieval_mode=analysis.retrieval_mode,
+                    unverified_confidence_threshold=(
+                        self._unverified_confidence_threshold
+                    ),
+                    knowledge_at=knowledge_at,
+                    event_time_from=event_time_from,
+                    event_time_to=event_time_to,
+                    time_from=effective_time_from,
+                    time_to=effective_time_to,
+                )
+                if projected is not scored:
+                    ranking_policy = "score_id"
+                scored = projected
+            except Exception:
+                logger.warning(
+                    "Evidence projection failed; continuing without projection",
+                    exc_info=True,
+                )
+
+        # Preserve concise semantic candidates while adding a bounded direct
+        # source layer. PackingConfig rejects simultaneous replacement and
+        # augmentation policies.
+        if effective_packing_config.evidence_augmentation_top_k > 0:
+            try:
+                augmented = await augment_evidence_context(
+                    scored,
+                    graph_store=self._graph_store,
+                    user_id=user_id,
+                    config=effective_packing_config,
+                    scopes=normalized_scope,
+                    retrieval_mode=analysis.retrieval_mode,
+                    unverified_confidence_threshold=(
+                        self._unverified_confidence_threshold
+                    ),
+                    knowledge_at=knowledge_at,
+                    event_time_from=event_time_from,
+                    event_time_to=event_time_to,
+                    time_from=effective_time_from,
+                    time_to=effective_time_to,
+                )
+                if augmented is not scored:
+                    ranking_policy = "score_id"
+                scored = augmented
+            except Exception:
+                logger.warning(
+                    "Evidence augmentation failed; continuing without augmentation",
                     exc_info=True,
                 )
 
@@ -536,7 +791,12 @@ class RetrievalPipeline:
         # per research Pattern 3) to surface highly relevant results from
         # other scopes. Hints are separate from primary results.
         cross_scope_hints: list[RetrievalCandidate] = []
-        if normalized_scope is not None and include_cross_scope and candidates:
+        if (
+            normalized_scope is not None
+            and include_cross_scope
+            and candidates
+            and effective_packing_config.cross_scope_top_n > 0
+        ):
             try:
                 # Build hint config with reduced k for performance.
                 hint_config = effective_packing_config.model_copy(
@@ -572,7 +832,8 @@ class RetrievalPipeline:
                 # bi-temporal window and the epistemic filter still apply
                 # (issue #60).
                 hint_candidates = _apply_bitemporal_filters(
-                    hint_candidates, knowledge_at, event_time_from, event_time_to
+                    hint_candidates, knowledge_at, event_time_from, event_time_to,
+                    effective_time_from, effective_time_to,
                 )
                 hint_candidates, _ = filter_epistemic(
                     hint_candidates,
@@ -584,6 +845,7 @@ class RetrievalPipeline:
                     scored_hints, _ = score_and_rank(
                         hint_candidates, effective_weights, now=scoring_now,
                         query_analysis=analysis,
+                        ranking_multipliers=ranking_multipliers,
                     )
                     # Only include top-N as cross-scope hints.
                     cross_scope_hints = scored_hints[
@@ -595,26 +857,159 @@ class RetrievalPipeline:
                     exc_info=True,
                 )
 
-        # --- Stage 6: Context Packing ---
-        bundle = pack_context(scored, config=effective_packing_config)
+        aggregation_candidate_count = len(scored) if analysis.is_aggregation else 0
 
-        end_time = time.monotonic()
-        timing_ms = (end_time - start_time) * 1000.0
+        # Apply selection to results and the bundle together. Explicit count
+        # and score bounds apply to pinned/tasks and adjacent context as well.
+        scored, selection_excluded = select_candidates(
+            scored,
+            min_score=min_score,
+            limit=limit,
+            max_per_source=max_per_source,
+            max_per_evidence=max_per_evidence,
+        )
+        excluded.extend(selection_excluded)
+        cross_scope_hints, _ = select_candidates(cross_scope_hints, min_score=min_score, limit=None)
+        traces = [c.score_trace for c in scored if c.score_trace is not None]
+
+        # --- Stage 6: Context Packing ---
+        coverage_notices = []
+        if analysis.is_aggregation:
+            coverage_notices.append(_AGGREGATION_COVERAGE_NOTICE)
+        if knowledge_at is not None:
+            coverage_notices.append(_HISTORICAL_COVERAGE_NOTICE)
+        bundle = await asyncio.to_thread(
+            pack_context,
+            scored,
+            config=effective_packing_config,
+            coverage_notice="\n".join(coverage_notices) or None,
+            context_guidance=build_context_guidance(
+                query,
+                query_analysis=analysis,
+                reference_time=scoring_now,
+                mode=effective_packing_config.context_guidance_mode,
+            ),
+        )
+
+        temporal_relation_metadata = None
+        if (
+            self._temporal_relation_enricher is not None
+            and is_temporal_reasoning_query(query, analysis)
+        ):
+            bundle, temporal_relation_metadata = (
+                await self._temporal_relation_enricher.enrich(
+                    query,
+                    bundle,
+                    question_time=scoring_now,
+                    packing_config=effective_packing_config,
+                )
+            )
+
+        aggregation_coverage: AggregationCoverage | None = None
+        if analysis.is_aggregation:
+            limitation_codes: list[AggregationLimitation] = ["semantic_matching"]
+            if aggregation_candidate_limit_paths:
+                limitation_codes.append("candidate_limit")
+            if candidate_diagnostics.backend_failures:
+                limitation_codes.append("backend_failure")
+            selection_reasons = {item.reason for item in selection_excluded}
+            if "below_threshold" in selection_reasons:
+                limitation_codes.append("score_floor")
+            if "result_limit" in selection_reasons:
+                limitation_codes.append("result_limit")
+            coverage_status: Literal[
+                "semantic_candidates", "candidate_limited", "context_limited"
+            ]
+            if bundle.excluded_ids:
+                limitation_codes.append("token_budget")
+
+            if bundle.excluded_ids:
+                coverage_status = "context_limited"
+            elif len(limitation_codes) > 1:
+                coverage_status = "candidate_limited"
+            else:
+                coverage_status = "semantic_candidates"
+            aggregation_coverage = AggregationCoverage(
+                status=coverage_status,
+                candidate_count=aggregation_candidate_count,
+                selected_count=len(scored),
+                context_count=bundle.included_count,
+                limitations=tuple(limitation_codes),
+                candidate_limit_paths=tuple(aggregation_candidate_limit_paths),
+            )
+
+        historical_coverage = (
+            HistoricalCoverage(knowledge_at=knowledge_at)
+            if knowledge_at is not None else None
+        )
 
         # --- Retrieval Logging ---
+        logging_started = time.monotonic()
+        receipt_persisted = False
         try:
+            from prme.models.relevance import make_receipt
+
+            execution = RetrievalExecution(features=execution_features, parameters={
+                "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
+                "ranking_profile": ranking_profile,
+                "max_per_source": max_per_source,
+                "max_per_evidence": max_per_evidence,
+                "time_from": time_from.isoformat() if time_from else None,
+                "time_to": time_to.isoformat() if time_to else None,
+                "knowledge_at": knowledge_at.isoformat() if knowledge_at else None,
+                "event_time_from": event_time_from.isoformat() if event_time_from else None,
+                "event_time_to": event_time_to.isoformat() if event_time_to else None,
+                "include_cross_scope": include_cross_scope,
+                "epistemic_weights": {key: value for key, value in self._epistemic_weights.items()}
+                    if self._epistemic_weights is not None else None,
+                "unverified_confidence_threshold": self._unverified_confidence_threshold,
+                "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
+                    if aggregation_coverage is not None else None,
+                "historical_coverage": historical_coverage.model_dump(mode="json")
+                    if historical_coverage is not None else None,
+                "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
+                    if temporal_relation_metadata is not None else None,
+                "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
+                "reranker_top_k": self._reranker_top_k,
+                "query_reformulation": {"enabled": self._enable_query_reformulation,
+                    "count": self._query_reformulation_count, "provider": self._query_reformulation_provider,
+                    "model": self._query_reformulation_model},
+            })
+            receipt = make_receipt(request_id=analysis.request_id, user_id=user_id, query=query,
+                                   reference_time=scoring_now, scopes=normalized_scope,
+                                   scoring=effective_weights, packing=effective_packing_config,
+                                   candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
+                                   retrieval_mode=retrieval_mode, time_from=effective_time_from,
+                                   time_to=effective_time_to, ranking_policy=ranking_policy, execution=execution)
             op_id = str(uuid.uuid4())
             payload = json.dumps({
                 "request_id": str(analysis.request_id),
+                "receipt": receipt.model_dump_json(), "receipt_checksum": receipt.checksum,
                 "query": query,
+                "reference_time": scoring_now.isoformat(),
+                "query_time_from": analysis.time_from.isoformat() if analysis.time_from else None,
+                "query_time_to": analysis.time_to.isoformat() if analysis.time_to else None,
                 "user_id": user_id,
                 "candidates_generated": candidate_counts,
                 "candidates_filtered": len(excluded),
                 "candidates_included": bundle.included_count,
                 "tokens_used": bundle.tokens_used,
+                "token_budget": bundle.token_budget,
+                "tokenizer": bundle.tokenizer,
                 "scoring_config_version": effective_weights.version_id,
+                "min_score": min_score, "result_limit": limit,
+                "max_per_source": max_per_source,
+                "max_per_evidence": max_per_evidence,
+                "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
+                "backend_failures": candidate_diagnostics.backend_failures,
+                "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
+                    if aggregation_coverage is not None else None,
+                "historical_coverage": historical_coverage.model_dump(mode="json")
+                    if historical_coverage is not None else None,
+                "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
+                    if temporal_relation_metadata is not None else None,
                 "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
                 "time_from": effective_time_from.isoformat() if effective_time_from else None,
                 "time_to": effective_time_to.isoformat() if effective_time_to else None,
@@ -629,13 +1024,16 @@ class RetrievalPipeline:
                         op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id,
                     )
             elif self._conn is not None:
+                from prme.storage._threading import run_to_completion
+
                 async with self._conn_lock:
-                    await asyncio.to_thread(
+                    await run_to_completion(
                         self._conn.execute,
                         "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
                         "VALUES (?, ?, ?, ?, ?, now())",
                         [op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id],
                     )
+            receipt_persisted = self._pool is not None or self._conn is not None
         except Exception:
             logger.warning(
                 "Failed to log RETRIEVAL_REQUEST operation for request %s",
@@ -644,15 +1042,37 @@ class RetrievalPipeline:
             )
 
         # --- Assemble RetrievalResponse ---
+        completed_at = time.monotonic()
         metadata = RetrievalMetadata(
+            receipt_persisted=receipt_persisted,
             request_id=analysis.request_id,
+            reference_time=scoring_now,
+            min_score=min_score, result_limit=limit,
+            max_per_source=max_per_source,
+            max_per_evidence=max_per_evidence,
             candidates_generated=candidate_counts,
             candidates_filtered=len(excluded),
             candidates_included=bundle.included_count,
             scoring_config_version=effective_weights.version_id,
-            timing_ms=round(timing_ms, 2),
+            ranking_multipliers=ranking_multipliers,
+            ranking_profile_id=(
+                uuid.UUID(ranking_profile["profile_id"])
+                if ranking_profile and ranking_profile.get("profile_id") else None
+            ),
+            ranking_profile_status=(
+                ranking_profile["status"] if ranking_profile else "none"
+            ),
+            ranking_profile_reason=(
+                ranking_profile.get("reason") if ranking_profile else None
+            ),
+            timing_ms=round((completed_at - start_time) * 1000, 2),
+            receipt_logging_ms=round((completed_at - logging_started) * 1000, 2),
             backends_used=list(candidate_counts.keys()),
             embedding_mismatch=embedding_mismatch,
+            backend_failures=candidate_diagnostics.backend_failures,
+            aggregation_coverage=aggregation_coverage,
+            historical_coverage=historical_coverage,
+            temporal_relation=temporal_relation_metadata,
         )
 
         # Build filter metadata for debugging/explainability.
@@ -666,6 +1086,7 @@ class RetrievalPipeline:
         return RetrievalResponse(
             bundle=bundle,
             results=scored,
+            excluded=excluded,
             metadata=metadata,
             score_traces=traces,
             filter_metadata=filter_meta,
@@ -683,6 +1104,7 @@ class RetrievalPipeline:
         time_to: datetime | None,
         retrieval_mode: RetrievalMode,
         config: PackingConfig,
+        reference_time: datetime | None = None,
     ) -> int:
         """Run LLM-reformulated alternate queries and merge new candidates.
 
@@ -723,6 +1145,7 @@ class RetrievalPipeline:
                 time_to=time_to,
                 retrieval_mode=retrieval_mode,
                 languages=self._temporal_languages,
+                reference_time=reference_time,
             )
             alt_candidates, _ = await generate_candidates(
                 alt_analysis,

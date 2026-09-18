@@ -1,0 +1,188 @@
+{
+  "all_individual_losses": {
+    "head1_quarter_vs_density": {
+      "2048": [
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "75832dbd"
+        },
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-assistant",
+          "question_id": "1568498a"
+        },
+        {
+          "after": 0.25,
+          "before": 0.5,
+          "category": "multi-session",
+          "question_id": "e3038f8c"
+        },
+        {
+          "after": 0.2,
+          "before": 0.4,
+          "category": "multi-session",
+          "question_id": "2788b940"
+        },
+        {
+          "after": 0.5,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "07b6f563"
+        },
+        {
+          "after": 0.0,
+          "before": 0.5,
+          "category": "multi-session",
+          "question_id": "80ec1f4f"
+        },
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "38146c39"
+        }
+      ],
+      "4096": [
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-assistant",
+          "question_id": "1568498a"
+        },
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "09d032c9"
+        }
+      ],
+      "8192": []
+    },
+    "head1_quarter_vs_quarter": {
+      "2048": [
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "temporal-reasoning",
+          "question_id": "gpt4_468eb063"
+        },
+        {
+          "after": 0.4,
+          "before": 0.8,
+          "category": "multi-session",
+          "question_id": "9d25d4e0"
+        },
+        {
+          "after": 0.2,
+          "before": 0.4,
+          "category": "multi-session",
+          "question_id": "2788b940"
+        },
+        {
+          "after": 0.6666666666666666,
+          "before": 1.0,
+          "category": "multi-session",
+          "question_id": "36b9f61e"
+        }
+      ],
+      "4096": [
+        {
+          "after": 0.5,
+          "before": 1.0,
+          "category": "multi-session",
+          "question_id": "eeda8a6d"
+        },
+        {
+          "after": 0.8,
+          "before": 1.0,
+          "category": "multi-session",
+          "question_id": "9d25d4e0"
+        }
+      ],
+      "8192": [
+        {
+          "after": 0.6666666666666666,
+          "before": 1.0,
+          "category": "multi-session",
+          "question_id": "d682f1a2"
+        },
+        {
+          "after": 0.4,
+          "before": 0.6,
+          "category": "multi-session",
+          "question_id": "gpt4_f2262a51"
+        }
+      ]
+    },
+    "quarter_vs_density": {
+      "2048": [
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "75832dbd"
+        },
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-assistant",
+          "question_id": "1568498a"
+        },
+        {
+          "after": 0.25,
+          "before": 0.5,
+          "category": "multi-session",
+          "question_id": "e3038f8c"
+        },
+        {
+          "after": 0.5,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "07b6f563"
+        },
+        {
+          "after": 0.0,
+          "before": 0.5,
+          "category": "multi-session",
+          "question_id": "80ec1f4f"
+        },
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "38146c39"
+        }
+      ],
+      "4096": [
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-assistant",
+          "question_id": "1568498a"
+        },
+        {
+          "after": 0.0,
+          "before": 1.0,
+          "category": "single-session-preference",
+          "question_id": "09d032c9"
+        }
+      ],
+      "8192": []
+    }
+  },
+  "focused_tests": {
+    "log_sha256": "0aef320ddb81a0b004bca24a4e651461989c02b8bc001575546af2e1add0229c",
+    "native_exit_code": 0,
+    "passed": 14,
+    "seconds": 0.43
+  },
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "native_exit_code": 0,
+  "native_session_id": 60808,
+  "observed_at": "2026-09-13T19:24:52.823212+00:00",
+  "source_commit": "2ca7f09",
+  "verification_sha256": "3f394317fba0885d88fbc8cbc71883b0be96aab679e9b3f7ec68939b5d288323"
+}

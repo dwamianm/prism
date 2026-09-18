@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "prepared.json": "4d3b5bdf10272183a75319ac2c41cb01e878538947218ec7c8c114ecf1b007ad",
+    "reader-0-completion.json": "03868c1186789a2184dc693eab53e40fdac4c8834609c80e83b30db8cf26256f",
+    "reader-0-plan.json": "ff25e4fa339582a924b6c4500bf07101d44afce2b026020afd4964d204135db3",
+    "reader-0-state.json": "545cfed5ebb11cbf3ca865b7afcef8a68ff159db59d21f59c511d3028f2d529e",
+    "reader-0.json": "fa5411aea68c4160f67a24b20bee3fec3fd8991b12103f6d55ed8386e5d7c325",
+    "reader-0.log": "e2cdb92534cefe5d0faf2176eb4c99eb16ceee945b338b3c8f41aaf8e22f82ed",
+    "reader-1-completion.json": "27802ddb9acd129398c1b3e1f5182ef3cd78c9a8504b6a8b46ffaf2684f2702d",
+    "reader-1-plan.json": "f1285956f8b38bcd42e28da5531e993ebb4403b4f7d126e5119f790ff6da901c",
+    "reader-1-state.json": "877917c23c0df849eb6054bd39b6895ed1b1454d455bfb9c89a6f94fc3c0d844",
+    "reader-1.json": "05464d02cc211ddf705fe0969adcf2b588d5a9498269af482ce484898d9b0be7",
+    "reader-1.log": "8600820ccb677bcf1b6959ef0dbd73d54cd6e076f8325e6b54fd6a8272c936d8"
+  },
+  "complete": false,
+  "downstream_judging_started": false,
+  "execution_sha256": "a10fd3e3c00eec6c3021876e7ccc58ddfe985e81d8967b237c38cdfcaa03aa55",
+  "failure": {
+    "at": "2026-09-13T19:37:39.587535+00:00",
+    "error_type": "ValueError",
+    "owned_service_log_observation": "Metal command buffer failed with Insufficient Memory and a compute error immediately before the failed request returned HTTP 200.",
+    "response_sha256": "e7409bce8158e40fe613fab7da373970f186ae774334565a188cc5617ee5a4ab",
+    "safe_response_metadata": {
+      "done": false,
+      "done_reason": null,
+      "eval_count": null,
+      "model": "",
+      "prompt_eval_count": null
+    },
+    "validation": "Reader returned another model"
+  },
+  "limits": [
+    "Response structure and checksums checked; answer correctness not inspected.",
+    "The entire failed study is retained and must not be resumed or selectively repaired.",
+    "GPU out-of-memory is observed for this owned run; this does not identify the earlier shared-service timeout causes.",
+    "No peak-memory trace or host-wide workload isolation was collected.",
+    "The head1 trial is not an answer evaluation of the new balanced policy."
+  ],
+  "logs": {
+    "/tmp/prme-owned-reader-child.log": "077e64033df52b92787cae49ab97920ddd7ee21a90acd51a62aafae0dec267cc",
+    "/tmp/prme-owned-reader-driver.log": "9ebbb963d4d4f70e5aec4630eff91795af32b5e38f674f342319c5bb17210381",
+    "/tmp/prme-owned-reader-ollama.log": "989e1ec9ad9e6e32fa0d281b78ce4fd83cf905312c362cbc7eafd780963d0caf"
+  },
+  "native_driver_exit_code": 1,
+  "native_session_id": 52995,
+  "observed_at": "2026-09-13T19:41:13.534074+00:00",
+  "owned_port_closed": true,
+  "owned_server_exit_code": 0,
+  "readers": [
+    {
+      "complete": true,
+      "native_exit_code": 0,
+      "unique_saved_responses_verified": 313
+    },
+    {
+      "complete": false,
+      "native_exit_code": 1,
+      "unique_saved_responses_verified": 140
+    }
+  ],
+  "scores_available": false
+}

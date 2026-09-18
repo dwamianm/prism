@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-monotonic-answer-failure",
+  "status": "failed_closed",
+  "registration_sha256": "05b58cdac11ce22cc03505a50f6e42a51cede133a2dee5f1fef9207b1b9264c1",
+  "reader": {
+    "complete": true,
+    "logical_predictions": 238,
+    "failed_attempts": 0,
+    "result_sha256": "267c3a2ef3bbe2762086eb600795b632bfa5c6e3c518e4e14aaa332265cca15c",
+    "state_sha256": "d110c65d494fd363f54119deb38e0a9845c47b5a8c14f8680ad21fb2f5a37f29"
+  },
+  "judge": {
+    "complete": false,
+    "logical_judgments_before_failure": 72,
+    "unique_generations_before_failure": 71,
+    "failed_attempts": 1,
+    "state_sha256": "aff3fc1af66e86a25404fa2469c00d52d04e8c3587d6134744067f068a2d2725",
+    "failure": {
+      "prompt_sha256": "c53834c2606eda2a93a8e9ada3dfb04202a6ec54f36982edfb85738e90fd3574",
+      "response_sha256": "1f1875fe298244f4771536a1126abf2c93d5bf8041cd408c7b00e72ad5914c2c",
+      "done": true,
+      "done_reason": "length",
+      "eval_count": 512,
+      "content_empty": true
+    }
+  },
+  "decision": "Do not resume or score this preregistered trial. Recalibrate a judge with a larger output allowance and bind a fresh judge-only continuation to the complete unchanged reader result and raw state.",
+  "claim_boundary": "Infrastructure failure before complete judging; no answer-quality conclusion."
+}

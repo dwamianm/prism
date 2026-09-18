@@ -1,0 +1,8 @@
+{
+  "checked_at": "2026-09-13T17:56:50.210890+00:00",
+  "credential_source": "explicit root .env OPENAI_API_KEY",
+  "error_type": "RateLimitError",
+  "http_status": 429,
+  "success": false,
+  "trigger": "follow-up after prior quota response; local work continues"
+}

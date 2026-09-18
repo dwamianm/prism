@@ -1,0 +1,29 @@
+{
+  "kind": "launch-record-not-completion",
+  "worker_commit": "f5a2a69",
+  "frozen_checkout": "/tmp/prme-hindsight-normalized-study",
+  "inputs": "data/benchmarks/hindsight-prme-dev-normalized-inputs.json",
+  "inputs_sha256": "bec6326c513fee3e35163c93f225432f5e91166ea6c40654e55b2f6bda611f7d",
+  "products": {
+    "hindsight": {
+      "plan": "benchmarks/results/research/2026-09-12/hindsight-normalized-dev-capture-plan.json",
+      "plan_sha256": "f1a90778e38b73af87a7406497961c5857d9c6127519e64085d547d64bddb10a",
+      "report": "data/benchmarks/hindsight-normalized-dev-f5a2a69.json",
+      "captures": "data/benchmarks/hindsight-normalized-dev-f5a2a69",
+      "log": "/tmp/prme-hindsight-normalized-dev-f5a2a69.log",
+      "tool_session_id": 86712,
+      "native_exit_code": null
+    },
+    "prme": {
+      "plan": "benchmarks/results/research/2026-09-12/prme-normalized-dev-capture-plan.json",
+      "plan_sha256": "db64fb21690abc37ca3b4882369ff47e86434cb86f3bc0e7ed2108cea637c29a",
+      "report": "data/benchmarks/prme-normalized-dev-f5a2a69.json",
+      "captures": "data/benchmarks/prme-normalized-dev-f5a2a69",
+      "log": "/tmp/prme-prme-normalized-dev-f5a2a69.log",
+      "tool_session_id": 55762,
+      "native_exit_code": null
+    }
+  },
+  "quality_inspection": "Deferred until both native exits are zero and every registered case succeeds.",
+  "supersedes": "hindsight-prme-strict-capture-stop.json"
+}

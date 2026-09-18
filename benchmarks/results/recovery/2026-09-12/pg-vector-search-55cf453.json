@@ -1,0 +1,301 @@
+{
+  "source_commit": "55cf453",
+  "baseline_package_commit": "217facb",
+  "installed_identity": {
+    "source_commit": "55cf453",
+    "matching_python_files": 121,
+    "installed_path": "/tmp/prme-wheel-313/lib/python3.13/site-packages/prme",
+    "wheel_sha256": "2cc7710a19674c1ef20dc3d87b738e24ee4e57dc65489890ee83307cf63995ee"
+  },
+  "runs": {
+    "initial_reproduction": {
+      "path": "/tmp/prme-pg-filtered-before.log",
+      "sha256": "e696973266fc387036ab14538cfbffa26c9b65d753408f5822cc014b1fec6868",
+      "native_exit_code": 1,
+      "note": "Six failures on the prior package, including tie behavior.",
+      "summary": "6 failed in 1.26s"
+    },
+    "captured_index_reproduction": {
+      "path": "/tmp/prme-pg-filtered-baseline-indexes.log",
+      "sha256": "6787981afe2c8478c2e22108793a089d57e2225bba23c60be5c67472bc727abd",
+      "native_exit_code": 1,
+      "note": "Five filtered cases; each plan selected idx_nodes_embedding_hnsw and returned no rows.",
+      "summary": "5 failed, 4 deselected in 1.18s"
+    },
+    "invalid_selection": {
+      "path": "/tmp/prme-pg-exact-expanded.log",
+      "sha256": "7da78a15cf4bf14db224f5214580b8b58b63e305778cbe8d5a521162fa747706",
+      "native_exit_code": 4,
+      "note": "Command named a nonexistent test file; no tests ran.",
+      "summary": "no tests ran in 0.00s"
+    },
+    "intermediate_source_regression": {
+      "path": "/tmp/prme-pg-exact-expanded-v2.log",
+      "sha256": "3ef6b893fe37e29c9a572d98aa7577ef0d63a222fb643cbc548c6c674c6f496a",
+      "native_exit_code": 0,
+      "note": "Worktree regression before the final native UUID tie-order cast.",
+      "summary": "72 passed, 1 skipped in 11.68s"
+    },
+    "final_contracts": {
+      "path": "/tmp/prme-pg-exact-final-contracts.log",
+      "sha256": "4eb286e6a8168f1981e3428733fbde90b8fe7022eb2b6812fc235143633bbb7b",
+      "native_exit_code": 0,
+      "note": "Final nine contracts.",
+      "summary": "9 passed in 2.69s"
+    },
+    "installed_regression": {
+      "path": "/tmp/prme-pg-exact-installed-tests.log",
+      "sha256": "ef64f27e7ff90d22ef2ac7e2ee734576a39791d8754745e8f007700755b83db0",
+      "native_exit_code": 0,
+      "note": "Installed 55cf453 package.",
+      "summary": "72 passed, 1 skipped in 14.09s"
+    },
+    "full_regression": {
+      "path": "/tmp/prme-pg-exact-full-55cf453.log",
+      "sha256": "e37807256552f133f324db90bf78039e5152d2d0589d0736f1dbc81b09403f8b",
+      "native_exit_code": 0,
+      "note": "Frozen complete source collection with live PostgreSQL.",
+      "summary": "2852 passed, 81 skipped in 403.86s (0:06:43)"
+    },
+    "mypy_missing_stubs": {
+      "path": "/tmp/prme-pg-exact-mypy.log",
+      "sha256": "6c7e8a70728505a5f5ff6a27ca1d5cef5eef4b57a0f4d4eb401292ef49257b0a",
+      "native_exit_code": 1,
+      "note": "asyncpg is untyped; this is not a production type failure.",
+      "summary": "Found 1 error in 1 file (checked 2 source files)"
+    },
+    "mypy_available_types": {
+      "path": "/tmp/prme-pg-exact-mypy-available-types.log",
+      "sha256": "f9b031e5c45aa702cd4fef028d465551cb20a2c4698e0913c7b00766b20ac4d8",
+      "native_exit_code": 0,
+      "note": "Changed modules, check-untyped-defs and ignore-missing-imports.",
+      "summary": "Success: no issues found in 2 source files"
+    },
+    "public_typing": {
+      "path": "/tmp/prme-pg-exact-public-typing.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e",
+      "native_exit_code": 0,
+      "note": "Strict public API consumer with the CI import settings.",
+      "summary": "Success: no issues found in 1 source file"
+    }
+  },
+  "probes": [
+    {
+      "source_commit": "55cf453",
+      "rows": 1000,
+      "native_exit_code": 0,
+      "artifact": "/Users/dwamianm/Sites/prism/data/benchmarks/pg-vector-modes-1000-55cf453.json",
+      "artifact_sha256": "f5e78f1f0b3714d59a76192d180977cf1f1768b1fd46dbd18e0d8c4e55bc5878",
+      "log_path": "/tmp/prme-pg-vector-modes-1000.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_commit": "55cf453",
+      "complete": true,
+      "error_type": null,
+      "database": {
+        "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+        "pgvector_version": "0.8.6"
+      },
+      "planner_settings": {
+        "enable_seqscan": "on",
+        "enable_indexscan": "on",
+        "enable_bitmapscan": "on",
+        "hnsw.ef_search": "40",
+        "hnsw.iterative_scan": "off"
+      },
+      "index_build_workers": null,
+      "measurements": {
+        "selective_scope": {
+          "exact": {
+            "median_ms": 0.695166498189792,
+            "measured_queries": 20,
+            "returned_counts": [
+              3
+            ],
+            "hnsw_plan": false
+          },
+          "approximate_allowed": {
+            "median_ms": 0.6853329978184775,
+            "measured_queries": 20,
+            "returned_counts": [
+              3
+            ],
+            "hnsw_plan": false
+          }
+        },
+        "all_scopes": {
+          "exact": {
+            "median_ms": 1.2888329947600141,
+            "measured_queries": 20,
+            "returned_counts": [
+              10
+            ],
+            "hnsw_plan": false
+          },
+          "approximate_allowed": {
+            "median_ms": 1.0732915106927976,
+            "measured_queries": 20,
+            "returned_counts": [
+              10
+            ],
+            "hnsw_plan": false
+          }
+        }
+      }
+    },
+    {
+      "source_commit": "55cf453",
+      "rows": 10000,
+      "native_exit_code": 1,
+      "artifact": "/Users/dwamianm/Sites/prism/data/benchmarks/pg-vector-modes-10000-55cf453.json",
+      "artifact_sha256": "7f6cfef32be580b4fccd67c435f763253a92a4938c1a9d3b7f9ac9c5ca41c9f6",
+      "log_path": "/tmp/prme-pg-vector-modes-10000.log",
+      "log_sha256": "94d68c162d3c268eae697b74b41dacb26e699ec32168f12d44fc91aeeeeb7709",
+      "runner_commit": "55cf453",
+      "complete": false,
+      "error_type": "DiskFullError",
+      "database": {
+        "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+        "pgvector_version": "0.8.6"
+      },
+      "planner_settings": {
+        "enable_seqscan": "on",
+        "enable_indexscan": "on",
+        "enable_bitmapscan": "on",
+        "hnsw.ef_search": "40",
+        "hnsw.iterative_scan": "off"
+      },
+      "index_build_workers": null,
+      "measurements": {}
+    },
+    {
+      "source_commit": "55cf453",
+      "rows": 1000,
+      "native_exit_code": 0,
+      "artifact": "/Users/dwamianm/Sites/prism/data/benchmarks/pg-vector-modes-1000-serial-55cf453.json",
+      "artifact_sha256": "fff420781cc706240a6bc304a0093d955da3c49d1db0b843a6842c0a4e9a1109",
+      "log_path": "/tmp/prme-pg-vector-modes-1000-serial.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_commit": "9f3d390",
+      "complete": true,
+      "error_type": null,
+      "database": {
+        "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+        "pgvector_version": "0.8.6"
+      },
+      "planner_settings": {
+        "enable_seqscan": "on",
+        "enable_indexscan": "on",
+        "enable_bitmapscan": "on",
+        "hnsw.ef_search": "40",
+        "hnsw.iterative_scan": "off"
+      },
+      "index_build_workers": "0",
+      "measurements": {
+        "selective_scope": {
+          "exact": {
+            "median_ms": 0.7369165105046704,
+            "measured_queries": 20,
+            "returned_counts": [
+              3
+            ],
+            "hnsw_plan": false
+          },
+          "approximate_allowed": {
+            "median_ms": 0.7326874911086634,
+            "measured_queries": 20,
+            "returned_counts": [
+              3
+            ],
+            "hnsw_plan": false
+          }
+        },
+        "all_scopes": {
+          "exact": {
+            "median_ms": 1.2245415127836168,
+            "measured_queries": 20,
+            "returned_counts": [
+              10
+            ],
+            "hnsw_plan": false
+          },
+          "approximate_allowed": {
+            "median_ms": 1.0312914964742959,
+            "measured_queries": 20,
+            "returned_counts": [
+              10
+            ],
+            "hnsw_plan": false
+          }
+        }
+      }
+    },
+    {
+      "source_commit": "55cf453",
+      "rows": 10000,
+      "native_exit_code": 0,
+      "artifact": "/Users/dwamianm/Sites/prism/data/benchmarks/pg-vector-modes-10000-serial-55cf453.json",
+      "artifact_sha256": "14818cfcfc5b90499e346b9a0422a073f629a21d9426937f1deee9d19aaaab40",
+      "log_path": "/tmp/prme-pg-vector-modes-10000-serial.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_commit": "9f3d390",
+      "complete": true,
+      "error_type": null,
+      "database": {
+        "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+        "pgvector_version": "0.8.6"
+      },
+      "planner_settings": {
+        "enable_seqscan": "on",
+        "enable_indexscan": "on",
+        "enable_bitmapscan": "on",
+        "hnsw.ef_search": "40",
+        "hnsw.iterative_scan": "off"
+      },
+      "index_build_workers": "0",
+      "measurements": {
+        "selective_scope": {
+          "exact": {
+            "median_ms": 0.7814794953446835,
+            "measured_queries": 20,
+            "returned_counts": [
+              3
+            ],
+            "hnsw_plan": false
+          },
+          "approximate_allowed": {
+            "median_ms": 0.7170830067479983,
+            "measured_queries": 20,
+            "returned_counts": [
+              3
+            ],
+            "hnsw_plan": false
+          }
+        },
+        "all_scopes": {
+          "exact": {
+            "median_ms": 7.455083017703146,
+            "measured_queries": 20,
+            "returned_counts": [
+              10
+            ],
+            "hnsw_plan": false
+          },
+          "approximate_allowed": {
+            "median_ms": 0.9010624926304445,
+            "measured_queries": 20,
+            "returned_counts": [
+              10
+            ],
+            "hnsw_plan": true
+          }
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Exact search cost grows with the eligible corpus; this is not a universal fast-path claim.",
+    "Native selected-HNSW adversarial failures do not imply all ordinary-planner filtered queries failed.",
+    "Sparse synthetic vectors and warm serial timings are not memory-QA or production performance evidence.",
+    "Exact vector eligibility does not implement PostgreSQL named projects, grants or RLS."
+  ]
+}

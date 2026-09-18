@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-v2-post-run-execution-attestation",
+  "created_at_utc": "2026-09-14T21:01:06Z",
+  "assurance": {
+    "classification": "post_hoc",
+    "limitation": "This schema-1 run predates launch-time execution manifests. These hashes were collected after both arms completed and therefore provide weaker source-state assurance than the schema-2 preflight fence."
+  },
+  "registration": {
+    "path": "benchmarks/results/research/2026-09-14/longmemeval-v2-web-unseen-deterministic-v1-registration.json",
+    "sha256": "504970ad3b0dd4a728ae6fbc918287ec83fce67f551d058e62bd3df14a053823",
+    "registered_prme_revision": "69699245fa0614352b7163b61c025b6605b07e8a"
+  },
+  "prme_execution": {
+    "worktree_revision": "831f95202ba78ec0c3c1bc516abfb6241c853955",
+    "worktree_clean_after_run": true,
+    "registered_to_execution_diff_paths": [
+      "benchmarks/results/research/2026-09-14/longmemeval-v2-web-unseen-deterministic-v1-registration.json"
+    ],
+    "runtime_sources_identical_across_registered_and_execution_revisions": true,
+    "source_sha256": {
+      "checkpoint_launcher": "fe2949eb740556be7c730978704aa97713aaa81f9fd053248ba6b76799f7f8f0",
+      "run_longmemeval_v2.py": "2eefcae4e15534fca4aafc67583450745f76043452d49274f4bcbbeb202d89ac",
+      "install_longmemeval_v2.py": "cea342c7460cf5998bf4ec8d29e5e239f397cb39ae69360f37f2a35e0b52adad",
+      "longmemeval_v2.py": "668cac29c851ebda4026ec9c6a5881dac8b3bcf0adecb99c578e090867a8e106",
+      "longmemeval_v2_config.json": "6df1b58baf8401ffeeedc463091e40a786b88cee819f6bb20c46046d38801db3",
+      "uv.lock": "2ba3168b3f1cd586ef6f1a559921037a37b6e0da2e4b2865e0686b8513e5965a"
+    }
+  },
+  "upstream_execution": {
+    "repository": "xiaowu0162/LongMemEval-V2",
+    "revision": "2cc8c540bdb87fe6761629b585e727e1c4704520",
+    "expected_installer_changes_only": true,
+    "working_tree_changes": [
+      "modified memory_modules/__init__.py with the PRME registry import",
+      "added memory_modules/prme.py",
+      "added evaluation/memory_configs/prme.json"
+    ],
+    "source_sha256": {
+      "memory_modules/__init__.py": "2ee0a51b8a329c193b323892e14d658c253fe04cc8d76ff3897073b8dced3ac4",
+      "memory_modules/prme.py": "668cac29c851ebda4026ec9c6a5881dac8b3bcf0adecb99c578e090867a8e106",
+      "evaluation/memory_configs/prme.json": "6df1b58baf8401ffeeedc463091e40a786b88cee819f6bb20c46046d38801db3",
+      "evaluation/run_eval.py": "15d13c481f153131c652027db72d111ac4c76ca31a7afae27915a10949b918fa",
+      "evaluation/harness.py": "93fe5855a74ad46d7e8b489cebac24de38a9b30ba7ec1de2dd8708bd4aeebdb6",
+      "evaluation/qa_eval_metrics.py": "f8ba659e237c4282a07a92538090ea500ce8483820b390b1d19af187c01417ac"
+    }
+  },
+  "reader": {
+    "provider": "Ollama 0.34.0",
+    "model": "qwen3.5:9b",
+    "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+    "thinking": false
+  },
+  "environment": {
+    "python": "3.11.6",
+    "uv": "0.9.17",
+    "operating_system": "macOS 26.6.1 build 25G76",
+    "architecture": "arm64"
+  },
+  "result": {
+    "comparison_path": "benchmarks/results/research/2026-09-14/longmemeval-v2-web-unseen-deterministic-v1-comparison.json",
+    "comparison_sha256": "f5a9c2fee736f2c3e40ef07de8522b9ac532a7b9e79019781857d5c71d15e71d",
+    "frozen_runner_log_sha256": "bbf271bc0ccc9f618f0ad9b7ef47a37a8ab2de10177efaa9e7870da07a2d6d67",
+    "both_arms_completed": true,
+    "comparison_validation_passed": true
+  }
+}

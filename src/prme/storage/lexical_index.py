@@ -10,6 +10,10 @@ import asyncio
 import time
 
 import tantivy
+from prme.models.derivation import DerivationPlan
+from prme.models.profile import ProfilePublication
+from prme.storage._threading import run_to_completion
+from prme.storage.derivation_staging import DuckDBStageFence
 
 
 class LexicalIndex:
@@ -162,6 +166,54 @@ class LexicalIndex:
             if writer is not None:
                 writer.wait_merging_threads()
 
+    def _do_replace(self, node_id: str, content: str, user_id: str, node_type: str, scope: str | None) -> None:
+        """Publish replacement in one commit; failure preserves the old document."""
+        self._do_replace_many(((node_id, content, user_id, node_type, scope),))
+
+    def _do_replace_many(self, replacements: tuple[tuple[str, str, str, str, str | None], ...]) -> None:
+        # Construct and validate all documents before deleting any old version.
+        documents = []
+        identities = set()
+        for node_id, content, user_id, node_type, scope in replacements:
+            if node_id in identities:
+                raise ValueError("Replacement batch contains duplicate node identities")
+            identities.add(node_id)
+            fields = {"node_id": [node_id], "content": [content], "user_id": [user_id], "node_type": [node_type]}
+            if scope is not None:
+                fields["scope"] = [scope]
+            documents.append((node_id, tantivy.Document(**fields)))
+        if not documents:
+            return
+        self._commit_locked()
+        writer = self._ensure_writer()
+        try:
+            for node_id, document in documents:
+                writer.delete_documents("node_id", node_id)
+                writer.add_document(document)
+            writer.commit()
+            self._index.reload()
+        except BaseException:
+            writer.rollback()
+            raise
+        finally:
+            self._writer = None
+            self._uncommitted = 0
+            self._oldest_uncommitted_at = None
+            writer.wait_merging_threads()
+
+    async def replace_many(self, replacements: tuple[tuple[str, str, str, str, str | None], ...]) -> None:
+        """Atomically publish a bounded batch of exact replacement documents.
+
+        Fields are node ID, content, owner, node type and optional scope. Duplicate
+        identities are rejected. A failure before commit preserves every prior
+        document; cancellation waits for the native transaction to finish before
+        releasing the index lock. Returns only after the commit is durable.
+        """
+        snapshot = tuple((node_id, content, owner, node_type, scope)
+                         for node_id, content, owner, node_type, scope in replacements)
+        async with self._write_lock:
+            await run_to_completion(self._do_replace_many, snapshot)
+
     async def index(
         self,
         node_id: str,
@@ -169,8 +221,12 @@ class LexicalIndex:
         user_id: str,
         node_type: str = "note",
         scope: str | None = None,
+        *, replace: bool = False,
     ) -> None:
         """Index a document for full-text search.
+
+        With replace=True, atomically replace this node's documents and commit
+        immediately. Failure before commit retains the previous document.
 
         The document is buffered and becomes searchable once the next
         batch commit runs (on the commit interval, after the max delay is
@@ -188,14 +244,128 @@ class LexicalIndex:
                 When provided, enables scope-filtered search queries.
         """
         async with self._write_lock:
-            await asyncio.to_thread(
-                self._do_index, node_id, content, user_id, node_type, scope
+            await run_to_completion(
+                self._do_replace if replace else self._do_index, node_id, content, user_id, node_type, scope
             )
 
     async def flush(self) -> None:
         """Commit any buffered documents so they become searchable."""
         async with self._write_lock:
-            await asyncio.to_thread(self._commit_locked)
+            await run_to_completion(self._commit_locked)
+
+    async def stage(self, plan: DerivationPlan, *, fence: DuckDBStageFence | None = None) -> None:
+        """Commit missing prepared documents once, rejecting identity conflicts.
+
+        The directory writer lock covers comparison and publication, so a
+        retry never deletes another attempt's documents. Managed ingestion
+        supplies a fence covering the work generation and native write; calls
+        without one remain an unmanaged component API.
+        """
+        plan = DerivationPlan.model_validate_json(plan.model_dump_json())
+        if fence is not None:
+            fence.verify_plan(plan)
+        nodes = {node.id: node for node in plan.nodes}
+        documents = tuple({
+            "node_id": [str(doc.node_id)], "content": [doc.content],
+            "user_id": [plan.user_id], "node_type": [nodes[doc.node_id].node_type.value],
+            "scope": [nodes[doc.node_id].scope.value],
+        } for doc in plan.lexical_documents)
+        async with self._write_lock:
+            if fence is not None:
+                async with fence.conn_lock:
+                    def guarded():
+                        with fence.hold():
+                            self._do_stage(documents)
+                    await run_to_completion(guarded)
+            else:
+                await run_to_completion(self._do_stage, documents)
+
+    async def stage_profile(self, plan: ProfilePublication, *, fence=None) -> None:
+        """Durably stage one prepared profile before graph publication.
+
+        As with unmanaged derivation staging, an interrupted preparation is
+        retained until an explicit rebuild; it is not an active graph memory.
+        """
+        plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        if fence is not None:
+            fence.verify_plan(plan)
+        node = plan.node
+        documents = ({
+            "node_id": [str(node.id)], "content": [node.content],
+            "user_id": [node.user_id], "node_type": [node.node_type.value],
+            "scope": [node.scope.value],
+        },)
+        async with self._write_lock:
+            if fence is None:
+                await run_to_completion(self._do_stage, documents)
+            else:
+                async with fence.conn_lock:
+                    def guarded():
+                        with fence.hold():
+                            self._do_stage(documents)
+                    await run_to_completion(guarded)
+
+    async def stage_consolidation(self, plan, *, fence=None) -> None:
+        """Durably stage one journaled consolidation document idempotently."""
+        from prme.models.consolidation import ConsolidationPublication
+
+        plan = ConsolidationPublication.model_validate_json(plan.model_dump_json())
+        if fence is not None:
+            fence.verify_plan(plan)
+        node = plan.node
+        documents = ({
+            "node_id": [str(node.id)], "content": [node.content],
+            "user_id": [node.user_id], "node_type": [node.node_type.value],
+            "scope": [node.scope.value],
+        },)
+        async with self._write_lock:
+            if fence is None:
+                await run_to_completion(self._do_stage, documents)
+            else:
+                async with fence.conn_lock:
+                    def guarded():
+                        with fence.hold():
+                            self._do_stage(documents)
+                    await run_to_completion(guarded)
+
+    def _do_stage(self, documents: tuple[dict, ...]) -> None:
+        # Preserve unrelated normal writes before starting this isolated batch.
+        self._commit_locked()
+        if not documents:
+            return
+        writer = self._ensure_writer()
+        try:
+            self._index.reload()
+            searcher = self._index.searcher()
+            missing = []
+            for fields in documents:
+                query = tantivy.Query.term_query(self._schema, "node_id", fields["node_id"][0])
+                found = searcher.search(query, limit=1)
+                if found.count > 1:
+                    raise ValueError("Prepared document conflicts with duplicate lexical identity")
+                if found.hits:
+                    existing = searcher.doc(found.hits[0][1])
+                    if any(existing[name] != value for name, value in fields.items()):
+                        raise ValueError("Prepared document conflicts with existing lexical identity")
+                else:
+                    missing.append(fields)
+            # Validate the whole batch before any add. One commit avoids the
+            # segment/merge overhead of committing every individual document.
+            for fields in missing:
+                writer.add_document(tantivy.Document(**fields))
+            if missing:
+                writer.commit()
+                self._index.reload()
+        except BaseException:
+            # Rollback only changes since the last commit. A lost commit
+            # acknowledgement must preserve the already committed documents.
+            writer.rollback()
+            raise
+        finally:
+            self._writer = None
+            self._uncommitted = 0
+            self._oldest_uncommitted_at = None
+            writer.wait_merging_threads()
 
     def _do_search(
         self,
@@ -288,7 +458,7 @@ class LexicalIndex:
         # far (batched commits would otherwise hide recent documents).
         if self._uncommitted > 0:
             await self.flush()
-        return await asyncio.to_thread(
+        return await run_to_completion(
             self._do_search, query_text, user_id, node_type, limit, scope
         )
 
@@ -315,6 +485,31 @@ class LexicalIndex:
         finally:
             writer.wait_merging_threads()
 
+    async def delete_profile_stage(self, plan: ProfilePublication, *, fence) -> None:
+        """Delete one exact abandoned document under its preparation fence."""
+        plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        fence.verify_collection_plan(plan)
+        node = plan.node
+        expected = {'node_id': [str(node.id)], 'content': [node.content], 'user_id': [node.user_id],
+                    'node_type': [node.node_type.value], 'scope': [node.scope.value]}
+        def guarded():
+            with fence.hold():
+                self._commit_locked()
+                self._index.reload()
+                searcher = self._index.searcher()
+                query = tantivy.Query.term_query(self._schema, 'node_id', str(node.id))
+                found = searcher.search(query, limit=1)
+                if found.count > 1:
+                    raise ValueError('Abandoned profile has ambiguous lexical documents')
+                if found.hits:
+                    document = searcher.doc(found.hits[0][1])
+                    if any(document[name] != value for name, value in expected.items()):
+                        raise ValueError('Staged document differs from the abandoned prepared profile')
+                self._do_delete(str(node.id))
+        async with self._write_lock:
+            async with fence.conn_lock:
+                await run_to_completion(guarded)
+
     async def delete_by_node_id(self, node_id: str) -> None:
         """Delete all documents for ``node_id`` from the index.
 
@@ -327,7 +522,7 @@ class LexicalIndex:
             node_id: The node_id of the document(s) to delete.
         """
         async with self._write_lock:
-            await asyncio.to_thread(self._do_delete, node_id)
+            await run_to_completion(self._do_delete, node_id)
 
     def _do_clear(self) -> None:
         """Synchronous delete-all + commit (runs in thread pool).
@@ -359,7 +554,7 @@ class LexicalIndex:
         Caller is responsible for re-indexing afterwards.
         """
         async with self._write_lock:
-            await asyncio.to_thread(self._do_clear)
+            await run_to_completion(self._do_clear)
 
     async def close(self) -> None:
         """Flush buffered documents and release the writer.

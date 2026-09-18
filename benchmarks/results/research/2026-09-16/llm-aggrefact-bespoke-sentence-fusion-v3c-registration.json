@@ -1,0 +1,168 @@
+{
+  "claim_boundary": "Passing would support direct first-token sentence fusion as an optional verification technique on the named cohort. The implementation correction, noncommercial weights, and local hardware result do not authorize a default or establish universal factuality detection.",
+  "cohort": {
+    "dev_cases": 1100,
+    "dev_selected_identity_sha256": "8f40221503bc677f2ac3345302cfb363a2b5584620423c3eeb21bc0ca6dfd9cf",
+    "per_label_per_dataset": 50,
+    "sampling": "For each split and exact (dataset,label) group, sort by SHA256(seed NUL split NUL contamination_identifier), then identifier, and take 50.",
+    "seed": "prme-llm-aggrefact-factcg-v1",
+    "test_cases": 1100,
+    "test_selected_identity_sha256": "61c9e6c450cfb618044da9127df1bc76bef4f571b9698ccf7e0296522a13bbbd"
+  },
+  "created_at": "2026-09-16T19:15:00Z",
+  "dataset": {
+    "files": {
+      "dev": {
+        "expected_shape": {
+          "datasets": {
+            "AggreFact-CNN": 459,
+            "AggreFact-XSum": 777,
+            "ClaimVerify": 1093,
+            "ExpertQA": 3773,
+            "FactCheck-GPT": 1537,
+            "Lfqa": 2029,
+            "RAGTruth": 15340,
+            "Reveal": 1656,
+            "TofuEval-MediaS": 1800,
+            "TofuEval-MeetB": 1607,
+            "Wice": 349
+          },
+          "labels": {
+            "0": 7402,
+            "1": 23018
+          },
+          "rows": 30420
+        },
+        "sha256": "ca9a5bda9561bbc6f7327ef81ab41727fa10e96f96e9dc74ef32ba3af3c1d8a8"
+      },
+      "test": {
+        "expected_shape": {
+          "datasets": {
+            "AggreFact-CNN": 558,
+            "AggreFact-XSum": 558,
+            "ClaimVerify": 1088,
+            "ExpertQA": 3702,
+            "FactCheck-GPT": 1566,
+            "Lfqa": 1911,
+            "RAGTruth": 16371,
+            "Reveal": 1710,
+            "TofuEval-MediaS": 726,
+            "TofuEval-MeetB": 772,
+            "Wice": 358
+          },
+          "labels": {
+            "0": 6488,
+            "1": 22832
+          },
+          "rows": 29320
+        },
+        "sha256": "ba6976c3da990a9d7b11670efaf4e3c93c1bd0530061ec742afd6b2d5bce698c"
+      }
+    },
+    "license": "cc-by-nd-4.0",
+    "name": "LLM-AggreFact",
+    "repository": "https://huggingface.co/datasets/lytang/LLM-AggreFact",
+    "revision": "981dfd0bd8e58e7238a9ab92b2e6ea44bce918e4",
+    "source_text_policy": "Authenticated external files only; committed results may contain identifiers, labels, scores, counts and hashes but no document or claim text."
+  },
+  "evaluation": {
+    "calibration": {
+      "selection": "maximum_recall_then_precision_then_lowest_threshold",
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6,
+      "test_unlock": "all_calibration_gates_pass"
+    },
+    "decision_rule": "Score the test cohort only if a development threshold satisfies both calibration gates. Promote no provider verifier unless every fixed test gate passes.",
+    "gates": {
+      "balanced_accuracy_min": 0.75,
+      "claims_evaluated_min": 1100,
+      "false_support_rate_max": 0.1,
+      "supported_precision_min": 0.9,
+      "supported_recall_min": 0.6
+    }
+  },
+  "kind": "llm-aggrefact-bespoke-registration",
+  "model": {
+    "architecture": "causal_lm",
+    "files": {
+      "added_tokens.json": "f8ec8cf12a056fa27277abd6fcc2ee4839aa0fead0ee7a5451bb4729ec8aea1f",
+      "config.json": "9be3df250500aa2c25eaf12f3f8006bde650f76a0cdffcaa098565357948e47d",
+      "configuration_internlm2.py": "89863f76efbb7f31b39e8feb789285b7362d243e7c9c2a07ac018e0e313fd856",
+      "generation_config.json": "ff8e6158edbc9ef0d37171659ac36235016ee8e019bfa7a03d2033c5dbca773c",
+      "model-00001-of-00004.safetensors": "fe5925c0fb86f23e08046b8f6a4c267f379d88b483ed9491df66ec7070ad4b35",
+      "model-00002-of-00004.safetensors": "a798caa3e7a716099534d7323280109562310f1076a3bcdb33eb3a4e4ea07f58",
+      "model-00003-of-00004.safetensors": "3af8e13b6c6478f9b0b07d8bac10c9b894de3ab82e2807d45c910780daca2b6d",
+      "model-00004-of-00004.safetensors": "cb458814b11f76602316c665b02bfa5f3f3911b70e2aa215fded245927577a2d",
+      "model.safetensors.index.json": "9a30484442acc1c0e75f347f06f04cbb3f5ecb91e51af7d33cde3b5ed4ee6201",
+      "modeling_internlm2.py": "1b781ec759a151caa48e03641e9b01411376f157cacd9a28044a714e4abad005",
+      "special_tokens_map.json": "e636e880c43a263dc00724686c9ad90e2d23bd1467fe9ed1b95740cd9f387202",
+      "tokenization_internlm2.py": "444d4c2b0da158e61c34b3c727943f0ad454770c74b307f4d881f03603335eef",
+      "tokenization_internlm2_fast.py": "1fe5f033032afc400b9b8b0274f16efd57c6ebaab46a2f6fe9f961afb868ae10",
+      "tokenizer.json": "ebe05e4502ecafdd74cc7604fe5bf5bacfd8aec0395fad8b5537e2fdd5111f2a",
+      "tokenizer.model": "f868398fc4e05ee1e8aeba95ddf18ddcc45b8bce55d5093bead5bbf80429b48b",
+      "tokenizer_config.json": "b502dc7c3e60754595068e64427a0baff2615721d75e2e173911dd81a6c1276c"
+    },
+    "license": "cc-by-nc-4.0",
+    "name": "bespokelabs/Bespoke-MiniCheck-7B",
+    "no_token_ids": [
+      1038,
+      2305,
+      2458,
+      2917,
+      9128
+    ],
+    "parameter_count": "8B",
+    "revision": "1ed7786bcda3fa1dc35f7c4ed9e3f36b785d33b8",
+    "yes_token_ids": [
+      7560,
+      9583,
+      9828,
+      9970,
+      14144
+    ]
+  },
+  "predecessor": {
+    "failure_sha256": "bef61c265a8cd52a8e608a1c50a25fb404da07eb60c2734b2f8bbde7f647849c",
+    "outcome": "development_infrastructure_failure_after_250_private_checkpointed_cases_without_inspection_of_score_values_or_calibration",
+    "registration_sha256": "6964be2c08b7b29fcfdf679879ac2257b223dee8fb497e17985918df531a8864"
+  },
+  "protocol": {
+    "accelerate_version": "1.10.1",
+    "batch_size": 1,
+    "checkpoint_policy": "source_free_completed_cases_v2_with_mps_peaks",
+    "claim_segmentation": "nltk_sent_tokenize",
+    "device": "auto",
+    "einops_version": "0.8.1",
+    "emit_source_text": false,
+    "max_model_length": 8192,
+    "mps_cache_release": "after_each_pair",
+    "progress_every_cases": 25,
+    "scoring_forward": "direct_next_token_logits_without_kv_cache",
+    "seed": 2024,
+    "sentence_fusion": "minimum_over_claim_sentences_of_maximum_over_source_chunks",
+    "sentencepiece_version": "0.2.1",
+    "source_chunk_tokens": 7800,
+    "source_chunking": "nltk_sentence_chunks_by_model_tokens",
+    "support_probability": "sum_full_vocabulary_probability_of_registered_yes_tokens",
+    "system_prompt_sha256": "016aea4b585f24d1f069463333d5494e570d5f69cdecf8f7edae0c6731dd3c7a",
+    "task": "sentence_fusion_document_grounding",
+    "temperature": 0,
+    "threshold_operator": "strictly_greater_than",
+    "transformers_version": "4.43.3",
+    "user_template_sha256": "b489b43fb3a950fceb92b9e2e92893b86770b3d6b4bfa9fd27dc874a9d80a704"
+  },
+  "purpose": "Retry the unchanged Bespoke sentence-fusion quality hypothesis with direct first-token scoring that disables the unnecessary KV cache after the registered generation path reproducibly exhausted unified memory.",
+  "schema_version": 1,
+  "selection": {
+    "disclosure": "V3b produced a private source-free checkpoint for 250 development cases. Only its hashes, counts, runtime, memory diagnostics and absence of source text were inspected; individual score values and aggregate calibration were not inspected. V3c is registered before the direct-forward implementation scores any selected development or test case, starts development from zero, and keeps the test cohort sealed unless calibration passes.",
+    "rationale": "For one-token classification, the first generated-token distribution is the softmax of the final prompt-position logits. Computing those logits directly with use_cache=False avoids an unnecessary generation cache. Synthetic supported evidence produced 0.9463608 versus 0.9463513 on the prior generation path while MPS driver allocation fell from roughly 45 GiB to 16-17 GiB. The model, prompts, source chunking, sentence fusion, cohort, calibration and quality gates remain fixed."
+  },
+  "source": {
+    "files": {
+      "base_registration_sha256": "505e04451f1e7d4ca29e40fe5592f6e9c669b4d74ed632fa1676b5c5f77df517",
+      "factcg_runner_sha256": "cab0c1065632af5ed39ce38c65bae138fda03dedd7b639f38b3a97797773d219",
+      "runner_sha256": "263f3fbb938777ce1cdaf126ce6d836d8e631738554796d74f2493927605235a"
+    },
+    "prme_revision": "8f44ff3c25bb07f4bed0859b6b3bca1733ed1266"
+  }
+}

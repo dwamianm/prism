@@ -1,0 +1,27 @@
+{
+  "kind": "launch-record-not-completion",
+  "worker_commit": "2f3ac2e",
+  "frozen_checkout": "/tmp/prme-native-dev-study",
+  "inputs": "data/benchmarks/hindsight-prme-dev-normalized-inputs.json",
+  "products": {
+    "hindsight": {
+      "tool_session_id": 47584,
+      "native_exit_code": null,
+      "plan": "benchmarks/results/research/2026-09-12/hindsight-native-dev-capture-plan.json",
+      "plan_sha256": "a3087e344448064d8de837510899047a0488a0a51826419098163bc43fe012a7",
+      "report": "data/benchmarks/hindsight-native-dev-2f3ac2e.json",
+      "captures": "data/benchmarks/hindsight-native-dev-2f3ac2e",
+      "log": "/tmp/prme-hindsight-native-dev-2f3ac2e.log"
+    },
+    "prme": {
+      "tool_session_id": 68967,
+      "native_exit_code": null,
+      "plan": "benchmarks/results/research/2026-09-12/prme-native-dev-capture-plan.json",
+      "plan_sha256": "d906129b630f6f8c7423346633a10e42be5c7662a5ccac668dd009c527d5903e",
+      "report": "data/benchmarks/prme-native-dev-2f3ac2e.json",
+      "captures": "data/benchmarks/prme-native-dev-2f3ac2e",
+      "log": "/tmp/prme-prme-native-dev-2f3ac2e.log"
+    }
+  },
+  "quality_inspection": "Deferred until both native exits are zero and every registered case succeeds."
+}

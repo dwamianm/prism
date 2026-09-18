@@ -1,0 +1,1212 @@
+{
+  "complete": true,
+  "baseline_reproduction_passed": true,
+  "kind": "development-product-packing-comparison",
+  "dataset": {
+    "name": "longmemeval_s_cleaned.json",
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "variant": "s",
+    "total_questions": 500,
+    "split": "dev",
+    "split_seed": "prme-evidence-v1",
+    "selected_question_ids": [
+      "1b9b7252",
+      "gpt4_8279ba02",
+      "e982271f"
+    ]
+  },
+  "source_provenance": {
+    "commit": "afc1539d0eb3b3c2fb5d2463bbbddfce0de8f51f",
+    "dirty": false,
+    "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "dependencies": {
+      "prme": "0.11.0",
+      "duckdb": "1.4.4",
+      "usearch": "2.23.0",
+      "tantivy": "0.25.1",
+      "fastembed": "0.7.4",
+      "tiktoken": "0.12.0",
+      "dateparser": "1.3.0"
+    },
+    "engine_config": {
+      "database_url": "<redacted>",
+      "db_path": "./memory.duckdb",
+      "vector_path": "./vectors.usearch",
+      "lexical_path": "./lexical_index",
+      "embedding": {
+        "provider": "fastembed",
+        "model_name": "BAAI/bge-small-en-v1.5",
+        "dimension": 384,
+        "api_key": "<redacted>"
+      },
+      "extraction": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "max_retries": 3,
+        "timeout": 30.0,
+        "lease_seconds": 300.0,
+        "api_key": "<redacted>",
+        "base_url": null
+      },
+      "write_queue_size": 1000,
+      "scoring": {
+        "w_semantic": 0.25,
+        "w_lexical": 0.2,
+        "w_graph": 0.2,
+        "w_recency": 0.1,
+        "w_salience": 0.1,
+        "w_confidence": 0.15,
+        "w_epistemic": 0.05,
+        "w_paths": 0.0,
+        "recency_lambda": 0.02,
+        "temporal_boost": 0.15,
+        "node_type_boost": {
+          "fact": 1.15,
+          "preference": 1.15,
+          "decision": 1.1,
+          "summary": 1.1,
+          "instruction": 1.1
+        },
+        "relevance_floor": 0.35
+      },
+      "packing": {
+        "token_budget": 4096,
+        "tokenizer": "cl100k_base",
+        "min_fidelity": "reference",
+        "overhead_tokens": 100,
+        "chars_per_token": 4.2,
+        "graph_max_candidates": 150,
+        "vector_k": 500,
+        "lexical_k": 500,
+        "graph_max_hops": 3,
+        "cross_scope_top_n": 5,
+        "cross_scope_token_budget": 512,
+        "session_context_window": 3,
+        "session_context_top_k": 20,
+        "session_context_score_decay": 0.85,
+        "aggregation_k_multiplier": 3.0,
+        "aggregation_k_max": 2000
+      },
+      "organizer": {
+        "opportunistic_enabled": false,
+        "opportunistic_cooldown": 3600,
+        "opportunistic_budget_ms": 200,
+        "opportunistic_batch_size": 50,
+        "default_organize_budget_ms": 5000,
+        "promotion_age_days": 7.0,
+        "promotion_evidence_count": 1,
+        "archive_salience_threshold": 0.1,
+        "archive_confidence_threshold": 0.4,
+        "force_archive_salience_threshold": 0.05,
+        "deprecate_confidence_threshold": 0.15,
+        "dedup_similarity_threshold": 0.92,
+        "alias_similarity_threshold": 0.85,
+        "consolidation_min_cluster_size": 3,
+        "consolidation_similarity_threshold": 0.8,
+        "consolidation_preserve_recent_days": 7,
+        "consolidation_min_confidence_preserve": 0.8,
+        "default_ttl_days": {
+          "entity": null,
+          "fact": null,
+          "event": 365,
+          "decision": 180,
+          "preference": null,
+          "task": 90,
+          "summary": 365,
+          "note": 90
+        },
+        "summarization_daily_min_events": 5,
+        "summarization_weekly_min_summaries": 3,
+        "summarization_monthly_min_summaries": 2,
+        "summarization_max_items_per_summary": 10
+      },
+      "mcp": {
+        "user_id": null,
+        "user_keys": {}
+      },
+      "api": {
+        "api_key": "<redacted>",
+        "user_keys": {},
+        "cors_origins": [],
+        "cors_allow_credentials": false
+      },
+      "enable_store_supersedence": false,
+      "reinforce_similarity_threshold": null,
+      "enable_qa_pairing": false,
+      "enable_surprise_gating": false,
+      "novelty_high_threshold": 0.7,
+      "novelty_low_threshold": 0.3,
+      "novelty_salience_boost": 0.15,
+      "novelty_salience_penalty": 0.1,
+      "enable_reranker": false,
+      "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "reranker_top_k": 100,
+      "enable_query_reformulation": false,
+      "query_reformulation_count": 2,
+      "temporal_languages": [
+        "en"
+      ],
+      "materialization_queue_size": 500,
+      "materialization_budget_ms": 100,
+      "vector_save_interval": 64,
+      "vector_exact_search": true,
+      "lexical_commit_interval": 64,
+      "lexical_commit_max_delay_s": 2.0,
+      "max_concurrent_extractions": 8,
+      "namespace_weights": {},
+      "epistemic_weights": {
+        "observed": 1.0,
+        "asserted": 0.9,
+        "inferred": 0.7,
+        "hypothetical": 0.3,
+        "conditional": 0.5,
+        "deprecated": 0.1,
+        "unverified": 0.5
+      },
+      "unverified_confidence_threshold": 0.3,
+      "confidence_overrides": {},
+      "encryption_enabled": false,
+      "encryption_key": "<redacted>"
+    }
+  },
+  "packing_config": {
+    "token_budget": 4096,
+    "tokenizer": "cl100k_base",
+    "min_fidelity": "reference",
+    "overhead_tokens": 100,
+    "chars_per_token": 4.2,
+    "graph_max_candidates": 150,
+    "vector_k": 500,
+    "lexical_k": 500,
+    "graph_max_hops": 3,
+    "cross_scope_top_n": 5,
+    "cross_scope_token_budget": 512,
+    "session_context_window": 3,
+    "session_context_top_k": 20,
+    "session_context_score_decay": 0.85,
+    "aggregation_k_multiplier": 3.0,
+    "aggregation_k_max": 2000
+  },
+  "packing_module_sha256": "f866f55be38c519574790b58c2b55888919dd27e7a62e7a52fb77bcbf52528b9",
+  "diagnostic_sha256": "85715395bc5634b285d038882ee55b76db527729f84c661bf4269980f51f81d4",
+  "budgets": [
+    2048,
+    4096,
+    8192
+  ],
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "comparator": "composite score within the multi-path tier; all other priorities and rendering unchanged",
+  "limitations": [
+    "Development source-support retention only; no answer accuracy or competitive quality claim.",
+    "Both variants reuse identical public retrieval candidates, scores, identities and timestamps.",
+    "All response candidates are packed; the shared evaluation ranking limit is not applied here.",
+    "REFERENCE and KEY_VALUE pointers receive no supporting-evidence credit.",
+    "Question bootstrap intervals are descriptive; shared histories can make questions dependent.",
+    "Source snapshots contain benchmark text and are stored separately from this summary."
+  ],
+  "summary": {
+    "2048": {
+      "evidence_recall": {
+        "queries": 3,
+        "before": 0.0,
+        "after": 1.0,
+        "delta": 1.0,
+        "interval_95": [
+          1.0,
+          1.0
+        ],
+        "wins": 3,
+        "losses": 0,
+        "ties": 0
+      },
+      "all_evidence_retained": {
+        "queries": 3,
+        "before": 0.0,
+        "after": 1.0,
+        "delta": 1.0,
+        "interval_95": [
+          1.0,
+          1.0
+        ],
+        "wins": 3,
+        "losses": 0,
+        "ties": 0
+      }
+    },
+    "4096": {
+      "evidence_recall": {
+        "queries": 3,
+        "before": 0.0,
+        "after": 1.0,
+        "delta": 1.0,
+        "interval_95": [
+          1.0,
+          1.0
+        ],
+        "wins": 3,
+        "losses": 0,
+        "ties": 0
+      },
+      "all_evidence_retained": {
+        "queries": 3,
+        "before": 0.0,
+        "after": 1.0,
+        "delta": 1.0,
+        "interval_95": [
+          1.0,
+          1.0
+        ],
+        "wins": 3,
+        "losses": 0,
+        "ties": 0
+      }
+    },
+    "8192": {
+      "evidence_recall": {
+        "queries": 3,
+        "before": 0.3333333333333333,
+        "after": 1.0,
+        "delta": 0.6666666666666666,
+        "interval_95": [
+          0.0,
+          1.0
+        ],
+        "wins": 2,
+        "losses": 0,
+        "ties": 1
+      },
+      "all_evidence_retained": {
+        "queries": 3,
+        "before": 0.3333333333333333,
+        "after": 1.0,
+        "delta": 0.6666666666666666,
+        "interval_95": [
+          0.0,
+          1.0
+        ],
+        "wins": 2,
+        "losses": 0,
+        "ties": 1
+      }
+    }
+  },
+  "categories": {
+    "single-session-assistant": {
+      "2048": {
+        "evidence_recall": {
+          "queries": 2,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 0
+        },
+        "all_evidence_retained": {
+          "queries": 2,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 0
+        }
+      },
+      "4096": {
+        "evidence_recall": {
+          "queries": 2,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 0
+        },
+        "all_evidence_retained": {
+          "queries": 2,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 0
+        }
+      },
+      "8192": {
+        "evidence_recall": {
+          "queries": 2,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 0
+        },
+        "all_evidence_retained": {
+          "queries": 2,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 0
+        }
+      }
+    },
+    "temporal-reasoning": {
+      "2048": {
+        "evidence_recall": {
+          "queries": 1,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 0
+        },
+        "all_evidence_retained": {
+          "queries": 1,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 0
+        }
+      },
+      "4096": {
+        "evidence_recall": {
+          "queries": 1,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 0
+        },
+        "all_evidence_retained": {
+          "queries": 1,
+          "before": 0.0,
+          "after": 1.0,
+          "delta": 1.0,
+          "interval_95": [
+            1.0,
+            1.0
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 0
+        }
+      },
+      "8192": {
+        "evidence_recall": {
+          "queries": 1,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 1
+        },
+        "all_evidence_retained": {
+          "queries": 1,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 1
+        }
+      }
+    }
+  },
+  "details": [
+    {
+      "question_id": "1b9b7252",
+      "category": "single-session-assistant",
+      "evidence_source_ids": [
+        "s23:t3"
+      ],
+      "candidate_count": 466,
+      "candidate_snapshot_sha256": "40f375eea99261a0cb01587dfcb27e92e8258792b289afd3ca017e4b51d872e6",
+      "variants": {
+        "density": {
+          "2048": {
+            "tokens": 1839,
+            "context_sha256": "f02041321e7f7f9657f2f5a6a9433e08f88968f9c8ae1e7186079ba22b510745",
+            "content_source_ids": [
+              "s23:t2",
+              "s23:t4",
+              "s23:t0",
+              "s42:t2",
+              "s31:t0",
+              "s2:t6",
+              "s18:t8",
+              "s26:t8",
+              "s23:t6",
+              "s5:t10",
+              "s38:t4",
+              "s20:t3",
+              "s31:t2",
+              "s29:t4"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 14
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          },
+          "4096": {
+            "tokens": 3958,
+            "context_sha256": "4c887b6a9aa75ace4e0112bd42c663e3d79671d5364314e8543bd5c11c4e903d",
+            "content_source_ids": [
+              "s23:t2",
+              "s23:t4",
+              "s23:t0",
+              "s42:t2",
+              "s31:t0",
+              "s2:t6",
+              "s18:t8",
+              "s26:t8",
+              "s23:t6",
+              "s5:t10",
+              "s38:t4",
+              "s20:t3",
+              "s31:t2",
+              "s29:t4",
+              "s17:t10",
+              "s38:t2",
+              "s38:t0",
+              "s15:t6",
+              "s29:t6",
+              "s41:t7",
+              "s8:t2",
+              "s41:t3",
+              "s34:t1",
+              "s29:t8",
+              "s42:t8",
+              "s12:t2",
+              "s42:t6",
+              "s28:t10",
+              "s42:t12",
+              "s8:t0"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 30
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          },
+          "8192": {
+            "tokens": 8037,
+            "context_sha256": "7fbaae13ed391aa3ee4f56f154eaea63a8a5129e1c8d04e00f180a19683af14c",
+            "content_source_ids": [
+              "s23:t2",
+              "s23:t4",
+              "s23:t0",
+              "s42:t2",
+              "s31:t0",
+              "s2:t6",
+              "s18:t8",
+              "s26:t8",
+              "s23:t6",
+              "s5:t10",
+              "s38:t4",
+              "s20:t3",
+              "s31:t2",
+              "s29:t4",
+              "s17:t10",
+              "s38:t2",
+              "s38:t0",
+              "s15:t6",
+              "s29:t6",
+              "s41:t7",
+              "s8:t2",
+              "s41:t3",
+              "s34:t1",
+              "s29:t8",
+              "s42:t8",
+              "s12:t2",
+              "s42:t6",
+              "s28:t10",
+              "s42:t12",
+              "s8:t0",
+              "s9:t0",
+              "s27:t2",
+              "s15:t2",
+              "s29:t10",
+              "s15:t8",
+              "s15:t0",
+              "s13:t8",
+              "s31:t4",
+              "s29:t2",
+              "s16:t2",
+              "s7:t2",
+              "s28:t0",
+              "s16:t0",
+              "s10:t0",
+              "s8:t4",
+              "s27:t10",
+              "s28:t8",
+              "s6:t4",
+              "s4:t2",
+              "s43:t2",
+              "s29:t0",
+              "s7:t0",
+              "s6:t2",
+              "s42:t4",
+              "s1:t2",
+              "s26:t10",
+              "s10:t4",
+              "s25:t7",
+              "s25:t3",
+              "s26:t4"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 60
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          }
+        },
+        "score": {
+          "2048": {
+            "tokens": 1918,
+            "context_sha256": "e1008f4d65b4f52bd879096d90a87896a6b441995e0c64745191cd990e3b595f",
+            "content_source_ids": [
+              "s23:t3",
+              "s23:t2",
+              "s23:t1",
+              "s22:t10",
+              "s18:t7",
+              "s23:t4",
+              "s22:t8",
+              "s18:t10"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 8
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          },
+          "4096": {
+            "tokens": 3960,
+            "context_sha256": "707955e440a7b7a04ff41e5f64081ea6ef5ded83373e7f5623c196490f1f7c25",
+            "content_source_ids": [
+              "s23:t3",
+              "s23:t2",
+              "s23:t1",
+              "s22:t10",
+              "s18:t7",
+              "s23:t4",
+              "s22:t8",
+              "s18:t10",
+              "s32:t2",
+              "s18:t6",
+              "s26:t6",
+              "s1:t4",
+              "s23:t6",
+              "s5:t6",
+              "s32:t4",
+              "s20:t0"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 16
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          },
+          "8192": {
+            "tokens": 8092,
+            "context_sha256": "4e5be6e10a142e114286a7156b3f858c4de4a21a462e9e44787a7c57b74ae701",
+            "content_source_ids": [
+              "s23:t3",
+              "s23:t2",
+              "s23:t1",
+              "s22:t10",
+              "s18:t7",
+              "s23:t4",
+              "s22:t8",
+              "s18:t10",
+              "s32:t2",
+              "s18:t6",
+              "s26:t6",
+              "s1:t4",
+              "s23:t6",
+              "s5:t6",
+              "s32:t4",
+              "s20:t0",
+              "s32:t5",
+              "s18:t2",
+              "s18:t0",
+              "s14:t6",
+              "s23:t0",
+              "s23:t5",
+              "s43:t0",
+              "s33:t6",
+              "s5:t8",
+              "s32:t0",
+              "s22:t9",
+              "s22:t11",
+              "s14:t4",
+              "s32:t10"
+            ],
+            "pointer_source_ids": [
+              "s32:t3"
+            ],
+            "representations": {
+              "full": 30,
+              "key_value": 1
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          }
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_8279ba02",
+      "category": "temporal-reasoning",
+      "evidence_source_ids": [
+        "s11:t2"
+      ],
+      "candidate_count": 489,
+      "candidate_snapshot_sha256": "5eba04014272032ccab328463da30715fb18de1580d4271676c94dc75832cb24",
+      "variants": {
+        "density": {
+          "2048": {
+            "tokens": 1863,
+            "context_sha256": "d8be5fd5af1f1a29ff325a4cba28b1b07471ac31faecbe63340729d9fdd95305",
+            "content_source_ids": [
+              "s3:t22",
+              "s10:t8",
+              "s20:t4",
+              "s3:t16",
+              "s28:t6",
+              "s22:t2",
+              "s20:t2",
+              "s11:t8",
+              "s17:t1",
+              "s22:t4",
+              "s6:t8",
+              "s42:t2",
+              "s3:t9",
+              "s2:t0"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 14
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          },
+          "4096": {
+            "tokens": 3984,
+            "context_sha256": "8796fa334bde7da23c11d609ed6a3ca47d13e1e0705a161099e2f104deab8b7b",
+            "content_source_ids": [
+              "s3:t22",
+              "s10:t8",
+              "s20:t4",
+              "s3:t16",
+              "s28:t6",
+              "s22:t2",
+              "s20:t2",
+              "s11:t8",
+              "s17:t1",
+              "s22:t4",
+              "s6:t8",
+              "s42:t2",
+              "s3:t9",
+              "s2:t0",
+              "s46:t10",
+              "s22:t6",
+              "s3:t11",
+              "s3:t26",
+              "s4:t10",
+              "s3:t13",
+              "s46:t2",
+              "s2:t2",
+              "s10:t2",
+              "s35:t0",
+              "s45:t8",
+              "s3:t25",
+              "s11:t4",
+              "s41:t2",
+              "s26:t10"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 29
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          },
+          "8192": {
+            "tokens": 8015,
+            "context_sha256": "d33a7d1235ea801aa44f9090e5d03397bb5db10fe233fbea8075c5cb91f19e1e",
+            "content_source_ids": [
+              "s3:t22",
+              "s10:t8",
+              "s20:t4",
+              "s3:t16",
+              "s28:t6",
+              "s22:t2",
+              "s20:t2",
+              "s11:t8",
+              "s17:t1",
+              "s22:t4",
+              "s6:t8",
+              "s42:t2",
+              "s3:t9",
+              "s2:t0",
+              "s46:t10",
+              "s22:t6",
+              "s3:t11",
+              "s3:t26",
+              "s4:t10",
+              "s3:t13",
+              "s46:t2",
+              "s2:t2",
+              "s10:t2",
+              "s35:t0",
+              "s45:t8",
+              "s3:t25",
+              "s11:t4",
+              "s41:t2",
+              "s26:t10",
+              "s36:t0",
+              "s37:t0",
+              "s18:t7",
+              "s11:t2",
+              "s0:t0",
+              "s3:t31",
+              "s46:t0",
+              "s16:t8",
+              "s3:t8",
+              "s11:t6",
+              "s29:t0",
+              "s3:t19",
+              "s13:t4",
+              "s42:t3",
+              "s42:t14",
+              "s46:t4",
+              "s20:t0",
+              "s10:t6",
+              "s13:t8",
+              "s45:t4",
+              "s11:t0",
+              "s4:t2",
+              "s35:t4",
+              "s10:t4",
+              "s38:t2",
+              "s1:t4",
+              "s24:t2",
+              "s14:t8"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 57
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          }
+        },
+        "score": {
+          "2048": {
+            "tokens": 1856,
+            "context_sha256": "d8838fc2bdf5243fe79edecddf0f34ee3a5dedd59eadc2ca48b21b523df59ba9",
+            "content_source_ids": [
+              "s22:t3",
+              "s22:t2",
+              "s13:t0",
+              "s46:t2",
+              "s10:t8",
+              "s41:t11",
+              "s11:t8",
+              "s11:t2"
+            ],
+            "pointer_source_ids": [
+              "s41:t3"
+            ],
+            "representations": {
+              "full": 8,
+              "key_value": 1
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          },
+          "4096": {
+            "tokens": 3928,
+            "context_sha256": "2093ab2528b833821fc62a23e52984b505072532c5d4f13f5dbbdef4d4751336",
+            "content_source_ids": [
+              "s22:t3",
+              "s22:t2",
+              "s13:t0",
+              "s46:t2",
+              "s10:t8",
+              "s41:t11",
+              "s11:t8",
+              "s41:t3",
+              "s11:t2",
+              "s29:t0",
+              "s9:t0",
+              "s41:t9"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 12
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          },
+          "8192": {
+            "tokens": 8057,
+            "context_sha256": "72f9dcdf0181329e1a011f41bff10e983e90289b3e4a029e13710051a586697b",
+            "content_source_ids": [
+              "s22:t3",
+              "s22:t2",
+              "s13:t0",
+              "s46:t2",
+              "s10:t8",
+              "s41:t11",
+              "s11:t8",
+              "s41:t3",
+              "s11:t2",
+              "s29:t0",
+              "s9:t0",
+              "s41:t9",
+              "s46:t0",
+              "s11:t5",
+              "s36:t1",
+              "s46:t10",
+              "s29:t4",
+              "s2:t2",
+              "s22:t4",
+              "s40:t7",
+              "s6:t8",
+              "s36:t0",
+              "s24:t7",
+              "s41:t2",
+              "s45:t8",
+              "s45:t4"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 26
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          }
+        }
+      }
+    },
+    {
+      "question_id": "e982271f",
+      "category": "single-session-assistant",
+      "evidence_source_ids": [
+        "s34:t3"
+      ],
+      "candidate_count": 568,
+      "candidate_snapshot_sha256": "1b156d95760415e3011377af34e0b11580dbb1296f569d83ba21d987aa3136b8",
+      "variants": {
+        "density": {
+          "2048": {
+            "tokens": 1947,
+            "context_sha256": "2b4ff71c4412b9e4d6d4af27f851d5ec7fb6d3ec3611774cdff33ac3d5f2e10d",
+            "content_source_ids": [
+              "s34:t2",
+              "s34:t4",
+              "s34:t0",
+              "s6:t0",
+              "s2:t10",
+              "s2:t4",
+              "s43:t6",
+              "s32:t8",
+              "s6:t10",
+              "s2:t2",
+              "s43:t10",
+              "s47:t0",
+              "s32:t2",
+              "s12:t8",
+              "s43:t8"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 15
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          },
+          "4096": {
+            "tokens": 3928,
+            "context_sha256": "cac8774296fbfafab5e9a789dcaa87c7cadf0cb4fb24a3734a374f8829fc1c33",
+            "content_source_ids": [
+              "s34:t2",
+              "s34:t4",
+              "s34:t0",
+              "s6:t0",
+              "s2:t10",
+              "s2:t4",
+              "s43:t6",
+              "s32:t8",
+              "s6:t10",
+              "s2:t2",
+              "s43:t10",
+              "s47:t0",
+              "s32:t2",
+              "s12:t8",
+              "s43:t8",
+              "s43:t2",
+              "s18:t0",
+              "s43:t0",
+              "s28:t4",
+              "s42:t4",
+              "s37:t0",
+              "s22:t2",
+              "s41:t2",
+              "s38:t0",
+              "s22:t0",
+              "s20:t4",
+              "s14:t8",
+              "s22:t6",
+              "s0:t4"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 29
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          },
+          "8192": {
+            "tokens": 8073,
+            "context_sha256": "67307a95c0a8b996da9999d0f5b384fa7a44edf3330586a5519d65677358137d",
+            "content_source_ids": [
+              "s34:t2",
+              "s34:t4",
+              "s34:t0",
+              "s6:t0",
+              "s2:t10",
+              "s2:t4",
+              "s43:t6",
+              "s32:t8",
+              "s6:t10",
+              "s2:t2",
+              "s43:t10",
+              "s47:t0",
+              "s32:t2",
+              "s12:t8",
+              "s43:t8",
+              "s43:t2",
+              "s18:t0",
+              "s43:t0",
+              "s28:t4",
+              "s42:t4",
+              "s37:t0",
+              "s22:t2",
+              "s41:t2",
+              "s38:t0",
+              "s22:t0",
+              "s20:t4",
+              "s14:t8",
+              "s22:t6",
+              "s0:t4",
+              "s43:t4",
+              "s45:t0",
+              "s48:t4",
+              "s15:t0",
+              "s32:t4",
+              "s19:t4",
+              "s12:t6",
+              "s28:t0",
+              "s6:t8",
+              "s24:t7",
+              "s4:t2",
+              "s6:t1",
+              "s7:t2",
+              "s17:t8",
+              "s53:t2",
+              "s8:t2",
+              "s2:t8",
+              "s25:t4",
+              "s1:t0",
+              "s15:t4",
+              "s16:t8",
+              "s42:t8",
+              "s36:t2",
+              "s3:t6",
+              "s4:t10",
+              "s38:t4",
+              "s2:t6",
+              "s6:t5",
+              "s4:t6",
+              "s42:t12"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 59
+            },
+            "evidence_recall": 0.0,
+            "all_evidence_retained": false
+          }
+        },
+        "score": {
+          "2048": {
+            "tokens": 1914,
+            "context_sha256": "cc6b834ef22d0ef23bc701e71d7a05787837fafdbe206664cf2e08793448bc08",
+            "content_source_ids": [
+              "s34:t3",
+              "s34:t4",
+              "s34:t2",
+              "s43:t2",
+              "s43:t0",
+              "s34:t1",
+              "s43:t9",
+              "s43:t7"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 8
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          },
+          "4096": {
+            "tokens": 3938,
+            "context_sha256": "cd7f3d607d0a394fed237fda74653a1b3f0fe4eb1302eba84f2da5224087870a",
+            "content_source_ids": [
+              "s34:t3",
+              "s34:t4",
+              "s34:t2",
+              "s43:t2",
+              "s43:t0",
+              "s34:t1",
+              "s43:t9",
+              "s43:t7",
+              "s43:t3",
+              "s34:t5",
+              "s43:t4",
+              "s43:t5",
+              "s43:t11",
+              "s34:t0",
+              "s43:t1",
+              "s43:t8"
+            ],
+            "pointer_source_ids": [],
+            "representations": {
+              "full": 16
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          },
+          "8192": {
+            "tokens": 8092,
+            "context_sha256": "103f6793f809293441e9717793bd6f193efbb81b23db76fdb430e735dd3d051e",
+            "content_source_ids": [
+              "s34:t3",
+              "s34:t4",
+              "s34:t2",
+              "s43:t2",
+              "s43:t0",
+              "s34:t1",
+              "s43:t9",
+              "s43:t7",
+              "s43:t3",
+              "s34:t5",
+              "s43:t4",
+              "s43:t5",
+              "s43:t11",
+              "s34:t0",
+              "s43:t1",
+              "s43:t8",
+              "s7:t0",
+              "s16:t6",
+              "s43:t10",
+              "s38:t0",
+              "s38:t8",
+              "s20:t8",
+              "s16:t4",
+              "s23:t10",
+              "s38:t1",
+              "s22:t7",
+              "s43:t6",
+              "s4:t0",
+              "s7:t8",
+              "s23:t6",
+              "s7:t10",
+              "s14:t0",
+              "s39:t4",
+              "s16:t0",
+              "s4:t10",
+              "s20:t4"
+            ],
+            "pointer_source_ids": [
+              "s33:t9",
+              "s23:t2"
+            ],
+            "representations": {
+              "full": 36,
+              "key_value": 1,
+              "reference": 1
+            },
+            "evidence_recall": 1.0,
+            "all_evidence_retained": true
+          }
+        }
+      }
+    }
+  ],
+  "input_sha256": "92caefb8b917bea7b94dbafd6fe6bb151fc73fad555456a7dfc7b910ebe7d723"
+}

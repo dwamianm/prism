@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "llm-aggrefact-bespoke-infrastructure-failure",
+  "completed_at": "2026-09-16T19:13:51Z",
+  "registration_sha256": "6964be2c08b7b29fcfdf679879ac2257b223dee8fb497e17985918df531a8864",
+  "phase": "development",
+  "status": "failed",
+  "error": {
+    "type": "MPSExecutionStall",
+    "message": "The batch-size-one generation path stopped making case progress inside an MPS model forward. The same 716-token case stalled after a fresh-process resume, with 46.3 GiB physical footprint and 45.4 GiB of graphics allocations, including 17.1 GiB swapped."
+  },
+  "observations": {
+    "partial_checkpoint_available": true,
+    "partial_checkpoint_file_sha256": "295edb7c158231a75a0bd95437c854d8dec8d8555a645481671eb69b83c49743",
+    "partial_checkpoint_payload_sha256": "df740c2a63138f9551a7227628c336ab90d821ea3d0890ee23c2a3d44ea048ae",
+    "partial_development_cases": 250,
+    "partial_pairs_scored": 491,
+    "partial_runtime_seconds": 510.32795333396643,
+    "checkpoint_contains_source_text": false,
+    "selected_score_values_inspected": false,
+    "calibration_result_available": false,
+    "result_file_written": false,
+    "test_unlocked": false
+  },
+  "conclusion": "The v3b execution is incomplete and supports no quality claim. The model.generate path is rejected on this hardware. A follow-up must be registered before scoring selected data and must restart the cohort rather than mix scores from different forward implementations."
+}

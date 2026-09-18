@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "source_commit": "7a1e864",
+  "provider": "ollama",
+  "model": "ollama/qwen3.5:4b",
+  "model_calls": 1,
+  "index_attempts": 6,
+  "facts": 2,
+  "elapsed_seconds": 20.794601707995753,
+  "checks": [
+    "real local structured extraction",
+    "durable output before injected index failure",
+    "retry without repeated inference",
+    "restart reuses identical extraction",
+    "owner-scoped inspection"
+  ],
+  "limits": "One synthetic integration workflow; not extraction accuracy or complete graph replay."
+}

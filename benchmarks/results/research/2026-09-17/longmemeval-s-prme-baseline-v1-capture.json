@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "longmemeval-s-prme-baseline-capture-result",
+  "completed_at": "2026-09-18T04:57:52.298172+00:00",
+  "registration_sha256": "e84e514b14db44d6cccd705a3babbafff4d1c1aec36f0286c60039242620288a",
+  "questions": 500,
+  "failures": 0,
+  "receipts": 1000,
+  "cold_warm_context_mismatches": 0,
+  "capture_manifest_sha256": "87d909b7eb5307c7ba279bef4e3168ca704afdaa9960f8b319403ed44dd0f9e1",
+  "pack_manifest_sha256": "d7b5553f7b71e9a3e645e5d514090122d1454e669b00116eaf698fbc64d51c92",
+  "contexts": {
+    "mean_tokens": 3964.75,
+    "median_tokens": 3976.0,
+    "p95_tokens": 3996.0,
+    "max_tokens": 3996
+  },
+  "retrieval": {
+    "cold_p50_seconds": 0.37917714595096186,
+    "cold_p95_seconds": 0.6513765419367701,
+    "warm_p50_seconds": 0.3005745004629716,
+    "warm_p95_seconds": 0.5718194999499246
+  },
+  "ingestion": {
+    "sum_question_wall_seconds": 73944.44317983033,
+    "median_question_seconds": 146.5537704374874,
+    "p95_question_seconds": 169.72453429200687,
+    "input_turns": 246750,
+    "stored_turns": 246738,
+    "empty_turns_omitted": 12
+  },
+  "evidence": {
+    "questions": 470,
+    "any_session_recall": 0.9936170212765958,
+    "complete_session_recall": 0.9297872340425531,
+    "any_turn_recall": 0.9595744680851064,
+    "complete_turn_recall": 0.8574468085106383
+  },
+  "runtime": {
+    "python": "3.11.6",
+    "platform": "macOS-26.6.1-arm64-i386-64bit",
+    "capture_workers": 5,
+    "output_directory": "/Users/dwamianm/Sites/prism/data/benchmarks/longmemeval-s-prme-baseline-v1"
+  },
+  "reader_status": "pending_provider_credit",
+  "judge_status": "pending_reader",
+  "result_sha256": "da16f20ad2427299eb5765d9a13f39f8a54b1aacc4bb6734b1f6a09284a8637c"
+}

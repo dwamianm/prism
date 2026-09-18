@@ -1,0 +1,785 @@
+"""Registered paired answer trial for Jev-gated temporal relation hints."""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import platform
+import subprocess
+import tempfile
+from typing import Any
+from uuid import UUID
+
+from benchmarks.diagnostics import paired_context_eval as paired
+from benchmarks.diagnostics import reader_judge as judge_runtime
+from benchmarks.diagnostics.longmemeval_s_compact import (
+    _case_checksum,
+    _clone_pack,
+    _sha256,
+    _sha256_file,
+    _source_changes_since,
+    _write,
+)
+from benchmarks.integrations.run_longmemeval_s_baseline import (
+    DATASET_SHA256,
+    USER_ID,
+    _load_dataset,
+    _pack_config,
+    _parse_date,
+)
+from benchmarks.llm_judge import GENERATION_SYSTEM_PROMPT
+from prme import MemoryEngine
+from prme.retrieval.packing import pack_context
+
+
+ARMS = ("auditable", "temporal_relation")
+JEV_THRESHOLD = 0.85
+TEMPORAL_QUESTIONS = 29
+EXPECTED_HINTS = 9
+READER_OPTIONS = {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 65536,
+    "num_predict": 1024,
+}
+
+
+def _git_revision(root: Path) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _validate_calibration(
+    controls_path: Path, declaration_path: Path, calibration_path: Path
+) -> dict[str, Any]:
+    controls = json.loads(controls_path.read_text())
+    declaration = json.loads(declaration_path.read_text())
+    calibration = json.loads(calibration_path.read_text())
+    judge_runtime.validate_calibration(controls, calibration, declaration)
+    return declaration
+
+
+def _development_inputs(
+    probe_path: Path,
+    jev_path: Path,
+    dataset_path: Path,
+) -> tuple[list[str], dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    if _sha256_file(dataset_path) != DATASET_SHA256:
+        raise ValueError("LongMemEval-S dataset checksum differs")
+    probe = json.loads(probe_path.read_text())
+    jev = json.loads(jev_path.read_text())
+    if (
+        probe.get("kind") != "longmemeval-s-temporal-relation-development-probe"
+        or probe.get("questions") != TEMPORAL_QUESTIONS
+        or not probe.get("complete")
+        or probe.get("failed_attempts")
+        or jev.get("kind") != "longmemeval-s-temporal-relation-jev-development-result"
+        or not jev.get("complete")
+        or jev.get("failures")
+    ):
+        raise ValueError("temporal relation development evidence differs")
+    cases = {case["question_id"]: case for case in _load_dataset(dataset_path)}
+    question_ids = [row["question_id"] for row in probe["rows"]]
+    if (
+        len(question_ids) != TEMPORAL_QUESTIONS
+        or len(set(question_ids)) != len(question_ids)
+        or any(
+            cases[question_id]["question_type"] != "temporal-reasoning"
+            for question_id in question_ids
+        )
+    ):
+        raise ValueError("temporal development cohort differs")
+    probe_rows = {row["question_id"]: row for row in probe["rows"]}
+    scores = {row["question_id"]: row for row in jev["rows"]}
+    if set(scores) != {
+        question_id
+        for question_id, row in probe_rows.items()
+        if row["relation"] is not None
+    }:
+        raise ValueError("Jev relation coverage differs")
+    accepted = {
+        question_id
+        for question_id, row in scores.items()
+        if row["minimum_probability"] >= JEV_THRESHOLD
+    }
+    if len(accepted) != EXPECTED_HINTS:
+        raise ValueError("Jev threshold selection differs")
+    selection = {
+        question_id: {
+            "relation": probe_rows[question_id]["relation"],
+            "minimum_probability": (
+                scores[question_id]["minimum_probability"]
+                if question_id in scores
+                else None
+            ),
+            "accepted": question_id in accepted,
+        }
+        for question_id in question_ids
+    }
+    return question_ids, cases, selection
+
+
+async def _prepare_case(
+    case: dict[str, Any],
+    selection: dict[str, Any],
+    *,
+    baseline_root: Path,
+    source_cases_root: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    question_id = case["question_id"]
+    saved = json.loads((source_cases_root / f"{question_id}.json").read_text())
+    if (
+        saved.get("kind") != "longmemeval-s-monotonic-compact-case"
+        or saved.get("question_id") != question_id
+        or saved.get("case_sha256") != _case_checksum(saved)
+    ):
+        raise ValueError(f"saved source case differs for {question_id}")
+    with tempfile.TemporaryDirectory(prefix="prme-lme-temporal-relation-") as temporary:
+        pack = Path(temporary) / question_id
+        clone_method = await asyncio.to_thread(
+            _clone_pack, baseline_root / "packs" / question_id, pack
+        )
+        config = _pack_config(pack)
+        config = config.model_copy(
+            update={
+                "organizer": config.organizer.model_copy(
+                    update={"opportunistic_enabled": False}
+                )
+            }
+        )
+        engine = await MemoryEngine.create(config)
+        try:
+            response = await engine.retrieve(
+                case["question"],
+                user_id=USER_ID,
+                reference_time=_parse_date(case["question_date"]),
+            )
+            control = response.bundle.render()
+            if control != saved["arms"]["control"]["context"]:
+                raise ValueError(f"auditable control replay differs for {question_id}")
+            control_candidates = [
+                candidate
+                for values in response.bundle.sections.values()
+                for candidate in values
+            ]
+            control_ids = {candidate.node.id for candidate in control_candidates}
+            if len(control_ids) != response.bundle.included_count:
+                raise ValueError(f"control identities differ for {question_id}")
+
+            relation = selection["relation"]
+            if selection["accepted"]:
+                if relation is None:
+                    raise ValueError(f"accepted relation is missing for {question_id}")
+                relation_ids = tuple(
+                    UUID(operand["evidence_id"]) for operand in relation["operands"]
+                )
+                if not set(relation_ids) <= control_ids:
+                    raise ValueError(
+                        f"relation evidence is not packed for {question_id}"
+                    )
+                by_id = {
+                    candidate.node.id: candidate for candidate in control_candidates
+                }
+                required = tuple(
+                    (memory_id, by_id[memory_id].representation)
+                    for memory_id in relation_ids
+                )
+                if any(level is None for _memory_id, level in required):
+                    raise ValueError(
+                        f"relation evidence has no representation for {question_id}"
+                    )
+                combined_guidance = "\n".join(
+                    value
+                    for value in (
+                        response.bundle.context_guidance,
+                        relation["guidance"],
+                    )
+                    if value
+                )
+                candidate_bundle = pack_context(
+                    control_candidates,
+                    config.packing,
+                    coverage_notice=response.bundle.coverage_notice,
+                    context_guidance=combined_guidance,
+                    _required=required,  # type: ignore[arg-type]
+                    _require_guidance=True,
+                )
+                candidate = candidate_bundle.render()
+                candidate_ids = {
+                    item.node.id
+                    for values in candidate_bundle.sections.values()
+                    for item in values
+                }
+                if (
+                    candidate_bundle.context_guidance != combined_guidance
+                    or not set(relation_ids) <= candidate_ids
+                    or not candidate_ids <= control_ids
+                    or candidate_bundle.tokens_used > config.packing.token_budget
+                ):
+                    raise ValueError(
+                        f"bounded temporal relation packing failed for {question_id}"
+                    )
+            else:
+                relation_ids = ()
+                candidate_bundle = response.bundle
+                candidate = control
+                candidate_ids = control_ids
+        finally:
+            await engine.close()
+
+    neutral = {
+        "question_id": question_id,
+        "question": case["question"],
+        "question_date": case["question_date"],
+        "contexts": {
+            "auditable": {
+                "context": control,
+                "sha256": _sha256(control.encode()),
+                "tokens": response.bundle.tokens_used,
+            },
+            "temporal_relation": {
+                "context": candidate,
+                "sha256": _sha256(candidate.encode()),
+                "tokens": candidate_bundle.tokens_used,
+            },
+        },
+    }
+    reference = {
+        key: case[key]
+        for key in (
+            "question_id",
+            "question",
+            "question_date",
+            "question_type",
+            "answer",
+        )
+    }
+    audit = {
+        "question_id": question_id,
+        "clone_method": clone_method,
+        "hint_accepted": selection["accepted"],
+        "jev_minimum_probability": selection["minimum_probability"],
+        "relation_evidence_ids": [str(value) for value in relation_ids],
+        "control_records": len(control_ids),
+        "candidate_records": len(candidate_ids),
+        "dropped_records": len(control_ids - candidate_ids),
+        "control_tokens": response.bundle.tokens_used,
+        "candidate_tokens": candidate_bundle.tokens_used,
+    }
+    return neutral, reference, audit
+
+
+async def _prepare(
+    *,
+    question_ids: list[str],
+    cases: dict[str, dict[str, Any]],
+    selections: dict[str, dict[str, Any]],
+    baseline_root: Path,
+    source_cases_root: Path,
+    prepared_path: Path,
+    references_path: Path,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    values = []
+    for question_id in question_ids:
+        values.append(
+            await _prepare_case(
+                cases[question_id],
+                selections[question_id],
+                baseline_root=baseline_root,
+                source_cases_root=source_cases_root,
+            )
+        )
+        print(f"Prepared {len(values)}/{len(question_ids)}", flush=True)
+    prepared: dict[str, Any] = {
+        "schema_version": 1,
+        "kind": "longmemeval-s-temporal-relation-answer-inputs",
+        "dataset_sha256": DATASET_SHA256,
+        "question_ids": question_ids,
+        "generation_system_prompt": GENERATION_SYSTEM_PROMPT,
+        "arms": list(ARMS),
+        "jev_threshold": JEV_THRESHOLD,
+        "rows": [value[0] for value in values],
+        "audits": [value[2] for value in values],
+    }
+    references = [value[1] for value in values]
+    if any("answer" in row for row in prepared["rows"]):
+        raise ValueError("neutral reader inputs contain reference answers")
+    _write(prepared_path, prepared)
+    _write(references_path, references)
+    return prepared, references
+
+
+def _protocol() -> dict[str, Any]:
+    return {
+        "status": "observed development cohort; cannot promote without confirmation",
+        "arms": list(ARMS),
+        "control": "the exact saved auditable MemoryBundle context",
+        "candidate": (
+            "a Jev-gated provenance-linked temporal relation plus a subset of the "
+            "control records under the same token budget"
+        ),
+        "relation_policy": {
+            "model_selects": "exact record IDs, verbatim quotes, temporal expressions",
+            "code_validates": "citations, quotes, temporal licenses, complete operands",
+            "code_computes": "calendar differences, dates, ordering, or explicit sums",
+            "jev_model": "jev-1.13.0",
+            "jev_minimum_operand_probability": JEV_THRESHOLD,
+            "accepted_hints": EXPECTED_HINTS,
+        },
+        "packing": {
+            "same_token_budget": True,
+            "candidate_pool": "control records only",
+            "cited_records_required": True,
+            "only_uncited_records_may_be_evicted": True,
+        },
+        "reader_order": "counterbalanced by question-ID hash parity",
+        "one_generation_per_distinct_context": True,
+        "no_selective_retries": True,
+        "gate": {
+            "complete_reader_and_judge": True,
+            "failed_calls": 0,
+            "candidate_correct": "> control_correct",
+            "paired_wins": "> paired_losses",
+            "accepted_hint_losses": 0,
+            "accepted_hint_wins": ">= 2",
+        },
+    }
+
+
+def _source(
+    *,
+    revision: str,
+    probe_path: Path,
+    jev_path: Path,
+    prepared_path: Path,
+    references_path: Path,
+    controls_path: Path,
+    declaration_path: Path,
+    calibration_path: Path,
+) -> dict[str, Any]:
+    return {
+        "prme_revision": revision,
+        "runner_sha256": _sha256_file(Path(__file__)),
+        "paired_runtime_sha256": _sha256_file(Path(paired.__file__)),
+        "packing_sha256": _sha256_file(Path(pack_context.__code__.co_filename)),
+        "probe_sha256": _sha256_file(probe_path),
+        "jev_result_sha256": _sha256_file(jev_path),
+        "prepared_sha256": _sha256_file(prepared_path),
+        "references_sha256": _sha256_file(references_path),
+        "controls_sha256": _sha256_file(controls_path),
+        "judge_declaration_sha256": _sha256_file(declaration_path),
+        "judge_calibration_sha256": _sha256_file(calibration_path),
+    }
+
+
+async def create_registration(
+    *,
+    probe_path: Path,
+    jev_path: Path,
+    dataset_path: Path,
+    baseline_root: Path,
+    source_cases_root: Path,
+    prepared_path: Path,
+    references_path: Path,
+    controls_path: Path,
+    declaration_path: Path,
+    calibration_path: Path,
+    reader_model: str,
+    base_url: str,
+    project_root: Path,
+    output_path: Path,
+) -> dict[str, Any]:
+    for path in (prepared_path, references_path, output_path):
+        if path.exists():
+            raise ValueError(f"fresh output required: {path}")
+    question_ids, cases, selections = _development_inputs(
+        probe_path, jev_path, dataset_path
+    )
+    declaration = _validate_calibration(
+        controls_path, declaration_path, calibration_path
+    )
+    prepared, references = await _prepare(
+        question_ids=question_ids,
+        cases=cases,
+        selections=selections,
+        baseline_root=baseline_root,
+        source_cases_root=source_cases_root,
+        prepared_path=prepared_path,
+        references_path=references_path,
+    )
+    revision = _git_revision(project_root)
+    value = {
+        "schema_version": 1,
+        "kind": "longmemeval-s-temporal-relation-answer-registration",
+        "registered_at": datetime.now(timezone.utc).isoformat(),
+        "status": "registered_before reader or judge calls",
+        "claim_boundary": (
+            "Paired temporal-relation answer evidence on an observed development "
+            "cohort; not an official LongMemEval score or product-promotion result."
+        ),
+        "source": _source(
+            revision=revision,
+            probe_path=probe_path,
+            jev_path=jev_path,
+            prepared_path=prepared_path,
+            references_path=references_path,
+            controls_path=controls_path,
+            declaration_path=declaration_path,
+            calibration_path=calibration_path,
+        ),
+        "dataset": {
+            "name": "LongMemEval-S cleaned",
+            "sha256": DATASET_SHA256,
+            "questions": len(question_ids),
+            "question_ids": question_ids,
+            "question_ids_sha256": _sha256(paired.canonical(question_ids)),
+        },
+        "models": {
+            "reader": paired.model_identity(
+                reader_model,
+                base_url,
+                dict(READER_OPTIONS),
+                GENERATION_SYSTEM_PROMPT,
+            ),
+            "judge": declaration,
+        },
+        "protocol": _protocol(),
+        "limitations": [
+            "The development questions, answers, resolver outputs, and gate calibration were observed before registration.",
+            "Ollama cloud manifests do not prove immutable remote weights.",
+            "One generation per distinct context does not estimate reader variance.",
+            "The custom judge is not the official LongMemEval judge.",
+            "Jev's 0.85 threshold is calibrated on only 14 development relations.",
+        ],
+    }
+    if (
+        len(prepared["rows"]) != len(references)
+        or len(references) != TEMPORAL_QUESTIONS
+        or sum(audit["hint_accepted"] for audit in prepared["audits"]) != EXPECTED_HINTS
+    ):
+        raise ValueError("prepared/reference coverage differs")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(value, indent=2) + "\n")
+    return value
+
+
+def _validate_registration(
+    registration: dict[str, Any],
+    *,
+    probe_path: Path,
+    jev_path: Path,
+    prepared_path: Path,
+    references_path: Path,
+    controls_path: Path,
+    declaration_path: Path,
+    calibration_path: Path,
+    base_url: str,
+    project_root: Path,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    revision = registration.get("source", {}).get("prme_revision")
+    expected_source = _source(
+        revision=revision,
+        probe_path=probe_path,
+        jev_path=jev_path,
+        prepared_path=prepared_path,
+        references_path=references_path,
+        controls_path=controls_path,
+        declaration_path=declaration_path,
+        calibration_path=calibration_path,
+    )
+    declaration = _validate_calibration(
+        controls_path, declaration_path, calibration_path
+    )
+    reader = registration.get("models", {}).get("reader", {})
+    runtime_reader = paired.model_identity(
+        str(reader.get("model", "")),
+        base_url,
+        dict(READER_OPTIONS),
+        GENERATION_SYSTEM_PROMPT,
+    )
+    if (
+        registration.get("schema_version") != 1
+        or registration.get("kind")
+        != "longmemeval-s-temporal-relation-answer-registration"
+        or not isinstance(revision, str)
+        or registration.get("source") != expected_source
+        or registration.get("dataset", {}).get("questions") != TEMPORAL_QUESTIONS
+        or registration.get("dataset", {}).get("question_ids_sha256")
+        != _sha256(paired.canonical(registration["dataset"]["question_ids"]))
+        or registration.get("models", {}).get("reader") != runtime_reader
+        or registration.get("models", {}).get("judge") != declaration
+        or registration.get("protocol") != _protocol()
+        or any(
+            not path.startswith("benchmarks/results/research/")
+            for path in _source_changes_since(revision, project_root)
+        )
+    ):
+        raise ValueError("registered temporal-relation inputs differ")
+    prepared = json.loads(prepared_path.read_text())
+    references = json.loads(references_path.read_text())
+    ids = registration["dataset"]["question_ids"]
+    if (
+        prepared.get("kind") != "longmemeval-s-temporal-relation-answer-inputs"
+        or prepared.get("question_ids") != ids
+        or prepared.get("arms") != list(ARMS)
+        or prepared.get("jev_threshold") != JEV_THRESHOLD
+        or [row.get("question_id") for row in prepared.get("rows", [])] != ids
+        or [row.get("question_id") for row in references] != ids
+        or any(row.get("question_type") != "temporal-reasoning" for row in references)
+        or any("answer" in row for row in prepared["rows"])
+        or sum(audit.get("hint_accepted") is True for audit in prepared["audits"])
+        != EXPECTED_HINTS
+    ):
+        raise ValueError("prepared temporal-relation inputs differ")
+    return prepared, references
+
+
+def _hint_metrics(
+    prepared: dict[str, Any],
+    cases: list[dict[str, Any]],
+    judgments: dict[str, Any],
+) -> dict[str, Any]:
+    accepted = {
+        audit["question_id"] for audit in prepared["audits"] if audit["hint_accepted"]
+    }
+    verdicts = {row["id"]: row["correct"] for row in judgments["judgments"]}
+    rows = [row for row in cases if row["question_id"] in accepted]
+    ids = sorted(accepted)
+    wins = sum(
+        verdicts[f"{question_id}:temporal_relation"]
+        and not verdicts[f"{question_id}:auditable"]
+        for question_id in ids
+    )
+    losses = sum(
+        verdicts[f"{question_id}:auditable"]
+        and not verdicts[f"{question_id}:temporal_relation"]
+        for question_id in ids
+    )
+    return {
+        "questions": len(ids),
+        "logical_judgments": len(rows),
+        "control_correct": sum(
+            verdicts[f"{question_id}:auditable"] for question_id in ids
+        ),
+        "candidate_correct": sum(
+            verdicts[f"{question_id}:temporal_relation"] for question_id in ids
+        ),
+        "paired_wins": wins,
+        "paired_losses": losses,
+        "paired_ties": len(ids) - wins - losses,
+    }
+
+
+def evaluate(
+    *,
+    registration_path: Path,
+    probe_path: Path,
+    jev_path: Path,
+    prepared_path: Path,
+    references_path: Path,
+    controls_path: Path,
+    declaration_path: Path,
+    calibration_path: Path,
+    base_url: str,
+    project_root: Path,
+    output_dir: Path,
+    summary_path: Path,
+) -> dict[str, Any]:
+    if summary_path.exists():
+        raise ValueError("summary output already exists")
+    registration = json.loads(registration_path.read_text())
+    prepared, references = _validate_registration(
+        registration,
+        probe_path=probe_path,
+        jev_path=jev_path,
+        prepared_path=prepared_path,
+        references_path=references_path,
+        controls_path=controls_path,
+        declaration_path=declaration_path,
+        calibration_path=calibration_path,
+        base_url=base_url,
+        project_root=project_root,
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    registration_sha256 = _sha256_file(registration_path)
+    reader = registration["models"]["reader"]
+    predictions = paired.run_reader(
+        prepared,
+        ARMS,
+        output_dir / "reader-state.json",
+        registration_sha256=registration_sha256,
+        prepared_sha256=_sha256_file(prepared_path),
+        model=reader["model"],
+        model_digest=reader["model_digest"],
+        options=dict(READER_OPTIONS),
+        system_prompt=GENERATION_SYSTEM_PROMPT,
+        base_url=base_url,
+    )
+    _write(output_dir / "reader.json", predictions)
+    if predictions["failed_attempts"]:
+        raise ValueError("reader execution contains failed attempts")
+    cases = paired.judge_cases(predictions, references, ARMS)
+    judgments = judge_runtime.run_cases(
+        cases,
+        registration["models"]["judge"],
+        output_dir / "judge-state.json",
+        base_url,
+    )
+    _write(output_dir / "judge.json", judgments)
+    metrics = paired.paired_metrics(
+        cases,
+        judgments,
+        control_arm=ARMS[0],
+        candidate_arm=ARMS[1],
+    )
+    metrics["accepted_hints"] = _hint_metrics(prepared, cases, judgments)
+    gate = {
+        "complete_reader_execution": predictions["complete"] is True,
+        "complete_judge_execution": judgments["complete"] is True,
+        "reader_failed_attempts": len(predictions["failed_attempts"]),
+        "judge_failed_attempts": len(judgments["prior_failed_attempts"]),
+        "candidate_improved": (
+            metrics["overall"]["candidate_correct"]
+            > metrics["overall"]["control_correct"]
+        ),
+        "wins_exceed_losses": (
+            metrics["overall"]["paired_wins"] > metrics["overall"]["paired_losses"]
+        ),
+        "accepted_hint_losses": metrics["accepted_hints"]["paired_losses"],
+        "accepted_hint_wins": metrics["accepted_hints"]["paired_wins"],
+    }
+    gate["passed"] = (
+        gate["complete_reader_execution"]
+        and gate["complete_judge_execution"]
+        and gate["reader_failed_attempts"] == 0
+        and gate["judge_failed_attempts"] == 0
+        and gate["candidate_improved"]
+        and gate["wins_exceed_losses"]
+        and gate["accepted_hint_losses"] == 0
+        and gate["accepted_hint_wins"] >= 2
+    )
+    metrics["gate"] = gate
+    execution_result = {
+        "registration_sha256": registration_sha256,
+        "reader": predictions,
+        "judge": judgments,
+        "metrics": metrics,
+    }
+    _write(output_dir / "execution.json", execution_result)
+    result = {
+        "schema_version": 1,
+        "kind": "longmemeval-s-temporal-relation-answer-result",
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "registration_sha256": registration_sha256,
+        "questions": len(prepared["rows"]),
+        "metrics": metrics,
+        "packing": {
+            "hint_questions": EXPECTED_HINTS,
+            "total_dropped_records": sum(
+                audit["dropped_records"] for audit in prepared["audits"]
+            ),
+            "maximum_dropped_records": max(
+                audit["dropped_records"] for audit in prepared["audits"]
+            ),
+            "control_tokens": sum(
+                row["contexts"]["auditable"]["tokens"] for row in prepared["rows"]
+            ),
+            "candidate_tokens": sum(
+                row["contexts"]["temporal_relation"]["tokens"]
+                for row in prepared["rows"]
+            ),
+        },
+        "execution_sha256": _sha256_file(output_dir / "execution.json"),
+        "runtime": {
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        },
+        "claim_boundary": registration["claim_boundary"],
+    }
+    result["result_sha256"] = _sha256(paired.canonical(result))
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(result, indent=2) + "\n")
+    return result
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    register = commands.add_parser("register")
+    run = commands.add_parser("evaluate")
+    for command in (register, run):
+        command.add_argument("--probe", type=Path, required=True)
+        command.add_argument("--jev-result", type=Path, required=True)
+        command.add_argument("--prepared", type=Path, required=True)
+        command.add_argument("--references", type=Path, required=True)
+        command.add_argument("--controls", type=Path, required=True)
+        command.add_argument("--judge-declaration", type=Path, required=True)
+        command.add_argument("--judge-calibration", type=Path, required=True)
+        command.add_argument("--base-url", default="http://127.0.0.1:11434")
+        command.add_argument("--project-root", type=Path, default=Path.cwd())
+    register.add_argument("--dataset", type=Path, required=True)
+    register.add_argument("--baseline-root", type=Path, required=True)
+    register.add_argument("--source-cases-root", type=Path, required=True)
+    register.add_argument("--reader-model", required=True)
+    register.add_argument("--output", type=Path, required=True)
+    run.add_argument("--registration", type=Path, required=True)
+    run.add_argument("--output-dir", type=Path, required=True)
+    run.add_argument("--summary", type=Path, required=True)
+    return parser
+
+
+def main() -> None:
+    args = _parser().parse_args()
+    shared = {
+        "probe_path": args.probe.resolve(),
+        "jev_path": args.jev_result.resolve(),
+        "prepared_path": args.prepared.resolve(),
+        "references_path": args.references.resolve(),
+        "controls_path": args.controls.resolve(),
+        "declaration_path": args.judge_declaration.resolve(),
+        "calibration_path": args.judge_calibration.resolve(),
+        "base_url": args.base_url,
+        "project_root": args.project_root.resolve(),
+    }
+    if args.command == "register":
+        value = asyncio.run(
+            create_registration(
+                dataset_path=args.dataset.resolve(),
+                baseline_root=args.baseline_root.resolve(),
+                source_cases_root=args.source_cases_root.resolve(),
+                reader_model=args.reader_model,
+                output_path=args.output.resolve(),
+                **shared,
+            )
+        )
+        print(
+            json.dumps(
+                {"dataset": value["dataset"], "protocol": value["protocol"]},
+                indent=2,
+            )
+        )
+        return
+    value = evaluate(
+        registration_path=args.registration.resolve(),
+        output_dir=args.output_dir.resolve(),
+        summary_path=args.summary.resolve(),
+        **shared,
+    )
+    print(
+        json.dumps(
+            {"metrics": value["metrics"], "result_sha256": value["result_sha256"]},
+            indent=2,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()

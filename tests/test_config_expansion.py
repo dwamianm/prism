@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from prme.config import PRMEConfig
 from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX, ConfidenceMatrix
 from prme.retrieval.config import ScoringWeights, PackingConfig
+from prme.types import EpistemicType, SourceType
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +105,11 @@ class TestConfidenceMatrixWithOverrides:
         """with_overrides({}) returns the same matrix instance."""
         m = DEFAULT_CONFIDENCE_MATRIX.with_overrides({})
         assert m is DEFAULT_CONFIDENCE_MATRIX
+
+    def test_conditional_user_claim_has_an_explicit_default(self):
+        assert DEFAULT_CONFIDENCE_MATRIX.lookup(
+            EpistemicType.CONDITIONAL, SourceType.USER_STATED
+        ) == pytest.approx(0.45)
 
     def test_override_existing_cell(self):
         """with_overrides can change an existing matrix cell."""

@@ -56,6 +56,7 @@ def infer_source_type(
     Heuristics based on role and node_type:
     - role == "user" or "human" -> USER_STATED
     - role == "assistant" or "system" -> SYSTEM_INFERRED
+    - role == "tool" -> TOOL_OUTPUT
     - EVENT nodes without role -> USER_STATED (events are user input)
     - All others without role -> USER_STATED (conservative default)
 
@@ -75,5 +76,7 @@ def infer_source_type(
             return SourceType.USER_STATED
         if role_lower in ("assistant", "system"):
             return SourceType.SYSTEM_INFERRED
+        if role_lower == "tool":
+            return SourceType.TOOL_OUTPUT
     # Conservative default: USER_STATED
     return SourceType.USER_STATED

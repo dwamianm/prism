@@ -1,0 +1,2330 @@
+{
+  "passed": false,
+  "cases": [
+    {
+      "case": "usage",
+      "source": "Maya uses Redis.",
+      "expectation": {
+        "expected_kinds": {
+          "Redis": "fact"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "1acd9357-45a1-4e3f-883c-2aa52959c41c",
+            "user_id": "usage:original",
+            "node_type": "fact",
+            "content": "Maya uses Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "Maya uses Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null,
+              "suggested_scope": "personal"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "2013f1ca-4ba0-47a4-8fc5-bc436b6efb99",
+            "user_id": "usage:original",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "652f167c-b455-4642-ae4e-4893d4241759",
+            "user_id": "usage:original",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "2013f1ca-4ba0-47a4-8fc5-bc436b6efb99",
+            "target_id": "1acd9357-45a1-4e3f-883c-2aa52959c41c",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "1acd9357-45a1-4e3f-883c-2aa52959c41c",
+            "target_id": "652f167c-b455-4642-ae4e-4893d4241759",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 7.411,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Maya",
+          "predicate": "uses",
+          "object": "Redis"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "fact",
+            "epistemic_type": "asserted",
+            "evidence_quote": "Maya uses Redis."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "2dcb64d6-4542-4c49-87e3-907f062ebee0",
+            "user_id": "usage:reviewed",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "4af809a9-49a6-4eb3-897e-43a79f68c241",
+            "user_id": "usage:reviewed",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "d27a1012-6210-463c-82c8-eeb2d722d61d",
+            "user_id": "usage:reviewed",
+            "node_type": "fact",
+            "content": "Maya uses Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "Maya uses Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "2dcb64d6-4542-4c49-87e3-907f062ebee0",
+            "target_id": "d27a1012-6210-463c-82c8-eeb2d722d61d",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "d27a1012-6210-463c-82c8-eeb2d722d61d",
+            "target_id": "4af809a9-49a6-4eb3-897e-43a79f68c241",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "possible_usage",
+      "source": "Maya might use Redis after evaluation.",
+      "expectation": {
+        "expected_kinds": {
+          "Redis": "fact"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "hypothetical",
+          "conditional"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": false,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": false,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "hypothetical"
+        ],
+        "nodes": [
+          {
+            "id": "08f9ac70-dfab-4122-b6c2-29aae0850b26",
+            "user_id": "possible_usage:original",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "20cfe148-3e20-4207-a552-2e4a6cd61bdf",
+            "user_id": "possible_usage:original",
+            "node_type": "entity",
+            "content": "evaluation",
+            "metadata": {
+              "entity_type": "event"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "83ed0f8d-e112-4cb7-80fb-45e5de28ddd9",
+            "user_id": "possible_usage:original",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "85a57c80-d88c-4d61-b8ac-5c26715a6b4b",
+            "user_id": "possible_usage:original",
+            "node_type": "preference",
+            "content": "Maya might use Redis after evaluation.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "Maya might use Redis after evaluation.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null,
+              "suggested_scope": "personal",
+              "temporal_ref": "after evaluation"
+            },
+            "epistemic_type": "hypothetical"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "08f9ac70-dfab-4122-b6c2-29aae0850b26",
+            "target_id": "85a57c80-d88c-4d61-b8ac-5c26715a6b4b",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "85a57c80-d88c-4d61-b8ac-5c26715a6b4b",
+            "target_id": "83ed0f8d-e112-4cb7-80fb-45e5de28ddd9",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 7.938,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Maya",
+          "predicate": "uses",
+          "object": "Redis"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "fact",
+            "epistemic_type": "hypothetical",
+            "evidence_quote": "Maya might use Redis after evaluation."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact"
+        ],
+        "claim_epistemic_types": [
+          "hypothetical"
+        ],
+        "nodes": [
+          {
+            "id": "1a3f5bc1-157a-4eb7-9864-25ef54392e2d",
+            "user_id": "possible_usage:reviewed",
+            "node_type": "fact",
+            "content": "Maya might use Redis after evaluation.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "Maya might use Redis after evaluation.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null,
+              "temporal_ref": "after evaluation"
+            },
+            "epistemic_type": "hypothetical"
+          },
+          {
+            "id": "2fa481b8-917a-4610-94c9-7823a4b21ac3",
+            "user_id": "possible_usage:reviewed",
+            "node_type": "entity",
+            "content": "evaluation",
+            "metadata": {
+              "entity_type": "event"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "92baf4cb-b140-48ec-af91-ac036e86ab16",
+            "user_id": "possible_usage:reviewed",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "e2cfc647-9de3-4d90-9335-b714f34b99f2",
+            "user_id": "possible_usage:reviewed",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "92baf4cb-b140-48ec-af91-ac036e86ab16",
+            "target_id": "1a3f5bc1-157a-4eb7-9864-25ef54392e2d",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "1a3f5bc1-157a-4eb7-9864-25ef54392e2d",
+            "target_id": "e2cfc647-9de3-4d90-9335-b714f34b99f2",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "conditional_usage",
+      "source": "If latency improves, Noah will use SQLite.",
+      "expectation": {
+        "expected_kinds": {
+          "SQLite": "fact"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "hypothetical",
+          "conditional"
+        ]
+      },
+      "passed": false,
+      "original": {
+        "passed": false,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": false,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "hypothetical"
+        ],
+        "nodes": [
+          {
+            "id": "2baa3b2b-b8da-4293-be5c-6c2a1aecc37f",
+            "user_id": "conditional_usage:original",
+            "node_type": "preference",
+            "content": "If latency improves, Noah will use SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Noah",
+              "predicate": "uses",
+              "object": "SQLite",
+              "evidence_quote": "If latency improves, Noah will use SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null,
+              "suggested_scope": "agent"
+            },
+            "epistemic_type": "hypothetical"
+          },
+          {
+            "id": "73520650-87ff-4f7b-b0a8-45fa6d180918",
+            "user_id": "conditional_usage:original",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product",
+              "description": "Software/database product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "8d6f24cb-96cf-431d-a0ad-b557f3b4149c",
+            "user_id": "conditional_usage:original",
+            "node_type": "entity",
+            "content": "Noah",
+            "metadata": {
+              "entity_type": "person",
+              "description": "Person mentioned in the context"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "8d6f24cb-96cf-431d-a0ad-b557f3b4149c",
+            "target_id": "2baa3b2b-b8da-4293-be5c-6c2a1aecc37f",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "2baa3b2b-b8da-4293-be5c-6c2a1aecc37f",
+            "target_id": "73520650-87ff-4f7b-b0a8-45fa6d180918",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 8.068,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Noah",
+          "predicate": "uses",
+          "object": "SQLite"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "preference",
+            "epistemic_type": "conditional",
+            "evidence_quote": "If latency improves, Noah will use SQLite."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": false,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": false,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "conditional"
+        ],
+        "nodes": [
+          {
+            "id": "66e4540e-8f8c-4bd7-924b-0305e57a8e8e",
+            "user_id": "conditional_usage:reviewed",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product",
+              "description": "Software/database product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "ccacdbbe-4a6c-4daa-b431-ab36c8336851",
+            "user_id": "conditional_usage:reviewed",
+            "node_type": "entity",
+            "content": "Noah",
+            "metadata": {
+              "entity_type": "person",
+              "description": "Person mentioned in the context"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "d800a067-fbe5-4b9e-a996-cb2884974f3a",
+            "user_id": "conditional_usage:reviewed",
+            "node_type": "preference",
+            "content": "If latency improves, Noah will use SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Noah",
+              "predicate": "uses",
+              "object": "SQLite",
+              "evidence_quote": "If latency improves, Noah will use SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "conditional"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "ccacdbbe-4a6c-4daa-b431-ab36c8336851",
+            "target_id": "d800a067-fbe5-4b9e-a996-cb2884974f3a",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "d800a067-fbe5-4b9e-a996-cb2884974f3a",
+            "target_id": "66e4540e-8f8c-4bd7-924b-0305e57a8e8e",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "explicit_preference",
+      "source": "Elena prefers PostgreSQL.",
+      "expectation": {
+        "expected_kinds": {
+          "PostgreSQL": "preference"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "observed"
+        ],
+        "nodes": [
+          {
+            "id": "b6925a2a-5aa8-4e78-8257-026111346365",
+            "user_id": "explicit_preference:original",
+            "node_type": "entity",
+            "content": "PostgreSQL",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "cb3a627c-caa0-48d9-88af-75d8f27ff69d",
+            "user_id": "explicit_preference:original",
+            "node_type": "entity",
+            "content": "Elena",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "e227d29b-0eb1-470e-ad2d-e3d06122d9b9",
+            "user_id": "explicit_preference:original",
+            "node_type": "preference",
+            "content": "Elena prefers PostgreSQL.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Elena",
+              "predicate": "prefers",
+              "object": "PostgreSQL",
+              "evidence_quote": "Elena prefers PostgreSQL.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            },
+            "epistemic_type": "observed"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "cb3a627c-caa0-48d9-88af-75d8f27ff69d",
+            "target_id": "e227d29b-0eb1-470e-ad2d-e3d06122d9b9",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "e227d29b-0eb1-470e-ad2d-e3d06122d9b9",
+            "target_id": "b6925a2a-5aa8-4e78-8257-026111346365",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 5.028,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Elena",
+          "predicate": "prefers",
+          "object": "PostgreSQL"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "preference",
+            "epistemic_type": "asserted",
+            "evidence_quote": "Elena prefers PostgreSQL."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "84e8a0de-739d-4e62-9c1a-3569d12c3100",
+            "user_id": "explicit_preference:reviewed",
+            "node_type": "entity",
+            "content": "PostgreSQL",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "967e94bb-3fe6-43a3-9b7e-a461b0f5504c",
+            "user_id": "explicit_preference:reviewed",
+            "node_type": "entity",
+            "content": "Elena",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "b9656fd3-33fb-4729-81c1-b2ee5149268b",
+            "user_id": "explicit_preference:reviewed",
+            "node_type": "preference",
+            "content": "Elena prefers PostgreSQL.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Elena",
+              "predicate": "prefers",
+              "object": "PostgreSQL",
+              "evidence_quote": "Elena prefers PostgreSQL.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "967e94bb-3fe6-43a3-9b7e-a461b0f5504c",
+            "target_id": "b9656fd3-33fb-4729-81c1-b2ee5149268b",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "b9656fd3-33fb-4729-81c1-b2ee5149268b",
+            "target_id": "84e8a0de-739d-4e62-9c1a-3569d12c3100",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "dislike",
+      "source": "Noah does not like Redis.",
+      "expectation": {
+        "expected_kinds": {
+          "Redis": "preference"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "observed"
+        ],
+        "nodes": [
+          {
+            "id": "00b0dbac-7406-4beb-8863-38859eda28ae",
+            "user_id": "dislike:original",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "56ed067f-4f96-4018-9bdc-d1ddddef76c1",
+            "user_id": "dislike:original",
+            "node_type": "entity",
+            "content": "Noah",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "a623286c-ada5-4900-ab9f-20271f849e6f",
+            "user_id": "dislike:original",
+            "node_type": "preference",
+            "content": "Noah does not like Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Noah",
+              "predicate": "likes",
+              "object": "Redis",
+              "evidence_quote": "Noah does not like Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null,
+              "suggested_scope": "personal"
+            },
+            "epistemic_type": "observed"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "56ed067f-4f96-4018-9bdc-d1ddddef76c1",
+            "target_id": "a623286c-ada5-4900-ab9f-20271f849e6f",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "a623286c-ada5-4900-ab9f-20271f849e6f",
+            "target_id": "00b0dbac-7406-4beb-8863-38859eda28ae",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 6.587,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Noah",
+          "predicate": "likes",
+          "object": "Redis"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "preference",
+            "epistemic_type": "asserted",
+            "evidence_quote": "Noah does not like Redis."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "07c71c72-074c-45cc-b56e-716c9604249f",
+            "user_id": "dislike:reviewed",
+            "node_type": "entity",
+            "content": "Noah",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "7f35c069-3f0e-42a3-aa27-7a681cfe59f2",
+            "user_id": "dislike:reviewed",
+            "node_type": "preference",
+            "content": "Noah does not like Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Noah",
+              "predicate": "likes",
+              "object": "Redis",
+              "evidence_quote": "Noah does not like Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "ee4b0443-b882-4e6d-b7da-37186c8d6344",
+            "user_id": "dislike:reviewed",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "07c71c72-074c-45cc-b56e-716c9604249f",
+            "target_id": "7f35c069-3f0e-42a3-aa27-7a681cfe59f2",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "7f35c069-3f0e-42a3-aa27-7a681cfe59f2",
+            "target_id": "ee4b0443-b882-4e6d-b7da-37186c8d6344",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "choice",
+      "source": "Maya chose SQLite.",
+      "expectation": {
+        "expected_kinds": {
+          "SQLite": "decision"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "decision"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "5ae295e6-0cf6-47bf-a8a9-c8e0c49b9144",
+            "user_id": "choice:original",
+            "node_type": "decision",
+            "content": "Maya chose SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "chose",
+              "object": "SQLite",
+              "evidence_quote": "Maya chose SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null,
+              "suggested_scope": "personal"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "a1000448-1dd4-4b31-b2f0-b72c9c508bc2",
+            "user_id": "choice:original",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "f32aacbb-1981-4165-8b86-86346cb544a3",
+            "user_id": "choice:original",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "a1000448-1dd4-4b31-b2f0-b72c9c508bc2",
+            "target_id": "5ae295e6-0cf6-47bf-a8a9-c8e0c49b9144",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "5ae295e6-0cf6-47bf-a8a9-c8e0c49b9144",
+            "target_id": "f32aacbb-1981-4165-8b86-86346cb544a3",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 5.007,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Maya",
+          "predicate": "chose",
+          "object": "SQLite"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "decision",
+            "epistemic_type": "asserted",
+            "evidence_quote": "Maya chose SQLite"
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "decision"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "49bdf23e-9def-41c8-aa7d-053d4f603350",
+            "user_id": "choice:reviewed",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "647385e1-7fb5-42c8-986c-68c3977b6edb",
+            "user_id": "choice:reviewed",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "d2da46ee-a50f-4624-ab0a-663528c255ff",
+            "user_id": "choice:reviewed",
+            "node_type": "decision",
+            "content": "Maya chose SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "chose",
+              "object": "SQLite",
+              "evidence_quote": "Maya chose SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "647385e1-7fb5-42c8-986c-68c3977b6edb",
+            "target_id": "d2da46ee-a50f-4624-ab0a-663528c255ff",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "d2da46ee-a50f-4624-ab0a-663528c255ff",
+            "target_id": "49bdf23e-9def-41c8-aa7d-053d4f603350",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "rejected_choice",
+      "source": "Elena decided against Redis.",
+      "expectation": {
+        "expected_kinds": {
+          "Redis": "decision"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "decision"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "1aabc7af-d537-46cb-b51e-745ac54b2b79",
+            "user_id": "rejected_choice:original",
+            "node_type": "decision",
+            "content": "Elena decided against Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Elena",
+              "predicate": "decided_against",
+              "object": "Redis",
+              "evidence_quote": "Elena decided against Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "b46ba94b-fba7-477c-b4b4-27bbeff7298b",
+            "user_id": "rejected_choice:original",
+            "node_type": "entity",
+            "content": "Elena",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "c607efef-e694-4269-8f6f-7ba4386f338f",
+            "user_id": "rejected_choice:original",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "b46ba94b-fba7-477c-b4b4-27bbeff7298b",
+            "target_id": "1aabc7af-d537-46cb-b51e-745ac54b2b79",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "1aabc7af-d537-46cb-b51e-745ac54b2b79",
+            "target_id": "c607efef-e694-4269-8f6f-7ba4386f338f",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 6.004,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Elena",
+          "predicate": "decided_against",
+          "object": "Redis"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "decision",
+            "epistemic_type": "asserted",
+            "evidence_quote": "Elena decided against Redis."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "decision"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "4b3f39dc-1882-4e87-82b0-36d3b89b0e8c",
+            "user_id": "rejected_choice:reviewed",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "63566a8c-0886-4f1c-b4a7-842e16ce0f1f",
+            "user_id": "rejected_choice:reviewed",
+            "node_type": "decision",
+            "content": "Elena decided against Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Elena",
+              "predicate": "decided_against",
+              "object": "Redis",
+              "evidence_quote": "Elena decided against Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "eb75903e-8b4b-4058-9a96-32b6f578022a",
+            "user_id": "rejected_choice:reviewed",
+            "node_type": "entity",
+            "content": "Elena",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "eb75903e-8b4b-4058-9a96-32b6f578022a",
+            "target_id": "63566a8c-0886-4f1c-b4a7-842e16ce0f1f",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "63566a8c-0886-4f1c-b4a7-842e16ce0f1f",
+            "target_id": "4b3f39dc-1882-4e87-82b0-36d3b89b0e8c",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "mixed",
+      "source": "Maya uses Redis but prefers SQLite.",
+      "expectation": {
+        "expected_kinds": {
+          "Redis": "fact",
+          "SQLite": "preference"
+        },
+        "expected_claim_count": 2,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact",
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "observed",
+          "observed"
+        ],
+        "nodes": [
+          {
+            "id": "5028ffb0-8cf2-4774-a462-8261177a6ffb",
+            "user_id": "mixed:original",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "9e8bd681-d903-4263-967c-9663b653149d",
+            "user_id": "mixed:original",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "a71dcbeb-37d4-4472-8cd6-498a23584df4",
+            "user_id": "mixed:original",
+            "node_type": "fact",
+            "content": "Maya uses Redis but prefers SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "Maya uses Redis but prefers SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null,
+              "suggested_scope": "personal"
+            },
+            "epistemic_type": "observed"
+          },
+          {
+            "id": "b8da0004-3b08-4328-84fb-806f6a16794f",
+            "user_id": "mixed:original",
+            "node_type": "preference",
+            "content": "Maya uses Redis but prefers SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "prefers",
+              "object": "SQLite",
+              "evidence_quote": "Maya uses Redis but prefers SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null,
+              "suggested_scope": "personal"
+            },
+            "epistemic_type": "observed"
+          },
+          {
+            "id": "c146ea00-c844-464d-b51f-25218c100336",
+            "user_id": "mixed:original",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "9e8bd681-d903-4263-967c-9663b653149d",
+            "target_id": "a71dcbeb-37d4-4472-8cd6-498a23584df4",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "a71dcbeb-37d4-4472-8cd6-498a23584df4",
+            "target_id": "c146ea00-c844-464d-b51f-25218c100336",
+            "edge_type": "mentions"
+          },
+          {
+            "source_id": "9e8bd681-d903-4263-967c-9663b653149d",
+            "target_id": "b8da0004-3b08-4328-84fb-806f6a16794f",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "b8da0004-3b08-4328-84fb-806f6a16794f",
+            "target_id": "5028ffb0-8cf2-4774-a462-8261177a6ffb",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 9.157,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Maya",
+          "predicate": "uses",
+          "object": "Redis"
+        },
+        {
+          "claim_id": 1,
+          "subject": "Maya",
+          "predicate": "prefers",
+          "object": "SQLite"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "fact",
+            "epistemic_type": "asserted",
+            "evidence_quote": "Maya uses Redis"
+          },
+          {
+            "claim_id": 1,
+            "fact_type": "preference",
+            "epistemic_type": "asserted",
+            "evidence_quote": "prefers SQLite"
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact",
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "asserted",
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "0e00d51f-b30c-40e2-ad5c-2ce4c1560d7a",
+            "user_id": "mixed:reviewed",
+            "node_type": "fact",
+            "content": "Maya uses Redis but prefers SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "Maya uses Redis but prefers SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "297558b8-f2e1-4084-a6de-d91de5c88184",
+            "user_id": "mixed:reviewed",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "83d5274d-0110-41cf-b015-fd02017017ff",
+            "user_id": "mixed:reviewed",
+            "node_type": "entity",
+            "content": "Maya",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "c4bc6905-b5e2-4d3f-bea4-f28877cb251b",
+            "user_id": "mixed:reviewed",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "df181c9b-2730-4719-953e-7e7569d65e34",
+            "user_id": "mixed:reviewed",
+            "node_type": "preference",
+            "content": "Maya uses Redis but prefers SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Maya",
+              "predicate": "prefers",
+              "object": "SQLite",
+              "evidence_quote": "Maya uses Redis but prefers SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "83d5274d-0110-41cf-b015-fd02017017ff",
+            "target_id": "0e00d51f-b30c-40e2-ad5c-2ce4c1560d7a",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "0e00d51f-b30c-40e2-ad5c-2ce4c1560d7a",
+            "target_id": "297558b8-f2e1-4084-a6de-d91de5c88184",
+            "edge_type": "mentions"
+          },
+          {
+            "source_id": "83d5274d-0110-41cf-b015-fd02017017ff",
+            "target_id": "df181c9b-2730-4719-953e-7e7569d65e34",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "df181c9b-2730-4719-953e-7e7569d65e34",
+            "target_id": "c4bc6905-b5e2-4d3f-bea4-f28877cb251b",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "past_choice",
+      "source": "Last month, Noah selected PostgreSQL.",
+      "expectation": {
+        "expected_kinds": {
+          "PostgreSQL": "decision"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "decision"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "273685df-990a-4d3e-9a67-f4e817cd02d6",
+            "user_id": "past_choice:original",
+            "node_type": "decision",
+            "content": "Last month, Noah selected PostgreSQL.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Noah",
+              "predicate": "selected",
+              "object": "PostgreSQL",
+              "evidence_quote": "Last month, Noah selected PostgreSQL.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null,
+              "suggested_scope": "personal",
+              "temporal_ref": "Last month",
+              "resolved_date": "2026-08-12T11:11:10.117136+00:00"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "2d489cf0-88c9-4a29-aadb-9e1055d33d1a",
+            "user_id": "past_choice:original",
+            "node_type": "entity",
+            "content": "PostgreSQL",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "8093ef9d-0bad-4974-89ed-a25c77d3d37c",
+            "user_id": "past_choice:original",
+            "node_type": "entity",
+            "content": "Noah",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "8093ef9d-0bad-4974-89ed-a25c77d3d37c",
+            "target_id": "273685df-990a-4d3e-9a67-f4e817cd02d6",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "273685df-990a-4d3e-9a67-f4e817cd02d6",
+            "target_id": "2d489cf0-88c9-4a29-aadb-9e1055d33d1a",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 11.415,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Noah",
+          "predicate": "selected",
+          "object": "PostgreSQL"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "decision",
+            "epistemic_type": "observed",
+            "evidence_quote": "Last month, Noah selected PostgreSQL."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "decision"
+        ],
+        "claim_epistemic_types": [
+          "observed"
+        ],
+        "nodes": [
+          {
+            "id": "1cae3d71-caf1-4a24-93d2-9c6cd35cc061",
+            "user_id": "past_choice:reviewed",
+            "node_type": "decision",
+            "content": "Last month, Noah selected PostgreSQL.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Noah",
+              "predicate": "selected",
+              "object": "PostgreSQL",
+              "evidence_quote": "Last month, Noah selected PostgreSQL.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null,
+              "temporal_ref": "Last month",
+              "resolved_date": "2026-08-12T11:11:21.641231+00:00"
+            },
+            "epistemic_type": "observed"
+          },
+          {
+            "id": "558bbefb-9dcb-4a14-881e-e5899f5568ac",
+            "user_id": "past_choice:reviewed",
+            "node_type": "entity",
+            "content": "PostgreSQL",
+            "metadata": {
+              "entity_type": "product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "cb4dca07-9f4b-433a-ab62-25dcfd0300d3",
+            "user_id": "past_choice:reviewed",
+            "node_type": "entity",
+            "content": "Noah",
+            "metadata": {
+              "entity_type": "person"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "cb4dca07-9f4b-433a-ab62-25dcfd0300d3",
+            "target_id": "1cae3d71-caf1-4a24-93d2-9c6cd35cc061",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "1cae3d71-caf1-4a24-93d2-9c6cd35cc061",
+            "target_id": "558bbefb-9dcb-4a14-881e-e5899f5568ac",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "service",
+      "source": "The Cedar service uses Redis.",
+      "expectation": {
+        "expected_kinds": {
+          "Redis": "fact"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "288d30a3-47ee-4405-9eb9-0648fa6042fb",
+            "user_id": "service:original",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product",
+              "description": "A database technology/product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "52ffebfa-6756-4c9f-ac70-1e3cacca5f78",
+            "user_id": "service:original",
+            "node_type": "fact",
+            "content": "The Cedar service uses Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Cedar",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "The Cedar service uses Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "f51488dc-83f6-4f12-844f-bd6c1ef9a8c4",
+            "user_id": "service:original",
+            "node_type": "entity",
+            "content": "Cedar",
+            "metadata": {
+              "entity_type": "product",
+              "description": "A service/product mentioned in the text"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "f51488dc-83f6-4f12-844f-bd6c1ef9a8c4",
+            "target_id": "52ffebfa-6756-4c9f-ac70-1e3cacca5f78",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "52ffebfa-6756-4c9f-ac70-1e3cacca5f78",
+            "target_id": "288d30a3-47ee-4405-9eb9-0648fa6042fb",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 5.931,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Cedar",
+          "predicate": "uses",
+          "object": "Redis"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "fact",
+            "epistemic_type": "observed",
+            "evidence_quote": "The Cedar service uses Redis"
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact"
+        ],
+        "claim_epistemic_types": [
+          "observed"
+        ],
+        "nodes": [
+          {
+            "id": "002f4ce1-6839-4523-8b13-a52d94454d06",
+            "user_id": "service:reviewed",
+            "node_type": "fact",
+            "content": "The Cedar service uses Redis.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Cedar",
+              "predicate": "uses",
+              "object": "Redis",
+              "evidence_quote": "The Cedar service uses Redis.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "observed"
+          },
+          {
+            "id": "236ef039-ab13-470c-9f31-58b329475907",
+            "user_id": "service:reviewed",
+            "node_type": "entity",
+            "content": "Redis",
+            "metadata": {
+              "entity_type": "product",
+              "description": "A database technology/product"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "793bd14c-2a05-4e18-93a4-be69056bc2e6",
+            "user_id": "service:reviewed",
+            "node_type": "entity",
+            "content": "Cedar",
+            "metadata": {
+              "entity_type": "product",
+              "description": "A service/product mentioned in the text"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "793bd14c-2a05-4e18-93a4-be69056bc2e6",
+            "target_id": "002f4ce1-6839-4523-8b13-a52d94454d06",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "002f4ce1-6839-4523-8b13-a52d94454d06",
+            "target_id": "236ef039-ab13-470c-9f31-58b329475907",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "namesake",
+      "source": "Jordan, the engineer, lives in Jordan, the country.",
+      "expectation": {
+        "allowed_epistemic": [
+          "asserted",
+          "observed"
+        ],
+        "expected_entity_types": {
+          "subject": "person",
+          "object": "location"
+        },
+        "expected_claim_count": 1
+      },
+      "passed": true,
+      "original": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact"
+        ],
+        "claim_epistemic_types": [
+          "observed"
+        ],
+        "nodes": [
+          {
+            "id": "28494925-628a-4c23-9406-7abdf7e85a6c",
+            "user_id": "namesake:original",
+            "node_type": "entity",
+            "content": "Jordan",
+            "metadata": {
+              "entity_type": "location",
+              "description": "the country"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "325163d0-293a-4c00-82a1-512254630ab3",
+            "user_id": "namesake:original",
+            "node_type": "entity",
+            "content": "Jordan",
+            "metadata": {
+              "entity_type": "person",
+              "description": "the engineer"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "f18709a2-36dc-480e-8816-a3112d583d3b",
+            "user_id": "namesake:original",
+            "node_type": "fact",
+            "content": "Jordan, the engineer, lives in Jordan, the country.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": "location",
+              "extraction_kind": "fact",
+              "subject_entity_type": "person",
+              "subject": "Jordan",
+              "predicate": "lives_in",
+              "object": "Jordan",
+              "evidence_quote": "Jordan, the engineer, lives in Jordan, the country.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "observed"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "325163d0-293a-4c00-82a1-512254630ab3",
+            "target_id": "f18709a2-36dc-480e-8816-a3112d583d3b",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "f18709a2-36dc-480e-8816-a3112d583d3b",
+            "target_id": "28494925-628a-4c23-9406-7abdf7e85a6c",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 12.053,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Jordan",
+          "predicate": "lives_in",
+          "object": "Jordan"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "fact",
+            "epistemic_type": "asserted",
+            "evidence_quote": "Jordan, the engineer, lives in Jordan, the country."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "fact"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "8ca97ede-a52f-4aff-b199-1e95492483ec",
+            "user_id": "namesake:reviewed",
+            "node_type": "entity",
+            "content": "Jordan",
+            "metadata": {
+              "entity_type": "location",
+              "description": "the country"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "d04ee71a-0d69-4520-b315-190097dc9b75",
+            "user_id": "namesake:reviewed",
+            "node_type": "entity",
+            "content": "Jordan",
+            "metadata": {
+              "entity_type": "person",
+              "description": "the engineer"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "de2994f4-1284-4641-a2a8-b0ef064cb700",
+            "user_id": "namesake:reviewed",
+            "node_type": "fact",
+            "content": "Jordan, the engineer, lives in Jordan, the country.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": "location",
+              "extraction_kind": "fact",
+              "subject_entity_type": "person",
+              "subject": "Jordan",
+              "predicate": "lives_in",
+              "object": "Jordan",
+              "evidence_quote": "Jordan, the engineer, lives in Jordan, the country.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": null,
+              "replaces_object": null
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "d04ee71a-0d69-4520-b315-190097dc9b75",
+            "target_id": "de2994f4-1284-4641-a2a8-b0ef064cb700",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "de2994f4-1284-4641-a2a8-b0ef064cb700",
+            "target_id": "8ca97ede-a52f-4aff-b199-1e95492483ec",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    },
+    {
+      "case": "conditional_preference",
+      "source": "If latency is equal, Elena prefers SQLite.",
+      "expectation": {
+        "expected_kinds": {
+          "SQLite": "preference"
+        },
+        "expected_claim_count": 1,
+        "allowed_epistemic": [
+          "hypothetical",
+          "conditional"
+        ]
+      },
+      "passed": true,
+      "original": {
+        "passed": false,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": false,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "asserted"
+        ],
+        "nodes": [
+          {
+            "id": "a9c5a7bd-20ec-4b48-a955-f1bc96030e92",
+            "user_id": "conditional_preference:original",
+            "node_type": "preference",
+            "content": "If latency is equal, Elena prefers SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Elena",
+              "predicate": "prefers",
+              "object": "SQLite",
+              "evidence_quote": "If latency is equal, Elena prefers SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null,
+              "suggested_scope": "personal"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "bb5ab504-ccb3-470f-8f96-bee38ad18588",
+            "user_id": "conditional_preference:original",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product",
+              "description": "Database product being preferred"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "ce3b43b6-f00d-48ec-b5fe-0ec9a1bd285e",
+            "user_id": "conditional_preference:original",
+            "node_type": "entity",
+            "content": "Elena",
+            "metadata": {
+              "entity_type": "person",
+              "description": "Person mentioned in the preference statement"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "e3501d78-2274-4e99-a410-61b1a9113a84",
+            "user_id": "conditional_preference:original",
+            "node_type": "entity",
+            "content": "latency",
+            "metadata": {
+              "entity_type": "concept",
+              "description": "Technical performance metric"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "ce3b43b6-f00d-48ec-b5fe-0ec9a1bd285e",
+            "target_id": "a9c5a7bd-20ec-4b48-a955-f1bc96030e92",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "a9c5a7bd-20ec-4b48-a955-f1bc96030e92",
+            "target_id": "bb5ab504-ccb3-470f-8f96-bee38ad18588",
+            "edge_type": "mentions"
+          }
+        ]
+      },
+      "review_seconds": 8.371,
+      "proposals": [
+        {
+          "claim_id": 0,
+          "subject": "Elena",
+          "predicate": "prefers",
+          "object": "SQLite"
+        }
+      ],
+      "review": {
+        "assessments": [
+          {
+            "claim_id": 0,
+            "fact_type": "preference",
+            "epistemic_type": "conditional",
+            "evidence_quote": "If latency is equal, Elena prefers SQLite."
+          }
+        ]
+      },
+      "reviewed": {
+        "passed": true,
+        "expected_objects_present": true,
+        "expected_claim_count": true,
+        "expected_entity_types_linked": true,
+        "expected_claim_kinds": true,
+        "epistemic_qualifications_preserved": true,
+        "subject_links_complete": true,
+        "association_edges_only": true,
+        "full_source_preserved": true,
+        "claim_node_types": [
+          "preference"
+        ],
+        "claim_epistemic_types": [
+          "conditional"
+        ],
+        "nodes": [
+          {
+            "id": "6e2771b3-c796-4632-af20-dfb1282bae87",
+            "user_id": "conditional_preference:reviewed",
+            "node_type": "entity",
+            "content": "SQLite",
+            "metadata": {
+              "entity_type": "product",
+              "description": "Database product being preferred"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "a2e5d743-d711-46c8-a8d4-847633b56725",
+            "user_id": "conditional_preference:reviewed",
+            "node_type": "preference",
+            "content": "If latency is equal, Elena prefers SQLite.",
+            "metadata": {
+              "subject_link_status": "resolved",
+              "object_link_status": "resolved",
+              "object_entity_type": null,
+              "extraction_kind": "fact",
+              "subject_entity_type": null,
+              "subject": "Elena",
+              "predicate": "prefers",
+              "object": "SQLite",
+              "evidence_quote": "If latency is equal, Elena prefers SQLite.",
+              "grounding_method": "source_passage_v1",
+              "temporal_intent": "assertion",
+              "replaces_object": null
+            },
+            "epistemic_type": "conditional"
+          },
+          {
+            "id": "b2d7bb36-47b0-41e2-aaa0-2431f2eb72c8",
+            "user_id": "conditional_preference:reviewed",
+            "node_type": "entity",
+            "content": "Elena",
+            "metadata": {
+              "entity_type": "person",
+              "description": "Person mentioned in the preference statement"
+            },
+            "epistemic_type": "asserted"
+          },
+          {
+            "id": "c6407527-a032-473b-9538-edb5abda0bfa",
+            "user_id": "conditional_preference:reviewed",
+            "node_type": "entity",
+            "content": "latency",
+            "metadata": {
+              "entity_type": "concept",
+              "description": "Technical performance metric"
+            },
+            "epistemic_type": "asserted"
+          }
+        ],
+        "edges": [
+          {
+            "source_id": "b2d7bb36-47b0-41e2-aaa0-2431f2eb72c8",
+            "target_id": "a2e5d743-d711-46c8-a8d4-847633b56725",
+            "edge_type": "has_fact"
+          },
+          {
+            "source_id": "a2e5d743-d711-46c8-a8d4-847633b56725",
+            "target_id": "6e2771b3-c796-4632-af20-dfb1282bae87",
+            "edge_type": "mentions"
+          }
+        ]
+      }
+    }
+  ],
+  "case_count": 12,
+  "original_cases_passed": 9,
+  "reviewed_cases_passed": 11,
+  "elapsed_seconds": 97.561,
+  "input_sha256": "0a85cdf8910459b2583a7e7b80b86b79dbc5a67d1470e694c13bf2fb2c3b5dfa",
+  "mode": "classification_only",
+  "review_prompt_sha256": "f7e5aa94f01d011bde2bab15ee93e94fef003d9aca0117aa737e8882b2b207b1",
+  "review_schema_sha256": "824a76fa2af13b7ea3bb634eccfb5f7ea976502c7645ca72c9c1b38fca78c97a",
+  "cases_sha256": "4bb1861a591962dd8c735d71cdbda1ad55567ad5887e8088744c84e4c1aa25e1",
+  "model": "qwen3.5:4b",
+  "provider": "ollama",
+  "provider_max_retries": 3,
+  "limits": "Incomplete end-to-end process; no success or accuracy claim.",
+  "workflow_assertions_passed": false,
+  "process_exit_code": 1,
+  "error_type": "WorkerExitError"
+}

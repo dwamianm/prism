@@ -1,0 +1,99 @@
+{
+  "passed": true,
+  "checks": [
+    "NLP pipelines loaded",
+    "blank source survives storage",
+    "neutral metadata preserved",
+    "public raw retrieval",
+    "BM25 keyword path returns source",
+    "no LLM calls"
+  ],
+  "ranked_source_ids": [
+    "s0:t0"
+  ],
+  "versions": {
+    "mem0ai": "2.0.20",
+    "fastembed": "0.7.4",
+    "onnxruntime": "1.24.2",
+    "numpy": "2.4.2",
+    "qdrant-client": "1.19.0",
+    "tiktoken": "0.12.0",
+    "dateparser": "1.3.0",
+    "ollama": "0.6.1",
+    "pydantic": "2.13.5",
+    "spacy": "3.8.16",
+    "en-core-web-sm": "3.8.0",
+    "mmh3": "5.3.0",
+    "py-rust-stemmers": "0.1.8"
+  },
+  "nlp_assets_sha256": {
+    "__init__.py": "c8eb57079c03fc4157c227f641781fbcb3e9d11439abe1bf0b72e4c0fa78a38d",
+    "en_core_web_sm-3.8.0/LICENSE": "3933c176979b68bc6d0bcc902c7d6c130f1d127f476f17ba5cdba8d99cfd0012",
+    "en_core_web_sm-3.8.0/LICENSES_SOURCES": "20d9dfacd215112251f15341edd1a47b1f98bf393a212f10f194ffdc7ee98a90",
+    "en_core_web_sm-3.8.0/README.md": "91b0ed1742ea0803034b4d769c4536e88d9d4da7808d833f2a804b6c54aae220",
+    "en_core_web_sm-3.8.0/accuracy.json": "e7572d7f2f3c18e9921471f9d0b3424f8cf7f1a909ae484fa10b780a13f4c676",
+    "en_core_web_sm-3.8.0/attribute_ruler/patterns": "f8b97f7ebef9b8536bba5f0fc1e73af6183563e96e2325bcbb021b8c6dbc6683",
+    "en_core_web_sm-3.8.0/config.cfg": "65c545ca2da5bd4b87b22d4917318605360b37dee6ed6b18516a036f87319f79",
+    "en_core_web_sm-3.8.0/lemmatizer/lookups/lookups.bin": "eb64f40c0f8396d1762730c0ddf4dad2a52d138f5a389f71a1a1d088173b7737",
+    "en_core_web_sm-3.8.0/meta.json": "7456349002fa8cf31111051bd37fdbea67a1b7f7a0a60ce235466f98a6758125",
+    "en_core_web_sm-3.8.0/ner/cfg": "a7172edadafba9f472e9ac0f2660eec04b6405e471be9e20267b79c67288d22d",
+    "en_core_web_sm-3.8.0/ner/model": "cd93e9ca9126c69f1d10a1039ef67c3d9ec1223b44d079856705970f0f19ff4e",
+    "en_core_web_sm-3.8.0/ner/moves": "d82b13473ebd33e0396004dd22f00c71fe3c1251742bf1f7c4554f23fd3b0af4",
+    "en_core_web_sm-3.8.0/parser/cfg": "e2a240ef01f95e58f5dd4c9d6e90d61f597b8d998966570d3009dd81e8879780",
+    "en_core_web_sm-3.8.0/parser/model": "e0098910535a863d430082ece57455d5fa071cd4ca3a0054e80582076c752b1e",
+    "en_core_web_sm-3.8.0/parser/moves": "ec41318c32eb7f9e4d8f050b2e8466ee67954d2d3455c1aec73abf46c82dd67f",
+    "en_core_web_sm-3.8.0/senter/cfg": "2a4db4a729b6469da1f87d71cc7cd3ed2a73360cc85326821e850836c4671103",
+    "en_core_web_sm-3.8.0/senter/model": "b69e7174a0b6307739adec3c8053ac45fdbad7171c4d3d8bfcd9713ecbc01f8c",
+    "en_core_web_sm-3.8.0/tagger/cfg": "d484c3d9391f37bf9c727aa2eb4c477a24cb103020f95e52dc37842818b50118",
+    "en_core_web_sm-3.8.0/tagger/model": "1ec3d93f38cebe172f2b5c89d84be72856ce42c8f1a64f1699f1d98a771f36b7",
+    "en_core_web_sm-3.8.0/tok2vec/cfg": "f8a5a26e3056eb6fb06deeb3dbccfd88ae74900200c98c70b5966bbb7ec9d4de",
+    "en_core_web_sm-3.8.0/tok2vec/model": "e84fc06eb319c94d28e460fc334e292120b01f18baa5dc8b50c977459820a090",
+    "en_core_web_sm-3.8.0/tokenizer": "b014e8bba4958b120af2d0c1c63eabb7c00379f2bacaf10df7c5325efd2ea467",
+    "en_core_web_sm-3.8.0/vocab/key2row": "76be8b528d0075f7aae98d6fa57a6d3c83ae480a8469e668d7b0af968995ac71",
+    "en_core_web_sm-3.8.0/vocab/lookups.bin": "fce9c883c56165f29573cc938c2a1c9d417ac61bd8f56b671dd5f7996de70682",
+    "en_core_web_sm-3.8.0/vocab/strings.json": "b1966d1f07a05b68576df07f43f40203b4e11124ad82cc839e8312ad8d7fdae7",
+    "en_core_web_sm-3.8.0/vocab/vectors": "14772b683e726436d5948ad3fff2b43d036ef2ebbe3458aafed6004e05a40706",
+    "en_core_web_sm-3.8.0/vocab/vectors.cfg": "ff4359091952c8cd16f1f0482f5770fb82d1707368d5cca3c46aa501f552e3c5",
+    "meta.json": "7456349002fa8cf31111051bd37fdbea67a1b7f7a0a60ce235466f98a6758125"
+  },
+  "sparse_assets_sha256": {
+    "arabic.txt": "0df01c0a184d8c15077c6f0ee70e25e0c0308d827b92b14a19f5f819a0c465d0",
+    "config.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "danish.txt": "1bedc9cf5a8830dacf8c4ee0d8b301f0801861756ad0d504431d01047f961b0c",
+    "dutch.txt": "e5a2a7c390fe3ad0c0a132586ed11492b635d66a1f426cd89677f80b07bc76a6",
+    "english.txt": "019f104ba2ed07436d05f9cdd3383034ad66014edc27fc651f837e1a038b6451",
+    "finnish.txt": "952af766edc9b8e7ddc877fc464cbd94b91754b5621fdfdd7020568fd4813fcd",
+    "french.txt": "58ac7f7c074b70dc0fc86f6fcf40b2c227e9f95627e90e57971d5cce1e30e2e9",
+    "german.txt": "f0c25acd7ec02a31f6679d9664ec5222ca846fdbc58db96160f4e7c0ddb0f7ea",
+    "greek.txt": "7a97c6dc81144f7e8fcfe976025954ca3731f78a75d1fd86aa87f261fd195dae",
+    "hungarian.txt": "64a68b5ebaa616b25bd976ac915c326f2ea8cce8b59a0ac8c5728b980ae4fb0c",
+    "italian.txt": "293d7841f198e4012f49e8e5653c3bfd073a58cea1259fa2c0fcec894167b628",
+    "norwegian.txt": "f7e5b42208ccf1b1f282f9e0f8570e464272762bda5718b6b26750f510a688dc",
+    "portuguese.txt": "6e7b98378c6b728266a83ebf035d927abf16b9e0d815d6204d81d90d896bcc9b",
+    "romanian.txt": "0ab53d21cbde00c6bf367706a0243c646140ba564cce7e83ac33d80f8923e957",
+    "russian.txt": "1743191192b4a4f77fcc216499455dc00c1b8626fdd407076a8deefff80e3d59",
+    "spanish.txt": "6125eadf28ba664a60bf4296147bcbd40b80be93670056fdb229960ac15e2310",
+    "swedish.txt": "2a9d9d756bc4257d49329994f805c712cd5ab6746162e2082752238766c1c0c8",
+    "turkish.txt": "f2c7f0c2bd3dba42da700776266831853a3b5f1207fada5c15207334109abb57"
+  },
+  "model_assets_sha256": {
+    "config.json": "13582bcf2effc85b7bf3d3f5532e686bc1c9ce86bb009d10f0ec33cbe92299dd",
+    "model_optimized.onnx": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+    "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+    "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+    "tokenizer_config.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53"
+  },
+  "native_process_exit_code": 0,
+  "preflight_script_sha256": "dc10fb1be36864ae01c4f8bcee33c49b8d0d1e901a26e439fcae71bce0d4712b",
+  "attempts": [
+    {
+      "native_process_exit_code": 1,
+      "reason": "Initial non-NLP probe incorrectly required the blank source to rank; storage verification succeeded but this search expectation failed."
+    },
+    {
+      "native_process_exit_code": 2,
+      "reason": "spaCy model installer targeted a different environment; explicit target-environment installation corrected setup."
+    }
+  ],
+  "limits": "Two authored sources, including a stored blank assistant turn. Confirms recommended NLP and BM25 availability, neutral metadata and ordinary raw API shape. No benchmark quality measurement."
+}

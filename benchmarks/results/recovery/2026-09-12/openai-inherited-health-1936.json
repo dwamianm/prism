@@ -1,0 +1,22 @@
+{
+  "checks": [
+    {
+      "model": "gpt-4o-mini",
+      "checked_at": "2026-09-12T19:36:17.069811+00:00",
+      "status": 401,
+      "success": false,
+      "error_type": "AuthenticationError"
+    },
+    {
+      "model": "gpt-4o-2024-08-06",
+      "checked_at": "2026-09-12T19:36:17.380387+00:00",
+      "status": 401,
+      "success": false,
+      "error_type": "AuthenticationError"
+    }
+  ],
+  "retries": 0,
+  "response_token_limit": 1,
+  "limits": "Connectivity/status probes only; no extraction quality or judge calibration. No keys, endpoints, response bodies or billing diagnosis retained.",
+  "credential_source": "Default SDK resolution: inherited OPENAI_API_KEY overrides a different value in root .env"
+}
