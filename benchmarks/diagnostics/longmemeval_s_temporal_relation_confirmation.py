@@ -54,6 +54,13 @@ JEV_THRESHOLD = answer_trial.JEV_THRESHOLD
 READER_OPTIONS = answer_trial.READER_OPTIONS
 RESOLVER_MODEL = "deepseek-v4.1-flash:cloud"
 READER_MODEL = "deepseek-v4.1-flash:cloud"
+MAX_SCHEMA_REPAIRS = 1
+SCHEMA_REPAIR_PROMPT = (
+    "Your previous JSON did not match the required schema. Return only one corrected "
+    "JSON object. Every evidence_id must be one of the UUIDs from the supplied records. "
+    "If the requested relation needs an unsupported or missing operand, return operation "
+    "unsupported with an empty operands list. Do not calculate or answer the question."
+)
 
 
 def _git_revision(root: Path) -> str:
@@ -74,6 +81,77 @@ def _validate_calibration(
     calibration = json.loads(calibration_path.read_text())
     judge_runtime.validate_calibration(controls, calibration, declaration)
     return declaration
+
+
+def _repair_body(
+    body: dict[str, Any], invalid_response: dict[str, Any]
+) -> dict[str, Any]:
+    content = reader_runtime.validate_response(invalid_response)
+    return {
+        **body,
+        "messages": [
+            *body["messages"],
+            {"role": "assistant", "content": content},
+            {"role": "user", "content": SCHEMA_REPAIR_PROMPT},
+        ],
+        "format": resolver.RawResolution.model_json_schema(),
+    }
+
+
+def _load_resolver_seed(registration_path: Path, state_path: Path) -> dict[str, Any]:
+    registration = json.loads(registration_path.read_text())
+    state = json.loads(state_path.read_text())
+    registration_sha256 = _sha256_file(registration_path)
+    if (
+        registration.get("schema_version") != 1
+        or registration.get("kind")
+        != "longmemeval-s-temporal-relation-confirmation-registration"
+        or state.get("identity", {}).get("registration_sha256") != registration_sha256
+        or state.get("complete") is not False
+    ):
+        raise ValueError("resolver seed identity differs")
+    generations = state.get("generations", {})
+    failures = state.get("failed_attempts", [])
+    if not isinstance(generations, dict) or not isinstance(failures, list):
+        raise ValueError("resolver seed shape differs")
+    for saved in generations.values():
+        if saved.get("response_sha256") != _sha256(
+            paired.canonical(saved.get("response"))
+        ):
+            raise ValueError("resolver seed response checksum differs")
+        resolver._parse_response(saved["response"])
+    invalid: dict[str, dict[str, Any]] = {}
+    for failed in failures:
+        prompt_sha256 = failed.get("prompt_sha256")
+        response = failed.get("response")
+        if (
+            not isinstance(prompt_sha256, str)
+            or prompt_sha256 in invalid
+            or response is None
+            or failed.get("response_sha256") != _sha256(paired.canonical(response))
+        ):
+            raise ValueError("resolver seed failure differs")
+        reader_runtime.validate_response(response)
+        try:
+            resolver._parse_response(response)
+        except ValueError:
+            invalid[prompt_sha256] = failed
+        else:
+            raise ValueError("resolver seed failure is schema-valid")
+    if set(generations) & set(invalid):
+        raise ValueError("resolver seed prompt is both valid and invalid")
+    return {
+        "registration": registration,
+        "registration_sha256": registration_sha256,
+        "state_sha256": _sha256_file(state_path),
+        "identity": state["identity"],
+        "generations": generations,
+        "invalid": invalid,
+        "summary": {
+            "valid_generations": len(generations),
+            "invalid_schema_attempts": len(invalid),
+        },
+    }
 
 
 def _cohort(
@@ -104,6 +182,24 @@ def _cohort(
 
 def _source_question_type(question_id: str, dataset_question_type: str) -> str:
     return "abstention" if question_id.endswith("_abs") else dataset_question_type
+
+
+def _resolver_jobs(
+    rows: list[dict[str, Any]], model: str
+) -> list[
+    tuple[dict[str, Any], dict[Any, resolver.EvidenceRecord], dict[str, Any], str]
+]:
+    jobs = []
+    for row in rows:
+        records = resolver.parse_records(row["control"]["context"])
+        body = resolver._request_body(
+            model=model,
+            question=row["question"],
+            question_date=row["question_date"],
+            records=records,
+        )
+        jobs.append((row, records, body, _sha256(paired.canonical(body))))
+    return jobs
 
 
 def _prepare_registered_inputs(
@@ -174,9 +270,12 @@ def _prepare_registered_inputs(
     return value, references, _sha256(paired.canonical(case_identities))
 
 
-def _protocol() -> dict[str, Any]:
+def _protocol(seed_summary: dict[str, int]) -> dict[str, Any]:
     return {
-        "status": "disjoint confirmation frozen before resolver, Jev, reader, or judge calls",
+        "status": (
+            "v2 frozen before resolver repair, remaining resolver calls, Jev, "
+            "reader, or judge"
+        ),
         "cohort": (
             "all temporal-reasoning questions in the 381-question complement of "
             "the frozen 119-question development split"
@@ -191,7 +290,11 @@ def _protocol() -> dict[str, Any]:
             "model_selects": "exact record IDs, verbatim quotes, temporal expressions",
             "code_validates": "citations, quotes, temporal licenses, complete operands",
             "code_computes": "calendar differences, dates, ordering, or explicit sums",
-            "failed_calls": 0,
+            "seeded_valid_generations": seed_summary["valid_generations"],
+            "seeded_invalid_schema_attempts": seed_summary["invalid_schema_attempts"],
+            "maximum_schema_repairs_per_question": MAX_SCHEMA_REPAIRS,
+            "repair_uses_structured_output": True,
+            "terminal_failed_questions": 0,
         },
         "jev": {
             "model": jev_trial.MODEL,
@@ -208,12 +311,12 @@ def _protocol() -> dict[str, Any]:
         "answer_trial": {
             "reader_order": "counterbalanced by question-ID hash parity",
             "one_generation_per_distinct_context": True,
-            "no_selective_retries": True,
+            "no_selective_reader_or_judge_retries": True,
             "judge_after_complete_reader": True,
         },
         "gate": {
             "complete_all_stages": True,
-            "failed_calls": 0,
+            "terminal_failed_questions": 0,
             "accepted_hints": ">= 10",
             "candidate_correct": "> control_correct",
             "paired_wins": "> paired_losses",
@@ -234,6 +337,8 @@ def _source(
     controls_path: Path,
     declaration_path: Path,
     calibration_path: Path,
+    resolver_seed_registration_path: Path,
+    resolver_seed_state_path: Path,
     source_cases_manifest_sha256: str,
 ) -> dict[str, Any]:
     return {
@@ -253,6 +358,10 @@ def _source(
         "controls_sha256": _sha256_file(controls_path),
         "judge_declaration_sha256": _sha256_file(declaration_path),
         "judge_calibration_sha256": _sha256_file(calibration_path),
+        "resolver_seed_registration_sha256": _sha256_file(
+            resolver_seed_registration_path
+        ),
+        "resolver_seed_state_sha256": _sha256_file(resolver_seed_state_path),
     }
 
 
@@ -268,6 +377,8 @@ async def create_registration(
     controls_path: Path,
     declaration_path: Path,
     calibration_path: Path,
+    resolver_seed_registration_path: Path,
+    resolver_seed_state_path: Path,
     resolver_model: str,
     reader_model: str,
     base_url: str,
@@ -291,11 +402,50 @@ async def create_registration(
     )
     revision = _git_revision(project_root)
     question_ids = resolver_inputs["question_ids"]
+    resolver_identity = paired.model_identity(
+        resolver_model,
+        base_url,
+        dict(resolver.MODEL_OPTIONS),
+        resolver.SYSTEM_PROMPT,
+    )
+    reader_identity = paired.model_identity(
+        reader_model,
+        base_url,
+        dict(READER_OPTIONS),
+        GENERATION_SYSTEM_PROMPT,
+    )
+    resolver_seed = _load_resolver_seed(
+        resolver_seed_registration_path, resolver_seed_state_path
+    )
+    seed_identity = resolver_seed["identity"]
+    wanted = {
+        key
+        for _row, _records, _body, key in _resolver_jobs(
+            resolver_inputs["rows"], resolver_model
+        )
+    }
+    seeded = set(resolver_seed["generations"])
+    invalid = set(resolver_seed["invalid"])
+    if (
+        resolver_seed["registration"].get("dataset", {}).get("question_ids")
+        != question_ids
+        or resolver_seed["registration"].get("models", {}).get("resolver")
+        != resolver_identity
+        or seed_identity.get("model") != resolver_identity["model"]
+        or seed_identity.get("model_digest") != resolver_identity["model_digest"]
+        or seed_identity.get("system_prompt_sha256")
+        != resolver_identity["system_prompt_sha256"]
+        or seed_identity.get("options") != resolver_identity["options"]
+        or not seeded <= wanted
+        or not invalid <= wanted
+        or seeded & invalid
+    ):
+        raise ValueError("resolver seed is incompatible with confirmation inputs")
     value = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "longmemeval-s-temporal-relation-confirmation-registration",
         "registered_at": datetime.now(timezone.utc).isoformat(),
-        "status": "registered before resolver, Jev, reader, or judge calls",
+        "status": "v2 registered before repair, Jev, reader, or judge calls",
         "claim_boundary": (
             "Disjoint LongMemEval-S temporal answer confirmation under the frozen "
             "PRME protocol; not an official leaderboard score or universal claim."
@@ -310,6 +460,8 @@ async def create_registration(
             controls_path=controls_path,
             declaration_path=declaration_path,
             calibration_path=calibration_path,
+            resolver_seed_registration_path=resolver_seed_registration_path,
+            resolver_seed_state_path=resolver_seed_state_path,
             source_cases_manifest_sha256=case_manifest,
         ),
         "dataset": {
@@ -322,30 +474,31 @@ async def create_registration(
             "question_ids_sha256": _sha256(paired.canonical(question_ids)),
         },
         "models": {
-            "resolver": paired.model_identity(
-                resolver_model,
-                base_url,
-                dict(resolver.MODEL_OPTIONS),
-                resolver.SYSTEM_PROMPT,
-            ),
+            "resolver": resolver_identity,
             "jev": {
                 "provider": "typesafe_jev",
                 "model": jev_trial.MODEL,
                 "api_url": jev_trial.API_URL,
                 "question_sha256": _sha256(paired.canonical(jev_trial.QUESTION)),
             },
-            "reader": paired.model_identity(
-                reader_model,
-                base_url,
-                dict(READER_OPTIONS),
-                GENERATION_SYSTEM_PROMPT,
-            ),
+            "reader": reader_identity,
             "judge": declaration,
         },
-        "protocol": _protocol(),
+        "resolver_seed": {
+            "registration_sha256": resolver_seed["registration_sha256"],
+            "state_sha256": resolver_seed["state_sha256"],
+            **resolver_seed["summary"],
+            "reuse_validation": (
+                "exact prompt hash, model digest, response checksum, schema, "
+                "registration hash, and state hash"
+            ),
+        },
+        "protocol": _protocol(resolver_seed["summary"]),
         "limitations": [
             "The confirmation is disjoint from the registered 119-question development split, but comes from the same benchmark dataset.",
             "The 500-pack retrieval baseline and structural source coverage were observed before confirmation.",
+            "Version 2 reuses answer-blind valid resolver calls after version 1 aborted on schema-invalid JSON; no reference answer had been deserialized.",
+            "The generic schema-repair policy was fixed after observing the invalid JSON shape but before any Jev, reader, judge, or answer result.",
             "Ollama cloud manifests do not prove immutable remote weights.",
             "One generation per distinct context does not estimate model variance.",
             "The custom judge is not the official LongMemEval judge.",
@@ -369,13 +522,18 @@ def _validate_registration(
     controls_path: Path,
     declaration_path: Path,
     calibration_path: Path,
+    resolver_seed_registration_path: Path,
+    resolver_seed_state_path: Path,
     source_cases_root: Path,
     base_url: str,
     project_root: Path,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     registration = json.loads(registration_path.read_text())
     revision = registration.get("source", {}).get("prme_revision")
     resolver_inputs = json.loads(resolver_inputs_path.read_text())
+    resolver_seed = _load_resolver_seed(
+        resolver_seed_registration_path, resolver_seed_state_path
+    )
     question_ids = registration.get("dataset", {}).get("question_ids", [])
     case_identities = []
     for question_id in question_ids:
@@ -395,6 +553,8 @@ def _validate_registration(
         controls_path=controls_path,
         declaration_path=declaration_path,
         calibration_path=calibration_path,
+        resolver_seed_registration_path=resolver_seed_registration_path,
+        resolver_seed_state_path=resolver_seed_state_path,
         source_cases_manifest_sha256=_sha256(paired.canonical(case_identities)),
     )
     declaration = _validate_calibration(
@@ -409,7 +569,7 @@ def _validate_registration(
         "question_sha256": _sha256(paired.canonical(jev_trial.QUESTION)),
     }
     if (
-        registration.get("schema_version") != 1
+        registration.get("schema_version") != 2
         or registration.get("kind")
         != "longmemeval-s-temporal-relation-confirmation-registration"
         or not isinstance(revision, str)
@@ -433,7 +593,17 @@ def _validate_registration(
             GENERATION_SYSTEM_PROMPT,
         )
         or registration.get("models", {}).get("judge") != declaration
-        or registration.get("protocol") != _protocol()
+        or registration.get("resolver_seed")
+        != {
+            "registration_sha256": resolver_seed["registration_sha256"],
+            "state_sha256": resolver_seed["state_sha256"],
+            **resolver_seed["summary"],
+            "reuse_validation": (
+                "exact prompt hash, model digest, response checksum, schema, "
+                "registration hash, and state hash"
+            ),
+        }
+        or registration.get("protocol") != _protocol(resolver_seed["summary"])
         or any(
             not path.startswith("benchmarks/results/research/")
             for path in _source_changes_since(revision, project_root)
@@ -453,7 +623,21 @@ def _validate_registration(
         )
     ):
         raise ValueError("confirmation resolver inputs differ")
-    return registration, resolver_inputs
+    jobs = _resolver_jobs(resolver_inputs["rows"], str(resolver_model.get("model")))
+    wanted = {key for _row, _records, _body, key in jobs}
+    seeded = set(resolver_seed["generations"])
+    invalid = set(resolver_seed["invalid"])
+    if (
+        registration.get("models", {}).get("resolver")
+        != resolver_seed["registration"].get("models", {}).get("resolver")
+        or resolver_seed["registration"].get("dataset", {}).get("question_ids")
+        != question_ids
+        or not seeded <= wanted
+        or not invalid <= wanted
+        or seeded & invalid
+    ):
+        raise ValueError("registered resolver seed differs")
+    return registration, resolver_inputs, resolver_seed
 
 
 def run_resolver(
@@ -469,6 +653,7 @@ def run_resolver(
         raise ValueError("fresh resolver output required")
     registration = validation["registration"]
     inputs = validation["resolver_inputs"]
+    seed = validation["resolver_seed"]
     model = registration["models"]["resolver"]
     identity = {
         "kind": "longmemeval-s-temporal-relation-confirmation-resolver-state",
@@ -478,78 +663,193 @@ def run_resolver(
         "model_digest": model["model_digest"],
         "system_prompt_sha256": _sha256(resolver.SYSTEM_PROMPT.encode()),
         "options": resolver.MODEL_OPTIONS,
+        "seed_registration_sha256": seed["registration_sha256"],
+        "seed_state_sha256": seed["state_sha256"],
+        "schema_repair_prompt_sha256": _sha256(SCHEMA_REPAIR_PROMPT.encode()),
+        "response_schema_sha256": _sha256(
+            paired.canonical(resolver.RawResolution.model_json_schema())
+        ),
+        "maximum_schema_repairs": MAX_SCHEMA_REPAIRS,
     }
-    jobs = []
-    for row in inputs["rows"]:
-        records = resolver.parse_records(row["control"]["context"])
-        body = resolver._request_body(
-            model=model["model"],
-            question=row["question"],
-            question_date=row["question_date"],
-            records=records,
-        )
-        jobs.append((row, records, body, _sha256(paired.canonical(body))))
+    jobs = _resolver_jobs(inputs["rows"], model["model"])
+    reuse = {
+        "registration_sha256": seed["registration_sha256"],
+        "state_sha256": seed["state_sha256"],
+        **seed["summary"],
+    }
     with reader_runtime.exclusive_state(state_path):
         state = (
             json.loads(state_path.read_text())
             if state_path.exists()
             else {
                 "identity": identity,
-                "generations": {},
+                "reuse": reuse,
+                "generations": dict(seed["generations"]),
+                "attempts": {},
                 "failed_attempts": [],
                 "complete": False,
             }
         )
-        if state.get("identity") != identity:
+        if state.get("identity") != identity or state.get("reuse") != reuse:
             raise ValueError("confirmation resolver resume identity differs")
         wanted = {key for _row, _records, _body, key in jobs}
-        if not set(state["generations"]) <= wanted:
+        if (
+            not set(state["generations"]) <= wanted
+            or not set(state.get("attempts", {})) <= wanted
+            or any(
+                state["generations"].get(key) != saved
+                for key, saved in seed["generations"].items()
+            )
+        ):
             raise ValueError("confirmation resolver state contains unrelated calls")
         for saved in state["generations"].values():
             if saved["response_sha256"] != _sha256(paired.canonical(saved["response"])):
                 raise ValueError("saved resolver response checksum differs")
             resolver._parse_response(saved["response"])
-        _write(state_path, state)
-        for index, (_row, _records, body, key) in enumerate(jobs):
-            if key not in state["generations"]:
-                response = None
-                try:
-                    if (
-                        reader_runtime.model_digest(base_url, model["model"])
-                        != model["model_digest"]
-                    ):
-                        raise ValueError("resolver model changed")
-                    response = reader_runtime.request(base_url, "/api/chat", body)
+        bodies = {key: body for _row, _records, body, key in jobs}
+        for key, attempts in state.get("attempts", {}).items():
+            if not isinstance(attempts, list) or len(attempts) > 2:
+                raise ValueError("saved resolver attempts differ")
+            previous = (
+                seed["invalid"][key]["response"] if key in seed["invalid"] else None
+            )
+            for attempt_index, attempt in enumerate(attempts):
+                response = attempt.get("response")
+                expected_kind = "repair" if previous is not None else "original"
+                expected_body = (
+                    _repair_body(bodies[key], previous)
+                    if previous is not None
+                    else bodies[key]
+                )
+                if (
+                    response is None
+                    or attempt.get("response_sha256")
+                    != _sha256(paired.canonical(response))
+                    or attempt.get("request_kind") != expected_kind
+                    or attempt.get("request_sha256")
+                    != _sha256(paired.canonical(expected_body))
+                    or not judge_runtime.matches_response_model(
+                        model["model"], response.get("model")
+                    )
+                ):
+                    raise ValueError("saved resolver attempt checksum differs")
+                reader_runtime.validate_response(response)
+                if attempt.get("valid_schema") is True:
                     resolver._parse_response(response)
                     if (
-                        not judge_runtime.matches_response_model(
-                            model["model"], response.get("model")
-                        )
-                        or reader_runtime.model_digest(base_url, model["model"])
-                        != model["model_digest"]
+                        attempt_index != len(attempts) - 1
+                        or state["generations"].get(key, {}).get("response") != response
                     ):
-                        raise ValueError("resolver response identity changed")
-                    state["generations"][key] = {
-                        "response": response,
-                        "response_sha256": _sha256(paired.canonical(response)),
-                    }
-                except Exception as exc:
-                    state["failed_attempts"].append(
-                        {
-                            "prompt_sha256": key,
-                            "error_type": type(exc).__name__,
+                        raise ValueError("saved valid resolver attempt differs")
+                    previous = None
+                elif attempt.get("valid_schema") is False:
+                    try:
+                        resolver._parse_response(response)
+                    except ValueError:
+                        pass
+                    else:
+                        raise ValueError("saved invalid resolver attempt is valid")
+                    previous = response
+                else:
+                    raise ValueError("saved resolver attempt validity differs")
+        _write(state_path, state)
+        print(
+            f"Imported {len(seed['generations'])}/{len(jobs)} valid resolver calls",
+            flush=True,
+        )
+        for index, (_row, _records, original_body, key) in enumerate(jobs):
+            if key not in state["generations"]:
+                attempts = state["attempts"].setdefault(key, [])
+                if attempts:
+                    previous = attempts[-1]["response"]
+                    request_kind = "repair"
+                    body = _repair_body(original_body, previous)
+                elif key in seed["invalid"]:
+                    previous = seed["invalid"][key]["response"]
+                    request_kind = "repair"
+                    body = _repair_body(original_body, previous)
+                else:
+                    request_kind = "original"
+                    body = original_body
+                while True:
+                    response = None
+                    try:
+                        if (
+                            reader_runtime.model_digest(base_url, model["model"])
+                            != model["model_digest"]
+                        ):
+                            raise ValueError("resolver model changed")
+                        response = reader_runtime.request(base_url, "/api/chat", body)
+                        if (
+                            not judge_runtime.matches_response_model(
+                                model["model"], response.get("model")
+                            )
+                            or reader_runtime.model_digest(base_url, model["model"])
+                            != model["model_digest"]
+                        ):
+                            raise ValueError("resolver response identity changed")
+                        reader_runtime.validate_response(response)
+                        try:
+                            resolver._parse_response(response)
+                        except ValueError as schema_error:
+                            attempts.append(
+                                {
+                                    "request_kind": request_kind,
+                                    "request_sha256": _sha256(paired.canonical(body)),
+                                    "response": response,
+                                    "response_sha256": _sha256(
+                                        paired.canonical(response)
+                                    ),
+                                    "valid_schema": False,
+                                    "error_type": type(schema_error).__name__,
+                                }
+                            )
+                            _write(state_path, state)
+                            if (
+                                request_kind == "repair"
+                                or sum(
+                                    item["request_kind"] == "repair"
+                                    for item in attempts
+                                )
+                                >= MAX_SCHEMA_REPAIRS
+                            ):
+                                raise
+                            request_kind = "repair"
+                            body = _repair_body(original_body, response)
+                            continue
+                        attempts.append(
+                            {
+                                "request_kind": request_kind,
+                                "request_sha256": _sha256(paired.canonical(body)),
+                                "response": response,
+                                "response_sha256": _sha256(paired.canonical(response)),
+                                "valid_schema": True,
+                                "error_type": None,
+                            }
+                        )
+                        state["generations"][key] = {
                             "response": response,
-                            "response_sha256": (
-                                _sha256(paired.canonical(response))
-                                if response is not None
-                                else None
-                            ),
+                            "response_sha256": _sha256(paired.canonical(response)),
                         }
-                    )
-                    _write(state_path, state)
-                    raise
-                _write(state_path, state)
-            print(f"Resolved {index + 1}/{len(jobs)}", flush=True)
+                        _write(state_path, state)
+                        break
+                    except Exception as exc:
+                        state["failed_attempts"].append(
+                            {
+                                "prompt_sha256": key,
+                                "request_kind": request_kind,
+                                "error_type": type(exc).__name__,
+                                "response": response,
+                                "response_sha256": (
+                                    _sha256(paired.canonical(response))
+                                    if response is not None
+                                    else None
+                                ),
+                            }
+                        )
+                        _write(state_path, state)
+                        raise
+                print(f"Resolved {index + 1}/{len(jobs)}", flush=True)
         state["complete"] = True
         _write(state_path, state)
 
@@ -568,13 +868,27 @@ def run_resolver(
             }
         )
     value = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "longmemeval-s-temporal-relation-confirmation-resolver-result",
         "registration_sha256": _sha256_file(registration_path),
         "complete": state["complete"],
         "failed_attempts": state["failed_attempts"],
         "questions": len(rows),
         "validated_relations": sum(row["relation"] is not None for row in rows),
+        "execution": {
+            "seeded_valid_generations": len(seed["generations"]),
+            "seeded_invalid_schema_attempts": len(seed["invalid"]),
+            "fresh_original_calls": sum(
+                attempt["request_kind"] == "original"
+                for attempts in state["attempts"].values()
+                for attempt in attempts
+            ),
+            "schema_repair_calls": sum(
+                attempt["request_kind"] == "repair"
+                for attempts in state["attempts"].values()
+                for attempt in attempts
+            ),
+        },
         "rows": rows,
     }
     value["result_sha256"] = _sha256(paired.canonical(value))
@@ -998,6 +1312,8 @@ def _add_validation_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--controls", type=Path, required=True)
     parser.add_argument("--judge-declaration", type=Path, required=True)
     parser.add_argument("--judge-calibration", type=Path, required=True)
+    parser.add_argument("--resolver-seed-registration", type=Path, required=True)
+    parser.add_argument("--resolver-seed-state", type=Path, required=True)
     parser.add_argument("--base-url", default="http://127.0.0.1:11434")
     parser.add_argument("--project-root", type=Path, default=Path.cwd())
 
@@ -1016,6 +1332,8 @@ def _parser() -> argparse.ArgumentParser:
     register.add_argument("--controls", type=Path, required=True)
     register.add_argument("--judge-declaration", type=Path, required=True)
     register.add_argument("--judge-calibration", type=Path, required=True)
+    register.add_argument("--resolver-seed-registration", type=Path, required=True)
+    register.add_argument("--resolver-seed-state", type=Path, required=True)
     register.add_argument("--resolver-model", required=True)
     register.add_argument("--reader-model", required=True)
     register.add_argument("--base-url", default="http://127.0.0.1:11434")
@@ -1059,7 +1377,7 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _validation(args: argparse.Namespace) -> dict[str, Any]:
-    registration, resolver_inputs = _validate_registration(
+    registration, resolver_inputs, resolver_seed = _validate_registration(
         args.registration.resolve(),
         development_registration_path=args.development_registration.resolve(),
         baseline_identity_path=args.baseline_identity.resolve(),
@@ -1069,11 +1387,17 @@ def _validation(args: argparse.Namespace) -> dict[str, Any]:
         controls_path=args.controls.resolve(),
         declaration_path=args.judge_declaration.resolve(),
         calibration_path=args.judge_calibration.resolve(),
+        resolver_seed_registration_path=args.resolver_seed_registration.resolve(),
+        resolver_seed_state_path=args.resolver_seed_state.resolve(),
         source_cases_root=args.source_cases_root.resolve(),
         base_url=args.base_url,
         project_root=args.project_root.resolve(),
     )
-    return {"registration": registration, "resolver_inputs": resolver_inputs}
+    return {
+        "registration": registration,
+        "resolver_inputs": resolver_inputs,
+        "resolver_seed": resolver_seed,
+    }
 
 
 def main() -> None:
@@ -1091,6 +1415,10 @@ def main() -> None:
                 controls_path=args.controls.resolve(),
                 declaration_path=args.judge_declaration.resolve(),
                 calibration_path=args.judge_calibration.resolve(),
+                resolver_seed_registration_path=(
+                    args.resolver_seed_registration.resolve()
+                ),
+                resolver_seed_state_path=args.resolver_seed_state.resolve(),
                 resolver_model=args.resolver_model,
                 reader_model=args.reader_model,
                 base_url=args.base_url,
