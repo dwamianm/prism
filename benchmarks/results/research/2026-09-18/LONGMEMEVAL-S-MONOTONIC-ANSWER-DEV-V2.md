@@ -78,10 +78,11 @@ answers, judge outputs and retry state remain outside Git under
 ## Next experiment
 
 Do not run the 381-question confirmation and do not expose this policy through
-configuration. A small post-hoc diagnostic may compare the auditable control
-with a compact serialization of exactly the same selected records and
-representations. That can separate serialization effects from extra-record
-effects, but it cannot promote a policy because the failed questions are now
-observed. Any later candidate must be preregistered on a different task cohort
-and must gate answer quality directly, especially temporal reasoning and
-complete-set questions.
+configuration. The subsequent [post-hoc localization](LONGMEMEVAL-S-COMPACT-LOCALIZATION-V1.md)
+compared the auditable control with compact serialization of exactly the same
+records and representations. Compact scored 6/20 versus 9/20, with one win and
+four losses, so serialization itself contributed to the failure in that paired
+run. The fresh control agreed with its prior outcome on only 13/20 questions,
+which also exposes material hosted-reader variance. Any later candidate must be
+preregistered on a different task cohort and gate answer quality directly,
+especially temporal reasoning and complete-set questions.
