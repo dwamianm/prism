@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from benchmarks.diagnostics import longmemeval_s_compact as runner
 
 
@@ -169,3 +171,24 @@ def test_test_split_allows_a_no_loss_complete_turn_tie(tmp_path: Path) -> None:
 
     assert result["gate"]["passed"] is True
     assert result["gate"]["complete_turn_questions_improved"] is False
+
+
+def test_development_result_identity_requires_an_intact_passing_result(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "development.json"
+    value = {
+        "kind": "longmemeval-s-compact-packing-result",
+        "split": "dev",
+        "registration_sha256": "a" * 64,
+        "gate": {"passed": True},
+    }
+    value["result_sha256"] = runner._sha256(runner._canonical(value))
+    path.write_text(json.dumps(value))
+
+    assert runner._development_result_identity(path) == runner._sha256_file(path)
+
+    value["gate"]["passed"] = False
+    path.write_text(json.dumps(value))
+    with pytest.raises(ValueError, match="valid passing result"):
+        runner._development_result_identity(path)

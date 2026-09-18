@@ -168,6 +168,26 @@ def _gates(split: str) -> dict[str, Any]:
     }
 
 
+def _development_result_identity(path: Path) -> str:
+    result = json.loads(path.read_text())
+    recorded_checksum = result.get("result_sha256")
+    computed_checksum = _sha256(
+        _canonical(
+            {key: value for key, value in result.items() if key != "result_sha256"}
+        )
+    )
+    if (
+        result.get("kind") != "longmemeval-s-compact-packing-result"
+        or result.get("split") != "dev"
+        or result.get("gate", {}).get("passed") is not True
+        or not isinstance(result.get("registration_sha256"), str)
+        or len(result["registration_sha256"]) != 64
+        or recorded_checksum != computed_checksum
+    ):
+        raise ValueError("development result is not a valid passing result")
+    return _sha256_file(path)
+
+
 def create_registration(
     *,
     dataset_path: Path,
@@ -175,12 +195,28 @@ def create_registration(
     baseline_registration: Path,
     baseline_capture: Path,
     baseline_manifest: Path,
+    development_result: Path | None,
     project_root: Path,
     output_path: Path,
 ) -> dict[str, Any]:
     if output_path.exists():
         raise ValueError("registration output already exists")
     cases = _load_dataset(dataset_path)
+    source = {
+        "prme_revision": _git_revision(project_root),
+        "runner_sha256": _sha256_file(Path(__file__).resolve()),
+        "baseline_registration_sha256": _sha256_file(baseline_registration),
+        "baseline_capture_sha256": _sha256_file(baseline_capture),
+        "baseline_manifest_sha256": _sha256_file(baseline_manifest),
+    }
+    if split == "test":
+        if development_result is None:
+            raise ValueError("test registration requires a passing development result")
+        source["development_result_sha256"] = _development_result_identity(
+            development_result
+        )
+    elif development_result is not None:
+        raise ValueError("development registration cannot bind a development result")
     value = {
         "schema_version": 1,
         "kind": "longmemeval-s-compact-packing-registration",
@@ -189,13 +225,7 @@ def create_registration(
             "Fixed-candidate source-retention comparison of PRME's public "
             "auditable and compact renderers; not answer accuracy or a Zep score."
         ),
-        "source": {
-            "prme_revision": _git_revision(project_root),
-            "runner_sha256": _sha256_file(Path(__file__).resolve()),
-            "baseline_registration_sha256": _sha256_file(baseline_registration),
-            "baseline_capture_sha256": _sha256_file(baseline_capture),
-            "baseline_manifest_sha256": _sha256_file(baseline_manifest),
-        },
+        "source": source,
         "dataset": _dataset_identity(dataset_path, cases, split),
         "protocol": _protocol(),
         "evaluation": _gates(split),
@@ -231,6 +261,7 @@ def _validate_registration(
     baseline_registration: Path,
     baseline_capture: Path,
     baseline_manifest: Path,
+    development_result: Path | None,
     project_root: Path,
 ) -> list[dict[str, Any]]:
     cases = _load_dataset(dataset_path)
@@ -243,6 +274,14 @@ def _validate_registration(
         "baseline_capture_sha256": _sha256_file(baseline_capture),
         "baseline_manifest_sha256": _sha256_file(baseline_manifest),
     }
+    if split == "test":
+        if development_result is None:
+            raise ValueError("test evaluation requires its development result")
+        expected_source["development_result_sha256"] = _development_result_identity(
+            development_result
+        )
+    elif development_result is not None:
+        raise ValueError("development evaluation cannot bind a development result")
     if (
         registration.get("schema_version") != 1
         or registration.get("kind") != "longmemeval-s-compact-packing-registration"
@@ -600,6 +639,7 @@ async def evaluate(
     baseline_registration: Path,
     baseline_capture: Path,
     baseline_manifest: Path,
+    development_result: Path | None,
     baseline_root: Path,
     project_root: Path,
     output_dir: Path,
@@ -614,6 +654,7 @@ async def evaluate(
         baseline_registration=baseline_registration,
         baseline_capture=baseline_capture,
         baseline_manifest=baseline_manifest,
+        development_result=development_result,
         project_root=project_root,
     )
     registration_sha256 = _sha256_file(registration_path)
@@ -676,6 +717,7 @@ def _parser() -> argparse.ArgumentParser:
     register.add_argument("--baseline-registration", type=Path, required=True)
     register.add_argument("--baseline-capture", type=Path, required=True)
     register.add_argument("--baseline-manifest", type=Path, required=True)
+    register.add_argument("--development-result", type=Path)
     register.add_argument("--project-root", type=Path, default=Path.cwd())
     register.add_argument("--output", type=Path, required=True)
     run = subparsers.add_parser("evaluate")
@@ -684,6 +726,7 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--baseline-registration", type=Path, required=True)
     run.add_argument("--baseline-capture", type=Path, required=True)
     run.add_argument("--baseline-manifest", type=Path, required=True)
+    run.add_argument("--development-result", type=Path)
     run.add_argument("--baseline-root", type=Path, required=True)
     run.add_argument("--project-root", type=Path, default=Path.cwd())
     run.add_argument("--output-dir", type=Path, required=True)
@@ -698,6 +741,9 @@ def main() -> None:
         "baseline_registration": args.baseline_registration.resolve(),
         "baseline_capture": args.baseline_capture.resolve(),
         "baseline_manifest": args.baseline_manifest.resolve(),
+        "development_result": (
+            args.development_result.resolve() if args.development_result else None
+        ),
         "project_root": args.project_root.resolve(),
     }
     if args.command == "register":
