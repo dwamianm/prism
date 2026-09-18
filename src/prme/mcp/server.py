@@ -905,6 +905,56 @@ async def memory_organize(
         return _internal_error("memory_organize", e)
 
 
+async def memory_list_alias_proposals(
+    user_id: Optional[str] = None,
+    scope: Optional[str] = None,
+    status: Optional[Literal["pending", "accepted", "rejected"]] = None,
+    limit: int = 100,
+    ctx: Context = None,
+) -> str:
+    """List audited entity-alias proposals and their review status."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        items = await engine.list_alias_proposals(
+            user_id=owner,
+            scope=Scope(scope) if scope is not None else None,
+            status=status,
+            limit=limit,
+        )
+        return json.dumps([item.model_dump(mode="json") for item in items])
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_list_alias_proposals", exc)
+
+
+async def memory_review_alias_proposal(
+    proposal_operation_id: str,
+    decision: Literal["accepted", "rejected"],
+    reviewer_id: str,
+    reason: Optional[str] = None,
+    user_id: Optional[str] = None,
+    ctx: Context = None,
+) -> str:
+    """Accept a verified alias link or record an audited rejection."""
+    engine = _get_engine(ctx)
+    try:
+        owner = _get_user_id(engine, user_id, required=True)
+        result = await engine.review_alias_proposal(
+            proposal_operation_id,
+            user_id=owner,
+            decision=decision,
+            reviewer_id=reviewer_id,
+            reason=reason,
+        )
+        return result.model_dump_json()
+    except (PermissionError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_review_alias_proposal", exc)
+
+
 async def memory_get_node(
     node_id: str,
     ctx: Context = None,
@@ -1581,6 +1631,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
     server.prme_config = config
     for tool in (memory_store, memory_ingest_fast_many, memory_process_materializations,
                  memory_retrieve, memory_ingest, memory_organize,
+                 memory_list_alias_proposals, memory_review_alias_proposal,
                  memory_get_node, memory_scan_nodes, memory_aggregate_assertions,
                  memory_aggregate_quantities, memory_get_assertion_state,
                  memory_get_event, memory_get_extraction,

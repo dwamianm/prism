@@ -71,6 +71,8 @@ class TestToolDiscovery:
             "memory_retrieve",
             "memory_ingest",
             "memory_organize",
+            "memory_list_alias_proposals",
+            "memory_review_alias_proposal",
             "memory_get_node",
             "memory_scan_nodes",
             "memory_aggregate_assertions",

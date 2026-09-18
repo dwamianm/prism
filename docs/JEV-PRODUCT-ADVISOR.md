@@ -46,6 +46,39 @@ async with JevProductAdvisor() as advisor:
     second = await advisor.compare(other_left, other_right)
 ```
 
+For a catalog rather than a hand-selected pair, generate a bounded candidate
+set first:
+
+```python
+from prme import ProductCandidateEntity
+
+candidates = await memory.find_product_alignment_candidates(
+    [
+        ProductCandidateEntity(
+            node_id=amazon_node_id,
+            catalog="amazon",
+            product=amazon_product,
+        ),
+        ProductCandidateEntity(
+            node_id=google_node_id,
+            catalog="google",
+            product=google_product,
+        ),
+    ],
+    user_id="alice",
+    top_k=5,
+    cross_catalog_only=True,
+)
+```
+
+The `product_tfidf_candidates_v1` ranker uses normalized name words, adjacent
+name bigrams, and manufacturer words to produce a deterministic sparse TF-IDF
+top-k union. It validates that every node is an active, owned product entity,
+that its content exactly matches the supplied product name, and that each pair
+shares compatible scope and provenance. It makes no provider calls and never
+creates an edge. Pass selected candidate pairs to the Jev advisor; candidate
+similarity is routing evidence, not an identity decision.
+
 To bind a positive assessment to existing PRME product entities, pass the exact
 node IDs and product records:
 
@@ -67,6 +100,16 @@ proposal = await memory.propose_product_alignment(
 )
 if proposal.proposal_published:
     print(proposal.proposal_edge_id, proposal.proposal_applied)
+
+    # The proposal is inert until an owner-scoped reviewer decides it.
+    decision = memory.review_alias_proposal(
+        proposal.proposal_operation_id,
+        user_id="alice",
+        decision="accepted",
+        reviewer_id="human:catalog-owner",
+        reason="The source catalog confirms one licensed product.",
+    )
+    print(decision.verified_edge_id)
 ```
 
 `MemoryClient.propose_product_alignment()` provides the same workflow without
@@ -111,6 +154,24 @@ shortest-path traversal, including retrieval and entity snapshots. Review tools
 can inspect them through `get_edges()` or opt into traversal with
 `include_unverified_aliases=True`. A proposal therefore cannot join the two
 entities' memories before a caller explicitly accepts the identity relationship.
+
+`list_alias_proposals(user_id=..., status="pending")` is the review inbox.
+It returns the complete decoded proposal, including the original node snapshots
+and Jev assessment when present. `review_alias_proposal()` accepts exactly one
+`accepted` or `rejected` decision with a bounded reviewer ID and optional reason;
+rejections require a reason. The synchronous `MemoryClient` and asynchronous
+`MemoryEngine` expose the same methods, and HTTP/MCP provide equivalent list and
+review operations.
+
+Acceptance atomically publishes a second `RELATES_TO` edge marked
+`identity_verified=True` with an `ALIAS_PROPOSAL_ACCEPTED` record. Both entity
+nodes stay active; review does not erase sources or silently choose a canonical
+entity. The verified link participates in ordinary traversal. Acceptance fails
+if either exact assessed node snapshot changed, so callers must reassess stale
+pairs. Rejection writes `ALIAS_PROPOSAL_REJECTED`, publishes no graph link, and
+keeps the original proposal excluded from traversal. The proposal pair has one
+deterministic review identity: identical retries return the committed decision,
+while a conflicting later decision fails.
 
 The unordered node pair has one durable proposal identity. A matching
 assessment-request retry returns the first committed assessment and edge without

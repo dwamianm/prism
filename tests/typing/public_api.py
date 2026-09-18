@@ -2,10 +2,11 @@
 
 from datetime import datetime, timezone
 from typing import assert_type
+from uuid import UUID
 
-from prme import AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
+from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, ProductAlignmentCandidate, ProductCandidateEntity, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ablate_context, assess_context_presence, evaluate_full_retrieval
 from prme.models import Event, MemoryNode, ProcessingResult
-from prme.integrations.typesafe import JevProductProposal
+from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
 
 
@@ -41,6 +42,38 @@ def consume(client: MemoryClient) -> None:
             user_id="alice",
         ),
         JevProductProposal,
+    )
+    assert_type(
+        client.find_product_alignment_candidates(
+            [
+                ProductCandidateEntity(
+                    node_id=UUID("11111111-1111-1111-1111-111111111111"),
+                    product=ProductEntity(name="Product"),
+                    catalog="left",
+                ),
+                {
+                    "node_id": "22222222-2222-2222-2222-222222222222",
+                    "product": {"name": "Product Pro"},
+                    "catalog": "right",
+                },
+            ],
+            user_id="alice",
+            cross_catalog_only=True,
+        ),
+        list[ProductAlignmentCandidate],
+    )
+    assert_type(
+        client.list_alias_proposals(user_id="alice", status="pending"),
+        list[AliasProposalInboxItem],
+    )
+    assert_type(
+        client.review_alias_proposal(
+            "proposal-id",
+            user_id="alice",
+            decision="accepted",
+            reviewer_id="human:alice",
+        ),
+        AliasProposalReviewResult,
     )
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])
     assert_type(client.get_events("alice"), list[Event])

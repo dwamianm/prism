@@ -86,6 +86,18 @@ class ContradictionResolutionRequest(BaseModel):
     evidence_id: UUID | None = None
 
 
+class AliasProposalReviewRequest(BaseModel):
+    """Explicit owner-scoped decision on an unverified identity proposal."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = Field(
+        default=None, description="Owner; defaults to authenticated user"
+    )
+    decision: Literal["accepted", "rejected"]
+    reviewer_id: str = Field(min_length=1, max_length=256)
+    reason: str | None = Field(default=None, max_length=2048)
+
+
 class StoreRequest(BaseModel):
     """Request body for POST /v1/store."""
 

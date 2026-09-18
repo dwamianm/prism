@@ -96,6 +96,16 @@ recognized and reused but not backfilled with invented creation history.
 Unverified proposals remain queryable as edges but are excluded from ordinary
 neighborhood and shortest-path traversal unless a caller explicitly opts in.
 
+An owner can list these records through the alias-proposal inbox and make one
+explicit accepted or rejected decision. The decision transaction retains the
+complete original proposal payload and reviewer input in a checksummed record.
+Acceptance rechecks the exact proposed node snapshots and publishes a separate
+verified alias edge; it leaves both nodes active and does not perform an
+organizer merge. Rejection publishes no traversable edge. Matching retries reuse
+the deterministic review record, while conflicting decisions fail. This turns a
+model or similarity signal into a reviewable identity link without treating it
+as permission to delete or supersede either entity.
+
 These guards protect source identity and merge behavior. They do not establish
 that extraction predicates are entailed, that a source is truthful, or that a
 reader correctly attributes every quotation. The PersonaMem reader diagnostic

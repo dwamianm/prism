@@ -65,6 +65,14 @@ from prme.types import ConditionEvaluationMethod, ConditionState, EpistemicType,
 from prme.models import Event, MemoryNode
 from prme.organizer.models import OrganizeResult
 from prme.retrieval.models import RetrievalResponse
+from prme.storage.alias_review import (
+    AliasProposalInboxItem,
+    AliasProposalReviewResult,
+)
+from prme.integrations.product_candidates import (
+    ProductAlignmentCandidate,
+    ProductCandidateEntity,
+)
 
 _Result = TypeVar("_Result")
 
@@ -625,6 +633,61 @@ class MemoryClient:
                 right,
                 user_id=user_id,
                 config=config,
+            )
+        )
+
+    def find_product_alignment_candidates(
+        self,
+        products: list[ProductCandidateEntity | dict[str, Any]],
+        *,
+        user_id: str,
+        top_k: int = 5,
+        min_score: float = 0.1,
+        cross_catalog_only: bool = False,
+    ) -> list[ProductAlignmentCandidate]:
+        """Rank compatible owned product nodes before optional Jev calls."""
+        return self._run(
+            self._engine.find_product_alignment_candidates(
+                products,
+                user_id=user_id,
+                top_k=top_k,
+                min_score=min_score,
+                cross_catalog_only=cross_catalog_only,
+            )
+        )
+
+    def list_alias_proposals(
+        self,
+        *,
+        user_id: str,
+        scope: Scope | str | None = None,
+        status: str | None = None,
+        limit: int = 100,
+    ) -> list[AliasProposalInboxItem]:
+        """List pending or reviewed identity proposals for one owner."""
+        return self._run(
+            self._engine.list_alias_proposals(
+                user_id=user_id, scope=scope, status=status, limit=limit
+            )
+        )
+
+    def review_alias_proposal(
+        self,
+        proposal_operation_id: str,
+        *,
+        user_id: str,
+        decision: str,
+        reviewer_id: str,
+        reason: str | None = None,
+    ) -> AliasProposalReviewResult:
+        """Accept an identity link or reject a proposal without merging nodes."""
+        return self._run(
+            self._engine.review_alias_proposal(
+                proposal_operation_id,
+                user_id=user_id,
+                decision=decision,
+                reviewer_id=reviewer_id,
+                reason=reason,
             )
         )
 
