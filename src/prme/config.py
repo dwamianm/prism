@@ -13,6 +13,7 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
+from prme.retrieval.temporal_relations import TemporalRelationConfig
 
 
 class _ProjectSettings(BaseSettings):
@@ -423,6 +424,14 @@ class PRMEConfig(_ProjectSettings):
     packing: PackingConfig = Field(
         default_factory=PackingConfig,
         description="Context packing configuration (RFC-0006)",
+    )
+    temporal_relation: TemporalRelationConfig = Field(
+        default_factory=TemporalRelationConfig,
+        description=(
+            "Opt-in evidence-bound temporal arithmetic. Disabled by default; "
+            "when enabled, the configured resolver and independent gate may "
+            "make network calls during temporal retrieval."
+        ),
     )
     organizer: OrganizerConfig = Field(
         default_factory=OrganizerConfig,

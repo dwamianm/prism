@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
+from datetime import timezone
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
+import re
 import time
 from typing import Any
 
@@ -153,14 +155,54 @@ async def _post_json(
     raise TemporalRelationProviderError("provider exhausted transient retries") from last_error
 
 
+async def _get_json(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    max_attempts: int,
+) -> dict[str, Any]:
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        response: httpx.Response | None = None
+        try:
+            response = await client.get(url)
+            if response.status_code in _RETRYABLE_STATUS and attempt < max_attempts:
+                await asyncio.sleep(_retry_delay(response, attempt))
+                continue
+            response.raise_for_status()
+            value = response.json()
+            if not isinstance(value, dict):
+                raise TemporalRelationProviderError(
+                    "provider identity response must be a JSON object"
+                )
+            return value
+        except (httpx.TransportError, httpx.TimeoutException) as exc:
+            last_error = exc
+            if attempt >= max_attempts:
+                break
+            await asyncio.sleep(_retry_delay(response, attempt))
+        except TemporalRelationProviderError:
+            raise
+        except (httpx.HTTPStatusError, json.JSONDecodeError, ValueError) as exc:
+            raise TemporalRelationProviderError(
+                "provider identity request failed"
+            ) from exc
+    raise TemporalRelationProviderError(
+        "provider identity exhausted transient retries"
+    ) from last_error
+
+
 def _resolver_body(
     config: TemporalRelationConfig,
     query: str,
     question_time,
     records: tuple[EvidenceRecord, ...],
 ) -> dict[str, Any]:
+    question_date = question_time.astimezone(timezone.utc).strftime(
+        "%Y/%m/%d %H:%M"
+    )
     state = {
-        "question_date": question_time.isoformat(),
+        "question_date": question_date,
         "question": query,
         "records": [record.model_dump(mode="json") for record in records],
     }
@@ -195,17 +237,36 @@ def _resolver_content(value: dict[str, Any], model: str) -> str:
     message = value.get("message")
     content = message.get("content") if isinstance(message, dict) else None
     if (
-        value.get("model") != model
+        not _matches_resolver_model(model, value.get("model"))
         or value.get("done") is not True
+        or value.get("done_reason") != "stop"
         or not isinstance(message, dict)
         or message.get("role") != "assistant"
+        or message.get("tool_calls")
         or not isinstance(content, str)
         or not content.strip()
     ):
         raise TemporalRelationProviderError(
             "Ollama returned an invalid resolver response"
         )
+    prompt_tokens = _optional_usage(value, "prompt_eval_count")
+    output_tokens = _optional_usage(value, "eval_count")
+    if (
+        prompt_tokens is None
+        or output_tokens is None
+        or prompt_tokens + output_tokens > RESOLVER_OPTIONS["num_ctx"]
+    ):
+        raise TemporalRelationProviderError(
+            "Ollama returned invalid resolver token observations"
+        )
     return content
+
+
+def _matches_resolver_model(requested: str, returned: Any) -> bool:
+    accepted = {requested}
+    if requested.endswith(":cloud"):
+        accepted.add(requested.removesuffix(":cloud"))
+    return isinstance(returned, str) and returned in accepted
 
 
 def _optional_usage(value: dict[str, Any], name: str) -> int | None:
@@ -215,6 +276,54 @@ def _optional_usage(value: dict[str, Any], name: str) -> int | None:
     if type(raw) is not int or raw < 0:
         raise TemporalRelationProviderError("provider returned invalid token usage")
     return raw
+
+
+async def _ollama_digest(
+    client: httpx.AsyncClient,
+    config: TemporalRelationConfig,
+) -> str:
+    tags = await _get_json(
+        client,
+        f"{config.resolver_base_url}/api/tags",
+        max_attempts=config.resolver_max_attempts,
+    )
+    models = tags.get("models")
+    matches = [
+        item.get("digest")
+        for item in models
+        if isinstance(item, dict) and item.get("name") == config.resolver_model
+    ] if isinstance(models, list) else []
+    if (
+        len(matches) != 1
+        or not isinstance(matches[0], str)
+        or not re.fullmatch(r"[0-9a-f]{64}", matches[0])
+    ):
+        raise TemporalRelationProviderError(
+            "Ollama model must resolve to exactly one digest"
+        )
+    digest = matches[0]
+    if (
+        config.resolver_model_digest is not None
+        and digest != config.resolver_model_digest
+    ):
+        raise TemporalRelationProviderError("Ollama resolver model digest changed")
+    return digest
+
+
+async def _ollama_identity(
+    client: httpx.AsyncClient,
+    config: TemporalRelationConfig,
+) -> tuple[str, str]:
+    digest = await _ollama_digest(client, config)
+    version_response = await _get_json(
+        client,
+        f"{config.resolver_base_url}/api/version",
+        max_attempts=config.resolver_max_attempts,
+    )
+    version = version_response.get("version")
+    if not isinstance(version, str) or not version.strip():
+        raise TemporalRelationProviderError("Ollama version is unavailable")
+    return digest, version.strip()
 
 
 class OllamaTemporalResolver:
@@ -248,6 +357,9 @@ class OllamaTemporalResolver:
             timeout=self.config.resolver_timeout_seconds,
             transport=self._transport,
         ) as client:
+            model_digest, provider_version = await _ollama_identity(
+                client, self.config
+            )
             while True:
                 bodies.append(body)
                 response, attempts = await _post_json(
@@ -259,6 +371,10 @@ class OllamaTemporalResolver:
                 )
                 transport_attempts += attempts
                 responses.append(response)
+                if await _ollama_digest(client, self.config) != model_digest:
+                    raise TemporalRelationProviderError(
+                        "Ollama resolver identity changed during the request"
+                    )
                 content = _resolver_content(response, self.config.resolver_model)
                 try:
                     resolution = RawResolution.model_validate_json(content)
@@ -276,6 +392,8 @@ class OllamaTemporalResolver:
             audit=ResolverAudit(
                 provider="ollama",
                 model=self.config.resolver_model,
+                model_digest=model_digest,
+                provider_version=provider_version,
                 request_sha256=_sha256(bodies),
                 response_sha256=_sha256(responses),
                 attempts=transport_attempts,

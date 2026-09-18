@@ -59,6 +59,10 @@ lossless special-float snapshots for previously admitted graph metadata.
 [Context packing](PACKING.md) explains the default balanced policy plus density and score
 ordering, exact token budgets, evidence limits and receipt compatibility.
 
+[Evidence-bound temporal relations](TEMPORAL-RELATIONS.md) documents the opt-in
+resolver, deterministic citation validation and arithmetic, independent Jev
+gate, fixed-budget repacking, failure behavior, receipts and held-out evidence.
+
 [Answerability and grounded abstention](ANSWERABILITY.md) documents the optional
 post-retrieval evidence-sufficiency evaluator, partial answers, cited conflicts,
 provider configuration and audit boundary.

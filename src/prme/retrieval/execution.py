@@ -72,6 +72,9 @@ def feature_identity(
         "reranker",
         "packing",
         "context_formatter",
+        "temporal_relation_models",
+        "temporal_relations",
+        "temporal_relation_providers",
         "tokenization",
     ):
         try:

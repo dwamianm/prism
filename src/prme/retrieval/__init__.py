@@ -35,7 +35,11 @@ from prme.retrieval.claim_verification import (
     EvidenceGroupScore,
     LocalizedEvidenceAssessment,
 )
-from prme.retrieval.context_formatter import build_context_guidance, format_for_llm
+from prme.retrieval.context_formatter import (
+    build_context_guidance,
+    format_for_llm,
+    is_temporal_reasoning_query,
+)
 from prme.retrieval.credit import ablate_context, assess_context_presence
 from prme.retrieval.filtering import filter_epistemic
 from prme.retrieval.models import (
@@ -58,6 +62,12 @@ from prme.retrieval.snapshots import (
     generate_all_entity_snapshots,
     generate_entity_snapshot,
     render_snapshot_text,
+)
+from prme.retrieval.temporal_relation_models import TemporalRelationMetadata
+from prme.retrieval.temporal_relations import (
+    TemporalRelation,
+    TemporalRelationConfig,
+    TemporalRelationEnricher,
 )
 
 __all__ = [
@@ -96,6 +106,10 @@ __all__ = [
     "RetrievalResponse",
     "ScoreTrace",
     "ScoringWeights",
+    "TemporalRelation",
+    "TemporalRelationConfig",
+    "TemporalRelationEnricher",
+    "TemporalRelationMetadata",
     "compute_composite_score",
     "build_context_guidance",
     "ablate_context",
@@ -104,6 +118,7 @@ __all__ = [
     "filter_epistemic",
     "generate_all_entity_snapshots",
     "generate_entity_snapshot",
+    "is_temporal_reasoning_query",
     "pack_context",
     "reformulate_query",
     "render_snapshot_text",

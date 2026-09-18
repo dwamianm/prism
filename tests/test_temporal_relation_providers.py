@@ -11,6 +11,7 @@ from prme.retrieval.temporal_relation_providers import (
     TemporalRelationProviderError,
 )
 from prme.retrieval.temporal_relations import (
+    CONFIRMED_RESOLVER_MODEL_DIGEST,
     EvidenceRecord,
     RawOperand,
     RawResolution,
@@ -61,7 +62,7 @@ def _resolution() -> RawResolution:
 
 def _ollama_response(content: str) -> dict:
     return {
-        "model": "deepseek-v4.1-flash:cloud",
+        "model": "deepseek-v4.1-flash",
         "done": True,
         "done_reason": "stop",
         "message": {"role": "assistant", "content": content},
@@ -70,11 +71,32 @@ def _ollama_response(content: str) -> dict:
     }
 
 
+def _identity_response(request: httpx.Request) -> httpx.Response | None:
+    if request.url.path == "/api/tags":
+        return httpx.Response(
+            200,
+            json={
+                "models": [
+                    {
+                        "name": "deepseek-v4.1-flash:cloud",
+                        "digest": CONFIRMED_RESOLVER_MODEL_DIGEST,
+                    }
+                ]
+            },
+        )
+    if request.url.path == "/api/version":
+        return httpx.Response(200, json={"version": "0.34.2"})
+    return None
+
+
 @pytest.mark.asyncio
 async def test_ollama_resolver_uses_answer_blind_contract() -> None:
     seen: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
+        identity = _identity_response(request)
+        if identity is not None:
+            return identity
         body = json.loads(request.content)
         seen.append(body)
         return httpx.Response(
@@ -91,13 +113,17 @@ async def test_ollama_resolver_uses_answer_blind_contract() -> None:
     assert result.resolution == _resolution()
     assert result.audit.schema_repairs == 0
     assert result.audit.attempts == 1
+    assert result.audit.model_digest == CONFIRMED_RESOLVER_MODEL_DIGEST
+    assert result.audit.provider_version == "0.34.2"
     assert result.audit.input_tokens == 150
     assert seen[0]["format"] == "json"
     assert seen[0]["think"] is False
     system = seen[0]["messages"][0]["content"]
     assert "Do not answer the question" in system
     assert "do not calculate dates" in system
-    assert "answer" not in json.loads(seen[0]["messages"][1]["content"])
+    state = json.loads(seen[0]["messages"][1]["content"])
+    assert "answer" not in state
+    assert state["question_date"] == "2026/09/18 12:00"
 
 
 @pytest.mark.asyncio
@@ -105,6 +131,9 @@ async def test_ollama_resolver_repairs_schema_once() -> None:
     seen: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
+        identity = _identity_response(request)
+        if identity is not None:
+            return identity
         body = json.loads(request.content)
         seen.append(body)
         content = (
@@ -126,6 +155,37 @@ async def test_ollama_resolver_repairs_schema_once() -> None:
     assert seen[1]["format"] == RawResolution.model_json_schema()
     assert seen[1]["messages"][-2]["role"] == "assistant"
     assert "did not match the required schema" in seen[1]["messages"][-1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_ollama_resolver_rejects_changed_model_before_generation() -> None:
+    chat_called = False
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal chat_called
+        if request.url.path == "/api/tags":
+            return httpx.Response(
+                200,
+                json={
+                    "models": [
+                        {
+                            "name": "deepseek-v4.1-flash:cloud",
+                            "digest": "0" * 64,
+                        }
+                    ]
+                },
+            )
+        chat_called = True
+        raise AssertionError("generation must not run with a changed model")
+
+    resolver = OllamaTemporalResolver(
+        TemporalRelationConfig(enabled=True),
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(TemporalRelationProviderError, match="digest changed"):
+        await resolver.resolve("How long passed?", NOW, _records())
+    assert chat_called is False
 
 
 def _relation():

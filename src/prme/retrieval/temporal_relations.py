@@ -24,39 +24,32 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import MemoryBundle, RetrievalCandidate
 from prme.retrieval.packing import pack_context
+from prme.retrieval.temporal_relation_models import (
+    GateAudit,
+    Operation,
+    ResolverAudit,
+    TemporalRelationMetadata,
+    TemporalRelationStatus,
+)
 from prme.types import RepresentationLevel
 
 
 TEMPORAL_RELATION_PROTOCOL = "temporal_relation_v1"
 CONFIRMED_RESOLVER_MODEL = "deepseek-v4.1-flash:cloud"
+CONFIRMED_RESOLVER_MODEL_DIGEST = (
+    "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8"
+)
+CONFIRMED_RESOLVER_BASE_URL = "http://127.0.0.1:11434"
 CONFIRMED_GATE_MODEL = "jev-1.13.0"
+CONFIRMED_GATE_API_URL = "https://api.typesafe.ai/v1/systemone"
 CONFIRMED_GATE_THRESHOLD = 0.85
 
-Operation = Literal[
-    "elapsed_between",
-    "elapsed_since_question",
-    "order",
-    "absolute_date",
-    "event_at_query_date",
-    "duration_from_text",
-    "schedule",
-    "unsupported",
-]
 TimeBasis = Literal[
     "event_time",
     "text_expression",
     "duration",
     "time_of_day",
     "none",
-]
-TemporalRelationStatus = Literal[
-    "empty_context",
-    "unsupported",
-    "validation_rejected",
-    "gate_rejected",
-    "packing_rejected",
-    "provider_error",
-    "accepted",
 ]
 
 _EVENT_TIME_MARKER_RE = re.compile(
@@ -117,13 +110,21 @@ class TemporalRelationConfig(BaseModel):
     enabled: bool = False
     resolver_provider: Literal["ollama"] = "ollama"
     resolver_model: str = Field(default=CONFIRMED_RESOLVER_MODEL, min_length=1)
-    resolver_base_url: str = "http://127.0.0.1:11434"
+    resolver_base_url: str = CONFIRMED_RESOLVER_BASE_URL
+    resolver_model_digest: str | None = Field(
+        default=CONFIRMED_RESOLVER_MODEL_DIGEST,
+        pattern=r"^[0-9a-f]{64}$",
+        description=(
+            "Expected Ollama model digest. Set None to accept the observed digest "
+            "for one request while still rejecting an in-flight identity change."
+        ),
+    )
     resolver_timeout_seconds: float = Field(default=90.0, gt=0, le=300)
     resolver_max_attempts: int = Field(default=3, ge=1, le=5)
     maximum_schema_repairs: Literal[1] = 1
     gate_provider: Literal["typesafe_jev"] = "typesafe_jev"
     gate_model: Literal["jev-1.13.0"] = "jev-1.13.0"
-    gate_api_url: str = "https://api.typesafe.ai/v1/systemone"
+    gate_api_url: str = CONFIRMED_GATE_API_URL
     gate_threshold: float = Field(
         default=CONFIRMED_GATE_THRESHOLD,
         ge=0,
@@ -149,13 +150,20 @@ class TemporalRelationConfig(BaseModel):
         return self
 
     @property
-    def confirmation_aligned(self) -> bool:
-        """Whether behavior-affecting values match the held-out confirmation."""
+    def confirmation_protocol_aligned(self) -> bool:
+        """Whether declared protocol values match the held-out confirmation.
+
+        This describes request configuration, not universal quality or a promise
+        that a hosted provider's internal weights remain reproducible.
+        """
         return (
             self.resolver_provider == "ollama"
             and self.resolver_model == CONFIRMED_RESOLVER_MODEL
+            and self.resolver_base_url == CONFIRMED_RESOLVER_BASE_URL
+            and self.resolver_model_digest == CONFIRMED_RESOLVER_MODEL_DIGEST
             and self.gate_provider == "typesafe_jev"
             and self.gate_model == CONFIRMED_GATE_MODEL
+            and self.gate_api_url == CONFIRMED_GATE_API_URL
             and self.gate_threshold == CONFIRMED_GATE_THRESHOLD
             and self.maximum_schema_repairs == 1
         )
@@ -217,78 +225,10 @@ class TemporalRelation(BaseModel):
     guidance: str
 
 
-class ResolverAudit(BaseModel):
-    """Non-secret audit fields returned by a resolver provider."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
-    provider: str
-    model: str
-    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    attempts: int = Field(ge=1)
-    schema_repairs: int = Field(ge=0, le=1)
-    input_tokens: int | None = Field(default=None, ge=0)
-    output_tokens: int | None = Field(default=None, ge=0)
-    elapsed_ms: float = Field(ge=0)
-
-
 class ResolverResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     resolution: RawResolution
     audit: ResolverAudit
-
-
-class GateAudit(BaseModel):
-    """Auditable relation-level result from the independent semantic gate."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
-    provider: str
-    model: str
-    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    probabilities: tuple[float, ...]
-    minimum_probability: float = Field(ge=0, le=1)
-    attempts: int = Field(ge=1)
-    input_tokens: int | None = Field(default=None, ge=0)
-    output_tokens: int | None = Field(default=None, ge=0)
-    elapsed_ms: float = Field(ge=0)
-
-    @model_validator(mode="after")
-    def validate_probabilities(self) -> GateAudit:
-        if not self.probabilities or any(
-            value < 0 or value > 1 for value in self.probabilities
-        ):
-            raise ValueError("gate probabilities must be a nonempty [0, 1] tuple")
-        if self.minimum_probability != min(self.probabilities):
-            raise ValueError("minimum_probability must match the operand minimum")
-        return self
-
-
-class TemporalRelationMetadata(BaseModel):
-    """Public outcome and complete non-secret provenance for one enrichment."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
-    schema_version: Literal[1] = 1
-    protocol: Literal["temporal_relation_v1"] = "temporal_relation_v1"
-    status: TemporalRelationStatus
-    confirmation_aligned: bool
-    configuration_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    operation: Operation | None = None
-    value: str | None = None
-    evidence_ids: tuple[UUID, ...] = ()
-    validation_errors: tuple[str, ...] = ()
-    resolver: ResolverAudit | None = None
-    gate: GateAudit | None = None
-    gate_threshold: float = Field(ge=0, le=1)
-    control_context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    result_context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    guidance_sha256: str | None = Field(
-        default=None, pattern=r"^[0-9a-f]{64}$"
-    )
-    dropped_record_ids: tuple[UUID, ...] = ()
-    error_stage: Literal["resolver", "gate"] | None = None
-    error_type: str | None = None
-    elapsed_ms: float = Field(ge=0)
 
 
 class TemporalResolver(Protocol):
@@ -616,7 +556,9 @@ class TemporalRelationEnricher:
         result_ids = {item.node.id for item in _packed_candidates(result)}
         return TemporalRelationMetadata(
             status=status,
-            confirmation_aligned=self.config.confirmation_aligned,
+            confirmation_protocol_aligned=(
+                self.config.confirmation_protocol_aligned
+            ),
             configuration_sha256=self.config.configuration_sha256,
             operation=relation.operation if relation else None,
             value=relation.value if relation else None,

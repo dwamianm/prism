@@ -107,6 +107,15 @@ validates bundle-local citations, and returns `answerable`, `partial`,
 `insufficient`, or `conflicting`. It is a model-assisted post-retrieval check;
 provider failures are explicit and do not alter deterministic retrieval.
 
+For interval, ordering, and explicit-duration questions, opt-in
+[`TemporalRelationConfig`](docs/TEMPORAL-RELATIONS.md) lets a resolver align the
+question to exact packed quotes, then performs the arithmetic locally and uses
+an independent Jev gate before adding fixed-budget guidance. The held-out
+104-question confirmation improved answer accuracy from 50/104 to 60/104 with
+10 paired wins and no losses. It remains disabled by default because it makes
+provider calls; every run exposes evidence IDs, model identity, hashes, gate
+probabilities, fallback status, and receipt data.
+
 For explicit declarative claims, the optional local
 [`ClaimVerifier`](docs/CLAIM-VERIFICATION.md) independently scores bounded
 minimal evidence groups using a pinned NLI model. It preserves typed packed

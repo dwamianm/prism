@@ -271,6 +271,15 @@ assessments do not mutate memory or retrieval receipts. A registered repeated
 BEAM development trial failed every promotion gate, so this remains an explicit
 experimental API rather than automatic retrieval behavior. The legacy
 `should_abstain` helper remains a fail-open Boolean compatibility API.
+`TemporalRelationConfig.enabled` opts temporal-reasoning queries into an
+answer-blind Ollama resolver, bundle-local quote/date validation, deterministic
+arithmetic, a pinned Jev operand gate and same-budget repacking. It is disabled
+by default and must never call either provider for ordinary queries. Accepted
+guidance may evict only uncited control records; cited IDs and representations
+must remain. Provider failures default to the byte-identical control bundle and
+surface sanitized metadata. Preserve the confirmed prompt/options, one-repair
+limit, model digest and 0.85 threshold when claiming protocol alignment. Changed
+configurations must report alignment false. See `docs/TEMPORAL-RELATIONS.md`.
 Python, HTTP and MCP retrieve accept explicit per-request `ranking_multipliers`
 for full-pipeline trials; they are applied after query adjustment and do not activate a profile.
 Python `evaluate_learning` fits an offline weight-multiplier proposal from a

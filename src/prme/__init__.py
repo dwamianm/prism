@@ -130,6 +130,8 @@ from prme.retrieval.claim_verification import (
     LocalizedEvidenceAssessment,
 )
 from prme.retrieval.full_learning import evaluate_full_retrieval
+from prme.retrieval.temporal_relation_models import TemporalRelationMetadata
+from prme.retrieval.temporal_relations import TemporalRelationConfig
 from prme.types import (
     ConditionEvaluationMethod,
     ConditionState,
@@ -283,6 +285,8 @@ __all__ = [
     "StaleAliasProposal",
     "StaleRankingProfileError",
     "StoreReceipt",
+    "TemporalRelationConfig",
+    "TemporalRelationMetadata",
     "ablate_context",
     "assess_context_presence",
     "assess_answerability",

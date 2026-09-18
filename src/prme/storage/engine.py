@@ -461,6 +461,7 @@ class MemoryEngine:
                 query_reformulation_provider=config.extraction.provider,
                 query_reformulation_model=config.extraction.model,
                 temporal_languages=config.temporal_languages,
+                temporal_relation_config=config.temporal_relation,
             )
 
             # Run epistemic backfill migration for existing nodes
@@ -595,6 +596,7 @@ class MemoryEngine:
                 query_reformulation_provider=config.extraction.provider,
                 query_reformulation_model=config.extraction.model,
                 temporal_languages=config.temporal_languages,
+                temporal_relation_config=config.temporal_relation,
             )
 
             # Run epistemic backfill migration

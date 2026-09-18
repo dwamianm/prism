@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from prme.models.nodes import MemoryNode
 from prme.models.learning import RankingMultipliers
 from prme.retrieval.config import ScoringWeights
+from prme.retrieval.temporal_relation_models import TemporalRelationMetadata
 from prme.types import QueryIntent, RepresentationLevel, RetrievalMode
 
 
@@ -477,6 +478,13 @@ class RetrievalMetadata(BaseModel):
     historical_coverage: HistoricalCoverage | None = Field(
         default=None,
         description="Explicit non-snapshot boundary when knowledge_at is requested",
+    )
+    temporal_relation: TemporalRelationMetadata | None = Field(
+        default=None,
+        description=(
+            "Outcome and non-secret provider provenance when opt-in temporal "
+            "relation enrichment ran for this retrieval"
+        ),
     )
 
 

@@ -465,6 +465,14 @@ def _detect_context_type(
     return "default"
 
 
+def is_temporal_reasoning_query(
+    query: str,
+    query_analysis: QueryAnalysis | None = None,
+) -> bool:
+    """Return whether retrieval should perform explicit temporal reasoning."""
+    return _detect_context_type(query, query_analysis) == "temporal"
+
+
 # ---------------------------------------------------------------------------
 # PRIME enhancements: profile preamble & conflict annotations
 # ---------------------------------------------------------------------------
