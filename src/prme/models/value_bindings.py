@@ -154,7 +154,9 @@ def attach_value_bindings(
     value_bindings: list[MemoryValueBinding | dict[str, Any]] | None,
 ) -> dict | None:
     """Validate and snapshot caller bindings before storage can await work."""
-    copied = _snapshot_object(metadata)
+    from prme.storage.metadata import snapshot_metadata
+
+    copied = snapshot_metadata(metadata)
     if copied is not None and VALUE_BINDINGS_METADATA_KEY in copied:
         raise ValueError(
             f"metadata.{VALUE_BINDINGS_METADATA_KEY} is reserved; pass value_bindings instead"
@@ -191,7 +193,7 @@ def attach_value_bindings(
     result[VALUE_BINDINGS_METADATA_KEY] = [
         item.model_dump(mode="json") for item in parsed
     ]
-    return _snapshot_object(result)
+    return snapshot_metadata(result)
 
 
 def value_bindings_for_node(node: "MemoryNode") -> tuple[MemoryValueBinding, ...]:
@@ -283,6 +285,12 @@ def resolve_tool_arguments(
     lookup_grouped: dict[str, list[RetrievedValueBinding]] = {}
     for binding in bindings:
         lookup_grouped.setdefault(binding.lookup, []).append(binding)
+    overlap = sorted(grouped.keys() & lookup_grouped.keys())
+    if overlap:
+        raise ValueError(
+            "Ambiguous values appear as both presentation and lookup forms: "
+            + ", ".join(repr(item) for item in overlap)
+        )
 
     def source_fields(sources: list[RetrievedValueBinding]) -> dict[str, Any]:
         return {

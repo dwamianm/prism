@@ -216,6 +216,32 @@ def test_resolution_omits_ambiguous_reverse_lookup_match():
     assert resolution.binding_uses == ()
 
 
+def test_resolution_rejects_cross_direction_value_collision():
+    def node(reference: str, presentation: str, lookup: str) -> MemoryNode:
+        binding = MemoryValueBinding(
+            reference=reference,
+            kind="city",
+            presentation=presentation,
+            lookup=lookup,
+        )
+        return MemoryNode(
+            id=uuid4(),
+            user_id="alice",
+            node_type=NodeType.NOTE,
+            content=presentation,
+            metadata={
+                VALUE_BINDINGS_METADATA_KEY: [binding.model_dump(mode="json")]
+            },
+        )
+
+    bundle = _bundle(
+        node("short", "NYC", "New York"),
+        node("alternate", "New York City", "NYC"),
+    )
+    with pytest.raises(ValueError, match="both presentation and lookup"):
+        bundle.resolve_tool_arguments({"city": "NYC"})
+
+
 def test_binding_is_unavailable_when_presentation_was_not_packed():
     node = MemoryNode(
         user_id="alice",
