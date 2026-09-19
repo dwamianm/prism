@@ -31,6 +31,7 @@ from prme.models.learning import (
     RankingMultipliers,
 )
 from prme.models.processing import FastIngestItem
+from prme.models.value_bindings import MemoryValueBinding
 from prme.storage.fast_ingest import FastIngestConflict
 from prme.types import (
     ConditionEvaluationMethod,
@@ -155,6 +156,7 @@ async def memory_store(
     content: str,
     user_id: Optional[str] = None,
     retrieval_content: Optional[str] = None,
+    value_bindings: Optional[list[MemoryValueBinding]] = None,
     node_type: str = "note",
     scope: str = "personal",
     event_time: Optional[AwareDatetime] = None,
@@ -177,6 +179,8 @@ async def memory_store(
         content: Exact source text retained in the immutable event log.
         retrieval_content: Optional compact text used for retrieval and model
             context while preserving the full source in ``content``.
+        value_bindings: Optional source-backed presentation values with complete
+            caller-supplied lookup forms for exact tool-argument resolution.
         user_id: User who owns this memory.
         node_type: Type of memory node. One of: entity, fact, decision,
             preference, task, instruction, summary, note. Default: note.
@@ -212,6 +216,7 @@ async def memory_store(
             content,
             user_id=user_id,
             retrieval_content=retrieval_content,
+            value_bindings=value_bindings,
             node_type=nt,
             scope=sc,
             role=role,
@@ -427,6 +432,10 @@ async def memory_retrieve(
         }
         if include_context:
             payload["context"] = response.bundle.render()
+            payload["value_bindings"] = [
+                item.model_dump(mode="json")
+                for item in response.bundle.value_bindings()
+            ]
         return json.dumps(payload)
     except Exception as e:
         return _internal_error("memory_retrieve", e)

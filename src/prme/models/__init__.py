@@ -36,6 +36,13 @@ from prme.models.processing import (
 )
 from prme.models.provenance import NodeProvenance, OperationAuditRecord
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
+from prme.models.value_bindings import (
+    MemoryValueBinding,
+    RetrievedValueBinding,
+    ToolArgumentBindingUse,
+    ToolArgumentReplacement,
+    ToolArgumentResolution,
+)
 
 __all__ = [
     "AssertionAggregation",
@@ -61,11 +68,16 @@ __all__ = [
     "MemoryEdge",
     "MemoryNode",
     "MemoryObject",
+    "MemoryValueBinding",
     "NodeProvenance",
     "OperationAuditRecord",
     "ProcessingResult",
     "ProcessingStatus",
     "StoreReceipt",
+    "RetrievedValueBinding",
+    "ToolArgumentBindingUse",
+    "ToolArgumentReplacement",
+    "ToolArgumentResolution",
     "ProfileJobStatus",
     "ProfileProcessingResult",
     "ProfileCollectionResult",

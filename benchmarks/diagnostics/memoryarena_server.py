@@ -17,7 +17,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from prme import MemoryEngine, PRMEConfig
+from prme import MemoryEngine, MemoryValueBinding, PRMEConfig
 from prme.retrieval.tokenization import count_tokens
 from prme.types import SourceType
 from benchmarks.diagnostics.hybrid_lexical import raw_config
@@ -28,22 +28,62 @@ _POSSESSIVE_NAME = re.compile(rf"\b({_TRAVELER_NAME})[’']s\b")
 _COMPANION_NAME = re.compile(
     rf"\b(?:join|with)\s+({_TRAVELER_NAME})\b",
 )
+_QUALIFIED_CITY = re.compile(r"^(?P<lookup>.+?)\((?P<qualifier>[^()\n]+)\)$")
 
 
-def _trace_projection(chunk: str) -> tuple[str | None, str | None, bool]:
+def _current_city_components(raw_value: str) -> tuple[str, ...]:
+    """Return atomic city values from one MemoryArena current-city field."""
+    value = raw_value.strip()
+    if value.casefold().startswith("from "):
+        origin, separator, destination = value[5:].partition(" to ")
+        if separator and origin.strip() and destination.strip():
+            return origin.strip(), destination.strip()
+    return (value,) if value else ()
+
+
+def _plan_value_bindings(plan: str) -> list[MemoryValueBinding]:
+    """Extract exact display/tool city forms already present in a saved plan."""
+    result: list[MemoryValueBinding] = []
+    seen: set[str] = set()
+    for line in plan.splitlines():
+        key, separator, raw_value = line.partition(":")
+        if not separator or key.strip().casefold().replace("_", " ") != "current city":
+            continue
+        for presentation in _current_city_components(raw_value):
+            match = _QUALIFIED_CITY.fullmatch(presentation)
+            if match is None or presentation in seen:
+                continue
+            lookup = match.group("lookup").rstrip()
+            if not lookup:
+                continue
+            result.append(
+                MemoryValueBinding(
+                    reference=f"current-city-{len(result) + 1}",
+                    kind="city",
+                    presentation=presentation,
+                    lookup=lookup,
+                )
+            )
+            seen.add(presentation)
+    return result
+
+
+def _trace_projection(
+    chunk: str,
+) -> tuple[str | None, str | None, bool, list[MemoryValueBinding]]:
     """Return a compact traveler/final-plan view without discarding the source."""
     try:
         value = json.loads(chunk)
     except (TypeError, json.JSONDecodeError):
-        return None, None, False
+        return None, None, False, []
     if not isinstance(value, dict):
-        return None, None, False
+        return None, None, False, []
     name = value.get("name")
     plan = value.get("final_plan")
     if not isinstance(name, str) or not name.strip():
-        return None, None, False
+        return None, None, False, []
     if not isinstance(plan, str) or not plan.strip():
-        return None, None, False
+        return None, None, False, []
     name = name.strip()
     marker = f"=== {name}'s Plan ==="
     boundary = plan.rfind(marker)
@@ -57,7 +97,7 @@ def _trace_projection(chunk: str) -> tuple[str | None, str | None, bool]:
     if is_base and isinstance(query, str) and query.strip():
         parts.append(f"Trip request:\n{query.strip()}")
     parts.append(f"Final plan:\n{plan.strip()}")
-    return "\n".join(parts), name, is_base
+    return "\n".join(parts), name, is_base, _plan_value_bindings(plan)
 
 
 def _travel_reference_names(
@@ -161,6 +201,10 @@ class Query(Identity):
     question: str = Field(min_length=1)
 
 
+class ResolveToolArguments(Identity):
+    arguments: dict[str, object]
+
+
 def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
     if memory_tokens < 128:
         raise ValueError("Memory budget must be at least 128 tokens")
@@ -175,6 +219,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
             app.state.owners = {}
             app.state.base_names = {}
             app.state.traveler_names = {}
+            app.state.active_bundles = {}
             app.state.lock = asyncio.Lock()
             yield
 
@@ -197,6 +242,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
             app.state.owners[identity.user_id] = str(uuid4())
             app.state.base_names[identity.user_id] = None
             app.state.traveler_names[identity.user_id] = []
+            app.state.active_bundles.pop(identity.user_id, None)
         return {"status": "ok", **identity.model_dump()}
 
     @app.post("/memory/add")
@@ -204,7 +250,9 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
         async with app.state.lock:
             user = owner(request)
             engine = app.state.engine
-            projection, traveler_name, is_base = _trace_projection(request.chunk)
+            projection, traveler_name, is_base, value_bindings = _trace_projection(
+                request.chunk
+            )
             if traveler_name and traveler_name not in app.state.traveler_names[request.user_id]:
                 app.state.traveler_names[request.user_id].append(traveler_name)
             if is_base:
@@ -212,7 +260,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
             metadata = (
                 {
                     "record_kind": "agent_environment_trace",
-                    "retrieval_projection": "traveler_confirmed_plan_v3",
+                    "retrieval_projection": "traveler_confirmed_plan_v5",
                     "traveler_name": traveler_name,
                     "base_traveler": is_base,
                 }
@@ -223,6 +271,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
                 request.chunk, user_id=user, role="system",
                 source_type=SourceType.EXTERNAL_DOCUMENT,
                 retrieval_content=projection,
+                value_bindings=value_bindings or None,
                 metadata=metadata,
             )
             status = await engine.processing_status(event_id, user_id=user)
@@ -246,6 +295,7 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
                 retrieval_query, user_id=user, token_budget=inner_budget,
                 include_cross_scope=False,
             )
+            app.state.active_bundles[request.user_id] = result.bundle
             context = _render_confirmed_plans(
                 result.results,
                 reference_names,
@@ -260,6 +310,20 @@ def create_app(config: PRMEConfig, *, memory_tokens: int = 4096) -> FastAPI:
                 raise HTTPException(500, "Rendered memory exceeds declared budget")
             return {"status": "ok", "user_id": request.user_id,
                     "prompt": block + f"\nUser: {request.question}"}
+
+    @app.post("/memory/resolve_tool_arguments")
+    async def resolve_tool_arguments(request: ResolveToolArguments):
+        async with app.state.lock:
+            owner(request)
+            bundle = app.state.active_bundles.get(request.user_id)
+            if bundle is None:
+                raise HTTPException(409, "No retrieved memory context is active")
+            resolution = bundle.resolve_tool_arguments(request.arguments)
+            return {
+                "status": "ok",
+                "user_id": request.user_id,
+                "response": resolution.model_dump(mode="json"),
+            }
 
     return app
 

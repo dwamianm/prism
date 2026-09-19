@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import random
+import re
 import subprocess
 import sys
 import time
@@ -38,7 +39,14 @@ DATASET_SPLIT = "test"
 REGISTRATION_KIND = "memoryarena-travel-paired-registration"
 RESULT_KIND = "memoryarena-travel-paired-result"
 SCHEMA_VERSION = 1
-ARMS = ("native_full_history", "prme")
+DEVELOPMENT_ARMS = ("native_full_history", "prme")
+CONFIRMATION_ARMS = (
+    "native_full_history",
+    "prme_no_result_guidance",
+    "prme",
+)
+PRME_ARMS = frozenset({"prme_no_result_guidance", "prme"})
+_QUALIFIED_TOOL_VALUE = re.compile(r"^.+\([^()\n]+\)$")
 FLIGHT_RELATIVE_PATH = (
     "env/env_systems/travel_planner_env/database/flights/clean_Flights_2022.csv"
 )
@@ -437,6 +445,24 @@ def register(
         raise RuntimeError("registration output already exists")
     if cohort_role not in {"development", "confirmation"}:
         raise ValueError("cohort role must be development or confirmation")
+    arms = (
+        CONFIRMATION_ARMS
+        if cohort_role == "confirmation"
+        else DEVELOPMENT_ARMS
+    )
+    decision_rules = {
+        "complete_execution": True,
+        "minimum_prme_minus_native_strict_ps_points": -5.0,
+        "minimum_prme_minus_native_strict_sps_points": -5.0,
+        "targeted_audit_complete": True,
+        "maximum_executed_qualified_arguments": 0,
+    }
+    if cohort_role == "development":
+        decision_rules["minimum_exact_qualified_values"] = 244
+    else:
+        decision_rules[
+            "minimum_candidate_minus_control_exact_qualified_values"
+        ] = 5
     _check_upstream(upstream)
     revision = _check_prme_clean(root)
     dataset, dataset_identity = _load_dataset()
@@ -495,8 +521,8 @@ def register(
             "remote_weights_pinned": False,
         },
         "protocol": {
-            "arms": list(ARMS),
-            "arm_order": "counterbalanced within each registered group",
+            "arms": list(arms),
+            "arm_order": "cyclically counterbalanced within each registered group",
             "judgement_mode": "none",
             "use_step_memory": False,
             "prme_memory_tokens": 4096,
@@ -509,7 +535,15 @@ def register(
                 "source-preserving trace-projection adapter; exact raw traces remain "
                 "events while traveler final plans are retrieved per query."
             ),
-            "prme_retrieval_projection": "traveler_confirmed_plan_v3",
+            "prme_retrieval_projection": "traveler_confirmed_plan_v5",
+            "prme_value_binding_policy": (
+                "Source-backed current-city values with parenthesized qualifiers are "
+                "stored as typed presentation/lookup pairs. Model context retains only "
+                "the confirmed plan text; exact complete-value resolution is applied "
+                "only when PRME-arm tool calls execute. Each executed call saves its "
+                "binding uses, and only those exact source-backed presentation forms "
+                "are appended as separate metadata to that call's tool result."
+            ),
             "prme_query_projection": (
                 "base traveler plus exact occurrences of previously stored traveler "
                 "names in the constraint body, excluding the roster preamble"
@@ -528,11 +562,7 @@ def register(
             "primary": "strict full-normalized-string PS, SPS and SR",
             "secondary": "unchanged upstream native PS, SPS and SR",
             "coverage": "exact registered group/person coverage in every arm",
-            "decision_rules": {
-                "complete_execution": True,
-                "minimum_prme_minus_native_strict_ps_points": -5.0,
-                "minimum_prme_minus_native_strict_sps_points": -5.0,
-            },
+            "decision_rules": decision_rules,
             "limits": [
                 (
                     "Fresh confirmation cohort; it does not establish universal "
@@ -546,6 +576,12 @@ def register(
             ],
         },
     }
+    if cohort_role == "confirmation":
+        registration["protocol"]["prme_no_result_guidance"] = (
+            "The same PRME retrieval and exact tool-argument resolution as the "
+            "candidate, while withholding call-local presentation metadata from "
+            "tool results. This is the causal output-fidelity control."
+        )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(_canonical(registration) + b"\n")
     return registration
@@ -739,6 +775,137 @@ def _configure_actor_client(agent: Any, actor: dict[str, Any]) -> None:
     agent.client = OllamaNativeTravelClient(actor)
 
 
+def _presentation_guidance(binding_uses: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Build call-local output metadata without exposing lookup values."""
+    values = set()
+    for use in binding_uses:
+        if not isinstance(use, dict):
+            raise RuntimeError("memory adapter returned a malformed binding use")
+        operation = use.get("operation")
+        kind = use.get("kind")
+        presentation = use.get("presentation")
+        if (
+            operation not in {"replaced", "already_lookup"}
+            or not isinstance(kind, str)
+            or not isinstance(presentation, str)
+        ):
+            raise RuntimeError("memory adapter returned a malformed binding use")
+        values.add((kind, presentation))
+    if not values:
+        return None
+    return {
+        "schema_version": 1,
+        "instruction": (
+            "When presenting this tool result, preserve these exact source-backed "
+            "values. This metadata is separate from the tool data."
+        ),
+        "values": [
+            {"kind": kind, "presentation": presentation}
+            for kind, presentation in sorted(values)
+        ],
+    }
+
+
+def _pointer_segment(value: str) -> str:
+    return value.replace("~", "~0").replace("/", "~1")
+
+
+def _unresolved_qualified_pointers(value: Any, pointer: str = "") -> list[str]:
+    """Find complete qualified values that remain after exact resolution."""
+    if isinstance(value, dict):
+        result = []
+        for key, nested in value.items():
+            child = f"{pointer}/{_pointer_segment(str(key))}"
+            result.extend(_unresolved_qualified_pointers(nested, child))
+        return result
+    if isinstance(value, list):
+        result = []
+        for index, nested in enumerate(value):
+            result.extend(_unresolved_qualified_pointers(nested, f"{pointer}/{index}"))
+        return result
+    if isinstance(value, str) and _QUALIFIED_TOOL_VALUE.fullmatch(value):
+        return [pointer or "/"]
+    return []
+
+
+class _ResolvingToolExecutor:
+    """Apply visible PRME value bindings at the real tool boundary."""
+
+    def __init__(
+        self, delegate: Any, memory: Any, *, annotate_results: bool = True
+    ):
+        self.delegate = delegate
+        self.memory = memory
+        self.annotate_results = annotate_results
+        self._records: list[dict[str, Any]] = []
+
+    def start_turn(self) -> None:
+        self._records = []
+
+    def drain(self) -> list[dict[str, Any]]:
+        records = self._records
+        self._records = []
+        return records
+
+    def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
+        original = json.loads(json.dumps(arguments, ensure_ascii=False))
+        response = self.memory._post(
+            "/memory/resolve_tool_arguments",
+            {
+                "user_id": self.memory.user_id,
+                "memory_system_name": self.memory.memory_system_name,
+                "arguments": original,
+            },
+        )
+        resolution = response.get("response")
+        if not isinstance(resolution, dict):
+            raise RuntimeError("memory adapter returned no tool-argument resolution")
+        resolved = resolution.get("arguments")
+        replacements = resolution.get("replacements")
+        binding_uses = resolution.get("binding_uses")
+        if (
+            not isinstance(resolved, dict)
+            or not isinstance(replacements, list)
+            or not isinstance(binding_uses, list)
+        ):
+            raise RuntimeError("memory adapter returned an invalid tool-argument resolution")
+        blocked_pointers = _unresolved_qualified_pointers(resolved)
+        delegate_executed = not blocked_pointers
+        eligible_guidance = _presentation_guidance(binding_uses)
+        guidance = (
+            eligible_guidance
+            if self.annotate_results and delegate_executed
+            else None
+        )
+        record = {
+            "tool_name": tool_name,
+            "original_arguments": original,
+            "resolved_arguments": resolved,
+            "replacements": replacements,
+            "binding_uses": binding_uses,
+            "delegate_executed": delegate_executed,
+            "blocked_qualified_argument_pointers": blocked_pointers,
+            "result_presentation_guidance_enabled": self.annotate_results,
+            "result_presentation_guidance": guidance,
+        }
+        self._records.append(record)
+        if blocked_pointers:
+            joined = ", ".join(blocked_pointers)
+            return (
+                "Tool execution blocked because source presentation values remain "
+                f"unresolved at {joined}. Retry with the tool lookup form."
+            )
+        result = self.delegate.execute(tool_name, resolved)
+        if not isinstance(result, str):
+            raise RuntimeError("tool executor returned a non-string result")
+        if guidance is None:
+            return result
+        payload = json.dumps(
+            guidance, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        )
+        return f"{result}\n\n<prme_value_presentations>{payload}</prme_value_presentations>"
+
+
 def _restore_actor_state(
     agent: Any,
     memory: Any,
@@ -779,15 +946,24 @@ def _run_group(
     if observation.get("group_id") != row["id"]:
         raise RuntimeError("upstream environment reset selected the wrong group")
     agent.reset()
+    base_executor = getattr(agent.executor, "delegate", agent.executor)
+    agent.executor = base_executor
     memory = None
+    resolving_executor = None
     memory_contexts = []
     base = observation["base_person"]
-    if arm == "prme":
+    if arm in PRME_ARMS:
         memory = runtime["memory_client"](
-            user_id=f"registered_{row['id']}_{model}_prme",
+            user_id=f"registered_{row['id']}_{model}_{arm}",
             memory_system_name="prme",
             base_url=memory_url,
         )
+        resolving_executor = _ResolvingToolExecutor(
+            base_executor,
+            memory,
+            annotate_results=arm == "prme",
+        )
+        agent.executor = resolving_executor
         base_plan = runtime["format_plan"](
             base["name"], base["daily_plans"]
         )
@@ -832,6 +1008,8 @@ def _run_group(
 
         person_started = time.perf_counter()
         before = agent.get_usage_stats()
+        if resolving_executor is not None:
+            resolving_executor.start_turn()
         memory_context = None
         if memory is not None:
             wrapped = memory.wrap_user_prompt(question["query"])
@@ -852,6 +1030,9 @@ def _run_group(
         )
         prior_plans = agent.accumulated_plans
         action = agent.act(question["query"])
+        tool_argument_resolutions = (
+            resolving_executor.drain() if resolving_executor is not None else []
+        )
         final_plan = _final_plan_block(action, question["name"])
         agent.accumulated_plans = prior_plans
         if final_plan:
@@ -892,6 +1073,7 @@ def _run_group(
             "reward_hidden_from_agent": reward,
             "usage": _usage_delta(agent.get_usage_stats(), before),
             "duration_seconds": round(time.perf_counter() - person_started, 6),
+            "tool_argument_resolutions": tool_argument_resolutions,
         }
         scratchpad = {
             "person_idx": question["round_idx"],
@@ -913,6 +1095,7 @@ def _run_group(
         persons.append(person)
         scratchpads.append(scratchpad)
     environment.close()
+    agent.executor = base_executor
     return {
         "schema_version": 1,
         "arm": arm,
@@ -963,6 +1146,9 @@ def run(
     registration, cohort = _verify_registration(
         registration_path, root=root, upstream=upstream
     )
+    arms = tuple(registration["protocol"].get("arms") or ())
+    if arms not in {DEVELOPMENT_ARMS, CONFIRMATION_ARMS}:
+        raise RuntimeError("registered MemoryArena arms are unsupported")
     expected_runtime = registration["actor"]["runtime_identity"]
     observed_runtime = _ollama_reader_identity(
         expected_runtime["api_base_url"], registration["actor"]["model"]
@@ -1007,7 +1193,12 @@ def run(
     process = None
     log = None
     try:
-        pending_prme = any(("prme", row["id"]) not in checkpoints for row in cohort)
+        pending_prme = any(
+            (arm, row["id"]) not in checkpoints
+            for arm in arms
+            if arm in PRME_ARMS
+            for row in cohort
+        )
         if pending_prme:
             process, log = _start_server(
                 root,
@@ -1023,10 +1214,11 @@ def run(
         _configure_actor_client(shared_agent, registration["actor"])
         # The upstream reset removes all behavioral state. Reusing its immutable
         # local tool databases avoids loading the 305 MB flight table twice.
-        agents = {arm: shared_agent for arm in ARMS}
+        agents = {arm: shared_agent for arm in arms}
         memory_url = f"http://127.0.0.1:{memory_port}"
         for index, row in enumerate(cohort):
-            order = ARMS if index % 2 == 0 else tuple(reversed(ARMS))
+            offset = index % len(arms)
+            order = arms[offset:] + arms[:offset]
             for arm in order:
                 key = (arm, row["id"])
                 if key in checkpoints:
@@ -1075,7 +1267,7 @@ def run(
     }
     scores = {}
     ordered_records = {}
-    for arm in ARMS:
+    for arm in arms:
         records = [checkpoints[(arm, row["id"])] for row in cohort]
         ordered_records[arm] = records
         submission = output / f"submission-{arm}.jsonl"
@@ -1110,7 +1302,7 @@ def run(
     }
     rules = registration["evaluation"]["decision_rules"]
     gates = {
-        "complete_execution": len(checkpoints) == len(cohort) * len(ARMS),
+        "complete_execution": len(checkpoints) == len(cohort) * len(arms),
         "strict_ps_noninferiority": deltas["ps"]
         >= rules["minimum_prme_minus_native_strict_ps_points"],
         "strict_sps_noninferiority": deltas["sps"]

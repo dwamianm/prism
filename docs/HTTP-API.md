@@ -29,7 +29,7 @@ HTTP 409. The API never turns Jev advice into an automatic merge.
 
 ## Store supplied memory
 
-`POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `role`, `user_id`,
+`POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `value_bindings`, `role`, `user_id`,
 `session_id`, `node_type`, `scope`, `metadata`, `epistemic_type`, `source_type`,
 `confidence`, `event_time` and `ttl_days`.
 
@@ -61,6 +61,13 @@ immutable event and uses the compact value for the graph node, vector and lexica
 indexes, retrieval results and packed model context. Omit it for the historical
 one-string behavior. The projection is recovered from the checksummed direct
 store journal and never regenerated after restart.
+
+`value_bindings` can attach source-backed `presentation` values and distinct,
+caller-supplied `lookup` forms to a direct memory. Every presentation must occur
+verbatim in both `content` and the indexed text. Retrieval responses expose only
+bindings whose presentation survived context packing. See
+[typed presentation and lookup values](VALUE-BINDINGS.md) for the exact-only
+resolution rule and audit fields.
 
 The response contains the immutable source `event_id`, its `node_id` when available,
 and `processing_status`. A completed status means the direct node and indexes

@@ -101,6 +101,39 @@ class TestToolDiscovery:
 
 
 class TestStore:
+    async def test_store_accepts_typed_value_bindings(self, session):
+        source = '{"plan":"Current City: Salt Lake City(Utah)"}'
+        result = await session.call_tool("memory_store", {
+            "content": source,
+            "retrieval_content": "Current City: Salt Lake City(Utah)",
+            "value_bindings": [{
+                "reference": "current-city-1",
+                "kind": "city",
+                "presentation": "Salt Lake City(Utah)",
+                "lookup": "Salt Lake City",
+            }],
+            "user_id": "binding-user",
+        })
+        assert not result.isError
+        stored = json.loads(result.content[0].text)
+        fetched = await session.call_tool(
+            "memory_get_node", {"node_id": stored["node_id"]}
+        )
+        node = json.loads(fetched.content[0].text)
+        assert node["metadata"]["prme_value_bindings_v1"][0]["lookup"] == (
+            "Salt Lake City"
+        )
+        retrieved = await session.call_tool("memory_retrieve", {
+            "query": "Salt Lake City",
+            "user_id": "binding-user",
+            "include_context": True,
+        })
+        assert not retrieved.isError
+        payload = json.loads(retrieved.content[0].text)
+        assert payload["value_bindings"][0]["presentation"] == (
+            "Salt Lake City(Utah)"
+        )
+
     async def test_store_source_clock_is_returned_separately_from_validity(self, session):
         clock = "2025-04-03T09:15:00+05:30"
         valid_from = "2025-04-04T00:00:00+05:30"

@@ -175,6 +175,140 @@ def test_actor_transport_rejects_unregistered_compatibility_path():
         })
 
 
+def test_tool_executor_resolves_at_boundary_and_retains_audit():
+    class Delegate:
+        calls = []
+
+        def execute(self, name, arguments):
+            self.calls.append((name, arguments))
+            return "found"
+
+    class Memory:
+        user_id = "alice"
+        memory_system_name = "prme"
+        calls = []
+
+        def _post(self, path, payload):
+            self.calls.append((path, payload))
+            return {
+                "response": {
+                    "arguments": {"city": "Salt Lake City"},
+                    "replacements": [{
+                        "json_pointer": "/city",
+                        "presentation": "Salt Lake City(Utah)",
+                        "lookup": "Salt Lake City",
+                    }],
+                    "binding_uses": [{
+                        "json_pointer": "/city",
+                        "operation": "replaced",
+                        "kind": "city",
+                        "presentation": "Salt Lake City(Utah)",
+                        "lookup": "Salt Lake City",
+                    }],
+                }
+            }
+
+    delegate = Delegate()
+    memory = Memory()
+    executor = runner._ResolvingToolExecutor(delegate, memory)
+    arguments = {"city": "Salt Lake City(Utah)"}
+
+    executor.start_turn()
+    result = executor.execute("RestaurantSearch", arguments)
+    assert result.startswith("found\n\n<prme_value_presentations>")
+    assert '"presentation":"Salt Lake City(Utah)"' in result
+    assert '"lookup"' not in result
+    assert arguments == {"city": "Salt Lake City(Utah)"}
+    assert delegate.calls == [("RestaurantSearch", {"city": "Salt Lake City"})]
+    assert memory.calls[0][0] == "/memory/resolve_tool_arguments"
+    records = executor.drain()
+    assert records[0]["original_arguments"] == arguments
+    assert records[0]["resolved_arguments"] == {"city": "Salt Lake City"}
+    assert records[0]["replacements"][0]["json_pointer"] == "/city"
+    assert records[0]["binding_uses"][0]["operation"] == "replaced"
+    assert records[0]["delegate_executed"] is True
+    assert records[0]["blocked_qualified_argument_pointers"] == []
+    assert records[0]["result_presentation_guidance_enabled"] is True
+    assert records[0]["result_presentation_guidance"]["values"] == [{
+        "kind": "city",
+        "presentation": "Salt Lake City(Utah)",
+    }]
+    assert executor.drain() == []
+
+    control = runner._ResolvingToolExecutor(
+        delegate, memory, annotate_results=False
+    )
+    control.start_turn()
+    assert control.execute("RestaurantSearch", arguments) == "found"
+    control_record = control.drain()[0]
+    assert control_record["binding_uses"][0]["operation"] == "replaced"
+    assert control_record["result_presentation_guidance_enabled"] is False
+    assert control_record["result_presentation_guidance"] is None
+
+
+def test_tool_executor_does_not_annotate_unmatched_result():
+    class Delegate:
+        def execute(self, _name, _arguments):
+            return "found"
+
+    class Memory:
+        user_id = "alice"
+        memory_system_name = "prme"
+
+        def _post(self, _path, payload):
+            return {
+                "response": {
+                    "arguments": payload["arguments"],
+                    "replacements": [],
+                    "binding_uses": [],
+                }
+            }
+
+    executor = runner._ResolvingToolExecutor(Delegate(), Memory())
+    executor.start_turn()
+    assert executor.execute("RestaurantSearch", {"city": "Boise"}) == "found"
+    assert executor.drain()[0]["result_presentation_guidance"] is None
+
+
+def test_tool_executor_blocks_unresolved_qualified_values():
+    class Delegate:
+        calls = []
+
+        def execute(self, name, arguments):
+            self.calls.append((name, arguments))
+            return "unsafe"
+
+    class Memory:
+        user_id = "alice"
+        memory_system_name = "prme"
+
+        def _post(self, _path, payload):
+            return {
+                "response": {
+                    "arguments": payload["arguments"],
+                    "replacements": [],
+                    "binding_uses": [],
+                }
+            }
+
+    delegate = Delegate()
+    executor = runner._ResolvingToolExecutor(delegate, Memory())
+    executor.start_turn()
+    result = executor.execute(
+        "FlightSearch",
+        {"origin": "Seattle", "destination": "Dallas(Texas)"},
+    )
+    assert result == (
+        "Tool execution blocked because source presentation values remain unresolved "
+        "at /destination. Retry with the tool lookup form."
+    )
+    assert delegate.calls == []
+    record = executor.drain()[0]
+    assert record["delegate_executed"] is False
+    assert record["blocked_qualified_argument_pointers"] == ["/destination"]
+    assert record["result_presentation_guidance"] is None
+
+
 def test_native_response_parsing_preserves_parallel_tool_calls():
     client = runner.OllamaNativeTravelClient.__new__(runner.OllamaNativeTravelClient)
     client.accepted_models = {"deepseek"}
