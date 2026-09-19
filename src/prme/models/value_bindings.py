@@ -132,6 +132,33 @@ class ToolArgumentBindingUse(BaseModel):
     source_references: tuple[str, ...]
 
 
+class PresentationValueReplacement(BaseModel):
+    """One exact lookup-to-presentation change in a declared output slot."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    json_pointer: str
+    kind: str
+    lookup: str
+    presentation: str
+    source_argument_pointers: tuple[str, ...]
+    source_node_ids: tuple[UUID, ...]
+    source_references: tuple[str, ...]
+
+
+class PresentationValueResolution(BaseModel):
+    """A copied structured document and its exact presentation restorations."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document: dict[str, Any]
+    replacements: tuple[PresentationValueReplacement, ...] = ()
+
+    @property
+    def changed(self) -> bool:
+        return bool(self.replacements)
+
+
 class ToolArgumentResolution(BaseModel):
     """A copied argument object and every visible binding PRME matched."""
 
@@ -144,6 +171,14 @@ class ToolArgumentResolution(BaseModel):
     @property
     def changed(self) -> bool:
         return bool(self.replacements)
+
+    def restore_presentations(
+        self,
+        document: dict[str, Any],
+        targets: dict[str, str],
+    ) -> PresentationValueResolution:
+        """Restore exact source forms in declared JSON-pointer/kind output slots."""
+        return restore_presentation_values(self.binding_uses, document, targets)
 
 
 def attach_value_bindings(
@@ -262,6 +297,124 @@ def _pointer_segment(value: str) -> str:
     return value.replace("~", "~0").replace("/", "~1")
 
 
+def _decode_pointer_segment(value: str) -> str:
+    result = []
+    index = 0
+    while index < len(value):
+        if value[index] != "~":
+            result.append(value[index])
+            index += 1
+            continue
+        if index + 1 >= len(value) or value[index + 1] not in {"0", "1"}:
+            raise ValueError("JSON pointer contains an invalid escape")
+        result.append("~" if value[index + 1] == "0" else "/")
+        index += 2
+    return "".join(result)
+
+
+def _pointer_parent(document: dict[str, Any], pointer: str) -> tuple[Any, str | int]:
+    if not isinstance(pointer, str) or not pointer.startswith("/"):
+        raise ValueError("Output JSON pointers must start with '/'")
+    segments = [_decode_pointer_segment(item) for item in pointer[1:].split("/")]
+    parent: Any = document
+    for segment in segments[:-1]:
+        if isinstance(parent, dict):
+            if segment not in parent:
+                raise ValueError(f"Output JSON pointer does not exist: {pointer}")
+            parent = parent[segment]
+        elif isinstance(parent, list):
+            if not segment.isdigit() or int(segment) >= len(parent):
+                raise ValueError(f"Output JSON pointer does not exist: {pointer}")
+            parent = parent[int(segment)]
+        else:
+            raise ValueError(f"Output JSON pointer does not exist: {pointer}")
+    leaf = segments[-1]
+    if isinstance(parent, dict):
+        if leaf not in parent:
+            raise ValueError(f"Output JSON pointer does not exist: {pointer}")
+        return parent, leaf
+    if isinstance(parent, list):
+        if not leaf.isdigit() or int(leaf) >= len(parent):
+            raise ValueError(f"Output JSON pointer does not exist: {pointer}")
+        return parent, int(leaf)
+    raise ValueError(f"Output JSON pointer does not exist: {pointer}")
+
+
+def restore_presentation_values(
+    binding_uses: tuple[ToolArgumentBindingUse, ...],
+    document: dict[str, Any],
+    targets: dict[str, str],
+) -> PresentationValueResolution:
+    """Restore complete values only at caller-declared structured output slots."""
+    if not isinstance(document, dict):
+        raise ValueError("Structured presentation restoration requires a JSON object")
+    if not isinstance(targets, dict):
+        raise ValueError("Presentation targets must be a JSON-pointer/kind object")
+    copied = _snapshot_object(document)
+    if copied is None:
+        copied = {}
+    if len(targets) > 256:
+        raise ValueError("At most 256 presentation targets can be restored")
+    grouped: dict[tuple[str, str], list[ToolArgumentBindingUse]] = {}
+    for use in binding_uses:
+        grouped.setdefault((use.lookup, use.kind), []).append(use)
+
+    validated_targets = []
+    for pointer, kind in targets.items():
+        if not isinstance(pointer, str) or not isinstance(kind, str) or not kind:
+            raise ValueError("Presentation targets require JSON-pointer and kind strings")
+        validated_targets.append((pointer, kind))
+
+    replacements: list[PresentationValueReplacement] = []
+    for pointer, kind in sorted(validated_targets):
+        parent, leaf = _pointer_parent(copied, pointer)
+        value = parent[leaf]
+        if not isinstance(value, str):
+            raise ValueError(f"Presentation target is not a string: {pointer}")
+        sources = grouped.get((value, kind), [])
+        if not sources:
+            raise ValueError(
+                f"No exact {kind!r} binding use matches output value at {pointer}"
+            )
+        presentations = {item.presentation for item in sources}
+        if len(presentations) != 1:
+            raise ValueError(
+                f"Ambiguous presentation values for output value at {pointer}"
+            )
+        presentation = next(iter(presentations))
+        parent[leaf] = presentation
+        replacements.append(
+            PresentationValueReplacement(
+                json_pointer=pointer,
+                kind=kind,
+                lookup=value,
+                presentation=presentation,
+                source_argument_pointers=tuple(
+                    sorted({item.json_pointer for item in sources})
+                ),
+                source_node_ids=tuple(
+                    sorted(
+                        {node_id for item in sources for node_id in item.source_node_ids},
+                        key=str,
+                    )
+                ),
+                source_references=tuple(
+                    sorted(
+                        {
+                            reference
+                            for item in sources
+                            for reference in item.source_references
+                        }
+                    )
+                ),
+            )
+        )
+    return PresentationValueResolution(
+        document=copied,
+        replacements=tuple(replacements),
+    )
+
+
 def resolve_tool_arguments(
     bundle: "MemoryBundle", arguments: dict[str, Any]
 ) -> ToolArgumentResolution:
@@ -355,6 +508,8 @@ def resolve_tool_arguments(
 
 __all__ = [
     "MemoryValueBinding",
+    "PresentationValueReplacement",
+    "PresentationValueResolution",
     "RetrievedValueBinding",
     "ToolArgumentBindingUse",
     "ToolArgumentReplacement",
@@ -362,6 +517,7 @@ __all__ = [
     "VALUE_BINDINGS_METADATA_KEY",
     "attach_value_bindings",
     "render_value_bindings",
+    "restore_presentation_values",
     "resolve_tool_arguments",
     "retrieved_value_bindings",
     "value_bindings_for_node",

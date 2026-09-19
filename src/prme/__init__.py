@@ -55,6 +55,8 @@ from prme.models.processing import (
 )
 from prme.models.value_bindings import (
     MemoryValueBinding,
+    PresentationValueReplacement,
+    PresentationValueResolution,
     RetrievedValueBinding,
     ToolArgumentBindingUse,
     ToolArgumentReplacement,
@@ -263,6 +265,8 @@ __all__ = [
     "MemoryClient",
     "MemoryEngine",
     "MemoryValueBinding",
+    "PresentationValueReplacement",
+    "PresentationValueResolution",
     "MemoryWorkspace",
     "NamespaceInfo",
     "NamespaceMemory",

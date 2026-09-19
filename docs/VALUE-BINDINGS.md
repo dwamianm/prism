@@ -32,6 +32,14 @@ with MemoryClient("./memory") as memory:
     )
     assert resolution.arguments == {"city": "Salt Lake City"}
     assert resolution.binding_uses[0].operation == "replaced"
+
+    restored = resolution.restore_presentations(
+        {"itinerary": {"city": "Salt Lake City"}},
+        {"/itinerary/city": "city"},
+    )
+    assert restored.document == {
+        "itinerary": {"city": "Salt Lake City(Utah)"}
+    }
 ```
 
 `presentation` is the exact source-backed form intended for output. `lookup` is
@@ -57,6 +65,14 @@ argument that already equals an unambiguous visible lookup form, using the
 the source-backed presentation form into result rendering without exposing all
 lookup values in model context. Ambiguous reverse lookup forms are omitted, and
 conflicting presentation mappings fail instead of choosing one.
+
+`ToolArgumentResolution.restore_presentations()` performs the inverse operation
+only for caller-declared structured output slots. Its `targets` map uses JSON
+pointers as keys and binding kinds as values. Each targeted value must exactly
+equal one unambiguous lookup used by that tool call; missing, non-string and
+ambiguous targets fail. The returned copy records the source argument pointers,
+node IDs and binding references that authorized each restoration. Other slots
+and free text are never rewritten.
 
 The HTTP `POST /v1/store` body and MCP `memory_store` accept the same
 `value_bindings` array. HTTP retrieval returns visible bindings in the top-level

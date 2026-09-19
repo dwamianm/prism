@@ -4,7 +4,13 @@ from uuid import uuid4
 
 import pytest
 
-from prme import MemoryEngine, MemoryValueBinding, PRMEConfig
+from prme import (
+    MemoryEngine,
+    MemoryValueBinding,
+    PRMEConfig,
+    ToolArgumentBindingUse,
+    ToolArgumentResolution,
+)
 from prme.models.nodes import MemoryNode
 from prme.models.value_bindings import VALUE_BINDINGS_METADATA_KEY
 from prme.retrieval.models import MemoryBundle, RetrievalCandidate
@@ -79,6 +85,33 @@ async def test_store_retrieve_and_restart_preserve_typed_value_binding(config):
             "replaced",
         ]
         assert arguments["city"] == "Salt Lake City(Utah)"
+
+        structured = {
+            "itinerary": [{
+                "current/city": "Salt Lake City",
+                "note": "Fly to Salt Lake City tomorrow",
+            }]
+        }
+        restored = resolution.restore_presentations(
+            structured,
+            {"/itinerary/0/current~1city": "city"},
+        )
+        assert restored.document == {
+            "itinerary": [{
+                "current/city": "Salt Lake City(Utah)",
+                "note": "Fly to Salt Lake City tomorrow",
+            }]
+        }
+        assert restored.changed is True
+        assert restored.replacements[0].json_pointer == (
+            "/itinerary/0/current~1city"
+        )
+        assert restored.replacements[0].source_argument_pointers == (
+            "/city",
+            "/nested~1key/0",
+        )
+        assert restored.replacements[0].source_node_ids == (receipt.node_id,)
+        assert structured["itinerary"][0]["current/city"] == "Salt Lake City"
 
         already_lookup = response.bundle.resolve_tool_arguments(
             {"city": "Salt Lake City"}
@@ -240,6 +273,54 @@ def test_resolution_rejects_cross_direction_value_collision():
     )
     with pytest.raises(ValueError, match="both presentation and lookup"):
         bundle.resolve_tool_arguments({"city": "NYC"})
+
+
+def test_structured_presentation_restoration_rejects_undeclared_or_ambiguous_values():
+    left_id = uuid4()
+    right_id = uuid4()
+    resolution = ToolArgumentResolution(
+        arguments={"city": "Springfield"},
+        binding_uses=(
+            ToolArgumentBindingUse(
+                json_pointer="/city",
+                operation="already_lookup",
+                presentation="Springfield(Illinois)",
+                lookup="Springfield",
+                kind="city",
+                source_node_ids=(left_id,),
+                source_references=("city-il",),
+            ),
+            ToolArgumentBindingUse(
+                json_pointer="/destination",
+                operation="already_lookup",
+                presentation="Springfield(Oregon)",
+                lookup="Springfield",
+                kind="city",
+                source_node_ids=(right_id,),
+                source_references=("city-or",),
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="Ambiguous presentation"):
+        resolution.restore_presentations(
+            {"result": {"city": "Springfield"}},
+            {"/result/city": "city"},
+        )
+    with pytest.raises(ValueError, match="No exact"):
+        resolution.restore_presentations(
+            {"result": {"summary": "Visit Springfield tomorrow"}},
+            {"/result/summary": "city"},
+        )
+    with pytest.raises(ValueError, match="does not exist"):
+        resolution.restore_presentations(
+            {"result": {"city": "Springfield"}},
+            {"/missing/city": "city"},
+        )
+    with pytest.raises(ValueError, match="invalid escape"):
+        resolution.restore_presentations(
+            {"result": {"city": "Springfield"}},
+            {"/result/~2city": "city"},
+        )
 
 
 def test_binding_is_unavailable_when_presentation_was_not_packed():

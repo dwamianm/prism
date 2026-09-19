@@ -38,6 +38,8 @@ from prme.models.provenance import NodeProvenance, OperationAuditRecord
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.value_bindings import (
     MemoryValueBinding,
+    PresentationValueReplacement,
+    PresentationValueResolution,
     RetrievedValueBinding,
     ToolArgumentBindingUse,
     ToolArgumentReplacement,
@@ -69,6 +71,8 @@ __all__ = [
     "MemoryNode",
     "MemoryObject",
     "MemoryValueBinding",
+    "PresentationValueReplacement",
+    "PresentationValueResolution",
     "NodeProvenance",
     "OperationAuditRecord",
     "ProcessingResult",
